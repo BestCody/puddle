@@ -8,8 +8,14 @@ function homePage() {
         <form class="newsletter"><label for="newsletter-email">Join the newsletter.</label><div class="newsletter__row"><input id="newsletter-email" type="email" required placeholder="you@example.com"><button type="submit" aria-label="Join newsletter">${arrow}</button></div><p class="form-note" role="status">Thanks — you are on the list.</p></form>
       </div>
       <div class="hero__side">
-        <div class="orbit" aria-hidden="true"><span class="orbit__dot orbit__dot--one"></span><span class="orbit__dot orbit__dot--two"></span><span class="orbit__dot orbit__dot--three"></span><div class="orbit__center"><img src="/logo.webp" alt=""></div></div>
-        <div class="testimonial-stack">${testimonials.map((item, index) => `<article class="testimonial-card" style="--card-right:${index * 22}px;--card-bottom:${index * 20}px;--card-rotate:${(index - 1) * 2}deg"><p>“${item[0]}”</p><div><strong>${item[1]}</strong><span>${item[2]}</span></div></article>`).join('')}</div>
+        <div class="orbit" aria-hidden="true">
+          <span class="orbit__ring orbit__ring--outer"></span><span class="orbit__ring orbit__ring--middle"></span><span class="orbit__ring orbit__ring--inner"></span>
+          <span class="orbit__rotor orbit__rotor--outer"><span class="orbit__dot orbit__dot--one"></span></span>
+          <span class="orbit__rotor orbit__rotor--middle"><span class="orbit__dot orbit__dot--two"></span></span>
+          <span class="orbit__rotor orbit__rotor--inner"><span class="orbit__dot orbit__dot--three"></span></span>
+          <div class="orbit__center"><img src="/logo.webp" alt=""></div>
+        </div>
+        <div class="testimonial-stack" tabindex="0" role="group" aria-label="Client testimonials. Hover or focus to pause. Click or press Enter to show the next testimonial.">${testimonials.map((item, index) => `<article class="testimonial-card" data-position="${index}" aria-hidden="${index !== 0}"><p>“${item[0]}”</p><div><strong>${item[1]}</strong><span>${item[2]}</span></div></article>`).join('')}<span class="testimonial-hint" aria-hidden="true">Click to view next <b>01 / ${String(testimonials.length).padStart(2, '0')}</b></span></div>
       </div>
       <a class="scroll-cue" href="#product">scroll down <span>↓</span></a>
     </section>
