@@ -15,8 +15,7 @@ function homePage() {
           <span class="orbit__rotor orbit__rotor--inner"><span class="orbit__dot orbit__dot--three"></span></span>
           <div class="orbit__center"><img src="/logo.webp" alt=""></div>
         </div>
-        <button class="motion-toggle" type="button" aria-pressed="false"><span aria-hidden="true">Ⅱ</span> Pause motion</button>
-        <div class="testimonial-stack" tabindex="0" role="group" aria-label="Client testimonials. Click or press Enter to show the next testimonial.">${testimonials.map((item, index) => `<article class="testimonial-card" data-position="${index}" aria-hidden="${index !== 0}"><p>“${item[0]}”</p><div><strong>${item[1]}</strong><span>${item[2]}</span></div></article>`).join('')}<span class="testimonial-hint" aria-hidden="true">Click for next <b>01 / ${String(testimonials.length).padStart(2, '0')}</b></span></div>
+        <div class="testimonial-stack" role="group" aria-label="Client testimonials that rotate automatically.">${testimonials.map((item, index) => `<article class="testimonial-card" data-position="${index}" aria-hidden="${index !== 0}"><p>“${item[0]}”</p><div><strong>${item[1]}</strong><span>${item[2]}</span></div></article>`).join('')}<span class="testimonial-hint" aria-hidden="true"><b>01 / ${String(testimonials.length).padStart(2, '0')}</b></span></div>
       </div>
       <a class="scroll-cue" href="#product">scroll down <span>↓</span></a>
     </section>
