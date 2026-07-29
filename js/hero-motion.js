@@ -5,7 +5,9 @@ function mountHeroMotion() {
   cleanupHeroMotion = null
 
   const stack = document.querySelector('.testimonial-stack')
-  if (!stack) return
+  const heroSide = stack?.closest('.hero__side')
+  const toggle = heroSide?.querySelector('.motion-toggle')
+  if (!stack || !heroSide) return
 
   const cards = Array.from(stack.querySelectorAll('.testimonial-card'))
   const counter = stack.querySelector('.testimonial-hint b')
@@ -13,12 +15,16 @@ function mountHeroMotion() {
 
   const controller = new AbortController()
   const { signal } = controller
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   let order = [...cards]
   let timer = 0
   let transitionTimer = 0
-  let paused = reducedMotion.matches
+  let userPaused = false
+  let pageHidden = document.hidden
   let transitioning = false
+
+  heroSide.classList.add('hero-motion-enabled')
+
+  const isPaused = () => userPaused || pageHidden
 
   const render = () => {
     order.forEach((card, position) => {
@@ -39,11 +45,20 @@ function mountHeroMotion() {
 
   const startTimer = () => {
     stopTimer()
-    if (!paused && !reducedMotion.matches) timer = window.setInterval(() => advance(false), 4800)
+    if (!isPaused()) timer = window.setInterval(() => advance(false), 3000)
+  }
+
+  const syncPauseUI = () => {
+    heroSide.classList.toggle('motion-paused', userPaused)
+    if (!toggle) return
+    toggle.setAttribute('aria-pressed', String(userPaused))
+    toggle.innerHTML = userPaused
+      ? '<span aria-hidden="true">▶</span> Play motion'
+      : '<span aria-hidden="true">Ⅱ</span> Pause motion'
   }
 
   const advance = manual => {
-    if (transitioning || (!manual && paused) || reducedMotion.matches) return
+    if (transitioning || (!manual && isPaused())) return
 
     transitioning = true
     const outgoing = order[0]
@@ -59,21 +74,17 @@ function mountHeroMotion() {
         outgoing.classList.remove('is-resetting')
         transitioning = false
       }))
-    }, 650)
+    }, 620)
   }
 
-  const setPaused = nextPaused => {
-    paused = nextPaused || reducedMotion.matches
-    if (paused) stopTimer()
+  toggle?.addEventListener('click', event => {
+    event.stopPropagation()
+    userPaused = !userPaused
+    syncPauseUI()
+    if (userPaused) stopTimer()
     else startTimer()
-  }
-
-  stack.addEventListener('mouseenter', () => setPaused(true), { signal })
-  stack.addEventListener('mouseleave', () => setPaused(false), { signal })
-  stack.addEventListener('focusin', () => setPaused(true), { signal })
-  stack.addEventListener('focusout', event => {
-    if (!stack.contains(event.relatedTarget)) setPaused(false)
   }, { signal })
+
   stack.addEventListener('click', () => advance(true), { signal })
   stack.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowRight') {
@@ -83,15 +94,12 @@ function mountHeroMotion() {
   }, { signal })
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopTimer()
+    pageHidden = document.hidden
+    if (pageHidden) stopTimer()
     else startTimer()
   }, { signal })
 
-  reducedMotion.addEventListener?.('change', event => {
-    setPaused(event.matches)
-    render()
-  }, { signal })
-
+  syncPauseUI()
   render()
   startTimer()
 
@@ -99,5 +107,6 @@ function mountHeroMotion() {
     controller.abort()
     stopTimer()
     window.clearTimeout(transitionTimer)
+    heroSide.classList.remove('hero-motion-enabled', 'motion-paused')
   }
 }
