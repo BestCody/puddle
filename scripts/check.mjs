@@ -10,11 +10,22 @@ const required = [
   'public/mission-green.webp', 'public/team-hani.webp', 'public/team-nathan.webp'
 ]
 for (const file of required) await access(join(root, file))
+
 const scriptFiles = ['base.js', 'home.js', 'auth.js', 'documents.js', 'router.js', 'liquid-header.js']
 const scripts = await Promise.all(scriptFiles.map(file => readFile(join(root, 'js', file), 'utf8')))
 const app = scripts.join('\n')
+const build = await readFile(join(root, 'scripts', 'build.mjs'), 'utf8')
+
 for (const route of ['/', '/signin', '/signup', '/help', '/terms', '/privacy']) {
   if (!app.includes(`'${route}'`) && route !== '/') throw new Error(`Missing route: ${route}`)
 }
 if (!app.includes("target: '.site-header'")) throw new Error('Missing liquidGL navigation target')
-console.log(`Checked ${required.length} required files, public routes, and liquidGL navigation integration.`)
+
+for (const asset of ['laptop.png', 'mission-green.png', 'mission-orange.png', 'team-hani.png', 'team-nathan.png', 'torontowhite.png', 'venn.png']) {
+  if (!build.includes(`'${asset}'`)) throw new Error(`Missing original asset from build manifest: ${asset}`)
+}
+for (const asset of ['laptop.png', 'mission-green.png', 'mission-orange.png', 'team-hani.png', 'team-nathan.png', 'venn.png']) {
+  if (!app.includes(`/${asset}`)) throw new Error(`Landing page is not using the sharp asset: ${asset}`)
+}
+
+console.log(`Checked ${required.length} required files, public routes, liquidGL navigation, and original-resolution landing assets.`)
