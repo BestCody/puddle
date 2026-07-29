@@ -4,6 +4,7 @@ import './stage-two.css'
 import './stage-three-four.css'
 import './stage-six.css'
 import './stage-seven.css'
+import './stage-eight.css'
 
 export const metadata = {
   title: { default: 'Puddle', template: '%s · Puddle' },

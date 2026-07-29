@@ -10,15 +10,10 @@ export default async function DiscoverPage() {
   return renderProductPage(async (session) => {
     const feed = await getDiscoveryFeed(session, { distance: session.profile.search_radius_km || 25, limit: 40 })
     await logDiscoveryImpressions(session, feed)
-    return (
-      <>
-        <section className="product-hero product-hero-pink">
-          <div><span className="section-pill">Your next plan</span><h1>Swipe into something good.</h1><p>Real nearby events and places, ranked with transparent rules instead of a black box.</p></div>
-          <div className="hero-orbit" aria-hidden="true"><span>EVENT</span><span>PLACE</span><strong>✦</strong></div>
-        </section>
-        <div className="product-toolbar"><span className="muted">Distance, timing, interests, availability, and variety shape the order.</span><Link className="text-link" href="/plans">Open my plans →</Link></div>
-        <DiscoveryWorkspace initialFeed={feed} defaultMode="deck" />
-      </>
-    )
+    return <>
+      <section className="product-hero product-hero-pink"><div><span className="section-pill">Your next plan</span><h1>Swipe into something good.</h1><p>Nearby events and places ranked by transparent rules, optional local embeddings, and signals you control.</p></div><div className="hero-orbit" aria-hidden="true"><span>EVENT</span><span>PLACE</span><strong>✦</strong></div></section>
+      <div className="product-toolbar"><span className="muted">Eligibility, distance, timing, interests, activity, similarity, and variety shape the order.</span><div><Link className="text-link" href="/settings/recommendations">Recommendation settings →</Link><Link className="text-link" href="/plans">Open my plans →</Link></div></div>
+      <DiscoveryWorkspace initialFeed={feed} defaultMode="deck" />
+    </>
   })
 }
