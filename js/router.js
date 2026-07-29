@@ -49,6 +49,8 @@ function bindInteractions() {
     const message = document.querySelector('.demo-message')
     if (message) message.hidden = false
   })
+
+  if (typeof mountHeroMotion === 'function') mountHeroMotion()
 }
 
 window.addEventListener('popstate', route)
