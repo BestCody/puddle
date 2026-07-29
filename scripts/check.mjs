@@ -6,15 +6,18 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const required = [
   'package.json','next.config.mjs','proxy.js','.env.example','index.html','styles.css','app.js',
-  'public/landing.html','public/styles.css','public/app.js','app/layout.js','app/auth.css',
+  'public/landing.html','public/styles.css','public/app.js','app/layout.js','app/auth.css','app/product.css','app/loading.js','app/error.js',
   'app/signin/page.js','app/signup/page.js','app/forgot-password/page.js','app/update-password/page.js',
   'app/auth/actions.js','app/auth/callback/route.js','app/auth/confirm/route.js','app/auth/error/page.js',
   'app/onboarding/page.js','app/dashboard/page.js','app/account/page.js','app/api/auth/session/route.js',
-  'components/auth-shell.js','lib/supabase/client.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/auth/user.js',
-  'supabase/migrations/0002_authentication.sql','docs/AUTH_SETUP.md'
+  'app/discover/page.js','app/explore/page.js','app/plans/page.js','app/create/page.js','app/friends/page.js','app/inbox/page.js','app/profile/page.js',
+  'components/auth-shell.js','components/product-shell.js','components/product-nav.js','components/discovery-deck.js','components/empty-state.js',
+  'lib/supabase/client.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/auth/user.js','lib/app/stage-one-data.js','lib/app/render-product-page.js',
+  'supabase/migrations/0002_authentication.sql','supabase/migrations/0003_unified_product_foundation.sql','supabase/migrations/0004_remove_person_matching_legacy.sql',
+  'supabase/tests/0003_stage1_authorization.sql','supabase/seed.sql','docs/AUTH_SETUP.md'
 ]
 for (const path of required) await access(join(root, path))
-for (const path of ['next.config.mjs','proxy.js','lib/supabase/env.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/auth/redirect.js','scripts/check.mjs','app/auth/actions.js','app/auth/callback/route.js','app/auth/confirm/route.js']) {
+for (const path of ['next.config.mjs','proxy.js','lib/supabase/env.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/auth/redirect.js','lib/app/stage-one-data.js','scripts/check.mjs','app/auth/actions.js','app/auth/callback/route.js','app/auth/confirm/route.js']) {
   execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
 }
 for (const [source, served] of [['index.html','public/landing.html'],['styles.css','public/styles.css'],['app.js','public/app.js']]) {
@@ -25,7 +28,7 @@ try { const bootstrap=await stat(join(root,'.bootstrap')); if(bootstrap.isDirect
 const pkg=JSON.parse(await readFile(join(root,'package.json'),'utf8'))
 for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','react','react-dom']) if(!pkg.dependencies?.[dependency]) throw new Error(`Missing dependency: ${dependency}`)
 const proxy=await readFile(join(root,'proxy.js'),'utf8')
-for (const route of ['/dashboard','/onboarding','/account']) if(!proxy.includes(route)) throw new Error(`Proxy does not protect ${route}`)
+for (const route of ['/dashboard','/discover','/explore','/plans','/create','/friends','/inbox','/profile','/onboarding','/account']) if(!proxy.includes(route)) throw new Error(`Proxy does not protect ${route}`)
 const landingConnector=await readFile(join(root,'app.js'),'utf8')
 if(!landingConnector.includes("replaceButtonWithLink(headerSignInButton, 'Sign In', signInPath)")) throw new Error('Landing header does not link Sign In correctly')
 if(!landingConnector.includes("replaceButtonWithLink(button, 'Register', registrationPath")) throw new Error('Landing registration CTA is missing')
@@ -47,4 +50,17 @@ if(!signIn.includes('Email me a one-time login code')) throw new Error('One-time
 if(!signIn.includes('Sign in with code')) throw new Error('One-time login code verification form is missing')
 if(!actions.includes("verifyOtp({ email, token, type: 'email' })")) throw new Error('Email OTP verification is missing')
 if(actions.includes("['google', 'apple']")) throw new Error('Apple OAuth remains enabled in the public action')
-console.log('Authentication UI and one-time-code checks passed.')
+
+const productNav=await readFile(join(root,'components/product-nav.js'),'utf8')
+for (const label of ['Discover','Explore','Plans','Create','Friends','Inbox','Profile']) if(!productNav.includes(label)) throw new Error(`Unified navigation is missing ${label}`)
+const dashboard=await readFile(join(root,'app/dashboard/page.js'),'utf8')
+if(!dashboard.includes("redirect('/discover')")) throw new Error('Legacy dashboard must redirect to Discover')
+const foundation=await readFile(join(root,'supabase/migrations/0003_unified_product_foundation.sql'),'utf8')
+for (const table of ['host_profiles','host_members','locations','event_permissions','user_content_states']) if(!foundation.includes(`public.${table}`)) throw new Error(`Stage 1 migration is missing ${table}`)
+for (const role of ['owner','editor','checkin','moderator','finance']) if(!foundation.includes(`'${role}'`)) throw new Error(`Stage 1 permissions are missing ${role}`)
+for (const state of ['saved','interested','attending','visited','hosting']) if(!foundation.includes(`'${state}'`)) throw new Error(`Unified content states are missing ${state}`)
+const removal=await readFile(join(root,'supabase/migrations/0004_remove_person_matching_legacy.sql'),'utf8')
+for (const term of ['profile_swipes','matches','dating_enabled']) if(!removal.includes(term)) throw new Error(`Legacy matching cleanup is missing ${term}`)
+const authorization=await readFile(join(root,'supabase/tests/0003_stage1_authorization.sql'),'utf8')
+if(!authorization.includes('RLS is not enabled')) throw new Error('Stage 1 authorization tests are incomplete')
+console.log('Stage 1 unified product checks passed.')
