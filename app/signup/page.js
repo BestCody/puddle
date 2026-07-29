@@ -21,9 +21,11 @@ export default async function SignUpPage({ searchParams }) {
         <SubmitButton>Create my Puddle →</SubmitButton>
       </form>
       <div className="auth-divider">or</div>
-      <div className="oauth-grid">
-        <form action={signInWithOAuth}><input type="hidden" name="provider" value="google" /><SubmitButton className="oauth-button">Google</SubmitButton></form>
-        <form action={signInWithOAuth}><input type="hidden" name="provider" value="apple" /><SubmitButton className="oauth-button">Apple</SubmitButton></form>
+      <div className="oauth-grid" style={{ gridTemplateColumns: '1fr' }}>
+        <form className="auth-form" action={signInWithOAuth}>
+          <input type="hidden" name="provider" value="google" />
+          <SubmitButton className="oauth-button" pendingText="Opening Google…">Continue with Google</SubmitButton>
+        </form>
       </div>
       <div className="auth-links"><span>Already in?</span><Link href="/signin">Sign in</Link></div>
     </AuthShell>
