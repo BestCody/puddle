@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
 
-const protectedPrefixes = ['/dashboard', '/onboarding', '/account']
+const protectedPrefixes = ['/dashboard', '/discover', '/explore', '/plans', '/create', '/friends', '/inbox', '/profile', '/onboarding', '/account']
 const authOnlyPaths = ['/signin', '/signup', '/forgot-password']
 
 function carriesCookies(source, target) {
@@ -30,7 +30,7 @@ export async function proxy(request) {
   }
 
   if (isAuthOnly && user) {
-    return carriesCookies(response, NextResponse.redirect(new URL('/dashboard', request.url)))
+    return carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url)))
   }
 
   return response
