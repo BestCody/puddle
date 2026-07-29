@@ -47,7 +47,7 @@ export async function POST(request, context) {
   if (errors.length) return NextResponse.json({ saved: false, waiting: true, error: errors[0] }, { status: 422 })
 
   const privateAddress = payload.private_address
-  const writable = { ...payload, has_private_address: Boolean(privateAddress) }
+  const writable = { ...payload }
   delete writable.private_address
   if (existing) {
     delete writable.created_by
