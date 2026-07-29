@@ -1,5 +1,14 @@
 function route() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
+
+  if (path === '/' && app?.dataset.staticHome === 'true') {
+    bindInteractions()
+    document.title = 'Valantir | Volunteer opportunities for Ontario students'
+    if (window.location.hash) requestAnimationFrame(() => document.querySelector(window.location.hash)?.scrollIntoView())
+    else window.scrollTo(0, 0)
+    return
+  }
+
   let html
   if (path === '/') html = homePage()
   else if (path === '/signin') html = authChoice('signin')
@@ -14,8 +23,9 @@ function route() {
   else html = notFoundPage()
 
   app.innerHTML = html
+  app.removeAttribute('data-static-home')
   bindInteractions()
-  document.title = path === '/' ? 'Valantir | Volunteer opportunities for Ontario students' : `${document.querySelector('h1')?.textContent || 'Valantir'} · Valantir`
+  document.title = `${document.querySelector('h1')?.textContent || 'Valantir'} · Valantir`
   if (window.location.hash) requestAnimationFrame(() => document.querySelector(window.location.hash)?.scrollIntoView())
   else window.scrollTo(0, 0)
 }
