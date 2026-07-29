@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { AuthMessage } from '@/components/auth-message'
+import { TemporaryLocationSharing } from '@/components/temporary-location-sharing'
 import { addPlanAvailability, addPlanStop, createPlanPoll, invitePlanMember, postPlanMessage, respondToPlanInvitation, voteInPlanPoll } from '@/app/plans/actions'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getPlanDetail } from '@/lib/app/plans-data'
@@ -38,6 +39,7 @@ export default async function PlanDetailPage({ params, searchParams }) {
       <>
         <section className="product-hero product-hero-purple"><div><span className="section-pill section-pill-yellow">Shared plan</span><h1>{plan.title}</h1><p>{plan.description || 'Build the day together.'}</p><div className="public-meta-row"><span>{plan.city || 'City flexible'}</span><span>{plan.status}</span><span>{members.filter((member)=>member.status==='accepted').length} people</span></div></div><div className="create-scribble" aria-hidden="true">vote<br/>plan<br/>go ↗</div></section>
         <AuthMessage searchParams={messages} />
+        {accepted ? <TemporaryLocationSharing contextKind="plan" contextId={plan.id} contextLabel={plan.title}/> : null}
         {!accepted ? <InvitationCard planId={plan.id} /> : <div className="plan-detail-grid">
           <main className="plan-detail-main">
             <section className="plan-section"><div className="plan-section-heading"><div><span className="section-pill section-pill-mint">Itinerary</span><h2>Stops in order.</h2></div><a className="text-link" href={`/plans/${plan.id}/calendar`}>Export calendar →</a></div>{stops.length ? <div className="itinerary-list">{stops.map((stop,index)=><StopCard stop={stop} index={index} key={stop.id} />)}</div> : <p className="empty-inline">No stops yet. Add a published event or place below.</p>}

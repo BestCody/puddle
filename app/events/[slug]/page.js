@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { PublicEventView } from '@/components/public-listing'
 import { ListingSocial } from '@/components/listing-social'
+import { TemporaryLocationSharing } from '@/components/temporary-location-sharing'
 import { eventStructuredData, getPublicEvent } from '@/lib/app/public-content'
 
 export const dynamic = 'force-dynamic'
@@ -18,5 +19,5 @@ export default async function EventPage({ params }) {
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'
   const structured = eventStructuredData(result.event, `${site}/events/${result.event.slug}`)
   const returnTo = `/events/${result.event.slug}`
-  return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structured).replace(/</g,'\u003c')}}/><PublicEventView {...result}/><ListingSocial kind="event" content={result.event} returnTo={returnTo}/></>
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structured).replace(/</g,'\u003c')}}/><PublicEventView {...result}/><TemporaryLocationSharing contextKind="event" contextId={result.event.id} contextLabel={result.event.title}/><ListingSocial kind="event" content={result.event} returnTo={returnTo}/></>
 }

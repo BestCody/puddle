@@ -1,24 +1,5 @@
 {
-  "name": "puddle",
-  "version": "7.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "check": "node scripts/check.mjs",
-    "build": "npm run check && next build",
-    "start": "next start",
-    "media:cleanup": "node scripts/cleanup-orphaned-media.mjs",
-    "notifications:deliver": "node scripts/process-notification-outbox.mjs"
-  },
-  "dependencies": {
-    "@supabase/ssr": "^0.12.3",
-    "@supabase/supabase-js": "^2.57.4",
-    "next": "16.2.12",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "sharp": "^0.35.3"
-  },
-  "engines": {
-    "node": ">=22"
-  }
+  "name":"puddle","version":"7.0.0","private":true,
+  "scripts":{"dev":"next dev","check":"node scripts/check.mjs && node scripts/check-stage-seven.mjs","build":"npm run check && next build","start":"next start","media:cleanup":"node scripts/cleanup-orphaned-media.mjs","notifications:deliver":"node scripts/process-notification-outbox.mjs","locations:expire":"node scripts/expire-location-sharing.mjs"},
+  "dependencies":{"@supabase/ssr":"^0.12.3","@supabase/supabase-js":"^2.57.4","next":"16.2.12","react":"19.2.8","react-dom":"19.2.8","sharp":"^0.35.3"},"engines":{"node":">=22"}
 }

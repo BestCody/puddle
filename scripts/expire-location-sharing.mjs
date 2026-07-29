@@ -1,0 +1,2 @@
+import { createClient } from '@supabase/supabase-js'
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;if(!url||!key)throw new Error('Supabase server credentials are required');const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});const{data,error}=await db.rpc('expire_location_shares_v1',{batch_size:1000});if(error)throw error;console.log(JSON.stringify(data))
