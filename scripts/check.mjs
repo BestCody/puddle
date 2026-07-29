@@ -18,7 +18,7 @@ const required = [
   'components/event-editor.js','components/location-editor.js','components/editor-shared.js','components/revision-history.js','components/public-listing.js',
   'lib/supabase/client.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/auth/user.js','lib/app/stage-one-data.js','lib/app/render-product-page.js',
   'lib/app/content-input.js','lib/app/creator-data.js','lib/app/public-content.js',
-  'supabase/migrations/0002_authentication.sql','supabase/migrations/0003_unified_product_foundation.sql','supabase/migrations/0004_remove_person_matching_legacy.sql','supabase/migrations/0005_content_creation_and_publication.sql','supabase/migrations/0006_private_address_isolation.sql',
+  'supabase/migrations/0002_authentication.sql','supabase/migrations/0003_unified_product_foundation.sql','supabase/migrations/0004_remove_person_matching_legacy.sql','supabase/migrations/0005_content_creation_and_publication.sql','supabase/migrations/0006_private_address_isolation.sql','supabase/migrations/0007_private_address_integrity.sql',
   'supabase/tests/0003_stage1_authorization.sql','supabase/tests/0005_stage2_authorization.sql','supabase/seed.sql','docs/AUTH_SETUP.md'
 ]
 for (const path of required) await access(join(root, path))
@@ -85,6 +85,9 @@ const privacy=await readFile(join(root,'supabase/migrations/0006_private_address
 for (const table of ['event_private_details','location_private_details']) if(!privacy.includes(`public.${table}`)) throw new Error(`Private-address migration is missing ${table}`)
 if(!privacy.includes('has_private_address') || !privacy.includes('drop column if exists private_address')) throw new Error('Public listing tables still expose exact private addresses')
 if(!privacy.includes('event managers manage private details') || !privacy.includes('location managers manage private details')) throw new Error('Private addresses are not isolated behind manager-only RLS')
+const privacyIntegrity=await readFile(join(root,'supabase/migrations/0007_private_address_integrity.sql'),'utf8')
+for (const trigger of ['event_private_details_sync_flag','location_private_details_sync_flag']) if(!privacyIntegrity.includes(trigger)) throw new Error(`Private-address integrity is missing ${trigger}`)
+if(!privacyIntegrity.includes('exists(select 1 from public.event_private_details') || !privacyIntegrity.includes('exists(select 1 from public.location_private_details')) throw new Error('Publication trusts a public private-address flag instead of protected detail rows')
 const stage2Test=await readFile(join(root,'supabase/tests/0005_stage2_authorization.sql'),'utf8')
 if(!stage2Test.includes('Controlled event status trigger is missing') || !stage2Test.includes('Missing Stage 2 RLS policies')) throw new Error('Stage 2 authorization tests are incomplete')
 for (const path of ['app/events/[slug]/page.js','app/places/[slug]/page.js','app/hosts/[slug]/page.js']) {
