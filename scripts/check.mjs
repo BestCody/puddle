@@ -23,6 +23,8 @@ const vercel = await readFile(join(root, 'vercel.json'), 'utf8')
 const viewportLayout = await readFile(join(root, 'css', 'viewport-layout.css'), 'utf8')
 const heroMotion = await readFile(join(root, 'css', 'hero-motion.css'), 'utf8')
 const liquidHeader = await readFile(join(root, 'js', 'liquid-header.js'), 'utf8')
+const home = await readFile(join(root, 'js', 'home.js'), 'utf8')
+const heroScript = await readFile(join(root, 'js', 'hero-motion.js'), 'utf8')
 
 for (const route of ['/', '/signin', '/signup', '/help', '/terms', '/privacy']) {
   if (!app.includes(`'${route}'`) && route !== '/') throw new Error(`Missing route: ${route}`)
@@ -44,8 +46,11 @@ if (!index.includes('/css/hero-motion.css') || !index.includes('/js/hero-motion.
 for (const feature of ['orbitClockwise', 'orbitCounterClockwise', 'is-leaving', 'prefers-reduced-motion']) {
   if (!heroMotion.includes(feature)) throw new Error(`Missing hero motion feature: ${feature}`)
 }
-for (const feature of ['mountHeroMotion', 'setInterval', 'mouseenter', 'keydown']) {
-  if (!app.includes(feature)) throw new Error(`Missing testimonial interaction: ${feature}`)
+for (const feature of ['mountHeroMotion', 'setInterval', 'visibilitychange', '3000']) {
+  if (!heroScript.includes(feature)) throw new Error(`Missing automatic testimonial behavior: ${feature}`)
+}
+if (home.includes('motion-toggle') || home.includes('Click for next') || home.includes('tabindex="0"')) {
+  throw new Error('Manual testimonial controls should not be present')
 }
 
 if (index.includes('cdn.jsdelivr.net/npm/html2canvas') || index.includes('cdn.jsdelivr.net/gh/naughtyduk')) {
@@ -60,4 +65,4 @@ for (const feature of ['liquid-fallback', 'is-scrolled', 'requestAnimationFrame'
 }
 if (!index.includes('Loading Valantir')) throw new Error('Missing visible startup fallback')
 
-console.log(`Checked ${required.length} required files, JavaScript syntax, public routes, safe Vercel rewrites, reliable CSS glass navigation, original-resolution assets, adaptive viewport sizing, and hero motion.`)
+console.log(`Checked ${required.length} required files, JavaScript syntax, public routes, safe Vercel rewrites, reliable CSS glass navigation, original-resolution assets, adaptive viewport sizing, and automatic hero motion.`)
