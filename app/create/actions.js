@@ -48,7 +48,7 @@ async function persistEvent(formData) {
   if (errors.length) redirect(pathWithMessage(editEventPath(id), 'error', errors[0]))
 
   const privateAddress = payload.private_address
-  const writable = { ...payload, has_private_address: Boolean(privateAddress) }
+  const writable = { ...payload }
   delete writable.private_address
   if (existing) {
     delete writable.created_by
@@ -82,7 +82,7 @@ async function persistLocation(formData) {
   if (errors.length) redirect(pathWithMessage(editLocationPath(id), 'error', errors[0]))
 
   const privateAddress = payload.private_address
-  const writable = { ...payload, has_private_address: Boolean(privateAddress) }
+  const writable = { ...payload }
   delete writable.private_address
   if (existing) {
     delete writable.created_by
