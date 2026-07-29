@@ -20,6 +20,17 @@ function editLocationPath(id) {
   return id ? `/studio/places/${id}` : '/create/place'
 }
 
+async function savePrivateDetail(supabase, kind, id, exactAddress, userId) {
+  const table = kind === 'event' ? 'event_private_details' : 'location_private_details'
+  const key = kind === 'event' ? 'event_id' : 'location_id'
+  if (exactAddress) {
+    const { error } = await supabase.from(table).upsert({ [key]: id, exact_address: exactAddress, updated_by: userId, updated_at: new Date().toISOString() })
+    return error
+  }
+  const { error } = await supabase.from(table).delete().eq(key, id)
+  return error
+}
+
 async function persistEvent(formData) {
   const session = await requireUser({ onboarding: true })
   const input = objectFromFormData(formData)
@@ -36,7 +47,9 @@ async function persistEvent(formData) {
   const errors = validateEvent(payload)
   if (errors.length) redirect(pathWithMessage(editEventPath(id), 'error', errors[0]))
 
-  const writable = { ...payload }
+  const privateAddress = payload.private_address
+  const writable = { ...payload, has_private_address: Boolean(privateAddress) }
+  delete writable.private_address
   if (existing) {
     delete writable.created_by
     delete writable.slug
@@ -47,6 +60,8 @@ async function persistEvent(formData) {
     : session.supabase.from('events').insert(writable).select('id,slug,status').single()
   const { data, error } = await query
   if (error || !data) redirect(pathWithMessage(editEventPath(id), 'error', firstError(error, 'We could not save this event draft.')))
+  const privateError = await savePrivateDetail(session.supabase, 'event', data.id, privateAddress, session.user.id)
+  if (privateError) redirect(pathWithMessage(`/studio/events/${data.id}`, 'error', 'The draft saved, but its private address could not be secured.'))
   return { session, event: data }
 }
 
@@ -66,7 +81,9 @@ async function persistLocation(formData) {
   const errors = validateLocation(payload)
   if (errors.length) redirect(pathWithMessage(editLocationPath(id), 'error', errors[0]))
 
-  const writable = { ...payload }
+  const privateAddress = payload.private_address
+  const writable = { ...payload, has_private_address: Boolean(privateAddress) }
+  delete writable.private_address
   if (existing) {
     delete writable.created_by
     delete writable.slug
@@ -77,6 +94,8 @@ async function persistLocation(formData) {
     : session.supabase.from('locations').insert(writable).select('id,slug,status').single()
   const { data, error } = await query
   if (error || !data) redirect(pathWithMessage(editLocationPath(id), 'error', firstError(error, 'We could not save this location draft.')))
+  const privateError = await savePrivateDetail(session.supabase, 'location', data.id, privateAddress, session.user.id)
+  if (privateError) redirect(pathWithMessage(`/studio/places/${data.id}`, 'error', 'The draft saved, but its private address could not be secured.'))
   return { session, location: data }
 }
 
