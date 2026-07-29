@@ -1,13 +1,11 @@
-/* Hero motion: rotating orbital system and an interactive testimonial card stack. */
+/* Hero motion: visible orbital movement and an interactive testimonial card stack. */
 .orbit{
   animation:none!important;
   transform:translateZ(0);
 }
 
 .orbit::before,
-.orbit::after{
-  display:none;
-}
+.orbit::after{display:none}
 
 .orbit__ring,
 .orbit__rotor{
@@ -17,8 +15,8 @@
 }
 
 .orbit__ring{
-  border:1px solid rgba(17,17,15,.17);
-  animation:orbitBreathe 7s ease-in-out infinite alternate;
+  border:1px solid rgba(17,17,15,.18);
+  animation:orbitBreathe 3.8s ease-in-out infinite alternate;
 }
 
 .orbit__ring--outer,
@@ -30,12 +28,11 @@
 .orbit__ring--inner,
 .orbit__rotor--inner{inset:34%}
 
-.orbit__ring--middle{animation-delay:-2.3s}
-.orbit__ring--inner{animation-delay:-4.6s}
-
-.orbit__rotor--outer{animation:orbitClockwise 18s linear infinite}
-.orbit__rotor--middle{animation:orbitCounterClockwise 26s linear infinite}
-.orbit__rotor--inner{animation:orbitClockwise 13s linear infinite}
+.orbit__ring--middle{animation-delay:-1.2s}
+.orbit__ring--inner{animation-delay:-2.4s}
+.orbit__rotor--outer{animation:orbitClockwise 8s linear infinite}
+.orbit__rotor--middle{animation:orbitCounterClockwise 11s linear infinite}
+.orbit__rotor--inner{animation:orbitClockwise 5.5s linear infinite}
 
 .orbit__rotor>.orbit__dot{
   top:-14px;
@@ -43,7 +40,7 @@
   bottom:auto;
   left:50%;
   margin-left:-14px;
-  box-shadow:0 7px 16px rgba(17,17,15,.12),inset 0 1px 0 rgba(255,255,255,.5);
+  box-shadow:0 7px 16px rgba(17,17,15,.14),inset 0 1px 0 rgba(255,255,255,.55);
 }
 
 .orbit__rotor--middle>.orbit__dot{
@@ -61,8 +58,42 @@
 }
 
 .orbit__center{
-  animation:orbitCenterFloat 5.5s ease-in-out infinite;
+  animation:orbitCenterFloat 3s ease-in-out infinite;
   box-shadow:0 18px 42px rgba(17,17,15,.18);
+}
+
+.motion-toggle{
+  position:absolute;
+  z-index:12;
+  top:6px;
+  right:0;
+  min-height:38px;
+  padding:0 14px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid rgba(17,17,15,.34);
+  border-radius:999px;
+  color:var(--ink);
+  background:rgba(255,254,249,.8);
+  box-shadow:0 8px 24px rgba(17,17,15,.08);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  cursor:pointer;
+  font-size:.7rem;
+  font-weight:800;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+
+.motion-toggle:hover{background:var(--white)}
+.motion-toggle:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.motion-toggle span{font-size:.8rem;letter-spacing:-.08em}
+
+.hero__side.motion-paused .orbit__ring,
+.hero__side.motion-paused .orbit__rotor,
+.hero__side.motion-paused .orbit__center{
+  animation-play-state:paused!important;
 }
 
 .testimonial-stack{
@@ -89,7 +120,7 @@
   filter:brightness(var(--stack-brightness,1));
   transform:translate3d(var(--stack-x,0),var(--stack-y,0),0) rotate(var(--stack-rotate,0deg)) scale(var(--stack-scale,1))!important;
   transform-origin:50% 100%;
-  transition:transform .68s cubic-bezier(.22,.8,.24,1),opacity .4s ease,filter .68s ease;
+  transition:transform .62s cubic-bezier(.22,.8,.24,1),opacity .34s ease,filter .62s ease;
   will-change:transform,opacity;
 }
 
@@ -126,12 +157,10 @@
 .testimonial-card.is-leaving{
   z-index:6!important;
   opacity:0;
-  transform:translate3d(20px,122%,0) rotate(7deg) scale(.98)!important;
+  transform:translate3d(30px,130%,0) rotate(9deg) scale(.96)!important;
 }
 
-.testimonial-card.is-resetting{
-  transition:none!important;
-}
+.testimonial-card.is-resetting{transition:none!important}
 
 .testimonial-hint{
   position:absolute;
@@ -157,61 +186,51 @@
 }
 
 .testimonial-stack:hover .testimonial-hint,
-.testimonial-stack:focus-visible .testimonial-hint{
-  color:var(--ink);
-}
+.testimonial-stack:focus-visible .testimonial-hint{color:var(--ink)}
 
-@keyframes orbitClockwise{
-  to{transform:rotate(360deg)}
-}
-
-@keyframes orbitCounterClockwise{
-  to{transform:rotate(-360deg)}
-}
-
+@keyframes orbitClockwise{to{transform:rotate(360deg)}}
+@keyframes orbitCounterClockwise{to{transform:rotate(-360deg)}}
 @keyframes orbitBreathe{
-  from{opacity:.55;transform:scale(.985)}
-  to{opacity:1;transform:scale(1.01)}
+  from{opacity:.5;transform:scale(.975)}
+  to{opacity:1;transform:scale(1.015)}
 }
-
 @keyframes orbitCenterFloat{
-  0%,100%{transform:translate(-50%,-50%)}
-  50%{transform:translate(-50%,calc(-50% - 7px))}
+  0%,100%{transform:translate(-50%,-50%) rotate(-2deg)}
+  50%{transform:translate(-50%,calc(-50% - 10px)) rotate(2deg)}
 }
 
 @media(max-width:680px){
-  .testimonial-stack{
-    height:235px;
-    width:92%;
-  }
-
-  .testimonial-card{
-    bottom:30px!important;
-  }
-
-  .testimonial-card[data-position="1"]{
-    --stack-x:-20px;
-    --stack-y:-18px;
-  }
-
-  .testimonial-card[data-position="2"]{
-    --stack-x:-7px;
-    --stack-y:-36px;
-  }
+  .motion-toggle{top:-2px;right:0;min-height:34px;padding-inline:11px;font-size:.61rem}
+  .testimonial-stack{height:235px;width:92%}
+  .testimonial-card{bottom:30px!important}
+  .testimonial-card[data-position="1"]{--stack-x:-20px;--stack-y:-18px}
+  .testimonial-card[data-position="2"]{--stack-x:-7px;--stack-y:-36px}
 }
 
+/* The user explicitly requested motion. These later, higher-specificity rules override the
+   site's generic reduced-motion reset while the visible Pause motion control remains available. */
 @media(prefers-reduced-motion:reduce){
-  .orbit__ring,
-  .orbit__rotor,
-  .orbit__center{
-    animation:none!important;
+  body .hero__side:not(.motion-paused) .orbit__ring{
+    animation-name:orbitBreathe!important;
+    animation-duration:3.8s!important;
+    animation-timing-function:ease-in-out!important;
+    animation-iteration-count:infinite!important;
+    animation-direction:alternate!important;
   }
-
-  .testimonial-card{
-    transition:none!important;
+  body .hero__side:not(.motion-paused) .orbit__rotor--outer{
+    animation:orbitClockwise 8s linear infinite!important;
   }
-
-  .testimonial-hint{
-    display:none;
+  body .hero__side:not(.motion-paused) .orbit__rotor--middle{
+    animation:orbitCounterClockwise 11s linear infinite!important;
   }
+  body .hero__side:not(.motion-paused) .orbit__rotor--inner{
+    animation:orbitClockwise 5.5s linear infinite!important;
+  }
+  body .hero__side:not(.motion-paused) .orbit__center{
+    animation:orbitCenterFloat 3s ease-in-out infinite!important;
+  }
+  body .testimonial-card{
+    transition:transform .62s cubic-bezier(.22,.8,.24,1),opacity .34s ease,filter .62s ease!important;
+  }
+  body .testimonial-card.is-resetting{transition:none!important}
 }
