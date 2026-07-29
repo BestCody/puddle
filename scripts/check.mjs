@@ -19,6 +19,7 @@ const scripts = await Promise.all(scriptFiles.map(file => readFile(join(root, 'j
 const app = scripts.join('\n')
 const build = await readFile(join(root, 'scripts', 'build.mjs'), 'utf8')
 const index = await readFile(join(root, 'index.html'), 'utf8')
+const vercel = await readFile(join(root, 'vercel.json'), 'utf8')
 const viewportLayout = await readFile(join(root, 'css', 'viewport-layout.css'), 'utf8')
 const heroMotion = await readFile(join(root, 'css', 'hero-motion.css'), 'utf8')
 const liquidHeader = await readFile(join(root, 'js', 'liquid-header.js'), 'utf8')
@@ -26,7 +27,6 @@ const liquidHeader = await readFile(join(root, 'js', 'liquid-header.js'), 'utf8'
 for (const route of ['/', '/signin', '/signup', '/help', '/terms', '/privacy']) {
   if (!app.includes(`'${route}'`) && route !== '/') throw new Error(`Missing route: ${route}`)
 }
-if (!app.includes("target: '.site-header'")) throw new Error('Missing liquidGL navigation target')
 
 for (const asset of ['laptop.png', 'mission-green.png', 'mission-orange.png', 'team-hani.png', 'team-nathan.png', 'torontowhite.png', 'venn.png']) {
   if (!build.includes(`'${asset}'`)) throw new Error(`Missing original asset from build manifest: ${asset}`)
@@ -51,9 +51,13 @@ for (const feature of ['mountHeroMotion', 'setInterval', 'mouseenter', 'keydown'
 if (index.includes('cdn.jsdelivr.net/npm/html2canvas') || index.includes('cdn.jsdelivr.net/gh/naughtyduk')) {
   throw new Error('Third-party scripts must not block the initial app render')
 }
-for (const feature of ['loadScript(', 'requestIdleCallback', 'html2canvas@1.4.1', 'naughtyduk/liquidGL']) {
-  if (!liquidHeader.includes(feature)) throw new Error(`Missing non-blocking liquidGL loader feature: ${feature}`)
+if (vercel.includes('"source": "/(.*)"')) throw new Error('Catch-all rewrite would intercept static assets')
+for (const route of ['/signin', '/signup', '/help', '/terms', '/privacy']) {
+  if (!vercel.includes(`"source": "${route}`)) throw new Error(`Missing Vercel rewrite for ${route}`)
+}
+for (const feature of ['liquid-fallback', 'is-scrolled', 'requestAnimationFrame']) {
+  if (!liquidHeader.includes(feature)) throw new Error(`Missing CSS glass navigation feature: ${feature}`)
 }
 if (!index.includes('Loading Valantir')) throw new Error('Missing visible startup fallback')
 
-console.log(`Checked ${required.length} required files, JavaScript syntax, public routes, non-blocking startup, liquidGL navigation, original-resolution assets, adaptive viewport sizing, and hero motion.`)
+console.log(`Checked ${required.length} required files, JavaScript syntax, public routes, safe Vercel rewrites, reliable CSS glass navigation, original-resolution assets, adaptive viewport sizing, and hero motion.`)
