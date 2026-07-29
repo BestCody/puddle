@@ -1,4 +1,5 @@
 import { access, readFile } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 
 const root = new URL('..', import.meta.url).pathname
@@ -12,12 +13,15 @@ const required = [
 for (const file of required) await access(join(root, file))
 
 const scriptFiles = ['base.js', 'home.js', 'auth.js', 'documents.js', 'hero-motion.js', 'router.js', 'liquid-header.js']
+for (const file of scriptFiles) execFileSync(process.execPath, ['--check', join(root, 'js', file)], { stdio: 'pipe' })
+
 const scripts = await Promise.all(scriptFiles.map(file => readFile(join(root, 'js', file), 'utf8')))
 const app = scripts.join('\n')
 const build = await readFile(join(root, 'scripts', 'build.mjs'), 'utf8')
 const index = await readFile(join(root, 'index.html'), 'utf8')
 const viewportLayout = await readFile(join(root, 'css', 'viewport-layout.css'), 'utf8')
 const heroMotion = await readFile(join(root, 'css', 'hero-motion.css'), 'utf8')
+const liquidHeader = await readFile(join(root, 'js', 'liquid-header.js'), 'utf8')
 
 for (const route of ['/', '/signin', '/signup', '/help', '/terms', '/privacy']) {
   if (!app.includes(`'${route}'`) && route !== '/') throw new Error(`Missing route: ${route}`)
@@ -44,4 +48,12 @@ for (const feature of ['mountHeroMotion', 'setInterval', 'mouseenter', 'keydown'
   if (!app.includes(feature)) throw new Error(`Missing testimonial interaction: ${feature}`)
 }
 
-console.log(`Checked ${required.length} required files, public routes, liquidGL navigation, original-resolution assets, adaptive viewport sizing, and hero motion.`)
+if (index.includes('cdn.jsdelivr.net/npm/html2canvas') || index.includes('cdn.jsdelivr.net/gh/naughtyduk')) {
+  throw new Error('Third-party scripts must not block the initial app render')
+}
+for (const feature of ['loadScript(', 'requestIdleCallback', 'html2canvas@1.4.1', 'naughtyduk/liquidGL']) {
+  if (!liquidHeader.includes(feature)) throw new Error(`Missing non-blocking liquidGL loader feature: ${feature}`)
+}
+if (!index.includes('Loading Valantir')) throw new Error('Missing visible startup fallback')
+
+console.log(`Checked ${required.length} required files, JavaScript syntax, public routes, non-blocking startup, liquidGL navigation, original-resolution assets, adaptive viewport sizing, and hero motion.`)
