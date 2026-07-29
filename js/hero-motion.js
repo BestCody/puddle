@@ -6,7 +6,6 @@ function mountHeroMotion() {
 
   const stack = document.querySelector('.testimonial-stack')
   const heroSide = stack?.closest('.hero__side')
-  const toggle = heroSide?.querySelector('.motion-toggle')
   if (!stack || !heroSide) return
 
   const cards = Array.from(stack.querySelectorAll('.testimonial-card'))
@@ -18,13 +17,10 @@ function mountHeroMotion() {
   let order = [...cards]
   let timer = 0
   let transitionTimer = 0
-  let userPaused = false
   let pageHidden = document.hidden
   let transitioning = false
 
   heroSide.classList.add('hero-motion-enabled')
-
-  const isPaused = () => userPaused || pageHidden
 
   const render = () => {
     order.forEach((card, position) => {
@@ -43,22 +39,8 @@ function mountHeroMotion() {
     timer = 0
   }
 
-  const startTimer = () => {
-    stopTimer()
-    if (!isPaused()) timer = window.setInterval(() => advance(false), 3000)
-  }
-
-  const syncPauseUI = () => {
-    heroSide.classList.toggle('motion-paused', userPaused)
-    if (!toggle) return
-    toggle.setAttribute('aria-pressed', String(userPaused))
-    toggle.innerHTML = userPaused
-      ? '<span aria-hidden="true">▶</span> Play motion'
-      : '<span aria-hidden="true">Ⅱ</span> Pause motion'
-  }
-
-  const advance = manual => {
-    if (transitioning || (!manual && isPaused())) return
+  const advance = () => {
+    if (transitioning || pageHidden) return
 
     transitioning = true
     const outgoing = order[0]
@@ -77,21 +59,10 @@ function mountHeroMotion() {
     }, 620)
   }
 
-  toggle?.addEventListener('click', event => {
-    event.stopPropagation()
-    userPaused = !userPaused
-    syncPauseUI()
-    if (userPaused) stopTimer()
-    else startTimer()
-  }, { signal })
-
-  stack.addEventListener('click', () => advance(true), { signal })
-  stack.addEventListener('keydown', event => {
-    if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowRight') {
-      event.preventDefault()
-      advance(true)
-    }
-  }, { signal })
+  const startTimer = () => {
+    stopTimer()
+    if (!pageHidden) timer = window.setInterval(advance, 3000)
+  }
 
   document.addEventListener('visibilitychange', () => {
     pageHidden = document.hidden
@@ -99,7 +70,6 @@ function mountHeroMotion() {
     else startTimer()
   }, { signal })
 
-  syncPauseUI()
   render()
   startTimer()
 
@@ -107,6 +77,6 @@ function mountHeroMotion() {
     controller.abort()
     stopTimer()
     window.clearTimeout(transitionTimer)
-    heroSide.classList.remove('hero-motion-enabled', 'motion-paused')
+    heroSide.classList.remove('hero-motion-enabled')
   }
 }
