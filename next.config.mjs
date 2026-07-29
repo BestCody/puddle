@@ -4,12 +4,13 @@ const contentSecurityPolicy = [
   "frame-ancestors 'none'",
   "form-action 'self'",
   "object-src 'none'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://*.supabase.co",
   "font-src 'self' https://fonts.gstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self'",
-  "worker-src 'self' blob:"
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321",
+  "worker-src 'self' blob:",
+  "upgrade-insecure-requests"
 ].join('; ')
 
 const securityHeaders = [
@@ -33,9 +34,7 @@ const nextConfig = {
     return [{ source: '/index.html', destination: '/', permanent: true }]
   },
   async rewrites() {
-    return {
-      beforeFiles: [{ source: '/', destination: '/landing.html' }]
-    }
+    return { beforeFiles: [{ source: '/', destination: '/landing.html' }] }
   }
 }
 

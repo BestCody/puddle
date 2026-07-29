@@ -2,21 +2,28 @@
 
 Puddle is a playful event-discovery product for **puddle.you**.
 
-## Repository status
+## Current implementation
 
-The repository has been stabilized as a normal Next.js application:
+The original interactive landing page is preserved byte-for-byte and served at `/`. The readable Next.js application now adds a complete Supabase Auth phase:
 
-- The existing landing page is preserved byte-for-byte in `index.html`, `styles.css`, and `app.js`.
-- The exact same files are served from `public/landing.html`, `public/styles.css`, and `public/app.js`.
-- Next.js rewrites `/` to the preserved landing page, so the design and interactions remain unchanged.
-- All application and deployment source is readable and committed directly to the repository.
-- The previous compressed `.bootstrap` materialization mechanism has been removed.
-- `/api/health` provides a no-cache deployment health check.
-- `/status` provides a human-readable deployment status page.
+- Email/password signup and sign-in
+- Email verification callback and OTP confirmation routes
+- Google and Apple OAuth entry points
+- Password recovery and password updates
+- Cookie-based SSR sessions using `@supabase/ssr`
+- Next.js 16 `proxy.js` token refresh and route protection
+- Server-side authorization checks on private pages
+- Complete onboarding flow stored in `profiles`
+- Authenticated dashboard and account settings
+- Email/profile/password updates
+- Sign-out of the current or all other sessions
+- Permanent account deletion through a server-only service-role client
+- Auth schema migration, profile trigger, RLS policies, and setup documentation
 
-## Local development
+## Run locally
 
 ```bash
+cp .env.example .env.local
 npm install
 npm run check
 npm run dev
@@ -24,16 +31,15 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Production build
+## Production setup
+
+Follow `docs/AUTH_SETUP.md`, apply both Supabase migrations, configure provider credentials, add environment variables to Vercel, then redeploy.
 
 ```bash
-npm run check
 npm run build
 npm start
 ```
 
-Vercel detects the Next.js framework and runs `npm run build`.
+## Landing-page guarantee
 
-## Current phase
-
-This commit covers repository stabilization only. Authentication, persistent product features, payments, realtime systems, moderation, and provider integrations are intentionally handled in later phases.
+`index.html`, `styles.css`, and `app.js` remain the source-of-truth landing files. Their exact blobs are also served as `public/landing.html`, `public/styles.css`, and `public/app.js`, and Next.js rewrites `/` to the preserved HTML.
