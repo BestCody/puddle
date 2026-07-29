@@ -1,10 +1,14 @@
+import Link from 'next/link'
 import { PuddleLogo } from './puddle-logo'
 
 export function AuthShell({ eyebrow, title, description, children, asideTitle = 'Plans are better together.', asideText = 'Find the event, meet your people, and turn “we should hang out” into an actual plan.' }) {
   return (
     <main className="auth-page">
       <section className="auth-panel">
-        <PuddleLogo />
+        <div className="auth-links" style={{ marginTop: 0, alignItems: 'center' }}>
+          <PuddleLogo />
+          <Link href="/" aria-label="Back to Puddle home">← Back to home</Link>
+        </div>
         <div className="auth-copy">
           <span className="auth-eyebrow">{eyebrow}</span>
           <h1>{title}</h1>

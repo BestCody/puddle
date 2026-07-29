@@ -18,8 +18,15 @@ async function siteUrl() {
   return (requestHeaders.get('origin') || 'http://localhost:3000').replace(/\/$/, '')
 }
 
+function publicError(error, fallback) {
+  const message = String(error?.message || '').trim()
+  if (!message) return fallback
+  if (/supabase|environment|api key|service role|configuration|project|provider.*enabled/i.test(message)) return fallback
+  return message
+}
+
 function ensureConfigured(path) {
-  if (!isSupabaseConfigured()) redirect(pathWithMessage(path, 'error', 'Supabase is not configured yet.'))
+  if (!isSupabaseConfigured()) redirect(pathWithMessage(path, 'error', 'Accounts are temporarily unavailable. Please try again later.'))
 }
 
 export async function signUp(formData) {
@@ -38,7 +45,7 @@ export async function signUp(formData) {
     password,
     options: { emailRedirectTo: callback, data: { display_name: displayName } }
   })
-  if (error) redirect(pathWithMessage('/signup', 'error', error.message))
+  if (error) redirect(pathWithMessage('/signup', 'error', publicError(error, 'We could not create your account. Please try again.')))
   if (data.session) redirect('/onboarding')
   redirect(`/verify-email?email=${encodeURIComponent(email)}`)
 }
@@ -64,7 +71,7 @@ export async function sendMagicLink(formData) {
     email,
     options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/dashboard`, shouldCreateUser: false }
   })
-  if (error) redirect(pathWithMessage('/signin', 'error', error.message))
+  if (error) redirect(pathWithMessage('/signin', 'error', publicError(error, 'We could not send a magic link. Please try again.')))
   redirect(pathWithMessage('/signin', 'success', 'Magic link sent. Check your inbox.'))
 }
 
@@ -77,7 +84,7 @@ export async function signInWithOAuth(formData) {
     provider,
     options: { redirectTo: `${await siteUrl()}/auth/callback?next=/onboarding` }
   })
-  if (error || !data.url) redirect(pathWithMessage('/signin', 'error', error?.message || 'OAuth could not start.'))
+  if (error || !data.url) redirect(pathWithMessage('/signin', 'error', publicError(error, 'That sign-in option is temporarily unavailable.')))
   redirect(data.url)
 }
 
@@ -88,7 +95,7 @@ export async function requestPasswordReset(formData) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${await siteUrl()}/auth/callback?next=/update-password`
   })
-  if (error) redirect(pathWithMessage('/forgot-password', 'error', error.message))
+  if (error) redirect(pathWithMessage('/forgot-password', 'error', publicError(error, 'We could not send a reset link. Please try again.')))
   redirect(pathWithMessage('/forgot-password', 'success', 'Password reset link sent.'))
 }
 
@@ -100,7 +107,7 @@ export async function updatePassword(formData) {
   if (password !== confirmation) redirect(pathWithMessage('/update-password', 'error', 'The passwords do not match.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ password })
-  if (error) redirect(pathWithMessage('/update-password', 'error', error.message))
+  if (error) redirect(pathWithMessage('/update-password', 'error', publicError(error, 'We could not update your password. Please try again.')))
   redirect(pathWithMessage('/account', 'success', 'Password updated.'))
 }
 
@@ -132,7 +139,7 @@ export async function completeOnboarding(formData) {
     updated_at: new Date().toISOString()
   }
   const { error } = await supabase.from('profiles').upsert(payload)
-  if (error) redirect(pathWithMessage('/onboarding', 'error', error.message))
+  if (error) redirect(pathWithMessage('/onboarding', 'error', publicError(error, 'We could not save your profile. Please try again.')))
   revalidatePath('/dashboard')
   redirect('/dashboard?success=Welcome+to+Puddle!')
 }
@@ -151,7 +158,7 @@ export async function updateProfile(formData) {
     profile_visibility: value(formData, 'profile_visibility') || 'friends',
     updated_at: new Date().toISOString()
   }).eq('id', user.id)
-  if (error) redirect(pathWithMessage('/account', 'error', error.message))
+  if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not save your profile. Please try again.')))
   revalidatePath('/account')
   revalidatePath('/dashboard')
   redirect(pathWithMessage('/account', 'success', 'Profile saved.'))
@@ -162,7 +169,7 @@ export async function updateEmail(formData) {
   const email = value(formData, 'email').toLowerCase()
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/account` })
-  if (error) redirect(pathWithMessage('/account', 'error', error.message))
+  if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not update your email. Please try again.')))
   redirect(pathWithMessage('/account', 'success', 'Check both inboxes to confirm the email change.'))
 }
 
@@ -170,7 +177,7 @@ export async function revokeOtherSessions() {
   ensureConfigured('/account')
   const supabase = await createClient()
   const { error } = await supabase.auth.signOut({ scope: 'others' })
-  if (error) redirect(pathWithMessage('/account', 'error', error.message))
+  if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not sign out your other sessions.')))
   redirect(pathWithMessage('/account', 'success', 'Other sessions were signed out.'))
 }
 
@@ -191,10 +198,10 @@ export async function deleteAccount(formData) {
   let admin
   try {
     admin = createAdminClient()
-  } catch (error) {
-    redirect(pathWithMessage('/account', 'error', error.message))
+  } catch {
+    redirect(pathWithMessage('/account', 'error', 'Account deletion is temporarily unavailable. Please try again later.'))
   }
   const { error } = await admin.auth.admin.deleteUser(user.id)
-  if (error) redirect(pathWithMessage('/account', 'error', error.message))
+  if (error) redirect(pathWithMessage('/account', 'error', 'We could not delete your account. Please try again later.'))
   redirect('/?account=deleted')
 }

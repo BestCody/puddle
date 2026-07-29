@@ -26,13 +26,9 @@ function replaceButtonWithLink(element, label, href, arrow = '') {
 }
 
 function connectLandingToAuthentication() {
-  const primaryNav = document.querySelector('.desktop-nav')
-  if (primaryNav && !primaryNav.querySelector('[data-auth-signin]')) {
-    const signInLink = document.createElement('a')
-    signInLink.href = signInPath
-    signInLink.dataset.authSignin = 'true'
-    signInLink.textContent = 'Sign in'
-    primaryNav.appendChild(signInLink)
+  const headerSignInButton = document.querySelector('.header-actions [data-open-modal="waitlist"]')
+  if (headerSignInButton) {
+    replaceButtonWithLink(headerSignInButton, 'Sign In', signInPath)
   }
 
   document.querySelectorAll('[data-open-modal="waitlist"]').forEach((button) => {
@@ -51,7 +47,7 @@ function connectLandingToAuthentication() {
     const heading = footerColumn?.querySelector('strong')
     const helper = footerColumn?.querySelector('small')
     if (heading) heading.textContent = 'Create your account'
-    if (helper) helper.textContent = 'Already registered? Sign in from the navigation above.'
+    if (helper) helper.textContent = 'Already registered? Use Sign In at the top of the page.'
 
     footerForm.addEventListener('submit', (event) => {
       event.preventDefault()

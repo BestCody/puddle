@@ -3,7 +3,6 @@ import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
 import { signUp, signInWithOAuth } from '@/app/auth/actions'
-import { isSupabaseConfigured } from '@/lib/supabase/env'
 
 export const metadata = { title: 'Create account' }
 
@@ -13,7 +12,6 @@ export default async function SignUpPage({ searchParams }) {
 
   return (
     <AuthShell eyebrow="New splash" title="Make plans that leave the chat." description="Create your profile, teach Puddle your vibe, and start finding things worth going out for.">
-      {!isSupabaseConfigured() && <div className="setup-note"><strong>Setup needed.</strong> Add the Supabase variables from <code>.env.example</code>.</div>}
       <AuthMessage searchParams={params} />
       <form className="auth-form" action={signUp}>
         <label className="field">Display name<input name="display_name" autoComplete="name" required maxLength="60" placeholder="Ava" /></label>

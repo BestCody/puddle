@@ -7,13 +7,13 @@ const allowedTypes = new Set(['signup', 'invite', 'magiclink', 'recovery', 'emai
 
 export async function GET(request) {
   const url = new URL(request.url)
-  if (!isSupabaseConfigured()) return NextResponse.redirect(new URL('/signin?error=Supabase+is+not+configured.', url))
+  if (!isSupabaseConfigured()) return NextResponse.redirect(new URL('/signin?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.', url))
   const tokenHash = url.searchParams.get('token_hash')
   const type = url.searchParams.get('type')
   const next = safeNextPath(url.searchParams.get('next'), '/dashboard')
-  if (!tokenHash || !allowedTypes.has(type)) return NextResponse.redirect(new URL('/auth/error?error=Invalid+verification+link.', url))
+  if (!tokenHash || !allowedTypes.has(type)) return NextResponse.redirect(new URL('/auth/error', url))
   const supabase = await createClient()
   const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
-  if (error) return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(error.message)}`, url))
+  if (error) return NextResponse.redirect(new URL('/auth/error', url))
   return NextResponse.redirect(new URL(next, url))
 }

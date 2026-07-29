@@ -19,7 +19,7 @@ export async function proxy(request) {
 
   if (isProtected && !configured) {
     const url = new URL('/signin', request.url)
-    url.searchParams.set('error', 'Supabase is not configured yet.')
+    url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
     return carriesCookies(response, NextResponse.redirect(url))
   }
 

@@ -3,7 +3,6 @@ import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
 import { signIn, signInWithOAuth, sendMagicLink } from '@/app/auth/actions'
-import { isSupabaseConfigured } from '@/lib/supabase/env'
 
 export const metadata = { title: 'Sign in' }
 
@@ -11,8 +10,7 @@ export default async function SignInPage({ searchParams }) {
   const params = await searchParams
   return (
     <AuthShell eyebrow="Welcome back" title="Jump back into your Puddle." description="Your saved plans, people, and tickets are waiting.">
-      {!isSupabaseConfigured() && <div className="setup-note"><strong>Setup needed.</strong> Add the Supabase variables from <code>.env.example</code>.</div>}
-      <AuthMessage searchParams={Promise.resolve(params)} />
+      <AuthMessage searchParams={params} />
       <form className="auth-form" action={signIn}>
         <input type="hidden" name="next" value={params?.next || '/dashboard'} />
         <label className="field">Email<input name="email" type="email" autoComplete="email" required placeholder="you@example.com" /></label>
