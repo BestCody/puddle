@@ -1,12 +1,12 @@
 {
   "name": "puddle",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs",
+    "build": "npm run check && next build",
+    "start": "next start"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
