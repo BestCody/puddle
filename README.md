@@ -1,43 +1,39 @@
 # Puddle
 
-Puddle is a playful event-discovery product for **puddle.you**: swipe through nearby events, save plans, see opted-in friends and attendees, chat with event crews, hold tickets, and give organizers a modern way to reach the right audience.
+Puddle is a playful event-discovery product for **puddle.you**.
 
-This repository currently contains:
+## Repository status
 
-- A production-quality responsive marketing site
-- A fully interactive browser prototype with swipe gestures, keyboard controls, event discovery, plans, people, messages and tickets
-- An organizer dashboard prototype
-- Generated original SVG event artwork and avatars
-- A dependency-free Vercel build
-- A Supabase/Postgres core migration with RLS foundations
-- Production implementation and launch guidance in `docs/PRODUCTION.md`
+The repository has been stabilized as a normal Next.js application:
 
-## Run locally
+- The existing landing page is preserved byte-for-byte in `index.html`, `styles.css`, and `app.js`.
+- The exact same files are served from `public/landing.html`, `public/styles.css`, and `public/app.js`.
+- Next.js rewrites `/` to the preserved landing page, so the design and interactions remain unchanged.
+- All application and deployment source is readable and committed directly to the repository.
+- The previous compressed `.bootstrap` materialization mechanism has been removed.
+- `/api/health` provides a no-cache deployment health check.
+- `/status` provides a human-readable deployment status page.
+
+## Local development
 
 ```bash
+npm install
 npm run check
 npm run dev
 ```
 
 Open `http://localhost:3000`.
 
-## Deploy
+## Production build
 
-The included `vercel.json` uses `npm run build` and publishes `dist/`. No framework preset is required.
+```bash
+npm run check
+npm run build
+npm start
+```
 
-## Product architecture
+Vercel detects the Next.js framework and runs `npm run build`.
 
-The frontend prototype uses local demo data so it can be deployed immediately. Real accounts, tickets, payments, realtime chat, location and moderation require the integrations documented in `docs/PRODUCTION.md` and environment-specific secrets that must never be committed.
+## Current phase
 
-Recommended production services:
-
-- Supabase Auth, Postgres, Storage, PostGIS and Realtime Broadcast
-- Stripe Connect + Checkout
-- Cloudflare Turnstile
-- Resend or Postmark
-- Mapbox or Google Maps
-- Sentry or equivalent monitoring
-
-## Brand direction
-
-The visual system is inspired by Lovable’s warm, vibrant product aesthetic without copying its layouts or brand assets. Puddle uses off-white surfaces, hot pink, purple, lavender, yellow and mint with tactile borders, sticker-like UI and playful motion.
+This commit covers repository stabilization only. Authentication, persistent product features, payments, realtime systems, moderation, and provider integrations are intentionally handled in later phases.

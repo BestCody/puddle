@@ -1,21 +1,55 @@
-import { access, readFile } from 'node:fs/promises'
+import { access, readFile, stat } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const required = [
-  'index.html','styles.css','app.js','vercel.json','README.md','docs/PRODUCTION.md','supabase/migrations/0001_puddle_core.sql',
-  'public/puddle-mark.svg','public/og-puddle.svg','public/events/neon-night.svg','public/events/ceramics.svg','public/events/rooftop.svg','public/events/jazz.svg','public/events/sunset-run.svg','public/events/indie-market.svg',
-  'public/avatars/ava.svg','public/avatars/jules.svg','public/avatars/kai.svg','public/avatars/maya.svg'
+  'package.json',
+  'next.config.mjs',
+  'vercel.json',
+  'index.html',
+  'styles.css',
+  'app.js',
+  'public/landing.html',
+  'public/styles.css',
+  'public/app.js',
+  'app/api/health/route.js',
+  'app/status/route.js'
 ]
-for (const file of required) await access(join(root,file))
-execFileSync(process.execPath,['--check',join(root,'app.js')],{stdio:'pipe'})
-for (const file of ['scripts/build.mjs','scripts/serve.mjs','scripts/check.mjs']) execFileSync(process.execPath,['--check',join(root,file)],{stdio:'pipe'})
-const html=await readFile(join(root,'index.html'),'utf8')
-const css=await readFile(join(root,'styles.css'),'utf8')
-const js=await readFile(join(root,'app.js'),'utf8')
-for (const feature of ['hero-deck','app-demo','organizer-board','location-map','ticket-stack']) if(!html.includes(feature)) throw new Error(`Missing UI feature: ${feature}`)
-for (const feature of ['completeSwipe','renderAppView','confetti','openModal','IntersectionObserver']) if(!js.includes(feature)) throw new Error(`Missing interaction: ${feature}`)
-for (const token of ['--pink:#ff4fa3','--purple:#7c4dff','@media(max-width:780px)','prefers-reduced-motion']) if(!css.includes(token)) throw new Error(`Missing design token: ${token}`)
-console.log(`Checked ${required.length} files, JavaScript syntax, responsive UI, swipe interactions, social surfaces and organizer demo.`)
+
+for (const path of required) await access(join(root, path))
+
+for (const path of ['next.config.mjs', 'scripts/check.mjs', 'app/api/health/route.js', 'app/status/route.js']) {
+  execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
+}
+
+const pairs = [
+  ['index.html', 'public/landing.html'],
+  ['styles.css', 'public/styles.css'],
+  ['app.js', 'public/app.js']
+]
+
+for (const [source, served] of pairs) {
+  const [left, right] = await Promise.all([
+    readFile(join(root, source)),
+    readFile(join(root, served))
+  ])
+  if (!left.equals(right)) throw new Error(`${served} does not exactly match ${source}`)
+}
+
+try {
+  const bootstrap = await stat(join(root, '.bootstrap'))
+  if (bootstrap.isDirectory()) throw new Error('Compressed .bootstrap source must not exist')
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error
+}
+
+const packageJson = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+if (packageJson.scripts?.build !== 'next build') throw new Error('Build must run Next.js directly')
+
+const config = await readFile(join(root, 'next.config.mjs'), 'utf8')
+if (!config.includes("destination: '/landing.html'")) throw new Error('Root landing-page rewrite is missing')
+if (!config.includes('Content-Security-Policy')) throw new Error('Security headers are missing')
+
+console.log('Repository stabilization checks passed.')
