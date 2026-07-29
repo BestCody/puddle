@@ -1,0 +1,5 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { isSupabaseConfigured } from '@/lib/supabase/env'
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+export async function POST(request){if(!isSupabaseConfigured())return NextResponse.json({error:'Refunds are unavailable.'},{status:503});const s=await createClient();const{data:{user}}=await s.auth.getUser();if(!user)return NextResponse.json({error:'Sign in.'},{status:401});const b=await request.json().catch(()=>({}));if(!UUID.test(String(b.orderId||'')))return NextResponse.json({error:'Order not found.'},{status:400});const{data,error}=await s.rpc('request_order_refund_v1',{target_order:b.orderId,requested_amount:Math.floor(Number(b.amountCents||0)),request_reason:String(b.reason||'').trim().slice(0,1000)});if(error)return NextResponse.json({error:String(error.message||'Refund request failed.').slice(0,200)},{status:400});return NextResponse.json({ok:true,refund:data})}

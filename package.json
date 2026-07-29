@@ -1,8 +1,8 @@
 {
-  "name":"puddle","version":"8.0.0","private":true,
+  "name":"puddle","version":"8.5.0","private":true,
   "scripts":{
     "dev":"next dev",
-    "check":"node scripts/check.mjs && node scripts/check-stage-seven.mjs && node scripts/check-stage-eight.mjs",
+    "check":"node scripts/check.mjs && node scripts/check-stage-seven.mjs && node scripts/check-stage-eight.mjs && node scripts/check-stage-five.mjs",
     "build":"npm run check && next build",
     "start":"next start",
     "media:cleanup":"node scripts/cleanup-orphaned-media.mjs",
@@ -10,8 +10,14 @@
     "locations:expire":"node scripts/expire-location-sharing.mjs",
     "embeddings:generate":"node scripts/generate-content-embeddings.mjs",
     "recommendations:metrics":"node scripts/compute-recommendation-metrics.mjs",
-    "stage8:test":"node scripts/test-stage-eight-ranking.mjs"
+    "stage8:test":"node scripts/test-stage-eight-ranking.mjs",
+    "stage5:test":"node scripts/test-stage-five.mjs",
+    "stripe:test":"node scripts/stripe-test-mode-integration.mjs",
+    "stripe:webhooks":"node scripts/process-stripe-webhooks.mjs",
+    "tickets:expire":"node scripts/expire-ticket-reservations.mjs",
+    "finance:reconcile":"node scripts/reconcile-stripe.mjs",
+    "tickets:keys":"node scripts/generate-ticket-keys.mjs"
   },
-  "dependencies":{"@supabase/ssr":"^0.12.3","@supabase/supabase-js":"^2.57.4","next":"16.2.12","react":"19.2.8","react-dom":"19.2.8","sharp":"^0.35.3"},
+  "dependencies":{"@supabase/ssr":"^0.12.3","@supabase/supabase-js":"^2.57.4","html5-qrcode":"^2.3.8","next":"16.2.12","qrcode":"^1.5.4","react":"19.2.8","react-dom":"19.2.8","sharp":"^0.35.3"},
   "engines":{"node":">=22"}
 }
