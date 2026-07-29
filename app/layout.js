@@ -1,8 +1,9 @@
 import './auth.css'
+import './product.css'
 
 export const metadata = {
   title: { default: 'Puddle', template: '%s · Puddle' },
-  description: 'Find your next plan, one swipe at a time.',
+  description: 'Find events and places worth leaving home for.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
 }
 
