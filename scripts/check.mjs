@@ -14,7 +14,7 @@ const required = [
   'supabase/migrations/0002_authentication.sql','docs/AUTH_SETUP.md'
 ]
 for (const path of required) await access(join(root, path))
-for (const path of ['next.config.mjs','proxy.js','lib/supabase/env.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/auth/redirect.js','scripts/check.mjs','app/auth/callback/route.js','app/auth/confirm/route.js']) {
+for (const path of ['next.config.mjs','proxy.js','lib/supabase/env.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/auth/redirect.js','scripts/check.mjs','app/auth/actions.js','app/auth/callback/route.js','app/auth/confirm/route.js']) {
   execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
 }
 for (const [source, served] of [['index.html','public/landing.html'],['styles.css','public/styles.css'],['app.js','public/app.js']]) {
@@ -35,4 +35,16 @@ for (const path of ['app/signin/page.js','app/signup/page.js','proxy.js','app/st
   const source=await readFile(join(root,path),'utf8')
   if(/Setup needed|Supabase is not configured|Add the Supabase environment variables/i.test(source)) throw new Error(`Developer setup copy leaked into ${path}`)
 }
-console.log('Authentication navigation and public-copy checks passed.')
+const signIn=await readFile(join(root,'app/signin/page.js'),'utf8')
+const signUp=await readFile(join(root,'app/signup/page.js'),'utf8')
+const actions=await readFile(join(root,'app/auth/actions.js'),'utf8')
+for (const source of [signIn,signUp]) {
+  if(source.includes('value="apple"') || source.includes('>Apple<')) throw new Error('Apple authentication button must not be displayed')
+  if(!source.includes('Continue with Google')) throw new Error('Google authentication button is missing')
+  if(!source.includes("gridTemplateColumns: '1fr'")) throw new Error('Google authentication control must be full width')
+}
+if(!signIn.includes('Email me a one-time login code')) throw new Error('One-time login code request is missing')
+if(!signIn.includes('Sign in with code')) throw new Error('One-time login code verification form is missing')
+if(!actions.includes("verifyOtp({ email, token, type: 'email' })")) throw new Error('Email OTP verification is missing')
+if(actions.includes("['google', 'apple']")) throw new Error('Apple OAuth remains enabled in the public action')
+console.log('Authentication UI and one-time-code checks passed.')
