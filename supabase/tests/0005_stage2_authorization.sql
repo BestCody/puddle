@@ -1,4 +1,4 @@
--- Stage 2 schema and authorization assertions. Run after applying migrations through 0006.
+-- Stage 2 schema and authorization assertions. Run after applying migrations through 0007.
 do $$
 declare missing text;
 begin
@@ -39,6 +39,8 @@ begin
   if not exists (select 1 from pg_trigger where tgname='events_capture_revision' and not tgisinternal) then raise exception 'Event revision trigger is missing'; end if;
   if not exists (select 1 from pg_trigger where tgname='locations_capture_revision' and not tgisinternal) then raise exception 'Location revision trigger is missing'; end if;
   if not exists (select 1 from pg_trigger where tgname='events_sync_occurrences' and not tgisinternal) then raise exception 'Event recurrence trigger is missing'; end if;
+  if not exists (select 1 from pg_trigger where tgname='event_private_details_sync_flag' and not tgisinternal) then raise exception 'Event private-address integrity trigger is missing'; end if;
+  if not exists (select 1 from pg_trigger where tgname='location_private_details_sync_flag' and not tgisinternal) then raise exception 'Location private-address integrity trigger is missing'; end if;
 
   select string_agg(policyname, ', ') into missing
   from (values
