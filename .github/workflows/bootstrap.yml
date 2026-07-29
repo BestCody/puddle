@@ -1,0 +1,39 @@
+name: Materialize Puddle production app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".bootstrap/**"
+      - ".github/workflows/bootstrap.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract production application
+        run: |
+          cat .bootstrap/chunk* | base64 --decode > /tmp/puddle-next.tar.gz
+          tar -xzf /tmp/puddle-next.tar.gz
+          mkdir -p public
+          cp styles.css public/styles.css
+          cp app.js public/app.js
+          sed -i 's#\*/10 \* \* \* \*#0 3 * * *#' vercel.json
+          rm -f package-lock.json
+          rm -rf .bootstrap
+          rm -f .github/workflows/bootstrap.yml
+
+      - name: Commit application
+        run: |
+          git config user.name "puddle-build[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Implement Puddle production platform foundation"
+          git push origin main
