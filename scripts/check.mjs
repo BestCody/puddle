@@ -4,7 +4,7 @@ import { join } from 'node:path'
 const root = new URL('..', import.meta.url).pathname
 const required = [
   'index.html', 'vercel.json', 'THIRD_PARTY_NOTICES.md',
-  'css/base.css', 'css/sections.css', 'css/pages.css', 'css/responsive.css', 'css/liquid-glass.css',
+  'css/base.css', 'css/sections.css', 'css/pages.css', 'css/responsive.css', 'css/liquid-glass.css', 'css/viewport-layout.css',
   'js/base.js', 'js/home.js', 'js/auth.js', 'js/documents.js', 'js/router.js', 'js/liquid-header.js',
   'public/logo.webp', 'public/laptop.webp', 'public/venn.webp', 'public/mission-orange.webp',
   'public/mission-green.webp', 'public/team-hani.webp', 'public/team-nathan.webp'
@@ -15,6 +15,8 @@ const scriptFiles = ['base.js', 'home.js', 'auth.js', 'documents.js', 'router.js
 const scripts = await Promise.all(scriptFiles.map(file => readFile(join(root, 'js', file), 'utf8')))
 const app = scripts.join('\n')
 const build = await readFile(join(root, 'scripts', 'build.mjs'), 'utf8')
+const index = await readFile(join(root, 'index.html'), 'utf8')
+const viewportLayout = await readFile(join(root, 'css', 'viewport-layout.css'), 'utf8')
 
 for (const route of ['/', '/signin', '/signup', '/help', '/terms', '/privacy']) {
   if (!app.includes(`'${route}'`) && route !== '/') throw new Error(`Missing route: ${route}`)
@@ -28,4 +30,9 @@ for (const asset of ['laptop.png', 'mission-green.png', 'mission-orange.png', 't
   if (!app.includes(`/${asset}`)) throw new Error(`Landing page is not using the sharp asset: ${asset}`)
 }
 
-console.log(`Checked ${required.length} required files, public routes, liquidGL navigation, and original-resolution landing assets.`)
+if (!index.includes('/css/viewport-layout.css')) throw new Error('Viewport layout stylesheet is not loaded')
+for (const rule of ['100svh', '100dvh', 'max-height:620px', 'overflow-x:clip']) {
+  if (!viewportLayout.includes(rule)) throw new Error(`Missing adaptive viewport rule: ${rule}`)
+}
+
+console.log(`Checked ${required.length} required files, public routes, liquidGL navigation, original-resolution assets, and adaptive viewport sizing.`)
