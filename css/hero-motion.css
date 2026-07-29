@@ -1,0 +1,217 @@
+/* Hero motion: rotating orbital system and an interactive testimonial card stack. */
+.orbit{
+  animation:none!important;
+  transform:translateZ(0);
+}
+
+.orbit::before,
+.orbit::after{
+  display:none;
+}
+
+.orbit__ring,
+.orbit__rotor{
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+}
+
+.orbit__ring{
+  border:1px solid rgba(17,17,15,.17);
+  animation:orbitBreathe 7s ease-in-out infinite alternate;
+}
+
+.orbit__ring--outer,
+.orbit__rotor--outer{inset:0}
+
+.orbit__ring--middle,
+.orbit__rotor--middle{inset:16%}
+
+.orbit__ring--inner,
+.orbit__rotor--inner{inset:34%}
+
+.orbit__ring--middle{animation-delay:-2.3s}
+.orbit__ring--inner{animation-delay:-4.6s}
+
+.orbit__rotor--outer{animation:orbitClockwise 18s linear infinite}
+.orbit__rotor--middle{animation:orbitCounterClockwise 26s linear infinite}
+.orbit__rotor--inner{animation:orbitClockwise 13s linear infinite}
+
+.orbit__rotor>.orbit__dot{
+  top:-14px;
+  right:auto;
+  bottom:auto;
+  left:50%;
+  margin-left:-14px;
+  box-shadow:0 7px 16px rgba(17,17,15,.12),inset 0 1px 0 rgba(255,255,255,.5);
+}
+
+.orbit__rotor--middle>.orbit__dot{
+  width:24px;
+  height:24px;
+  top:-12px;
+  margin-left:-12px;
+}
+
+.orbit__rotor--inner>.orbit__dot{
+  width:20px;
+  height:20px;
+  top:-10px;
+  margin-left:-10px;
+}
+
+.orbit__center{
+  animation:orbitCenterFloat 5.5s ease-in-out infinite;
+  box-shadow:0 18px 42px rgba(17,17,15,.18);
+}
+
+.testimonial-stack{
+  height:270px;
+  outline:none;
+  cursor:pointer;
+  perspective:900px;
+  -webkit-tap-highlight-color:transparent;
+}
+
+.testimonial-stack:focus-visible::after{
+  content:"";
+  position:absolute;
+  inset:-12px;
+  border:2px solid var(--ink);
+  border-radius:30px;
+}
+
+.testimonial-card{
+  right:0!important;
+  bottom:34px!important;
+  z-index:var(--stack-z,1)!important;
+  opacity:var(--stack-opacity,1);
+  filter:brightness(var(--stack-brightness,1));
+  transform:translate3d(var(--stack-x,0),var(--stack-y,0),0) rotate(var(--stack-rotate,0deg)) scale(var(--stack-scale,1))!important;
+  transform-origin:50% 100%;
+  transition:transform .68s cubic-bezier(.22,.8,.24,1),opacity .4s ease,filter .68s ease;
+  will-change:transform,opacity;
+}
+
+.testimonial-card[data-position="0"]{
+  --stack-x:0;
+  --stack-y:0;
+  --stack-rotate:-1deg;
+  --stack-scale:1;
+  --stack-z:4;
+  --stack-opacity:1;
+  --stack-brightness:1;
+}
+
+.testimonial-card[data-position="1"]{
+  --stack-x:-32px;
+  --stack-y:-25px;
+  --stack-rotate:1.5deg;
+  --stack-scale:.985;
+  --stack-z:3;
+  --stack-opacity:1;
+  --stack-brightness:.98;
+}
+
+.testimonial-card[data-position="2"]{
+  --stack-x:-13px;
+  --stack-y:-50px;
+  --stack-rotate:-1.6deg;
+  --stack-scale:.965;
+  --stack-z:2;
+  --stack-opacity:1;
+  --stack-brightness:.94;
+}
+
+.testimonial-card.is-leaving{
+  z-index:6!important;
+  opacity:0;
+  transform:translate3d(20px,122%,0) rotate(7deg) scale(.98)!important;
+}
+
+.testimonial-card.is-resetting{
+  transition:none!important;
+}
+
+.testimonial-hint{
+  position:absolute;
+  right:5px;
+  bottom:0;
+  z-index:8;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:750;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  pointer-events:none;
+}
+
+.testimonial-hint b{
+  min-width:54px;
+  color:var(--ink);
+  font-size:.72rem;
+  font-variant-numeric:tabular-nums;
+}
+
+.testimonial-stack:hover .testimonial-hint,
+.testimonial-stack:focus-visible .testimonial-hint{
+  color:var(--ink);
+}
+
+@keyframes orbitClockwise{
+  to{transform:rotate(360deg)}
+}
+
+@keyframes orbitCounterClockwise{
+  to{transform:rotate(-360deg)}
+}
+
+@keyframes orbitBreathe{
+  from{opacity:.55;transform:scale(.985)}
+  to{opacity:1;transform:scale(1.01)}
+}
+
+@keyframes orbitCenterFloat{
+  0%,100%{transform:translate(-50%,-50%)}
+  50%{transform:translate(-50%,calc(-50% - 7px))}
+}
+
+@media(max-width:680px){
+  .testimonial-stack{
+    height:235px;
+    width:92%;
+  }
+
+  .testimonial-card{
+    bottom:30px!important;
+  }
+
+  .testimonial-card[data-position="1"]{
+    --stack-x:-20px;
+    --stack-y:-18px;
+  }
+
+  .testimonial-card[data-position="2"]{
+    --stack-x:-7px;
+    --stack-y:-36px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .orbit__ring,
+  .orbit__rotor,
+  .orbit__center{
+    animation:none!important;
+  }
+
+  .testimonial-card{
+    transition:none!important;
+  }
+
+  .testimonial-hint{
+    display:none;
+  }
+}
