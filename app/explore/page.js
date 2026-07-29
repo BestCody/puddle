@@ -1,13 +1,19 @@
-import Link from 'next/link'
+import { DiscoveryWorkspace } from '@/components/discovery-workspace'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getStageOneSnapshot } from '@/lib/app/stage-one-data'
+import { getDiscoveryFeed, logDiscoveryImpressions } from '@/lib/app/discovery'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Explore' }
 
 export default function ExplorePage() {
   return renderProductPage(async (session) => {
-    const snapshot = await getStageOneSnapshot(session)
-    return <><section className="page-heading-row"><div><span className="section-pill section-pill-mint">Map the fun</span><h1 className="product-title">Explore nearby.</h1><p>Search events and places without committing to the swipe deck.</p></div><button className="splash-button splash-button-mint" type="button">Map view</button></section><section className="search-panel"><label><span>Search your city</span><input type="search" placeholder="Try live music, ramen, parks…" /></label><div className="filter-chips"><button className="is-selected">Everything</button><button>Events</button><button>Places</button><button>Open now</button><button>This weekend</button></div></section><section className="content-card-grid">{snapshot.discover.map((item) => <Link className="content-tile" href={item.href || '/discover'} key={item.id} style={{'--tile-accent':item.accent}}><div className="content-tile-art"><span>{item.kind}</span><strong aria-hidden="true">{item.symbol}</strong></div><div><span className="tile-category">{item.category}</span><h2>{item.title}</h2><p>{item.meta}</p><div className="card-tags">{item.tags.map((tag)=><span key={tag}>{tag}</span>)}</div></div></Link>)}</section></>
+    const feed = await getDiscoveryFeed(session, { distance: session.profile.search_radius_km || 25, limit: 80 })
+    await logDiscoveryImpressions(session, feed)
+    return (
+      <>
+        <section className="page-heading-row"><div><span className="section-pill section-pill-mint">Map the fun</span><h1 className="product-title">Explore nearby.</h1><p>Search, filter, compare, and move between the real list and map without leaving Puddle.</p></div></section>
+        <DiscoveryWorkspace initialFeed={feed} defaultMode="map" />
+      </>
+    )
   })
 }

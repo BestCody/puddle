@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { requestLocationPublication, saveLocationDraft, transitionLocationStatus } from '@/app/create/actions'
 import { accessibilityValue, contactValue, listText } from './editor-shared'
+import { GeocodeFields } from './geocode-fields'
 import { RevisionHistory } from './revision-history'
 
 const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
@@ -75,12 +76,12 @@ export function LocationEditor({ location = null, identities = [] }) {
         </section>
 
         <section className="editor-card editor-card-purple">
-          <div className="editor-section-heading"><div><span className="section-pill section-pill-yellow">03 · Address</span><h2>Put it on the map.</h2></div></div>
+          <div className="editor-section-heading"><div><span className="section-pill section-pill-yellow">03 · Map</span><h2>Put it in the right spot.</h2></div><p>Coordinates power radius search and the Explore map. Review the pin before publishing.</p></div>
           <div className="editor-grid two">
             <label className="editor-field">City<input name="city" required defaultValue={location?.city || ''} /></label>
             <label className="editor-field">Neighborhood<input name="neighborhood" defaultValue={location?.neighborhood || ''} /></label>
-            <label className="editor-field span-two">Public address or area<input name="address_public" defaultValue={location?.address_public || ''} placeholder="Kensington Market, Toronto" /></label>
-            <label className="editor-field span-two">Private exact address<input name="private_address" defaultValue={location?.private_address || ''} placeholder="Only used when public visibility rules allow" /></label>
+            <GeocodeFields defaultAddress={location?.address_public || ''} defaultLatitude={location?.latitude ?? ''} defaultLongitude={location?.longitude ?? ''} />
+            <label className="editor-field span-two">Private exact address<input name="private_address" defaultValue={location?.private_address || ''} placeholder="Protected from public location records" /></label>
             <label className="editor-field">Timezone<input name="timezone" defaultValue={location?.timezone || 'America/Toronto'} /></label>
             <label className="editor-field">Visibility<select name="visibility" defaultValue={location?.visibility || 'public'}><option value="public">Public</option><option value="unlisted">Unlisted</option><option value="private">Private</option></select></label>
           </div>
@@ -88,7 +89,7 @@ export function LocationEditor({ location = null, identities = [] }) {
 
         <section className="editor-card editor-card-yellow">
           <div className="editor-section-heading"><div><span className="section-pill">04 · Hours & price</span><h2>When is it worth the trip?</h2></div></div>
-          <div className="hours-grid">{days.map((day) => <label className="editor-field" key={day}>{day}<input name={`hours_${day}`} defaultValue={hours[day] || ''} placeholder="9:00 AM–10:00 PM or Closed" /></label>)}</div>
+          <div className="hours-grid">{days.map((day) => <label className="editor-field" key={day}>{day}<input name={`hours_${day}`} defaultValue={hours[day] || ''} placeholder="09:00-22:00 or Closed" /></label>)}</div>
           <label className="editor-field">Price range<select name="price_level" defaultValue={location?.price_level || ''}><option value="">Not specified</option><option value="1">$ · inexpensive</option><option value="2">$$ · moderate</option><option value="3">$$$ · higher</option><option value="4">$$$$ · premium</option></select></label>
         </section>
 

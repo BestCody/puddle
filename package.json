@@ -1,19 +1,21 @@
 {
   "name": "puddle",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "check": "node scripts/check.mjs",
     "build": "npm run check && next build",
-    "start": "next start"
+    "start": "next start",
+    "media:cleanup": "node scripts/cleanup-orphaned-media.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.57.4",
     "next": "16.2.12",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "sharp": "^0.35.3"
   },
   "engines": {
     "node": ">=22"
