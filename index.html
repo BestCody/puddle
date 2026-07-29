@@ -16,16 +16,19 @@
     <title>Valantir | Volunteer opportunities for Ontario students</title>
   </head>
   <body>
-    <div id="app"></div>
-    <!-- liquidGL v1.0.6 by NaughtyDuk (MIT); see THIRD_PARTY_NOTICES.md -->
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/naughtyduk/liquidGL@2cef983b7fe593d3e0878dc78e5b79b47038a953/scripts/liquidGL.js" defer></script>
+    <div id="app">
+      <main style="min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center">
+        <p>Loading Valantir…</p>
+      </main>
+    </div>
+    <noscript>Valantir requires JavaScript to display the website.</noscript>
     <script src="/js/base.js" defer></script>
     <script src="/js/home.js" defer></script>
     <script src="/js/auth.js" defer></script>
     <script src="/js/documents.js" defer></script>
     <script src="/js/hero-motion.js" defer></script>
     <script src="/js/router.js" defer></script>
+    <!-- liquidGL is loaded asynchronously after the site has rendered; see THIRD_PARTY_NOTICES.md -->
     <script src="/js/liquid-header.js" defer></script>
   </body>
 </html>
