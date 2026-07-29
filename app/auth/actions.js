@@ -62,23 +62,47 @@ export async function signIn(formData) {
   redirect(profile?.onboarding_completed_at ? next : '/onboarding')
 }
 
-export async function sendMagicLink(formData) {
+export async function sendLoginCode(formData) {
   ensureConfigured('/signin')
   const email = value(formData, 'email').toLowerCase()
-  if (!email.includes('@')) redirect(pathWithMessage('/signin', 'error', 'Enter your email before requesting a magic link.'))
+  const next = safeNextPath(value(formData, 'next'))
+  if (!email.includes('@')) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', { next }))
+
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/dashboard`, shouldCreateUser: false }
+    options: { shouldCreateUser: false }
   })
-  if (error) redirect(pathWithMessage('/signin', 'error', publicError(error, 'We could not send a magic link. Please try again.')))
-  redirect(pathWithMessage('/signin', 'success', 'Magic link sent. Check your inbox.'))
+  if (error) redirect(pathWithMessage('/signin', 'error', publicError(error, 'We could not send a login code. Please try again.'), { next }))
+  redirect(pathWithMessage('/signin', 'success', 'We emailed you a one-time login code.', {
+    code_sent: '1',
+    email,
+    next
+  }))
+}
+
+export async function verifyLoginCode(formData) {
+  ensureConfigured('/signin')
+  const email = value(formData, 'email').toLowerCase()
+  const token = value(formData, 'token').replace(/[\s-]/g, '')
+  const next = safeNextPath(value(formData, 'next'))
+  const retry = { code_sent: '1', email, next }
+
+  if (!email.includes('@')) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', retry))
+  if (!/^\d{6,8}$/.test(token)) redirect(pathWithMessage('/signin', 'error', 'Enter the code from your email.', retry))
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+  if (error || !data.user) redirect(pathWithMessage('/signin', 'error', 'That code was not accepted. Request a new code and try again.', retry))
+
+  const { data: profile } = await supabase.from('profiles').select('onboarding_completed_at').eq('id', data.user.id).maybeSingle()
+  redirect(profile?.onboarding_completed_at ? next : '/onboarding')
 }
 
 export async function signInWithOAuth(formData) {
   ensureConfigured('/signin')
   const provider = value(formData, 'provider')
-  if (!['google', 'apple'].includes(provider)) redirect(pathWithMessage('/signin', 'error', 'That sign-in provider is not supported.'))
+  if (provider !== 'google') redirect(pathWithMessage('/signin', 'error', 'That sign-in option is not supported.'))
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
