@@ -1,6 +1,6 @@
 # Supabase authentication setup
 
-The authentication source is complete, but Supabase and OAuth providers must be configured before real users can sign in.
+The authentication source is complete, but Supabase and Google OAuth must be configured before real users can sign in.
 
 ## 1. Create the Supabase project
 
@@ -32,13 +32,26 @@ Set the production Site URL to `https://puddle.you` and allow these redirect URL
 
 ## 4. Providers
 
-Enable Email/Password. Enable email confirmation for production.
+Enable Email/Password and email confirmation for production.
 
-For Google and Apple, create provider credentials in their developer consoles and add them to Supabase Auth → Providers. Their callback URL is the Supabase callback URL shown in that provider panel; Puddle then receives the completed flow at `/auth/callback`.
+For Google, create OAuth credentials in Google Cloud, then add them to Supabase Auth → Providers. Use the Supabase callback URL shown in that provider panel. Puddle receives the completed flow at `/auth/callback`.
 
-## 5. Email templates
+## 5. One-time login code email
 
-The default Supabase confirmation and password-recovery templates work with the PKCE callback route. A custom template can point directly to `/auth/confirm` using `token_hash` and `type`.
+Puddle uses Supabase email OTP for passwordless sign-in. In Supabase Auth → Email Templates, edit the **Magic Link** template so it sends the token instead of a clickable magic link.
+
+The template must contain `{{ .Token }}`. For example:
+
+```html
+<h2>Your Puddle login code</h2>
+<p>Enter this one-time code to sign in:</p>
+<p style="font-size:32px;font-weight:700;letter-spacing:8px">{{ .Token }}</p>
+<p>This code expires shortly and can only be used once.</p>
+```
+
+Do not use `{{ .ConfirmationURL }}` in that template when the product should send a code rather than a magic link.
+
+The signup-confirmation and password-recovery templates can continue using the existing PKCE callback flow. A custom confirmation template can point to `/auth/confirm` using `token_hash` and `type`.
 
 ## Implemented routes
 
