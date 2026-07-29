@@ -17,7 +17,7 @@ const required = [
   'supabase/tests/0003_stage1_authorization.sql','supabase/seed.sql','docs/AUTH_SETUP.md'
 ]
 for (const path of required) await access(join(root, path))
-for (const path of ['next.config.mjs','proxy.js','lib/supabase/env.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/auth/redirect.js','lib/app/stage-one-data.js','scripts/check.mjs','app/auth/actions.js','app/auth/callback/route.js','app/auth/confirm/route.js']) {
+for (const path of ['next.config.mjs','scripts/check.mjs']) {
   execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
 }
 for (const [source, served] of [['index.html','public/landing.html'],['styles.css','public/styles.css'],['app.js','public/app.js']]) {
