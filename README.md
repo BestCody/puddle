@@ -8,7 +8,8 @@ The original interactive landing page is preserved byte-for-byte and served at `
 
 - Email/password signup and sign-in
 - Email verification callback and OTP confirmation routes
-- Google and Apple OAuth entry points
+- Google OAuth with full-width authentication controls
+- Email one-time login codes
 - Password recovery and password updates
 - Cookie-based SSR sessions using `@supabase/ssr`
 - Next.js 16 `proxy.js` token refresh and route protection
@@ -33,7 +34,7 @@ Open `http://localhost:3000`.
 
 ## Production setup
 
-Follow `docs/AUTH_SETUP.md`, apply both Supabase migrations, configure provider credentials, add environment variables to Vercel, then redeploy.
+Follow `docs/AUTH_SETUP.md`, apply both Supabase migrations, configure Google OAuth and the email OTP template, add environment variables to Vercel, then redeploy.
 
 ```bash
 npm run build
