@@ -5,14 +5,15 @@ create or replace function public.sync_event_private_address_flag()
 returns trigger language plpgsql security definer set search_path=public as $$
 declare target uuid;
 begin
-  target := coalesce(new.event_id,old.event_id);
+  target := case when tg_op='DELETE' then old.event_id else new.event_id end;
   update public.events
   set has_private_address=exists(
     select 1 from public.event_private_details d
     where d.event_id=target and nullif(trim(coalesce(d.exact_address,'')),'') is not null
   )
   where id=target;
-  return coalesce(new,old);
+  if tg_op='DELETE' then return old; end if;
+  return new;
 end;
 $$;
 drop trigger if exists event_private_details_sync_flag on public.event_private_details;
@@ -23,14 +24,15 @@ create or replace function public.sync_location_private_address_flag()
 returns trigger language plpgsql security definer set search_path=public as $$
 declare target uuid;
 begin
-  target := coalesce(new.location_id,old.location_id);
+  target := case when tg_op='DELETE' then old.location_id else new.location_id end;
   update public.locations
   set has_private_address=exists(
     select 1 from public.location_private_details d
     where d.location_id=target and nullif(trim(coalesce(d.exact_address,'')),'') is not null
   )
   where id=target;
-  return coalesce(new,old);
+  if tg_op='DELETE' then return old; end if;
+  return new;
 end;
 $$;
 drop trigger if exists location_private_details_sync_flag on public.location_private_details;
