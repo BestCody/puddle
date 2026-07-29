@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
 
-const protectedPrefixes = ['/dashboard', '/discover', '/explore', '/plans', '/create', '/studio', '/report', '/friends', '/inbox', '/profile', '/onboarding', '/account']
+const protectedPrefixes = ['/dashboard', '/discover', '/explore', '/plans', '/create', '/studio', '/report', '/friends', '/inbox', '/notifications', '/profile', '/onboarding', '/account']
 const authOnlyPaths = ['/signin', '/signup', '/forgot-password']
 
 function carriesCookies(source, target) {
