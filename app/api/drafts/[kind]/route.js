@@ -10,6 +10,13 @@ function message(error, fallback) {
   return value && !/policy|permission|schema cache|relation|supabase/i.test(value) ? value : fallback
 }
 
+async function savePrivateDetail(supabase, kind, id, exactAddress, userId) {
+  const table = kind === 'event' ? 'event_private_details' : 'location_private_details'
+  const key = kind === 'event' ? 'event_id' : 'location_id'
+  if (exactAddress) return supabase.from(table).upsert({ [key]: id, exact_address: exactAddress, updated_by: userId, updated_at: new Date().toISOString() })
+  return supabase.from(table).delete().eq(key, id)
+}
+
 export async function POST(request, context) {
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Draft saving is temporarily unavailable.' }, { status: 503 })
   const { kind } = await context.params
@@ -39,7 +46,9 @@ export async function POST(request, context) {
   const errors = kind === 'event' ? validateEvent(payload) : validateLocation(payload)
   if (errors.length) return NextResponse.json({ saved: false, waiting: true, error: errors[0] }, { status: 422 })
 
-  const writable = { ...payload }
+  const privateAddress = payload.private_address
+  const writable = { ...payload, has_private_address: Boolean(privateAddress) }
+  delete writable.private_address
   if (existing) {
     delete writable.created_by
     delete writable.slug
@@ -49,6 +58,8 @@ export async function POST(request, context) {
     : supabase.from(table).insert(writable).select('id,slug,status,autosaved_at').single()
   const { data, error } = await query
   if (error || !data) return NextResponse.json({ error: message(error, 'Draft could not be saved.') }, { status: 400 })
+  const privateResult = await savePrivateDetail(supabase, kind, data.id, privateAddress, user.id)
+  if (privateResult.error) return NextResponse.json({ error: 'The draft saved, but its private address could not be secured.' }, { status: 400 })
 
   return NextResponse.json({ saved: true, draft: data })
 }
