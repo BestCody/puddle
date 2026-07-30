@@ -43,6 +43,10 @@ if(!String(vercel.ignoreCommand||'').includes('process.exit(0)')) throw new Erro
 
 const proxy=await readFile(join(root,'proxy.js'),'utf8')
 for (const route of ['/dashboard','/discover','/explore','/plans','/create','/studio','/report','/friends','/inbox','/profile','/onboarding','/account']) if(!proxy.includes(route)) throw new Error(`Proxy does not protect ${route}`)
+for (const route of ['/','/privacy','/terms']) if(!proxy.includes(`'${route}'`)) throw new Error(`Proxy public-session bypass is missing ${route}`)
+const publicBypassIndex=proxy.indexOf('if (publicNoSessionPaths.has(pathname))')
+const sessionLookupIndex=proxy.indexOf('await updateSession(request, requestHeaders)')
+if(publicBypassIndex<0 || sessionLookupIndex<0 || publicBypassIndex>sessionLookupIndex) throw new Error('Public pages must bypass the Supabase session lookup')
 const landingConnector=await readFile(join(root,'app.js'),'utf8')
 if(!landingConnector.includes("replaceButtonWithLink(headerSignInButton, 'Sign In', signInPath)")) throw new Error('Landing Sign In link changed')
 if(!landingConnector.includes("replaceButtonWithLink(button, 'Register', registrationPath")) throw new Error('Landing registration CTA changed')
