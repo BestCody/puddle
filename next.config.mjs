@@ -1,20 +1,4 @@
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "frame-ancestors 'none'",
-  "form-action 'self'",
-  "object-src 'none'",
-  "img-src 'self' data: blob: https://*.supabase.co",
-  "font-src 'self' https://fonts.gstatic.com",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321",
-  "worker-src 'self' blob:",
-  "upgrade-insecure-requests"
-].join('; ')
-
 const securityHeaders = [
-  { key: 'Content-Security-Policy', value: contentSecurityPolicy },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -24,11 +8,34 @@ const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' }
 ]
 
+const durableAssetCache = [
+  { key: 'Cache-Control', value: 'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800' },
+  { key: 'CDN-Cache-Control', value: 'public, s-maxage=31536000, stale-while-revalidate=604800' }
+]
+
+const landingAssetCache = [
+  { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800' },
+  { key: 'CDN-Cache-Control', value: 'public, s-maxage=86400, stale-while-revalidate=604800' }
+]
+
 const nextConfig = {
   poweredByHeader: false,
   compress: true,
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400
+  },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
+    return [
+      { source: '/avatars/:path*', headers: durableAssetCache },
+      { source: '/events/:path*', headers: durableAssetCache },
+      { source: '/puddle-mark.svg', headers: durableAssetCache },
+      { source: '/og-puddle.svg', headers: durableAssetCache },
+      { source: '/styles.css', headers: landingAssetCache },
+      { source: '/landing-responsive.css', headers: landingAssetCache },
+      { source: '/app.js', headers: landingAssetCache },
+      { source: '/:path*', headers: securityHeaders }
+    ]
   },
   async redirects() {
     return [{ source: '/index.html', destination: '/', permanent: true }]
