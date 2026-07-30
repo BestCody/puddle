@@ -1,0 +1,8 @@
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { requirePrivileged } from '@/lib/auth/privileged'
+import { getUserModeration } from '@/lib/app/admin-data'
+import { AdminShell } from '@/components/admin-shell'
+import { OpenModerationCase } from '@/components/open-moderation-case'
+export const dynamic='force-dynamic';export const metadata={title:'User moderation',robots:{index:false,follow:false}}
+export default async function UserPage({params}){const{id}=await params;const session=await requirePrivileged(['trust_safety','super_admin','security','support']);const data=await getUserModeration(session.supabase,id);if(!data)notFound();return <AdminShell access={session.access}><section className="admin-card"><h2>{data.profile.display_name}</h2><p>@{data.profile.username} · {data.profile.moderation_state} · risk {data.profile.risk_score}</p><code>{data.profile.id}</code></section><OpenModerationCase subjectType="profile" subjectId={data.profile.id} title={`Review ${data.profile.display_name}`} queue="safety" category="safety"/><div className="admin-grid"><section className="admin-card"><h2>Cases</h2>{data.cases.map((item)=><Link href={`/admin/cases/${item.id}`} key={item.id}>{item.case_number} · {item.title}</Link>)}</section><section className="admin-card"><h2>Risk signals</h2>{data.signals.map((item)=><p key={item.id}><strong>{item.signal_type}</strong> {item.score_delta}</p>)}</section></div><section className="admin-card"><h2>Security activity</h2>{data.events.map((item,index)=><p key={`${item.created_at}-${index}`}>{item.severity} · {item.event_type} · {new Date(item.created_at).toLocaleString('en-US')}</p>)}</section></AdminShell>}

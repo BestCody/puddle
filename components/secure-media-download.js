@@ -1,0 +1,3 @@
+"use client"
+import { useState } from 'react'
+export function SecureMediaDownload({assetId}){const[message,setMessage]=useState('');async function open(){setMessage('Authorizing download…');const response=await fetch(`/api/media/${assetId}/signed-url`,{cache:'no-store'});const result=await response.json().catch(()=>({}));if(response.ok&&result.url){window.open(result.url,'_blank','noopener,noreferrer');setMessage('Private link opened.')}else setMessage(result.error||'Download unavailable.')}return <span><button type="button" className="quiet-button" onClick={open}>Open preserved file</button><small>{message}</small></span>}

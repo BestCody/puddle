@@ -1,0 +1,4 @@
+import { requirePrivileged } from '@/lib/auth/privileged'
+import { MfaEnrollment } from '@/components/mfa-enrollment'
+export const dynamic='force-dynamic';export const metadata={title:'Privileged MFA',robots:{index:false,follow:false}}
+export default async function MfaPage(){const session=await requirePrivileged([],{allowMfaEnrollment:true});return <div className="admin-shell"><header className="admin-header"><div><span className="section-pill section-pill-yellow">Security requirement</span><h1>Protect privileged access.</h1><p>Moderation, finance, verification, and security tools require an authenticator-backed AAL2 session.</p></div></header>{session.aal2?<section className="admin-card"><h2>MFA is active</h2><a href="/admin">Continue to administration</a></section>:<MfaEnrollment/>}</div>}

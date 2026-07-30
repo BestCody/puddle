@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { PuddleLogo } from './puddle-logo'
 import { ProductNav } from './product-nav'
+import { SystemNoticeBanner } from './system-notice-banner'
 import { signOut } from '@/app/auth/actions'
+import { createClient } from '@/lib/supabase/server'
 
 function initials(name) {
   return String(name || 'Puddle person')
@@ -12,7 +14,9 @@ function initials(name) {
     .join('') || 'P'
 }
 
-export function ProductShell({ user, profile, children }) {
+export async function ProductShell({ user, profile, children }) {
+  let showAdmin=['admin','moderator','support','finance'].includes(profile?.role)
+  if(!showAdmin){try{const supabase=await createClient();const{data}=await supabase.rpc('privileged_access_v1',{required_roles:[]});showAdmin=Boolean(data?.allowed)}catch{}}
   return (
     <div className="product-shell">
       <aside className="product-sidebar">
@@ -25,9 +29,11 @@ export function ProductShell({ user, profile, children }) {
       </aside>
 
       <div className="product-stage">
+        <SystemNoticeBanner />
         <header className="product-header">
           <div className="product-header-brand"><PuddleLogo compact /></div>
           <div className="product-header-actions">
+            {showAdmin ? <Link className="quiet-button" href="/admin">Admin</Link> : null}
             <Link className="header-profile" href="/profile">
               <span className="profile-initials" aria-hidden="true">{initials(profile?.display_name)}</span>
               <span><strong>{profile?.display_name || 'Puddle person'}</strong><small>@{profile?.username || 'new_here'}</small></span>

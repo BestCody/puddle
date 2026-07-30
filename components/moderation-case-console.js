@@ -1,0 +1,12 @@
+"use client"
+import { useEffect, useState } from 'react'
+
+const actions=['assign_self','set_priority','preserve_evidence','resolve','dismiss','escalate_emergency','suspend_user','ban_user','restore_user','delist_event','cancel_event','relist_event','delist_location','relist_location','suspend_host','restore_host','freeze_payouts','unfreeze_payouts','restrict_conversation','reopen_conversation','remove_message','remove_comment','approve_host_verification','reject_host_verification','approve_verification_document','reject_verification_document','approve_location_claim','reject_location_claim','quarantine_media','approve_media','fraud_hold_order','release_fraud_hold','void_ticket','restore_ticket','approve_refund','decline_refund','uphold_appeal','overturn_appeal']
+
+async function csrf() { const response=await fetch('/api/security/csrf',{cache:'no-store'}); const result=await response.json(); return result.token }
+export function ModerationCaseConsole({ caseId, currentPriority='normal' }) {
+  const [action,setAction]=useState('assign_self');const[reason,setReason]=useState('');const[priority,setPriority]=useState(currentPriority);const[message,setMessage]=useState('');const[token,setToken]=useState('')
+  useEffect(()=>{csrf().then(setToken).catch(()=>{})},[])
+  async function submit(){setMessage('Applying action…');const response=await fetch('/api/admin/action',{method:'POST',headers:{'content-type':'application/json','x-puddle-csrf':token,'x-puddle-action':'admin_case_action'},body:JSON.stringify({caseId,action,payload:{reason,priority}})});const result=await response.json().catch(()=>({}));setMessage(response.ok?'Action recorded.':result.error||'Action failed.');if(response.ok)location.reload()}
+  return <section className="admin-card"><h2>Case action</h2><div className="admin-form-grid"><label>Action<select value={action} onChange={(event)=>setAction(event.target.value)}>{actions.map((item)=><option value={item} key={item}>{item.replaceAll('_',' ')}</option>)}</select></label><label>Priority<select value={priority} onChange={(event)=>setPriority(event.target.value)}><option>low</option><option>normal</option><option>high</option><option>urgent</option><option>emergency</option></select></label><label className="span-two">Reason<textarea value={reason} onChange={(event)=>setReason(event.target.value)} maxLength={2000}/></label></div><button onClick={submit} type="button">Apply with audit record</button><p>{message}</p></section>
+}

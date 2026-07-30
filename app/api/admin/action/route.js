@@ -1,0 +1,10 @@
+import { NextResponse } from 'next/server'
+import { requirePrivilegedApi } from '@/lib/auth/privileged'
+import { verifyCsrf } from '@/lib/security/csrf'
+import { enforceRateLimit } from '@/lib/security/rate-limit'
+import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
+import { object, record, string, uuid } from '@/lib/security/schema'
+import { recordSecurityEvent } from '@/lib/security/audit'
+
+export const runtime='nodejs';export const dynamic='force-dynamic'
+export async function POST(request){let session;try{if(!verifyCsrf(request))return NextResponse.json({error:'Security token is invalid.'},{status:403});session=await requirePrivilegedApi(['content_moderator','trust_safety','super_admin','security','support','finance_ops','verification','incident_commander']);const limited=await enforceRateLimit({headers:request.headers,userId:session.user.id,action:'admin_case_action'});if(!limited.allowed)return NextResponse.json({error:'Too many privileged actions. Try again later.'},{status:429,headers:{'retry-after':String(limited.retryAfter||60)}});const body=object(await readJsonLimited(request,32_000));const caseId=uuid(body.caseId,'caseId');const action=string(body.action,{name:'action',min:2,max:80});const payload=record(body.payload||{},{name:'payload',maxBytes:20_000});const{data,error}=await session.supabase.rpc('admin_moderation_action_v1',{target_case:caseId,action_name:action,action_payload:payload,request_id_value:limited.requestId});if(error)throw error;await recordSecurityEvent({headers:request.headers,actorId:session.user.id,eventType:'privileged_moderation_action',severity:'notice',targetType:'moderation_case',targetId:caseId,metadata:{action}});return NextResponse.json({ok:true,result:data})}catch(error){await recordSecurityEvent({headers:request.headers,actorId:session?.user?.id,eventType:'privileged_action_rejected',severity:'warning',metadata:{reason:String(error?.message||'error').slice(0,120)}});return NextResponse.json({error:safeSecurityError(error,'That moderation action could not be completed.')},{status:error?.status||400})}}
