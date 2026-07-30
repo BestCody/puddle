@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/fix-supabase-migrations
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
