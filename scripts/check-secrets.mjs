@@ -7,6 +7,7 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root }).toString().split('\0').filter(Boolean)
 const textExtensions = new Set(['.js','.mjs','.cjs','.ts','.tsx','.jsx','.json','.md','.sql','.yml','.yaml','.html','.css','.txt','.toml','.env',''])
 const excluded = new Set(['package-lock.json'])
+const patternDefinitionFile = 'scripts/check-secrets.mjs'
 const secretPatterns = [
   ['private key', /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],
   ['Stripe live secret', /\b(?:sk|rk)_live_[A-Za-z0-9]{16,}\b/],
@@ -28,7 +29,9 @@ for (const path of tracked) {
   const source = await readFile(file, 'utf8').catch(() => '')
   if (!source) continue
 
-  for (const [label, pattern] of secretPatterns) if (pattern.test(source)) findings.push(`${path}: ${label}`)
+  if (path !== patternDefinitionFile) {
+    for (const [label, pattern] of secretPatterns) if (pattern.test(source)) findings.push(`${path}: ${label}`)
+  }
 
   if (path !== '.env.example') {
     for (const name of serverOnlyNames) {
