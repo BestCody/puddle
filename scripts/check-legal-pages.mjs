@@ -27,7 +27,7 @@ for (const marker of ['Terms of Service', 'Acceptable use', 'Tickets, payments, 
 
 if (!layout.includes('Back to home') || !layout.includes('href="/"')) throw new Error('Legal pages need a Back to home link')
 if (!landingConnector.includes("privacyPath = '/privacy'") || !landingConnector.includes("termsPath = '/terms'")) throw new Error('Landing footer legal links are missing')
-if (/landing-demo\.js|window\.toast|showToast|confetti/i.test(landingConnector)) throw new Error('Removed landing notification or prototype code returned')
+if (/landing-demo\.js|window\.toast|showToast|makeConfetti|createConfetti/i.test(landingConnector)) throw new Error('Removed landing notification or prototype code returned')
 if (!landingConnector.includes("$('#toast-region')?.remove()") || !landingConnector.includes("$('#confetti-layer')?.remove()")) throw new Error('Legacy landing notification containers are not removed on startup')
 
 console.log('Legal pages and lean landing interactions validated.')
