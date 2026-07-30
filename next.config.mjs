@@ -34,7 +34,7 @@ const nextConfig = {
     return [{ source: '/index.html', destination: '/', permanent: true }]
   },
   async rewrites() {
-    return { beforeFiles: [{ source: '/', destination: '/responsive-landing' }] }
+    return { beforeFiles: [{ source: '/', destination: '/landing.html' }] }
   }
 }
 
