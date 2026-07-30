@@ -39,7 +39,7 @@ export async function signUp(formData) {
   if (password.length < 10) redirect(pathWithMessage('/signup', 'error', 'Use at least 10 characters for your password.'))
 
   const supabase = await createClient()
-  const callback = `${await siteUrl()}/auth/callback?next=/onboarding`
+  const callback = `${await siteUrl()}/auth/callback?mode=signup`
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -115,9 +115,11 @@ export async function signInWithOAuth(formData) {
 export async function requestPasswordReset(formData) {
   ensureConfigured('/forgot-password')
   const email = value(formData, 'email').toLowerCase()
+  if (!email.includes('@')) redirect(pathWithMessage('/forgot-password', 'error', 'Enter a valid email address.'))
+
   const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await siteUrl()}/auth/callback?next=/update-password`
+    redirectTo: `${await siteUrl()}/auth/callback?mode=recovery`
   })
   if (error) redirect(pathWithMessage('/forgot-password', 'error', publicError(error, 'We could not send a reset link. Please try again.')))
   redirect(pathWithMessage('/forgot-password', 'success', 'Password reset link sent.'))
@@ -133,6 +135,24 @@ export async function updatePassword(formData) {
   const { error } = await supabase.auth.updateUser({ password })
   if (error) redirect(pathWithMessage('/update-password', 'error', publicError(error, 'We could not update your password. Please try again.')))
   redirect(pathWithMessage('/account', 'success', 'Password updated.'))
+}
+
+export async function resetPassword(formData) {
+  ensureConfigured('/reset-password')
+  const password = value(formData, 'password')
+  const confirmation = value(formData, 'password_confirmation')
+  if (password.length < 10) redirect(pathWithMessage('/reset-password', 'error', 'Use at least 10 characters.'))
+  if (password !== confirmation) redirect(pathWithMessage('/reset-password', 'error', 'The passwords do not match.'))
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect(pathWithMessage('/reset-password', 'error', 'This reset link is missing or expired. Request a new one.'))
+
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) redirect(pathWithMessage('/reset-password', 'error', publicError(error, 'We could not update your password. Please try again.')))
+
+  await supabase.auth.signOut({ scope: 'local' })
+  redirect(pathWithMessage('/signin', 'success', 'Password updated. Sign in with your new password.'))
 }
 
 export async function completeOnboarding(formData) {
@@ -188,11 +208,36 @@ export async function updateProfile(formData) {
   redirect(pathWithMessage('/account', 'success', 'Profile saved.'))
 }
 
+export async function requestEmailChange(formData) {
+  ensureConfigured('/change-email')
+  const email = value(formData, 'email').toLowerCase()
+  const confirmation = value(formData, 'email_confirmation').toLowerCase()
+
+  if (!email.includes('@')) redirect(pathWithMessage('/change-email', 'error', 'Enter a valid email address.'))
+  if (email !== confirmation) redirect(pathWithMessage('/change-email', 'error', 'The email addresses do not match.'))
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/signin?next=/change-email')
+  if ((user.email || '').toLowerCase() === email) redirect(pathWithMessage('/change-email', 'error', 'That is already your current email address.'))
+
+  const { error } = await supabase.auth.updateUser(
+    { email },
+    { emailRedirectTo: `${await siteUrl()}/auth/callback?mode=email_change` }
+  )
+  if (error) redirect(pathWithMessage('/change-email', 'error', publicError(error, 'We could not start the email change. Please try again.')))
+  redirect(pathWithMessage('/change-email', 'success', 'Confirmation email sent. Check your current and new inboxes.'))
+}
+
+// Kept for compatibility with any older account form still calling updateEmail.
 export async function updateEmail(formData) {
   ensureConfigured('/account')
   const email = value(formData, 'email').toLowerCase()
   const supabase = await createClient()
-  const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/account` })
+  const { error } = await supabase.auth.updateUser(
+    { email },
+    { emailRedirectTo: `${await siteUrl()}/auth/callback?mode=email_change` }
+  )
   if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not update your email. Please try again.')))
   redirect(pathWithMessage('/account', 'success', 'Check both inboxes to confirm the email change.'))
 }
