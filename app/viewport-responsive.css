@@ -1,0 +1,43 @@
+/* Final viewport safety layer. This file only adjusts layout mechanics and leaves the established visual styling intact. */
+:where(.product-stage,.product-shell,.product-main,.public-wrap,.app-main,.admin-shell,.auth-page,.auth-panel,.editor-layout,.map-layout,.plan-detail-grid,.notifications-layout,.scanner-layout,.ticket-detail-card,.ticket-purchase-panel,.inbox-layout,.discover-grid,.public-listing-hero,.public-content-grid,.shared-plan-builder,.app-demo,.app-shell,.app-view){min-width:0;max-width:100%}
+:where([class$="-grid"],[class*="-grid "],[class$="-layout"],[class*="-layout "])>*{min-width:0}
+:where(img,video,canvas,iframe){max-width:100%}
+:where(input,select,textarea,button){min-width:0}
+:where(.attendee-manager,.admin-table,.finance-card,.table-wrap,.ticket-table,.payout-table,.moderation-table){max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+:where(.product-header-actions,.public-header nav,.app-nav,.product-toolbar,.page-heading-row,.editor-actions,.filter-actions,.listing-social-actions,.real-card-actions,.conversation-actions,.admin-actions,.location-sharing-actions){min-width:0}
+
+@media (max-width:1180px){
+  :where(.product-header-actions,.public-header nav,.app-nav,.product-toolbar,.page-heading-row,.editor-actions,.listing-social-actions,.real-card-actions,.conversation-actions,.admin-actions,.location-sharing-actions){flex-wrap:wrap}
+  :where(.editor-grid.two,.editor-grid.three,.studio-media-grid,.media-settings-grid,.accessibility-grid,.hours-grid,.rsvp-form,.visit-plan-form,.compact-plan-form,.poll-grid,.plan-option-picker,.wallet-grid,.finance-summary-grid,.inbox-conversation-grid,.recommendation-settings-grid,.admin-form-grid){grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+  :where(.dashboard-grid,.event-strip,.settings-grid,.content-card-grid,.creation-choice-grid,.profile-grid,.friend-stats,.public-similar-grid,.public-gallery,.plan-content-grid,.real-discovery-list,.admin-grid){align-items:stretch}
+  :where(.ticket-purchase-panel,.ticket-detail-card){max-height:calc(100svh - 2rem);overflow:auto}
+}
+
+@media (max-width:900px){
+  :where(.product-header,.public-header,.app-header,.product-toolbar,.page-heading-row,.admin-header,.conversation-header,.location-sharing-heading,.active-location-card,.ai-creation-heading,.admin-case-heading){height:auto;min-height:0;flex-wrap:wrap}
+  :where(.product-header-actions,.public-header nav,.app-nav,.editor-actions,.filter-actions,.listing-social-actions,.real-card-actions,.conversation-actions,.admin-actions,.location-sharing-actions){width:100%;justify-content:flex-start}
+  :where(.editor-grid.two,.editor-grid.three,.studio-media-grid,.media-settings-grid,.accessibility-grid,.hours-grid,.rsvp-form,.visit-plan-form,.compact-plan-form,.poll-grid,.plan-option-picker,.wallet-grid,.finance-summary-grid,.inbox-conversation-grid,.recommendation-settings-grid,.admin-form-grid){grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+  :where(.content-tile,.real-discovery-card,.ticket-tier,.wallet-ticket,.admin-case)>*{min-width:0}
+  :where(.modal,.dialog,.ticket-purchase-panel,.ticket-detail-card){width:min(100% - 1rem,960px);max-width:100%}
+  :where(.product-main,.public-wrap,.app-main,.admin-shell){min-height:0}
+}
+
+@media (max-width:680px){
+  :where(.product-header-actions,.public-header nav,.app-nav,.editor-actions,.filter-actions,.listing-social-actions,.real-card-actions,.conversation-actions,.admin-actions,.location-sharing-actions){gap:.55rem}
+  :where(.product-header-actions,.editor-actions,.filter-actions,.listing-social-actions,.real-card-actions,.conversation-actions,.admin-actions,.location-sharing-actions)>*{flex:1 1 auto}
+  :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea){width:100%}
+  :where(.editor-grid.two,.editor-grid.three,.studio-media-grid,.media-settings-grid,.accessibility-grid,.hours-grid,.rsvp-form,.visit-plan-form,.compact-plan-form,.poll-grid,.plan-option-picker,.wallet-grid,.finance-summary-grid,.inbox-conversation-grid,.recommendation-settings-grid,.admin-form-grid){grid-template-columns:1fr}
+  :where(.product-hero,.profile-hero,.public-listing-hero,.editor-card,.revision-card,.public-story-card,.public-facts-card,.public-safety-bar,.public-host-hero,.dash-card,.settings-card){max-width:100%}
+  :where(.conversation-message-list,.camera-reader,.puddle-map){max-height:none}
+  :where(.attendee-table,.ticket-table,.payout-table,.moderation-table){min-width:680px}
+}
+
+@media (max-width:380px){
+  :where(.product-header-actions,.editor-actions,.filter-actions,.listing-social-actions,.real-card-actions,.conversation-actions,.admin-actions,.location-sharing-actions)>*{flex-basis:100%}
+  :where(.modal,.dialog,.ticket-purchase-panel,.ticket-detail-card){width:calc(100% - .5rem)}
+}
+
+@media (max-height:680px) and (min-width:681px){
+  :where(.ticket-purchase-panel,.ticket-detail-card,.modal,.dialog){max-height:calc(100svh - 1rem);overflow:auto}
+  :where(.product-main,.public-wrap,.app-main){padding-top:1rem}
+}
