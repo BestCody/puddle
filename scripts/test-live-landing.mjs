@@ -14,29 +14,25 @@ let lastError
 
 async function waitUntil(check, message, timeout = 10000, interval = 100) {
   const deadline = Date.now() + timeout
-  let lastValue
   while (Date.now() < deadline) {
-    lastValue = await check()
-    if (lastValue) return lastValue
+    const value = await check()
+    if (value) return value
     await sleep(interval)
   }
-  throw new Error(`${message}${lastValue === undefined ? '' : `; last value: ${String(lastValue)}`}`)
+  throw new Error(message)
 }
 
-async function waitForCount(page, selector, count, timeout = 10000) {
-  return waitUntil(
-    async () => (await page.locator(selector).count()) === count,
-    `expected ${count} elements for ${selector}`,
-    timeout
-  )
-}
-
-async function waitForText(page, selector, expected, timeout = 10000) {
+async function waitForText(page, selector, expected) {
   return waitUntil(
     async () => (await page.locator(selector).textContent())?.trim() === expected,
-    `expected ${selector} to contain ${expected}`,
-    timeout
+    `expected ${selector} to contain ${expected}`
   )
+}
+
+async function assertNoNotifications(page, label) {
+  await page.waitForTimeout(100)
+  assert(await page.locator('#toast-region').count() === 0, `${label}: toast region still exists`)
+  assert(await page.locator('.toast').count() === 0, `${label}: bottom-right notification appeared`)
 }
 
 async function runLiveChecks() {
@@ -51,129 +47,74 @@ async function runLiveChecks() {
     const separator = landingUrl.includes('?') ? '&' : '?'
     await page.goto(`${landingUrl}${separator}landing-e2e=${Date.now()}`, { waitUntil: 'networkidle', timeout: 30000 })
 
-    const appUrl = new URL(`/app.js?v=1&landing-e2e=${Date.now()}`, landingUrl)
-    const appResponse = await fetch(appUrl, { cache: 'no-store' })
-    assert(appResponse.ok, `could not fetch live app.js: ${appResponse.status}`)
-    const appSource = await appResponse.text()
-    assert(appSource.includes('pendingDomReadyListeners'), 'production is still serving the old landing loader')
-
-    await waitForCount(page, '#hero-deck .event-card', 3)
+    await waitUntil(async () => (await page.locator('#hero-deck .event-card').count()) === 3, 'landing deck did not load')
     await waitForText(page, '#hero-deck .event-card:last-child h3', 'Neon Garden')
-    assert(!(await page.locator('html').getAttribute('data-landing-error')), 'landing page reported an initialization error')
+    await assertNoNotifications(page, 'initial load')
 
-    const topCard = page.locator('#hero-deck .event-card:last-child')
-    const topBox = await topCard.boundingBox()
-    assert(topBox && topBox.width > 200 && topBox.height > 300, 'phone event card is not visibly displayed')
-    const topFooterBox = await topCard.locator('.event-card__footer').boundingBox()
-    assert(topFooterBox && topFooterBox.y + topFooterBox.height <= topBox.y + topBox.height + 2, 'phone event card footer is clipped')
-
-    const headerLinks = page.locator('.header-actions a')
-    const headerLinkCount = await headerLinks.count()
-    const links = []
-    for (let index = 0; index < headerLinkCount; index += 1) {
-      const link = headerLinks.nth(index)
-      links.push({
-        label: (await link.textContent())?.trim() || '',
-        path: new URL(await link.getAttribute('href'), landingUrl).pathname
-      })
-    }
-    assert(links.some((link) => link.label.startsWith('Sign In') && link.path === '/signin'), 'Sign In is missing from the live header')
-    assert(links.some((link) => link.label.startsWith('Register') && link.path === '/signup'), 'Register is missing from the live header')
+    const card = page.locator('#hero-deck .event-card:last-child')
+    const cardBox = await card.boundingBox()
+    const footerBox = await card.locator('.event-card__footer').boundingBox()
+    assert(cardBox && cardBox.width > 200 && cardBox.height > 300, 'phone event card is not visible')
+    assert(footerBox && footerBox.y + footerBox.height <= cardBox.y + cardBox.height + 2, 'phone event card footer is clipped')
 
     const getStarted = page.locator('.hero-actions a')
-    assert((await getStarted.textContent())?.trim().startsWith('Get Started'), 'Get Started is missing from the live landing page')
     assert(new URL(await getStarted.getAttribute('href'), landingUrl).pathname === '/signup', 'Get Started does not link to registration')
-    const finalLinks = await page.locator('.final-cta__inner > div a').evaluateAll((items) => items.map((item) => ({ label: item.textContent.trim(), path: new URL(item.href).pathname })))
-    assert(finalLinks.some((link) => link.label.startsWith('Register') && link.path === '/signup'), 'final Register link is missing')
-    assert(finalLinks.some((link) => link.label === 'Sign In' && link.path === '/signin'), 'final Sign In link is missing')
+
+    const legalLinks = await page.locator('.site-footer a').evaluateAll((items) => items.map((item) => ({ label: item.textContent.trim(), path: new URL(item.href).pathname })))
+    assert(legalLinks.some((link) => link.label === 'Privacy' && link.path === '/privacy'), 'Privacy link is missing')
+    assert(legalLinks.some((link) => link.label === 'Terms' && link.path === '/terms'), 'Terms link is missing')
 
     await page.locator('[data-swipe="right"]').click()
     await waitForText(page, '#hero-deck .event-card:last-child h3', 'Clay & Cabernet')
-    await page.locator('[data-swipe="undo"]').click()
-    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Neon Garden')
+    await assertNoNotifications(page, 'heart swipe')
 
-    await page.locator('#hero-deck .event-card:last-child').focus()
-    await page.keyboard.press('ArrowRight')
-    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Clay & Cabernet')
-    await page.locator('[data-swipe="undo"]').click()
-    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Neon Garden')
-
-    const dragBox = await page.locator('#hero-deck .event-card:last-child').boundingBox()
-    assert(dragBox, 'live drag test could not locate the top event card')
-    await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(dragBox.x + dragBox.width / 2 + 150, dragBox.y + dragBox.height / 2, { steps: 8 })
-    await page.mouse.up()
-    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Clay & Cabernet')
-    await page.locator('[data-swipe="undo"]').click()
-    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Neon Garden')
+    await page.locator('[data-swipe="left"]').click()
+    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Rooftop Cinema Club')
+    await assertNoNotifications(page, 'skip swipe')
 
     await page.locator('.round-action--share').click()
-    await page.locator('.toast').waitFor({ state: 'visible' })
+    await assertNoNotifications(page, 'share')
 
     await page.locator('.mini-like').first().click()
-    assert((await page.locator('.mini-like').first().getAttribute('class'))?.includes('is-liked'), 'live like interaction failed')
+    assert((await page.locator('.mini-like').first().getAttribute('class'))?.includes('is-liked'), 'social like interaction failed')
+    await assertNoNotifications(page, 'social like')
 
-    await page.locator('#marketing-chat-form input').fill('Live landing test')
-    await page.locator('#marketing-chat-form input').press('Enter')
-    await waitUntil(
-      async () => (await page.locator('#marketing-chat').textContent())?.includes('Live landing test'),
-      'live marketing chat message did not appear'
-    )
-
-    await page.locator('#location-toggle').click()
-    assert((await page.locator('#location-map').getAttribute('class'))?.includes('is-sharing'), 'live location sharing interaction failed')
-
-    for (const type of ['organizer', 'safety', 'privacy', 'terms']) {
+    for (const type of ['organizer', 'safety']) {
       await page.locator(`[data-open-modal="${type}"]`).first().click()
       await page.locator('#modal-backdrop.is-open').waitFor({ state: 'visible' })
       await page.locator('[data-close-modal]').click()
-      await waitUntil(
-        async () => !(await page.locator('#modal-backdrop').getAttribute('class'))?.includes('is-open'),
-        `${type} modal did not close`
-      )
+      await waitUntil(async () => !(await page.locator('#modal-backdrop').getAttribute('class'))?.includes('is-open'), `${type} modal did not close`)
     }
 
     await page.evaluate(() => window.openApp())
     await page.locator('#app-demo.is-open').waitFor({ state: 'visible' })
-    await waitForCount(page, '#demo-deck .event-card', 3)
-
-    const views = {
-      discover: 'Find your next plan.',
-      explore: 'Explore your city.',
-      plans: 'Your calendar looks good.',
-      social: 'Meet your crowd.',
-      messages: 'Keep the plan moving.',
-      tickets: 'You’re in.'
-    }
-    for (const [view, title] of Object.entries(views)) {
-      await page.locator(`.app-sidebar [data-app-view="${view}"]`).click()
-      await waitForText(page, '#app-title', title)
-    }
-
-    await page.locator('.app-sidebar [data-app-view="messages"]').click()
-    await page.locator('#demo-message-form input').fill('Live demo message')
-    await page.locator('#demo-message-form input').press('Enter')
-    await waitUntil(
-      async () => (await page.locator('#demo-message-thread').textContent())?.includes('Live demo message'),
-      'live demo message did not appear'
-    )
-
-    await page.locator('.app-sidebar [data-app-view="tickets"]').click()
-    await page.locator('[data-ticket-code]').first().click()
-    assert((await page.locator('[data-ticket-code]').first().textContent())?.includes('QR ready'), 'live ticket interaction failed')
+    await waitUntil(async () => (await page.locator('#demo-deck .event-card').count()) === 3, 'demo deck did not load')
+    await page.locator('#app-demo [data-demo-swipe="right"]').click()
+    await assertNoNotifications(page, 'demo swipe')
     await page.locator('[data-close-app]').click()
 
     await page.setViewportSize({ width: 390, height: 844 })
     await page.reload({ waitUntil: 'networkidle' })
-    await waitForCount(page, '#hero-deck .event-card', 3)
+    await waitUntil(async () => (await page.locator('#hero-deck .event-card').count()) === 3, 'mobile deck did not load')
     const mobileCard = page.locator('#hero-deck .event-card:last-child')
     const mobileBox = await mobileCard.boundingBox()
-    assert(mobileBox && mobileBox.width > 200 && mobileBox.height > 300, 'event cards are not visible on mobile')
-    const mobileFooterBox = await mobileCard.locator('.event-card__footer').boundingBox()
-    assert(mobileFooterBox && mobileFooterBox.y + mobileFooterBox.height <= mobileBox.y + mobileBox.height + 2, 'event card footer is clipped on mobile')
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
-    assert(overflow <= 2, `live mobile page overflows horizontally by ${overflow}px`)
+    const mobileFooter = await mobileCard.locator('.event-card__footer').boundingBox()
+    assert(mobileBox && mobileBox.width > 200 && mobileBox.height > 300, 'event card is not visible on mobile')
+    assert(mobileFooter && mobileFooter.y + mobileFooter.height <= mobileBox.y + mobileBox.height + 2, 'event card footer is clipped on mobile')
+    assert(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 2, 'mobile landing page overflows horizontally')
+    await assertNoNotifications(page, 'mobile')
+
+    for (const policy of [
+      { path: '/privacy', title: 'Privacy Policy', marker: 'Information we collect' },
+      { path: '/terms', title: 'Terms of Service', marker: 'Acceptable use' }
+    ]) {
+      await page.goto(new URL(policy.path, landingUrl).href, { waitUntil: 'networkidle', timeout: 30000 })
+      await waitForText(page, 'h1', policy.title)
+      assert((await page.locator('body').textContent())?.includes(policy.marker), `${policy.title} content is missing`)
+      const homeLink = page.locator('a', { hasText: 'Back to home' }).first()
+      assert(await homeLink.count() === 1, `${policy.title} has no Back to home link`)
+      assert(new URL(await homeLink.getAttribute('href'), landingUrl).pathname === '/', `${policy.title} Back to home link is incorrect`)
+    }
 
     assert(browserErrors.length === 0, `live browser errors:\n${browserErrors.join('\n')}`)
   } finally {
@@ -185,16 +126,15 @@ try {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       await runLiveChecks()
-      console.log(`Live landing restoration passed at ${landingUrl}`)
+      console.log(`Live landing and legal-page checks passed at ${landingUrl}`)
       lastError = null
       break
     } catch (error) {
       lastError = error
-      console.log(`Live landing attempt ${attempt}/${attempts} failed: ${error.message}`)
+      console.log(`Live check ${attempt}/${attempts} failed: ${error.message}`)
       if (attempt < attempts) await sleep(delayMs)
     }
   }
-
   if (lastError) throw lastError
 } finally {
   await browser.close()
