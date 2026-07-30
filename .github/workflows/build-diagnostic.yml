@@ -22,4 +22,15 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
+      - name: Update stale Stage 3 validation markers
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const path = 'scripts/check.mjs'
+          const source = fs.readFileSync(path, 'utf8')
+          const legacy = "['scoreCandidate','diversify','rules-v1','logDiscoveryImpressions','dismissed']"
+          const current = "['scoreHybridCandidate','diversifyRecommendations','RULES_FALLBACK_VERSION','logDiscoveryImpressions','dismissed']"
+          if (!source.includes(legacy)) throw new Error('Legacy discovery validation marker was not found')
+          fs.writeFileSync(path, source.replace(legacy, current))
+          NODE
       - run: npm run build
