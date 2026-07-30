@@ -61,8 +61,11 @@ async function runLiveChecks() {
     await waitForText(page, '#hero-deck .event-card:last-child h3', 'Neon Garden')
     assert(!(await page.locator('html').getAttribute('data-landing-error')), 'landing page reported an initialization error')
 
-    const topBox = await page.locator('#hero-deck .event-card:last-child').boundingBox()
+    const topCard = page.locator('#hero-deck .event-card:last-child')
+    const topBox = await topCard.boundingBox()
     assert(topBox && topBox.width > 200 && topBox.height > 300, 'phone event card is not visibly displayed')
+    const topFooterBox = await topCard.locator('.event-card__footer').boundingBox()
+    assert(topFooterBox && topFooterBox.y + topFooterBox.height <= topBox.y + topBox.height + 2, 'phone event card footer is clipped')
 
     const headerLinks = page.locator('.header-actions a')
     const headerLinkCount = await headerLinks.count()
@@ -76,6 +79,13 @@ async function runLiveChecks() {
     }
     assert(links.some((link) => link.label.startsWith('Sign In') && link.path === '/signin'), 'Sign In is missing from the live header')
     assert(links.some((link) => link.label.startsWith('Register') && link.path === '/signup'), 'Register is missing from the live header')
+
+    const getStarted = page.locator('.hero-actions a')
+    assert((await getStarted.textContent())?.trim().startsWith('Get Started'), 'Get Started is missing from the live landing page')
+    assert(new URL(await getStarted.getAttribute('href'), landingUrl).pathname === '/signup', 'Get Started does not link to registration')
+    const finalLinks = await page.locator('.final-cta__inner > div a').evaluateAll((items) => items.map((item) => ({ label: item.textContent.trim(), path: new URL(item.href).pathname })))
+    assert(finalLinks.some((link) => link.label.startsWith('Register') && link.path === '/signup'), 'final Register link is missing')
+    assert(finalLinks.some((link) => link.label === 'Sign In' && link.path === '/signin'), 'final Sign In link is missing')
 
     await page.locator('[data-swipe="right"]').click()
     await waitForText(page, '#hero-deck .event-card:last-child h3', 'Clay & Cabernet')
@@ -124,7 +134,7 @@ async function runLiveChecks() {
       )
     }
 
-    await page.locator('.hero-actions [data-open-app]').click()
+    await page.evaluate(() => window.openApp())
     await page.locator('#app-demo.is-open').waitFor({ state: 'visible' })
     await waitForCount(page, '#demo-deck .event-card', 3)
 
@@ -157,8 +167,11 @@ async function runLiveChecks() {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.reload({ waitUntil: 'networkidle' })
     await waitForCount(page, '#hero-deck .event-card', 3)
-    const mobileBox = await page.locator('#hero-deck .event-card:last-child').boundingBox()
+    const mobileCard = page.locator('#hero-deck .event-card:last-child')
+    const mobileBox = await mobileCard.boundingBox()
     assert(mobileBox && mobileBox.width > 200 && mobileBox.height > 300, 'event cards are not visible on mobile')
+    const mobileFooterBox = await mobileCard.locator('.event-card__footer').boundingBox()
+    assert(mobileFooterBox && mobileFooterBox.y + mobileFooterBox.height <= mobileBox.y + mobileBox.height + 2, 'event card footer is clipped on mobile')
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
     assert(overflow <= 2, `live mobile page overflows horizontally by ${overflow}px`)
 
