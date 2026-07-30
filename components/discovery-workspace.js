@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { csrfFetch } from '@/lib/security/csrf-client'
 
 function queryString(filters) {
   const params = new URLSearchParams()
@@ -73,14 +74,14 @@ export function DiscoveryWorkspace({ initialFeed, defaultMode = 'deck' }) {
   }
   async function act(action, item) {
     if (action !== 'opened') setMessage(`${action === 'dismissed' ? 'Passed' : action === 'saved' ? 'Saved' : action === 'visited' ? 'Visited' : 'Interested'} · ${item.title}`)
-    const response = await fetch('/api/discovery/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, contentKind: item.content_kind, contentId: item.content_id, requestId: feed.requestId }), keepalive: action === 'opened' })
+    const response = await csrfFetch('/api/discovery/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, contentKind: item.content_kind, contentId: item.content_id, requestId: feed.requestId }), keepalive: action === 'opened' })
     if (!response.ok && action !== 'opened') { const result = await response.json().catch(() => ({}));setMessage(result.error || 'That choice could not be saved.');return }
     if (mode === 'deck' && action !== 'opened') setIndex((current) => Math.min(current + 1, Math.max(feed.items.length - 1, 0)))
   }
   async function undo() {
     const item = feed.items[Math.max(0, index - 1)] || feed.items[index]
     if (!item) return
-    await fetch('/api/discovery/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'undo', contentKind: item.content_kind, contentId: item.content_id, requestId: feed.requestId }) })
+    await csrfFetch('/api/discovery/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'undo', contentKind: item.content_kind, contentId: item.content_id, requestId: feed.requestId }) })
     setIndex((current) => Math.max(0, current - 1));setMessage('Last discovery choice undone.')
   }
 
