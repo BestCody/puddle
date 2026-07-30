@@ -8,9 +8,8 @@ const protectedPrefixes = ['/dashboard','/discover','/explore','/plans','/create
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
 const csrfExempt = new Set(['/api/stripe/webhook'])
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
-const staticScriptPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
 const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/auth/callback','/auth/confirm','/auth/error'])
-const publicNoSessionPaths = new Set([...staticScriptPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
+const publicNoSessionPaths = new Set([...staticLandingPaths, '/privacy', '/terms', '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
@@ -58,7 +57,7 @@ export async function proxy(request) {
 
   if (publicNoSessionPaths.has(pathname)) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
-    return secured(response, { request, nonce, staticScripts: staticScriptPaths.has(pathname) })
+    return secured(response, { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
   }
 
   const isProtected = protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
@@ -77,7 +76,7 @@ export async function proxy(request) {
     return secured(carriesCookies(response, NextResponse.redirect(url)), { request, nonce })
   }
   if (isAuthOnly && user && !hasAuthFailure) return secured(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), { request, nonce })
-  return secured(response, { request, nonce, staticScripts: staticScriptPaths.has(pathname) })
+  return secured(response, { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
 }
 
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)'] }
