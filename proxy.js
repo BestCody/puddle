@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
 import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue } from '@/lib/security/headers'
 import { isUnsafeMethod } from '@/lib/security/request'
+import { normalizeOrigin } from '@/lib/auth/origin'
 
 const protectedPrefixes = ['/dashboard','/discover','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/wallet','/orders','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
 const csrfExempt = new Set(['/api/stripe/webhook'])
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
-const publicNoSessionPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
+const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/auth/callback','/auth/confirm','/auth/error'])
+const publicNoSessionPaths = new Set([...staticLandingPaths, '/privacy', '/terms', '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
@@ -16,6 +18,20 @@ function carriesCookies(source, target) {
 
 function secured(response, context) { return applySecurityHeaders(response, context) }
 function forbidden(request, nonce, message = 'Cross-site request blocked.') { return secured(NextResponse.json({ error: message }, { status: 403 }), { request, nonce }) }
+function isPuddleHost(hostname) { return hostname === 'puddle.you' || hostname === 'www.puddle.you' }
+
+function canonicalAuthTarget(request, pathname) {
+  if ((request.method !== 'GET' && request.method !== 'HEAD') || !authCanonicalPaths.has(pathname)) return null
+  const configuredOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL)
+  const currentOrigin = normalizeOrigin(request.nextUrl.origin)
+  if (!configuredOrigin || !currentOrigin || configuredOrigin === currentOrigin) return null
+
+  const configured = new URL(configuredOrigin)
+  const current = new URL(currentOrigin)
+  if (!isPuddleHost(configured.hostname) || !isPuddleHost(current.hostname)) return null
+
+  return new URL(`${pathname}${request.nextUrl.search}`, configuredOrigin)
+}
 
 export async function proxy(request) {
   const nonce = nonceValue()
@@ -47,6 +63,9 @@ export async function proxy(request) {
   const maxBytes = pathname === '/api/media/upload' ? 20_000_000 : pathname === '/api/stripe/webhook' ? 2_000_000 : pathname.startsWith('/api/') ? 256_000 : 2_000_000
   const contentLength = Number(request.headers.get('content-length') || 0)
   if (contentLength > maxBytes) return secured(NextResponse.json({ error: 'Request payload is too large.' }, { status: 413 }), { request, nonce })
+
+  const canonicalTarget = canonicalAuthTarget(request, pathname)
+  if (canonicalTarget) return secured(NextResponse.redirect(canonicalTarget, 307), { request, nonce })
 
   if (publicNoSessionPaths.has(pathname)) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
