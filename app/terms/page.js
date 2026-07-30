@@ -1,5 +1,6 @@
 import { LegalPage, LegalSection } from '../../components/legal-page'
 
+export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Terms of Service',
   description: 'The terms that govern access to and use of Puddle.'
