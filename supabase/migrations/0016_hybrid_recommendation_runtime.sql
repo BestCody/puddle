@@ -97,7 +97,7 @@ friends as (
       case when coalesce(stats.engagement,0)>0 then 'popularity' end,
       case when vc.content_id is not null and ce.embedding is not null and ue.embedding is not null then 'vector_nearest' end
     ],null)::text[]
-  from public.events e left join public.locations l on l.id=e.location_id left join public.host_profiles h on h.id=e.host_profile_id cross join origin o cross join prefs
+  from public.events e left join public.locations l on l.id=e.location_id left join public.host_profiles h on h.id=e.host_profile_id cross join origin o cross join prefs left join ue on true
   left join lateral (
     select count(*) filter(where r.status in ('going','checked_in'))::integer going_count,
       (count(*) filter(where r.status in ('going','checked_in'))*3 + count(*) filter(where r.status in ('interested','requested')) +
@@ -111,7 +111,7 @@ friends as (
   ) friend_stats on true
   left join vector_candidates vc on vc.content_kind='event' and vc.content_id=e.id
   left join lateral (
-    select c.embedding,c.model_version from public.content_embeddings c,ue where c.content_kind='event' and c.content_id=e.id and c.active and c.deleted_at is null and c.model=ue.model and c.model_version=ue.model_version order by c.generated_at desc limit 1
+    select c.embedding,c.model_version from public.content_embeddings c where c.content_kind='event' and c.content_id=e.id and c.active and c.deleted_at is null and c.model=ue.model and c.model_version=ue.model_version order by c.generated_at desc limit 1
   ) ce on true
   where e.status='published' and e.visibility='public' and e.ends_at>now()
     and (e.min_age is null or ((select birth_date from profile) is not null and (select birth_date from profile)<=current_date-make_interval(years=>e.min_age)))
@@ -134,7 +134,7 @@ friends as (
       case when coalesce(stats.engagement,0)>0 then 'popularity' end,
       case when vc.content_id is not null and ce.embedding is not null and ue.embedding is not null then 'vector_nearest' end
     ],null)::text[]
-  from public.locations l left join public.host_profiles h on h.id=l.host_profile_id cross join origin o cross join prefs
+  from public.locations l left join public.host_profiles h on h.id=l.host_profile_id cross join origin o cross join prefs left join ue on true
   left join lateral (
     select ((select count(*)*3 from public.location_visits v where v.location_id=l.id and v.status='visited') +
       (select count(*)*2 from public.discovery_actions d where d.location_id=l.id and d.undone_at is null and d.action in ('saved','interested','visited')))::numeric engagement
@@ -145,7 +145,7 @@ friends as (
   ) friend_stats on true
   left join vector_candidates vc on vc.content_kind='place' and vc.content_id=l.id
   left join lateral (
-    select c.embedding,c.model_version from public.content_embeddings c,ue where c.content_kind='place' and c.content_id=l.id and c.active and c.deleted_at is null and c.model=ue.model and c.model_version=ue.model_version order by c.generated_at desc limit 1
+    select c.embedding,c.model_version from public.content_embeddings c where c.content_kind='place' and c.content_id=l.id and c.active and c.deleted_at is null and c.model=ue.model and c.model_version=ue.model_version order by c.generated_at desc limit 1
   ) ce on true
   where l.status='published' and l.visibility='public' and not coalesce(l.has_private_address,false)
     and not exists(select 1 from public.blocks b where (b.blocker_id=(select id from actor) and b.blocked_id=l.created_by) or (b.blocked_id=(select id from actor) and b.blocker_id=l.created_by))
@@ -153,7 +153,7 @@ friends as (
     and (select id from actor) is not null
 )
 select * from (select * from event_rows union all select * from place_rows) pool
-order by vector_similarity desc nulls last,distance_m nulls last,published_at desc nulls last limit greatest(1,least(max_rows,500));
+order by 28 desc nulls last,20 nulls last,25 desc nulls last limit greatest(1,least(max_rows,500));
 $$;
 
 create or replace function public.record_recommendation_outcome_v1(request_key uuid,target_kind text,target_id uuid,outcome_name text,outcome_metadata jsonb default '{}'::jsonb)

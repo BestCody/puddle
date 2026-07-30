@@ -48,6 +48,7 @@ alter table public.ticket_types add column if not exists per_customer_limit inte
 alter table public.ticket_types add column if not exists tax_code text;
 alter table public.ticket_types add column if not exists created_by uuid references public.profiles(id) on delete set null;
 alter table public.ticket_types add column if not exists metadata jsonb not null default '{}'::jsonb;
+alter table public.ticket_types add column if not exists created_at timestamptz not null default now();
 alter table public.ticket_types add column if not exists updated_at timestamptz not null default now();
 alter table public.ticket_types drop constraint if exists ticket_types_status_check;
 alter table public.ticket_types add constraint ticket_types_status_check check(status in ('draft','active','paused','sold_out','archived'));

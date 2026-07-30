@@ -274,7 +274,7 @@ with origin as (
     and (o.point is null or l.point is null or st_dwithin(l.point,o.point,greatest(1000,least(radius_m,200000))))
 )
 select * from (select * from event_rows union all select * from place_rows) candidates
-order by distance_m nulls last,published_at desc nulls last limit greatest(1,least(max_rows,500));
+order by 20 nulls last,24 desc nulls last limit greatest(1,least(max_rows,500));
 $$;
 
 create or replace function public.content_in_view_v1(min_lat double precision,min_lng double precision,max_lat double precision,max_lng double precision,max_rows integer default 300)
