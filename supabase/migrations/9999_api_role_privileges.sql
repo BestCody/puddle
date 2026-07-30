@@ -1,9 +1,12 @@
 -- API privileges required in addition to row-level security policies.
--- RLS remains the authorization boundary for authenticated profile access.
+-- RLS remains the authorization boundary for authenticated application access.
 
 grant usage on schema public to authenticated, service_role;
 
 grant select, insert, update on table public.profiles to authenticated;
+-- Event creation is authorized by the unified event creator RLS policy, but
+-- PostgREST also requires explicit table privileges before evaluating RLS.
+grant select, insert, update, delete on table public.events to authenticated;
 -- Profile SELECT policies reference these tables directly. PostgreSQL requires
 -- privileges on every policy dependency even when the self-read policy matches.
 grant select on table public.friendships to authenticated;
