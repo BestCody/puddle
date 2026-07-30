@@ -36,6 +36,12 @@ REPAIRS: tuple[Repair, ...] = (
         "order by 28 desc nulls last,20 nulls last,25 desc nulls last limit greatest(1,least(max_rows,500));",
         1,
     ),
+    (
+        "supabase/migrations/0019_stage5_financial_foundation.sql",
+        "alter table public.ticket_types add column if not exists updated_at timestamptz not null default now();",
+        "alter table public.ticket_types add column if not exists created_at timestamptz not null default now();\nalter table public.ticket_types add column if not exists updated_at timestamptz not null default now();",
+        1,
+    ),
 )
 
 
