@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { safeNextPath } from '@/lib/auth/redirect'
+import { authenticatedDestination, ensureProfile } from '@/lib/auth/profile'
+import { authLinkErrorMessage, safeAuthErrorCode } from '@/lib/auth/errors'
 
 function authFailure(url, code = 'callback_failed') {
+  const safeCode = safeAuthErrorCode(code, 'callback_failed')
   const target = new URL('/signin', url)
-  target.searchParams.set('error', 'We could not finish signing you in. Please start again.')
-  target.searchParams.set('auth_error', code)
+  target.searchParams.set('error', authLinkErrorMessage(safeCode))
+  target.searchParams.set('auth_error', safeCode)
   return NextResponse.redirect(target)
 }
 
@@ -17,8 +20,8 @@ export async function GET(request) {
   const providerError = url.searchParams.get('error')
   if (providerError) {
     console.error('Supabase OAuth provider returned an error', {
-      code: providerError,
-      description: url.searchParams.get('error_description') || undefined
+      code: safeAuthErrorCode(providerError),
+      description: url.searchParams.get('error_description') ? 'provided' : undefined
     })
     return authFailure(url, providerError)
   }
@@ -31,11 +34,16 @@ export async function GET(request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     console.error('Supabase auth code exchange failed', {
-      code: error.code || 'exchange_failed',
+      code: safeAuthErrorCode(error.code || 'exchange_failed'),
       status: error.status || undefined
     })
     return authFailure(url, error.code || 'exchange_failed')
   }
 
-  return NextResponse.redirect(new URL(next, url))
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return authFailure(url, 'session_not_created')
+  const { profile, error: profileError } = await ensureProfile(supabase, user)
+  if (profileError) return authFailure(url, 'profile_recovery_failed')
+
+  return NextResponse.redirect(new URL(authenticatedDestination(profile, next), url))
 }

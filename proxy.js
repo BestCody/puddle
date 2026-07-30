@@ -62,6 +62,7 @@ export async function proxy(request) {
 
   const isProtected = protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
   const isAuthOnly = authOnlyPaths.includes(pathname)
+  const hasAuthFailure = request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('auth_error')
   const { response, user, configured } = await updateSession(request, requestHeaders)
 
   if (isProtected && !configured) {
@@ -74,7 +75,7 @@ export async function proxy(request) {
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return secured(carriesCookies(response, NextResponse.redirect(url)), { request, nonce })
   }
-  if (isAuthOnly && user) return secured(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), { request, nonce })
+  if (isAuthOnly && user && !hasAuthFailure) return secured(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), { request, nonce })
   return secured(response, { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
 }
 

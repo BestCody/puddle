@@ -7,6 +7,11 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
+import { authenticatedDestination, ensureProfile } from '@/lib/auth/profile'
+import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
+
+const allowedInterests = new Set(['Live music','Nightlife','Food','Pop-ups','Art','Film','Workshops','Sports','Wellness','Markets','Comedy','Outdoors'])
+const allowedVisibility = new Set(['hidden', 'friends', 'mutuals', 'attendees', 'public'])
 
 function value(formData, key) {
   return String(formData.get(key) || '').trim()
@@ -21,12 +26,72 @@ async function siteUrl() {
 function publicError(error, fallback) {
   const message = String(error?.message || '').trim()
   if (!message) return fallback
-  if (/supabase|environment|api key|service role|configuration|project|provider.*enabled/i.test(message)) return fallback
+  if (/supabase|environment|api key|service role|configuration|project|provider.*enabled|database|schema|policy|permission/i.test(message)) return fallback
   return message
 }
 
 function ensureConfigured(path) {
   if (!isSupabaseConfigured()) redirect(pathWithMessage(path, 'error', 'Accounts are temporarily unavailable. Please try again later.'))
+}
+
+function ageFromBirthDate(birthDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return -1
+  const birthday = new Date(`${birthDate}T00:00:00Z`)
+  if (Number.isNaN(birthday.getTime())) return -1
+  const today = new Date()
+  let age = today.getUTCFullYear() - birthday.getUTCFullYear()
+  const month = today.getUTCMonth() - birthday.getUTCMonth()
+  if (month < 0 || (month === 0 && today.getUTCDate() < birthday.getUTCDate())) age -= 1
+  return age
+}
+
+async function authenticatedProfile(path) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect(`/signin?next=${encodeURIComponent(path)}`)
+  const { profile, error } = await ensureProfile(supabase, user)
+  if (error) redirect(pathWithMessage(path, 'error', 'We could not load your profile. Refresh the page and try again.'))
+  return { supabase, user, profile }
+}
+
+function onboardingInput(formData, user, profile, { complete }) {
+  const displayName = value(formData, 'display_name') || profile?.display_name || user.user_metadata?.display_name || 'Puddle person'
+  const username = value(formData, 'username').toLowerCase()
+  const birthDate = value(formData, 'birth_date')
+  const city = value(formData, 'city')
+  const interests = [...new Set(formData.getAll('interests').map(String).filter((interest) => allowedInterests.has(interest)))].slice(0, 12)
+  const radius = Number(value(formData, 'search_radius_km'))
+  const requestedVisibility = value(formData, 'profile_visibility')
+  const profileVisibility = allowedVisibility.has(requestedVisibility) ? requestedVisibility : profile?.profile_visibility || 'friends'
+
+  if (displayName.length < 1 || displayName.length > 60) return { error: 'Add a display name between 1 and 60 characters.' }
+  if (username && !/^[a-z0-9_]{3,24}$/.test(username)) return { error: 'Username must be 3–24 lowercase letters, numbers, or underscores.' }
+  if (birthDate && ageFromBirthDate(birthDate) < 13) return { error: 'Puddle accounts require users to be at least 13.' }
+  if (complete && !username) return { error: 'Choose a username before building your feed.' }
+  if (complete && !birthDate) return { error: 'Add your birth date before building your feed.' }
+  if (complete && !city) return { error: 'Add your city before building your feed.' }
+  if (complete && interests.length < 3) return { error: 'Pick at least three interests.' }
+
+  const payload = {
+    id: user.id,
+    display_name: displayName,
+    username: username || null,
+    birth_date: birthDate || null,
+    city: city || null,
+    search_radius_km: Number.isFinite(radius) ? Math.min(100, Math.max(1, radius)) : profile?.search_radius_km || 10,
+    bio: value(formData, 'bio') || null,
+    profile_visibility: profileVisibility,
+    interests,
+    updated_at: new Date().toISOString()
+  }
+  if (complete) payload.onboarding_completed_at = new Date().toISOString()
+  return { payload }
+}
+
+async function preserveOnboardingProgressWithoutUsername(supabase, payload, profile) {
+  const retryPayload = { ...payload, username: profile?.username || null }
+  delete retryPayload.onboarding_completed_at
+  await supabase.from('profiles').upsert(retryPayload, { onConflict: 'id' })
 }
 
 export async function signUp(formData) {
@@ -46,7 +111,11 @@ export async function signUp(formData) {
     options: { emailRedirectTo: callback, data: { display_name: displayName } }
   })
   if (error) redirect(pathWithMessage('/signup', 'error', publicError(error, 'We could not create your account. Please try again.')))
-  if (data.session) redirect('/onboarding')
+  if (data.session && data.user) {
+    const { profile, error: profileError } = await ensureProfile(supabase, data.user)
+    if (profileError) redirect(pathWithMessage('/onboarding', 'error', 'Your account was created, but your profile could not be prepared. Please retry.'))
+    redirect(authenticatedDestination(profile, '/onboarding'))
+  }
   redirect(`/verify-email?email=${encodeURIComponent(email)}`)
 }
 
@@ -57,9 +126,10 @@ export async function signIn(formData) {
   const next = safeNextPath(value(formData, 'next'))
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) redirect(pathWithMessage('/signin', 'error', 'Email or password was not accepted.', { next }))
-  const { data: profile } = await supabase.from('profiles').select('onboarding_completed_at').eq('id', data.user.id).maybeSingle()
-  redirect(profile?.onboarding_completed_at ? next : '/onboarding')
+  if (error || !data.user) redirect(pathWithMessage('/signin', 'error', 'Email or password was not accepted.', { next }))
+  const { profile, error: profileError } = await ensureProfile(supabase, data.user)
+  if (profileError) redirect(pathWithMessage('/signin', 'error', 'You are signed in, but your profile could not be loaded. Please retry.', { next }))
+  redirect(authenticatedDestination(profile, next))
 }
 
 export async function sendLoginCode(formData) {
@@ -69,16 +139,9 @@ export async function sendLoginCode(formData) {
   if (!email.includes('@')) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', { next }))
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: false }
-  })
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
   if (error) redirect(pathWithMessage('/signin', 'error', publicError(error, 'We could not send a login code. Please try again.'), { next }))
-  redirect(pathWithMessage('/signin', 'success', 'We emailed you a one-time login code.', {
-    code_sent: '1',
-    email,
-    next
-  }))
+  redirect(pathWithMessage('/signin', 'success', 'We emailed you a one-time login code.', { code_sent: '1', email, next }))
 }
 
 export async function verifyLoginCode(formData) {
@@ -94,9 +157,9 @@ export async function verifyLoginCode(formData) {
   const supabase = await createClient()
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
   if (error || !data.user) redirect(pathWithMessage('/signin', 'error', 'That code was not accepted. Request a new code and try again.', retry))
-
-  const { data: profile } = await supabase.from('profiles').select('onboarding_completed_at').eq('id', data.user.id).maybeSingle()
-  redirect(profile?.onboarding_completed_at ? next : '/onboarding')
+  const { profile, error: profileError } = await ensureProfile(supabase, data.user)
+  if (profileError) redirect(pathWithMessage('/signin', 'error', 'You are signed in, but your profile could not be loaded. Please retry.', { next }))
+  redirect(authenticatedDestination(profile, next))
 }
 
 export async function signInWithOAuth(formData) {
@@ -115,12 +178,13 @@ export async function signInWithOAuth(formData) {
 export async function requestPasswordReset(formData) {
   ensureConfigured('/forgot-password')
   const email = value(formData, 'email').toLowerCase()
+  if (!email.includes('@')) redirect(pathWithMessage('/forgot-password', 'error', 'Enter a valid email address.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${await siteUrl()}/auth/callback?next=/update-password`
   })
   if (error) redirect(pathWithMessage('/forgot-password', 'error', publicError(error, 'We could not send a reset link. Please try again.')))
-  redirect(pathWithMessage('/forgot-password', 'success', 'Password reset link sent.'))
+  redirect(pathWithMessage('/forgot-password', 'success', 'If that email has a Puddle account, a password reset link is on the way.'))
 }
 
 export async function updatePassword(formData) {
@@ -131,40 +195,44 @@ export async function updatePassword(formData) {
   if (password !== confirmation) redirect(pathWithMessage('/update-password', 'error', 'The passwords do not match.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ password })
-  if (error) redirect(pathWithMessage('/update-password', 'error', publicError(error, 'We could not update your password. Please try again.')))
+  if (error) redirect(pathWithMessage('/update-password', 'error', publicError(error, 'We could not update your password. Please request a new reset link and try again.')))
   redirect(pathWithMessage('/account', 'success', 'Password updated.'))
+}
+
+export async function saveOnboardingDraft(formData) {
+  ensureConfigured('/onboarding')
+  const { supabase, user, profile } = await authenticatedProfile('/onboarding')
+  const { payload, error: validationError } = onboardingInput(formData, user, profile, { complete: false })
+  if (validationError) redirect(pathWithMessage('/onboarding', 'error', validationError))
+
+  const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' })
+  if (error) {
+    if (isDuplicateUsernameError(error)) {
+      await preserveOnboardingProgressWithoutUsername(supabase, payload, profile)
+      redirect(pathWithMessage('/onboarding', 'error', 'That username is already taken. Your other progress was saved.'))
+    }
+    redirect(pathWithMessage('/onboarding', 'error', profileWriteErrorMessage(error, 'We could not save your progress. Please try again.')))
+  }
+  revalidatePath('/onboarding')
+  redirect(pathWithMessage('/onboarding', 'success', 'Progress saved. You can sign out and continue later.'))
 }
 
 export async function completeOnboarding(formData) {
   ensureConfigured('/onboarding')
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/signin?next=/onboarding')
-  const username = value(formData, 'username').toLowerCase()
-  if (!/^[a-z0-9_]{3,24}$/.test(username)) redirect(pathWithMessage('/onboarding', 'error', 'Username must be 3–24 lowercase letters, numbers, or underscores.'))
-  const interests = formData.getAll('interests').map(String).slice(0, 12)
-  if (interests.length < 3) redirect(pathWithMessage('/onboarding', 'error', 'Pick at least three interests.'))
-  const birthDate = value(formData, 'birth_date')
-  const birthday = new Date(`${birthDate}T00:00:00Z`)
-  const age = Number.isNaN(birthday.getTime()) ? -1 : Math.floor((Date.now() - birthday.getTime()) / 31557600000)
-  if (age < 13) redirect(pathWithMessage('/onboarding', 'error', 'Puddle accounts require users to be at least 13.'))
-  const radius = Number(value(formData, 'search_radius_km'))
-  const payload = {
-    id: user.id,
-    display_name: value(formData, 'display_name') || user.user_metadata?.display_name || 'Puddle person',
-    username,
-    birth_date: birthDate,
-    city: value(formData, 'city') || null,
-    search_radius_km: Number.isFinite(radius) ? Math.min(100, Math.max(1, radius)) : 10,
-    bio: value(formData, 'bio') || null,
-    profile_visibility: value(formData, 'profile_visibility') || 'friends',
-    interests,
-    onboarding_completed_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+  const { supabase, user, profile } = await authenticatedProfile('/onboarding')
+  const { payload, error: validationError } = onboardingInput(formData, user, profile, { complete: true })
+  if (validationError) redirect(pathWithMessage('/onboarding', 'error', validationError))
+
+  const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' })
+  if (error) {
+    if (isDuplicateUsernameError(error)) {
+      await preserveOnboardingProgressWithoutUsername(supabase, payload, profile)
+      redirect(pathWithMessage('/onboarding', 'error', 'That username is already taken. Your other progress was saved—choose another username.'))
+    }
+    redirect(pathWithMessage('/onboarding', 'error', profileWriteErrorMessage(error)))
   }
-  const { error } = await supabase.from('profiles').upsert(payload)
-  if (error) redirect(pathWithMessage('/onboarding', 'error', publicError(error, 'We could not save your profile. Please try again.')))
   revalidatePath('/dashboard')
+  revalidatePath('/onboarding')
   redirect('/dashboard?success=Welcome+to+Puddle!')
 }
 
@@ -182,7 +250,7 @@ export async function updateProfile(formData) {
     profile_visibility: value(formData, 'profile_visibility') || 'friends',
     updated_at: new Date().toISOString()
   }).eq('id', user.id)
-  if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not save your profile. Please try again.')))
+  if (error) redirect(pathWithMessage('/account', 'error', profileWriteErrorMessage(error, 'We could not save your profile. Please try again.')))
   revalidatePath('/account')
   revalidatePath('/dashboard')
   redirect(pathWithMessage('/account', 'success', 'Profile saved.'))
@@ -191,6 +259,7 @@ export async function updateProfile(formData) {
 export async function updateEmail(formData) {
   ensureConfigured('/account')
   const email = value(formData, 'email').toLowerCase()
+  if (!email.includes('@')) redirect(pathWithMessage('/account', 'error', 'Enter a valid email address.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/account` })
   if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not update your email. Please try again.')))

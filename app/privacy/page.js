@@ -1,5 +1,6 @@
 import { LegalPage, LegalSection } from '../../components/legal-page'
 
+export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Privacy Policy',
   description: 'How Puddle collects, uses, shares, and protects personal information.'

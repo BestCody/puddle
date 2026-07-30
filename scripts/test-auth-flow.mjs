@@ -65,12 +65,18 @@ for (const path of ['/auth/callback', '/auth/confirm']) {
 const callback = await readFile(join(root, 'app/auth/callback/route.js'), 'utf8')
 assert(callback.includes("url.searchParams.get('error')"), 'OAuth provider errors must be handled')
 assert(callback.includes('exchangeCodeForSession(code)'), 'OAuth code exchange is missing')
-assert(callback.includes("target.searchParams.set('auth_error', code)"), 'OAuth callback needs a safe diagnostic code')
+assert(callback.includes("target.searchParams.set('auth_error', safeCode)"), 'OAuth callback needs a sanitized diagnostic code')
+assert(callback.includes('safeAuthErrorCode'), 'OAuth callback must sanitize provider and exchange errors')
+assert(callback.includes('ensureProfile(supabase, user)'), 'OAuth callback must recover a missing profile')
+assert(callback.includes('authenticatedDestination(profile, next)'), 'OAuth callback must route incomplete accounts to onboarding')
 assert(!callback.includes("new URL('/auth/error'"), 'OAuth callback should not dump users onto the generic error page')
 
 const confirm = await readFile(join(root, 'app/auth/confirm/route.js'), 'utf8')
 assert(confirm.includes('verifyOtp({ token_hash: tokenHash, type })'), 'Email confirmation exchange is missing')
-assert(confirm.includes("target.searchParams.set('auth_error', code)"), 'Email confirmation needs a safe diagnostic code')
+assert(confirm.includes("target.searchParams.set('auth_error', safeCode)"), 'Email confirmation needs a sanitized diagnostic code')
+assert(confirm.includes('authLinkErrorMessage'), 'Email confirmation must map expired and reused links to useful messages')
+assert(confirm.includes('ensureProfile(supabase, user)'), 'Email confirmation must recover a missing profile')
+assert(confirm.includes('authenticatedDestination(profile, next)'), 'Email confirmation must route new accounts to onboarding')
 assert(!confirm.includes("new URL('/auth/error'"), 'Email confirmation should not dump users onto the generic error page')
 
 const actions = await readFile(join(root, 'app/auth/actions.js'), 'utf8')
@@ -78,5 +84,8 @@ for (const marker of ['signInWithPassword', 'signUp({', "provider !== 'google'",
   const source = marker === 'exchangeCodeForSession' ? callback : actions
   assert(source.includes(marker), `Authentication source is missing ${marker}`)
 }
+for (const marker of ['saveOnboardingDraft', 'profileWriteErrorMessage', 'ensureProfile', 'resetPasswordForEmail', "signOut({ scope: 'local' })"]) {
+  assert(actions.includes(marker), `Authentication lifecycle is missing ${marker}`)
+}
 
-console.log('Authentication origin, canonical host, callback, email confirmation, sign-in, and sign-up regression checks passed.')
+console.log('Authentication origin, canonical host, callback, email confirmation, sign-in, password reset, sign-out, and onboarding regression checks passed.')
