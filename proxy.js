@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
 import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue } from '@/lib/security/headers'
 import { isUnsafeMethod } from '@/lib/security/request'
-import { normalizeOrigin } from '@/lib/auth/origin'
+import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
 
 const protectedPrefixes = ['/dashboard','/discover','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/wallet','/orders','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
@@ -18,20 +18,6 @@ function carriesCookies(source, target) {
 
 function secured(response, context) { return applySecurityHeaders(response, context) }
 function forbidden(request, nonce, message = 'Cross-site request blocked.') { return secured(NextResponse.json({ error: message }, { status: 403 }), { request, nonce }) }
-function isPuddleHost(hostname) { return hostname === 'puddle.you' || hostname === 'www.puddle.you' }
-
-function canonicalAuthTarget(request, pathname) {
-  if ((request.method !== 'GET' && request.method !== 'HEAD') || !authCanonicalPaths.has(pathname)) return null
-  const configuredOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL)
-  const currentOrigin = normalizeOrigin(request.nextUrl.origin)
-  if (!configuredOrigin || !currentOrigin || configuredOrigin === currentOrigin) return null
-
-  const configured = new URL(configuredOrigin)
-  const current = new URL(currentOrigin)
-  if (!isPuddleHost(configured.hostname) || !isPuddleHost(current.hostname)) return null
-
-  return new URL(`${pathname}${request.nextUrl.search}`, configuredOrigin)
-}
 
 export async function proxy(request) {
   const nonce = nonceValue()
@@ -64,7 +50,9 @@ export async function proxy(request) {
   const contentLength = Number(request.headers.get('content-length') || 0)
   if (contentLength > maxBytes) return secured(NextResponse.json({ error: 'Request payload is too large.' }, { status: 413 }), { request, nonce })
 
-  const canonicalTarget = canonicalAuthTarget(request, pathname)
+  const canonicalTarget = (request.method === 'GET' || request.method === 'HEAD')
+    ? canonicalPuddleAuthUrl(request.url, process.env.NEXT_PUBLIC_SITE_URL, authCanonicalPaths)
+    : null
   if (canonicalTarget) return secured(NextResponse.redirect(canonicalTarget, 307), { request, nonce })
 
   if (publicNoSessionPaths.has(pathname)) {
