@@ -82,7 +82,7 @@ test('email signup, confirmation, resumable onboarding, sign-in, reset, and sign
   await expect(page.getByLabel('Profile visibility')).toHaveValue('mutuals')
 
   await page.getByRole('button', { name: /Build my feed/i }).click()
-  await expect(page).toHaveURL(/\/dashboard\?success=/)
+  await expect(page).toHaveURL(/\/discover\?success=/)
   await expect(page.getByText(/Welcome to Puddle/i)).toBeVisible()
 
   const completedProfile = await waitForProfile(user.id)
@@ -90,7 +90,7 @@ test('email signup, confirmation, resumable onboarding, sign-in, reset, and sign
 
   await signOutThroughUi(page)
   await signInThroughUi(page, email, password)
-  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page).toHaveURL(/\/discover$/)
 
   await signOutThroughUi(page)
   await page.goto('/forgot-password')
@@ -114,7 +114,7 @@ test('email signup, confirmation, resumable onboarding, sign-in, reset, and sign
   await expect(page.getByText(/Email or password was not accepted/i)).toBeVisible()
 
   await signInThroughUi(page, email, newPassword)
-  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page).toHaveURL(/\/discover$/)
   await signOutThroughUi(page)
   await page.goto('/dashboard')
   await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard|\/signin\?next=\/dashboard/)
