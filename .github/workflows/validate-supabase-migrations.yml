@@ -23,18 +23,20 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Start local Supabase and apply migrations
+      - name: Start local Supabase database and apply migrations
         shell: bash
         run: |
           set -o pipefail
-          npx --yes supabase@2.110.0 start --debug --exclude studio,imgproxy,edge-runtime,logflare,vector,supavisor 2>&1 | tee supabase-start.log
+          npx --yes supabase@2.110.0 db start --debug 2>&1 | tee supabase-db-start.log
 
       - name: Dump local database logs after failure
         if: failure()
         shell: bash
         run: |
           docker ps -a
-          docker logs supabase_db_puddle 2>&1 || true
+          for container in $(docker ps -aq --filter 'name=supabase_db_'); do
+            docker logs "$container" 2>&1 || true
+          done
 
       - name: Rebuild database from all migrations
         run: npx --yes supabase@2.110.0 db reset --debug
