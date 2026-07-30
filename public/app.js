@@ -54,6 +54,11 @@ function connectLandingToAuthentication() {
   }
 }
 
+function disableLandingNotifications() {
+  window.toast = () => {}
+  document.querySelector('#toast-region')?.remove()
+}
+
 function loadInteractiveLanding() {
   const originalAddEventListener = document.addEventListener.bind(document)
   const pendingDomReadyListeners = []
@@ -72,6 +77,7 @@ function loadInteractiveLanding() {
 
   demoScript.onload = () => {
     document.addEventListener = originalAddEventListener
+    disableLandingNotifications()
     const event = new Event('DOMContentLoaded')
 
     pendingDomReadyListeners.forEach((listener) => {
@@ -97,4 +103,5 @@ function loadInteractiveLanding() {
 }
 
 connectLandingToAuthentication()
+disableLandingNotifications()
 loadInteractiveLanding()
