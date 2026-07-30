@@ -42,6 +42,12 @@ REPAIRS: tuple[Repair, ...] = (
         "alter table public.ticket_types add column if not exists created_at timestamptz not null default now();\nalter table public.ticket_types add column if not exists updated_at timestamptz not null default now();",
         1,
     ),
+    (
+        "supabase/migrations/0024_stage9_moderation_foundation.sql",
+        ");\ncreate index if not exists security_events_actor_idx on public.security_events(actor_id,created_at desc);\ncreate index if not exists security_events_type_idx on public.security_events(event_type,severity,created_at desc);",
+        ");\n-- security_events was introduced in 0002 with a smaller authentication-audit schema.\n-- Evolve that table explicitly because CREATE TABLE IF NOT EXISTS does not add columns.\nalter table public.security_events add column if not exists actor_id uuid references public.profiles(id) on delete set null;\nalter table public.security_events add column if not exists severity text not null default 'info';\nalter table public.security_events add column if not exists target_type text;\nalter table public.security_events add column if not exists target_id text;\nalter table public.security_events add column if not exists request_id text;\nalter table public.security_events add column if not exists ip_hash text;\nalter table public.security_events add column if not exists device_hash text;\nalter table public.security_events add column if not exists user_agent_hash text;\nupdate public.security_events set actor_id=profile_id where actor_id is null and profile_id is not null;\ncreate index if not exists security_events_actor_idx on public.security_events(actor_id,created_at desc);\ncreate index if not exists security_events_type_idx on public.security_events(event_type,severity,created_at desc);",
+        1,
+    ),
 )
 
 
