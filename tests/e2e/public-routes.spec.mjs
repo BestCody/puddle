@@ -11,6 +11,11 @@ const publicPages = [
 
 for (const [path, heading] of publicPages) {
   test(`${path} renders without horizontal overflow`, async ({ page }) => {
+    const cspErrors = []
+    page.on('console', (message) => {
+      if (message.type() === 'error' && /content security policy/i.test(message.text())) cspErrors.push(message.text())
+    })
+
     await page.goto(path)
     if (path === '/') {
       await expect(page.locator('body')).toContainText(heading)
@@ -18,6 +23,7 @@ for (const [path, heading] of publicPages) {
       await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
     }
     await assertNoHorizontalOverflow(page)
+    if (path === '/privacy' || path === '/terms') expect(cspErrors).toEqual([])
   })
 }
 
