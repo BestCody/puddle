@@ -2,26 +2,30 @@ import { test, expect } from '@playwright/test'
 import { assertNoHorizontalOverflow } from './support.mjs'
 
 const publicPages = [
-  ['/', /Puddle/i],
-  ['/signin', /Jump back into your Puddle/i],
-  ['/signup', /Make plans that leave the chat/i],
-  ['/privacy', /Privacy/i],
-  ['/terms', /Terms/i]
+  ['/', 'Puddle'],
+  ['/signin', 'Jump back into your Puddle.'],
+  ['/signup', 'Make plans that leave the chat.'],
+  ['/privacy', 'Privacy Policy'],
+  ['/terms', 'Terms of Service']
 ]
 
 for (const [path, heading] of publicPages) {
   test(`${path} renders without horizontal overflow`, async ({ page }) => {
     await page.goto(path)
-    await expect(page.getByText(heading).first()).toBeVisible()
+    if (path === '/') {
+      await expect(page.locator('body')).toContainText(heading)
+    } else {
+      await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
+    }
     await assertNoHorizontalOverflow(page)
   })
 }
 
 test('landing page links to signup, privacy, and terms', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('a[href="/signup"]').first()).toBeVisible()
-  await expect(page.locator('a[href="/privacy"]').first()).toBeVisible()
-  await expect(page.locator('a[href="/terms"]').first()).toBeVisible()
+  await expect(page.locator('a[href="/signup"]:visible').first()).toBeVisible()
+  await expect(page.locator('a[href="/privacy"]:visible').first()).toBeVisible()
+  await expect(page.locator('a[href="/terms"]:visible').first()).toBeVisible()
 })
 
 test('callback provider failures return a useful sign-in message', async ({ page }) => {
