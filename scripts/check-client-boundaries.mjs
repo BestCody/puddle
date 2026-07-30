@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { readFile, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
-const paths = execFileSync('git', ['ls-files', '-z', 'app/**/*.js', 'components/**/*.js', 'lib/**/*.js'], { cwd: root }).toString().split('\0').filter(Boolean)
+const paths = execFileSync('git', ['ls-files', '-z', 'app', 'components', 'lib'], { cwd: root }).toString().split('\0').filter((path) => ['.js','.jsx','.ts','.tsx'].includes(extname(path)))
 const clientFiles = []
 const findings = []
 
