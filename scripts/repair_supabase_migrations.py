@@ -30,6 +30,12 @@ REPAIRS: tuple[Repair, ...] = (
         "from public.content_embeddings c where",
         2,
     ),
+    (
+        "supabase/migrations/0016_hybrid_recommendation_runtime.sql",
+        "order by vector_similarity desc nulls last,distance_m nulls last,published_at desc nulls last limit greatest(1,least(max_rows,500));",
+        "order by 28 desc nulls last,20 nulls last,25 desc nulls last limit greatest(1,least(max_rows,500));",
+        1,
+    ),
 )
 
 
