@@ -35,6 +35,7 @@ test('password recovery is allowed before onboarding is complete', () => {
 test('authenticated and service API roles receive required database privileges', async () => {
   const migration = await readFile(new URL('../../supabase/migrations/9999_api_role_privileges.sql', import.meta.url), 'utf8')
   assert.match(migration, /grant select, insert, update on table public\.profiles to authenticated/i)
+  assert.match(migration, /grant select, insert, update, delete on table public\.events to authenticated/i)
   for (const table of ['friendships', 'event_rsvps', 'plan_members']) {
     assert.match(migration, new RegExp(`grant select on table public\\.${table} to authenticated`, 'i'))
   }
