@@ -27,7 +27,7 @@ test('an onboarded user can create event and place drafts', async ({ page }) => 
   expect(events[0].status).toBe('draft')
 
   await page.goto('/create/place')
-  await expect(page.getByRole('heading', { name: /Add the place people keep recommending/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Put a local gem on Puddle/i })).toBeVisible()
   await page.getByLabel('Location name').fill('Automated Moonlight Cafe')
   await page.getByLabel('City').fill('Toronto')
   await page.getByLabel('Short summary').fill('A reliable test location draft.')
