@@ -1,5 +1,7 @@
 const registrationPath = '/signup'
 const signInPath = '/signin'
+const privacyPath = '/privacy'
+const termsPath = '/terms'
 
 function replaceButtonWithLink(element, label, href, arrow = '') {
   const link = document.createElement('a')
@@ -32,6 +34,14 @@ function connectLandingToAuthentication() {
 
   document.querySelectorAll('[data-open-modal="waitlist"]').forEach((button) => {
     replaceButtonWithLink(button, 'Sign Up', registrationPath)
+  })
+
+  document.querySelectorAll('[data-open-modal="privacy"]').forEach((button) => {
+    replaceButtonWithLink(button, 'Privacy', privacyPath)
+  })
+
+  document.querySelectorAll('[data-open-modal="terms"]').forEach((button) => {
+    replaceButtonWithLink(button, 'Terms', termsPath)
   })
 
   const footerForm = document.querySelector('.footer-form[data-waitlist-form]')
