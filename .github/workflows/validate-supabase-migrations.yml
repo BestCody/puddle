@@ -1,0 +1,30 @@
+name: Validate Supabase migrations
+
+on:
+  push:
+    branches:
+      - agent/fix-supabase-migrations
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Start local Supabase
+        run: npx --yes supabase@2.110.0 start --exclude studio,imgproxy,edge-runtime,logflare,vector,supavisor
+
+      - name: Rebuild database from all migrations
+        run: npx --yes supabase@2.110.0 db reset --debug
