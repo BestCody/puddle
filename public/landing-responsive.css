@@ -1,0 +1,130 @@
+/* Responsive layout safeguards for the existing landing design. Colors, borders, shadows, and component styling remain in styles.css. */
+html,body{min-width:280px}
+:where(.page-shell,.site-header,.hero,.hero-copy,.hero-playground,.feature-bento,.social-stage,.organizer-board,.organizer-main,.ticket-layout,.safety-panel,.footer-grid,.final-cta__inner,.app-demo,.app-shell,.app-main,.app-view){min-width:0;max-width:100%}
+:where(.hero,.feature-bento,.social-stage,.organizer-board,.ticket-layout,.safety-panel,.footer-grid)>*{min-width:0}
+:where(img,video,canvas,iframe){max-width:100%}
+:where(input,select,textarea,button){min-width:0}
+
+@media (max-width:1180px){
+  :root{--shell:min(1000px,calc(100vw - clamp(28px,5vw,56px)))}
+  .site-header{width:calc(100vw - clamp(24px,4vw,40px))}
+  .desktop-nav{gap:clamp(16px,2vw,28px);margin-left:clamp(20px,4vw,60px)}
+  .hero{gap:clamp(30px,5vw,64px);padding-block:clamp(110px,12vh,130px) clamp(64px,8vw,80px)}
+  .hero h1{font-size:clamp(3.8rem,8vw,7rem)}
+  .hero-playground{min-height:clamp(570px,62vw,680px)}
+  .phone-shell{width:clamp(320px,34vw,382px);height:auto;aspect-ratio:382/680}
+  .deck{height:calc(100% - 180px)}
+  .section{padding-block:clamp(82px,10vw,120px)}
+  .section-heading{grid-template-columns:clamp(54px,6vw,70px) minmax(0,1fr) minmax(230px,.72fr);gap:clamp(18px,2.4vw,28px)}
+  .bento-card{padding:clamp(26px,3vw,34px)}
+  .social-stage{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .social-column--location{grid-column:1/-1}
+  .organizer-board{grid-template-columns:clamp(190px,21vw,240px) minmax(0,1fr)}
+  .metric-grid{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}
+  .analytics-row{grid-template-columns:minmax(0,1.25fr) minmax(230px,.75fr)}
+  .ticket-layout,.safety-panel{gap:clamp(28px,5vw,64px)}
+  .footer-grid{grid-template-columns:minmax(220px,1.25fr) repeat(2,minmax(130px,.55fr)) minmax(220px,1fr)}
+}
+
+@media (max-width:900px){
+  :root{--shell:calc(100vw - clamp(24px,5vw,44px))}
+  .site-header{top:10px;height:auto;min-height:64px}
+  .desktop-nav{display:none}
+  .menu-button{display:grid}
+  .header-actions{margin-left:auto}
+  .hero{grid-template-columns:1fr;padding-top:clamp(108px,15vw,130px);text-align:left}
+  .hero-copy{max-width:720px}
+  .hero h1{font-size:clamp(3.5rem,12vw,6.4rem)}
+  .hero-playground{min-height:clamp(600px,88vw,700px)}
+  .phone-shell{width:min(382px,78vw)}
+  .section-heading{grid-template-columns:54px minmax(0,1fr);align-items:start}
+  .section-heading>p{grid-column:2}
+  .feature-bento{grid-template-columns:1fr;grid-template-rows:auto}
+  .bento-card--pink{grid-row:auto}
+  .bento-card{min-height:clamp(410px,64vw,500px)}
+  .social-stage{grid-template-columns:1fr}
+  .social-column--location{grid-column:auto}
+  .organizer-board{grid-template-columns:1fr}
+  .organizer-sidebar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .organizer-sidebar nav{grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .analytics-row{grid-template-columns:1fr}
+  .ticket-layout,.safety-panel{grid-template-columns:1fr}
+  .ticket-stack{justify-self:center}
+  .footer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .app-shell{grid-template-columns:1fr}
+  .app-sidebar{display:none}
+  .app-main{width:100%}
+  .app-mobile-nav{display:flex}
+}
+
+@media (max-width:680px){
+  :root{--shell:calc(100vw - 24px)}
+  .site-header{width:calc(100vw - 16px);padding-inline:12px}
+  .brand{font-size:1.2rem}
+  .brand img{width:31px;height:31px}
+  .header-actions .button--ghost{display:none}
+  .header-actions .button{padding:11px 14px}
+  .hero{padding-bottom:58px;gap:24px}
+  .hero h1{font-size:clamp(3rem,15.5vw,4.8rem);margin-block:20px 24px}
+  .hero-lede{font-size:1rem;line-height:1.55}
+  .hero-actions{width:100%}
+  .hero-actions .button{width:100%}
+  .social-proof{align-items:flex-start}
+  .hero-playground{min-height:clamp(545px,150vw,630px)}
+  .phone-shell{width:min(340px,86vw);border-radius:38px;padding:15px;box-shadow:10px 12px 0 var(--ink),0 22px 50px rgba(52,24,42,.18)}
+  .deck{height:calc(100% - 164px)}
+  .deck-actions{gap:10px;height:66px}
+  .round-action{width:45px;height:45px}
+  .round-action--no{width:52px;height:52px}
+  .round-action--yes{width:58px;height:58px}
+  .sticker--spark{left:-4px;top:48px}
+  .sticker--arrow{right:-3px;top:118px}
+  .floating-bubble--friends{left:0;bottom:110px}
+  .floating-bubble--match{right:0;bottom:54px}
+  .section{padding-block:72px}
+  .section-heading{grid-template-columns:1fr;margin-bottom:36px}
+  .section-heading .section-number,.section-heading>p{grid-column:auto}
+  .section-heading h2,.ticket-copy h2,.safety-copy h2,.final-cta h2{font-size:clamp(2.55rem,12vw,4rem)}
+  .bento-card{min-height:430px;padding:24px;border-radius:26px}
+  .mini-map{inset:190px 18px 18px}
+  .calendar-event{grid-template-columns:40px 48px minmax(0,1fr)}
+  .calendar-event b{display:none}
+  .social-column{min-height:0;padding:18px}
+  .organizer-sidebar{display:block}
+  .organizer-sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .organizer-top,.event-performance__head,.location-top,.social-title{align-items:flex-start;flex-direction:column;gap:8px}
+  .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ticket-layout,.safety-panel{padding:24px;border-radius:26px}
+  .ticket{width:min(330px,86vw)}
+  .final-cta__inner>div{display:grid;grid-template-columns:1fr;gap:12px}
+  .final-cta__inner .button{width:100%}
+  .footer-grid{grid-template-columns:1fr}
+  .app-demo{padding:0}
+  .app-shell{width:100%;height:100svh;border-radius:0}
+  .app-topbar{padding:16px}
+  .app-view{padding:16px 16px calc(92px + env(safe-area-inset-bottom))}
+  .app-mobile-nav{padding-bottom:env(safe-area-inset-bottom)}
+  .modal{width:calc(100vw - 20px);max-height:calc(100svh - 20px);overflow:auto}
+}
+
+@media (max-width:380px){
+  :root{--shell:calc(100vw - 16px)}
+  .site-header{width:calc(100vw - 10px)}
+  .header-actions .button{padding-inline:11px;font-size:.82rem}
+  .hero h1{font-size:clamp(2.75rem,15vw,3.55rem)}
+  .phone-shell{width:min(318px,88vw)}
+  .metric-grid{grid-template-columns:1fr}
+  .organizer-sidebar nav{grid-template-columns:1fr}
+  .calendar-strip{grid-template-columns:repeat(2,1fr)}
+}
+
+@media (max-height:720px) and (min-width:901px){
+  .hero{padding-top:105px;padding-bottom:48px}
+  .hero-playground{min-height:560px}
+  .phone-shell{height:560px;width:315px;aspect-ratio:auto}
+  .deck{height:390px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
