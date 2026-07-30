@@ -9,6 +9,7 @@ on:
       - public/landing-demo.js
       - public/landing.html
       - public/styles.css
+      - public/landing-responsive.css
       - styles.css
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
@@ -22,6 +23,7 @@ on:
       - public/landing-demo.js
       - public/landing.html
       - public/styles.css
+      - public/landing-responsive.css
       - styles.css
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
