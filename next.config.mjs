@@ -31,7 +31,10 @@ const nextConfig = {
     return [{ source: '/:path*', headers: securityHeaders }]
   },
   async redirects() {
-    return [{ source: '/index.html', destination: '/', permanent: true }]
+    return [
+      { source: '/index.html', destination: '/', permanent: true },
+      { source: '/landing.html', destination: '/', permanent: true }
+    ]
   },
   async rewrites() {
     return { beforeFiles: [{ source: '/', destination: '/responsive-landing' }] }
