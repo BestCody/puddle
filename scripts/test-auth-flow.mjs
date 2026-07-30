@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { authCallbackUrl, normalizeOrigin, requestOrigin } from '../lib/auth/origin.js'
+import { authCallbackUrl, canonicalPuddleAuthUrl, normalizeOrigin, requestOrigin } from '../lib/auth/origin.js'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 
@@ -37,17 +37,30 @@ assert.equal(requestOrigin(spoofedOriginHeaders, 'https://puddle.you'), 'https:/
 const localHeaders = new Headers({ host: 'localhost:3000' })
 assert.equal(requestOrigin(localHeaders, 'https://puddle.you'), 'http://localhost:3000')
 
+const authPaths = new Set(['/signin', '/signup', '/auth/callback', '/auth/confirm'])
+assert.equal(
+  canonicalPuddleAuthUrl('https://www.puddle.you/signup?email=ava%40example.com', 'https://puddle.you', authPaths)?.toString(),
+  'https://puddle.you/signup?email=ava%40example.com'
+)
+assert.equal(
+  canonicalPuddleAuthUrl('https://www.puddle.you/auth/callback?code=abc&next=/onboarding', 'https://puddle.you', authPaths)?.toString(),
+  'https://puddle.you/auth/callback?code=abc&next=/onboarding'
+)
+assert.equal(canonicalPuddleAuthUrl('https://puddle.you/signin', 'https://puddle.you', authPaths), null)
+assert.equal(canonicalPuddleAuthUrl('https://preview.vercel.app/signin', 'https://puddle.you', authPaths), null)
+assert.equal(canonicalPuddleAuthUrl('https://www.puddle.you/privacy', 'https://puddle.you', authPaths), null)
+
 const proxy = await readFile(join(root, 'proxy.js'), 'utf8')
-const canonicalCheck = proxy.indexOf('const canonicalTarget = canonicalAuthTarget(request, pathname)')
+const canonicalCheck = proxy.indexOf('const canonicalTarget = (request.method')
 const publicBypass = proxy.indexOf('if (publicNoSessionPaths.has(pathname))')
 const sessionLookup = proxy.indexOf('await updateSession(request, requestHeaders)')
 assert(canonicalCheck >= 0, 'Proxy must canonicalize auth routes')
+assert(proxy.includes('canonicalPuddleAuthUrl(request.url'), 'Proxy must use the tested canonical URL helper')
 assert(publicBypass > canonicalCheck, 'Canonical redirect must run before the public callback bypass')
 assert(sessionLookup > publicBypass, 'Auth callbacks must bypass session lookup before code exchange')
 for (const path of ['/auth/callback', '/auth/confirm']) {
   assert(proxy.includes(`'${path}'`), `Proxy must treat ${path} as a no-session callback route`)
 }
-assert(proxy.includes("hostname === 'puddle.you' || hostname === 'www.puddle.you'"), 'Canonical host guard is missing')
 
 const callback = await readFile(join(root, 'app/auth/callback/route.js'), 'utf8')
 assert(callback.includes("url.searchParams.get('error')"), 'OAuth provider errors must be handled')
@@ -66,4 +79,4 @@ for (const marker of ['signInWithPassword', 'signUp({', "provider !== 'google'",
   assert(source.includes(marker), `Authentication source is missing ${marker}`)
 }
 
-console.log('Authentication origin, callback, email confirmation, sign-in, and sign-up regression checks passed.')
+console.log('Authentication origin, canonical host, callback, email confirmation, sign-in, and sign-up regression checks passed.')
