@@ -10,6 +10,11 @@ const events = [
   { title:'Late Night Jazz Club', category:'Live music', date:'Thu · 9:00 PM', place:'The Annex · 4.2 km', price:'$16', image:'/events/jazz.svg', description:'A tiny room, warm lights and three sets from Toronto’s newest jazz players.', match:'92% your vibe' }
 ]
 
+const modalCopy = {
+  organizer: ['Organizer tools without the spreadsheet sprawl.', 'Create drafts, manage attendees, publish updates, review performance, and keep private venue details out of public records.'],
+  safety: ['Safety is part of the product, not a footer promise.', 'Puddle combines visibility controls, age restrictions, expiring location sharing, reporting, evidence preservation, and role-gated moderation workflows.']
+}
+
 let currentIndex = 0
 const history = []
 const $ = (selector, root = document) => root.querySelector(selector)
@@ -38,6 +43,7 @@ function connectLandingToAuthentication() {
   document.querySelectorAll('.header-actions [data-open-app]').forEach((button) => {
     replaceButtonWithLink(button, 'Register', registrationPath, '↗')
   })
+  document.querySelectorAll('[data-open-app]').forEach((button) => replaceButtonWithLink(button, button.textContent.trim() || 'Register', registrationPath))
   document.querySelectorAll('[data-open-modal="waitlist"]').forEach((button) => replaceButtonWithLink(button, 'Sign Up', registrationPath))
   document.querySelectorAll('[data-open-modal="privacy"]').forEach((button) => replaceButtonWithLink(button, 'Privacy', privacyPath))
   document.querySelectorAll('[data-open-modal="terms"]').forEach((button) => replaceButtonWithLink(button, 'Terms', termsPath))
@@ -147,6 +153,29 @@ function attachDrag(card) {
   card.addEventListener('keydown', (event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); completeSwipe(event.key === 'ArrowRight' ? 'right' : 'left') } })
 }
 
+function openModal(type) {
+  const copy = modalCopy[type]
+  const backdrop = $('#modal-backdrop')
+  const content = $('#modal-content')
+  if (!copy || !backdrop || !content) return
+  content.replaceChildren()
+  const title = document.createElement('h2')
+  title.id = 'modal-title'
+  title.textContent = copy[0]
+  const paragraph = document.createElement('p')
+  paragraph.textContent = copy[1]
+  content.append(title, paragraph)
+  backdrop.classList.add('is-open')
+  backdrop.setAttribute('aria-hidden', 'false')
+  $('[data-close-modal]', backdrop)?.focus()
+}
+
+function closeModal() {
+  const backdrop = $('#modal-backdrop')
+  backdrop?.classList.remove('is-open')
+  backdrop?.setAttribute('aria-hidden', 'true')
+}
+
 function optimizeImages() {
   $$('img').forEach((image, index) => {
     image.decoding = 'async'
@@ -155,10 +184,18 @@ function optimizeImages() {
 }
 
 function initLanding() {
+  $('#app-demo')?.remove()
+  $('#toast-region')?.remove()
+  $('#confetti-layer')?.remove()
   connectLandingToAuthentication()
   renderDeck()
   optimizeImages()
   $$('[data-swipe]').forEach((button) => button.addEventListener('click', () => button.dataset.swipe === 'undo' ? undo() : completeSwipe(button.dataset.swipe)))
+  $$('.mini-like').forEach((button) => button.addEventListener('click', () => { button.classList.toggle('is-liked'); button.setAttribute('aria-pressed', String(button.classList.contains('is-liked'))) }))
+  $$('[data-open-modal]').forEach((button) => button.addEventListener('click', () => openModal(button.dataset.openModal)))
+  $$('[data-close-modal]').forEach((button) => button.addEventListener('click', closeModal))
+  $('#modal-backdrop')?.addEventListener('click', (event) => { if (event.target.id === 'modal-backdrop') closeModal() })
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeModal() })
   $('.menu-button')?.addEventListener('click', (event) => { const header = $('#site-header'); const open = header.classList.toggle('menu-open'); event.currentTarget.setAttribute('aria-expanded', String(open)) })
   window.addEventListener('scroll', () => $('#site-header')?.classList.toggle('is-scrolled', window.scrollY > 20), { passive: true })
   const revealObserver = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); revealObserver.unobserve(entry.target) } }), { threshold: .12 })
