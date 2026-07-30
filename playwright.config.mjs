@@ -1,9 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:3000'
+const baseURL = process.env.E2E_BASE_URL || 'http://localhost:3000'
 const serverCommand = process.env.CI
-  ? 'npm run build && npm run start -- --hostname 127.0.0.1'
-  : 'npm run dev -- --hostname 127.0.0.1'
+  ? 'npm run build && npm run start -- --hostname localhost'
+  : 'npm run dev -- --hostname localhost'
 
 export default defineConfig({
   testDir: './tests/e2e',
