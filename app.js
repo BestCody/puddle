@@ -1,10 +1,5 @@
 const registrationPath = '/signup'
 const signInPath = '/signin'
-let domContentLoaded = false
-
-document.addEventListener('DOMContentLoaded', () => {
-  domContentLoaded = true
-}, { once: true })
 
 function replaceButtonWithLink(element, label, href, arrow = '') {
   const link = document.createElement('a')
@@ -31,13 +26,12 @@ function connectLandingToAuthentication() {
     replaceButtonWithLink(headerSignInButton, 'Sign In', signInPath)
   }
 
-  document.querySelectorAll('[data-open-modal="waitlist"]').forEach((button) => {
-    replaceButtonWithLink(button, 'Sign Up', registrationPath)
+  document.querySelectorAll('.header-actions [data-open-app]').forEach((button) => {
+    replaceButtonWithLink(button, 'Register', registrationPath, '↗')
   })
 
-  document.querySelectorAll('[data-open-app]').forEach((button) => {
-    const arrow = button.querySelector('span')?.textContent?.trim() || '→'
-    replaceButtonWithLink(button, 'Register', registrationPath, arrow)
+  document.querySelectorAll('[data-open-modal="waitlist"]').forEach((button) => {
+    replaceButtonWithLink(button, 'Sign Up', registrationPath)
   })
 
   const footerForm = document.querySelector('.footer-form[data-waitlist-form]')
@@ -60,11 +54,47 @@ function connectLandingToAuthentication() {
   }
 }
 
-connectLandingToAuthentication()
+function loadInteractiveLanding() {
+  const originalAddEventListener = document.addEventListener.bind(document)
+  const pendingDomReadyListeners = []
 
-const demoScript = document.createElement('script')
-demoScript.src = '/landing-demo.js?v=1'
-demoScript.onload = () => {
-  if (domContentLoaded) document.dispatchEvent(new Event('DOMContentLoaded'))
+  document.addEventListener = function addEventListener(type, listener, options) {
+    if (type === 'DOMContentLoaded') {
+      pendingDomReadyListeners.push(listener)
+      return
+    }
+    return originalAddEventListener(type, listener, options)
+  }
+
+  const demoScript = document.createElement('script')
+  demoScript.src = '/landing-demo.js?v=4'
+  demoScript.dataset.landingDemo = 'true'
+
+  demoScript.onload = () => {
+    document.addEventListener = originalAddEventListener
+    const event = new Event('DOMContentLoaded')
+
+    pendingDomReadyListeners.forEach((listener) => {
+      if (typeof listener === 'function') listener.call(document, event)
+      else listener?.handleEvent?.(event)
+    })
+
+    requestAnimationFrame(() => {
+      if (!document.querySelector('#hero-deck .event-card')) {
+        document.documentElement.dataset.landingError = 'deck-not-initialized'
+        console.error('Puddle landing deck failed to initialize')
+      }
+    })
+  }
+
+  demoScript.onerror = () => {
+    document.addEventListener = originalAddEventListener
+    document.documentElement.dataset.landingError = 'demo-script-failed'
+    console.error('Puddle landing demo script failed to load')
+  }
+
+  document.head.appendChild(demoScript)
 }
-document.head.appendChild(demoScript)
+
+connectLandingToAuthentication()
+loadInteractiveLanding()
