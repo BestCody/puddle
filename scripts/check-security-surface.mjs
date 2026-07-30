@@ -5,11 +5,12 @@ import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const findings = []
+const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root }).toString().split('\0').filter(Boolean)
 
 async function source(path) { return readFile(join(root, path), 'utf8') }
-async function requireMarkers(path, markers) {
-  const value = await source(path)
-  for (const marker of markers) if (!value.includes(marker)) findings.push(`${path}: missing ${marker}`)
+async function requireMarkers(path, markers, value = null) {
+  const content = value ?? await source(path)
+  for (const marker of markers) if (!content.includes(marker)) findings.push(`${path}: missing ${marker}`)
 }
 
 const protectedMutations = [
@@ -20,10 +21,14 @@ const protectedMutations = [
 ]
 for (const path of protectedMutations) await requireMarkers(path, ['verifyCsrf', 'enforceRateLimit'])
 
-const adminApis = execFileSync('git', ['ls-files', '-z', 'app/api/admin/**/route.js'], { cwd: root }).toString().split('\0').filter(Boolean)
-for (const path of adminApis) await requireMarkers(path, ['requirePrivilegedApi', 'verifyCsrf', 'enforceRateLimit'])
+const adminApis = tracked.filter((path) => path.startsWith('app/api/admin/') && path.endsWith('/route.js'))
+for (const path of adminApis) {
+  const value = await source(path)
+  await requireMarkers(path, ['requirePrivilegedApi'], value)
+  if (/export\s+async\s+function\s+(?:POST|PUT|PATCH|DELETE)\b/.test(value)) await requireMarkers(path, ['verifyCsrf', 'enforceRateLimit'], value)
+}
 
-const adminPages = execFileSync('git', ['ls-files', '-z', 'app/admin/**/page.js', 'app/admin/page.js'], { cwd: root }).toString().split('\0').filter(Boolean)
+const adminPages = tracked.filter((path) => (path === 'app/admin/page.js' || (path.startsWith('app/admin/') && path.endsWith('/page.js'))))
 for (const path of adminPages) await requireMarkers(path, ['requirePrivileged'])
 
 await requireMarkers('app/api/stripe/webhook/route.js', ['verifyStripeWebhook', 'storeStripeWebhookEvent'])
