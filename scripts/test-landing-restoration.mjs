@@ -12,7 +12,7 @@ const mimeTypes = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
-  '.jpg': 'image/jpeg',
+  '.jpg': 'image/jpg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp'
 }
@@ -61,8 +61,11 @@ async function assertDeckVisible(page, label) {
   await page.waitForFunction(() => document.querySelectorAll('#hero-deck .event-card').length === 3)
   const count = await page.locator('#hero-deck .event-card').count()
   assert(count === 3, `${label}: expected three event cards, found ${count}`)
-  const box = await page.locator('#hero-deck .event-card:last-child').boundingBox()
+  const card = page.locator('#hero-deck .event-card:last-child')
+  const box = await card.boundingBox()
   assert(box && box.width > 200 && box.height > 300, `${label}: top event card is not visibly rendered`)
+  const footerBox = await card.locator('.event-card__footer').boundingBox()
+  assert(footerBox && footerBox.y + footerBox.height <= box.y + box.height + 2, `${label}: event card footer is clipped`)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
   assert(overflow <= 2, `${label}: page horizontally overflows by ${overflow}px`)
 }
@@ -82,6 +85,13 @@ try {
   const authLinks = await page.locator('.header-actions a').evaluateAll((links) => links.map((link) => ({ label: link.textContent.trim(), href: new URL(link.href).pathname })))
   assert(authLinks.some((link) => link.label.startsWith('Sign In') && link.href === '/signin'), 'header Sign In link is missing')
   assert(authLinks.some((link) => link.label.startsWith('Register') && link.href === '/signup'), 'header Register link is missing')
+
+  const getStarted = page.locator('.hero-actions a')
+  assert((await getStarted.textContent())?.trim().startsWith('Get Started'), 'Get Started CTA is missing')
+  assert(new URL(await getStarted.getAttribute('href'), baseUrl).pathname === '/signup', 'Get Started does not link to registration')
+  const finalLinks = await page.locator('.final-cta__inner > div a').evaluateAll((links) => links.map((link) => ({ label: link.textContent.trim(), href: new URL(link.href).pathname })))
+  assert(finalLinks.some((link) => link.label.startsWith('Register') && link.href === '/signup'), 'final Register link is missing')
+  assert(finalLinks.some((link) => link.label === 'Sign In' && link.href === '/signin'), 'final Sign In link is missing')
 
   await page.locator('[data-swipe="right"]').click()
   await waitForTitle(page, 'Clay & Cabernet')
@@ -126,7 +136,7 @@ try {
     await page.waitForSelector('#modal-backdrop:not(.is-open)')
   }
 
-  await page.locator('.hero-actions [data-open-app]').click()
+  await page.evaluate(() => window.openApp())
   await page.waitForSelector('#app-demo.is-open')
   await page.waitForFunction(() => document.querySelectorAll('#demo-deck .event-card').length === 3)
 
