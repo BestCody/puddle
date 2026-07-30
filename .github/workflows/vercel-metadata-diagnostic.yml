@@ -1,0 +1,19 @@
+name: Vercel Metadata Diagnostic
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch failed deployment page
+        run: |
+          curl -sS -L -D headers.txt -o body.html 'https://vercel.com/bestcodys-projects/valantir/2pkKAvQGTJQqZ5xVMsQeqFHv9pAm' || true
+          echo '--- headers ---'
+          cat headers.txt
+          echo '--- title and deployment markers ---'
+          grep -Eo '<title>[^<]*|BUILD_FAILED|ERROR|deployment[^<]{0,160}|2pkKAvQGTJQqZ5xVMsQeqFHv9pAm' body.html | head -80 || true
+          echo '--- body bytes ---'
+          wc -c body.html
