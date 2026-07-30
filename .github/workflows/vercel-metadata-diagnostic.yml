@@ -10,10 +10,23 @@ jobs:
     steps:
       - name: Fetch failed deployment page
         run: |
-          curl -sS -L -D headers.txt -o body.html 'https://vercel.com/bestcodys-projects/valantir/2pkKAvQGTJQqZ5xVMsQeqFHv9pAm' || true
-          echo '--- headers ---'
-          cat headers.txt
-          echo '--- title and deployment markers ---'
-          grep -Eo '<title>[^<]*|BUILD_FAILED|ERROR|deployment[^<]{0,160}|2pkKAvQGTJQqZ5xVMsQeqFHv9pAm' body.html | head -80 || true
-          echo '--- body bytes ---'
-          wc -c body.html
+          curl -sS -L -o body.html 'https://vercel.com/bestcodys-projects/valantir/2pkKAvQGTJQqZ5xVMsQeqFHv9pAm'
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const body = fs.readFileSync('body.html', 'utf8')
+          const needles = ['BUILD_FAILED','ERROR','readyState','errorCode','errorMessage','buildError','status','state','projectId','deploymentId','2pkKAvQGTJQqZ5xVMsQeqFHv9pAm']
+          for (const needle of needles) {
+            let start = 0
+            let shown = 0
+            while (shown < 12) {
+              const index = body.indexOf(needle, start)
+              if (index < 0) break
+              const from = Math.max(0, index - 220)
+              const to = Math.min(body.length, index + needle.length + 500)
+              console.log(`--- ${needle} @ ${index} ---`)
+              console.log(body.slice(from, to).replace(/\s+/g, ' '))
+              start = index + needle.length
+              shown += 1
+            }
+          }
+          NODE
