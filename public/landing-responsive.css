@@ -70,7 +70,7 @@ html,body{min-width:280px}
   .hero-actions .button{width:100%}
   .social-proof{align-items:flex-start}
   .hero-playground{min-height:585px}
-  .phone-shell{width:382px;height:680px;padding:18px;border-radius:44px;transform:rotate(2.4deg) scale(.86);transform-origin:center}
+  .phone-shell{width:382px;height:680px;padding:18px;border-radius:44px;zoom:.86;transform:rotate(2.4deg);transform-origin:center}
   .deck{height:500px}
   .sticker--spark{left:-4px;top:48px}
   .sticker--arrow{right:-3px;top:118px}
@@ -104,7 +104,7 @@ html,body{min-width:280px}
 
 @media (max-width:480px){
   .hero-playground{min-height:555px}
-  .phone-shell{transform:rotate(2.4deg) scale(.8)}
+  .phone-shell{zoom:.8}
 }
 
 @media (max-width:380px){
@@ -113,7 +113,7 @@ html,body{min-width:280px}
   .header-actions .button{padding-inline:11px;font-size:.82rem}
   .hero h1{font-size:clamp(2.75rem,15vw,3.55rem)}
   .hero-playground{min-height:525px}
-  .phone-shell{transform:rotate(2.4deg) scale(.76)}
+  .phone-shell{zoom:.76}
   .metric-grid{grid-template-columns:1fr}
   .organizer-sidebar nav{grid-template-columns:1fr}
   .calendar-strip{grid-template-columns:repeat(2,1fr)}
@@ -122,7 +122,7 @@ html,body{min-width:280px}
 @media (max-height:720px) and (min-width:901px){
   .hero{padding-top:105px;padding-bottom:48px}
   .hero-playground{min-height:560px}
-  .phone-shell{width:382px;height:680px;aspect-ratio:auto;transform:rotate(2.4deg) scale(.82);transform-origin:center}
+  .phone-shell{width:382px;height:680px;aspect-ratio:auto;zoom:.82;transform:rotate(2.4deg);transform-origin:center}
   .deck{height:500px}
 }
 
