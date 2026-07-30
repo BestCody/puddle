@@ -1,22 +1,21 @@
-name: Vercel Check and Node 24 Diagnostic
+name: Vercel Status and Node 24 Diagnostic
 on:
   pull_request:
     branches: [main]
 permissions:
   contents: read
-  checks: read
   statuses: read
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect Vercel check runs
+      - name: Inspect Vercel commit statuses
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            'https://api.github.com/repos/BestCody/puddle/commits/7a5ec50cb19ca0202f3fbac8f4b0eb32048d4f68/check-runs' \
-            | jq '{total_count, check_runs: [.check_runs[] | {name,status,conclusion,details_url,output}]}'
+            'https://api.github.com/repos/BestCody/puddle/commits/7a5ec50cb19ca0202f3fbac8f4b0eb32048d4f68/statuses' \
+            | jq '[.[] | {context,state,description,target_url,created_at,updated_at}]'
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
