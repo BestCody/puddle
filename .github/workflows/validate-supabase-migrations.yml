@@ -23,8 +23,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Start local Supabase
-        run: npx --yes supabase@2.110.0 start --exclude studio,imgproxy,edge-runtime,logflare,vector,supavisor
+      - name: Start local Supabase and apply migrations
+        shell: bash
+        run: |
+          set -o pipefail
+          npx --yes supabase@2.110.0 start --debug --exclude studio,imgproxy,edge-runtime,logflare,vector,supavisor 2>&1 | tee supabase-start.log
 
       - name: Rebuild database from all migrations
         run: npx --yes supabase@2.110.0 db reset --debug
