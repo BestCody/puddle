@@ -3,7 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mediaObjectPath, mediaPolicy, processMediaFile } from '@/lib/media/pipeline'
+import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
+import { safeSecurityError } from '@/lib/security/request'
 import { verifyTurnstile } from '@/lib/security/turnstile'
 import { recordSecurityEvent } from '@/lib/security/audit'
 import { scanBuffer } from '@/lib/security/malware-scanner'
@@ -34,11 +36,12 @@ async function attachAsset(supabase, user, asset, purpose, targetId, sortOrder) 
 }
 
 export async function POST(request) {
+  if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Uploads are temporarily unavailable.' }, { status: 503 })
   const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Sign in to upload media.' }, { status: 401 })
   const limited = await enforceRateLimit({ headers: request.headers, userId: user.id, action: 'media_upload', weight: 2 })
-  if (!limited.allowed) return NextResponse.json({ error: 'Too many uploads. Try again later.' }, { status: 429 })
+  if (!limited.allowed) return NextResponse.json({ error: 'Too many uploads. Try again later.' }, { status: 429, headers: { 'retry-after': String(limited.retryAfter || 60) } })
   let form; try { form = await request.formData() } catch { return NextResponse.json({ error: 'The upload could not be read.' }, { status: 400 }) }
   const file = form.get('file'); const purpose = String(form.get('purpose') || ''); const targetId = String(form.get('target_id') || '').trim() || null
   const sortOrder = Math.max(0, Math.min(999, Number.parseInt(String(form.get('sort_order') || '0'), 10) || 0))
@@ -54,5 +57,9 @@ export async function POST(request) {
     const url = processed.visibility === 'public' && processed.status === 'approved' ? admin.storage.from(processed.bucket).getPublicUrl(objectPath).data.publicUrl : null
     await recordSecurityEvent({ headers:request.headers,actorId:user.id,eventType:'media_uploaded',targetType:'media_asset',targetId:asset.id,metadata:{purpose,scan_status:asset.scan_status} })
     return NextResponse.json({ asset:{id:asset.id,purpose,status:asset.status,scanStatus:asset.scan_status,url,width:asset.width,height:asset.height} },{status:201})
-  } catch (error) { const message=String(error?.message||'The upload failed.'); return NextResponse.json({error:/policy|permission|rls/i.test(message)?'You do not have permission to attach media there.':message},{status:400}) }
+  } catch (error) {
+    const raw = String(error?.message || '')
+    const fallback = /policy|permission|rls/i.test(raw) ? 'You do not have permission to attach media there.' : 'The upload failed validation or storage checks.'
+    return NextResponse.json({ error: safeSecurityError(error, fallback) }, { status: 400 })
+  }
 }
