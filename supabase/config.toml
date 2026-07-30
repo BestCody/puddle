@@ -37,10 +37,11 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 additional_redirect_urls = [
-  "http://127.0.0.1:3000/auth/callback",
   "http://localhost:3000/auth/callback",
+  "http://localhost:3000/auth/confirm",
+  "http://127.0.0.1:3000/auth/callback",
   "http://127.0.0.1:3000/auth/confirm"
 ]
 jwt_expiry = 3600
