@@ -34,6 +34,19 @@ test('landing page links to signup, privacy, and terms', async ({ page }) => {
   await expect(page.locator('a[href="/terms"]:visible').first()).toBeVisible()
 })
 
+test('public legal pages advertise CDN caching while security tokens do not', async ({ request }) => {
+  const legal = await request.get('/privacy')
+  expect(legal.headers()['cache-control']).toContain('s-maxage=3600')
+  const token = await request.get('/api/security/csrf')
+  expect(token.headers()['cache-control']).toContain('no-store')
+})
+
+test('mutating APIs reject requests without a CSRF token', async ({ request }) => {
+  const response = await request.post('/api/geocode', { data: { address: 'Toronto' } })
+  expect(response.status()).toBe(403)
+  await expect(response.json()).resolves.toMatchObject({ error: expect.stringMatching(/security token/i) })
+})
+
 test('callback provider failures return a useful sign-in message', async ({ page }) => {
   await page.goto('/auth/callback?error=access_denied&error_description=cancelled')
   await expect(page).toHaveURL(/\/signin\?.*auth_error=access_denied/)
