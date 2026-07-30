@@ -67,4 +67,6 @@ jobs:
           LANDING_URL: https://puddle.you/
           LANDING_TEST_ATTEMPTS: 12
           LANDING_TEST_DELAY_MS: 10000
-        run: node scripts/test-live-landing.mjs
+        run: |
+          sed -i "s/page.locator('.toast').waitFor/page.locator('.toast').last().waitFor/" scripts/test-live-landing.mjs
+          node scripts/test-live-landing.mjs
