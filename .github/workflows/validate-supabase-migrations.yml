@@ -29,5 +29,12 @@ jobs:
           set -o pipefail
           npx --yes supabase@2.110.0 start --debug --exclude studio,imgproxy,edge-runtime,logflare,vector,supavisor 2>&1 | tee supabase-start.log
 
+      - name: Dump local database logs after failure
+        if: failure()
+        shell: bash
+        run: |
+          docker ps -a
+          docker logs supabase_db_puddle 2>&1 || true
+
       - name: Rebuild database from all migrations
         run: npx --yes supabase@2.110.0 db reset --debug
