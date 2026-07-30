@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { authLinkErrorMessage, isDuplicateUsernameError, profileWriteErrorMessage, safeAuthErrorCode } from '../../lib/auth/errors.js'
 import { authenticatedDestination } from '../../lib/auth/profile.js'
+import { pathWithMessage, safeNextPath } from '../../lib/auth/redirect.js'
 
 test('expired and reused authentication links receive a useful message', () => {
   assert.match(authLinkErrorMessage('otp_expired'), /expired|already been used/i)
@@ -13,6 +14,14 @@ test('expired and reused authentication links receive a useful message', () => {
 test('unsafe provider error values are reduced to diagnostic codes', () => {
   assert.equal(safeAuthErrorCode('Bad Code Verifier<script>'), 'badcodeverifierscript')
   assert.equal(safeAuthErrorCode('', 'callback_failed'), 'callback_failed')
+})
+
+test('authentication redirects accept only normalized internal paths', () => {
+  assert.equal(safeNextPath('/create/event?draft=1#details'), '/create/event?draft=1#details')
+  for (const value of ['https://evil.example','//evil.example','/\\evil.example','/%2f%2fevil.example','/%5cevil.example','/safe\u0000bad']) {
+    assert.equal(safeNextPath(value, '/dashboard'), '/dashboard')
+  }
+  assert.equal(pathWithMessage('/discover?kind=event#results', 'success', 'Ready'), '/discover?kind=event&success=Ready#results')
 })
 
 test('duplicate usernames map to a user-facing recovery message', () => {
@@ -41,4 +50,10 @@ test('authenticated and service API roles receive required database privileges',
   }
   assert.match(migration, /grant all privileges on all tables in schema public to service_role/i)
   assert.match(migration, /alter default privileges in schema public grant all privileges on tables to service_role/i)
+})
+
+test('interactive API rate limits are installed', async () => {
+  const migration = await readFile(new URL('../../supabase/migrations/10000_performance_security_hardening.sql', import.meta.url), 'utf8')
+  for (const action of ['draft_autosave','geocode_lookup','discovery_action']) assert.match(migration, new RegExp(`'${action}'`, 'i'))
+  assert.match(migration, /prune_security_rate_limit_counters_v1/i)
 })
