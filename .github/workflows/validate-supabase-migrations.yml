@@ -23,6 +23,14 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Apply candidate migration repairs
+        shell: bash
+        run: |
+          if [[ -f scripts/repair_supabase_migrations.py ]]; then
+            python scripts/repair_supabase_migrations.py
+            git diff -- supabase/migrations
+          fi
+
       - name: Start local Supabase database and apply migrations
         shell: bash
         run: |
