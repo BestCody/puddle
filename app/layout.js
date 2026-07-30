@@ -7,6 +7,7 @@ import './stage-six.css'
 import './stage-seven.css'
 import './stage-eight.css'
 import './stage-nine.css'
+import './legal.css'
 import './responsive.css'
 import './viewport-responsive.css'
 export const metadata={title:{default:'Puddle',template:'%s · Puddle'},description:'Find events and places worth leaving home for.',metadataBase:new URL(process.env.NEXT_PUBLIC_SITE_URL||'http://localhost:3000')}
