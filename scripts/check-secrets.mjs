@@ -33,7 +33,8 @@ for (const path of tracked) {
     for (const [label, pattern] of secretPatterns) if (pattern.test(source)) findings.push(`${path}: ${label}`)
   }
 
-  if (path !== '.env.example') {
+  const envFile = /(?:^|\/)\.env(?:\.[^/]+)?$/.test(path)
+  if (envFile && path !== '.env.example') {
     for (const name of serverOnlyNames) {
       const assignment = new RegExp(`(?:^|\\n)\\s*${name}\\s*=\\s*([^\\n#]+)`, 'i').exec(source)
       if (assignment && !/^(?:YOUR_|REPLACE_|<|\$\{|$)/i.test(assignment[1].trim())) findings.push(`${path}: populated ${name}`)
