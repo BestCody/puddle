@@ -2,5 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "ignoreCommand": "node -e \"process.exit(0)\""
+  "ignoreCommand": "node -e \"if (process.env.PUDDLE_SKIP_VERCEL_BUILD === '1') process.exit(0); process.exit(1)\""
 }
