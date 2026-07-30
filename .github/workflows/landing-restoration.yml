@@ -13,6 +13,18 @@ on:
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
       - .github/workflows/landing-restoration.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - app.js
+      - public/app.js
+      - public/landing-demo.js
+      - public/landing.html
+      - public/styles.css
+      - styles.css
+      - next.config.mjs
+      - scripts/test-landing-restoration.mjs
+      - .github/workflows/landing-restoration.yml
   workflow_dispatch:
 
 permissions:
