@@ -33,7 +33,7 @@ test('password recovery is allowed before onboarding is complete', () => {
 })
 
 test('authenticated and service API roles receive required database privileges', async () => {
-  const migration = await readFile(new URL('../../supabase/migrations/0025_api_role_privileges.sql', import.meta.url), 'utf8')
+  const migration = await readFile(new URL('../../supabase/migrations/0026_api_role_privileges.sql', import.meta.url), 'utf8')
   assert.match(migration, /grant select, insert, update on table public\.profiles to authenticated/i)
   assert.match(migration, /grant all privileges on all tables in schema public to service_role/i)
   assert.match(migration, /alter default privileges in schema public grant all privileges on tables to service_role/i)
