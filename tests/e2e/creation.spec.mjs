@@ -5,7 +5,7 @@ test('an onboarded user can create event and place drafts', async ({ page }) => 
   const account = await createConfirmedUser({ displayName: 'Creator Test' })
   await completeProfileDirect(account.user.id)
   await signInThroughUi(page, account.email, account.password)
-  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page).toHaveURL(/\/discover$/)
 
   await page.goto('/create/event')
   await expect(page.getByRole('heading', { name: /Build the whole plan/i })).toBeVisible()
