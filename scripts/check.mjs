@@ -94,7 +94,7 @@ if(stage3.includes('users upload public media into own folder') || stage3.includ
 const discovery=await readFile(join(root,'components/discovery-workspace.js'),'utf8')
 for (const marker of ["['deck','list','map']",'openNow','accessible','available','Use my location','Undo last choice']) if(!discovery.includes(marker)) throw new Error(`Discovery workspace is missing ${marker}`)
 const ranking=await readFile(join(root,'lib/app/discovery.js'),'utf8')
-for (const marker of ['scoreCandidate','diversify','rules-v1','logDiscoveryImpressions','dismissed']) if(!ranking.includes(marker)) throw new Error(`Rules-based discovery is missing ${marker}`)
+for (const marker of ['scoreHybridCandidate','diversifyRecommendations','RULES_FALLBACK_VERSION','logDiscoveryImpressions','dismissed']) if(!ranking.includes(marker)) throw new Error(`Rules-based discovery is missing ${marker}`)
 const stage3Test=await readFile(join(root,'supabase/tests/0008_stage3_authorization.sql'),'utf8')
 if(!stage3Test.includes('Authenticated clients can bypass the server media pipeline') || !stage3Test.includes('PostGIS discovery index is missing')) throw new Error('Stage 3 authorization assertions are incomplete')
 
