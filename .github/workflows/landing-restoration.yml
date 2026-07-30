@@ -1,0 +1,35 @@
+name: Landing restoration
+
+on:
+  push:
+    branches: [main, landing-restoration-tested]
+    paths:
+      - app.js
+      - public/app.js
+      - public/landing-demo.js
+      - public/landing.html
+      - public/styles.css
+      - styles.css
+      - next.config.mjs
+      - scripts/test-landing-restoration.mjs
+      - .github/workflows/landing-restoration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          npm install --no-save --package-lock=false playwright@1.54.1
+          npx playwright install --with-deps chromium
+      - name: Test restored landing page
+        run: node scripts/test-landing-restoration.mjs
