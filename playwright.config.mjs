@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:3000'
+const serverCommand = process.env.CI
+  ? 'npm run build && npm run start -- --hostname 127.0.0.1'
+  : 'npm run dev -- --hostname 127.0.0.1'
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -28,14 +31,14 @@ export default defineConfig({
     {
       name: 'mobile-chromium',
       testMatch: /public-routes\.spec\.mjs/,
-      use: { ...devices['iPhone 13'] }
+      use: { ...devices['Pixel 5'] }
     }
   ],
   webServer: {
-    command: 'npm run dev -- --hostname 127.0.0.1',
+    command: serverCommand,
     url: `${baseURL}/signin`,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
     stdout: 'pipe',
     stderr: 'pipe'
   }
