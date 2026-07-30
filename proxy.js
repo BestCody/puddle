@@ -6,6 +6,7 @@ import { isUnsafeMethod } from '@/lib/security/request'
 const protectedPrefixes = ['/dashboard','/discover','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/wallet','/orders','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
 const csrfExempt = new Set(['/api/stripe/webhook'])
+const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
@@ -61,7 +62,7 @@ export async function proxy(request) {
     return secured(carriesCookies(response, NextResponse.redirect(url)), { request, nonce })
   }
   if (isAuthOnly && user) return secured(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), { request, nonce })
-  return secured(response, { request, nonce })
+  return secured(response, { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
 }
 
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)'] }
+export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)'] }
