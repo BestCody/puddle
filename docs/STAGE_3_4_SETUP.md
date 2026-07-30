@@ -15,7 +15,7 @@ Then run the matching SQL assertions in a non-production project:
 
 ## Secure media
 
-The server upload route authenticates the user, validates magic bytes and declared MIME type, limits file size and image pixels, decodes the image with Sharp, applies orientation, resizes it, strips source metadata through re-encoding, writes WebP derivatives using the service role, and records a SHA-256 digest. Authenticated clients have no direct Storage write policy, so they cannot bypass this pipeline.
+The server upload route authenticates the user, validates magic bytes and declared MIME type, limits file size and image pixels, decodes the image with Sharp, applies orientation, resizes it, strips source metadata through re-encoding, writes WebP derivatives using the Supabase secret key, and records a SHA-256 digest. Authenticated clients have no direct Storage write policy, so they cannot bypass this pipeline.
 
 Public images use `puddle-public-media`. Conversation images use `puddle-private-media`. Verification PDFs enter `puddle-quarantine` with `pending` scan state and are not promoted automatically. Connect a malware-scanning worker before accepting verification documents in production. The cleanup command removes abandoned quarantine objects and records already marked deleted:
 
@@ -23,7 +23,7 @@ Public images use `puddle-public-media`. Conversation images use `puddle-private
 npm run media:cleanup
 ```
 
-Schedule that command with a trusted server-side job runner. Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+Schedule that command with a trusted server-side job runner. Never expose `SUPABASE_SECRET_KEY` to the browser.
 
 ## Geocoding
 

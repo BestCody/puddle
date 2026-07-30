@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL
-const key=process.env.SUPABASE_SERVICE_ROLE_KEY
-if(!url||!key) throw new Error('Supabase service credentials are required')
+const key=process.env.SUPABASE_SECRET_KEY
+if(!url||!key) throw new Error('Supabase secret-key credentials are required')
 const supabase=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})
 const since=new Date(Date.now()-24*60*60*1000).toISOString()
 const date=new Date().toISOString().slice(0,10)

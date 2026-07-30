@@ -18,9 +18,9 @@ Copy `.env.example` to `.env.local` locally and add the same variables in Vercel
 - `NEXT_PUBLIC_SITE_URL` — `https://puddle.you` in production
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` — server-only; used solely for permanent account deletion
+- `SUPABASE_SECRET_KEY` — server-only; used solely for permanent account deletion
 
-Never expose the service-role key through a `NEXT_PUBLIC_` variable.
+Never expose the Supabase secret key through a `NEXT_PUBLIC_` variable.
 
 ## 3. Supabase Auth URL configuration
 

@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!url || !serviceKey) throw new Error('Supabase URL and service role key are required.')
+const secretKey = process.env.SUPABASE_SECRET_KEY
+if (!url || !secretKey) throw new Error('Supabase URL and secret key are required.')
 
-const supabase = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
+const supabase = createClient(url, secretKey, { auth: { persistSession: false, autoRefreshToken: false } })
 const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
 const [{ data: abandoned, error: abandonedError }, { data: deleted, error: deletedError }] = await Promise.all([
