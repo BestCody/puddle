@@ -1,11 +1,11 @@
-name: Vercel Build Diagnostic
+name: Apply Validated Release Fix
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [agent/vercel-build-diagnostic]
 permissions:
-  contents: read
+  contents: write
 jobs:
-  build:
+  apply:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -18,10 +18,11 @@ jobs:
       TURNSTILE_REQUIRED: "false"
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: agent/vercel-build-diagnostic
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
       - name: Update stale Stage 3 validation markers
         run: |
           node - <<'NODE'
@@ -30,7 +31,16 @@ jobs:
           const source = fs.readFileSync(path, 'utf8')
           const legacy = "['scoreCandidate','diversify','rules-v1','logDiscoveryImpressions','dismissed']"
           const current = "['scoreHybridCandidate','diversifyRecommendations','RULES_FALLBACK_VERSION','logDiscoveryImpressions','dismissed']"
-          if (!source.includes(legacy)) throw new Error('Legacy discovery validation marker was not found')
-          fs.writeFileSync(path, source.replace(legacy, current))
+          if (source.includes(legacy)) fs.writeFileSync(path, source.replace(legacy, current))
+          else if (!source.includes(current)) throw new Error('Discovery validation marker set is unexpected')
           NODE
+      - run: npm install --no-audit --no-fund
       - run: npm run build
+      - name: Commit validated check fix
+        run: |
+          if git diff --quiet -- scripts/check.mjs; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/check.mjs
+          git commit -m "Fix release validation markers"
+          git push origin HEAD:agent/vercel-build-diagnostic
