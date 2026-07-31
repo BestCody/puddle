@@ -59,6 +59,17 @@ function dateReasons(item) {
   return [...new Set(reasons)].slice(0, 3)
 }
 
+function PhotoCredit({ item, compact = false }) {
+  if (!item.has_real_photo) return null
+  const provider = String(item.photo_provider || '').replaceAll('_', ' ')
+  const label = item.photo_attribution || (provider && provider !== 'puddle' ? `Photo via ${provider}` : 'Photo of this place')
+  const className = compact ? 'date-photo-credit is-compact' : 'date-photo-credit'
+  if (item.photo_attribution_url) {
+    return <a className={className} href={item.photo_attribution_url} target="_blank" rel="noreferrer" onPointerDown={(event) => event.stopPropagation()}>{label} ↗</a>
+  }
+  return <span className={className}>{label}</span>
+}
+
 function DateLocationDetails({ item, onClose, onShare }) {
   const reasons = dateReasons(item)
   return (
@@ -67,6 +78,7 @@ function DateLocationDetails({ item, onClose, onShare }) {
         <button className="date-details-close" type="button" onClick={onClose} aria-label="Close details">×</button>
         <span className="date-card-type">{categoryLabel(item.category)}</span>
         <h2 id="date-details-title">{item.title}</h2>
+        <PhotoCredit item={item} />
         <p>{item.summary || 'A nearby place that could be worth a date.'}</p>
         <div className="date-details-facts">
           <span>{item.distanceLabel}</span>
@@ -91,6 +103,7 @@ function DateLocationCard({ item, onChoice, onMessage, busy }) {
   const [dragging, setDragging] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const reasons = dateReasons(item)
+  const photoUrl = item.photo_url || item.cover_url || null
 
   async function choose(action) {
     if (busy) return
@@ -160,8 +173,10 @@ function DateLocationCard({ item, onChoice, onMessage, busy }) {
       >
         <div className="date-swipe-stamp is-save" style={{ opacity: saveOpacity }}>SAVE</div>
         <div className="date-swipe-stamp is-pass" style={{ opacity: passOpacity }}>PASS</div>
-        <div className="date-card-photo" style={{ backgroundImage: item.cover_url ? `linear-gradient(180deg,transparent 35%,rgba(19,12,17,.78)),url(${item.cover_url})` : undefined }}>
-          {!item.cover_url ? <div className="date-card-placeholder" aria-hidden="true"><span>⌖</span><small>{categoryLabel(item.category)}</small></div> : null}
+        <div className="date-card-photo" style={{ backgroundImage: photoUrl ? `linear-gradient(180deg,transparent 35%,rgba(19,12,17,.78)),url(${photoUrl})` : undefined }}>
+          {!photoUrl ? <div className="date-card-placeholder" aria-hidden="true"><span>⌖</span><small>Real photo coming soon</small></div> : null}
+          {photoUrl ? <span className="date-real-photo-badge">✓ Real place photo</span> : null}
+          {photoUrl ? <PhotoCredit item={item} compact /> : null}
           <div className="date-card-photo-meta"><span>{categoryLabel(item.category)}</span><span>{item.distanceLabel}</span></div>
         </div>
         <div className="date-card-content">
