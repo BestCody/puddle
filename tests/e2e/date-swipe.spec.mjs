@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { completeProfileDirect, createConfirmedUser, signInThroughUi } from './support.mjs'
+import { completeProfileDirect, createConfirmedUser, signInThroughUi, waitForProfile } from './support.mjs'
 
-test('date locations are swiped, inspected, saved, and undone on one page', async ({ page }) => {
+test('date locations are swiped, inspected, saved, undone, and updated from account settings', async ({ page }) => {
   const account = await createConfirmedUser({ displayName: 'Date Swiper' })
   await completeProfileDirect(account.user.id, {
     interests: ['cafe', 'gallery', 'scenic_spot'],
@@ -42,4 +42,25 @@ test('date locations are swiped, inspected, saved, and undone on one page', asyn
   await page.getByLabel('Maximum distance').fill('50')
   await page.getByRole('button', { name: /Update my deck/i }).click()
   await expect(page.getByLabel('Maximum distance')).toHaveCount(0)
+
+  await page.goto('/account')
+  await expect(page.getByRole('heading', { name: /Account settings/i })).toBeVisible()
+  await expect(page.getByText(/These choices shape the places in your swipe deck/i)).toBeVisible()
+  await expect(page.getByLabel('Coffee shops')).toBeChecked()
+  await expect(page.getByLabel('Galleries')).toBeChecked()
+  await expect(page.getByLabel('Scenic spots')).toBeChecked()
+
+  await page.getByLabel('Coffee shops').uncheck()
+  await page.getByLabel('Galleries').uncheck()
+  await page.getByLabel('Scenic spots').uncheck()
+  await page.getByLabel('Restaurants').check()
+  await page.getByLabel('Parks & gardens').check()
+  await page.getByLabel('Activity dates').check()
+  await page.getByRole('button', { name: /Save profile and date preferences/i }).click()
+
+  await expect(page).toHaveURL(/\/account\?success=/)
+  await expect(page.getByText(/Profile and date preferences saved/i)).toBeVisible()
+  const updatedProfile = await waitForProfile(account.user.id)
+  expect(updatedProfile.interests).toEqual(expect.arrayContaining(['restaurant', 'park', 'activity_venue']))
+  expect(updatedProfile.interests).not.toEqual(expect.arrayContaining(['cafe', 'gallery', 'scenic_spot']))
 })
