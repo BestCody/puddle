@@ -4,12 +4,12 @@ import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue
 import { isUnsafeMethod } from '@/lib/security/request'
 import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
 
-const protectedPrefixes = ['/dashboard','/discover','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/wallet','/orders','/settings','/appeals','/admin']
+const protectedPrefixes = ['/dashboard','/discover','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/change-email','/wallet','/orders','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
 const csrfExempt = new Set(['/api/stripe/webhook'])
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
 const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
-const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/auth/callback','/auth/confirm','/auth/error'])
+const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
 const publicNoSessionPaths = new Set([...cacheablePublicPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
 
 function carriesCookies(source, target) {
