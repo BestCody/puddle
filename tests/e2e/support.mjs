@@ -86,12 +86,15 @@ export async function deleteProfile(userId) {
   if (error) throw error
 }
 
+const htmlEntities = new Map([
+  ['&amp;', '&'],
+  ['&#x2f;', '/'],
+  ['&#47;', '/'],
+  ['&quot;', '"']
+])
+
 function decodeHtml(value) {
-  return String(value || '')
-    .replaceAll('&amp;', '&')
-    .replaceAll('&#x2F;', '/')
-    .replaceAll('&#47;', '/')
-    .replaceAll('&quot;', '"')
+  return String(value || '').replace(/&(?:amp|#x2f|#47|quot);/gi, (entity) => htmlEntities.get(entity.toLowerCase()) || entity)
 }
 
 function linksFromMessage(html) {
