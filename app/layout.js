@@ -1,6 +1,7 @@
 import './auth.css'
 import './onboarding.css'
 import './date-swipe.css'
+import './real-place-photos.css'
 import './product.css'
 import './stage-two.css'
 import './stage-three-four.css'
