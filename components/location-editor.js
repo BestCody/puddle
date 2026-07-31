@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { requestLocationPublication, saveLocationDraft, transitionLocationStatus } from '@/app/create/actions'
+import { csrfFetch } from '@/lib/security/csrf-client'
 import { accessibilityValue, contactValue, listText } from './editor-shared'
 import { GeocodeFields } from './geocode-fields'
 import { RevisionHistory } from './revision-history'
@@ -23,7 +24,7 @@ export function LocationEditor({ location = null, identities = [] }) {
       payload.id = draftId
       setAutosave('Saving…')
       try {
-        const response = await fetch('/api/drafts/place', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        const response = await csrfFetch('/api/drafts/place', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         const result = await response.json()
         if (!response.ok || !result.saved) {
           setAutosave(result.waiting ? 'Add the required basics to autosave' : result.error || 'Autosave paused')

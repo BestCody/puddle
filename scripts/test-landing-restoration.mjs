@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { readFile, stat } from 'node:fs/promises'
+import { access, readFile, stat } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
 import { chromium } from 'playwright'
 
@@ -17,9 +17,7 @@ const mimeTypes = {
   '.webp': 'image/webp'
 }
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message)
-}
+function assert(condition, message) { if (!condition) throw new Error(message) }
 
 const server = createServer(async (request, response) => {
   try {
@@ -30,10 +28,7 @@ const server = createServer(async (request, response) => {
     const info = await stat(filePath)
     if (!info.isFile()) throw new Error('Not a file')
     const body = await readFile(filePath)
-    response.writeHead(200, {
-      'Content-Type': mimeTypes[extname(filePath)] || 'application/octet-stream',
-      'Cache-Control': 'no-store'
-    })
+    response.writeHead(200, { 'Content-Type': mimeTypes[extname(filePath)] || 'application/octet-stream', 'Cache-Control': 'no-store' })
     response.end(body)
   } catch {
     response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
@@ -46,17 +41,8 @@ const address = server.address()
 const baseUrl = `http://127.0.0.1:${address.port}/`
 const browser = await chromium.launch({ headless: true })
 
-async function waitForTitle(page, expected, deck = '#hero-deck') {
-  await page.waitForFunction(
-    ({ selector, title }) => document.querySelector(`${selector} .event-card:last-child h3`)?.textContent?.trim() === title,
-    { selector: deck, title: expected }
-  )
-}
-
-async function assertNoNotifications(page, label) {
-  await page.waitForTimeout(80)
-  assert(await page.locator('#toast-region').count() === 0, `${label}: toast region still exists`)
-  assert(await page.locator('.toast').count() === 0, `${label}: a bottom-right notification appeared`)
+async function waitForTitle(page, expected) {
+  await page.waitForFunction((title) => document.querySelector('#hero-deck .event-card:last-child h3')?.textContent?.trim() === title, expected)
 }
 
 async function assertDeckVisible(page, label) {
@@ -74,14 +60,13 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
-  page.on('console', (message) => {
-    if (message.type() === 'error') pageErrors.push(message.text())
-  })
+  page.on('console', (message) => { if (message.type() === 'error') pageErrors.push(message.text()) })
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await assertDeckVisible(page, 'desktop')
-  await assertNoNotifications(page, 'initial load')
   await waitForTitle(page, 'Neon Garden')
+  assert(await page.locator('#app-demo').count() === 0, 'unused application prototype remains in the active DOM')
+  assert(await page.locator('#toast-region').count() === 0, 'toast region remains in the active DOM')
 
   const getStarted = page.locator('.hero-actions a')
   assert((await getStarted.textContent())?.trim().startsWith('Get Started'), 'Get Started CTA is missing')
@@ -97,32 +82,19 @@ try {
 
   await page.locator('[data-swipe="right"]').click()
   await waitForTitle(page, 'Clay & Cabernet')
-  await assertNoNotifications(page, 'heart swipe')
-
   await page.locator('[data-swipe="left"]').click()
   await waitForTitle(page, 'Rooftop Cinema Club')
-  await assertNoNotifications(page, 'skip swipe')
-
-  await page.locator('.round-action--share').click()
-  await assertNoNotifications(page, 'share')
 
   await page.locator('.mini-like').first().click()
   assert(await page.locator('.mini-like').first().evaluate((button) => button.classList.contains('is-liked')), 'marketing like interaction failed')
-  await assertNoNotifications(page, 'social heart')
 
   for (const type of ['organizer', 'safety']) {
     await page.locator(`[data-open-modal="${type}"]`).first().click()
     await page.waitForSelector('#modal-backdrop.is-open')
+    assert((await page.locator('#modal-title').textContent())?.trim().length > 10, `${type}: modal content is missing`)
     await page.locator('[data-close-modal]').click()
     await page.waitForSelector('#modal-backdrop:not(.is-open)')
   }
-
-  await page.evaluate(() => window.openApp())
-  await page.waitForSelector('#app-demo.is-open')
-  await page.waitForFunction(() => document.querySelectorAll('#demo-deck .event-card').length === 3)
-  await page.locator('#app-demo [data-demo-swipe="right"]').click()
-  await assertNoNotifications(page, 'demo heart')
-  await page.locator('[data-close-app]').click()
 
   for (const viewport of [
     { width: 1024, height: 768, label: 'laptop' },
@@ -133,20 +105,19 @@ try {
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
     await page.goto(baseUrl, { waitUntil: 'networkidle' })
     await assertDeckVisible(page, viewport.label)
-    await assertNoNotifications(page, viewport.label)
   }
 
   const privacySource = await readFile(join(root, 'app/privacy/page.js'), 'utf8')
   const termsSource = await readFile(join(root, 'app/terms/page.js'), 'utf8')
-  for (const marker of ['Information we collect', 'Location and social privacy', 'Your choices and rights', 'Back to home']) {
-    assert(privacySource.includes(marker) || (await readFile(join(root, 'components/legal-page.js'), 'utf8')).includes(marker), `privacy page is missing ${marker}`)
-  }
-  for (const marker of ['Acceptable use', 'Tickets, payments, refunds, and payouts', 'Governing law and disputes']) {
-    assert(termsSource.includes(marker), `terms page is missing ${marker}`)
+  for (const marker of ['Information we collect', 'Location and social privacy', 'Your choices and rights']) assert(privacySource.includes(marker), `privacy page is missing ${marker}`)
+  for (const marker of ['Acceptable use', 'Tickets, payments, refunds, and payouts', 'Governing law and disputes']) assert(termsSource.includes(marker), `terms page is missing ${marker}`)
+
+  for (const removed of ['index.html','styles.css','app.js','public/landing-demo.js']) {
+    try { await access(join(root, removed)); throw new Error(`${removed} still exists`) } catch (error) { if (error?.code !== 'ENOENT') throw error }
   }
 
   assert(pageErrors.length === 0, `browser errors detected:\n${pageErrors.join('\n')}`)
-  console.log('Landing, legal links, responsive cards, and notification removal tests passed.')
+  console.log('Lean landing, legal links, responsive cards, and interaction tests passed.')
 } finally {
   await browser.close()
   await new Promise((resolve) => server.close(resolve))

@@ -8,8 +8,9 @@ const protectedPrefixes = ['/dashboard','/discover','/explore','/plans','/create
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
 const csrfExempt = new Set(['/api/stripe/webhook'])
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
+const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
 const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/auth/callback','/auth/confirm','/auth/error'])
-const publicNoSessionPaths = new Set([...staticLandingPaths, '/privacy', '/terms', '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
+const publicNoSessionPaths = new Set([...cacheablePublicPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
@@ -18,6 +19,20 @@ function carriesCookies(source, target) {
 
 function secured(response, context) { return applySecurityHeaders(response, context) }
 function forbidden(request, nonce, message = 'Cross-site request blocked.') { return secured(NextResponse.json({ error: message }, { status: 403 }), { request, nonce }) }
+function hasSupabaseAuthCookie(request) { return request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(?:\.\d+)?$/i.test(name)) }
+function cachePolicy(response, pathname, privateResponse = false) {
+  if (privateResponse) {
+    response.headers.set('Cache-Control', 'private, no-store')
+    return response
+  }
+  if (cacheablePublicPaths.has(pathname)) {
+    response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
+  } else {
+    response.headers.set('Cache-Control', 'no-store')
+  }
+  return response
+}
 
 export async function proxy(request) {
   const nonce = nonceValue()
@@ -57,26 +72,33 @@ export async function proxy(request) {
 
   if (publicNoSessionPaths.has(pathname)) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
-    return secured(response, { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
+    return secured(cachePolicy(response, pathname), { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
   }
 
   const isProtected = protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
   const isAuthOnly = authOnlyPaths.includes(pathname)
   const hasAuthFailure = request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('auth_error')
+  const needsSession = isProtected || (hasSupabaseAuthCookie(request) && !pathname.startsWith('/api/'))
+
+  if (!needsSession) {
+    const response = NextResponse.next({ request: { headers: requestHeaders } })
+    return secured(cachePolicy(response, pathname, isAuthOnly), { request, nonce })
+  }
+
   const { response, user, configured } = await updateSession(request, requestHeaders)
 
   if (isProtected && !configured) {
     const url = new URL('/signin', request.url)
     url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
-    return secured(carriesCookies(response, NextResponse.redirect(url)), { request, nonce })
+    return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
   }
   if (isProtected && !user) {
     const url = new URL('/signin', request.url)
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
-    return secured(carriesCookies(response, NextResponse.redirect(url)), { request, nonce })
+    return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
   }
-  if (isAuthOnly && user && !hasAuthFailure) return secured(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), { request, nonce })
-  return secured(response, { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
+  if (isAuthOnly && user && !hasAuthFailure) return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce })
+  return secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly), { request, nonce })
 }
 
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)'] }

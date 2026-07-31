@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { requestEventPublication, saveEventDraft, transitionEventStatus } from '@/app/create/actions'
+import { csrfFetch } from '@/lib/security/csrf-client'
 import { accessibilityValue, contactValue, formatDateTimeLocal, listText } from './editor-shared'
 import { RevisionHistory } from './revision-history'
 
@@ -22,7 +23,7 @@ export function EventEditor({ event = null, identities = [], locations = [], cat
       payload.id = draftId
       setAutosave('Saving…')
       try {
-        const response = await fetch('/api/drafts/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        const response = await csrfFetch('/api/drafts/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         const result = await response.json()
         if (!response.ok || !result.saved) {
           setAutosave(result.waiting ? 'Add the required basics to autosave' : result.error || 'Autosave paused')

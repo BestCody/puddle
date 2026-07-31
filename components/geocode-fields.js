@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { csrfFetch } from '@/lib/security/csrf-client'
 
 export function GeocodeFields({ defaultAddress = '', defaultLatitude = '', defaultLongitude = '' }) {
   const [address, setAddress] = useState(defaultAddress)
@@ -10,7 +11,7 @@ export function GeocodeFields({ defaultAddress = '', defaultLatitude = '', defau
 
   async function lookup() {
     setMessage('Looking up address…')
-    const response = await fetch('/api/geocode', {
+    const response = await csrfFetch('/api/geocode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address })
