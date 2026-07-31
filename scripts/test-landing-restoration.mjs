@@ -1,10 +1,11 @@
 import { createServer } from 'node:http'
-import { access, readFile, stat } from 'node:fs/promises'
-import { extname, join, normalize } from 'node:path'
+import { access, open, readFile } from 'node:fs/promises'
+import { extname, join, resolve, sep } from 'node:path'
 import { chromium } from 'playwright'
 
 const root = process.cwd()
-const publicRoot = join(root, 'public')
+const publicRoot = resolve(root, 'public')
+const publicPrefix = `${publicRoot}${sep}`
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -20,23 +21,28 @@ const mimeTypes = {
 function assert(condition, message) { if (!condition) throw new Error(message) }
 
 const server = createServer(async (request, response) => {
+  let handle
   try {
     const url = new URL(request.url || '/', 'http://127.0.0.1')
-    const requestedPath = url.pathname === '/' ? '/landing.html' : url.pathname
-    const safePath = normalize(requestedPath).replace(/^([.][.][/\\])+/, '')
-    const filePath = join(publicRoot, safePath)
-    const info = await stat(filePath)
+    const requestedPath = url.pathname === '/' ? 'landing.html' : url.pathname.replace(/^\/+/, '')
+    const filePath = resolve(publicRoot, requestedPath)
+    if (filePath !== publicRoot && !filePath.startsWith(publicPrefix)) throw new Error('Path escapes public root')
+
+    handle = await open(filePath, 'r')
+    const info = await handle.stat()
     if (!info.isFile()) throw new Error('Not a file')
-    const body = await readFile(filePath)
+    const body = await handle.readFile()
     response.writeHead(200, { 'Content-Type': mimeTypes[extname(filePath)] || 'application/octet-stream', 'Cache-Control': 'no-store' })
     response.end(body)
   } catch {
     response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
     response.end('Not found')
+  } finally {
+    await handle?.close()
   }
 })
 
-await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+await new Promise((resolveListening) => server.listen(0, '127.0.0.1', resolveListening))
 const address = server.address()
 const baseUrl = `http://127.0.0.1:${address.port}/`
 const browser = await chromium.launch({ headless: true })
@@ -120,5 +126,5 @@ try {
   console.log('Lean landing, legal links, responsive cards, and interaction tests passed.')
 } finally {
   await browser.close()
-  await new Promise((resolve) => server.close(resolve))
+  await new Promise((resolveClosing) => server.close(resolveClosing))
 }
