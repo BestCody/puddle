@@ -1,0 +1,46 @@
+name: Verify code scanning is clean
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: read
+
+concurrency:
+  group: code-scanning-zero-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Wait for zero open alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          endpoint="repos/${GITHUB_REPOSITORY}/code-scanning/alerts?state=open&ref=refs/heads/main&per_page=100"
+
+          for attempt in $(seq 1 40); do
+            pages="$(gh api --paginate --slurp \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "$endpoint")"
+            count="$(jq '[.[][]] | length' <<<"$pages")"
+
+            if [ "$count" -eq 0 ]; then
+              echo 'GitHub reports zero open code scanning alerts on main.'
+              exit 0
+            fi
+
+            echo "Attempt ${attempt}/40: GitHub still reports ${count} open code scanning alert(s)."
+            if [ "$attempt" -eq 40 ]; then
+              jq -r '.[][] | "- #\(.number) \(.rule.id) at \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line // 0) — \(.rule.description)"' <<<"$pages"
+              exit 1
+            fi
+            sleep 30
+          done
