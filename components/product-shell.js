@@ -23,8 +23,8 @@ export async function ProductShell({ user, profile, children }) {
         <PuddleLogo />
         <ProductNav />
         <div className="sidebar-splash" aria-hidden="true">
-          <span>make a splash</span>
-          <strong>✦</strong>
+          <span>find the date spot</span>
+          <strong>♡</strong>
         </div>
       </aside>
 

@@ -47,7 +47,7 @@ const address = server.address()
 const baseUrl = `http://127.0.0.1:${address.port}/`
 const browser = await chromium.launch({ headless: true })
 
-async function waitForTitle(page, expected) {
+async function waitForCardTitle(page, expected) {
   await page.waitForFunction((title) => document.querySelector('#hero-deck .event-card:last-child h3')?.textContent?.trim() === title, expected)
 }
 
@@ -55,9 +55,9 @@ async function assertDeckVisible(page, label) {
   await page.waitForFunction(() => document.querySelectorAll('#hero-deck .event-card').length === 3)
   const card = page.locator('#hero-deck .event-card:last-child')
   const box = await card.boundingBox()
-  assert(box && box.width > 200 && box.height > 300, `${label}: top event card is not visible`)
+  assert(box && box.width > 200 && box.height > 300, `${label}: top date-location card is not visible`)
   const footerBox = await card.locator('.event-card__footer').boundingBox()
-  assert(footerBox && footerBox.y + footerBox.height <= box.y + box.height + 2, `${label}: event card footer is clipped`)
+  assert(footerBox && footerBox.y + footerBox.height <= box.y + box.height + 2, `${label}: date-location card footer is clipped`)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
   assert(overflow <= 2, `${label}: page horizontally overflows by ${overflow}px`)
 }
@@ -70,7 +70,13 @@ try {
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await assertDeckVisible(page, 'desktop')
-  await waitForTitle(page, 'Neon Garden')
+  await waitForCardTitle(page, 'Moonlight Café')
+  assert(await page.title() === 'Puddle — swipe for your next date spot', 'date-location browser title is missing')
+  assert((await page.locator('.hero-copy h1').textContent())?.trim() === 'Find the date spot one swipe at a time.', 'date-location hero promise is missing')
+  assert((await page.locator('.hero-lede').textContent())?.includes('Coffee shops, restaurants, parks'), 'date-location hero description is missing')
+  assert(await page.locator('#social').count() === 0, 'generic social event section remains in the active landing page')
+  assert(await page.locator('#organizers').count() === 0, 'organizer section remains in the active landing page')
+  assert(await page.locator('.section--tickets').count() === 0, 'ticketing section remains in the active landing page')
   assert(await page.locator('#app-demo').count() === 0, 'unused application prototype remains in the active DOM')
   assert(await page.locator('#toast-region').count() === 0, 'toast region remains in the active DOM')
 
@@ -87,20 +93,19 @@ try {
   assert(companyLinks.some((link) => link.label === 'Terms' && link.href === '/terms'), 'Terms page link is missing')
 
   await page.locator('[data-swipe="right"]').click()
-  await waitForTitle(page, 'Clay & Cabernet')
+  await waitForCardTitle(page, 'Clay & Cabernet')
   await page.locator('[data-swipe="left"]').click()
-  await waitForTitle(page, 'Rooftop Cinema Club')
+  await waitForCardTitle(page, 'Rooftop Cinema Club')
+  await page.locator('[data-swipe="undo"]').click()
+  await waitForCardTitle(page, 'Clay & Cabernet')
 
-  await page.locator('.mini-like').first().click()
-  assert(await page.locator('.mini-like').first().evaluate((button) => button.classList.contains('is-liked')), 'marketing like interaction failed')
-
-  for (const type of ['organizer', 'safety']) {
-    await page.locator(`[data-open-modal="${type}"]`).first().click()
-    await page.waitForSelector('#modal-backdrop.is-open')
-    assert((await page.locator('#modal-title').textContent())?.trim().length > 10, `${type}: modal content is missing`)
-    await page.locator('[data-close-modal]').click()
-    await page.waitForSelector('#modal-backdrop:not(.is-open)')
-  }
+  const safetyButton = page.locator('[data-open-modal="safety"]').first()
+  assert(await safetyButton.count() === 1, 'date-safety details button is missing')
+  await safetyButton.click()
+  await page.waitForSelector('#modal-backdrop.is-open')
+  assert((await page.locator('#modal-title').textContent())?.trim() === 'Date ideas without matching strangers.', 'date-safety modal copy is missing')
+  await page.locator('[data-close-modal]').click()
+  await page.waitForSelector('#modal-backdrop:not(.is-open)')
 
   for (const viewport of [
     { width: 1024, height: 768, label: 'laptop' },
@@ -111,6 +116,7 @@ try {
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
     await page.goto(baseUrl, { waitUntil: 'networkidle' })
     await assertDeckVisible(page, viewport.label)
+    assert((await page.locator('.hero-copy h1').textContent())?.includes('Find the date spot'), `${viewport.label}: date-location headline is missing`)
   }
 
   const privacySource = await readFile(join(root, 'app/privacy/page.js'), 'utf8')
@@ -123,7 +129,7 @@ try {
   }
 
   assert(pageErrors.length === 0, `browser errors detected:\n${pageErrors.join('\n')}`)
-  console.log('Lean landing, legal links, responsive cards, and interaction tests passed.')
+  console.log('Date-location landing, legal links, responsive cards, and swipe interactions passed.')
 } finally {
   await browser.close()
   await new Promise((resolveClosing) => server.close(resolveClosing))

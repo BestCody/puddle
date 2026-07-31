@@ -4,15 +4,15 @@ const privacyPath = '/privacy'
 const termsPath = '/terms'
 
 const events = [
-  { title:'Neon Garden', category:'Nightlife', date:'Fri · 10:00 PM', place:'Stackt Market · 2.4 km', price:'$24', image:'/events/neon-night.svg', description:'A glowing indoor garden, live DJs and surreal installations until late.', match:'98% your vibe' },
-  { title:'Clay & Cabernet', category:'Workshop', date:'Sat · 6:30 PM', place:'Dundas West · 3.1 km', price:'$38', image:'/events/ceramics.svg', description:'Make a wonky cup, drink something good and meet people who also need a hobby.', match:'Creative pick' },
-  { title:'Rooftop Cinema Club', category:'Film', date:'Sun · 8:45 PM', place:'King West · 1.8 km', price:'$18', image:'/events/rooftop.svg', description:'Cult classics, city lights, popcorn and blankets above the skyline.', match:'Because you saved film' },
-  { title:'Late Night Jazz Club', category:'Live music', date:'Thu · 9:00 PM', place:'The Annex · 4.2 km', price:'$16', image:'/events/jazz.svg', description:'A tiny room, warm lights and three sets from Toronto’s newest jazz players.', match:'92% your vibe' }
+  { title:'Moonlight Café', category:'Coffee date', date:'Open late', place:'Queen West · 1.5 km', price:'$$', image:'/events/jazz.svg', description:'Late-night espresso, vinyl, soft lights, and enough quiet to actually talk.', match:'Easy conversation' },
+  { title:'Clay & Cabernet', category:'Activity date', date:'Saturday evenings', place:'Dundas West · 3.1 km', price:'$$$', image:'/events/ceramics.svg', description:'Make something slightly wonky together, with wine and alcohol-free drinks available.', match:'Playful pick' },
+  { title:'Rooftop Cinema Club', category:'Movie date', date:'Sunset screenings', place:'King West · 1.8 km', price:'$$', image:'/events/rooftop.svg', description:'Cult classics, skyline views, popcorn, and blankets above the city.', match:'Great second stop' },
+  { title:'Neon Garden Lounge', category:'Evening date', date:'Open until 1 AM', place:'The Junction · 4.2 km', price:'$$$', image:'/events/neon-night.svg', description:'A glowing indoor garden with small plates, mocktails, and tucked-away booths.', match:'Romantic atmosphere' }
 ]
 
 const modalCopy = {
-  organizer: ['Organizer tools without the spreadsheet sprawl.', 'Create drafts, manage attendees, publish updates, review performance, and keep private venue details out of public records.'],
-  safety: ['Safety is part of the product, not a footer promise.', 'Puddle combines visibility controls, age restrictions, expiring location sharing, reporting, evidence preservation, and role-gated moderation workflows.']
+  organizer: ['Puddle is built around choosing the place together.', 'Swipe through nearby date locations, save your favourites, share a shortlist, and turn the best option into a real plan.'],
+  safety: ['Date ideas without matching strangers.', 'Puddle recommends places—not people—and gives you privacy controls, blocking, reporting, and time-limited location sharing for plans you choose to make.']
 }
 
 let currentIndex = 0
@@ -35,6 +35,97 @@ function replaceButtonWithLink(element, label, href, arrow = '') {
   if (ariaLabel) link.setAttribute('aria-label', ariaLabel)
   element.replaceWith(link)
   return link
+}
+
+function setText(selector, text, root = document) {
+  const element = root.querySelector(selector)
+  if (element) element.textContent = text
+}
+
+function updateMeta(selector, content) {
+  const element = document.querySelector(selector)
+  if (element) element.setAttribute('content', content)
+}
+
+function alignLandingToDateLocations() {
+  document.title = 'Puddle — swipe for your next date spot'
+  updateMeta('meta[name="description"]', 'Swipe through nearby places and save locations that feel right for a date.')
+  updateMeta('meta[property="og:title"]', 'Puddle — find a date spot by swiping')
+  updateMeta('meta[property="og:description"]', 'Coffee shops, restaurants, activity dates, scenic spots and more—one place at a time.')
+
+  const navItems = $$('.desktop-nav a')
+  const navCopy = [
+    ['How it works', '#how'],
+    ['Date ideas', '#how'],
+    ['Safety', '#safety']
+  ]
+  navItems.forEach((item, index) => {
+    const next = navCopy[index]
+    if (!next) return
+    item.textContent = next[0]
+    item.href = next[1]
+  })
+  navItems.slice(navCopy.length).forEach((item) => item.remove())
+
+  setText('.hero .eyebrow', 'Toronto beta · made for better dates')
+  const heroTitle = $('.hero-copy h1')
+  if (heroTitle) heroTitle.innerHTML = 'Find the date spot <em>one swipe</em> at a time.'
+  setText('.hero-lede', 'Coffee shops, restaurants, parks, galleries, activity dates and hidden gems nearby—served as a deck you can actually swipe through.')
+  setText('.social-proof p strong', 'Skip the “where should we go?” spiral.')
+  const socialProof = $('.social-proof p')
+  if (socialProof) socialProof.lastChild.textContent = ' Save places that feel right and share the shortlist.'
+
+  const playground = $('.hero-playground')
+  if (playground) playground.setAttribute('aria-label', 'Interactive Puddle date-location deck')
+  setText('.sticker--spark', '♡ date night?')
+  setText('.sticker--arrow', 'swipe a place ↘')
+  setText('.floating-bubble--friends', 'send it to your date')
+  setText('.floating-bubble--match', 'great for conversation')
+  setText('.round-action--no', '×')
+  $('.round-action--no')?.setAttribute('aria-label', 'Pass on this location')
+  $('.round-action--yes')?.setAttribute('aria-label', 'Save this location for a date')
+  $('.round-action--share')?.setAttribute('aria-label', 'Share date location')
+
+  const categories = ['COFFEE DATES ♡','DINNER DATES ♡','ACTIVITY DATES ♡','PARKS & GARDENS ♡','MUSEUMS ♡','SCENIC SPOTS ♡','DESSERT SPOTS ♡']
+  $$('.marquee-track span').forEach((element, index) => { element.textContent = categories[index % categories.length] })
+  $('.marquee')?.setAttribute('aria-label', 'Date location categories')
+
+  setText('#how .section-heading .eyebrow', 'No endless review tabs')
+  setText('#how .section-heading h2', 'Choosing the place should feel fun.')
+  const howParagraph = $('#how .section-heading > p')
+  if (howParagraph) howParagraph.textContent = 'Tell Puddle what kinds of date locations you like. Every pass and save sharpens the next deck while keeping enough variety to surprise you.'
+
+  const bentoCards = $$('#how .bento-card')
+  if (bentoCards[0]) {
+    setText('.bento-kicker', 'Swipe', bentoCards[0])
+    setText('h3', 'One nearby date spot at a time.', bentoCards[0])
+    setText('p', 'Pass, save, inspect details, or share without leaving the swipe page.', bentoCards[0])
+  }
+  if (bentoCards[1]) {
+    setText('.bento-kicker', 'Choose', bentoCards[1])
+    setText('h3', 'Filter for the date you have in mind.', bentoCards[1])
+    setText('.map-card strong', 'Date ideas near you', bentoCards[1])
+    setText('.map-card span', 'within your travel radius', bentoCards[1])
+  }
+  if (bentoCards[2]) {
+    setText('.bento-kicker', 'Plan', bentoCards[2])
+    setText('h3', 'Turn a saved place into a real date.', bentoCards[2])
+    setText('.calendar-event strong', 'Dinner, then a sunset walk', bentoCards[2])
+    setText('.calendar-event b', 'saved', bentoCards[2])
+  }
+
+  $('#social')?.remove()
+  $('#organizers')?.remove()
+  $('.section--tickets')?.remove()
+
+  setText('#safety .eyebrow', 'Places, not people')
+  setText('#safety h2', 'Date discovery without stranger matching.')
+  setText('#safety .safety-copy > p:not(.eyebrow)', 'Puddle helps you choose where to go. It does not match you with strangers, and sharing a plan or temporary location is always optional and controlled by you.')
+
+  const footerHeading = $('.footer-form')?.parentElement?.querySelector('strong')
+  const footerHelper = $('.footer-form')?.parentElement?.querySelector('small')
+  if (footerHeading) footerHeading.textContent = 'Start swiping date locations'
+  if (footerHelper) footerHelper.textContent = 'Create an account, choose the kinds of places you like, and build your first date deck.'
 }
 
 function connectLandingToAuthentication() {
@@ -69,13 +160,13 @@ function cardElement(item, stackIndex) {
   card.className = 'event-card'
   card.style.zIndex = String(20 - stackIndex)
   card.tabIndex = stackIndex === 0 ? 0 : -1
-  card.setAttribute('aria-label', `${item.title}, ${item.date}`)
+  card.setAttribute('aria-label', `${item.title}, ${item.category}`)
 
   const imageArea = document.createElement('div')
   imageArea.className = 'event-card__image'
   const image = document.createElement('img')
   image.src = item.image
-  image.alt = `${item.title} event artwork`
+  image.alt = `${item.title} location artwork`
   image.draggable = false
   image.decoding = 'async'
   imageArea.appendChild(image)
@@ -107,7 +198,7 @@ function cardElement(item, stackIndex) {
   footer.className = 'event-card__footer'
   const hint = document.createElement('span')
   hint.className = 'event-card__friends'
-  hint.textContent = 'Swipe to explore'
+  hint.textContent = 'Swipe to choose'
   const price = document.createElement('span')
   price.className = 'event-card__price'
   price.textContent = item.price
@@ -187,6 +278,7 @@ function initLanding() {
   $('#app-demo')?.remove()
   $('#toast-region')?.remove()
   $('#confetti-layer')?.remove()
+  alignLandingToDateLocations()
   connectLandingToAuthentication()
   renderDeck()
   optimizeImages()
