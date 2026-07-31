@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   security-events: read
+  statuses: write
 
 concurrency:
   group: code-scanning-zero-${{ github.ref }}
@@ -24,6 +25,23 @@ jobs:
         run: |
           set -euo pipefail
           endpoint="repos/${GITHUB_REPOSITORY}/code-scanning/alerts?state=open&ref=refs/heads/main&per_page=100"
+          status_endpoint="repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          publish_status() {
+            local state="$1"
+            local description="$2"
+            gh api --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "$status_endpoint" \
+              -f state="$state" \
+              -f context='code-scanning-zero' \
+              -f description="$description" \
+              -f target_url="$run_url" >/dev/null
+          }
+
+          publish_status pending 'Waiting for GitHub code scanning to refresh'
 
           for attempt in $(seq 1 40); do
             pages="$(gh api --paginate --slurp \
@@ -34,12 +52,14 @@ jobs:
 
             if [ "$count" -eq 0 ]; then
               echo 'GitHub reports zero open code scanning alerts on main.'
+              publish_status success '0 open code scanning alerts'
               exit 0
             fi
 
             echo "Attempt ${attempt}/40: GitHub still reports ${count} open code scanning alert(s)."
             if [ "$attempt" -eq 40 ]; then
               jq -r '.[][] | "- #\(.number) \(.rule.id) at \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line // 0) — \(.rule.description)"' <<<"$pages"
+              publish_status failure "${count} open code scanning alert(s)"
               exit 1
             fi
             sleep 30
