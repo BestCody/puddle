@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { readFile, stat } from 'node:fs/promises'
+import { open } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -19,14 +19,23 @@ const secretPatterns = [
 const serverOnlyNames = ['SUPABASE_SECRET_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','CRON_SECRET','TURNSTILE_SECRET_KEY','SECURITY_HASH_SECRET','GEOCODING_API_KEY','EMAIL_DELIVERY_TOKEN','MALWARE_SCANNER_TOKEN','MALWARE_SCANNER_SIGNING_SECRET','TICKET_SIGNING_PRIVATE_KEY_BASE64']
 const findings = []
 
+async function readTrackedText(path) {
+  const handle = await open(join(root, path), 'r').catch(() => null)
+  if (!handle) return ''
+  try {
+    const info = await handle.stat()
+    if (!info.isFile() || info.size > 2_000_000) return ''
+    return await handle.readFile('utf8')
+  } finally {
+    await handle.close()
+  }
+}
+
 for (const path of tracked) {
   if (excluded.has(path)) continue
   const extension = extname(path)
   if (!textExtensions.has(extension)) continue
-  const file = join(root, path)
-  const info = await stat(file).catch(() => null)
-  if (!info?.isFile() || info.size > 2_000_000) continue
-  const source = await readFile(file, 'utf8').catch(() => '')
+  const source = await readTrackedText(path)
   if (!source) continue
 
   if (path !== patternDefinitionFile) {
