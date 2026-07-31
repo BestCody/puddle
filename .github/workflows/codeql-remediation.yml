@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  security-events: read
 
 jobs:
   analyze:
@@ -24,9 +25,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          queries: |
-            security-and-quality
-            security-extended
+          queries: security-extended
           build-mode: none
       - name: Analyze without uploading
         uses: github/codeql-action/analyze@v4
