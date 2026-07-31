@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useRef, useState } from 'react'
+import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { csrfFetch } from '@/lib/security/csrf-client'
 
 const categoryLabels = {
@@ -104,6 +105,7 @@ function DateLocationCard({ item, onChoice, onMessage, busy }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const reasons = dateReasons(item)
   const photoUrl = item.photo_url || item.cover_url || null
+  const useGoogleFallback = !photoUrl && item.content_kind === 'place' && Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))
 
   async function choose(action) {
     if (busy) return
@@ -173,9 +175,11 @@ function DateLocationCard({ item, onChoice, onMessage, busy }) {
       >
         <div className="date-swipe-stamp is-save" style={{ opacity: saveOpacity }}>SAVE</div>
         <div className="date-swipe-stamp is-pass" style={{ opacity: passOpacity }}>PASS</div>
-        <div className="date-card-photo" style={{ backgroundImage: photoUrl ? `linear-gradient(180deg,transparent 35%,rgba(19,12,17,.78)),url(${photoUrl})` : undefined }}>
-          {!photoUrl ? <div className="date-card-placeholder" aria-hidden="true"><span>⌖</span><small>Real photo coming soon</small></div> : null}
+        <div className={`date-card-photo ${useGoogleFallback ? 'has-google-fallback' : ''}`} style={{ backgroundImage: photoUrl ? `linear-gradient(180deg,transparent 35%,rgba(19,12,17,.78)),url(${photoUrl})` : undefined }}>
+          {useGoogleFallback ? <GooglePlacePhotoFallback title={item.title} latitude={item.latitude} longitude={item.longitude} placeId={item.google_place_id || null} /> : null}
+          {!photoUrl && !useGoogleFallback ? <div className="date-card-placeholder" aria-hidden="true"><span>⌖</span><small>Real photo coming soon</small></div> : null}
           {photoUrl ? <span className="date-real-photo-badge">✓ Real place photo</span> : null}
+          {useGoogleFallback ? <span className="date-real-photo-badge is-google">Google Maps photo</span> : null}
           {photoUrl ? <PhotoCredit item={item} compact /> : null}
           <div className="date-card-photo-meta"><span>{categoryLabel(item.category)}</span><span>{item.distanceLabel}</span></div>
         </div>
