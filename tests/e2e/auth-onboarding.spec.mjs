@@ -9,6 +9,7 @@ import {
   signInThroughUi,
   signOutThroughUi,
   uniqueEmail,
+  uniqueSuffix,
   waitForAuthEmailLink,
   waitForProfile
 } from './support.mjs'
@@ -29,7 +30,7 @@ test('email signup, confirmation, resumable onboarding, sign-in, reset, and sign
   const email = uniqueEmail('complete-flow')
   const password = 'OriginalPuddle123!'
   const newPassword = 'ReplacementPuddle456!'
-  const username = `flow_${Math.random().toString(36).slice(2, 10)}`
+  const username = `flow_${uniqueSuffix(12)}`
 
   await page.goto('/signup')
   await page.getByLabel('Display name').fill('Complete Flow')
@@ -121,7 +122,7 @@ test('email signup, confirmation, resumable onboarding, sign-in, reset, and sign
 })
 
 test('duplicate usernames preserve the rest of onboarding progress', async ({ page }) => {
-  const sharedUsername = `shared_${Math.random().toString(36).slice(2, 9)}`
+  const sharedUsername = `shared_${uniqueSuffix(12)}`
   const owner = await createConfirmedUser({ displayName: 'Username Owner' })
   await completeProfileDirect(owner.user.id, { username: sharedUsername })
 
