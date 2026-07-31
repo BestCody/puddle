@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -9,13 +9,12 @@ const clientFiles = []
 const findings = []
 
 for (const path of paths) {
-  const file = join(root, path)
-  const info = await stat(file)
-  const source = await readFile(file, 'utf8')
+  const source = await readFile(join(root, path), 'utf8')
+  const bytes = Buffer.byteLength(source)
   const client = /^\s*["']use client["']/.test(source.slice(0, 300))
   if (!client) continue
-  clientFiles.push({ path, bytes: info.size })
-  if (info.size > 90_000) findings.push(`${path}: client source is ${Math.round(info.size / 1024)} KiB`)
+  clientFiles.push({ path, bytes })
+  if (bytes > 90_000) findings.push(`${path}: client source is ${Math.round(bytes / 1024)} KiB`)
   if (/from\s+["'](?:node:|sharp|fs|path|crypto)/.test(source)) findings.push(`${path}: imports a Node-only module`)
   if (/from\s+["']@\/lib\/supabase\/(?:server|admin)/.test(source)) findings.push(`${path}: imports a server Supabase client`)
   if (/from\s+["']@\/lib\/auth\/(?:privileged|user)/.test(source)) findings.push(`${path}: imports server authentication logic`)
