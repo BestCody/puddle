@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { expect } from '@playwright/test'
 
@@ -13,8 +14,12 @@ export const admin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 })
 
+export function uniqueSuffix(length = 12) {
+  return randomUUID().replaceAll('-', '').slice(0, length)
+}
+
 export function uniqueEmail(label = 'user') {
-  return `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}@example.com`
+  return `${label}-${Date.now()}-${uniqueSuffix()}@example.com`
 }
 
 export async function poll(fn, { timeout = 15_000, interval = 250, message = 'Condition was not met.' } = {}) {
@@ -61,11 +66,10 @@ export async function createConfirmedUser({ email = uniqueEmail(), password = 'P
 }
 
 export async function completeProfileDirect(userId, overrides = {}) {
-  const suffix = Math.random().toString(36).slice(2, 9)
   const payload = {
     id: userId,
     display_name: 'Ready Tester',
-    username: `ready_${suffix}`,
+    username: `ready_${uniqueSuffix(10)}`,
     birth_date: '1995-05-15',
     city: 'Toronto',
     search_radius_km: 10,
