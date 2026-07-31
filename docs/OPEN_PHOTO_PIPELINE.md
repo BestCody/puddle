@@ -51,14 +51,15 @@ GOOGLE_PLACES_API_KEY=...
 GOOGLE_PLACE_MATCH_LIMIT=200
 GOOGLE_PLACE_MATCH_MIN_SCORE=0.84
 
-# Browser-restricted key. Enable Maps JavaScript API and Places UI Kit only.
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
+# Intentionally public credential, restricted to Puddle HTTP referrers.
+# A server component passes it to the active client card.
+GOOGLE_MAPS_BROWSER_KEY=...
 
 OPEN_PHOTO_IMPORT_LIMIT=200
 OPEN_PHOTO_MIN_SCORE=0.76
 ```
 
-Use separate server and browser Google keys. Restrict the browser key by production and preview HTTP referrers. Restrict the server key to the Places API and the environment that runs the matching command.
+Use separate server and browser Google keys. Restrict the browser key by production and preview HTTP referrers. Restrict the server key to the Places API and the environment that runs the matching command. Although `GOOGLE_MAPS_BROWSER_KEY` is read on the server, its value is intentionally serialized to the client for the Maps JavaScript loader and must be treated as a public, referrer-restricted credential.
 
 ## Preview open-photo candidates
 
@@ -111,7 +112,7 @@ npm run locations:google:match -- --location=LOCATION_UUID
 - The active card is a place.
 - No Puddle or approved open-source photo exists.
 - The location has a verified row in `location_google_places`.
-- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is configured.
+- `GOOGLE_MAPS_BROWSER_KEY` is configured.
 
 The card first reads the verified Place ID from Puddle's authenticated same-origin endpoint. It then renders only media and Google attribution through Places UI Kit. It does not copy, cache, or persist Google image files. Because the swipe workspace renders only the active card, cards behind the active card do not create Google component requests.
 
@@ -130,7 +131,7 @@ Locations without an approved open photo or verified Google Place ID retain the 
 9. Import approved open-photo matches with `--apply`.
 10. Run Google Place matching in dry-run mode and review a representative sample.
 11. Save verified Google mappings with `--apply`.
-12. Redeploy so the public Google key is included in the client bundle.
+12. Redeploy so the browser credential is included in the server-rendered page.
 13. Confirm stored photos win and Google appears only for uncovered active cards.
 
 ## Cost controls
