@@ -97,7 +97,7 @@ function DateLocationDetails({ item, onClose, onShare }) {
   )
 }
 
-function DateLocationCard({ item, onChoice, onMessage, busy }) {
+function DateLocationCard({ item, onChoice, onMessage, busy, googleMapsBrowserKey }) {
   const startX = useRef(null)
   const pointerId = useRef(null)
   const [dragX, setDragX] = useState(0)
@@ -176,7 +176,7 @@ function DateLocationCard({ item, onChoice, onMessage, busy }) {
         <div className="date-swipe-stamp is-save" style={{ opacity: saveOpacity }}>SAVE</div>
         <div className="date-swipe-stamp is-pass" style={{ opacity: passOpacity }}>PASS</div>
         <div className={`date-card-photo ${useGoogleFallback ? 'has-google-fallback' : ''}`} style={{ backgroundImage: photoUrl ? `linear-gradient(180deg,transparent 35%,rgba(19,12,17,.78)),url(${photoUrl})` : undefined }}>
-          {useGoogleFallback ? <GooglePlacePhotoFallback title={item.title} locationId={item.content_id} placeId={item.google_place_id || null} /> : null}
+          {useGoogleFallback ? <GooglePlacePhotoFallback title={item.title} locationId={item.content_id} placeId={item.google_place_id || null} apiKey={googleMapsBrowserKey} /> : null}
           {!photoUrl && !useGoogleFallback ? <div className="date-card-placeholder" aria-hidden="true"><span>⌖</span><small>Real photo coming soon</small></div> : null}
           {photoUrl ? <span className="date-real-photo-badge">✓ Real place photo</span> : null}
           {useGoogleFallback ? <span className="date-real-photo-badge is-google">Google Maps photo</span> : null}
@@ -201,7 +201,7 @@ function DateLocationCard({ item, onChoice, onMessage, busy }) {
   )
 }
 
-export function DateSwipeWorkspace({ initialFeed }) {
+export function DateSwipeWorkspace({ initialFeed, googleMapsBrowserKey = '' }) {
   const [feed, setFeed] = useState(initialFeed)
   const [filters, setFilters] = useState({ ...initialFeed.filters, kind: 'place', date: 'any' })
   const [index, setIndex] = useState(0)
@@ -304,7 +304,7 @@ export function DateSwipeWorkspace({ initialFeed }) {
       {message ? <p className="date-swipe-message" role="status">{message}</p> : null}
 
       <div className="date-deck-stage">
-        {current ? <DateLocationCard key={current.content_id} item={current} onChoice={choose} onMessage={setMessage} busy={busy} /> : <section className="date-deck-empty"><span aria-hidden="true">♡</span><h2>You reached the end of this date deck.</h2><p>Adjust your filters or widen the distance to find more places.</p><div><button type="button" onClick={() => setShowFilters(true)}>Change filters</button><button type="button" onClick={() => refresh()}>Refresh deck</button></div></section>}
+        {current ? <DateLocationCard key={current.content_id} item={current} onChoice={choose} onMessage={setMessage} busy={busy} googleMapsBrowserKey={googleMapsBrowserKey} /> : <section className="date-deck-empty"><span aria-hidden="true">♡</span><h2>You reached the end of this date deck.</h2><p>Adjust your filters or widen the distance to find more places.</p><div><button type="button" onClick={() => setShowFilters(true)}>Change filters</button><button type="button" onClick={() => refresh()}>Refresh deck</button></div></section>}
       </div>
 
       <div className="date-deck-footer">
