@@ -33,7 +33,8 @@ test('duplicate usernames map to a user-facing recovery message', () => {
 test('new or recovered profiles are always sent through onboarding', () => {
   assert.equal(authenticatedDestination(null, '/dashboard'), '/onboarding')
   assert.equal(authenticatedDestination({ onboarding_completed_at: null }, '/create'), '/onboarding')
-  assert.equal(authenticatedDestination({ onboarding_completed_at: '2026-01-01T00:00:00Z' }, '/onboarding'), '/dashboard')
+  assert.equal(authenticatedDestination({ onboarding_completed_at: '2026-01-01T00:00:00Z' }, '/onboarding'), '/discover')
+  assert.equal(authenticatedDestination({ onboarding_completed_at: '2026-01-01T00:00:00Z' }, '/dashboard'), '/discover')
   assert.equal(authenticatedDestination({ onboarding_completed_at: '2026-01-01T00:00:00Z' }, '/create'), '/create')
 })
 
