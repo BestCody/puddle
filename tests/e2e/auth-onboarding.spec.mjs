@@ -16,9 +16,10 @@ import {
 
 async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Saved browser-test progress.' } = {}) {
   await page.getByLabel('Username').fill(username)
-  await page.getByLabel('Birth date').fill('1994-06-15')
+  await page.getByLabel('Birth date').fill('19940615')
+  await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
   await page.getByLabel('City').fill(city)
-  await page.getByLabel('Search radius').selectOption('25')
+  await page.getByLabel('Search radius').fill('25')
   await page.getByLabel('Live music').check()
   await page.getByLabel('Food').check()
   await page.getByLabel('Art').check()
@@ -26,7 +27,7 @@ async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Saved b
   await page.getByLabel('Profile visibility').selectOption('mutuals')
 }
 
-test('email signup, confirmation, resumable onboarding, sign-in, reset, and sign-out work end to end', async ({ page, browser }) => {
+test('email signup, confirmation, onboarding, sign-in, reset, and sign-out work end to end', async ({ page, browser }) => {
   const email = uniqueEmail('complete-flow')
   const password = 'OriginalPuddle123!'
   const newPassword = 'ReplacementPuddle456!'
@@ -51,6 +52,9 @@ test('email signup, confirmation, resumable onboarding, sign-in, reset, and sign
   await page.goto(confirmationPath)
   await expect(page).toHaveURL(/\/onboarding$/)
   await expect(page.getByRole('heading', { name: /Teach Puddle your vibe/i })).toBeVisible()
+  await expect(page.getByLabel('Profile visibility')).toHaveValue('public')
+  await expect(page.getByRole('button', { name: /Save and continue later/i })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Build my feed/i })).toHaveCount(1)
 
   const cleanContext = await browser.newContext()
   const reusedPage = await cleanContext.newPage()
@@ -60,33 +64,16 @@ test('email signup, confirmation, resumable onboarding, sign-in, reset, and sign
   await cleanContext.close()
 
   await fillOnboarding(page, { username })
-  await page.getByRole('button', { name: /Save and continue later/i }).click()
-  await expect(page).toHaveURL(/\/onboarding\?success=/)
-  await expect(page.getByText(/Progress saved/i)).toBeVisible()
-
-  const draftProfile = await waitForProfile(user.id)
-  expect(draftProfile.username).toBe(username)
-  expect(draftProfile.city).toBe('Toronto')
-  expect(draftProfile.search_radius_km).toBe(25)
-  expect(draftProfile.interests).toEqual(expect.arrayContaining(['Live music', 'Food', 'Art']))
-  expect(draftProfile.onboarding_completed_at).toBeNull()
-
-  await signOutThroughUi(page)
-  await signInThroughUi(page, email, password)
-  await expect(page).toHaveURL(/\/onboarding$/)
-  await expect(page.getByLabel('Username')).toHaveValue(username)
-  await expect(page.getByLabel('City')).toHaveValue('Toronto')
-  await expect(page.getByLabel('Live music')).toBeChecked()
-  await expect(page.getByLabel('Food')).toBeChecked()
-  await expect(page.getByLabel('Art')).toBeChecked()
-  await expect(page.getByLabel('Tiny bio')).toHaveValue('Saved browser-test progress.')
-  await expect(page.getByLabel('Profile visibility')).toHaveValue('mutuals')
-
   await page.getByRole('button', { name: /Build my feed/i }).click()
   await expect(page).toHaveURL(/\/discover\?success=/)
   await expect(page.getByText(/Welcome to Puddle/i)).toBeVisible()
 
   const completedProfile = await waitForProfile(user.id)
+  expect(completedProfile.username).toBe(username)
+  expect(completedProfile.city).toBe('Toronto')
+  expect(completedProfile.search_radius_km).toBe(25)
+  expect(completedProfile.interests).toEqual(expect.arrayContaining(['Live music', 'Food', 'Art']))
+  expect(completedProfile.profile_visibility).toBe('mutuals')
   expect(completedProfile.onboarding_completed_at).toBeTruthy()
 
   await signOutThroughUi(page)
