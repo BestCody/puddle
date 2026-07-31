@@ -1,5 +1,6 @@
 import './auth.css'
 import './onboarding.css'
+import './date-swipe.css'
 import './product.css'
 import './stage-two.css'
 import './stage-three-four.css'
@@ -12,7 +13,7 @@ import './viewport-responsive.css'
 
 export const metadata = {
   title: { default: 'Puddle', template: '%s · Puddle' },
-  description: 'Find events and places worth leaving home for.',
+  description: 'Swipe through nearby places and find somewhere worth going together.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
 }
 
