@@ -14,20 +14,20 @@ import {
   waitForProfile
 } from './support.mjs'
 
-async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Saved browser-test progress.' } = {}) {
+async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Low-key dates with good conversation.' } = {}) {
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Birth date').fill('19940615')
   await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
   await page.getByLabel('City').fill(city)
   await page.getByLabel('Search radius').fill('25')
-  await page.getByLabel('Live music').check()
-  await page.getByLabel('Food').check()
-  await page.getByLabel('Art').check()
-  await page.getByLabel('Tiny bio').fill(bio)
+  await page.getByLabel('Coffee shops').check()
+  await page.getByLabel('Restaurants').check()
+  await page.getByLabel('Galleries').check()
+  await page.getByLabel('Your ideal date vibe').fill(bio)
   await page.getByLabel('Profile visibility').selectOption('mutuals')
 }
 
-test('email signup, confirmation, onboarding, sign-in, reset, and sign-out work end to end', async ({ page, browser }) => {
+test('email signup, confirmation, date onboarding, sign-in, reset, and sign-out work end to end', async ({ page, browser }) => {
   const email = uniqueEmail('complete-flow')
   const password = 'OriginalPuddle123!'
   const newPassword = 'ReplacementPuddle456!'
@@ -51,10 +51,11 @@ test('email signup, confirmation, onboarding, sign-in, reset, and sign-out work 
   const confirmationPath = directConfirmationPath(verificationLink)
   await page.goto(confirmationPath)
   await expect(page).toHaveURL(/\/onboarding$/)
-  await expect(page.getByRole('heading', { name: /Teach Puddle your vibe/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Build your date deck/i })).toBeVisible()
+  await expect(page.getByText(/What kinds of places do you like for dates/i)).toBeVisible()
   await expect(page.getByLabel('Profile visibility')).toHaveValue('public')
   await expect(page.getByRole('button', { name: /Save and continue later/i })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /Build my feed/i })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: /Build my date deck/i })).toHaveCount(1)
 
   const cleanContext = await browser.newContext()
   const reusedPage = await cleanContext.newPage()
@@ -64,15 +65,16 @@ test('email signup, confirmation, onboarding, sign-in, reset, and sign-out work 
   await cleanContext.close()
 
   await fillOnboarding(page, { username })
-  await page.getByRole('button', { name: /Build my feed/i }).click()
+  await page.getByRole('button', { name: /Build my date deck/i }).click()
   await expect(page).toHaveURL(/\/discover\?success=/)
-  await expect(page.getByText(/Welcome to Puddle/i)).toBeVisible()
+  await expect(page.getByText(/Your date deck is ready/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Swipe for somewhere worth going together/i })).toBeVisible()
 
   const completedProfile = await waitForProfile(user.id)
   expect(completedProfile.username).toBe(username)
   expect(completedProfile.city).toBe('Toronto')
   expect(completedProfile.search_radius_km).toBe(25)
-  expect(completedProfile.interests).toEqual(expect.arrayContaining(['Live music', 'Food', 'Art']))
+  expect(completedProfile.interests).toEqual(expect.arrayContaining(['cafe', 'restaurant', 'gallery']))
   expect(completedProfile.profile_visibility).toBe('mutuals')
   expect(completedProfile.onboarding_completed_at).toBeTruthy()
 
@@ -108,7 +110,7 @@ test('email signup, confirmation, onboarding, sign-in, reset, and sign-out work 
   await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard|\/signin\?next=\/dashboard/)
 })
 
-test('duplicate usernames preserve the rest of onboarding progress', async ({ page }) => {
+test('duplicate usernames preserve date-location onboarding choices', async ({ page }) => {
   const sharedUsername = `shared_${uniqueSuffix(12)}`
   const owner = await createConfirmedUser({ displayName: 'Username Owner' })
   await completeProfileDirect(owner.user.id, { username: sharedUsername })
@@ -116,16 +118,16 @@ test('duplicate usernames preserve the rest of onboarding progress', async ({ pa
   const candidate = await createConfirmedUser({ displayName: 'Username Candidate' })
   await signInThroughUi(page, candidate.email, candidate.password)
   await expect(page).toHaveURL(/\/onboarding$/)
-  await fillOnboarding(page, { username: sharedUsername, city: 'Montreal', bio: 'Keep this even when the username conflicts.' })
-  await page.getByRole('button', { name: /Build my feed/i }).click()
+  await fillOnboarding(page, { username: sharedUsername, city: 'Montreal', bio: 'Keep these date choices even when the username conflicts.' })
+  await page.getByRole('button', { name: /Build my date deck/i }).click()
 
   await expect(page).toHaveURL(/\/onboarding\?error=/)
   await expect(page.getByText(/username is already taken/i)).toBeVisible()
   const profile = await waitForProfile(candidate.user.id)
   expect(profile.username).not.toBe(sharedUsername)
   expect(profile.city).toBe('Montreal')
-  expect(profile.bio).toBe('Keep this even when the username conflicts.')
-  expect(profile.interests).toEqual(expect.arrayContaining(['Live music', 'Food', 'Art']))
+  expect(profile.bio).toBe('Keep these date choices even when the username conflicts.')
+  expect(profile.interests).toEqual(expect.arrayContaining(['cafe', 'restaurant', 'gallery']))
   expect(profile.onboarding_completed_at).toBeNull()
 })
 
