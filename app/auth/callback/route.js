@@ -22,33 +22,42 @@ function authFailure(code = 'callback_failed') {
   return NextResponse.redirect(target)
 }
 
+function knownProviderError(value) {
+  switch (safeAuthErrorCode(value, '')) {
+    case 'access_denied': return 'access_denied'
+    case 'bad_code_verifier': return 'bad_code_verifier'
+    case 'flow_state_expired': return 'flow_state_expired'
+    case 'flow_state_not_found': return 'flow_state_not_found'
+    default: return null
+  }
+}
+
+function exchangeableCode(value) {
+  const candidate = String(value || '')
+  return /^[A-Za-z0-9._~-]{8,4096}$/.test(candidate) ? candidate : ''
+}
+
 export async function GET(request) {
-  const url = new URL(request.url)
   if (!isSupabaseConfigured()) {
     return NextResponse.redirect(appUrl('/signin?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.'))
   }
 
-  const providerError = url.searchParams.get('error')
-  if (providerError) {
-    console.error('Supabase OAuth provider returned an error', {
-      code: safeAuthErrorCode(providerError),
-      description: url.searchParams.get('error_description') ? 'provided' : undefined
-    })
-    return authFailure(providerError)
-  }
-
-  const code = url.searchParams.get('code')
+  const url = new URL(request.url)
+  const rawCode = url.searchParams.get('code')
+  const code = exchangeableCode(rawCode)
+  const providerError = knownProviderError(url.searchParams.get('error'))
   const next = safeNextPath(url.searchParams.get('next'), '/dashboard')
-  if (!code) return authFailure('missing_auth_code')
 
   const supabase = await createClient()
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
+    const failureCode = providerError || (rawCode ? safeAuthErrorCode(error.code || 'exchange_failed') : 'missing_auth_code')
     console.error('Supabase auth code exchange failed', {
-      code: safeAuthErrorCode(error.code || 'exchange_failed'),
-      status: error.status || undefined
+      code: failureCode,
+      status: error.status || undefined,
+      providerError: providerError || undefined
     })
-    return authFailure(error.code || 'exchange_failed')
+    return authFailure(failureCode)
   }
 
   const { data: { user } } = await supabase.auth.getUser()
