@@ -72,7 +72,7 @@ export default async function OnboardingPage({ searchParams }) {
             </div>
           </fieldset>
           <label className="field">Your ideal date vibe<textarea name="bio" maxLength="500" defaultValue={profile?.bio || ''} placeholder="Low-key coffee, a walk somewhere pretty, and enough time to actually talk." /></label>
-          <label className="field">Profile visibility<select name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Confirmed attendees</option><option value="hidden">Hidden</option></select></label>
+          <label className="field">Profile visibility<select name="profile_visibility" defaultValue="public"><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Confirmed attendees</option><option value="hidden">Hidden</option></select></label>
           <div className="onboarding-submit">
             <SubmitButton className="primary-button onboarding-primary" pendingText="Building your date deck…">Build my date deck →</SubmitButton>
           </div>
