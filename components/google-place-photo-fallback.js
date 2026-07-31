@@ -55,10 +55,9 @@ async function resolvePlaceId(locationId, existingPlaceId) {
   return result.placeId ? String(result.placeId) : null
 }
 
-export function GooglePlacePhotoFallback({ title, locationId, placeId = null }) {
+export function GooglePlacePhotoFallback({ title, locationId, placeId = null, apiKey = '' }) {
   const rootRef = useRef(null)
   const [state, setState] = useState('loading')
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   useEffect(() => {
     const root = rootRef.current
