@@ -34,6 +34,13 @@ for (const path of adminPages) await requireMarkers(path, ['requirePrivileged'])
 await requireMarkers('app/api/stripe/webhook/route.js', ['verifyStripeWebhook', 'storeStripeWebhookEvent'])
 await requireMarkers('lib/auth/privileged.js', ['privileged_access_v1', 'getAuthenticatorAssuranceLevel', "currentLevel === 'aal2'"])
 await requireMarkers('lib/media/pipeline.js', ['detectedMime', 'declared !== mime', 'limitInputPixels', 'pdfLooksSafe', '/encrypt'])
+await requireMarkers('tests/e2e/support.mjs', ["from 'node:crypto'", 'randomUUID'])
+
+const testScripts = tracked.filter((path) => path.startsWith('tests/') && /\.(?:[cm]?js|jsx|ts|tsx)$/.test(path))
+for (const path of testScripts) {
+  const value = await source(path)
+  if (/\bMath\.random\s*\(/.test(value)) findings.push(`${path}: use cryptographic test identifiers instead of Math.random()`)
+}
 
 const proxy = await source('proxy.js')
 for (const marker of ['hasSupabaseAuthCookie', 'needsSession', 'publicNoSessionPaths', 'sec-fetch-site', 'content-length']) if (!proxy.includes(marker)) findings.push(`proxy.js: missing ${marker}`)
@@ -42,4 +49,4 @@ const gate = proxy.indexOf('if (!needsSession)')
 if (gate < 0 || lookup < 0 || gate > lookup) findings.push('proxy.js: Supabase session lookup is not gated')
 
 if (findings.length) throw new Error(`Security surface audit failed:\n${findings.map((item) => `- ${item}`).join('\n')}`)
-console.log(`Security surface audit passed for ${protectedMutations.length} interactive routes, ${adminApis.length} admin APIs, and ${adminPages.length} admin pages.`)
+console.log(`Security surface audit passed for ${protectedMutations.length} interactive routes, ${adminApis.length} admin APIs, ${adminPages.length} admin pages, and ${testScripts.length} test scripts.`)
