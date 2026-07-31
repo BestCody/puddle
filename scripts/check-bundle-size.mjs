@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib'
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -8,11 +8,10 @@ const chunksRoot = join(root, '.next', 'static', 'chunks')
 const entries = []
 
 async function walk(directory) {
-  for (const name of await readdir(directory)) {
-    const path = join(directory, name)
-    const info = await stat(path)
-    if (info.isDirectory()) await walk(path)
-    else if (name.endsWith('.js')) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) await walk(path)
+    else if (entry.isFile() && entry.name.endsWith('.js')) {
       const content = await readFile(path)
       entries.push({ path: relative(root, path), raw: content.length, gzip: gzipSync(content).length })
     }
