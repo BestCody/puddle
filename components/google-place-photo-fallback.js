@@ -42,21 +42,27 @@ async function loadPlacesLibrary(apiKey) {
   await window.google.maps.importLibrary('places')
   await Promise.all([
     customElements.whenDefined('gmp-place-details-compact'),
-    customElements.whenDefined('gmp-place-details-place-request'),
-    customElements.whenDefined('gmp-place-details-location-request')
+    customElements.whenDefined('gmp-place-details-place-request')
   ])
 }
 
-export function GooglePlacePhotoFallback({ title, latitude, longitude, placeId = null }) {
+async function resolvePlaceId(locationId, existingPlaceId) {
+  if (existingPlaceId) return String(existingPlaceId)
+  if (!locationId) return null
+  const response = await fetch(`/api/location-google-place/${encodeURIComponent(String(locationId))}`, { cache: 'no-store' })
+  if (!response.ok) return null
+  const result = await response.json().catch(() => ({}))
+  return result.placeId ? String(result.placeId) : null
+}
+
+export function GooglePlacePhotoFallback({ title, locationId, placeId = null }) {
   const rootRef = useRef(null)
   const [state, setState] = useState('loading')
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   useEffect(() => {
     const root = rootRef.current
-    const lat = Number(latitude)
-    const lng = Number(longitude)
-    if (!root || !apiKey || (!placeId && (!Number.isFinite(lat) || !Number.isFinite(lng)))) {
+    if (!root || !apiKey || (!placeId && !locationId)) {
       setState('unavailable')
       return undefined
     }
@@ -69,6 +75,8 @@ export function GooglePlacePhotoFallback({ title, latitude, longitude, placeId =
 
     async function render() {
       try {
+        const verifiedPlaceId = await resolvePlaceId(locationId, placeId)
+        if (!verifiedPlaceId || cancelled) return fail()
         await loadPlacesLibrary(apiKey)
         if (cancelled) return
 
@@ -78,10 +86,8 @@ export function GooglePlacePhotoFallback({ title, latitude, longitude, placeId =
         details.setAttribute('truncation-preferred', '')
         details.setAttribute('aria-label', `Google Maps place photo for ${title}`)
 
-        const request = document.createElement(placeId ? 'gmp-place-details-place-request' : 'gmp-place-details-location-request')
-        if (placeId) request.setAttribute('place', String(placeId))
-        else request.setAttribute('location', `${lat},${lng}`)
-
+        const request = document.createElement('gmp-place-details-place-request')
+        request.setAttribute('place', verifiedPlaceId)
         const content = document.createElement('gmp-place-content-config')
         const media = document.createElement('gmp-place-media')
         media.setAttribute('lightbox-preferred', '')
@@ -106,7 +112,7 @@ export function GooglePlacePhotoFallback({ title, latitude, longitude, placeId =
       if (details) details.removeEventListener('gmp-requesterror', fail)
       root.replaceChildren()
     }
-  }, [apiKey, latitude, longitude, placeId, title])
+  }, [apiKey, locationId, placeId, title])
 
   return (
     <div className={`date-google-photo ${state === 'ready' ? 'is-ready' : ''}`}>
