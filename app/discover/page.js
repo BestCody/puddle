@@ -1,5 +1,5 @@
 import { AuthMessage } from '@/components/auth-message'
-import { DiscoveryWorkspace } from '@/components/discovery-workspace'
+import { DateSwipeWorkspace } from '@/components/date-swipe-workspace'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getDiscoveryFeed, logDiscoveryImpressions } from '@/lib/app/discovery'
 
@@ -29,7 +29,7 @@ export default async function DiscoverPage({ searchParams }) {
         </div>
         <div className="date-swipe-heading-mark" aria-hidden="true"><span>♡</span><strong>⌖</strong></div>
       </section>
-      <DiscoveryWorkspace initialFeed={feed} />
+      <DateSwipeWorkspace initialFeed={feed} />
     </>
   })
 }
