@@ -1,4 +1,5 @@
 import './auth.css'
+import './onboarding.css'
 import './product.css'
 import './stage-two.css'
 import './stage-three-four.css'
