@@ -5,7 +5,7 @@ import { isUnsafeMethod } from '@/lib/security/request'
 import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
 import { isLegacyApiPath, legacyRedirectForPath, legacySystemsEnabled } from '@/lib/product-vision'
 
-const protectedPrefixes = ['/dashboard','/discover','/date-match','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/change-email','/wallet','/orders','/settings','/appeals','/admin']
+const protectedPrefixes = ['/dashboard','/discover','/date-match','/map','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/change-email','/wallet','/orders','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
 const csrfExempt = new Set(['/api/stripe/webhook'])
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
@@ -17,21 +17,15 @@ function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
   return target
 }
-
 function secured(response, context) { return applySecurityHeaders(response, context) }
 function forbidden(request, nonce, message = 'Cross-site request blocked.') { return secured(NextResponse.json({ error: message }, { status: 403 }), { request, nonce }) }
 function hasSupabaseAuthCookie(request) { return request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(?:\.\d+)?$/i.test(name)) }
 function cachePolicy(response, pathname, privateResponse = false) {
-  if (privateResponse) {
-    response.headers.set('Cache-Control', 'private, no-store')
-    return response
-  }
+  if (privateResponse) { response.headers.set('Cache-Control', 'private, no-store'); return response }
   if (cacheablePublicPaths.has(pathname)) {
     response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400')
     response.headers.set('CDN-Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-  } else {
-    response.headers.set('Cache-Control', 'no-store')
-  }
+  } else response.headers.set('Cache-Control', 'no-store')
   return response
 }
 
@@ -73,14 +67,10 @@ export async function proxy(request) {
       url.searchParams.set('legacy', 'disabled')
       return secured(cachePolicy(NextResponse.redirect(url, 307), pathname, true), { request, nonce })
     }
-    if (isLegacyApiPath(pathname)) {
-      return secured(NextResponse.json({ error: 'This legacy Puddle system is disabled in the location-first product.' }, { status: 410 }), { request, nonce })
-    }
+    if (isLegacyApiPath(pathname)) return secured(NextResponse.json({ error: 'This legacy Puddle system is disabled in the location-first product.' }, { status: 410 }), { request, nonce })
   }
 
-  const canonicalTarget = (request.method === 'GET' || request.method === 'HEAD')
-    ? canonicalPuddleAuthUrl(request.url, process.env.NEXT_PUBLIC_SITE_URL, authCanonicalPaths)
-    : null
+  const canonicalTarget = (request.method === 'GET' || request.method === 'HEAD') ? canonicalPuddleAuthUrl(request.url, process.env.NEXT_PUBLIC_SITE_URL, authCanonicalPaths) : null
   if (canonicalTarget) return secured(NextResponse.redirect(canonicalTarget, 307), { request, nonce })
 
   if (publicNoSessionPaths.has(pathname)) {
@@ -99,15 +89,12 @@ export async function proxy(request) {
   }
 
   const { response, user, configured } = await updateSession(request, requestHeaders)
-
   if (isProtected && !configured) {
-    const url = new URL('/signin', request.url)
-    url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
+    const url = new URL('/signin', request.url); url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
     return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
   }
   if (isProtected && !user) {
-    const url = new URL('/signin', request.url)
-    url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+    const url = new URL('/signin', request.url); url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
   }
   if (isAuthOnly && user && !hasAuthFailure) return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce })
