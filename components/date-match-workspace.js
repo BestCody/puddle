@@ -186,12 +186,14 @@ export function DateMatchWorkspace({ initialSnapshot, googleMapsBrowserKey = '' 
     setItems((currentItems) => currentItems.map((candidate) => candidate.content_id === item.content_id ? { ...candidate, own_choice: choice, own_note: note } : candidate))
     setDeck((currentDeck) => ({ ...currentDeck, completedCount: Number(payload.result?.completedMembers ?? currentDeck.completedCount), memberCount: Number(payload.result?.memberCount ?? currentDeck.memberCount) }))
     if (payload.result?.matched) {
-      const match = { location_id: item.content_id, strength: payload.result.strength || 2, status: 'matched', matched_at: new Date().toISOString(), voteSummary: { positiveCount: payload.result.positiveCount, perfectCount: payload.result.perfectCount, passCount: payload.result.passCount, voteCount: payload.result.memberCount } }
+      const match = { location_id: item.content_id, strength: payload.result.strength || 2, status: 'matched', matched_at: new Date().toISOString(), voteSummary: { positiveCount: payload.result.positiveCount, perfectCount: payload.result.perfectCount, passCount: payload.result.passCount, voteCount: payload.result.voteCount ?? payload.result.memberCount } }
+      const matchedItem = payload.result.partnerNote ? { ...item, partner_note: payload.result.partnerNote } : item
       seenMatches.current.add(item.content_id)
       setMatches((currentMatches) => [...currentMatches.filter((candidate) => candidate.location_id !== item.content_id), match])
+      if (payload.result.partnerNote) setItems((currentItems) => currentItems.map((candidate) => candidate.content_id === item.content_id ? { ...candidate, partner_note: payload.result.partnerNote } : candidate))
       if (payload.result?.newMatch !== false) {
         vibrate([40, 35, 80])
-        setCelebration({ match, item, strength: match.strength, voteSummary: match.voteSummary })
+        setCelebration({ match, item: matchedItem, strength: match.strength, voteSummary: match.voteSummary })
       }
     }
     setIndex(nextUnswiped(index, nextChoices))
