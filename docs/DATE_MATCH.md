@@ -29,12 +29,9 @@ The partner’s note remains private until the mutual match exists. When a match
 
 A Hangout Match room supports 3–8 people and does not create a group result until at least three people have joined.
 
-A location becomes a group match when:
+For each location, Puddle waits until every person currently in the room has independently decided. The location becomes a group match only when nobody chooses Pass. Save and Perfect Pick both count as agreement, while Perfect Picks make the result rank more strongly.
 
-- at least 60% of the currently joined group choose Save or Perfect Pick; and
-- nobody chooses Pass for that location.
-
-Perfect Picks rank the group result more strongly. Participant choices and notes remain private until the location becomes a valid group match. The room displays joined-member progress, completed-member progress, remaining capacity, vote strength, and the strongest group options.
+Waiting for every joined participant prevents an early result from revealing how the first few people voted before the rest of the group has chosen. Participant choices and notes remain private until the location becomes a valid group match. The room displays joined-member progress, completed-member progress, remaining capacity, vote strength, and the strongest group options.
 
 New Hangout Match invitations use `/hangout/[token]`. Existing shared links under `/date-match/[token]` remain compatible and route Hangout rooms to the first-class Hangout surface.
 
@@ -81,6 +78,8 @@ Each deck has one clearly marked Puddle Pick. Its explanation comes from real re
 - push subscriptions
 
 `10010_hangout_minimum_consensus.sql` enforces the three-person minimum for Hangout Match consensus.
+
+`10011_private_shared_consensus.sql` prevents early result leakage by waiting for all joined members to decide on a location and restores the matched partner note in the immediate DateMatch response.
 
 Row-level security allows members to read permitted deck metadata, items, and actual matches while raw swipe rows remain private.
 
