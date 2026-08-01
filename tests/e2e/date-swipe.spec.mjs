@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { completeProfileDirect, createConfirmedUser, signInThroughUi, waitForProfile } from './support.mjs'
 
-test('date locations are swiped, inspected, saved, undone, and updated from account settings', async ({ page }) => {
+test('date locations are swiped, inspected, noted, undone, and updated from account settings', async ({ page }) => {
   const account = await createConfirmedUser({ displayName: 'Date Swiper' })
   await completeProfileDirect(account.user.id, {
     interests: ['cafe', 'gallery', 'scenic_spot'],
@@ -12,6 +12,8 @@ test('date locations are swiped, inspected, saved, undone, and updated from acco
   await signInThroughUi(page, account.email, account.password, '/discover')
   await expect(page).toHaveURL(/\/discover$/)
   await expect(page.getByRole('heading', { name: /Swipe for somewhere worth going together/i })).toBeVisible()
+  await expect(page.getByText(/Your 12-card date deck/i)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Swipe together/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /^deck$/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /^list$/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /^map$/i })).toHaveCount(0)
@@ -19,8 +21,10 @@ test('date locations are swiped, inspected, saved, undone, and updated from acco
   const card = page.locator('.date-swipe-card')
   await expect(card).toBeVisible()
   const firstTitle = await card.locator('h2').innerText()
+  await expect(card.getByText(/Puddle Pick/i)).toBeVisible()
   await expect(card.getByRole('button', { name: /Pass/i })).toBeVisible()
   await expect(card.getByRole('button', { name: /^Save/i })).toBeVisible()
+  await expect(card.getByRole('button', { name: /Perfect Pick/i })).toBeVisible()
 
   await card.getByRole('button', { name: 'Details' }).click()
   const details = page.getByRole('dialog')
@@ -30,6 +34,10 @@ test('date locations are swiped, inspected, saved, undone, and updated from acco
   await expect(details).toHaveCount(0)
 
   await card.getByRole('button', { name: /^Save/i }).click()
+  const noteDialog = page.getByRole('dialog')
+  await expect(noteDialog.getByRole('heading', { name: new RegExp(`Why does ${firstTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} stand out`, 'i') })).toBeVisible()
+  await noteDialog.getByRole('textbox').fill('Looks cozy and easy to talk in.')
+  await noteDialog.getByRole('button', { name: /^Save$/i }).click()
   await expect(page.getByText(new RegExp(`Saved for a date · ${firstTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))).toBeVisible()
   await expect(page.locator('.date-swipe-card h2')).not.toHaveText(firstTitle)
 
