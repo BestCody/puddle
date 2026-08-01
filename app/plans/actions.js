@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
+import { legacySystemsEnabled } from '@/lib/product-vision'
 
 function value(formData, name, max = 2000) {
   return String(formData.get(name) || '').trim().slice(0, max)
@@ -26,7 +27,12 @@ function publicMessage(error, fallback) {
   return message && !/policy|permission|rls|schema|relation|supabase/i.test(message) ? message : fallback
 }
 
+function requireLegacyPlansSystem() {
+  if (!legacySystemsEnabled()) redirect(pathWithMessage('/plans', 'error', 'Complex itineraries and event attendance are disabled in the location-first product.'))
+}
+
 export async function createCollaborativePlan(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const title = value(formData, 'title', 120)
   if (title.length < 2) redirect(pathWithMessage('/plans?tab=shared', 'error', 'Give the plan a name.'))
@@ -51,6 +57,7 @@ export async function createCollaborativePlan(formData) {
 }
 
 export async function invitePlanMember(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const planId = value(formData, 'plan_id', 64)
   const username = value(formData, 'username', 30).toLowerCase().replace(/^@/, '')
@@ -73,6 +80,7 @@ export async function invitePlanMember(formData) {
 }
 
 export async function respondToPlanInvitation(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const planId = value(formData, 'plan_id', 64)
   const response = value(formData, 'response', 20) === 'accepted' ? 'accepted' : 'declined'
@@ -82,6 +90,7 @@ export async function respondToPlanInvitation(formData) {
 }
 
 export async function addPlanAvailability(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const planId = value(formData, 'plan_id', 64)
   const startsAt = optionalDate(value(formData, 'starts_at', 80))
@@ -100,6 +109,7 @@ export async function addPlanAvailability(formData) {
 }
 
 export async function addPlanStop(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const planId = value(formData, 'plan_id', 64)
   const kind = value(formData, 'kind', 20)
@@ -117,6 +127,7 @@ export async function addPlanStop(formData) {
 }
 
 export async function createPlanPoll(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const planId = value(formData, 'plan_id', 64)
   const question = value(formData, 'question', 300)
@@ -149,6 +160,7 @@ export async function createPlanPoll(formData) {
 }
 
 export async function voteInPlanPoll(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const planId = value(formData, 'plan_id', 64)
   const optionId = value(formData, 'option_id', 64)
@@ -164,6 +176,7 @@ export async function voteInPlanPoll(formData) {
 }
 
 export async function postPlanMessage(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const planId = value(formData, 'plan_id', 64)
   const body = value(formData, 'body', 2000)
@@ -175,6 +188,7 @@ export async function postPlanMessage(formData) {
 }
 
 export async function requestEventAttendance(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const eventId = value(formData, 'event_id', 64)
   const slug = value(formData, 'slug', 120)
@@ -199,6 +213,7 @@ export async function requestEventAttendance(formData) {
 }
 
 export async function cancelEventAttendance(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const eventId = value(formData, 'event_id', 64)
   const next = safeNextPath(value(formData, 'next', 300) || '/plans?tab=going')
@@ -209,6 +224,7 @@ export async function cancelEventAttendance(formData) {
 }
 
 export async function approveEventAttendance(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const eventId = value(formData, 'event_id', 64)
   const attendeeId = value(formData, 'attendee_id', 64)
@@ -220,6 +236,7 @@ export async function approveEventAttendance(formData) {
 }
 
 export async function promoteEventWaitlist(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const eventId = value(formData, 'event_id', 64)
   const { data, error } = await session.supabase.rpc('promote_event_waitlist_as_manager_v1', { target: eventId })
@@ -229,6 +246,7 @@ export async function promoteEventWaitlist(formData) {
 }
 
 export async function checkInAttendee(formData) {
+  requireLegacyPlansSystem()
   const session = await requireUser({ onboarding: true })
   const eventId = value(formData, 'event_id', 64)
   const attendeeId = value(formData, 'attendee_id', 64)
@@ -254,5 +272,6 @@ export async function recordLocationVisit(formData) {
   }, { onConflict: 'profile_id,location_id' })
   if (error) redirect(pathWithMessage('/plans?tab=past', 'error', 'The place visit could not be saved.'))
   revalidatePath('/plans')
-  redirect(pathWithMessage(status === 'visited' ? '/plans?tab=past' : '/plans?tab=saved_places', 'success', status === 'visited' ? 'Visit recorded.' : 'Place added to your visit plans.'))
+  const next = status === 'visited' ? '/plans?tab=past' : legacySystemsEnabled() ? '/plans?tab=saved_places' : '/plans?tab=planned'
+  redirect(pathWithMessage(next, 'success', status === 'visited' ? 'Visit recorded.' : 'Place added to your visit plans.'))
 }
