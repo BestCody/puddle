@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { EmptyState } from '@/components/empty-state'
+import { LegacyPlansPage } from '@/app/plans/legacy-page'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansSnapshot } from '@/lib/app/location-plans-data'
+import { legacySystemsEnabled } from '@/lib/product-vision'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Saved and planned locations' }
@@ -27,6 +29,8 @@ function LocationCard({ item }) {
 }
 
 export default async function PlansPage({ searchParams }) {
+  if (legacySystemsEnabled()) return <LegacyPlansPage searchParams={searchParams} />
+
   const params = await searchParams
   const active = tabs.some(([value]) => value === params?.tab) ? params.tab : 'saved'
 
