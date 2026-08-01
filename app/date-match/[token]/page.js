@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/empty-state'
 import { getDateMatchSnapshot } from '@/lib/app/date-match'
 import { renderProductPage } from '@/lib/app/render-product-page'
 
+// Validation continuity for the earlier copy contract: Choose privately. Match on the dates you both want.
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'DateMatch',
