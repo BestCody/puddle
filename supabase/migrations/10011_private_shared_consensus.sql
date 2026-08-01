@@ -121,7 +121,7 @@ begin
       'match_found',
       case when target_mode = 'hangout' then 'Your group found a location' else 'It is a DateMatch' end,
       l.name || case when target_mode = 'hangout' then ' is a strong group match.' else ' was saved by both of you.' end,
-      case when target_mode = 'hangout' then '/hangout/' else '/dashboard' end,
+      '/dashboard',
       jsonb_build_object(
         'deckId', target_deck,
         'locationId', target_location,
