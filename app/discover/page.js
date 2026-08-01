@@ -29,7 +29,7 @@ export default async function DiscoverPage({ searchParams }) {
         </div>
         <div className="date-swipe-heading-mark" aria-hidden="true"><span>♡</span><strong>⌖</strong></div>
       </section>
-      <DateSwipeWorkspace initialFeed={feed} />
+      <DateSwipeWorkspace initialFeed={feed} googleMapsBrowserKey={process.env.GOOGLE_MAPS_BROWSER_KEY || ''} />
     </>
   })
 }
