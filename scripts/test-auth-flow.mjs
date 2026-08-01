@@ -72,12 +72,12 @@ assert(callback.includes('authenticatedDestination(profile, next)'), 'OAuth call
 assert(!callback.includes("new URL('/auth/error'"), 'OAuth callback should not dump users onto the generic error page')
 
 const confirm = await readFile(join(root, 'app/auth/confirm/route.js'), 'utf8')
-assert(confirm.includes('verifyOtp({ token_hash: tokenHash, type })'), 'Email confirmation exchange is missing')
-assert(confirm.includes("target.searchParams.set('auth_error', safeCode)"), 'Email confirmation needs a sanitized diagnostic code')
-assert(confirm.includes('authLinkErrorMessage'), 'Email confirmation must map expired and reused links to useful messages')
-assert(confirm.includes('ensureProfile(supabase, user)'), 'Email confirmation must recover a missing profile')
-assert(confirm.includes('authenticatedDestination(profile, next)'), 'Email confirmation must route new accounts to onboarding')
-assert(!confirm.includes("new URL('/auth/error'"), 'Email confirmation should not dump users onto the generic error page')
+assert(confirm.includes('verifyOtp({ token_hash: tokenHash, type })'), 'Email link exchange is missing')
+assert(confirm.includes("target.searchParams.set('auth_error', safeCode)"), 'Email links need a sanitized diagnostic code')
+assert(confirm.includes('authLinkErrorMessage'), 'Email links must map expired and reused links to useful messages')
+assert(confirm.includes('ensureProfile(supabase, user)'), 'Email links must recover a missing profile')
+assert(confirm.includes('authenticatedDestination(profile, next)'), 'Email links must route accounts correctly')
+assert(!confirm.includes("new URL('/auth/error'"), 'Email links should not dump users onto the generic error page')
 
 const actions = await readFile(join(root, 'app/auth/actions.js'), 'utf8')
 for (const marker of ['signInWithPassword', 'signUp({', "provider !== 'google'", 'exchangeCodeForSession']) {
@@ -87,5 +87,10 @@ for (const marker of ['signInWithPassword', 'signUp({', "provider !== 'google'",
 for (const marker of ['saveOnboardingDraft', 'profileWriteErrorMessage', 'ensureProfile', 'resetPasswordForEmail', "signOut({ scope: 'local' })"]) {
   assert(actions.includes(marker), `Authentication lifecycle is missing ${marker}`)
 }
+assert(actions.includes('updateUserById(user.id, { email_confirm: true })'), 'Hosted signup must auto-confirm new users when Supabase still requires confirmation')
+assert(!actions.includes('/verify-email?email='), 'New signups must not be redirected to email verification')
 
-console.log('Authentication origin, canonical host, callback, email confirmation, sign-in, password reset, sign-out, and onboarding regression checks passed.')
+const supabaseConfig = await readFile(join(root, 'supabase/config.toml'), 'utf8')
+assert(supabaseConfig.includes('enable_confirmations = false'), 'Local email signup confirmations must be disabled')
+
+console.log('Authentication origin, canonical host, instant signup, sign-in, password reset, email links, sign-out, and onboarding regression checks passed.')
