@@ -39,11 +39,11 @@ test('two people privately swipe the same deck and both receive a DateMatch', as
 
   await shareDialog.getByRole('link', { name: /Open room/i }).click()
   await expect(creatorPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
-  await expect(creatorPage.getByRole('heading', { name: /Choose privately. Match on the dates you both want/i })).toBeVisible()
+  await expect(creatorPage.getByRole('heading', { name: /Choose privately. Match on the locations you both want/i })).toBeVisible()
 
   await signInThroughUi(partnerPage, partner.email, partner.password, roomPath)
   await expect(partnerPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
-  await expect(partnerPage.getByRole('heading', { name: /Choose privately. Match on the dates you both want/i })).toBeVisible()
+  await expect(partnerPage.getByRole('heading', { name: /Choose privately. Match on the locations you both want/i })).toBeVisible()
 
   const creatorTitle = await creatorPage.locator('.date-swipe-card h2').innerText()
   const partnerTitle = await partnerPage.locator('.date-swipe-card h2').innerText()
