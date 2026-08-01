@@ -24,12 +24,10 @@ create table if not exists public.location_descriptions (
   status text not null default 'pending' check (status in ('pending','approved','rejected','archived')),
   verified_at timestamptz,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (location_id, source)
 );
 create index if not exists location_descriptions_location_status_idx on public.location_descriptions(location_id, status, verified_at desc);
-create unique index if not exists location_descriptions_one_approved_source_idx
-  on public.location_descriptions(location_id, source)
-  where status = 'approved';
 
 create table if not exists public.location_rating_summaries (
   location_id uuid primary key references public.locations(id) on delete cascade,
@@ -93,6 +91,37 @@ begin
 end;
 $$;
 
+create or replace function public.find_open_location_match_v1(
+  target_name text,
+  target_kind text,
+  target_latitude double precision,
+  target_longitude double precision,
+  target_city text
+)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select l.id
+  from public.locations l
+  where l.status not in ('rejected','suspended','archived')
+    and l.latitude is not null
+    and l.longitude is not null
+    and abs(l.latitude - target_latitude) <= 0.001
+    and abs(l.longitude - target_longitude) <= 0.001
+    and lower(coalesce(l.city, '')) = lower(coalesce(target_city, ''))
+    and (
+      l.kind = target_kind
+      or l.kind = 'other'
+      or target_kind = 'other'
+    )
+    and regexp_replace(lower(l.name), '[^a-z0-9]+', '', 'g') = regexp_replace(lower(target_name), '[^a-z0-9]+', '', 'g')
+  order by abs(l.latitude - target_latitude) + abs(l.longitude - target_longitude)
+  limit 1;
+$$;
+
 create or replace function public.refresh_location_rating_summary_v1(target_location uuid)
 returns void
 language plpgsql
@@ -151,9 +180,17 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  target uuid;
 begin
-  perform public.refresh_location_rating_summary_v1(coalesce(new.location_id, old.location_id));
-  return coalesce(new, old);
+  if tg_op = 'DELETE' then
+    target := old.location_id;
+  else
+    target := new.location_id;
+  end if;
+  perform public.refresh_location_rating_summary_v1(target);
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
 end;
 $$;
 
@@ -195,11 +232,11 @@ select
     )) then 2
     else 1
   end as card_tier,
-  coalesce(r.average_rating, null) as average_rating,
+  r.average_rating,
   coalesce(r.confidence_adjusted_rating, 3.8) as confidence_adjusted_rating,
   coalesce(r.rating_count, 0) as rating_count,
   coalesce(r.happened_count, 0) as happened_count,
-  coalesce(r.last_feedback_at, null) as last_feedback_at
+  r.last_feedback_at
 from public.locations l
 left join lateral (
   select ld.description, ld.source
