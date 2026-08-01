@@ -20,7 +20,7 @@ Disable it immediately with the same statement using `enabled=false`. Disable ve
 
 `10006_contextual_recommendation_learning.sql` upgrades the location ranking to `contextual-v2`. Existing discovery and action APIs keep the same RPC names, while the migration wraps them with richer learning and remains backward compatible with the Stage 8 runtime.
 
-The learner records normalized location interactions rather than raw browsing histories. Perfect Picks, visits, saves, opens, and dismissals become bounded signals for:
+The learner records normalized location interactions rather than raw browsing histories. Solo-deck choices, DateMatch swipes, and post-visit DateMatch feedback become bounded signals. Perfect Picks, successful visits, saves, opens, and dismissals contribute at different strengths for:
 
 - location category;
 - price level;
@@ -31,7 +31,7 @@ The learner records normalized location interactions rather than raw browsing hi
 
 Signals decay over 45 days, stop contributing after 180 days, and are Bayesian-shrunk so one swipe cannot dominate a deck. Contextual confidence reaches full strength only after twelve active signals. Undo marks the corresponding context event inactive, and the existing preference reset timestamp excludes older learning immediately.
 
-The migration backfills recent location outcomes, queues affected preference embeddings, and adds contextual location text to future preference embeddings. Ranking keeps the hard quality-first ordering from the location pipeline; contextual learning only improves the relevance portion within eligible, image-ready locations.
+The migration backfills recent discovery outcomes, captures future DateMatch choices and ratings, queues affected preference embeddings, and adds contextual location text to future preference embeddings. Ranking keeps the hard quality-first ordering from the location pipeline; contextual learning only improves the relevance portion within eligible, image-ready locations.
 
 To roll back the scoring weights without deleting learning data, activate the previous configuration:
 
