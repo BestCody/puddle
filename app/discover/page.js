@@ -24,7 +24,7 @@ export default async function DiscoverPage({ searchParams }) {
       <section className="date-swipe-heading">
         <div>
           <span className="section-pill">Your 12-card date deck</span>
-          <h1>Find a date idea worth choosing together.</h1>
+          <h1>Swipe for somewhere worth going together.</h1>
           <p>Pass, save, or mark a Perfect Pick. Finish with a useful shortlist—or invite someone to privately swipe the same deck and reveal mutual DateMatches.</p>
         </div>
         <div className="date-swipe-heading-mark" aria-hidden="true"><span>♡</span><strong>⇄</strong></div>
