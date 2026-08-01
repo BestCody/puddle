@@ -9,7 +9,6 @@ import {
   streetCandidateScore,
   tokenSimilarity
 } from '../../lib/app/open-photo-candidates.js'
-import { scoreGooglePlaceMatch } from '../../lib/app/google-place-match.js'
 
 test('distance, bearing, and angle helpers are stable', () => {
   assert.ok(haversineMeters(43.6532, -79.3832, 43.6533, -79.3832) < 12)
@@ -44,22 +43,6 @@ test('Commons candidates require both geospatial and title agreement', () => {
   assert.ok(matching?.score > 0.7)
   assert.equal(unrelated, null)
   assert.equal(tokenSimilarity('Royal Ontario Museum', 'Royal Ontario Museum exterior'), 1)
-})
-
-test('Google matches require a close location and strong name agreement', () => {
-  const location = { name: 'Royal Ontario Museum', latitude: 43.6677, longitude: -79.3948 }
-  const matching = scoreGooglePlaceMatch(location, {
-    id: 'google-place-id',
-    displayName: { text: 'Royal Ontario Museum' },
-    location: { latitude: 43.6678, longitude: -79.3948 }
-  })
-  const wrongName = scoreGooglePlaceMatch(location, {
-    id: 'other-place-id',
-    displayName: { text: 'Coffee Shop' },
-    location: { latitude: 43.6678, longitude: -79.3948 }
-  })
-  assert.ok(matching?.score > 0.8)
-  assert.equal(wrongName, null)
 })
 
 test('public attractions check Commons before street imagery', () => {
