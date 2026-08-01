@@ -16,17 +16,32 @@ function initials(name) {
 }
 
 export async function ProductShell({ user, profile, children }) {
-  let showAdmin=['admin','moderator','support','finance'].includes(profile?.role)
-  if(!showAdmin){try{const supabase=await createClient();const{data}=await supabase.rpc('privileged_access_v1',{required_roles:[]});showAdmin=Boolean(data?.allowed)}catch{}}
+  let showAdmin = ['admin', 'moderator', 'support', 'finance'].includes(profile?.role)
+  if (!showAdmin) {
+    try {
+      const supabase = await createClient()
+      const { data } = await supabase.rpc('privileged_access_v1', { required_roles: [] })
+      showAdmin = Boolean(data?.allowed)
+    } catch {}
+  }
+
   return (
     <div className="product-shell">
       <aside className="product-sidebar">
-        <PuddleLogo />
-        <ProductNav showLegacy={legacySystemsEnabled()} />
-        <div className="sidebar-splash" aria-hidden="true">
-          <span>find the date spot</span>
-          <strong>♡</strong>
+        <div className="sidebar-brand-block">
+          <PuddleLogo />
+          <span className="sidebar-product-badge">location-first</span>
+          <p>Choose the place—not the person.</p>
         </div>
+        <ProductNav showLegacy={legacySystemsEnabled()} />
+        <div className="sidebar-priority-note">
+          <span aria-hidden="true">✦</span>
+          <div><strong>Better cards first</strong><small>Photos and useful descriptions are prioritized before ratings.</small></div>
+        </div>
+        <Link className="sidebar-splash" href="/discover">
+          <span><small>Quick start</small><strong>Find the date spot</strong><em>Open your 12-card deck →</em></span>
+          <b aria-hidden="true">♡</b>
+        </Link>
       </aside>
 
       <div className="product-stage">
