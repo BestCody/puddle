@@ -4,7 +4,7 @@ import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue
 import { isUnsafeMethod } from '@/lib/security/request'
 import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
 
-const protectedPrefixes = ['/dashboard','/discover','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/change-email','/wallet','/orders','/settings','/appeals','/admin']
+const protectedPrefixes = ['/dashboard','/discover','/date-match','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/change-email','/wallet','/orders','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
 const csrfExempt = new Set(['/api/stripe/webhook'])
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
