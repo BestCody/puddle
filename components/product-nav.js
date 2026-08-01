@@ -3,9 +3,16 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const items = [
+const coreItems = [
   { href: '/discover', label: 'Swipe', icon: '♡' },
   { href: '/plans', label: 'Saved & plans', icon: '⌖' },
+  { href: '/profile', label: 'Profile', icon: '●' }
+]
+
+const legacyItems = [
+  { href: '/discover', label: 'Swipe', icon: '♡' },
+  { href: '/plans', label: 'Saved & plans', icon: '⌖' },
+  { href: '/inbox', label: 'Inbox', icon: '✉' },
   { href: '/profile', label: 'Profile', icon: '●' }
 ]
 
@@ -13,8 +20,9 @@ function isActive(pathname, href) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function ProductNav() {
+export function ProductNav({ showLegacy = false }) {
   const pathname = usePathname()
+  const items = showLegacy ? legacyItems : coreItems
 
   return (
     <>
