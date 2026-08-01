@@ -41,7 +41,7 @@ begin
   insert into public.app_notifications(profile_id, kind, title, body, href, metadata, dedupe_key)
   select m.profile_id, 'feedback_ready', 'How did the location work?',
     'Tell Puddle how '||l.name||' worked so future recommendations get smarter.',
-    '/date-match/'||encode(digest(d.invite_token_hash,'sha256'),'hex'),
+    '/plans?tab=past',
     jsonb_build_object('deckId',dm.deck_id,'locationId',dm.location_id,'mode',d.mode),
     'shared-feedback:'||dm.deck_id||':'||dm.location_id
   from public.date_match_matches dm
