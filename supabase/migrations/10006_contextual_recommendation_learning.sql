@@ -6,7 +6,9 @@ create table if not exists public.recommendation_context_events (
   id bigint generated always as identity primary key,
   profile_id uuid not null references public.profiles(id) on delete cascade,
   request_id uuid references public.recommendation_requests(request_id) on delete set null,
-  dedupe_request_id uuid generated always as (coalesce(request_id,'00000000-0000-0000-0000-000000000000'::uuid)) stored,
+  recommendation_outcome_id bigint references public.recommendation_outcomes(id) on delete set null,
+  source text not null check (source in ('discovery','date_match_swipe','date_match_feedback','backfill')),
+  source_key text not null check (char_length(source_key) between 1 and 180),
   location_id uuid not null references public.locations(id) on delete cascade,
   outcome text not null check (outcome in ('opened','saved','dismissed','interested','visited')),
   signal_weight numeric(6,3) not null check (signal_weight between -10 and 10 and signal_weight <> 0),
@@ -21,7 +23,7 @@ create table if not exists public.recommendation_context_events (
   metadata jsonb not null default '{}'::jsonb,
   occurred_at timestamptz not null default now(),
   undone_at timestamptz,
-  unique(profile_id,dedupe_request_id,location_id,outcome)
+  unique(profile_id,source_key,location_id,outcome)
 );
 create index if not exists recommendation_context_events_profile_idx on public.recommendation_context_events(profile_id,occurred_at desc) where undone_at is null;
 create index if not exists recommendation_context_events_location_idx on public.recommendation_context_events(location_id,occurred_at desc) where undone_at is null;
@@ -88,6 +90,8 @@ declare
   request_filters jsonb:='{}'::jsonb;
   candidate_category text;
   candidate_distance real;
+  recorded_outcome_id bigint;
+  learned_source_key text;
   location_row public.locations%rowtype;
   local_time timestamp;
   learned_outcome text;
@@ -97,6 +101,15 @@ declare
   learned_intent text;
 begin
   recorded:=public.record_recommendation_outcome_base_v1(request_key,target_kind,target_id,outcome_name,coalesce(outcome_metadata,'{}'::jsonb));
+  if actor is not null then
+    select id into recorded_outcome_id from public.recommendation_outcomes
+    where profile_id=actor and content_kind=target_kind and coalesce(event_id,location_id)=target_id and outcome=outcome_name
+      and request_id is not distinct from request_key
+    order by id desc limit 1;
+  end if;
+  learned_source_key:=case when recorded_outcome_id is not null then 'recommendation_outcome:'||recorded_outcome_id::text
+    when request_key is not null then 'request:'||request_key::text||':'||outcome_name
+    else 'rpc:'||target_id::text||':'||outcome_name||':'||txid_current()::text end;
   if actor is null or target_kind<>'place' then return recorded; end if;
 
   if outcome_name='undo' then
@@ -144,15 +157,15 @@ begin
   learned_intent:=public.contextual_intent_bucket_v1(request_filters);
 
   insert into public.recommendation_context_events(
-    profile_id,request_id,location_id,outcome,signal_weight,category,price_level,amenities,distance_m,
+    profile_id,request_id,recommendation_outcome_id,source,source_key,location_id,outcome,signal_weight,category,price_level,amenities,distance_m,
     daypart,day_type,intent,filters,metadata,occurred_at,undone_at
   ) values(
-    actor,request_key,target_id,learned_outcome,learned_weight,
+    actor,request_key,recorded_outcome_id,'discovery',learned_source_key,target_id,learned_outcome,learned_weight,
     coalesce(nullif(candidate_category,''),location_row.kind),location_row.price_level,coalesce(location_row.amenities,'{}'::text[]),candidate_distance,
     learned_daypart,learned_day_type,learned_intent,request_filters,
     coalesce(outcome_metadata,'{}'::jsonb)||jsonb_build_object('source','recommendation_outcome_v1'),now(),null
   )
-  on conflict(profile_id,dedupe_request_id,location_id,outcome) do update set
+  on conflict(profile_id,source_key,location_id,outcome) do update set
     signal_weight=excluded.signal_weight,category=excluded.category,price_level=excluded.price_level,amenities=excluded.amenities,
     distance_m=excluded.distance_m,daypart=excluded.daypart,day_type=excluded.day_type,intent=excluded.intent,
     filters=excluded.filters,metadata=recommendation_context_events.metadata||excluded.metadata,occurred_at=excluded.occurred_at,undone_at=null;
@@ -263,11 +276,11 @@ create trigger recommendation_context_events_queue_preference
 
 -- Backfill recent location outcomes so existing users receive contextual learning immediately.
 insert into public.recommendation_context_events(
-  profile_id,request_id,location_id,outcome,signal_weight,category,price_level,amenities,distance_m,
+  profile_id,request_id,recommendation_outcome_id,source,source_key,location_id,outcome,signal_weight,category,price_level,amenities,distance_m,
   daypart,day_type,intent,filters,metadata,occurred_at
 )
 select
-  o.profile_id,o.request_id,o.location_id,o.outcome,
+  o.profile_id,o.request_id,o.id,'backfill','recommendation_outcome:'||o.id::text,o.location_id,o.outcome,
   case
     when o.outcome='visited' then 8
     when o.outcome='saved' and lower(coalesce(o.metadata->>'perfect_pick','false')) in ('true','1') then 7
@@ -292,7 +305,86 @@ left join public.recommendation_requests r on r.request_id=o.request_id and r.pr
 left join public.recommendation_candidates c on c.request_id=o.request_id and c.profile_id=o.profile_id and c.location_id=o.location_id
 where o.content_kind='place' and o.outcome in ('opened','saved','dismissed','interested','visited')
   and o.created_at>=now()-interval '180 days'
-on conflict(profile_id,dedupe_request_id,location_id,outcome) do nothing;
+on conflict(profile_id,source_key,location_id,outcome) do nothing;
+
+-- DateMatch is the product's strongest source of collaborative intent. Keep its
+-- swipes and post-visit feedback in the same bounded context model.
+create or replace function public.capture_date_match_context_v1()
+returns trigger language plpgsql security definer set search_path=public,extensions as $$
+declare
+  location_row public.locations%rowtype;
+  deck_row public.date_match_decks%rowtype;
+  match_time timestamptz;
+  local_time timestamp;
+  learned_outcome text;
+  learned_weight numeric(6,3);
+  learned_source text;
+  learned_source_key text;
+  learned_metadata jsonb:='{}'::jsonb;
+  learned_distance real;
+begin
+  select * into location_row from public.locations where id=new.location_id;
+  select * into deck_row from public.date_match_decks where id=new.deck_id;
+  if location_row.id is null or deck_row.id is null then return new; end if;
+
+  if tg_table_name='date_match_swipes' then
+    learned_source:='date_match_swipe';
+    learned_source_key:='date_match_swipe:'||new.deck_id::text||':'||new.profile_id::text;
+    learned_outcome:=case when new.choice='pass' then 'dismissed' else 'saved' end;
+    learned_weight:=case when new.choice='perfect' then 7 when new.choice='save' then 4 else -3 end;
+    match_time:=coalesce(new.updated_at,new.created_at,now());
+    learned_metadata:=jsonb_build_object('choice',new.choice,'perfect_pick',new.choice='perfect');
+  else
+    learned_source:='date_match_feedback';
+    learned_source_key:='date_match_feedback:'||new.deck_id::text||':'||new.profile_id::text;
+    update public.recommendation_context_events set undone_at=now()
+      where profile_id=new.profile_id and source_key=learned_source_key and location_id=new.location_id and undone_at is null;
+    if not new.happened then return new; end if;
+    learned_outcome:='visited';
+    learned_weight:=case when new.rating='great' then 9 when new.rating='okay' then 5 when new.rating='not_for_us' then -5 else 4 end;
+    select coalesce(m.planned_for,new.updated_at,new.created_at,now()) into match_time
+      from public.date_match_matches m where m.deck_id=new.deck_id and m.location_id=new.location_id;
+    match_time:=coalesce(match_time,new.updated_at,new.created_at,now());
+    learned_metadata:=jsonb_build_object('happened',new.happened,'rating',new.rating);
+  end if;
+
+  update public.recommendation_context_events set undone_at=now()
+    where profile_id=new.profile_id and source_key=learned_source_key and location_id=new.location_id and undone_at is null;
+  begin
+    local_time:=timezone(coalesce(nullif(location_row.timezone,''),'UTC'),match_time);
+  exception when others then
+    local_time:=timezone('UTC',match_time);
+  end;
+  if deck_row.center_latitude is not null and deck_row.center_longitude is not null and location_row.point is not null then
+    learned_distance:=st_distance(location_row.point,st_setsrid(st_makepoint(deck_row.center_longitude,deck_row.center_latitude),4326)::geography)::real;
+  end if;
+
+  insert into public.recommendation_context_events(
+    profile_id,source,source_key,location_id,outcome,signal_weight,category,price_level,amenities,distance_m,
+    daypart,day_type,intent,filters,metadata,occurred_at,undone_at
+  ) values(
+    new.profile_id,learned_source,learned_source_key,new.location_id,learned_outcome,learned_weight,location_row.kind,
+    location_row.price_level,coalesce(location_row.amenities,'{}'::text[]),learned_distance,
+    case when extract(hour from local_time) between 5 and 11 then 'morning'
+      when extract(hour from local_time) between 12 and 16 then 'afternoon'
+      when extract(hour from local_time) between 17 and 21 then 'evening' else 'late_night' end,
+    case when extract(isodow from local_time)>=6 then 'weekend' else 'weekday' end,
+    'date_match',jsonb_build_object('source','date_match'),learned_metadata||jsonb_build_object('deck_id',new.deck_id),match_time,null
+  )
+  on conflict(profile_id,source_key,location_id,outcome) do update set
+    signal_weight=excluded.signal_weight,category=excluded.category,price_level=excluded.price_level,amenities=excluded.amenities,
+    distance_m=excluded.distance_m,daypart=excluded.daypart,day_type=excluded.day_type,intent=excluded.intent,
+    filters=excluded.filters,metadata=excluded.metadata,occurred_at=excluded.occurred_at,undone_at=null;
+  return new;
+end;
+$$;
+
+drop trigger if exists date_match_swipes_capture_context on public.date_match_swipes;
+create trigger date_match_swipes_capture_context after insert or update of choice on public.date_match_swipes
+  for each row execute function public.capture_date_match_context_v1();
+drop trigger if exists date_match_feedback_capture_context on public.date_match_feedback;
+create trigger date_match_feedback_capture_context after insert or update of happened,rating on public.date_match_feedback
+  for each row execute function public.capture_date_match_context_v1();
 
 create or replace function public.delete_recommendation_data_v1()
 returns void language plpgsql security definer set search_path=public as $$
@@ -330,6 +422,7 @@ update public.feature_flags
 
 revoke all on function public.contextual_key_token_v1(text) from public;
 revoke all on function public.contextual_intent_bucket_v1(jsonb) from public;
+revoke all on function public.capture_date_match_context_v1() from public,anon,authenticated;
 revoke all on function public.recommendation_context_base_v1() from public,anon,authenticated;
 revoke all on function public.record_recommendation_outcome_base_v1(uuid,text,uuid,text,jsonb) from public,anon,authenticated;
 revoke all on function public.recommendation_preference_text_base_v1(uuid) from public,anon,authenticated;
