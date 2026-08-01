@@ -6,7 +6,7 @@ import { getDiscoveryFeed, logDiscoveryImpressions } from '@/lib/app/discovery'
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Swipe date locations',
-  description: 'Swipe through a curated set of nearby date ideas and invite someone to find mutual favourites.'
+  description: 'Swipe through a curated set of nearby date locations and invite someone to find mutual favourites.'
 }
 
 export default async function DiscoverPage({ searchParams }) {
@@ -25,11 +25,11 @@ export default async function DiscoverPage({ searchParams }) {
         <div>
           <span className="section-pill">Your 12-card date deck</span>
           <h1>Swipe for somewhere worth going together.</h1>
-          <p>Pass, save, or mark a Perfect Pick. Finish with a useful shortlist—or invite someone to privately swipe the same deck and reveal mutual DateMatches.</p>
+          <p>Pass, save, or mark a Perfect Pick. Image-rich locations with useful descriptions come first, followed by the places with the strongest trusted Puddle ratings.</p>
         </div>
         <div className="date-swipe-heading-mark" aria-hidden="true"><span>♡</span><strong>⇄</strong></div>
       </section>
-      <DateSwipeWorkspace initialFeed={feed} googleMapsBrowserKey={process.env.GOOGLE_MAPS_BROWSER_KEY || ''} />
+      <DateSwipeWorkspace initialFeed={feed} />
     </>
   })
 }
