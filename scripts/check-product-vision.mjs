@@ -34,7 +34,10 @@ for (const marker of [
   '/api/plans',
   '/api/ai/assist'
 ]) if (!vision.includes(marker)) throw new Error(`Product vision gate is missing ${marker}`)
-requireIncludes(vision, ['/studio/places/123'], 'Location contribution exception test coverage')
+if (vision.includes("{ prefix: '/studio',")) throw new Error('Location studio must remain active')
+
+const visionTests = await read('tests/unit/product-vision.test.mjs')
+requireIncludes(visionTests, ["legacyRedirectForPath('/studio/places/123'), null", "isLegacyApiPath('/api/drafts/place'), false"], 'Location contribution exception tests')
 
 const proxy = await read('proxy.js')
 requireIncludes(proxy, ['legacySystemsEnabled()', 'legacyRedirectForPath(pathname)', 'isLegacyApiPath(pathname)', 'status: 410'], 'Runtime legacy gate')
