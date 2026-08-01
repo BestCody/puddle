@@ -104,19 +104,33 @@ export async function signUp(formData) {
   if (password.length < 10) redirect(pathWithMessage('/signup', 'error', 'Use at least 10 characters for your password.'))
 
   const supabase = await createClient()
-  const callback = `${await siteUrl()}/auth/callback?next=/onboarding`
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: callback, data: { display_name: displayName } }
+    options: { data: { display_name: displayName } }
   })
-  if (error) redirect(pathWithMessage('/signup', 'error', publicError(error, 'We could not create your account. Please try again.')))
-  if (data.session && data.user) {
-    const { profile, error: profileError } = await ensureProfile(supabase, data.user)
-    if (profileError) redirect(pathWithMessage('/onboarding', 'error', 'Your account was created, but your profile could not be prepared. Please retry.'))
-    redirect(authenticatedDestination(profile, '/onboarding'))
+  if (error || !data.user) redirect(pathWithMessage('/signup', 'error', publicError(error, 'We could not create your account. Please try again.')))
+
+  let user = data.user
+  if (!data.session) {
+    let admin
+    try {
+      admin = createAdminClient()
+    } catch {
+      redirect(pathWithMessage('/signup', 'error', 'We could not finish creating your account. Please try again.'))
+    }
+
+    const { error: confirmationError } = await admin.auth.admin.updateUserById(user.id, { email_confirm: true })
+    if (confirmationError) redirect(pathWithMessage('/signup', 'error', 'We could not finish creating your account. Please try again.'))
+
+    const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    if (signInError || !signedIn.user) redirect(pathWithMessage('/signup', 'error', 'Your account was created, but we could not sign you in. Please use the sign-in page.'))
+    user = signedIn.user
   }
-  redirect(`/verify-email?email=${encodeURIComponent(email)}`)
+
+  const { profile, error: profileError } = await ensureProfile(supabase, user)
+  if (profileError) redirect(pathWithMessage('/onboarding', 'error', 'Your account was created, but your profile could not be prepared. Please retry.'))
+  redirect(authenticatedDestination(profile, '/onboarding'))
 }
 
 export async function signIn(formData) {

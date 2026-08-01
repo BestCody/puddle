@@ -4,7 +4,6 @@ import {
   completeProfileDirect,
   createConfirmedUser,
   deleteProfile,
-  directConfirmationPath,
   findUserByEmail,
   signInThroughUi,
   signOutThroughUi,
@@ -27,10 +26,10 @@ async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Low-key
   await page.getByLabel('Profile visibility').selectOption('mutuals')
 }
 
-test('email signup, confirmation, date onboarding, sign-in, reset, and sign-out work end to end', async ({ page, browser }) => {
+test('email signup goes straight to onboarding, then sign-in, reset, and sign-out work end to end', async ({ page }) => {
   const email = uniqueEmail('complete-flow')
-  const password = 'OriginalPuddle123!'
-  const newPassword = 'ReplacementPuddle456!'
+  const password = `Puddle-${uniqueSuffix(18)}-Aa1!`
+  const newPassword = `Puddle-${uniqueSuffix(18)}-Bb2!`
   const username = `flow_${uniqueSuffix(12)}`
 
   await page.goto('/signup')
@@ -39,30 +38,20 @@ test('email signup, confirmation, date onboarding, sign-in, reset, and sign-out 
   await page.getByLabel('Password').fill(password)
   await page.getByRole('checkbox').check()
   await page.getByRole('button', { name: /Create my Puddle/i }).click()
-  await expect(page).toHaveURL(/\/verify-email\?email=/)
-  await expect(page.getByText(/Check your inbox/i)).toBeVisible()
 
-  const user = await findUserByEmail(email)
-  const automaticProfile = await waitForProfile(user.id)
-  expect(automaticProfile.display_name).toBe('Complete Flow')
-  expect(automaticProfile.onboarding_completed_at).toBeNull()
-
-  const verificationLink = await waitForAuthEmailLink(email, 'signup')
-  const confirmationPath = directConfirmationPath(verificationLink)
-  await page.goto(confirmationPath)
   await expect(page).toHaveURL(/\/onboarding$/)
+  await expect(page.getByText(/Check your inbox/i)).toHaveCount(0)
   await expect(page.getByRole('heading', { name: /Build your date deck/i })).toBeVisible()
   await expect(page.getByText(/What kinds of places do you like for dates/i)).toBeVisible()
   await expect(page.getByLabel('Profile visibility')).toHaveValue('public')
   await expect(page.getByRole('button', { name: /Save and continue later/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Build my date deck/i })).toHaveCount(1)
 
-  const cleanContext = await browser.newContext()
-  const reusedPage = await cleanContext.newPage()
-  await reusedPage.goto(confirmationPath)
-  await expect(reusedPage).toHaveURL(/\/signin\?.*auth_error=/)
-  await expect(reusedPage.getByText(/expired|already been used|request a new/i)).toBeVisible()
-  await cleanContext.close()
+  const user = await findUserByEmail(email)
+  expect(user.email_confirmed_at).toBeTruthy()
+  const automaticProfile = await waitForProfile(user.id)
+  expect(automaticProfile.display_name).toBe('Complete Flow')
+  expect(automaticProfile.onboarding_completed_at).toBeNull()
 
   await fillOnboarding(page, { username })
   await page.getByRole('button', { name: /Build my date deck/i }).click()
