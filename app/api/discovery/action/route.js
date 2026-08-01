@@ -7,7 +7,7 @@ import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 import { object, string, uuid } from '@/lib/security/schema'
 
 const DISCOVERY_ACTIONS = new Set(['saved', 'interested', 'dismissed', 'visited', 'undo'])
-const RECOMMENDATION_ACTIONS = new Set([...DISCOVERY_ACTIONS, 'opened'])
+const RECOMMENDATION_ACTIONS = new Set([...DISCOVERY_ACTIONS, 'opened', 'perfect'])
 const KINDS = ['event', 'place']
 
 export async function POST(request) {
@@ -22,7 +22,8 @@ export async function POST(request) {
 
   try {
     const body = object(await readJsonLimited(request, 8_000))
-    const action = string(body.action, { name: 'action', choices: [...RECOMMENDATION_ACTIONS], max: 20 })
+    const requestedAction = string(body.action, { name: 'action', choices: [...RECOMMENDATION_ACTIONS], max: 20 })
+    const action = requestedAction === 'perfect' ? 'saved' : requestedAction
     const contentKind = string(body.contentKind, { name: 'contentKind', choices: KINDS, max: 10 })
     const contentId = uuid(body.contentId, 'contentId')
     const requestId = body.requestId ? uuid(body.requestId, 'requestId') : null
@@ -39,9 +40,9 @@ export async function POST(request) {
       target_kind: contentKind,
       target_id: contentId,
       outcome_name: action,
-      outcome_metadata: { surface: 'discover' }
+      outcome_metadata: { surface: 'discover', perfect_pick: requestedAction === 'perfect' }
     })
-    return NextResponse.json({ ok: true, result })
+    return NextResponse.json({ ok: true, result, perfectPick: requestedAction === 'perfect' })
   } catch (error) {
     return NextResponse.json({ error: safeSecurityError(error, 'That discovery action is not valid.') }, { status: error?.status || 400 })
   }
