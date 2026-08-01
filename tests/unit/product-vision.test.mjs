@@ -24,6 +24,7 @@ test('legacy pages redirect to the closest location-first surface', () => {
   assert.equal(legacyRedirectForPath('/admin/finance'), '/admin')
   assert.equal(legacyRedirectForPath('/discover'), null)
   assert.equal(legacyRedirectForPath('/date-match/token'), null)
+  assert.equal(legacyRedirectForPath('/hangout/token'), null)
   assert.equal(legacyRedirectForPath('/places/cafe'), null)
   assert.equal(legacyRedirectForPath('/studio/places/123'), null)
 })
