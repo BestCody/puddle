@@ -14,6 +14,8 @@ DateMatch turns Puddle discovery into a finite, useful two-person decision flow 
 8. Either member can schedule a mutual choice.
 9. One day after the planned time, revisiting the room asks whether the date happened and how well the location worked.
 
+The feedback timing and in-room prompt are implemented here. Proactive push or email delivery is intentionally outside this PR and can use Puddle's existing notification outbox in a later change.
+
 ## Interaction rules
 
 - Swipe left: Pass
