@@ -17,6 +17,8 @@ const protectedMutations = [
   'app/api/drafts/[kind]/route.js',
   'app/api/geocode/route.js',
   'app/api/discovery/action/route.js',
+  'app/api/date-match/start/route.js',
+  'app/api/date-match/action/route.js',
   'app/api/media/upload/route.js'
 ]
 for (const path of protectedMutations) await requireMarkers(path, ['verifyCsrf', 'enforceRateLimit'])
