@@ -9,6 +9,12 @@ if (!supabaseUrl || !serviceRoleKey) throw new Error('Push delivery requires NEX
 if (!webPushConfigured()) throw new Error('Push delivery requires NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY.')
 
 const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+if (apply) {
+  const scheduled = await admin.rpc('enqueue_location_plan_notifications_v1')
+  if (scheduled.error) throw scheduled.error
+  console.log(`Enqueued ${Number(scheduled.data || 0)} reminder or feedback notification(s).`)
+}
+
 const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
 const { data: notifications, error } = await admin
   .from('app_notifications')
