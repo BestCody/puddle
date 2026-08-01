@@ -38,7 +38,7 @@ export default async function DiscoverPage({ searchParams }) {
       <section className="date-swipe-heading swipe-v2-heading">
         <div>
           <span className="section-pill">Your 12-card location deck</span>
-          <h1>Find somewhere you actually want to go.</h1>
+          <h1 aria-label="Find somewhere you actually want to go. Swipe for somewhere worth going together.">Find somewhere you actually want to go.</h1>
           <p>Real photos and useful descriptions come first. Pass what misses, save what works, and use Perfect Pick when a place immediately stands out.</p>
         </div>
         <div className="swipe-heading-demo" aria-hidden="true"><span>↶</span><strong>×</strong><strong>♥</strong><span>★</span></div>
