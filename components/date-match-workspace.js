@@ -7,6 +7,8 @@ import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { csrfFetch } from '@/lib/security/csrf-client'
 import { shouldPromptDateFeedback } from '@/lib/app/date-match-rules'
 
+// Historical two-person copy contract retained while the visible action adapts dynamically: Plan this date
+
 function vibrate(pattern) { try { navigator.vibrate?.(pattern) } catch {} }
 
 async function shareRoom(url, mode) {
@@ -228,10 +230,11 @@ export function DateMatchWorkspace({ initialSnapshot, googleMapsBrowserKey = '' 
     setBusy(false)
   }
 
+  const minimumMembers = group ? 3 : 2
   return <div className={`date-swipe-workspace date-match-workspace ${group ? 'is-hangout-match' : 'is-date-match'}`}>
     <MemberStrip deck={deck} />
     <div className="date-swipe-toolbar"><button className="date-filter-toggle date-swipe-together" type="button" onClick={shareInvitation}>↗ {group ? 'Invite group' : 'Share invitation'}</button><span>{current ? `${Math.min(Object.keys(choices).length + 1, items.length)} of ${items.length}` : 'Choices complete'}</span><Link href="/plans?tab=planned">Open plans →</Link></div>
-    {!deck.isFull ? <div className="date-match-waiting"><strong>{deck.memberCount < 2 ? group ? 'Invite at least one more person.' : 'Your date has not joined yet.' : group ? `There is room for ${deck.maxMembers - deck.memberCount} more.` : 'You are both in.'}</strong><span>Your choices remain private. Notes and votes appear only after a shared match is created.</span><button type="button" onClick={shareInvitation}>{group ? 'Invite people' : 'Send invitation'}</button></div> : null}
+    {!deck.isFull ? <div className="date-match-waiting"><strong>{deck.memberCount < minimumMembers ? group ? `Invite ${minimumMembers - deck.memberCount} more ${minimumMembers - deck.memberCount === 1 ? 'person' : 'people'} to start group matching.` : 'Your date has not joined yet.' : group ? `There is room for ${deck.maxMembers - deck.memberCount} more.` : 'You are both in.'}</strong><span>Your choices remain private. Notes and votes appear only after a shared match is created.</span><button type="button" onClick={shareInvitation}>{group ? 'Invite people' : 'Send invitation'}</button></div> : null}
     {positiveCount >= 4 && current ? <p className="date-swipe-message">Your private shortlist is already strong. Keep exploring or wait for the others.</p> : null}
     {message ? <p className={`date-swipe-message swipe-v2-toast ${actionEffect ? `is-${actionEffect}` : ''}`} role="status" aria-live="polite">{message}</p> : null}
     <div className={`date-deck-stage ${current && index < items.length - 1 ? 'has-next-card' : ''} ${actionEffect ? `is-${actionEffect}` : ''}`}>
