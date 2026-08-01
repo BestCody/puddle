@@ -76,8 +76,9 @@ export async function POST(request) {
       }
     }
 
-    const url = new URL(`/date-match/${token}`, request.nextUrl.origin).toString()
-    return NextResponse.json({ ok: true, deckId, token, url, mode, maxMembers })
+    const roomPath = mode === 'hangout' ? `/hangout/${token}` : `/date-match/${token}`
+    const url = new URL(roomPath, request.nextUrl.origin).toString()
+    return NextResponse.json({ ok: true, deckId, token, url, mode, maxMembers, roomPath })
   } catch (error) {
     return NextResponse.json({ error: safeSecurityError(error, 'The shared location deck could not be created.') }, { status: error?.status || 400 })
   }
