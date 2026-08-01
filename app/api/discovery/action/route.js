@@ -11,6 +11,31 @@ const DISCOVERY_ACTIONS = new Set(['saved', 'interested', 'dismissed', 'visited'
 const RECOMMENDATION_ACTIONS = new Set([...DISCOVERY_ACTIONS, 'opened', 'perfect'])
 const KINDS = legacySystemsEnabled() ? ['event', 'place'] : ['place']
 
+function contextEvent(requestedAction, action) {
+  if (requestedAction === 'perfect') return 'perfect'
+  if (action === 'dismissed') return 'pass'
+  if (action === 'saved' || action === 'interested') return 'save'
+  if (action === 'visited') return 'visited'
+  if (action === 'opened') return 'opened'
+  return null
+}
+
+function safeContext(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { mode: 'solo', category: null, payload: {} }
+  const mode = ['solo', 'date', 'hangout'].includes(value.mode) ? value.mode : 'solo'
+  const daypart = ['morning', 'afternoon', 'evening', 'late', 'any'].includes(value.daypart) ? value.daypart : 'any'
+  return {
+    mode,
+    category: String(value.category || '').trim().slice(0, 80) || null,
+    payload: {
+      daypart,
+      mood: String(value.mood || '').trim().slice(0, 80) || null,
+      price: String(value.price || '').trim().slice(0, 12) || null,
+      source: String(value.source || 'swipe').trim().slice(0, 40)
+    }
+  }
+}
+
 export async function POST(request) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Discovery actions are unavailable.' }, { status: 503 })
@@ -43,6 +68,20 @@ export async function POST(request) {
       outcome_name: action,
       outcome_metadata: { surface: 'discover', perfect_pick: requestedAction === 'perfect' }
     })
+
+    const eventName = contextEvent(requestedAction, action)
+    if (contentKind === 'place' && eventName) {
+      const context = safeContext(body.context)
+      await supabase.rpc('record_recommendation_context_v1', {
+        target_location: contentId,
+        event_name: eventName,
+        context_mode: context.mode,
+        context_category: context.category,
+        context_payload: context.payload,
+        context_deck: null
+      })
+    }
+
     return NextResponse.json({ ok: true, result, perfectPick: requestedAction === 'perfect' })
   } catch (error) {
     return NextResponse.json({ error: safeSecurityError(error, 'That discovery action is not valid.') }, { status: error?.status || 400 })

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
-import { object, uuid } from '@/lib/security/schema'
+import { object, string, uuid } from '@/lib/security/schema'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 import { normalizeDateMatchChoice, sanitizeDateMatchNote } from '@/lib/app/date-match-rules'
 
@@ -15,9 +15,19 @@ function finiteCoordinate(value, min, max) {
   return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : null
 }
 
+function safeContext(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return {
+    mood: String(value.mood || '').trim().slice(0, 80) || null,
+    category: String(value.category || '').trim().slice(0, 60) || null,
+    price: String(value.price || '').trim().slice(0, 12) || null,
+    daypart: ['morning', 'afternoon', 'evening', 'late', 'any'].includes(value.daypart) ? value.daypart : 'any'
+  }
+}
+
 export async function POST(request) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
-  if (!isSupabaseConfigured()) return NextResponse.json({ error: 'DateMatch is unavailable.' }, { status: 503 })
+  if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Shared location matching is unavailable.' }, { status: 503 })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Sign in to swipe together.' }, { status: 401 })
@@ -29,16 +39,24 @@ export async function POST(request) {
     const body = object(await readJsonLimited(request, 24_000))
     const rawIds = Array.isArray(body.locationIds) ? body.locationIds.slice(0, MAX_ITEMS) : []
     const locationIds = [...new Set(rawIds.map((value) => uuid(value, 'locationId')))]
-    if (locationIds.length < 2) return NextResponse.json({ error: 'Add at least two date ideas before swiping together.' }, { status: 400 })
+    if (locationIds.length < 2) return NextResponse.json({ error: 'Add at least two location ideas before swiping together.' }, { status: 400 })
 
-    const created = await supabase.rpc('create_date_match_v1', {
+    const mode = string(body.mode || 'date', { name: 'mode', choices: ['date', 'hangout'], max: 20 })
+    const requestedMembers = Number(body.maxMembers)
+    const maxMembers = mode === 'date' ? 2 : Math.min(8, Math.max(3, Number.isFinite(requestedMembers) ? Math.round(requestedMembers) : 4))
+    const context = safeContext(body.context)
+
+    const created = await supabase.rpc('create_shared_location_deck_v2', {
       location_ids: locationIds,
       center_lat: finiteCoordinate(body.center?.latitude, -90, 90),
-      center_lng: finiteCoordinate(body.center?.longitude, -180, 180)
+      center_lng: finiteCoordinate(body.center?.longitude, -180, 180),
+      deck_mode: mode,
+      member_limit: maxMembers,
+      deck_context: context
     })
     const deckId = created.data?.deckId || created.data?.deck_id
     const token = created.data?.token
-    if (created.error || !deckId || !token) return NextResponse.json({ error: 'The shared date deck could not be created.' }, { status: 400 })
+    if (created.error || !deckId || !token) return NextResponse.json({ error: 'The shared location deck could not be created.' }, { status: 400 })
 
     const choices = Array.isArray(body.choices) ? body.choices.slice(0, MAX_ITEMS) : []
     for (const rawChoice of choices) {
@@ -54,13 +72,13 @@ export async function POST(request) {
           swipe_note: sanitizeDateMatchNote(rawChoice?.note)
         })
       } catch {
-        // A malformed optional prior choice should not prevent the room from being created.
+        // Optional prior choices should never prevent the room from being created.
       }
     }
 
     const url = new URL(`/date-match/${token}`, request.nextUrl.origin).toString()
-    return NextResponse.json({ ok: true, deckId, token, url })
+    return NextResponse.json({ ok: true, deckId, token, url, mode, maxMembers })
   } catch (error) {
-    return NextResponse.json({ error: safeSecurityError(error, 'The shared date deck could not be created.') }, { status: error?.status || 400 })
+    return NextResponse.json({ error: safeSecurityError(error, 'The shared location deck could not be created.') }, { status: error?.status || 400 })
   }
 }

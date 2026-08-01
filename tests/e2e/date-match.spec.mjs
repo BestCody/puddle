@@ -10,7 +10,7 @@ async function saveCurrentCard(page, note) {
   const title = await card.locator('h2').innerText()
   await card.getByRole('button', { name: /^Save/i }).click()
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: new RegExp(`Why do you like ${escapePattern(title)}`, 'i') })).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: new RegExp(`Why does ${escapePattern(title)} work`, 'i') })).toBeVisible()
   await dialog.getByRole('textbox').fill(note)
   await dialog.getByRole('button', { name: /Save choice/i }).click()
   return title
