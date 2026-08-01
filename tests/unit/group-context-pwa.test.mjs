@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import test from 'node:test'
+
+const root = fileURLToPath(new URL('../..', import.meta.url))
+const source = (path) => readFile(join(root, path), 'utf8')
+
+test('Hangout Match extends DateMatch without exposing private votes', async () => {
+  const migration = await source('supabase/migrations/10006_group_context_map_push.sql')
+  const room = await source('components/date-match-workspace.js')
+  const loader = await source('lib/app/date-match.js')
+  assert.match(migration, /mode text not null default 'date'/)
+  assert.match(migration, /max_members between 2 and 8/)
+  assert.match(migration, /ceil\(member_count \* 0\.6\)/)
+  assert.match(migration, /pass_count = 0/)
+  assert.match(migration, /This shared deck is already full/)
+  assert.match(room, /Group Hangout Match/)
+  assert.match(room, /no vetoes/)
+  assert.match(loader, /matchedLocationIds/)
+  assert.match(loader, /group_notes/)
+  assert.doesNotMatch(loader, /select\([^)]*email/)
+})
+
+test('contextual learning stays inside recommendation relevance', async () => {
+  const events = await source('supabase/migrations/10006_group_context_map_push.sql')
+  const merge = await source('supabase/migrations/10007_contextual_recommendation_merge.sql')
+  const discovery = await source('app/api/discovery/action/route.js')
+  assert.match(events, /recommendation_context_events/)
+  assert.match(events, /daypart text not null/)
+  assert.match(events, /mode text not null default 'solo'/)
+  assert.match(merge, /positiveCategories/)
+  assert.match(merge, /negativeCategories/)
+  assert.match(merge, /contextualCategories/)
+  assert.match(discovery, /record_recommendation_context_v1/)
+  assert.doesNotMatch(merge, /card_tier/)
+  assert.doesNotMatch(merge, /confidence_adjusted_rating/)
+})
+
+test('focused map contains only saved, matched, and planned locations', async () => {
+  const data = await source('lib/app/location-map-data.js')
+  const page = await source('app/map/page.js')
+  const map = await source('components/location-map.js')
+  assert.match(data, /addState\(item\.location_id, 'saved'/)
+  assert.match(data, /addState\(match\.location_id, 'matched'/)
+  assert.match(data, /addState\(item\.location_id, 'planned'/)
+  assert.doesNotMatch(data, /from\('events'\)/)
+  assert.match(page, /never opens the retired event-discovery map/)
+  assert.match(map, /tile\.openstreetmap\.org/)
+  assert.match(map, /© OpenStreetMap contributors/)
+})
+
+test('Puddle is installable and supports encrypted push delivery', async () => {
+  const manifest = JSON.parse(await source('public/manifest.webmanifest'))
+  const worker = await source('public/sw.js')
+  const subscriptionApi = await source('app/api/push/subscriptions/route.js')
+  const sender = await source('lib/push/web-push.js')
+  const delivery = await source('scripts/deliver-push-notifications.mjs')
+  assert.equal(manifest.display, 'standalone')
+  assert.equal(manifest.start_url, '/dashboard?source=pwa')
+  assert.ok(manifest.shortcuts.some((shortcut) => shortcut.url === '/map'))
+  assert.match(worker, /addEventListener\('push'/)
+  assert.match(worker, /notificationclick/)
+  assert.match(subscriptionApi, /verifyCsrf/)
+  assert.match(subscriptionApi, /enforceRateLimit/)
+  assert.match(sender, /aes-128-gcm/)
+  assert.match(sender, /Content-Encoding: aes128gcm/)
+  assert.match(sender, /vapid t=/)
+  assert.match(delivery, /enqueue_location_plan_notifications_v1/)
+})
