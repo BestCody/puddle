@@ -3,6 +3,7 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue } from '@/lib/security/headers'
 import { isUnsafeMethod } from '@/lib/security/request'
 import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
+import { isLegacyApiPath, legacyRedirectForPath, legacySystemsEnabled } from '@/lib/product-vision'
 
 const protectedPrefixes = ['/dashboard','/discover','/date-match','/explore','/plans','/create','/studio','/report','/friends','/inbox','/notifications','/profile','/onboarding','/account','/change-email','/wallet','/orders','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
@@ -64,6 +65,18 @@ export async function proxy(request) {
   const maxBytes = pathname === '/api/media/upload' ? 20_000_000 : pathname === '/api/stripe/webhook' ? 2_000_000 : pathname.startsWith('/api/') ? 256_000 : 2_000_000
   const contentLength = Number(request.headers.get('content-length') || 0)
   if (contentLength > maxBytes) return secured(NextResponse.json({ error: 'Request payload is too large.' }, { status: 413 }), { request, nonce })
+
+  if (!legacySystemsEnabled()) {
+    const destination = legacyRedirectForPath(pathname)
+    if (destination) {
+      const url = new URL(destination, request.url)
+      url.searchParams.set('legacy', 'disabled')
+      return secured(cachePolicy(NextResponse.redirect(url, 307), pathname, true), { request, nonce })
+    }
+    if (isLegacyApiPath(pathname)) {
+      return secured(NextResponse.json({ error: 'This legacy Puddle system is disabled in the location-first product.' }, { status: 410 }), { request, nonce })
+    }
+  }
 
   const canonicalTarget = (request.method === 'GET' || request.method === 'HEAD')
     ? canonicalPuddleAuthUrl(request.url, process.env.NEXT_PUBLIC_SITE_URL, authCanonicalPaths)

@@ -40,6 +40,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     stdout: 'pipe',
-    stderr: 'pipe'
+    stderr: 'pipe',
+    env: { ...process.env, PUDDLE_LEGACY_SYSTEMS_ENABLED: 'true' }
   }
 })

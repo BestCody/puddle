@@ -5,10 +5,11 @@ import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 import { object, string, uuid } from '@/lib/security/schema'
+import { legacySystemsEnabled } from '@/lib/product-vision'
 
 const DISCOVERY_ACTIONS = new Set(['saved', 'interested', 'dismissed', 'visited', 'undo'])
 const RECOMMENDATION_ACTIONS = new Set([...DISCOVERY_ACTIONS, 'opened', 'perfect'])
-const KINDS = ['event', 'place']
+const KINDS = legacySystemsEnabled() ? ['event', 'place'] : ['place']
 
 export async function POST(request) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })

@@ -5,11 +5,16 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
 import { eventPayload, locationPayload, objectFromFormData, validateEvent, validateLocation } from '@/lib/app/content-input'
+import { legacySystemsEnabled } from '@/lib/product-vision'
 
 function firstError(error, fallback) {
   const message = String(error?.message || '').trim()
   if (!message || /policy|permission|schema cache|relation|supabase/i.test(message)) return fallback
   return message
+}
+
+function requireLegacyEventSystem() {
+  if (!legacySystemsEnabled()) redirect(pathWithMessage('/create/place', 'error', 'Event creation is no longer part of the location-first Puddle product.'))
 }
 
 function editEventPath(id) {
@@ -32,6 +37,7 @@ async function savePrivateDetail(supabase, kind, id, exactAddress, userId) {
 }
 
 async function persistEvent(formData) {
+  requireLegacyEventSystem()
   const session = await requireUser({ onboarding: true })
   const input = objectFromFormData(formData)
   const id = String(input.id || '').trim()
@@ -118,6 +124,7 @@ export async function requestEventPublication(formData) {
 }
 
 export async function transitionEventStatus(formData) {
+  requireLegacyEventSystem()
   const session = await requireUser({ onboarding: true })
   const id = String(formData.get('id') || '')
   const nextStatus = String(formData.get('next_status') || '')
@@ -163,7 +170,7 @@ export async function submitLocationClaim(formData) {
   const relationship = String(formData.get('relationship') || '').trim().slice(0, 120)
   const evidenceUrl = String(formData.get('evidence_url') || '').trim().slice(0, 500) || null
   const note = String(formData.get('note') || '').trim().slice(0, 1200) || null
-  const next = safeNextPath(String(formData.get('next') || '/explore'))
+  const next = safeNextPath(String(formData.get('next') || '/discover'))
   if (!locationId || !relationship) redirect(pathWithMessage(next, 'error', 'Describe your relationship to this location.'))
 
   const { error } = await session.supabase.from('location_claims').insert({

@@ -1,25 +1,44 @@
 # Puddle
 
-Puddle is a playful event-discovery product for **puddle.you**.
+Puddle is a swipe-and-match product for choosing **date locations and hangout locations**.
 
-## Current implementation
+## Active product
 
-The original interactive landing page is preserved byte-for-byte and served at `/`. The readable Next.js application now adds a complete Supabase Auth phase:
+The primary flow is:
 
-- Email/password signup and sign-in
-- Email verification callback and OTP confirmation routes
-- Google OAuth with full-width authentication controls
-- Email one-time login codes
-- Password recovery and password updates
-- Cookie-based SSR sessions using `@supabase/ssr`
-- Next.js 16 `proxy.js` token refresh and route protection
-- Server-side authorization checks on private pages
-- Complete onboarding flow stored in `profiles`
-- Authenticated dashboard and account settings
-- Email/profile/password updates
-- Sign-out of the current or all other sessions
-- Permanent account deletion through a server-only service-role client
-- Auth schema migration, profile trigger, RLS policies, and setup documentation
+```text
+location preferences
+→ twelve nearby location cards
+→ Pass, Save, or Perfect Pick
+→ solo shortlist or DateMatch
+→ choose a location and time
+→ post-visit feedback improves future decks
+```
+
+Current location-first capabilities include:
+
+- Supabase email/password, Google OAuth, email-code login, recovery, SSR sessions, onboarding, account settings, and deletion
+- image-rich location cards with factual descriptions, attribution, amenities, distance, price, and known opening status
+- strict ranking priority: card quality first, confidence-adjusted Puddle rating second, personalization third
+- finite twelve-card decks with Pass, Save, Perfect Pick, details, sharing, notes, undo, and a shortlist summary
+- private two-person DateMatch rooms with mutual matches, scheduling, and post-date feedback
+- Saved, Planned, and Past location views
+- FSQ OS and Overture catalogue imports plus Wikimedia, Mapillary, and KartaView image enrichment
+- location contribution, editing, claims, media moderation, reports, recommendation controls, and security administration
+
+The global catalogue and open-photo jobs are operational inputs. A deployment must still import regional data and run enrichment before it has broad location coverage.
+
+## Location-first cutover
+
+The previous event marketplace, creator studio, social network, live-location sharing, complex itineraries, ticketing, checkout, payouts, refunds, and check-in systems are disabled by default.
+
+```dotenv
+PUDDLE_LEGACY_SYSTEMS_ENABLED=false
+```
+
+Their source and migrations remain preserved for rollback, historical records, and a later controlled decommissioning. Production legacy pages redirect to the nearest location-first screen, while legacy APIs return `410 Gone`.
+
+See `docs/LOCATION_FIRST_CUTOVER.md` for the exact route map and rollback contract.
 
 ## Run locally
 
@@ -32,15 +51,26 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Production setup
-
-Follow `docs/AUTH_SETUP.md`, apply both Supabase migrations, configure Google OAuth and the email OTP template, add environment variables to Vercel, then redeploy.
+## Location data operations
 
 ```bash
-npm run build
-npm start
+# Dry run first
+npm run locations:catalogue:open -- --source=fsq_os --file=/data/fsq-places.jsonl
+npm run locations:catalogue:open -- --source=overture --file=/data/overture-places.jsonl
+npm run locations:photos:open -- --limit=200
+
+# Apply only after reviewing the dry-run report
+npm run locations:catalogue:open -- --source=fsq_os --file=/data/fsq-places.jsonl --apply
+npm run locations:catalogue:open -- --source=overture --file=/data/overture-places.jsonl --apply
+npm run locations:photos:open -- --limit=200 --apply
 ```
 
-## Landing-page guarantee
+## Validation
 
-`index.html`, `styles.css`, and `app.js` remain the source-of-truth landing files. Their exact blobs are also served as `public/landing.html`, `public/styles.css`, and `public/app.js`, and Next.js rewrites `/` to the preserved HTML.
+```bash
+npm run check
+npm run build
+npm run e2e:test
+```
+
+The Playwright regression server temporarily enables the legacy rollback flag so preserved historical flows continue to compile and remain testable. Normal builds and deployments default to the location-first product.

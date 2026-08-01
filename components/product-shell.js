@@ -4,6 +4,7 @@ import { ProductNav } from './product-nav'
 import { SystemNoticeBanner } from './system-notice-banner'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
+import { legacySystemsEnabled } from '@/lib/product-vision'
 
 function initials(name) {
   return String(name || 'Puddle person')
@@ -21,7 +22,7 @@ export async function ProductShell({ user, profile, children }) {
     <div className="product-shell">
       <aside className="product-sidebar">
         <PuddleLogo />
-        <ProductNav />
+        <ProductNav showLegacy={legacySystemsEnabled()} />
         <div className="sidebar-splash" aria-hidden="true">
           <span>find the date spot</span>
           <strong>♡</strong>

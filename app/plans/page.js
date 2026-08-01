@@ -1,26 +1,80 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { EmptyState } from '@/components/empty-state'
-import { createCollaborativePlan, cancelEventAttendance, respondToPlanInvitation } from '@/app/plans/actions'
+import { LegacyPlansPage } from '@/app/plans/legacy-page'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getPlansSnapshot } from '@/lib/app/plans-data'
+import { getLocationPlansSnapshot } from '@/lib/app/location-plans-data'
+import { legacySystemsEnabled } from '@/lib/product-vision'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Plans' }
+export const metadata = { title: 'Saved and planned locations' }
 
 const tabs = [
-  ['saved_events','Saved events'],['saved_places','Saved places'],['interested','Interested'],['going','Going'],['tickets','Tickets'],['hosting','Hosting'],['shared','Shared plans'],['past','Past']
+  ['saved', 'Saved'],
+  ['planned', 'Planned'],
+  ['past', 'Past']
 ]
 
-function ListingCard({ item }) {
-  const title = item.title || item.events?.title || item.ticket_types?.events?.title || item.locations?.name || 'Untitled'
-  const href = item.href || (item.ticket_number ? `/wallet/tickets/${item.id}` : item.events?.slug ? `/events/${item.events.slug}` : item.ticket_types?.events?.slug ? `/events/${item.ticket_types.events.slug}` : item.locations?.slug ? `/places/${item.locations.slug}` : '/plans')
-  return <article className="plan-content-card"><span>{item.kind || (item.ticket_number ? 'ticket' : item.events ? 'event' : item.locations ? 'place' : 'plan')}</span><h2><Link href={href}>{title}</Link></h2><p>{item.ticket_number ? `${item.ticket_types?.name || 'Ticket'} · ${item.ticket_number}` : item.summary || item.events?.summary || item.locations?.summary || item.status || 'Plan details'}</p>{item.startsAt || item.events?.starts_at || item.ticket_types?.events?.starts_at ? <small>{new Date(item.startsAt || item.events?.starts_at || item.ticket_types?.events?.starts_at).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</small> : null}</article>
+function LocationCard({ item }) {
+  const timestamp = item.planned_for || item.visited_at || null
+  return (
+    <article className="plan-content-card">
+      <span>{item.status === 'planned' ? 'planned location' : item.status === 'visited' ? 'past location' : 'saved location'}</span>
+      <h2><Link href={item.href}>{item.title}</Link></h2>
+      <p>{item.summary}</p>
+      {item.city ? <small>{item.city}</small> : null}
+      {timestamp ? <small>{new Date(timestamp).toLocaleString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</small> : null}
+    </article>
+  )
 }
-function GoingCard({ item }) { return <article className="plan-content-card"><span>{item.status.replaceAll('_', ' ')}</span><h2><Link href={`/events/${item.events?.slug}`}>{item.events?.title || 'Event'}</Link></h2><p>{item.events?.locations?.name || item.events?.locations?.city || 'Location details in event'}</p>{item.status === 'waitlisted' ? <small>Waitlist position {item.waitlist_position || 'pending'}</small> : null}<form action={cancelEventAttendance}><input type="hidden" name="event_id" value={item.event_id} /><input type="hidden" name="next" value="/plans?tab=going" /><button className="quiet-button" type="submit">Cancel RSVP</button></form></article> }
-function SharedCard({ plan, userId }) { const invited=plan.membership_status==='invited';return <article className="plan-content-card shared-plan-card"><span>{invited?'invited':plan.status}</span><h2><Link href={`/plans/${plan.id}`}>{plan.title}</Link></h2><p>{plan.description||plan.meeting_label||plan.city||'Build the itinerary together.'}</p><small>{plan.owner_id===userId?'You organize this plan':invited?'Waiting for your response':'Shared with you'}</small>{invited?<div className="plan-invite-actions"><form action={respondToPlanInvitation}><input type="hidden" name="plan_id" value={plan.id}/><button name="response" value="accepted" type="submit">Accept</button></form><form action={respondToPlanInvitation}><input type="hidden" name="plan_id" value={plan.id}/><button name="response" value="declined" type="submit">Decline</button></form></div>:null}</article> }
 
 export default async function PlansPage({ searchParams }) {
-  const params=await searchParams;const active=tabs.some(([value])=>value===params?.tab)?params.tab:'saved_events'
-  return renderProductPage(async(session)=>{const snapshot=await getPlansSnapshot(session);const items=active==='saved_events'?snapshot.savedEvents:active==='saved_places'?snapshot.savedPlaces:active==='interested'?snapshot.interested:active==='going'?snapshot.going:active==='tickets'?snapshot.tickets:active==='hosting'?snapshot.hosting:active==='shared'?snapshot.sharedPlans:snapshot.past;return <><section className="page-heading-row"><div><span className="section-pill section-pill-yellow">Your orbit</span><h1 className="product-title">Plans, not maybes.</h1><p>Saved events, saved places, attendance, hosting, visits, and collaborative itineraries live together.</p></div><div className="studio-heading-actions">{active==='tickets'?<Link className="splash-button splash-button-mint" href="/wallet">Open full ticket wallet</Link>:null}<Link className="splash-button splash-button-pink" href="/discover">Find something</Link></div></section><AuthMessage searchParams={params}/><nav className="tab-rail" aria-label="Plan categories">{tabs.map(([value,label])=><Link className={active===value?'is-active':''} href={`/plans?tab=${value}`} key={value}><span>{label}</span><strong>{snapshot.counts[value]||0}</strong></Link>)}</nav>{active==='shared'?<section className="shared-plan-builder"><div><span className="section-pill section-pill-mint">Start together</span><h2>Create a shared plan.</h2><p>Invite friends, compare availability, vote on options, and arrange events and places into one itinerary.</p></div><form action={createCollaborativePlan} className="compact-plan-form"><label>Plan name<input name="title" required placeholder="Saturday city wander" /></label><label>City<input name="city" defaultValue={session.profile.city||''}/></label><label>Starts<input name="starts_at" type="datetime-local"/></label><label>Ends<input name="ends_at" type="datetime-local"/></label><label>Meeting point<input name="meeting_label" placeholder="Union Station clock"/></label><label>Meeting latitude<input name="meeting_latitude" type="number" step="any" min="-90" max="90"/></label><label>Meeting longitude<input name="meeting_longitude" type="number" step="any" min="-180" max="180"/></label><label>Privacy<select name="visibility" defaultValue="invite_only"><option value="invite_only">Invite only</option><option value="friends">Friends</option><option value="private">Private</option></select></label><label className="span-two">Description<textarea name="description" placeholder="What kind of day are you planning?"/></label><input type="hidden" name="timezone" value="America/Toronto"/><button className="splash-button splash-button-mint" type="submit">Create shared plan</button></form></section>:null}{items.length?<section className="plan-content-grid">{active==='going'?items.map(item=><GoingCard item={item} key={item.event_id}/>):active==='shared'?items.map(plan=><SharedCard plan={plan} userId={session.user.id} key={plan.id}/>):items.map((item,index)=><ListingCard item={item} key={item.id||item.event_id||item.location_id||index}/>)}</section>:<EmptyState icon={active==='hosting'?'✦':active==='shared'?'☻':'♡'} title={active==='hosting'?'Nothing hosted yet.':active==='shared'?'No shared plans yet.':'This pocket is empty.'} description={active==='hosting'?'Create is always available—hosting is something any Puddle user can do.':active==='shared'?'Create a plan above, then invite friends and add stops.':'Save events and places from Discover or Explore and they will collect here.'} actionHref={active==='hosting'?'/create':'/discover'} actionLabel={active==='hosting'?'Create something':'Start discovering'}/>}</>})
+  if (legacySystemsEnabled()) return <LegacyPlansPage searchParams={searchParams} />
+
+  const params = await searchParams
+  const active = tabs.some(([value]) => value === params?.tab) ? params.tab : 'saved'
+
+  return renderProductPage(async (session) => {
+    const snapshot = await getLocationPlansSnapshot(session)
+    const items = snapshot[active]
+
+    return (
+      <>
+        <section className="page-heading-row">
+          <div>
+            <span className="section-pill section-pill-yellow">Your places</span>
+            <h1 className="product-title">Saved, planned, and actually visited.</h1>
+            <p>Puddle now keeps this area focused on locations selected through solo swiping or DateMatch.</p>
+          </div>
+          <Link className="splash-button splash-button-pink" href="/discover">Swipe more locations</Link>
+        </section>
+
+        <AuthMessage searchParams={params} />
+        {params?.legacy === 'disabled' ? <p className="date-swipe-message" role="status">That older Puddle feature is no longer part of the location-first product.</p> : null}
+
+        <nav className="tab-rail" aria-label="Location plan categories">
+          {tabs.map(([value, label]) => (
+            <Link className={active === value ? 'is-active' : ''} href={`/plans?tab=${value}`} key={value}>
+              <span>{label}</span>
+              <strong>{snapshot.counts[value] || 0}</strong>
+            </Link>
+          ))}
+        </nav>
+
+        {items.length ? (
+          <section className="plan-content-grid">
+            {items.map((item) => <LocationCard item={item} key={`${active}:${item.location_id}`} />)}
+          </section>
+        ) : (
+          <EmptyState
+            icon={active === 'planned' ? '⌖' : active === 'past' ? '✓' : '♡'}
+            title={active === 'planned' ? 'No location planned yet.' : active === 'past' ? 'No past visits yet.' : 'No saved locations yet.'}
+            description={active === 'planned' ? 'Choose a mutual DateMatch and set a time when you are ready.' : active === 'past' ? 'Completed location plans will appear here.' : 'Save a location from your swipe deck to build a shortlist.'}
+            actionHref="/discover"
+            actionLabel="Start swiping"
+          />
+        )}
+      </>
+    )
+  })
 }

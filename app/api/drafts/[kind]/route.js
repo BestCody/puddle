@@ -5,6 +5,7 @@ import { eventPayload, locationPayload, validateEvent, validateLocation } from '
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
+import { legacySystemsEnabled } from '@/lib/product-vision'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +26,7 @@ export async function POST(request, context) {
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Draft saving is temporarily unavailable.' }, { status: 503 })
   const { kind } = await context.params
   if (!['event', 'place'].includes(kind)) return NextResponse.json({ error: 'Unknown draft type.' }, { status: 404 })
+  if (kind === 'event' && !legacySystemsEnabled()) return NextResponse.json({ error: 'Event creation is disabled in the location-first product.' }, { status: 410 })
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

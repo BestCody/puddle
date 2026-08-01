@@ -10,6 +10,7 @@ export const metadata = {
 }
 
 export default async function DiscoverPage({ searchParams }) {
+  const params = await searchParams
   return renderProductPage(async (session) => {
     const feed = await getDiscoveryFeed(session, {
       kind: 'place',
@@ -20,7 +21,8 @@ export default async function DiscoverPage({ searchParams }) {
     await logDiscoveryImpressions(session, feed)
 
     return <>
-      <AuthMessage searchParams={searchParams} />
+      <AuthMessage searchParams={params} />
+      {params?.legacy === 'disabled' ? <p className="date-swipe-message" role="status">That older Puddle feature is no longer part of the location-first product. Your location deck is ready here.</p> : null}
       <section className="date-swipe-heading">
         <div>
           <span className="section-pill">Your 12-card date deck</span>
