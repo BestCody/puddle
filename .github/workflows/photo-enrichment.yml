@@ -1,0 +1,36 @@
+name: Enrich place photos
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */4 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: progressive-place-photo-enrichment
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Drain prioritized open-photo candidates
+        run: npm run locations:photos:enrich
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+          PHOTO_ENRICH_BATCH_SIZE: '500'
+          PHOTO_ENRICH_MAX_BATCHES: '20'
+          PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '105'
+          OPEN_PHOTO_MIN_SCORE: '0.76'
