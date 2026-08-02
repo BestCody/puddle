@@ -1,16 +1,16 @@
-import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { spawn } from 'node:child_process'
+import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
+import { convertJsonSequenceToJsonLines } from '../lib/app/json-sequence.js'
 import { createAdminClient } from '../lib/supabase/admin.js'
 
-const execFileAsync = promisify(execFile)
 const REGION_LIMIT = Math.max(1, Math.min(20, Number(process.env.CATALOGUE_REFRESH_REGION_LIMIT || 4)))
 const PLACE_LIMIT = Math.max(100, Math.min(1_000_000, Number(process.env.CATALOGUE_REFRESH_PLACE_LIMIT || 100_000)))
 const PHOTO_LIMIT = Math.max(1, Math.min(5_000, Number(process.env.CATALOGUE_REFRESH_PHOTO_LIMIT || 200)))
 const RELEASE_ID = String(process.env.OVERTURE_RELEASE || 'latest').trim().slice(0, 80)
 const ENRICH_PHOTOS = String(process.env.CATALOGUE_PHOTO_ENRICH ?? 'true').toLowerCase() !== 'false'
+const OUTPUT_TAIL_LIMIT = 2 * 1024 * 1024
 const admin = createAdminClient()
 
 function bbox(region) {
@@ -27,18 +27,50 @@ function bbox(region) {
   ]
 }
 
+function appendTail(current, chunk) {
+  const combined = `${current}${chunk}`
+  return combined.length > OUTPUT_TAIL_LIMIT ? combined.slice(-OUTPUT_TAIL_LIMIT) : combined
+}
+
 async function command(file, args, options = {}) {
-  const result = await execFileAsync(file, args, { maxBuffer: 40 * 1024 * 1024, ...options })
-  if (result.stdout) process.stdout.write(result.stdout)
-  if (result.stderr) process.stderr.write(result.stderr)
-  return result.stdout || ''
+  return new Promise((resolve, reject) => {
+    const child = spawn(file, args, { stdio: ['ignore', 'pipe', 'pipe'], ...options })
+    let stdoutTail = ''
+    let stderrTail = ''
+
+    child.stdout.on('data', (chunk) => {
+      process.stdout.write(chunk)
+      stdoutTail = appendTail(stdoutTail, chunk.toString())
+    })
+    child.stderr.on('data', (chunk) => {
+      process.stderr.write(chunk)
+      stderrTail = appendTail(stderrTail, chunk.toString())
+    })
+    child.once('error', reject)
+    child.once('close', (code, signal) => {
+      if (code === 0) {
+        resolve(stdoutTail)
+        return
+      }
+      const reason = signal ? `signal ${signal}` : `exit code ${code}`
+      const detail = stderrTail.trim().slice(-1000)
+      reject(new Error(`${file} failed with ${reason}${detail ? `: ${detail}` : ''}`))
+    })
+  })
 }
 
 function parseStats(output) {
-  const start = output.indexOf('{')
   const end = output.lastIndexOf('}')
-  if (start < 0 || end <= start) return null
-  try { return JSON.parse(output.slice(start, end + 1)) } catch { return null }
+  if (end < 0) return null
+  for (let start = output.lastIndexOf('{', end); start >= 0; start = output.lastIndexOf('{', start - 1)) {
+    try {
+      const value = JSON.parse(output.slice(start, end + 1))
+      if (value && typeof value === 'object' && 'insertedOrUpdated' in value) return value
+    } catch {
+      // Keep scanning backward for the root object of the final JSON summary.
+    }
+  }
+  return null
 }
 
 async function queuedRegions() {
@@ -76,29 +108,30 @@ async function claim(region) {
   return Boolean(result.data)
 }
 
-async function convertGeoJson(inputPath, outputPath) {
-  const payload = JSON.parse(await readFile(inputPath, 'utf8'))
-  const features = Array.isArray(payload?.features) ? payload.features : Array.isArray(payload) ? payload : []
-  await writeFile(outputPath, features.map((feature) => JSON.stringify(feature)).join('\n') + (features.length ? '\n' : ''), 'utf8')
-  return features.length
-}
-
 async function refreshRegion(region) {
-  if (!(await claim(region))) return
+  if (!(await claim(region))) return { status: 'skipped' }
   const work = await mkdtemp(join(tmpdir(), 'puddle-overture-'))
-  const geojson = join(work, 'places.geojson')
+  const geojsonSequence = join(work, 'places.geojsonseq')
   const jsonl = join(work, 'places.jsonl')
+  let stage = 'preparing catalogue refresh'
+
   try {
     const bounds = bbox(region)
     console.log(`Refreshing ${region.region_key} from Overture (${bounds.join(',')}).`)
+
+    stage = 'downloading Overture places'
     await command('overturemaps', [
       'download',
       `--bbox=${bounds.join(',')}`,
-      '-f', 'geojson',
+      '-f', 'geojsonseq',
       '--type=place',
-      '-o', geojson
+      '-o', geojsonSequence
     ])
-    const downloaded = await convertGeoJson(geojson, jsonl)
+
+    stage = 'streaming Overture records'
+    const downloaded = await convertJsonSequenceToJsonLines(geojsonSequence, jsonl)
+
+    stage = 'importing Overture places'
     const output = await command(process.execPath, [
       'scripts/import-open-place-catalogue.mjs',
       '--source=overture',
@@ -107,9 +140,11 @@ async function refreshRegion(region) {
       '--apply'
     ], { env: process.env })
     const stats = parseStats(output)
-    const imported = Number(stats?.insertedOrUpdated || 0)
+    if (!stats) throw new Error('Place importer did not return a readable summary.')
+    const imported = Number(stats.insertedOrUpdated || 0)
 
     if (ENRICH_PHOTOS && imported > 0) {
+      stage = 'enriching imported place photos'
       try {
         await command(process.execPath, ['scripts/import-open-location-photos.mjs', '--apply', `--limit=${PHOTO_LIMIT}`], { env: process.env })
       } catch (error) {
@@ -117,6 +152,7 @@ async function refreshRegion(region) {
       }
     }
 
+    stage = 'marking catalogue region ready'
     const updated = await admin.from('catalogue_sync_regions').update({
       status: 'ready',
       synced_at: new Date().toISOString(),
@@ -125,13 +161,17 @@ async function refreshRegion(region) {
       error_message: null
     }).eq('id', region.id)
     if (updated.error) throw updated.error
-    console.log(`Catalogue region ${region.region_key} is ready (${downloaded} downloaded, ${imported} imported or updated).`)
+    console.log(`Catalogue region ${region.region_key} is ready (${downloaded} downloaded, ${Number(stats.read || 0)} read, ${imported} imported or updated).`)
+    return { status: 'ready', imported }
   } catch (error) {
-    await admin.from('catalogue_sync_regions').update({
+    const message = `${stage}: ${String(error?.message || error)}`.slice(0, 1000)
+    const failed = await admin.from('catalogue_sync_regions').update({
       status: 'failed',
-      error_message: String(error?.message || error).slice(0, 1000)
+      error_message: message
     }).eq('id', region.id)
-    console.error(`Catalogue refresh failed for ${region.region_key}: ${error?.message || error}`)
+    if (failed.error) console.error(`Could not mark catalogue region ${region.region_key} failed: ${failed.error.message}`)
+    console.error(`Catalogue refresh failed for ${region.region_key}: ${message}`)
+    return { status: 'failed', error: message }
   } finally {
     await rm(work, { recursive: true, force: true })
   }
@@ -141,5 +181,8 @@ const regions = await queuedRegions()
 if (!regions.length) {
   console.log('No catalogue regions need a refresh.')
 } else {
-  for (const region of regions) await refreshRegion(region)
+  const results = []
+  for (const region of regions) results.push(await refreshRegion(region))
+  const failures = results.filter((result) => result.status === 'failed')
+  if (failures.length) throw new Error(`${failures.length} catalogue region refresh${failures.length === 1 ? '' : 'es'} failed.`)
 }
