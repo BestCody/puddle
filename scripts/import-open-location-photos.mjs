@@ -5,6 +5,7 @@ import { commonsCandidateScore, providerOrderForCategory, streetCandidateScore }
 
 const APPLY = process.argv.includes('--apply')
 const locationArgument = process.argv.find((value) => value.startsWith('--location='))?.split('=')[1] || null
+const regionArgument = process.argv.find((value) => value.startsWith('--region-id='))?.split('=')[1] || null
 const limitArgument = process.argv.find((value) => value.startsWith('--limit='))?.split('=')[1]
 const LIMIT = Math.max(1, Math.min(5_000, Number(limitArgument || process.env.OPEN_PHOTO_IMPORT_LIMIT || 200)))
 const MIN_SCORE = Math.max(0.6, Math.min(0.98, Number(process.env.OPEN_PHOTO_MIN_SCORE || 0.76)))
@@ -218,16 +219,18 @@ async function candidatesFor(provider, location) {
 }
 
 async function selectCandidate(location) {
+  let providerFailures = 0
   for (const provider of providerOrderForCategory(location.kind)) {
     try {
       const candidates = await candidatesFor(provider, location)
       const candidate = candidates.find((item) => item.score >= MIN_SCORE)
-      if (candidate) return candidate
+      if (candidate) return { candidate, providerFailures }
     } catch (error) {
+      providerFailures += 1
       console.warn(`${location.name}: ${provider} lookup failed: ${error.message}`)
     }
   }
-  return null
+  return { candidate: null, providerFailures }
 }
 
 async function transformImage(candidate) {
@@ -274,24 +277,52 @@ async function registerCandidate(admin, location, candidate) {
   if (error) throw error
 }
 
+async function complete(admin, locationId, outcome, errorMessage = null) {
+  if (!APPLY) return
+  const result = await admin.rpc('complete_open_photo_candidate_v1', {
+    target_location: locationId,
+    outcome,
+    error_value: errorMessage
+  })
+  if (result.error) throw result.error
+}
+
+async function directCandidates(admin) {
+  let query = admin
+    .from('locations')
+    .select('id,name,kind,latitude,longitude,status,visibility')
+    .eq('status', 'published')
+    .eq('visibility', 'public')
+    .not('latitude', 'is', null)
+    .not('longitude', 'is', null)
+    .order('photo_attempts', { ascending: true })
+    .order('published_at', { ascending: false })
+    .limit(LIMIT)
+  if (locationArgument) query = query.eq('id', locationArgument)
+  const result = await query
+  if (result.error) throw result.error
+  return result.data || []
+}
+
+async function claimedCandidates(admin) {
+  if (locationArgument) return directCandidates(admin)
+  const result = await admin.rpc('claim_open_photo_candidates_v1', {
+    batch_size: LIMIT,
+    target_region: regionArgument
+  })
+  if (result.error) throw result.error
+  return result.data || []
+}
+
 const admin = createAdminClient()
-let query = admin
-  .from('locations')
-  .select('id,name,kind,latitude,longitude,status,visibility')
-  .eq('status', 'published')
-  .eq('visibility', 'public')
-  .not('latitude', 'is', null)
-  .not('longitude', 'is', null)
-  .order('published_at', { ascending: false })
-  .limit(LIMIT)
-if (locationArgument) query = query.eq('id', locationArgument)
-const { data: locations, error: locationsError } = await query
-if (locationsError) throw locationsError
+const locations = APPLY ? await claimedCandidates(admin) : await directCandidates(admin)
 
 let imported = 0
 let matched = 0
 let skipped = 0
-for (const location of locations || []) {
+let noMatch = 0
+let failed = 0
+for (const location of locations) {
   const existing = await admin
     .from('location_photo_sources')
     .select('id')
@@ -301,23 +332,53 @@ for (const location of locations || []) {
   if (existing.error) throw existing.error
   if (existing.data?.length) {
     skipped += 1
+    await complete(admin, location.id, 'skipped')
     continue
   }
 
-  const candidate = await selectCandidate(location)
-  if (!candidate) {
-    console.log(`No high-confidence open photo: ${location.name}`)
-    await sleep(80)
-    continue
-  }
-  matched += 1
-  console.log(`${APPLY ? 'Importing' : 'Would import'} ${location.name} from ${candidate.provider} (${candidate.score.toFixed(3)} confidence).`)
-  if (APPLY) {
-    await registerCandidate(admin, location, candidate)
-    imported += 1
+  try {
+    const result = await selectCandidate(location)
+    if (!result.candidate) {
+      if (result.providerFailures > 0) {
+        failed += 1
+        await complete(admin, location.id, 'failed', `${result.providerFailures} photo providers failed.`)
+      } else {
+        noMatch += 1
+        await complete(admin, location.id, 'no_match')
+      }
+      console.log(`No high-confidence open photo: ${location.name}`)
+      await sleep(80)
+      continue
+    }
+
+    matched += 1
+    console.log(`${APPLY ? 'Importing' : 'Would import'} ${location.name} from ${result.candidate.provider} (${result.candidate.score.toFixed(3)} confidence).`)
+    if (APPLY) {
+      await registerCandidate(admin, location, result.candidate)
+      await complete(admin, location.id, 'matched')
+      imported += 1
+    }
+  } catch (error) {
+    failed += 1
+    console.warn(`${location.name}: photo import failed: ${error.message}`)
+    try {
+      await complete(admin, location.id, 'failed', error.message)
+    } catch (completionError) {
+      console.warn(`${location.name}: could not record photo failure: ${completionError.message}`)
+    }
   }
   await sleep(120)
 }
 
-console.log(JSON.stringify({ mode: APPLY ? 'apply' : 'dry-run', inspected: locations?.length || 0, matched, imported, skipped, minimumScore: MIN_SCORE }, null, 2))
+console.log(JSON.stringify({
+  mode: APPLY ? 'apply' : 'dry-run',
+  regionId: regionArgument,
+  inspected: locations.length,
+  matched,
+  imported,
+  noMatch,
+  failed,
+  skipped,
+  minimumScore: MIN_SCORE
+}, null, 2))
 if (!APPLY) console.log('Dry run only. Re-run with --apply after reviewing the candidate output.')
