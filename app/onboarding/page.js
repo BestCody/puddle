@@ -59,7 +59,7 @@ export default async function OnboardingPage({ searchParams }) {
             <small className="field-hint">Choose any distance from 1 to 100 km.</small>
           </label>
           <fieldset className="field interest-fieldset date-location-fieldset">
-            <legend>What kinds of places do you like?</legend>
+            <legend>What kinds of places do you like for dates?</legend>
             <p className="date-location-help">Choose at least three. You can change these later.</p>
             <div className="interest-grid date-location-grid">
               {dateLocationOptions.map((option) => (
