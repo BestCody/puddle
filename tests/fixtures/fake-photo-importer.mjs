@@ -19,11 +19,13 @@ if (mode === 'failure') {
   process.exit(2)
 }
 
-const inspected = mode === 'full' || iteration === 1 ? limit : Math.min(2, limit)
+const claimLimit = mode === 'reduced' ? Math.min(2, limit) : limit
+const inspected = mode === 'full' || iteration === 1 ? claimLimit : Math.min(1, claimLimit)
 const imported = Math.min(1, inspected)
 const summary = {
   mode: 'apply',
   regionId: null,
+  claimLimit,
   inspected,
   matched: imported,
   imported,

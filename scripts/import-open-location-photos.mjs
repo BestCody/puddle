@@ -2,21 +2,33 @@ import { createHash } from 'node:crypto'
 import sharp from 'sharp'
 import { createAdminClient } from '../lib/supabase/admin.js'
 import { commonsCandidateScore, providerOrderForCategory, streetCandidateScore } from '../lib/app/open-photo-candidates.js'
+import {
+  boundedInteger,
+  claimBatchSizes,
+  isStatementTimeout,
+  retryAfterMilliseconds,
+  retryDelayMilliseconds
+} from '../lib/app/photo-enrichment.js'
 
 const APPLY = process.argv.includes('--apply')
 const locationArgument = process.argv.find((value) => value.startsWith('--location='))?.split('=')[1] || null
 const regionArgument = process.argv.find((value) => value.startsWith('--region-id='))?.split('=')[1] || null
 const limitArgument = process.argv.find((value) => value.startsWith('--limit='))?.split('=')[1]
-const LIMIT = Math.max(1, Math.min(5_000, Number(limitArgument || process.env.OPEN_PHOTO_IMPORT_LIMIT || 200)))
+const LIMIT = boundedInteger(limitArgument || process.env.OPEN_PHOTO_IMPORT_LIMIT, 200, { min: 1, max: 5_000 })
 const MIN_SCORE = Math.max(0.6, Math.min(0.98, Number(process.env.OPEN_PHOTO_MIN_SCORE || 0.76)))
 const MAPILLARY_TOKEN = String(process.env.MAPILLARY_ACCESS_TOKEN || '').trim()
 const BUCKET = 'puddle-public-media'
 const MAX_BYTES = 10_000_000
-const REQUEST_TIMEOUT_MS = 12_000
+const REQUEST_TIMEOUT_MS = boundedInteger(process.env.OPEN_PHOTO_REQUEST_TIMEOUT_MS, 12_000, { min: 2_000, max: 60_000 })
+const WIKIMEDIA_MIN_INTERVAL_MS = boundedInteger(process.env.OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS, 1_100, { min: 250, max: 10_000 })
+const MAX_CANDIDATES_PER_PROVIDER = boundedInteger(process.env.OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER, 3, { min: 1, max: 10 })
+const CLAIM_MIN_BATCH_SIZE = boundedInteger(process.env.OPEN_PHOTO_CLAIM_MIN_BATCH_SIZE, 1, { min: 1, max: LIMIT })
 const USER_AGENT = 'Puddle/1.0 open licensed place photo importer (contact via configured site URL)'
+const RETRYABLE_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
+const providerGates = new Map()
 
 function sleep(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds))
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(milliseconds) || 0)))
 }
 
 function finite(value) {
@@ -27,10 +39,6 @@ function finite(value) {
 function stripHtml(value) {
   return String(value || '')
     .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#039;|&apos;/gi, "'")
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -49,14 +57,84 @@ function boundingBox(latitude, longitude, radiusM = 45) {
   return [Number(longitude) - lngDelta, Number(latitude) - latDelta, Number(longitude) + lngDelta, Number(latitude) + latDelta]
 }
 
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, {
+function providerGate(name) {
+  const key = String(name || 'default')
+  if (!providerGates.has(key)) providerGates.set(key, { nextAt: 0 })
+  return providerGates.get(key)
+}
+
+async function waitForProvider(name) {
+  const delay = providerGate(name).nextAt - Date.now()
+  if (delay > 0) await sleep(delay)
+}
+
+function deferProvider(name, delayMs) {
+  const gate = providerGate(name)
+  gate.nextAt = Math.max(gate.nextAt, Date.now() + Math.max(0, Number(delayMs) || 0))
+}
+
+function responseError(url, response) {
+  const error = new Error(`${new URL(url).hostname} returned ${response.status}.`)
+  error.status = response.status
+  error.retryAfterMs = retryAfterMilliseconds(response.headers.get('retry-after'))
+  return error
+}
+
+async function fetchWithRetry(url, options = {}, policy = {}) {
+  const provider = String(policy.provider || new URL(url).hostname)
+  const maxAttempts = boundedInteger(policy.maxAttempts, 2, { min: 1, max: 6 })
+  const minIntervalMs = boundedInteger(policy.minIntervalMs, 0, { min: 0, max: 10_000 })
+  const baseDelayMs = boundedInteger(policy.baseDelayMs, 1_000, { min: 100, max: 30_000 })
+  let lastError = null
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    await waitForProvider(provider)
+    if (minIntervalMs > 0) deferProvider(provider, minIntervalMs)
+
+    let response
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers: { 'User-Agent': USER_AGENT, ...(options.headers || {}) },
+        signal: options.signal || AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        cache: 'no-store'
+      })
+    } catch (error) {
+      lastError = error
+      if (attempt + 1 >= maxAttempts) throw error
+      const delay = retryDelayMilliseconds({ attempt, baseMs: baseDelayMs, maxMs: 30_000 })
+      deferProvider(provider, delay)
+      console.warn(`${provider} request failed; retrying in ${Math.ceil(delay / 1_000)}s: ${error.message}`)
+      continue
+    }
+
+    if (response.ok || (policy.acceptRedirects && response.status >= 300 && response.status < 400)) return response
+    const error = responseError(url, response)
+    lastError = error
+    const retryable = RETRYABLE_HTTP_STATUSES.has(response.status)
+    if (!retryable || attempt + 1 >= maxAttempts) {
+      if (response.status === 429) deferProvider(provider, Math.max(error.retryAfterMs, 60_000))
+      throw error
+    }
+
+    const delay = retryDelayMilliseconds({
+      attempt,
+      retryAfterMs: error.retryAfterMs,
+      baseMs: baseDelayMs,
+      maxMs: 60_000
+    })
+    deferProvider(provider, delay)
+    console.warn(`${provider} returned ${response.status}; retrying in ${Math.ceil(delay / 1_000)}s.`)
+  }
+
+  throw lastError || new Error(`${provider} request failed.`)
+}
+
+async function fetchJson(url, options = {}, policy = {}) {
+  const response = await fetchWithRetry(url, {
     ...options,
-    headers: { Accept: 'application/json', 'User-Agent': USER_AGENT, ...(options.headers || {}) },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    cache: 'no-store'
-  })
-  if (!response.ok) throw new Error(`${new URL(url).hostname} returned ${response.status}.`)
+    headers: { Accept: 'application/json', ...(options.headers || {}) }
+  }, policy)
   return response.json()
 }
 
@@ -71,11 +149,15 @@ function approvedAssetHost(provider, hostname) {
 async function downloadAsset(value, provider, redirects = 0) {
   const url = new URL(String(value || ''))
   if (url.protocol !== 'https:' || !approvedAssetHost(provider, url.hostname)) throw new Error(`Rejected unexpected ${provider} asset host.`)
-  const response = await fetch(url, {
-    headers: { Accept: 'image/avif,image/webp,image/png,image/jpeg', 'User-Agent': USER_AGENT },
-    redirect: 'manual',
-    cache: 'no-store',
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  const response = await fetchWithRetry(url, {
+    headers: { Accept: 'image/avif,image/webp,image/png,image/jpeg' },
+    redirect: 'manual'
+  }, {
+    provider,
+    maxAttempts: 3,
+    minIntervalMs: provider === 'wikimedia-commons' ? 250 : 0,
+    baseDelayMs: 1_000,
+    acceptRedirects: true
   })
   if (response.status >= 300 && response.status < 400) {
     if (redirects >= 2) throw new Error(`${provider} redirected too many times.`)
@@ -83,7 +165,6 @@ async function downloadAsset(value, provider, redirects = 0) {
     if (!next) throw new Error(`${provider} returned an incomplete redirect.`)
     return downloadAsset(new URL(next, url).toString(), provider, redirects + 1)
   }
-  if (!response.ok) throw new Error(`${provider} image returned ${response.status}.`)
   const mime = String(response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
   if (!['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(mime)) throw new Error(`${provider} returned unsupported content type ${mime || 'unknown'}.`)
   const declared = Number(response.headers.get('content-length') || 0)
@@ -106,13 +187,18 @@ function commonsLicense(metadata) {
 async function wikimediaCandidates(location) {
   const url = new URL('https://commons.wikimedia.org/w/api.php')
   url.search = new URLSearchParams({
-    action: 'query', format: 'json', origin: '*', generator: 'geosearch',
+    action: 'query', format: 'json', origin: '*', generator: 'geosearch', maxlag: '5',
     ggsprimary: 'all', ggsnamespace: '6', ggsradius: '500', ggslimit: '25',
     ggscoord: `${location.latitude}|${location.longitude}`,
     prop: 'coordinates|imageinfo', iiprop: 'url|size|extmetadata', iiurlwidth: '1800',
     iiextmetadatafilter: 'Artist|Credit|ImageDescription|LicenseShortName|UsageTerms'
   }).toString()
-  const payload = await fetchJson(url)
+  const payload = await fetchJson(url, {}, {
+    provider: 'wikimedia-commons',
+    maxAttempts: 4,
+    minIntervalMs: WIKIMEDIA_MIN_INTERVAL_MS,
+    baseDelayMs: 2_000
+  })
   return Object.values(payload?.query?.pages || {}).flatMap((page) => {
     const info = page?.imageinfo?.[0]
     const metadata = info?.extmetadata || {}
@@ -148,7 +234,7 @@ async function mapillaryCandidates(location) {
     limit: '30',
     fields: 'id,computed_geometry,geometry,compass_angle,captured_at,thumb_2048_url,width,height,creator'
   }).toString()
-  const payload = await fetchJson(url)
+  const payload = await fetchJson(url, {}, { provider: 'mapillary', maxAttempts: 3, baseDelayMs: 1_000 })
   return (payload?.data || []).flatMap((row) => {
     const coordinates = row?.computed_geometry?.coordinates || row?.geometry?.coordinates || []
     const image = {
@@ -187,7 +273,7 @@ async function kartaviewCandidates(location) {
     lat: String(location.latitude), lng: String(location.longitude), radius: '45', zoomLevel: '18',
     join: 'sequence', orderBy: 'id', orderDirection: 'desc'
   }).toString()
-  const payload = await fetchJson(url)
+  const payload = await fetchJson(url, {}, { provider: 'kartaview', maxAttempts: 3, baseDelayMs: 1_000 })
   return kartaRows(payload).flatMap((row) => {
     const image = {
       latitude: finite(row?.lat ?? row?.latitude ?? row?.gps?.lat),
@@ -216,21 +302,6 @@ async function candidatesFor(provider, location) {
   if (provider === 'mapillary') return mapillaryCandidates(location)
   if (provider === 'kartaview') return kartaviewCandidates(location)
   return []
-}
-
-async function selectCandidate(location) {
-  let providerFailures = 0
-  for (const provider of providerOrderForCategory(location.kind)) {
-    try {
-      const candidates = await candidatesFor(provider, location)
-      const candidate = candidates.find((item) => item.score >= MIN_SCORE)
-      if (candidate) return { candidate, providerFailures }
-    } catch (error) {
-      providerFailures += 1
-      console.warn(`${location.name}: ${provider} lookup failed: ${error.message}`)
-    }
-  }
-  return { candidate: null, providerFailures }
 }
 
 async function transformImage(candidate) {
@@ -301,84 +372,128 @@ async function directCandidates(admin) {
   if (locationArgument) query = query.eq('id', locationArgument)
   const result = await query
   if (result.error) throw result.error
-  return result.data || []
+  return { locations: result.data || [], claimLimit: LIMIT }
 }
 
 async function claimedCandidates(admin) {
   if (locationArgument) return directCandidates(admin)
-  const result = await admin.rpc('claim_open_photo_candidates_v1', {
-    batch_size: LIMIT,
-    target_region: regionArgument
-  })
-  if (result.error) throw result.error
-  return result.data || []
+  const sizes = claimBatchSizes(LIMIT, { min: CLAIM_MIN_BATCH_SIZE })
+  let lastError = null
+  for (let index = 0; index < sizes.length; index += 1) {
+    const batchSize = sizes[index]
+    const result = await admin.rpc('claim_open_photo_candidates_v1', {
+      batch_size: batchSize,
+      target_region: regionArgument
+    })
+    if (!result.error) return { locations: result.data || [], claimLimit: batchSize }
+    if (!isStatementTimeout(result.error)) throw result.error
+    lastError = result.error
+    const next = sizes[index + 1]
+    if (!next) break
+    const delay = retryDelayMilliseconds({ attempt: index, baseMs: 750, maxMs: 8_000 })
+    console.warn(`Photo candidate claim timed out at ${batchSize}; retrying with ${next} after ${delay}ms.`)
+    await sleep(delay)
+  }
+  throw lastError || new Error('Photo candidate claim failed.')
 }
 
-const admin = createAdminClient()
-const locations = APPLY ? await claimedCandidates(admin) : await directCandidates(admin)
+function conciseFailure(failures) {
+  return failures.slice(0, 4).join(' | ').slice(0, 900) || 'Open-photo providers temporarily failed.'
+}
 
-let imported = 0
-let matched = 0
-let skipped = 0
-let noMatch = 0
-let failed = 0
-for (const location of locations) {
-  const existing = await admin
-    .from('location_photo_sources')
-    .select('id')
-    .eq('location_id', location.id)
-    .eq('status', 'approved')
-    .limit(1)
-  if (existing.error) throw existing.error
-  if (existing.data?.length) {
-    skipped += 1
-    await complete(admin, location.id, 'skipped')
-    continue
-  }
-
+async function processLocation(admin, location) {
+  const counts = { matched: 0, imported: 0, noMatch: 0, failed: 0, skipped: 0 }
   try {
-    const result = await selectCandidate(location)
-    if (!result.candidate) {
-      if (result.providerFailures > 0) {
-        failed += 1
-        await complete(admin, location.id, 'failed', `${result.providerFailures} photo providers failed.`)
-      } else {
-        noMatch += 1
-        await complete(admin, location.id, 'no_match')
-      }
-      console.log(`No high-confidence open photo: ${location.name}`)
-      await sleep(80)
-      continue
+    const existing = await admin
+      .from('location_photo_sources')
+      .select('id')
+      .eq('location_id', location.id)
+      .eq('status', 'approved')
+      .limit(1)
+    if (existing.error) throw existing.error
+    if (existing.data?.length) {
+      counts.skipped = 1
+      await complete(admin, location.id, 'skipped')
+      return counts
     }
 
-    matched += 1
-    console.log(`${APPLY ? 'Importing' : 'Would import'} ${location.name} from ${result.candidate.provider} (${result.candidate.score.toFixed(3)} confidence).`)
-    if (APPLY) {
-      await registerCandidate(admin, location, result.candidate)
-      await complete(admin, location.id, 'matched')
-      imported += 1
+    const failures = []
+    let sawCandidate = false
+    for (const provider of providerOrderForCategory(location.kind)) {
+      let candidates
+      try {
+        candidates = await candidatesFor(provider, location)
+      } catch (error) {
+        failures.push(`${provider} lookup: ${error.message}`)
+        console.warn(`${location.name}: ${provider} lookup failed: ${error.message}`)
+        continue
+      }
+
+      const eligible = candidates
+        .filter((candidate) => candidate.score >= MIN_SCORE)
+        .slice(0, MAX_CANDIDATES_PER_PROVIDER)
+      if (eligible.length) sawCandidate = true
+
+      for (const candidate of eligible) {
+        console.log(`${APPLY ? 'Importing' : 'Would import'} ${location.name} from ${candidate.provider} (${candidate.score.toFixed(3)} confidence).`)
+        if (!APPLY) {
+          counts.matched = 1
+          return counts
+        }
+        try {
+          await registerCandidate(admin, location, candidate)
+        } catch (error) {
+          failures.push(`${candidate.provider} asset ${candidate.externalId}: ${error.message}`)
+          console.warn(`${location.name}: ${candidate.provider} candidate ${candidate.externalId} failed: ${error.message}; trying the next candidate.`)
+          continue
+        }
+        await complete(admin, location.id, 'matched')
+        counts.matched = 1
+        counts.imported = 1
+        return counts
+      }
     }
+
+    counts.matched = sawCandidate ? 1 : 0
+    if (failures.length) {
+      counts.failed = 1
+      await complete(admin, location.id, 'failed', conciseFailure(failures))
+      console.log(`Open-photo lookup will retry: ${location.name}`)
+    } else {
+      counts.noMatch = 1
+      await complete(admin, location.id, 'no_match')
+      console.log(`No high-confidence open photo: ${location.name}`)
+    }
+    return counts
   } catch (error) {
-    failed += 1
+    counts.failed = 1
     console.warn(`${location.name}: photo import failed: ${error.message}`)
     try {
       await complete(admin, location.id, 'failed', error.message)
     } catch (completionError) {
       console.warn(`${location.name}: could not record photo failure: ${completionError.message}`)
     }
+    return counts
   }
+}
+
+const admin = createAdminClient()
+const claim = APPLY ? await claimedCandidates(admin) : await directCandidates(admin)
+const locations = claim.locations
+
+const totals = { matched: 0, imported: 0, noMatch: 0, failed: 0, skipped: 0 }
+for (const location of locations) {
+  const counts = await processLocation(admin, location)
+  for (const field of Object.keys(totals)) totals[field] += Number(counts[field] || 0)
   await sleep(120)
 }
 
 console.log(JSON.stringify({
   mode: APPLY ? 'apply' : 'dry-run',
   regionId: regionArgument,
+  claimLimit: claim.claimLimit,
   inspected: locations.length,
-  matched,
-  imported,
-  noMatch,
-  failed,
-  skipped,
+  ...totals,
   minimumScore: MIN_SCORE
 }, null, 2))
 if (!APPLY) console.log('Dry run only. Re-run with --apply after reviewing the candidate output.')
