@@ -12,14 +12,21 @@ alter table public.recommendation_context_events
   add column if not exists outcome text,
   add column if not exists signal_weight numeric(6,3),
   add column if not exists price_level smallint,
-  add column if not exists amenities text[] default '{}',
+  add column if not exists amenities text[],
   add column if not exists distance_m real,
   add column if not exists day_type text,
   add column if not exists intent text,
-  add column if not exists filters jsonb default '{}'::jsonb,
-  add column if not exists metadata jsonb default '{}'::jsonb,
-  add column if not exists occurred_at timestamptz default now(),
+  add column if not exists filters jsonb,
+  add column if not exists metadata jsonb,
+  add column if not exists occurred_at timestamptz,
   add column if not exists undone_at timestamptz;
+
+-- Defaults on the earlier shape would hide whether a value came from a legacy
+-- writer or from contextual-v2 before the synchronization trigger can map it.
+alter table public.recommendation_context_events
+  alter column mode drop default,
+  alter column daypart drop default,
+  alter column context drop default;
 
 alter table public.recommendation_context_events
   drop constraint if exists recommendation_context_events_daypart_check;
@@ -51,14 +58,17 @@ set
   signal_weight = coalesce(e.signal_weight, nullif(e.weight,0), 1),
   category = coalesce(e.category, (select l.kind from public.locations l where l.id=e.location_id)),
   price_level = coalesce(e.price_level, (select l.price_level from public.locations l where l.id=e.location_id)),
-  amenities = coalesce(e.amenities, (select l.amenities from public.locations l where l.id=e.location_id), '{}'::text[]),
+  amenities = case
+    when e.amenities is null or cardinality(e.amenities)=0 then coalesce((select l.amenities from public.locations l where l.id=e.location_id),'{}'::text[])
+    else e.amenities
+  end,
   distance_m = coalesce(e.distance_m, case
     when coalesce(e.context->>'distance_m','') ~ '^[0-9]+([.][0-9]+)?$' then (e.context->>'distance_m')::real
     else null
   end),
   daypart = case
     when e.daypart='late' then 'late_night'
-    when e.daypart='any' then case
+    when e.daypart='any' or e.daypart is null then case
       when extract(hour from coalesce(e.created_at,now())) between 5 and 11 then 'morning'
       when extract(hour from coalesce(e.created_at,now())) between 12 and 16 then 'afternoon'
       when extract(hour from coalesce(e.created_at,now())) between 17 and 21 then 'evening'
@@ -68,25 +78,19 @@ set
   end,
   day_type = coalesce(e.day_type, case when e.weekend then 'weekend' else 'weekday' end),
   intent = coalesce(e.intent, nullif(e.context->>'intent',''), nullif(e.context->>'mode',''), e.mode),
-  filters = coalesce(e.filters, e.context, '{}'::jsonb),
+  filters = case when e.filters is null or e.filters='{}'::jsonb then coalesce(e.context,'{}'::jsonb) else e.filters end,
   metadata = coalesce(e.metadata,'{}'::jsonb)||jsonb_build_object('legacyEventType',e.event_type,'mode',e.mode,'deck_id',e.deck_id),
   occurred_at = coalesce(e.occurred_at,e.created_at,now());
 
 alter table public.recommendation_context_events
-  alter column source set default 'discovery',
   alter column source set not null,
   alter column source_key set not null,
   alter column outcome set not null,
   alter column signal_weight set not null,
-  alter column amenities set default '{}',
   alter column amenities set not null,
-  alter column day_type set default 'weekday',
   alter column day_type set not null,
-  alter column filters set default '{}',
   alter column filters set not null,
-  alter column metadata set default '{}',
   alter column metadata set not null,
-  alter column occurred_at set default now(),
   alter column occurred_at set not null;
 
 do $$
@@ -130,9 +134,17 @@ declare
   location_row public.locations%rowtype;
   effective_time timestamptz;
   normalized_event text;
+  resolved_mode text;
+  deck_mode text;
 begin
   if new.location_id is not null then
     select * into location_row from public.locations where id=new.location_id;
+  end if;
+  if new.deck_id is null and coalesce(new.metadata->>'deck_id','') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
+    new.deck_id:=(new.metadata->>'deck_id')::uuid;
+  end if;
+  if new.deck_id is not null then
+    select mode into deck_mode from public.date_match_decks where id=new.deck_id;
   end if;
 
   effective_time:=coalesce(new.occurred_at,new.created_at,now());
@@ -150,17 +162,22 @@ begin
     else 'opened'
   end);
 
-  new.event_type:=normalized_event;
-  new.mode:=coalesce(new.mode,case
+  resolved_mode:=case
     when new.metadata->>'mode' in ('solo','date','hangout') then new.metadata->>'mode'
+    when deck_mode in ('date','hangout') then deck_mode
+    when new.mode in ('date','hangout') then new.mode
     when new.source in ('date_match_swipe','date_match_feedback') then 'date'
     else 'solo'
-  end);
-  new.source:=coalesce(new.source,case
-    when new.mode in ('date','hangout') and normalized_event in ('visited','great','okay','not_for_us') then 'date_match_feedback'
-    when new.mode in ('date','hangout') then 'date_match_swipe'
-    else 'discovery'
-  end);
+  end;
+  new.event_type:=normalized_event;
+  new.mode:=resolved_mode;
+  if new.source is null or (new.source='discovery' and resolved_mode in ('date','hangout')) then
+    new.source:=case
+      when resolved_mode in ('date','hangout') and normalized_event in ('visited','great','okay','not_for_us') then 'date_match_feedback'
+      when resolved_mode in ('date','hangout') then 'date_match_swipe'
+      else 'discovery'
+    end;
+  end if;
   new.source_key:=coalesce(nullif(new.source_key,''),'context-event:'||coalesce(new.id,gen_random_uuid())::text);
   new.outcome:=coalesce(new.outcome,case normalized_event
     when 'opened' then 'opened'
@@ -177,7 +194,9 @@ begin
 
   new.category:=coalesce(nullif(new.category,''),location_row.kind,'other');
   new.price_level:=coalesce(new.price_level,location_row.price_level);
-  new.amenities:=coalesce(new.amenities,location_row.amenities,'{}'::text[]);
+  if new.amenities is null or cardinality(new.amenities)=0 then
+    new.amenities:=coalesce(location_row.amenities,'{}'::text[]);
+  end if;
   if new.distance_m is null and coalesce(new.context->>'distance_m','') ~ '^[0-9]+([.][0-9]+)?$' then
     new.distance_m:=(new.context->>'distance_m')::real;
   end if;
@@ -192,12 +211,15 @@ begin
       else 'late_night'
     end
   end;
-  new.day_type:=coalesce(new.day_type,case when new.weekend then 'weekend' else 'weekday' end);
+  if new.day_type not in ('weekday','weekend') or (new.day_type='weekday' and new.weekend) then
+    new.day_type:=case when new.weekend then 'weekend' else 'weekday' end;
+  end if;
   new.weekend:=(new.day_type='weekend');
-  new.intent:=coalesce(nullif(new.intent,''),nullif(new.filters->>'intent',''),nullif(new.context->>'intent',''),new.mode);
-  new.filters:=coalesce(new.filters,new.context,'{}'::jsonb);
-  new.metadata:=coalesce(new.metadata,'{}'::jsonb)||jsonb_build_object('mode',new.mode,'event_type',normalized_event,'deck_id',new.deck_id);
-  new.context:=coalesce(new.context,'{}'::jsonb)||new.filters||jsonb_build_object('intent',new.intent,'mode',new.mode);
+  if new.filters is null or new.filters='{}'::jsonb then new.filters:=coalesce(new.context,'{}'::jsonb); end if;
+  new.intent:=coalesce(nullif(new.intent,''),nullif(new.filters->>'intent',''),nullif(new.context->>'intent',''),resolved_mode);
+  new.metadata:=coalesce(new.metadata,'{}'::jsonb)||jsonb_build_object('mode',resolved_mode,'event_type',normalized_event,'deck_id',new.deck_id);
+  if new.context is null or new.context='{}'::jsonb then new.context:=new.filters; end if;
+  new.context:=coalesce(new.context,'{}'::jsonb)||new.filters||jsonb_build_object('intent',new.intent,'mode',resolved_mode);
   new.occurred_at:=effective_time;
   new.created_at:=coalesce(new.created_at,effective_time);
   return new;
