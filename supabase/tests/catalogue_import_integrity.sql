@@ -4,13 +4,13 @@ begin;
 \echo 'catalogue integrity: private worker RPC permissions'
 select case when has_function_privilege(
   'service_role','public.upsert_open_catalogue_batch_v1(text,jsonb)','EXECUTE'
-) then 1 else 1/0 end as service_role_can_import;
+) then 1 else 1/(floor(random())::int) end as service_role_can_import;
 select case when not has_function_privilege(
   'authenticated','public.upsert_open_catalogue_batch_v1(text,jsonb)','EXECUTE'
-) then 1 else 1/0 end as authenticated_cannot_import;
+) then 1 else 1/(floor(random())::int) end as authenticated_cannot_import;
 select case when has_function_privilege(
   'service_role','public.claim_open_photo_candidates_v1(integer,uuid)','EXECUTE'
-) then 1 else 1/0 end as service_role_can_claim_photos;
+) then 1 else 1/(floor(random())::int) end as service_role_can_claim_photos;
 
 insert into public.catalogue_sync_regions(
   region_key,center_latitude,center_longitude,radius_km,source,status
@@ -62,9 +62,9 @@ select * from public.upsert_open_catalogue_batch_v1(
 );
 
 select case when count(*)=2 and bool_and(location_id is not null and error_message is null)
-  then 1 else 1/0 end as rich_batch_succeeded from rich_import;
+  then 1 else 1/(floor(random())::int) end as rich_batch_succeeded from rich_import;
 
-select case when count(*)=1 then 1 else 1/0 end as rich_geography_stored
+select case when count(*)=1 then 1 else 1/(floor(random())::int) end as rich_geography_stored
 from public.locations l
 join public.location_source_links s on s.location_id=l.id
 where s.source='overture' and s.source_place_id='overture-test-cafe'
@@ -79,12 +79,12 @@ where s.source='overture' and s.source_place_id='overture-test-cafe'
   and l.accessibility->>'wheelchair_accessible'='true';
 
 select case when count(*)=2 and bool_and(present_in_latest_release)
-  then 1 else 1/0 end as region_membership_stored
+  then 1 else 1/(floor(random())::int) end as region_membership_stored
 from public.catalogue_region_locations
 where region_id=:'test_region_id' and source='overture'
   and source_place_id in ('overture-test-cafe','overture-test-playground');
 
-select case when count(*)=1 then 1 else 1/0 end as parent_child_linked
+select case when count(*)=1 then 1 else 1/(floor(random())::int) end as parent_child_linked
 from public.locations child
 join public.location_source_links child_link on child_link.location_id=child.id
 join public.location_source_links parent_link on parent_link.location_id=child.parent_location_id
@@ -92,7 +92,7 @@ where child_link.source='overture' and child_link.source_place_id='overture-test
   and parent_link.source='overture' and parent_link.source_place_id='overture-test-cafe'
   and child.catalogue_group_key='overture:overture-test-cafe';
 
-select case when count(*)=2 then 1 else 1/0 end as generated_descriptions_stored
+select case when count(*)=2 then 1 else 1/(floor(random())::int) end as generated_descriptions_stored
 from public.location_descriptions description
 join public.location_source_links source_link on source_link.location_id=description.location_id
 where source_link.source='overture'
@@ -118,7 +118,7 @@ select * from public.upsert_open_catalogue_batch_v1(
     'catalogue_group_key','overture:overture-test-cafe'
   ))
 );
-select case when count(*)=1 then 1 else 1/0 end as replay_kept_one_source_link
+select case when count(*)=1 then 1 else 1/(floor(random())::int) end as replay_kept_one_source_link
 from public.location_source_links
 where source='overture' and source_place_id='overture-test-cafe';
 
@@ -147,9 +147,9 @@ select * from public.upsert_open_catalogue_batch_v1(
 );
 select case when count(*) filter(where error_message is null)=1
                   and count(*) filter(where error_message is not null)=2
-  then 1 else 1/0 end as mixed_batch_isolated_failures
+  then 1 else 1/(floor(random())::int) end as mixed_batch_isolated_failures
 from mixed_import;
-select case when count(*)=0 then 1 else 1/0 end as invalid_rows_left_no_links
+select case when count(*)=0 then 1 else 1/(floor(random())::int) end as invalid_rows_left_no_links
 from public.location_source_links
 where source='overture'
   and source_place_id in ('overture-test-invalid','overture-test-missing-coordinates');
@@ -157,11 +157,11 @@ where source='overture'
 \echo 'catalogue integrity: progressive regional photo queue'
 create temporary table photo_claim as
 select * from public.claim_open_photo_candidates_v1(20,:'test_region_id');
-select case when count(*)>=2 then 1 else 1/0 end as regional_photo_candidates_claimed
+select case when count(*)>=2 then 1 else 1/(floor(random())::int) end as regional_photo_candidates_claimed
 from photo_claim;
 select id as claimed_photo_location from photo_claim limit 1 \gset
 select public.complete_open_photo_candidate_v1(:'claimed_photo_location','no_match',null);
-select case when count(*)=1 then 1 else 1/0 end as no_match_retry_recorded
+select case when count(*)=1 then 1 else 1/(floor(random())::int) end as no_match_retry_recorded
 from public.locations
 where id=:'claimed_photo_location' and photo_enrichment_status='no_match'
   and photo_retry_after>now()+interval '80 days';
@@ -170,10 +170,10 @@ where id=:'claimed_photo_location' and photo_enrichment_status='no_match'
 select public.finalize_catalogue_region_refresh_v1(:'test_region_id','overture');
 select public.begin_catalogue_region_refresh_v1(:'test_region_id','overture','2026-08-01.0');
 select public.finalize_catalogue_region_refresh_v1(:'test_region_id','overture');
-select case when missed_refreshes=1 then 1 else 1/0 end as one_missed_release_recorded
+select case when missed_refreshes=1 then 1 else 1/(floor(random())::int) end as one_missed_release_recorded
 from public.catalogue_region_locations
 where region_id=:'test_region_id' and source='overture' and source_place_id='overture-test-cafe';
-select case when count(*)=1 then 1 else 1/0 end as one_miss_kept_location_published
+select case when count(*)=1 then 1 else 1/(floor(random())::int) end as one_miss_kept_location_published
 from public.locations l
 join public.location_source_links s on s.location_id=l.id
 where s.source='overture' and s.source_place_id='overture-test-cafe' and l.status='published';
