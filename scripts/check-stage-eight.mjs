@@ -8,7 +8,9 @@ const required = [
   'app/settings/recommendations/page.js','components/ai-creation-assistant.js','components/recommendation-settings.js',
   'lib/ai/local-provider.js','lib/ai/embedding-provider.js','lib/ai/grounding.js','lib/app/hybrid-recommendations.js',
   'scripts/generate-content-embeddings.mjs','scripts/compute-recommendation-metrics.mjs','scripts/test-stage-eight-ranking.mjs',
-  'supabase/migrations/0014_ai_creation_and_embeddings.sql','supabase/migrations/0015_hybrid_recommendation_foundation.sql','supabase/migrations/0016_hybrid_recommendation_runtime.sql','supabase/migrations/0017_stage8_authorization.sql','supabase/migrations/0018_stage8_hardening.sql','supabase/migrations/10006_contextual_recommendation_learning.sql','supabase/tests/0014_stage8_authorization.sql','docs/STAGE_8_SETUP.md','app/stage-eight.css'
+  'supabase/migrations/0014_ai_creation_and_embeddings.sql','supabase/migrations/0015_hybrid_recommendation_foundation.sql','supabase/migrations/0016_hybrid_recommendation_runtime.sql','supabase/migrations/0017_stage8_authorization.sql','supabase/migrations/0018_stage8_hardening.sql',
+  'supabase/migrations/10013_contextual_recommendation_schema_bridge.sql','supabase/migrations/10014_contextual_recommendation_learning.sql','supabase/migrations/10015_contextual_recommendation_compatibility.sql',
+  'supabase/tests/0014_stage8_authorization.sql','docs/STAGE_8_SETUP.md','app/stage-eight.css'
 ]
 for (const path of required) await access(join(root, path))
 for (const path of [
@@ -20,11 +22,12 @@ execFileSync(process.execPath, [join(root, 'scripts/test-stage-eight-ranking.mjs
 
 const migrationNames = [
   '0014_ai_creation_and_embeddings.sql','0015_hybrid_recommendation_foundation.sql','0016_hybrid_recommendation_runtime.sql',
-  '0017_stage8_authorization.sql','0018_stage8_hardening.sql','10006_contextual_recommendation_learning.sql'
+  '0017_stage8_authorization.sql','0018_stage8_hardening.sql',
+  '10013_contextual_recommendation_schema_bridge.sql','10014_contextual_recommendation_learning.sql','10015_contextual_recommendation_compatibility.sql'
 ]
 const migration = (await Promise.all(migrationNames.map((name) => readFile(join(root, 'supabase/migrations', name), 'utf8')))).join('\n')
 for (const marker of ['create extension if not exists vector','ai_assistance_runs','content_embeddings','user_preference_embeddings','embedding_jobs','recommendation_ranking_configs','recommendation_eligibility_logs','recommendation_candidates','recommendation_outcomes','recommendation_metrics','recommendation_candidate_pool_v1','delete_recommendation_data_v1','queue_embedding_regeneration_v1','activate_recommendation_ranking_v1','rules_holdout','vector_similarity','feature_flags','ai_writing_enabled','ai_social_caption_enabled']) if (!migration.includes(marker)) throw new Error(`Stage 8 migration is missing ${marker}`)
-for (const marker of ['recommendation_context_events','contextual_intent_bucket_v1','contextualCategory','contextualPrice','contextualAmenities','contextualDistanceKm','contextual-v2','date_match_swipes_capture_context','date_match_feedback_capture_context']) if (!migration.includes(marker)) throw new Error(`Contextual recommendation learning is missing ${marker}`)
+for (const marker of ['recommendation_context_events','contextual_intent_bucket_v1','contextualCategory','contextualPrice','contextualAmenities','contextualDistanceKm','contextual-v2','date_match_swipes_capture_context','date_match_feedback_capture_context','sync_recommendation_context_event_v1','record_recommendation_context_v1','recommendation_context_scores_v1']) if (!migration.includes(marker)) throw new Error(`Contextual recommendation learning is missing ${marker}`)
 for (const marker of ['complete_ai_assistance_v1','claim_embedding_jobs_v1','store_embedding_job_v1','fail_embedding_job_v1']) if (!migration.includes(`grant execute on function public.${marker}`) || !migration.includes('to service_role')) throw new Error(`Stage 8 worker authorization is missing ${marker}`)
 
 const provider = await readFile(join(root, 'lib/ai/local-provider.js'), 'utf8')
