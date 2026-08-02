@@ -6,7 +6,7 @@ const MAX_BATCHES = boundedInteger(process.env.PHOTO_ENRICH_MAX_BATCHES, 50, { m
 const MAX_RUNTIME_MINUTES = boundedInteger(process.env.PHOTO_ENRICH_MAX_RUNTIME_MINUTES, 105, { min: 1, max: 110 })
 const IMPORTER = String(process.env.PHOTO_ENRICH_IMPORTER || 'scripts/import-open-location-photos.mjs').trim()
 const OUTPUT_TAIL_LIMIT = 2 * 1024 * 1024
-const RUNTIME_HEADROOM_MS = 5 * 60_000
+const RUNTIME_HEADROOM_MS = Math.min(5 * 60_000, Math.max(5_000, Math.floor(MAX_RUNTIME_MINUTES * 60_000 / 5)))
 
 function appendTail(current, chunk) {
   const combined = `${current}${chunk}`
