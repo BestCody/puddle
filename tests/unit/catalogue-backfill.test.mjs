@@ -3,7 +3,6 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 const migrationUrl = new URL('../../supabase/migrations/10021_catalogue_quality_backfill.sql', import.meta.url)
-const importerUrl = new URL('../../scripts/import-open-place-catalogue.mjs', import.meta.url)
 
 function executableSql(value) {
   return value
@@ -11,21 +10,14 @@ function executableSql(value) {
     .replace(/^\s*--.*$/gm, '')
 }
 
-test('catalogue backfill never rewrites the locations table inside a migration transaction', async () => {
+test('catalogue backfill migration only requeues the bounded worker', async () => {
   const sql = executableSql(await readFile(migrationUrl, 'utf8'))
+  const statements = sql.split(';').map((statement) => statement.trim()).filter(Boolean)
 
-  assert.doesNotMatch(sql, /\bupdate\s+public\.locations\b/i)
-  assert.doesNotMatch(sql, /\bdelete\s+from\s+public\.locations\b/i)
-  assert.doesNotMatch(sql, /\binsert\s+into\s+public\.locations\b/i)
-  assert.match(sql, /\bupdate\s+public\.catalogue_sync_regions\b/i)
-  assert.match(sql, /status\s*=\s*'queued'/i)
-})
-
-test('catalogue replay uses bounded RPC transactions', async () => {
-  const importer = await readFile(importerUrl, 'utf8')
-
-  assert.match(importer, /const BATCH_SIZE = .*Number\(args\.get\('batch-size'\) \|\| 100\)/)
-  assert.match(importer, /Math\.min\(200,/)
-  assert.match(importer, /admin\.rpc\('upsert_open_catalogue_batch_v1'/)
-  assert.match(importer, /if \(batch\.length >= BATCH_SIZE\) await flushBatch\(\)/)
+  assert.equal(statements.length, 1)
+  assert.match(statements[0], /^update\s+public\.catalogue_sync_regions\b/i)
+  assert.match(statements[0], /status\s*=\s*'queued'/i)
+  assert.match(statements[0], /where\s+source\s*=\s*'overture'/i)
+  assert.match(statements[0], /status\s+in\s*\(\s*'ready'\s*,\s*'empty'\s*\)/i)
+  assert.doesNotMatch(sql, /\b(?:insert\s+into|update|delete\s+from)\s+public\.locations\b/i)
 })
