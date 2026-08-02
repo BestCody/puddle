@@ -1,5 +1,6 @@
 "use client"
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
@@ -68,6 +69,30 @@ function InviteSheet({ busy, room, onCreate, onClose, onMessage }) {
   )
 }
 
+function EmptyDeck({ feed, onRefresh, onFilters }) {
+  if (feed.emptyReason === 'location_required') return <div className="minimal-deck-complete">
+    <h1>Choose your location</h1>
+    <p>Puddle needs a city or your current location before it can find nearby places.</p>
+    <div><Link className="minimal-primary-button" href="/account">Set location</Link></div>
+  </div>
+
+  if (feed.emptyReason === 'catalogue_sync_pending') return <div className="minimal-deck-complete">
+    <h1>Places are being added nearby</h1>
+    <p>{feed.centerLabel ? `Puddle has your location in ${feed.centerLabel}, but this area needs a catalogue refresh.` : 'This area needs a catalogue refresh.'}</p>
+    <div><button className="minimal-primary-button" type="button" onClick={onRefresh}>Try again</button><Link href="/account">Edit location</Link></div>
+  </div>
+
+  if (feed.emptyReason === 'filters') return <div className="minimal-deck-complete">
+    <h1>No places match these filters</h1>
+    <div><button className="minimal-primary-button" type="button" onClick={onFilters}>Change filters</button><button type="button" onClick={onRefresh}>Try again</button></div>
+  </div>
+
+  return <div className="minimal-deck-complete">
+    <h1>{feed.items.length ? 'Deck complete' : 'No places found'}</h1>
+    <div><button className="minimal-primary-button" type="button" onClick={onRefresh}>Swipe again</button></div>
+  </div>
+}
+
 export function DateSwipeWorkspaceV2({ initialFeed }) {
   const [feed, setFeed] = useState({ ...initialFeed, items: initialFeed.items.slice(0, 12) })
   const [filters, setFilters] = useState({ ...initialFeed.filters, kind: 'place', date: 'any', limit: 12 })
@@ -78,7 +103,7 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
   const [room, setRoom] = useState(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(initialFeed.recycled ? 'Showing passed places again.' : '')
   const current = feed.items[index] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
 
@@ -122,6 +147,7 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
     setChoices({})
     setRoom(null)
     setShowFilters(false)
+    setMessage(result.recycled ? 'Showing passed places again.' : '')
   }
 
   async function persistChoice(action, item) {
@@ -179,6 +205,8 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
     setRoom(result)
   }
 
+  const deckComplete = feed.items.length > 0 && !current
+
   return (
     <section className="minimal-swipe-workspace">
       <header className="minimal-swipe-toolbar">
@@ -199,10 +227,10 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
           busy={busy}
         />
         <div className="minimal-progress" aria-label={`${index + 1} of ${feed.items.length}`}><span style={{ width: `${Math.max(6, ((index + 1) / Math.max(1, feed.items.length)) * 100)}%` }} /></div>
-      </> : <div className="minimal-deck-complete">
-        <h1>{feed.items.length ? 'Deck complete' : 'No places found'}</h1>
-        <div><button className="minimal-primary-button" type="button" onClick={() => setShowInvite(true)} disabled={!feed.items.length}>Invite others</button><button type="button" onClick={() => refresh()}>Swipe again</button></div>
-      </div>}
+      </> : deckComplete ? <div className="minimal-deck-complete">
+        <h1>Deck complete</h1>
+        <div><button className="minimal-primary-button" type="button" onClick={() => setShowInvite(true)}>Invite others</button><button type="button" onClick={() => refresh()}>Swipe again</button></div>
+      </div> : <EmptyDeck feed={feed} onRefresh={() => refresh()} onFilters={() => setShowFilters(true)} />}
 
       {showFilters ? <FilterSheet filters={filters} categories={categories} onChange={updateFilter} onApply={() => refresh(filters)} onClose={() => setShowFilters(false)} loading={loading} /> : null}
       {showInvite ? <InviteSheet busy={busy} room={room} onCreate={createSharedDeck} onClose={() => { setShowInvite(false); setRoom(null) }} onMessage={setMessage} /> : null}
