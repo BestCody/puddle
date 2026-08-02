@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import test from 'node:test'
 import { normalizeGeocodingResult } from '../../lib/app/geocoding.js'
+import { convertJsonSequenceToJsonLines, normalizeJsonSequenceLine } from '../../lib/app/json-sequence.js'
 import { profileLocationFromForm } from '../../lib/app/profile-location.js'
 
 test('normalizes a worldwide geocoding result', () => {
@@ -54,4 +58,24 @@ test('rejects city text without coordinates', () => {
   const form = new FormData()
   form.set('city', 'London')
   assert.throws(() => profileLocationFromForm(form), /Choose a city or use your current location/)
+})
+
+test('normalizes GeoJSON text sequence records without loading a collection', () => {
+  assert.equal(normalizeJsonSequenceLine('\u001e{"type":"Feature","id":"one"}'), '{"type":"Feature","id":"one"}')
+  assert.equal(normalizeJsonSequenceLine('\uFEFF\u001e{"type":"Feature","id":"two"}\r'), '{"type":"Feature","id":"two"}')
+  assert.equal(normalizeJsonSequenceLine('   '), '')
+})
+
+test('streams GeoJSON text sequences into JSON Lines', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'puddle-json-sequence-test-'))
+  const input = join(directory, 'places.geojsonseq')
+  const output = join(directory, 'places.jsonl')
+  try {
+    await writeFile(input, '\u001e{"type":"Feature","id":"one"}\n\u001e{"type":"Feature","id":"two"}\n', 'utf8')
+    const count = await convertJsonSequenceToJsonLines(input, output)
+    assert.equal(count, 2)
+    assert.equal(await readFile(output, 'utf8'), '{"type":"Feature","id":"one"}\n{"type":"Feature","id":"two"}\n')
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
 })

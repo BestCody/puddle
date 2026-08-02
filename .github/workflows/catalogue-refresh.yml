@@ -28,7 +28,7 @@ jobs:
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund
       - name: Install the official Overture client
-        run: python -m pip install --disable-pip-version-check overturemaps
+        run: python -m pip install --disable-pip-version-check overturemaps==1.0.1
       - name: Refresh queued worldwide regions
         run: npm run locations:catalogue:refresh
         env:
