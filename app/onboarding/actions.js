@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { ensureProfile } from '@/lib/auth/profile'
+import { profileLocationFromForm } from '@/lib/app/profile-location'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
 import { pathWithMessage } from '@/lib/auth/redirect'
 
@@ -69,7 +70,6 @@ export async function completeDateOnboarding(formData) {
   const displayName = value(formData, 'display_name') || profile?.display_name || user.user_metadata?.display_name || 'Puddle person'
   const username = value(formData, 'username').toLowerCase()
   const birthDate = value(formData, 'birth_date')
-  const city = value(formData, 'city')
   const radius = Number(value(formData, 'search_radius_km'))
   const dateLocations = [...new Set(
     formData.getAll('date_locations').map(String).filter((location) => allowedDateLocations.has(location))
@@ -86,9 +86,15 @@ export async function completeDateOnboarding(formData) {
   const age = ageFromBirthDate(birthDate)
   if (age < 0) redirect(pathWithMessage('/onboarding', 'error', 'Enter a real birth date in YYYY-MM-DD format.'))
   if (age < 13) redirect(pathWithMessage('/onboarding', 'error', 'Puddle accounts require users to be at least 13.'))
-  if (!city) redirect(pathWithMessage('/onboarding', 'error', 'Add your city before building your date deck.'))
   if (dateLocations.length < 3) {
     redirect(pathWithMessage('/onboarding', 'error', 'Choose at least three kinds of places you like for dates.'))
+  }
+
+  let location
+  try {
+    location = profileLocationFromForm(formData, profile)
+  } catch (error) {
+    redirect(pathWithMessage('/onboarding', 'error', error.message || 'Choose your location before building your deck.'))
   }
 
   const payload = {
@@ -96,7 +102,7 @@ export async function completeDateOnboarding(formData) {
     display_name: displayName,
     username,
     birth_date: birthDate,
-    city,
+    ...location,
     search_radius_km: Number.isFinite(radius) ? Math.min(100, Math.max(1, Math.round(radius))) : 10,
     bio: value(formData, 'bio') || null,
     profile_visibility: profileVisibility,
@@ -117,5 +123,5 @@ export async function completeDateOnboarding(formData) {
   revalidatePath('/onboarding')
   revalidatePath('/discover')
   revalidatePath('/profile')
-  redirect(pathWithMessage('/discover', 'success', 'Your date deck is ready. Start swiping!'))
+  redirect(pathWithMessage('/discover', 'success', 'Your deck is ready. Start swiping!'))
 }

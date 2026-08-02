@@ -13,11 +13,26 @@ import {
   waitForProfile
 } from './support.mjs'
 
+const cityData = {
+  Toronto: { region: 'Ontario', country: 'Canada', countryCode: 'CA', latitude: 43.6532, longitude: -79.3832, timezone: 'America/Toronto' },
+  Montreal: { region: 'Quebec', country: 'Canada', countryCode: 'CA', latitude: 45.5017, longitude: -73.5673, timezone: 'America/Toronto' }
+}
+
 async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Low-key dates with good conversation.' } = {}) {
+  const location = cityData[city] || cityData.Toronto
+  await page.route('**/api/location/search**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ results: [{ providerId: `test-${city.toLowerCase()}`, city, ...location, label: `${city}, ${location.region}, ${location.country}` }] })
+    })
+  })
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Birth date').fill('19940615')
   await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
-  await page.getByLabel('City').fill(city)
+  await page.getByLabel('City or town').fill(city)
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await page.getByRole('option').first().click()
   await page.getByLabel('Search radius').fill('25')
   await page.getByLabel('Coffee shops').check()
   await page.getByLabel('Restaurants').check()
@@ -42,7 +57,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await expect(page).toHaveURL(/\/onboarding$/)
   await expect(page.getByText(/Check your inbox/i)).toHaveCount(0)
   await expect(page.getByRole('heading', { name: /Build your date deck/i })).toBeVisible()
-  await expect(page.getByText(/What kinds of places do you like for dates/i)).toBeVisible()
+  await expect(page.getByText(/What kinds of places do you like/i)).toBeVisible()
   await expect(page.getByLabel('Profile visibility')).toHaveValue('public')
   await expect(page.getByRole('button', { name: /Save and continue later/i })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Build my date deck/i })).toHaveCount(1)
@@ -56,7 +71,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await fillOnboarding(page, { username })
   await page.getByRole('button', { name: /Build my date deck/i }).click()
   await expect(page).toHaveURL(/\/discover\?success=/)
-  await expect(page.getByText(/Your date deck is ready/i)).toBeVisible()
+  await expect(page.getByText(/Your deck is ready/i)).toBeVisible()
   await expect(page.locator('.minimal-swipe-card')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
@@ -64,6 +79,9 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   const completedProfile = await waitForProfile(user.id)
   expect(completedProfile.username).toBe(username)
   expect(completedProfile.city).toBe('Toronto')
+  expect(completedProfile.country_code).toBe('CA')
+  expect(completedProfile.latitude).toBeCloseTo(43.6532)
+  expect(completedProfile.longitude).toBeCloseTo(-79.3832)
   expect(completedProfile.search_radius_km).toBe(25)
   expect(completedProfile.interests).toEqual(expect.arrayContaining(['cafe', 'restaurant', 'gallery']))
   expect(completedProfile.profile_visibility).toBe('mutuals')
@@ -117,6 +135,7 @@ test('duplicate usernames preserve date-location onboarding choices', async ({ p
   const profile = await waitForProfile(candidate.user.id)
   expect(profile.username).not.toBe(sharedUsername)
   expect(profile.city).toBe('Montreal')
+  expect(profile.latitude).toBeCloseTo(45.5017)
   expect(profile.bio).toBe('Keep these date choices even when the username conflicts.')
   expect(profile.interests).toEqual(expect.arrayContaining(['cafe', 'restaurant', 'gallery']))
   expect(profile.onboarding_completed_at).toBeNull()

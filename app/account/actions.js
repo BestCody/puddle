@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { profileLocationFromForm } from '@/lib/app/profile-location'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
 import { pathWithMessage } from '@/lib/auth/redirect'
 
@@ -36,9 +37,14 @@ export async function updateDateProfile(formData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/signin?next=/account')
 
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('city,region,country,country_code,timezone,location_label,location_source,location_accuracy_m,latitude,longitude')
+    .eq('id', user.id)
+    .maybeSingle()
+
   const displayName = value(formData, 'display_name')
   const username = value(formData, 'username').toLowerCase()
-  const city = value(formData, 'city')
   const radius = Number(value(formData, 'search_radius_km'))
   const requestedVisibility = value(formData, 'profile_visibility')
   const dateLocations = [...new Set(
@@ -51,7 +57,6 @@ export async function updateDateProfile(formData) {
   if (!/^[a-z0-9_]{3,24}$/.test(username)) {
     redirect(pathWithMessage('/account', 'error', 'Username must be 3–24 lowercase letters, numbers, or underscores.'))
   }
-  if (!city) redirect(pathWithMessage('/account', 'error', 'Add your city before saving your profile.'))
   if (!Number.isFinite(radius) || radius < 1 || radius > 100) {
     redirect(pathWithMessage('/account', 'error', 'Choose a search radius from 1 to 100 km.'))
   }
@@ -59,10 +64,17 @@ export async function updateDateProfile(formData) {
     redirect(pathWithMessage('/account', 'error', 'Choose at least three kinds of places you like for dates.'))
   }
 
+  let location
+  try {
+    location = profileLocationFromForm(formData, currentProfile || {})
+  } catch (error) {
+    redirect(pathWithMessage('/account', 'error', error.message || 'Choose a valid location.'))
+  }
+
   const { error } = await supabase.from('profiles').update({
     display_name: displayName,
     username,
-    city,
+    ...location,
     bio: value(formData, 'bio') || null,
     search_radius_km: Math.round(radius),
     profile_visibility: allowedVisibility.has(requestedVisibility) ? requestedVisibility : 'public',

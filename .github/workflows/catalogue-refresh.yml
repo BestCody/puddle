@@ -1,0 +1,41 @@
+name: Refresh place catalogue
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '27 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worldwide-place-catalogue
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install the official Overture client
+        run: python -m pip install --disable-pip-version-check overturemaps
+      - name: Refresh queued worldwide regions
+        run: npm run locations:catalogue:refresh
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+          CATALOGUE_REFRESH_REGION_LIMIT: '4'
+          CATALOGUE_REFRESH_PLACE_LIMIT: '100000'
+          CATALOGUE_REFRESH_PHOTO_LIMIT: '200'
+          CATALOGUE_PHOTO_ENRICH: 'true'
