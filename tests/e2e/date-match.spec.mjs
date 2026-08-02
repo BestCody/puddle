@@ -5,7 +5,7 @@ function escapePattern(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-async function saveCurrentCard(page, note) {
+async function saveSharedCard(page, note) {
   const card = page.locator('.date-swipe-card')
   const title = await card.locator('h2').innerText()
   await card.getByRole('button', { name: /^Save/i }).click()
@@ -16,13 +16,24 @@ async function saveCurrentCard(page, note) {
   return title
 }
 
+async function choosePersonalCard(page, action) {
+  const card = page.locator('.minimal-swipe-card')
+  await expect(card).toBeVisible()
+  const previous = await card.getAttribute('aria-label')
+  await page.getByRole('button', { name: action }).click()
+  await expect.poll(async () => {
+    if (await page.getByRole('button', { name: 'Invite others' }).isVisible().catch(() => false)) return 'complete'
+    return page.locator('.minimal-swipe-card').getAttribute('aria-label')
+  }).not.toBe(previous)
+}
+
 async function finishPersonalDeck(page) {
-  const pass = page.getByRole('button', { name: 'Pass' })
-  for (let index = 0; index < 12; index += 1) {
-    if (!await pass.isVisible().catch(() => false)) break
-    await pass.click()
+  const invite = page.getByRole('button', { name: 'Invite others' })
+  for (let index = 0; index < 20; index += 1) {
+    if (await invite.isVisible().catch(() => false)) return
+    await choosePersonalCard(page, 'Pass')
   }
-  await expect(page.getByRole('button', { name: 'Invite others' })).toBeVisible()
+  await expect(invite).toBeVisible()
 }
 
 test('two people privately swipe the same deck and both receive a DateMatch', async ({ browser }) => {
@@ -38,6 +49,8 @@ test('two people privately swipe the same deck and both receive a DateMatch', as
 
   await signInThroughUi(creatorPage, creator.email, creator.password, '/discover')
   await expect(creatorPage).toHaveURL(/\/discover$/)
+  const creatorTitle = await creatorPage.locator('.minimal-swipe-card h1').innerText()
+  await choosePersonalCard(creatorPage, 'Save')
   await finishPersonalDeck(creatorPage)
   await creatorPage.getByRole('button', { name: 'Invite others' }).click()
 
@@ -50,24 +63,18 @@ test('two people privately swipe the same deck and both receive a DateMatch', as
 
   await inviteDialog.getByRole('link', { name: /Open room/i }).click()
   await expect(creatorPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
-  await expect(creatorPage.getByRole('heading', { name: /Choose privately. Match on the locations you both want/i })).toBeVisible()
+  await expect(creatorPage.getByText(/Your choices are saved privately/i)).toBeVisible()
 
   await signInThroughUi(partnerPage, partner.email, partner.password, roomPath)
   await expect(partnerPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
   await expect(partnerPage.getByRole('heading', { name: /Choose privately. Match on the locations you both want/i })).toBeVisible()
+  await expect(partnerPage.locator('.date-swipe-card h2')).toHaveText(creatorTitle)
 
-  const creatorTitle = await creatorPage.locator('.date-swipe-card h2').innerText()
-  const partnerTitle = await partnerPage.locator('.date-swipe-card h2').innerText()
+  const partnerTitle = await saveSharedCard(partnerPage, 'I love this one too.')
   expect(partnerTitle).toBe(creatorTitle)
-
-  await saveCurrentCard(creatorPage, 'This feels cozy and easy to talk in.')
-  await expect(creatorPage.getByText(new RegExp(`Saved privately · ${escapePattern(creatorTitle)}`))).toBeVisible()
-  await expect(creatorPage.getByText(/It’s a DateMatch/i)).toHaveCount(0)
-
-  await saveCurrentCard(partnerPage, 'I love this one too.')
   const partnerMatch = partnerPage.getByRole('dialog')
   await expect(partnerMatch.getByRole('heading', { name: new RegExp(`You both saved ${escapePattern(creatorTitle)}`, 'i') })).toBeVisible()
-  await expect(partnerMatch.getByText(/This feels cozy and easy to talk in/i)).toBeVisible()
+  await expect(partnerMatch.getByRole('button', { name: /Plan this date/i })).toBeVisible()
 
   const creatorMatch = creatorPage.getByRole('dialog')
   await expect(creatorMatch.getByRole('heading', { name: new RegExp(`You both saved ${escapePattern(creatorTitle)}`, 'i') })).toBeVisible({ timeout: 20_000 })

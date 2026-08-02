@@ -1,7 +1,15 @@
 import { test, expect } from '@playwright/test'
 import { completeProfileDirect, createConfirmedUser, signInThroughUi, waitForProfile } from './support.mjs'
 
-test('date locations are swiped, inspected, noted, undone, and updated from account settings', async ({ page }) => {
+async function waitForNextCardOrCompletion(page, previousLabel) {
+  const invite = page.getByRole('button', { name: 'Invite others' })
+  await expect.poll(async () => {
+    if (await invite.isVisible().catch(() => false)) return 'complete'
+    return page.locator('.minimal-swipe-card').getAttribute('aria-label')
+  }).not.toBe(previousLabel)
+}
+
+test('date locations are swiped, inspected, undone, filtered, and updated from account settings', async ({ page }) => {
   const account = await createConfirmedUser({ displayName: 'Date Swiper' })
   await completeProfileDirect(account.user.id, {
     interests: ['cafe', 'gallery', 'scenic_spot'],
@@ -11,57 +19,48 @@ test('date locations are swiped, inspected, noted, undone, and updated from acco
 
   await signInThroughUi(page, account.email, account.password, '/discover')
   await expect(page).toHaveURL(/\/discover$/)
-  await expect(page.getByRole('heading', { name: /Find somewhere you actually want to go/i })).toBeVisible()
-  await expect(page.getByText(/Your 12-card location deck/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: /Swipe together/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^deck$/i })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /^list$/i })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /^map$/i })).toHaveCount(0)
-
-  const card = page.locator('.date-swipe-card')
+  const card = page.locator('.minimal-swipe-card')
   await expect(card).toBeVisible()
-  const firstTitle = await card.locator('h2').innerText()
-  await expect(card.getByText(/Puddle Pick/i)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open filters' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Swipe' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Saved' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Matches' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Profile' })).toBeVisible()
 
-  const dockButtons = page.locator('.swipe-control-dock .swipe-control')
-  await expect(dockButtons).toHaveCount(4)
-  await expect(dockButtons.nth(0)).toHaveAttribute('data-action', 'undo')
-  await expect(dockButtons.nth(1)).toHaveAttribute('data-action', 'pass')
-  await expect(dockButtons.nth(2)).toHaveAttribute('data-action', 'save')
-  await expect(dockButtons.nth(3)).toHaveAttribute('data-action', 'perfect')
-  await expect(page.getByRole('button', { name: /Undo\. Bring back the last card/i })).toBeDisabled()
-  await expect(page.getByRole('button', { name: /Pass\. Not this one/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Save\. Add to your shortlist/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Perfect Pick\. This one stands out/i })).toBeVisible()
+  const firstTitle = await card.locator('h1').innerText()
+  const firstLabel = await card.getAttribute('aria-label')
+  await expect(page.locator('.minimal-swipe-action')).toHaveCount(4)
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Perfect' })).toBeVisible()
 
-  await card.getByRole('button', { name: 'Details' }).click()
+  await card.click()
   const details = page.getByRole('dialog')
   await expect(details).toBeVisible()
   await expect(details.getByRole('heading', { name: firstTitle })).toBeVisible()
+  await expect(details.getByRole('link', { name: 'Full details' })).toBeVisible()
   await details.getByRole('button', { name: 'Close details' }).click()
   await expect(details).toHaveCount(0)
 
-  await page.getByRole('button', { name: /Save\. Add to your shortlist/i }).click()
-  const noteDialog = page.getByRole('dialog')
-  await expect(noteDialog.getByRole('heading', { name: /Add it to your shortlist/i })).toBeVisible()
-  await noteDialog.getByRole('textbox').fill('Looks easy to talk in and close to both of us.')
-  await noteDialog.getByRole('button', { name: /Save location/i }).click()
-  await expect(page.getByText(new RegExp(`Saved · ${firstTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))).toBeVisible()
-  await expect(page.locator('.date-swipe-card h2')).not.toHaveText(firstTitle)
+  await page.getByRole('button', { name: 'Save' }).click()
+  await waitForNextCardOrCompletion(page, firstLabel)
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled()
 
-  await page.getByRole('button', { name: /Undo\. Bring back the last card/i }).click()
-  await expect(page.locator('.date-swipe-card h2')).toHaveText(firstTitle)
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(page.locator('.minimal-swipe-card h1')).toHaveText(firstTitle)
 
-  await page.getByRole('button', { name: /^Filters$/i }).click()
-  await expect(page.getByLabel('Maximum distance')).toBeVisible()
-  await expect(page.getByLabel('Open now')).toBeVisible()
-  await page.getByLabel('Maximum distance').fill('50')
-  await page.getByRole('button', { name: /Build this deck/i }).click()
-  await expect(page.getByLabel('Maximum distance')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Open filters' }).click()
+  const filters = page.getByRole('dialog')
+  await expect(filters.getByRole('heading', { name: 'Filters' })).toBeVisible()
+  await filters.getByLabel('Distance').selectOption('50')
+  await filters.getByRole('button', { name: 'Apply' }).click()
+  await expect(filters).toHaveCount(0)
+  await expect(page.locator('.minimal-swipe-card')).toBeVisible()
 
   await page.goto('/dashboard')
-  await expect(page.getByRole('heading', { name: /what is the next move/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Open Swipe/i })).toBeVisible()
+  await expect(page).toHaveURL(/\/discover$/)
+  await expect(page.locator('.minimal-swipe-card')).toBeVisible()
 
   await page.goto('/account')
   await expect(page.getByRole('heading', { name: /Account settings/i })).toBeVisible()
