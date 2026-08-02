@@ -18,6 +18,7 @@ import './viewport-responsive.css'
 import './group-map.css'
 import './minimal-product.css'
 import './sidebar-tooltips.css'
+import './location-picker.css'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 
 export const metadata = {
