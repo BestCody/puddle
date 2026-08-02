@@ -28,7 +28,7 @@ function overtureFeature(index, overrides = {}) {
         freeform: `${index} Lakeshore Road`,
         locality: 'Oakville',
         region: index % 2 ? 'ON' : 'Ontario',
-        country: index % 2 ? 'CA' : 'Canada',
+        country: 'CA',
         postcode: 'L6J 1H4'
       }],
       sources: [{ update_time: '2026-06-17T00:00:00Z', confidence: 0.97 }],
