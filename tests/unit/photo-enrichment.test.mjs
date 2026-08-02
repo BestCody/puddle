@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
 import {
   boundedInteger,
   parsePhotoImportSummary,
@@ -10,7 +9,6 @@ import {
   validatePhotoImportSummary
 } from '../../lib/app/photo-enrichment.js'
 
-const root = fileURLToPath(new URL('../..', import.meta.url))
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('bounds progressive photo worker configuration', () => {
@@ -69,8 +67,8 @@ test('catalogue refresh no longer performs the one-off 200-photo pass', async ()
   const photoWorkflow = await read('.github/workflows/photo-enrichment.yml')
   assert.ok(catalogueWorkflow.includes("CATALOGUE_PHOTO_ENRICH: 'false'"))
   assert.equal(catalogueWorkflow.includes('CATALOGUE_REFRESH_PHOTO_LIMIT'), false)
-  assert.ok(photoWorkflow.includes("PHOTO_ENRICH_BATCH_SIZE: '500'"))
+  assert.ok(photoWorkflow.includes("PHOTO_ENRICH_BATCH_SIZE: '100'"))
+  assert.ok(photoWorkflow.includes("PHOTO_ENRICH_MAX_BATCHES: '50'"))
   assert.ok(photoWorkflow.includes("cron: '17 */4 * * *'"))
   assert.ok(photoWorkflow.includes('npm run locations:photos:enrich'))
-  assert.ok(root.endsWith('puddle') || root.length > 0)
 })
