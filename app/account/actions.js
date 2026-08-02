@@ -92,5 +92,5 @@ export async function updateDateProfile(formData) {
   revalidatePath('/account')
   revalidatePath('/profile')
   revalidatePath('/discover')
-  redirect(pathWithMessage('/account', 'success', 'Profile and location saved.'))
+  redirect(pathWithMessage('/account', 'success', 'Profile and date preferences saved.'))
 }
