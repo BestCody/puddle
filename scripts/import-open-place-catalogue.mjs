@@ -24,14 +24,14 @@ if (APPLY && (!supabaseUrl || !serviceKey)) throw new Error('Supabase server cre
 const admin = APPLY ? createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } }) : null
 
 const CATEGORY_MAP = new Map([
-  ['restaurant', 'restaurant'], ['food', 'restaurant'], ['dining', 'restaurant'],
+  ['restaurant', 'restaurant'], ['food', 'restaurant'], ['dining', 'restaurant'], ['fast food', 'restaurant'],
   ['cafe', 'cafe'], ['coffee', 'cafe'], ['tea', 'cafe'], ['dessert', 'cafe'], ['bakery', 'cafe'],
-  ['bar', 'bar'], ['pub', 'bar'], ['lounge', 'bar'], ['nightlife', 'nightlife'],
-  ['park', 'park'], ['garden', 'park'], ['nature', 'park'],
+  ['bar', 'bar'], ['pub', 'bar'], ['lounge', 'bar'], ['nightlife', 'nightlife'], ['club', 'nightlife'],
+  ['park', 'park'], ['garden', 'park'], ['nature', 'park'], ['playground', 'park'],
   ['museum', 'museum'], ['gallery', 'gallery'], ['art gallery', 'gallery'],
-  ['cinema', 'attraction'], ['theatre', 'attraction'], ['theater', 'attraction'], ['attraction', 'attraction'],
-  ['arcade', 'activity_venue'], ['bowling', 'activity_venue'], ['mini golf', 'activity_venue'], ['activity', 'activity_venue'],
-  ['scenic', 'scenic_spot'], ['viewpoint', 'scenic_spot'], ['landmark', 'scenic_spot'],
+  ['cinema', 'attraction'], ['theatre', 'attraction'], ['theater', 'attraction'], ['attraction', 'attraction'], ['aquarium', 'attraction'], ['zoo', 'attraction'],
+  ['arcade', 'activity_venue'], ['bowling', 'activity_venue'], ['mini golf', 'activity_venue'], ['activity', 'activity_venue'], ['recreation', 'activity_venue'],
+  ['scenic', 'scenic_spot'], ['viewpoint', 'scenic_spot'], ['landmark', 'scenic_spot'], ['historic', 'scenic_spot'],
   ['bookstore', 'shop'], ['market', 'shop'], ['shopping', 'shop'],
   ['community', 'community_space'], ['cultural', 'community_space']
 ])
@@ -51,6 +51,26 @@ function first(value) {
   return Array.isArray(value) ? value.find(Boolean) : value
 }
 
+function flattenTerms(value, result = []) {
+  if (value === null || value === undefined) return result
+  if (Array.isArray(value)) {
+    for (const item of value) flattenTerms(item, result)
+    return result
+  }
+  if (typeof value === 'object') {
+    for (const item of Object.values(value)) flattenTerms(item, result)
+    return result
+  }
+  const normalized = clean(value, 120).toLowerCase()
+  if (normalized) result.push(normalized.replaceAll('_', ' '))
+  return result
+}
+
+function recordFromInput(raw) {
+  if (raw?.type === 'Feature' && raw?.properties) return { ...raw.properties, geometry: raw.geometry || raw.properties.geometry }
+  return raw || {}
+}
+
 function slugify(value) {
   return clean(value, 100).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || 'place'
 }
@@ -60,10 +80,10 @@ function hash(value) {
 }
 
 function categoryTerms(record) {
-  const source = SOURCE === 'fsq_os'
-    ? [record.category, record.category_name, ...(record.categories || []).flatMap((item) => [item?.name, item?.label, item])]
-    : [record.categories?.primary, ...(record.categories?.alternate || []), record.category]
-  return source.map((value) => clean(value, 100).toLowerCase()).filter(Boolean)
+  const values = SOURCE === 'fsq_os'
+    ? [record.category, record.category_name, record.fsq_category_labels, record.categories]
+    : [record.basic_category, record.taxonomy, record.categories?.primary, record.categories?.alternate, record.category]
+  return [...new Set(values.flatMap((value) => flattenTerms(value)))].filter(Boolean)
 }
 
 function mapCategory(terms) {
@@ -85,7 +105,13 @@ function overtureCoordinates(record) {
   return { latitude: number(coordinates[1] ?? record.latitude), longitude: number(coordinates[0] ?? record.longitude) }
 }
 
-function normalizeRecord(record) {
+function newestSource(record) {
+  const sources = Array.isArray(record.sources) ? record.sources : []
+  return sources.map((source) => source || {}).sort((a, b) => new Date(b.update_time || 0) - new Date(a.update_time || 0))[0] || {}
+}
+
+function normalizeRecord(rawRecord) {
+  const record = recordFromInput(rawRecord)
   const terms = categoryTerms(record)
   const kind = mapCategory(terms)
   const name = clean(SOURCE === 'fsq_os' ? record.name : record.names?.primary ?? record.name, 120)
@@ -97,21 +123,26 @@ function normalizeRecord(record) {
 
   const sourceId = clean(SOURCE === 'fsq_os' ? record.fsq_place_id ?? record.id : record.id, 240)
   if (!sourceId) return null
-  const address = SOURCE === 'fsq_os' ? record : first(record.addresses) || {}
-  const closed = Boolean(record.date_closed) || ['closed', 'permanently_closed', 'inactive'].includes(String(record.operating_status || '').toLowerCase())
+  const address = SOURCE === 'fsq_os' ? record : first(record.addresses) || record.address || {}
+  const operatingStatus = Array.isArray(record.operating_status) ? record.operating_status.join(' ') : record.operating_status
+  const closed = Boolean(record.date_closed) || ['closed', 'permanently_closed', 'inactive'].includes(String(operatingStatus || '').toLowerCase())
   if (closed) return null
 
+  const sourceRow = newestSource(record)
   const city = clean(address.locality ?? record.locality ?? address.city ?? record.city, 120) || 'Unknown city'
   const neighborhood = clean(address.neighborhood ?? record.neighborhood, 120) || null
+  const region = clean(address.region ?? address.state ?? record.region ?? record.state, 120) || null
+  const countryCode = clean(address.country ?? record.country_code ?? record.country, 2).toUpperCase() || null
+  const country = clean(address.country_name ?? record.country_name, 120) || null
   const addressPublic = clean(address.address ?? address.freeform ?? record.address, 240) || null
   const timezone = clean(record.timezone ?? address.timezone, 80) || 'UTC'
-  const confidence = number(record.confidence ?? record.source_confidence)
+  const confidence = number(record.confidence ?? record.source_confidence ?? sourceRow.confidence)
   const summary = `A ${kind.replaceAll('_', ' ')} in ${neighborhood || city}. Opening hours and other details are shown only when verified.`
   const amenities = [...new Set((record.amenities || []).map((item) => clean(item, 50).toLowerCase().replaceAll(' ', '_')).filter(Boolean))].slice(0, 20)
 
   return {
     sourceId,
-    sourceUpdatedAt: record.date_refreshed ?? record.updated_at ?? record.update_time ?? null,
+    sourceUpdatedAt: record.date_refreshed ?? record.updated_at ?? record.update_time ?? sourceRow.update_time ?? null,
     sourceConfidence: confidence === null ? null : Math.max(0, Math.min(1, confidence)),
     payloadHash: hash(JSON.stringify(record)),
     location: {
@@ -121,6 +152,9 @@ function normalizeRecord(record) {
       summary,
       city,
       neighborhood,
+      region,
+      country,
+      country_code: countryCode,
       address_public: addressPublic,
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
@@ -161,6 +195,9 @@ async function applyRecord(item) {
       summary: item.location.summary,
       city: item.location.city,
       neighborhood: item.location.neighborhood,
+      region: item.location.region,
+      country: item.location.country,
+      country_code: item.location.country_code,
       address_public: item.location.address_public,
       latitude: item.location.latitude,
       longitude: item.location.longitude,
@@ -193,7 +230,7 @@ async function applyRecord(item) {
     location_id: locationId,
     source: 'generated_factual',
     description: item.location.summary,
-    facts_used: { kind: item.location.kind, city: item.location.city, neighborhood: item.location.neighborhood },
+    facts_used: { kind: item.location.kind, city: item.location.city, region: item.location.region, country: item.location.country, neighborhood: item.location.neighborhood },
     status: 'approved',
     verified_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
