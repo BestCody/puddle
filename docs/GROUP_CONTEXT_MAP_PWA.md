@@ -13,8 +13,8 @@ The creator chooses the maximum group size and shares the existing high-entropy 
 
 A Hangout Match is created when:
 
-1. at least two people have joined;
-2. at least 60% of current members choose Save or Perfect Pick; and
+1. at least three people have joined;
+2. every currently joined participant has decided on the location; and
 3. nobody chooses Pass.
 
 Perfect Picks strengthen the rank. One Pass is a veto. Raw votes and notes remain private until a match exists. The room shows joined members and completion progress without revealing unfinished choices.
@@ -127,3 +127,11 @@ Apply in order:
 - `10007_contextual_recommendation_merge.sql`
 - `10008_push_delivery_tracking.sql`
 - `10009_location_notification_scheduler.sql`
+- `10010_hangout_minimum_consensus.sql`
+- `10011_private_shared_consensus.sql`
+- `10012_hangout_join_recalculation.sql`
+- `10013_contextual_recommendation_schema_bridge.sql`
+- `10014_contextual_recommendation_learning.sql`
+- `10015_contextual_recommendation_compatibility.sql`
+
+The final three migrations reconcile the earlier Group Hangout event shape with contextual-v2 into one `recommendation_context_events` table and keep the existing RPC contracts compatible.
