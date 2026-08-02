@@ -1,13 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { allowedPhotoHosts, approvedPhotoUrl, chooseLocationPhoto, photoMetadata, providerPhotoPath } from '../../lib/app/place-photos.js'
+import { allowedPhotoHosts, approvedPhotoUrl, chooseLocationPhoto, photoMetadata, providerPhotoPath, supabasePhotoHost } from '../../lib/app/place-photos.js'
 
 test('photo URLs require exact approved HTTPS hosts', () => {
-  const hosts = allowedPhotoHosts('images.example.com,cdn.example.com')
+  const hosts = allowedPhotoHosts('images.example.com,cdn.example.com', null)
   assert.equal(approvedPhotoUrl('https://images.example.com/place.jpg', hosts)?.hostname, 'images.example.com')
   assert.equal(approvedPhotoUrl('http://images.example.com/place.jpg', hosts), null)
   assert.equal(approvedPhotoUrl('https://images.example.com.evil.test/place.jpg', hosts), null)
   assert.equal(approvedPhotoUrl('https://user:pass@images.example.com/place.jpg', hosts), null)
+})
+
+test('the configured Supabase project host is always approved for copied open photos', () => {
+  assert.equal(supabasePhotoHost('https://project-ref.supabase.co'), 'project-ref.supabase.co')
+  assert.equal(supabasePhotoHost('http://project-ref.supabase.co'), null)
+  const hosts = allowedPhotoHosts('images.example.com', 'https://project-ref.supabase.co')
+  assert.deepEqual([...hosts].sort(), ['images.example.com', 'project-ref.supabase.co'])
+  assert.equal(approvedPhotoUrl('https://project-ref.supabase.co/storage/v1/object/public/puddle-public-media/photo.jpg', hosts)?.hostname, 'project-ref.supabase.co')
 })
 
 test('real photos prefer primary and trusted first-party sources', () => {
