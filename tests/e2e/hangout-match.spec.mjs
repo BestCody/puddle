@@ -74,7 +74,7 @@ test('three people privately choose and receive a Group Hangout Match', async ({
   await inviteDialog.getByRole('link', { name: /Open room/i }).click()
   await expect(creatorPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
   await expect(creatorPage.getByText(/Your choices are saved privately/i)).toBeVisible()
-  await expect(creatorPage.getByText(/Invite 2 more people to unlock group matching/i)).toBeVisible()
+  await expect(creatorPage.getByText(/Invite 2 more people to start group matching/i)).toBeVisible()
 
   await signInThroughUi(friendOnePage, friendOne.email, friendOne.password, roomPath)
   await signInThroughUi(friendTwoPage, friendTwo.email, friendTwo.password, roomPath)
