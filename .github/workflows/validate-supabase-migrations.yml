@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
@@ -27,7 +27,14 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npx --yes supabase@2.110.0 db start --debug 2>&1 | tee supabase-db-start.log
+          npx --yes supabase@2.111.0 db start --debug 2>&1 | tee supabase-db-start.log
+
+      - name: Test catalogue import integrity after initial migration apply
+        shell: bash
+        run: |
+          database="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)"
+          test -n "$database"
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/catalogue_import_integrity.sql
 
       - name: Dump local database logs after failure
         if: failure()
@@ -39,4 +46,11 @@ jobs:
           done
 
       - name: Rebuild database from all migrations
-        run: npx --yes supabase@2.110.0 db reset --debug
+        run: npx --yes supabase@2.111.0 db reset --debug
+
+      - name: Test catalogue import integrity after clean rebuild
+        shell: bash
+        run: |
+          database="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)"
+          test -n "$database"
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/catalogue_import_integrity.sql
