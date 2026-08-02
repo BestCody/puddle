@@ -5,7 +5,9 @@ const root = process.cwd()
 const required = [
   'lib/product-vision.js',
   'lib/app/location-plans-data.js',
+  'lib/app/matches-data.js',
   'app/plans/legacy-page.js',
+  'app/matches/page.js',
   'tests/unit/product-vision.test.mjs',
   'docs/LOCATION_FIRST_CUTOVER.md'
 ]
@@ -40,10 +42,12 @@ const visionTests = await read('tests/unit/product-vision.test.mjs')
 requireIncludes(visionTests, ["legacyRedirectForPath('/studio/places/123'), null", "isLegacyApiPath('/api/drafts/place'), false"], 'Location contribution exception tests')
 
 const proxy = await read('proxy.js')
-requireIncludes(proxy, ['legacySystemsEnabled()', 'legacyRedirectForPath(pathname)', 'isLegacyApiPath(pathname)', 'status: 410'], 'Runtime legacy gate')
+requireIncludes(proxy, ['legacySystemsEnabled()', 'legacyRedirectForPath(pathname)', 'isLegacyApiPath(pathname)', 'status: 410', "'/matches'"], 'Runtime legacy gate')
 
 const plans = await read('app/plans/page.js')
-requireIncludes(plans, ['getLocationPlansSnapshot', "['saved', 'Saved']", "['planned', 'Planned']", "['past', 'Past']", 'LegacyPlansPage'], 'Location-only plans')
+requireIncludes(plans, ['getLocationPlansSnapshot', "['saved', 'Saved']", "['planned', 'Plans']", "params?.tab === 'past'", 'History', 'LegacyPlansPage'], 'Location-only plans')
+const matches = await read('app/matches/page.js')
+requireIncludes(matches, ['getMatchesSnapshot','Active rooms','Matched places'], 'Shared location matches')
 
 const drafts = await read('app/api/drafts/[kind]/route.js')
 requireIncludes(drafts, ["kind === 'event' && !legacySystemsEnabled()", 'Event creation is disabled'], 'Event draft guard')

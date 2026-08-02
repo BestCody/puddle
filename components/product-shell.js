@@ -26,13 +26,13 @@ export async function ProductShell({ user, profile, children }) {
   return (
     <div className="product-shell minimal-product-shell">
       <aside className="product-sidebar minimal-product-sidebar">
-        <div className="minimal-sidebar-logo"><PuddleLogo compact /></div>
+        <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" /></div>
         <ProductNav />
       </aside>
 
       <div className="product-stage minimal-product-stage">
         <header className="product-header minimal-product-header">
-          <div className="minimal-header-logo"><PuddleLogo compact /></div>
+          <div className="minimal-header-logo"><PuddleLogo compact href="/discover" /></div>
           <details className="profile-menu">
             <summary aria-label="Open profile menu">
               <span className="profile-initials" aria-hidden="true">{initials(profile?.display_name)}</span>

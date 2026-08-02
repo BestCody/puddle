@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Puddle">
-  <rect width="512" height="512" rx="120" fill="#ff5f87"/>
-  <path d="M104 286c0-104 74-182 166-182 83 0 146 57 146 137 0 104-83 177-188 177-70 0-124-48-124-132Z" fill="#fff8fb" stroke="#171114" stroke-width="22"/>
-  <path d="M165 278c18-39 51-63 91-63 45 0 79 25 93 66-26-17-55-24-87-20-35 4-67 18-97 42 0-8 0-17 0-25Z" fill="#75e5c2" stroke="#171114" stroke-width="16" stroke-linejoin="round"/>
-  <path d="M190 180c20-18 43-27 69-27 27 0 50 9 69 27" fill="none" stroke="#171114" stroke-width="18" stroke-linecap="round"/>
-  <circle cx="205" cy="215" r="11" fill="#171114"/>
-  <circle cx="309" cy="215" r="11" fill="#171114"/>
-  <path d="M220 339c24 17 49 18 74 0" fill="none" stroke="#171114" stroke-width="17" stroke-linecap="round"/>
-</svg>
