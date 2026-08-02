@@ -1,6 +1,6 @@
 # Puddle Stage 8: local creation assistance and hybrid recommendations
 
-Apply `supabase/migrations/0014_ai_creation_and_embeddings.sql`, `0015_hybrid_recommendation_foundation.sql`, `0016_hybrid_recommendation_runtime.sql`, `0017_stage8_authorization.sql`, `0018_stage8_hardening.sql`, and `10006_contextual_recommendation_learning.sql` in order after the Stage 7 migrations, then run `supabase/tests/0014_stage8_authorization.sql` in a non-production Supabase project.
+Apply `supabase/migrations/0014_ai_creation_and_embeddings.sql`, `0015_hybrid_recommendation_foundation.sql`, `0016_hybrid_recommendation_runtime.sql`, `0017_stage8_authorization.sql`, and `0018_stage8_hardening.sql` in order after the Stage 7 migrations. The later location-first migrations then apply `10013_contextual_recommendation_schema_bridge.sql`, `10014_contextual_recommendation_learning.sql`, and `10015_contextual_recommendation_compatibility.sql` in that order. Run `supabase/tests/0014_stage8_authorization.sql` in a non-production Supabase project.
 
 ## No external AI key
 
@@ -18,9 +18,15 @@ Disable it immediately with the same statement using `enabled=false`. Disable ve
 
 ## Contextual recommendation learning
 
-`10006_contextual_recommendation_learning.sql` upgrades the location ranking to `contextual-v2`. Existing discovery and action APIs keep the same RPC names, while the migration wraps them with richer learning and remains backward compatible with the Stage 8 runtime.
+The contextual migration sequence upgrades location ranking to `contextual-v2` without keeping two incompatible event tables:
 
-The learner records normalized location interactions rather than raw browsing histories. Solo-deck choices, DateMatch swipes, and post-visit DateMatch feedback become bounded signals. Perfect Picks, successful visits, saves, opens, and dismissals contribute at different strengths for:
+- `10013_contextual_recommendation_schema_bridge.sql` expands the earlier Group Hangout event table into one canonical superset and synchronizes legacy and contextual-v2 columns.
+- `10014_contextual_recommendation_learning.sql` installs the richer category, price, amenity, distance, daypart, day-type, and intent learning.
+- `10015_contextual_recommendation_compatibility.sql` points the Group Hangout RPCs at the canonical contextual-v2 representation.
+
+Existing discovery, DateMatch, and Hangout APIs keep the same RPC names. Solo choices, shared swipes, matches, plans, visits, and post-visit feedback now write compatible rows into the same `recommendation_context_events` table.
+
+The learner records normalized location interactions rather than raw browsing histories. Perfect Picks, successful visits, saves, opens, and dismissals contribute at different strengths for:
 
 - location category;
 - price level;
