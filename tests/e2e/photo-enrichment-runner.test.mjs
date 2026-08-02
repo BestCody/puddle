@@ -47,7 +47,15 @@ test('progressive runner drains multiple committed batches until the queue is em
   assert.equal(result.iterations, 2)
   assert.match(result.stdout, /"complete": true/)
   assert.match(result.stdout, /"stoppedReason": "queue_drained"/)
-  assert.match(result.stdout, /"inspected": 5/)
+  assert.match(result.stdout, /"inspected": 4/)
+})
+
+test('progressive runner keeps draining after the importer reduces a timed-out claim', async () => {
+  const result = await runWorker('reduced')
+  assert.equal(result.code, 0, result.stderr)
+  assert.equal(result.iterations, 2)
+  assert.match(result.stdout, /"complete": true/)
+  assert.match(result.stdout, /"inspected": 3/)
 })
 
 test('progressive runner stops cleanly at its batch ceiling and resumes on a later run', async () => {
