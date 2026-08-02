@@ -2,13 +2,14 @@ import { spawn } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { catalogueBoundingBoxes } from '../lib/app/catalogue-regions.js'
+import { catalogueTileBoundingBoxes } from '../lib/app/catalogue-regions.js'
 import { convertJsonSequenceToJsonLines } from '../lib/app/json-sequence.js'
 import { createAdminClient } from '../lib/supabase/admin.js'
 
 const REGION_LIMIT = Math.max(1, Math.min(20, Number(process.env.CATALOGUE_REFRESH_REGION_LIMIT || 4)))
-const PLACE_LIMIT = Math.max(100, Math.min(1_000_000, Number(process.env.CATALOGUE_REFRESH_PLACE_LIMIT || 100_000)))
+const PLACE_LIMIT = Math.max(100, Math.min(2_000_000, Number(process.env.CATALOGUE_REFRESH_PLACE_LIMIT || 1_000_000)))
 const PHOTO_LIMIT = Math.max(1, Math.min(5_000, Number(process.env.CATALOGUE_REFRESH_PHOTO_LIMIT || 200)))
+const TILE_KM = Math.max(20, Math.min(100, Number(process.env.CATALOGUE_REFRESH_TILE_KM || 60)))
 const RELEASE_ID = String(process.env.OVERTURE_RELEASE || 'latest').trim().slice(0, 80)
 const ENRICH_PHOTOS = String(process.env.CATALOGUE_PHOTO_ENRICH ?? 'true').toLowerCase() !== 'false'
 const OUTPUT_TAIL_LIMIT = 2 * 1024 * 1024
@@ -107,7 +108,8 @@ async function claim(region) {
       status: 'processing',
       claimed_at: new Date().toISOString(),
       attempts: Number(region.attempts || 0) + 1,
-      error_message: null
+      error_message: null,
+      truncated: false
     })
     .eq('id', region.id)
     .eq('status', region.status)
@@ -117,13 +119,26 @@ async function claim(region) {
   return Boolean(result.data)
 }
 
-async function markRegion(region, status, importedCount = 0) {
+function metrics(downloaded, stats = {}) {
+  return {
+    downloaded_count: Number(downloaded || 0),
+    read_count: Number(stats.read || 0),
+    accepted_count: Number(stats.accepted || 0),
+    rejected_count: Number(stats.rejected || 0),
+    failed_count: Number(stats.failed || 0),
+    truncated: Boolean(stats.truncated),
+    rejection_reasons: stats.rejectionReasons || {}
+  }
+}
+
+async function markRegion(region, status, importedCount = 0, downloaded = 0, stats = {}) {
   const updated = await admin.from('catalogue_sync_regions').update({
     status,
     synced_at: new Date().toISOString(),
     release_id: RELEASE_ID,
     imported_count: importedCount,
-    error_message: null
+    error_message: null,
+    ...metrics(downloaded, stats)
   }).eq('id', region.id).eq('status', 'processing').select('id').maybeSingle()
   if (updated.error) throw updated.error
   if (!updated.data) throw new Error(`Catalogue region ${region.region_key} was no longer claimed by this worker.`)
@@ -135,11 +150,31 @@ function validateImportStats(stats) {
   const imported = Number(stats?.insertedOrUpdated || 0)
   const failed = Number(stats?.failed || 0)
   if (read <= 0) throw new Error('Place importer read zero records from the Overture export.')
+  if (stats?.truncated || stats?.complete === false) {
+    throw new Error(`Place importer did not reach the end of the export before its ${stats?.limit || PLACE_LIMIT}-record limit.`)
+  }
   if (failed > 0) throw new Error(`Place importer reported ${failed} failed records.`)
   if (imported !== accepted) {
     throw new Error(`Place importer wrote ${imported} of ${accepted} accepted records.`)
   }
   return { read, accepted, imported }
+}
+
+async function beginRegion(region) {
+  const result = await admin.rpc('begin_catalogue_region_refresh_v1', {
+    target_region: region.id,
+    import_source: 'overture',
+    release_value: RELEASE_ID
+  })
+  if (result.error) throw result.error
+}
+
+async function finalizeRegion(region) {
+  const result = await admin.rpc('finalize_catalogue_region_refresh_v1', {
+    target_region: region.id,
+    import_source: 'overture'
+  })
+  if (result.error) throw result.error
 }
 
 async function refreshRegion(region) {
@@ -148,15 +183,20 @@ async function refreshRegion(region) {
   const jsonl = join(work, 'places.jsonl')
   let stage = 'preparing catalogue refresh'
   let imported = 0
+  let downloaded = 0
+  let stats = null
 
   try {
-    const boxes = catalogueBoundingBoxes(region)
+    stage = 'starting regional reconciliation'
+    await beginRegion(region)
+
+    const boxes = catalogueTileBoundingBoxes(region, TILE_KM)
     const sequences = []
     stage = 'downloading Overture places'
     for (const [index, bounds] of boxes.entries()) {
       const output = join(work, `places-${index + 1}.geojsonseq`)
       sequences.push(output)
-      console.log(`Refreshing ${region.region_key} from Overture part ${index + 1}/${boxes.length} (${bounds.join(',')}).`)
+      console.log(`Refreshing ${region.region_key} from Overture tile ${index + 1}/${boxes.length} (${bounds.join(',')}).`)
       await command('overturemaps', [
         'download',
         `--bbox=${bounds.join(',')}`,
@@ -167,10 +207,12 @@ async function refreshRegion(region) {
     }
 
     stage = 'streaming Overture records'
-    const downloaded = await convertJsonSequenceToJsonLines(sequences, jsonl)
+    downloaded = await convertJsonSequenceToJsonLines(sequences, jsonl)
     if (downloaded <= 0) {
+      stage = 'reconciling empty catalogue region'
+      await finalizeRegion(region)
       stage = 'marking catalogue region empty'
-      await markRegion(region, 'empty', 0)
+      await markRegion(region, 'empty', 0, 0, { complete: true })
       console.log(`Catalogue region ${region.region_key} is empty (Overture returned zero records).`)
       return { status: 'empty', imported: 0 }
     }
@@ -181,19 +223,25 @@ async function refreshRegion(region) {
       '--source=overture',
       `--file=${jsonl}`,
       `--limit=${PLACE_LIMIT}`,
+      `--region-id=${region.id}`,
+      `--release-id=${RELEASE_ID}`,
       '--apply'
     ], { env: process.env })
-    const stats = parseStats(output)
+    stats = parseStats(output)
     if (!stats) throw new Error('Place importer did not return a readable summary.')
     const validated = validateImportStats(stats)
     imported = validated.imported
     const outcome = imported > 0 ? 'ready' : 'empty'
 
+    stage = 'finalizing regional reconciliation'
+    await finalizeRegion(region)
+
     if (ENRICH_PHOTOS && imported > 0) {
       stage = 'enriching imported place photos'
       try {
         await command(process.execPath, [
-          'scripts/import-open-location-photos.mjs', '--apply', `--limit=${PHOTO_LIMIT}`
+          'scripts/import-open-location-photos.mjs', '--apply', `--limit=${PHOTO_LIMIT}`,
+          `--region-id=${region.id}`
         ], { env: process.env })
       } catch (error) {
         console.warn(`Photo enrichment did not complete for ${region.region_key}: ${error.message}`)
@@ -201,10 +249,11 @@ async function refreshRegion(region) {
     }
 
     stage = `marking catalogue region ${outcome}`
-    await markRegion(region, outcome, imported)
+    await markRegion(region, outcome, imported, downloaded, stats)
     console.log(
       `Catalogue region ${region.region_key} is ${outcome} ` +
-      `(${downloaded} downloaded, ${validated.read} read, ${validated.accepted} accepted, ${imported} imported or updated).`
+      `(${boxes.length} tiles, ${downloaded} downloaded, ${validated.read} read, ` +
+      `${validated.accepted} accepted, ${imported} imported or updated).`
     )
     return { status: outcome, imported }
   } catch (error) {
@@ -212,7 +261,8 @@ async function refreshRegion(region) {
     const failed = await admin.from('catalogue_sync_regions').update({
       status: 'failed',
       imported_count: imported,
-      error_message: message
+      error_message: message,
+      ...metrics(downloaded, stats || {})
     }).eq('id', region.id).eq('status', 'processing')
     if (failed.error) console.error(`Could not mark catalogue region ${region.region_key} failed: ${failed.error.message}`)
     console.error(`Catalogue refresh failed for ${region.region_key}: ${message}`)
