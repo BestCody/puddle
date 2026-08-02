@@ -1,5 +1,6 @@
 import { AuthMessage } from '@/components/auth-message'
 import { BirthDateInput } from '@/components/birth-date-input'
+import { LocationPicker } from '@/components/location-picker'
 import { SubmitButton } from '@/components/submit-button'
 import { PuddleLogo } from '@/components/puddle-logo'
 import { signOut } from '@/app/auth/actions'
@@ -41,18 +42,16 @@ export default async function OnboardingPage({ searchParams }) {
       <main className="app-main onboarding-main">
         <span className="eyebrow">One quick setup</span>
         <h1 className="page-title">Build your date deck.</h1>
-        <p className="muted onboarding-intro">Tell Puddle what kinds of places you enjoy on dates. We will use your choices, location, and swipes to find better options nearby.</p>
+        <p className="muted onboarding-intro">Tell Puddle what kinds of places you enjoy. We use your selected location and swipes to find nearby options anywhere in the world.</p>
         <AuthMessage searchParams={searchParams} />
         <form className="settings-card full auth-form onboarding-card" action={completeDateOnboarding}>
           <div className="field-row">
             <label className="field">Display name<input name="display_name" defaultValue={profile?.display_name || user.user_metadata?.display_name || ''} required maxLength="60" autoComplete="name" /></label>
-            <label className="field">Username<input name="username" defaultValue={profile?.username || ''} required pattern="[a-z0-9_]{3,24}" placeholder="ava_in_toronto" autoComplete="username" /></label>
+            <label className="field">Username<input name="username" defaultValue={profile?.username || ''} required pattern="[a-z0-9_]{3,24}" placeholder="your_username" autoComplete="username" /></label>
           </div>
-          <div className="field-row">
-            <label className="field">Birth date<BirthDateInput defaultValue={profile?.birth_date || ''} /></label>
-            <label className="field">City<input name="city" defaultValue={profile?.city || ''} placeholder="Toronto" required autoComplete="address-level2" /></label>
-          </div>
-          <label className="field">How far would you travel for a date?
+          <label className="field">Birth date<BirthDateInput defaultValue={profile?.birth_date || ''} /></label>
+          <LocationPicker profile={profile} />
+          <label className="field">How far would you travel?
             <span className="radius-control">
               <input aria-label="Search radius" name="search_radius_km" type="number" inputMode="numeric" min="1" max="100" step="1" defaultValue={profile?.search_radius_km || 10} required />
               <span className="radius-unit" aria-hidden="true">km</span>
@@ -60,8 +59,8 @@ export default async function OnboardingPage({ searchParams }) {
             <small className="field-hint">Choose any distance from 1 to 100 km.</small>
           </label>
           <fieldset className="field interest-fieldset date-location-fieldset">
-            <legend>What kinds of places do you like for dates?</legend>
-            <p className="date-location-help">Choose at least three. You can change these later as your taste evolves.</p>
+            <legend>What kinds of places do you like?</legend>
+            <p className="date-location-help">Choose at least three. You can change these later.</p>
             <div className="interest-grid date-location-grid">
               {dateLocationOptions.map((option) => (
                 <label className="interest-chip date-location-chip" key={option.value}>
