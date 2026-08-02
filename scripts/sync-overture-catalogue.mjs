@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { catalogueBoundingBoxes } from '../lib/app/catalogue-regions.js'
 import { convertJsonSequenceToJsonLines } from '../lib/app/json-sequence.js'
 import { createAdminClient } from '../lib/supabase/admin.js'
 
@@ -12,20 +13,6 @@ const RELEASE_ID = String(process.env.OVERTURE_RELEASE || 'latest').trim().slice
 const ENRICH_PHOTOS = String(process.env.CATALOGUE_PHOTO_ENRICH ?? 'true').toLowerCase() !== 'false'
 const OUTPUT_TAIL_LIMIT = 2 * 1024 * 1024
 const admin = createAdminClient()
-
-function bbox(region) {
-  const latitude = Number(region.center_latitude)
-  const longitude = Number(region.center_longitude)
-  const radius = Number(region.radius_km) + 5
-  const latitudeDelta = radius / 111.32
-  const longitudeDelta = radius / (111.32 * Math.max(0.15, Math.cos(latitude * Math.PI / 180)))
-  return [
-    Math.max(-180, longitude - longitudeDelta),
-    Math.max(-90, latitude - latitudeDelta),
-    Math.min(180, longitude + longitudeDelta),
-    Math.min(90, latitude + latitudeDelta)
-  ]
-}
 
 function appendTail(current, chunk) {
   const combined = `${current}${chunk}`
@@ -53,8 +40,10 @@ async function command(file, args, options = {}) {
         return
       }
       const reason = signal ? `signal ${signal}` : `exit code ${code}`
-      const detail = stderrTail.trim().slice(-1000)
-      reject(new Error(`${file} failed with ${reason}${detail ? `: ${detail}` : ''}`))
+      const stderrDetail = stderrTail.trim().slice(-1200)
+      const stdoutDetail = stdoutTail.trim().slice(-1800)
+      const detail = [stderrDetail, stdoutDetail].filter(Boolean).join('\n')
+      reject(new Error(`${file} failed with ${reason}${detail ? `:\n${detail}` : ''}`))
     })
   })
 }
@@ -73,7 +62,21 @@ function parseStats(output) {
   return null
 }
 
+async function recoverAbandonedRegions() {
+  const abandonedBefore = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+  const recovered = await admin
+    .from('catalogue_sync_regions')
+    .update({
+      status: 'failed',
+      error_message: 'Previous catalogue worker stopped before completing this region.'
+    })
+    .eq('status', 'processing')
+    .lt('claimed_at', abandonedBefore)
+  if (recovered.error) throw recovered.error
+}
+
 async function queuedRegions() {
+  await recoverAbandonedRegions()
   const staleBefore = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const pending = await admin
     .from('catalogue_sync_regions')
@@ -87,7 +90,7 @@ async function queuedRegions() {
     const stale = await admin
       .from('catalogue_sync_regions')
       .select('*')
-      .eq('status', 'ready')
+      .in('status', ['ready', 'empty'])
       .lt('synced_at', staleBefore)
       .order('synced_at', { ascending: true })
       .limit(REGION_LIMIT - rows.length)
@@ -100,36 +103,60 @@ async function queuedRegions() {
 async function claim(region) {
   const result = await admin
     .from('catalogue_sync_regions')
-    .update({ status: 'processing', claimed_at: new Date().toISOString(), attempts: Number(region.attempts || 0) + 1, error_message: null })
+    .update({
+      status: 'processing',
+      claimed_at: new Date().toISOString(),
+      attempts: Number(region.attempts || 0) + 1,
+      error_message: null
+    })
     .eq('id', region.id)
+    .eq('status', region.status)
     .select('id')
     .maybeSingle()
   if (result.error) throw result.error
   return Boolean(result.data)
 }
 
+function validateImportStats(stats) {
+  const read = Number(stats?.read || 0)
+  const accepted = Number(stats?.accepted || 0)
+  const imported = Number(stats?.insertedOrUpdated || 0)
+  const failed = Number(stats?.failed || 0)
+  if (read <= 0) throw new Error('Place importer read zero records from the Overture export.')
+  if (failed > 0) throw new Error(`Place importer reported ${failed} failed records.`)
+  if (imported !== accepted) {
+    throw new Error(`Place importer wrote ${imported} of ${accepted} accepted records.`)
+  }
+  return { read, accepted, imported }
+}
+
 async function refreshRegion(region) {
   if (!(await claim(region))) return { status: 'skipped' }
   const work = await mkdtemp(join(tmpdir(), 'puddle-overture-'))
-  const geojsonSequence = join(work, 'places.geojsonseq')
   const jsonl = join(work, 'places.jsonl')
   let stage = 'preparing catalogue refresh'
+  let imported = 0
 
   try {
-    const bounds = bbox(region)
-    console.log(`Refreshing ${region.region_key} from Overture (${bounds.join(',')}).`)
-
+    const boxes = catalogueBoundingBoxes(region)
+    const sequences = []
     stage = 'downloading Overture places'
-    await command('overturemaps', [
-      'download',
-      `--bbox=${bounds.join(',')}`,
-      '-f', 'geojsonseq',
-      '--type=place',
-      '-o', geojsonSequence
-    ])
+    for (const [index, bounds] of boxes.entries()) {
+      const output = join(work, `places-${index + 1}.geojsonseq`)
+      sequences.push(output)
+      console.log(`Refreshing ${region.region_key} from Overture part ${index + 1}/${boxes.length} (${bounds.join(',')}).`)
+      await command('overturemaps', [
+        'download',
+        `--bbox=${bounds.join(',')}`,
+        '-f', 'geojsonseq',
+        '--type=place',
+        '-o', output
+      ])
+    }
 
     stage = 'streaming Overture records'
-    const downloaded = await convertJsonSequenceToJsonLines(geojsonSequence, jsonl)
+    const downloaded = await convertJsonSequenceToJsonLines(sequences, jsonl)
+    if (downloaded <= 0) throw new Error('Overture returned no records for the requested bounding box.')
 
     stage = 'importing Overture places'
     const output = await command(process.execPath, [
@@ -141,34 +168,42 @@ async function refreshRegion(region) {
     ], { env: process.env })
     const stats = parseStats(output)
     if (!stats) throw new Error('Place importer did not return a readable summary.')
-    const imported = Number(stats.insertedOrUpdated || 0)
+    const validated = validateImportStats(stats)
+    imported = validated.imported
+    const outcome = imported > 0 ? 'ready' : 'empty'
 
     if (ENRICH_PHOTOS && imported > 0) {
       stage = 'enriching imported place photos'
       try {
-        await command(process.execPath, ['scripts/import-open-location-photos.mjs', '--apply', `--limit=${PHOTO_LIMIT}`], { env: process.env })
+        await command(process.execPath, [
+          'scripts/import-open-location-photos.mjs', '--apply', `--limit=${PHOTO_LIMIT}`
+        ], { env: process.env })
       } catch (error) {
         console.warn(`Photo enrichment did not complete for ${region.region_key}: ${error.message}`)
       }
     }
 
-    stage = 'marking catalogue region ready'
+    stage = `marking catalogue region ${outcome}`
     const updated = await admin.from('catalogue_sync_regions').update({
-      status: 'ready',
+      status: outcome,
       synced_at: new Date().toISOString(),
       release_id: RELEASE_ID,
       imported_count: imported,
       error_message: null
-    }).eq('id', region.id)
+    }).eq('id', region.id).eq('status', 'processing')
     if (updated.error) throw updated.error
-    console.log(`Catalogue region ${region.region_key} is ready (${downloaded} downloaded, ${Number(stats.read || 0)} read, ${imported} imported or updated).`)
-    return { status: 'ready', imported }
+    console.log(
+      `Catalogue region ${region.region_key} is ${outcome} ` +
+      `(${downloaded} downloaded, ${validated.read} read, ${validated.accepted} accepted, ${imported} imported or updated).`
+    )
+    return { status: outcome, imported }
   } catch (error) {
     const message = `${stage}: ${String(error?.message || error)}`.slice(0, 1000)
     const failed = await admin.from('catalogue_sync_regions').update({
       status: 'failed',
+      imported_count: imported,
       error_message: message
-    }).eq('id', region.id)
+    }).eq('id', region.id).eq('status', 'processing')
     if (failed.error) console.error(`Could not mark catalogue region ${region.region_key} failed: ${failed.error.message}`)
     console.error(`Catalogue refresh failed for ${region.region_key}: ${message}`)
     return { status: 'failed', error: message }
@@ -184,5 +219,7 @@ if (!regions.length) {
   const results = []
   for (const region of regions) results.push(await refreshRegion(region))
   const failures = results.filter((result) => result.status === 'failed')
-  if (failures.length) throw new Error(`${failures.length} catalogue region refresh${failures.length === 1 ? '' : 'es'} failed.`)
+  if (failures.length) {
+    throw new Error(`${failures.length} catalogue region refresh${failures.length === 1 ? '' : 'es'} failed.`)
+  }
 }
