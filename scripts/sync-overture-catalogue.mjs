@@ -117,6 +117,18 @@ async function claim(region) {
   return Boolean(result.data)
 }
 
+async function markRegion(region, status, importedCount = 0) {
+  const updated = await admin.from('catalogue_sync_regions').update({
+    status,
+    synced_at: new Date().toISOString(),
+    release_id: RELEASE_ID,
+    imported_count: importedCount,
+    error_message: null
+  }).eq('id', region.id).eq('status', 'processing').select('id').maybeSingle()
+  if (updated.error) throw updated.error
+  if (!updated.data) throw new Error(`Catalogue region ${region.region_key} was no longer claimed by this worker.`)
+}
+
 function validateImportStats(stats) {
   const read = Number(stats?.read || 0)
   const accepted = Number(stats?.accepted || 0)
@@ -156,7 +168,12 @@ async function refreshRegion(region) {
 
     stage = 'streaming Overture records'
     const downloaded = await convertJsonSequenceToJsonLines(sequences, jsonl)
-    if (downloaded <= 0) throw new Error('Overture returned no records for the requested bounding box.')
+    if (downloaded <= 0) {
+      stage = 'marking catalogue region empty'
+      await markRegion(region, 'empty', 0)
+      console.log(`Catalogue region ${region.region_key} is empty (Overture returned zero records).`)
+      return { status: 'empty', imported: 0 }
+    }
 
     stage = 'importing Overture places'
     const output = await command(process.execPath, [
@@ -184,14 +201,7 @@ async function refreshRegion(region) {
     }
 
     stage = `marking catalogue region ${outcome}`
-    const updated = await admin.from('catalogue_sync_regions').update({
-      status: outcome,
-      synced_at: new Date().toISOString(),
-      release_id: RELEASE_ID,
-      imported_count: imported,
-      error_message: null
-    }).eq('id', region.id).eq('status', 'processing')
-    if (updated.error) throw updated.error
+    await markRegion(region, outcome, imported)
     console.log(
       `Catalogue region ${region.region_key} is ${outcome} ` +
       `(${downloaded} downloaded, ${validated.read} read, ${validated.accepted} accepted, ${imported} imported or updated).`
