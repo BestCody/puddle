@@ -5,8 +5,14 @@ import test from 'node:test'
 const migrationUrl = new URL('../../supabase/migrations/10021_catalogue_quality_backfill.sql', import.meta.url)
 const importerUrl = new URL('../../scripts/import-open-place-catalogue.mjs', import.meta.url)
 
+function executableSql(value) {
+  return value
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*--.*$/gm, '')
+}
+
 test('catalogue backfill never rewrites the locations table inside a migration transaction', async () => {
-  const sql = await readFile(migrationUrl, 'utf8')
+  const sql = executableSql(await readFile(migrationUrl, 'utf8'))
 
   assert.doesNotMatch(sql, /\bupdate\s+public\.locations\b/i)
   assert.doesNotMatch(sql, /\bdelete\s+from\s+public\.locations\b/i)
