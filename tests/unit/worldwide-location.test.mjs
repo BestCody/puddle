@@ -3,10 +3,11 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { catalogueBoundingBoxes } from '../../lib/app/catalogue-regions.js'
+import { normalizePlaceGeography, suppressCatalogueRepetition } from '../../lib/app/catalogue-quality.js'
+import { catalogueBoundingBoxes, catalogueTileBoundingBoxes } from '../../lib/app/catalogue-regions.js'
 import { normalizeGeocodingResult } from '../../lib/app/geocoding.js'
 import { convertJsonSequenceToJsonLines, normalizeJsonSequenceLine } from '../../lib/app/json-sequence.js'
-import { normalizeOpenPlaceRecord } from '../../lib/app/open-place-catalogue.js'
+import { mapOpenPlaceCategory, normalizeOpenPlaceRecord } from '../../lib/app/open-place-catalogue.js'
 import { profileLocationFromForm } from '../../lib/app/profile-location.js'
 
 test('normalizes a worldwide geocoding result', () => {
@@ -100,11 +101,13 @@ function overtureFeature(overrides = {}) {
       },
       operating_status: 'open',
       confidence: 0.97,
+      timezone: 'America/Toronto',
       addresses: [{
         freeform: '123 Lakeshore Road',
         locality: 'Oakville',
         region: 'Ontario',
-        country: 'CA'
+        country: 'CA',
+        postcode: 'L6J 1H4'
       }],
       sources: [{ update_time: '2026-06-17T00:00:00Z', confidence: 0.97 }],
       ...overrides
@@ -112,15 +115,63 @@ function overtureFeature(overrides = {}) {
   }
 }
 
-test('normalizes a current Overture place feature', () => {
+test('normalizes a current Overture place feature with canonical geography', () => {
   const result = normalizeOpenPlaceRecord(overtureFeature(), 'overture')
   assert.equal(result.rejectionReason, null)
   assert.equal(result.item.sourcePlaceId, 'overture-place-one')
   assert.equal(result.item.kind, 'cafe')
   assert.equal(result.item.city, 'Oakville')
+  assert.equal(result.item.region, 'Ontario')
+  assert.equal(result.item.regionCode, 'ON')
+  assert.equal(result.item.country, 'Canada')
   assert.equal(result.item.countryCode, 'CA')
+  assert.equal(result.item.postalCode, 'L6J 1H4')
+  assert.equal(result.item.timezone, 'America/Toronto')
   assert.equal(result.item.latitude, 43.4791)
   assert.equal(result.item.longitude, -79.648)
+})
+
+test('normalizes Canadian subdivision codes and names bidirectionally', () => {
+  assert.deepEqual(normalizePlaceGeography({ locality: 'Mississauga', region: 'ON', country: 'CA' }), {
+    city: 'Mississauga',
+    region: 'Ontario',
+    regionCode: 'ON',
+    country: 'Canada',
+    countryCode: 'CA',
+    postalCode: null,
+    timezone: null,
+    source: { city: 'Mississauga', region: 'ON', country: 'CA' }
+  })
+  const named = normalizePlaceGeography({ locality: 'Oakville', region: 'Ontario', country: 'CA' })
+  assert.equal(named.regionCode, 'ON')
+  assert.equal(named.region, 'Ontario')
+})
+
+test('preserves the public category mapper string contract', () => {
+  assert.equal(mapOpenPlaceCategory(['coffee_shop']), 'cafe')
+  assert.equal(mapOpenPlaceCategory(['barber_shop']), null)
+})
+
+test('lets specific cafe evidence beat a broad restaurant ancestor', () => {
+  const result = normalizeOpenPlaceRecord(overtureFeature({
+    names: { primary: 'Tim Hortons' },
+    basic_category: 'restaurant',
+    taxonomy: {
+      primary: 'restaurant',
+      hierarchy: ['food_and_drink', 'restaurant', 'coffee_shop'],
+      alternates: []
+    }
+  }), 'overture')
+  assert.equal(result.item.kind, 'cafe')
+})
+
+test('does not classify bridge clubs as nightlife', () => {
+  const result = normalizeOpenPlaceRecord(overtureFeature({
+    names: { primary: 'Mississauga-Oakville Bridge Centre Inc' },
+    basic_category: 'nightlife',
+    taxonomy: { primary: 'nightlife', hierarchy: ['social_club'], alternates: [] }
+  }), 'overture')
+  assert.equal(result.item.kind, 'activity_venue')
 })
 
 test('does not misclassify barber shops as bars', () => {
@@ -154,4 +205,31 @@ test('uses a world-spanning longitude range near the poles', () => {
   const boxes = catalogueBoundingBoxes({ center_latitude: 89.9, center_longitude: 40, radius_km: 100 })
   assert.deepEqual(boxes[0].slice(0, 3), [-180, boxes[0][1], 180])
   assert.equal(boxes.length, 1)
+})
+
+test('tiles dense regional exports into bounded downloads', () => {
+  const tiles = catalogueTileBoundingBoxes({ center_latitude: 43.4791, center_longitude: -79.648, radius_km: 100 }, 60)
+  assert.ok(tiles.length > 1)
+  for (const [west, south, east, north] of tiles) {
+    assert.ok(west >= -180 && east <= 180)
+    assert.ok(south >= -90 && north <= 90)
+    assert.ok(west < east)
+    assert.ok(south < north)
+  }
+})
+
+test('suppresses duplicates, parent groups, and repeated brands without changing photo priority', () => {
+  const items = [
+    { content_kind: 'place', content_id: 'photo-rich', title: 'Woodhurst Heights Park', card_tier: 3, score: 3_000_000, latitude: 43.5364, longitude: -79.6918, catalogue_group_key: 'park-one', duplicate_group_key: 'park-canonical' },
+    { content_kind: 'place', content_id: 'exact-copy', title: 'Woodhurst Heights Park', card_tier: 3, score: 3_000_000, latitude: 43.5364, longitude: -79.6918, catalogue_group_key: 'park-one', duplicate_group_key: 'park-canonical' },
+    { content_kind: 'place', content_id: 'playground-child', title: 'Woodhurst Heights Park Playground', card_tier: 2, score: 2_000_000, latitude: 43.5359, longitude: -79.6924, catalogue_group_key: 'park-one', duplicate_group_key: 'playground' },
+    { content_kind: 'place', content_id: 'tim-one', title: 'Tim Hortons', card_tier: 2, score: 2_000_000, latitude: 43.5367, longitude: -79.6865, brand_id: 'tim-hortons', duplicate_group_key: 'tim-one' },
+    { content_kind: 'place', content_id: 'independent', title: 'Independent Cafe', card_tier: 2, score: 2_000_000, latitude: 43.53, longitude: -79.68, duplicate_group_key: 'independent' },
+    { content_kind: 'place', content_id: 'tim-two', title: 'Tim Hortons', card_tier: 2, score: 2_000_000, latitude: 43.54, longitude: -79.69, brand_id: 'tim-hortons', duplicate_group_key: 'tim-two' }
+  ]
+  const result = suppressCatalogueRepetition(items, 5)
+  assert.equal(result[0].content_id, 'photo-rich')
+  assert.ok(!result.some((item) => item.content_id === 'exact-copy'))
+  assert.ok(result.findIndex((item) => item.content_id === 'playground-child') > result.findIndex((item) => item.content_id === 'independent'))
+  assert.ok(result.findIndex((item) => item.content_id === 'tim-two') > result.findIndex((item) => item.content_id === 'independent'))
 })
