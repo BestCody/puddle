@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { normalizeGeocodingResult } from '../../lib/app/geocoding.js'
+import { normalizeJsonSequenceLine } from '../../lib/app/json-sequence.js'
 import { profileLocationFromForm } from '../../lib/app/profile-location.js'
 
 test('normalizes a worldwide geocoding result', () => {
@@ -54,4 +55,10 @@ test('rejects city text without coordinates', () => {
   const form = new FormData()
   form.set('city', 'London')
   assert.throws(() => profileLocationFromForm(form), /Choose a city or use your current location/)
+})
+
+test('normalizes GeoJSON text sequence records without loading a collection', () => {
+  assert.equal(normalizeJsonSequenceLine('\u001e{"type":"Feature","id":"one"}'), '{"type":"Feature","id":"one"}')
+  assert.equal(normalizeJsonSequenceLine('\uFEFF\u001e{"type":"Feature","id":"two"}\r'), '{"type":"Feature","id":"two"}')
+  assert.equal(normalizeJsonSequenceLine('   '), '')
 })
