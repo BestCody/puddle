@@ -1,7 +1,8 @@
 "use client"
 
 import Link from 'next/link'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { photoDisplayState } from '@/lib/app/photo-enrichment'
 
 const categoryLabels = {
   cafe: 'Coffee shop', restaurant: 'Restaurant', bar: 'Bar or lounge', park: 'Park or garden',
@@ -63,6 +64,21 @@ function DetailsSheet({ item, photos, onClose }) {
   )
 }
 
+function PhotoSearchState({ state }) {
+  const retrying = state === 'retrying'
+  return <div
+    aria-live="polite"
+    style={{
+      position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', alignContent: 'center', gap: 10,
+      padding: 24, textAlign: 'center', color: '#756c70', background: 'linear-gradient(145deg,#eee9eb,#ddd6d9)'
+    }}
+  >
+    <span aria-hidden="true" style={{ fontSize: '2.3rem' }}>⌖</span>
+    <strong style={{ fontSize: '.9rem' }}>{retrying ? 'Photo search will retry' : 'Finding a real photo'}</strong>
+    <small style={{ maxWidth: 250, lineHeight: 1.4 }}>Checking Wikimedia Commons, Mapillary, and KartaView.</small>
+  </div>
+}
+
 export function MinimalSwipeCard({ item, onChoice, busy }) {
   const pointer = useRef(null)
   const origin = useRef({ x: 0, y: 0 })
@@ -72,7 +88,20 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const photos = useMemo(() => [...new Set([...(item.photo_urls || []), item.photo_url, item.cover_url].filter(Boolean))].slice(0, 5), [item])
   const mainPhoto = photos[0] || null
+  const [photoStatus, setPhotoStatus] = useState(item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending'))
+  const displayState = photoDisplayState(photoStatus, Boolean(mainPhoto))
   const rating = ratingLabel(item)
+
+  useEffect(() => {
+    setPhotoStatus(item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending'))
+    if (mainPhoto || !item.content_id) return undefined
+    let cancelled = false
+    fetch(`/api/location-photo-status/${encodeURIComponent(item.content_id)}`, { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : null)
+      .then((result) => { if (!cancelled && result?.status) setPhotoStatus(result.status) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [item.content_id, item.photo_enrichment_status, mainPhoto])
 
   async function choose(action) {
     if (busy) return
@@ -129,7 +158,8 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
       aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
       <div className="minimal-swipe-photo" style={mainPhoto ? { backgroundImage: `linear-gradient(180deg,transparent 45%,rgba(10,10,12,.82)),url(${mainPhoto})` } : undefined}>
-        {!mainPhoto ? <div className="minimal-photo-placeholder" aria-hidden="true">⌖</div> : null}
+        {displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found"><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
+        {displayState === 'searching' || displayState === 'retrying' ? <PhotoSearchState state={displayState} /> : null}
         <div className="minimal-swipe-meta">
           <span>{categoryLabel(item.category)}</span>
           {item.distanceLabel ? <span>{item.distanceLabel}</span> : null}
