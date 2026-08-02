@@ -1,21 +1,9 @@
 "use client"
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { DateLocationCard } from '@/components/date-swipe-workspace'
+import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { csrfFetch } from '@/lib/security/csrf-client'
-
-const categoryLabels = {
-  cafe: 'Coffee shop', restaurant: 'Restaurant', bar: 'Bar or lounge', park: 'Park or garden',
-  museum: 'Museum', gallery: 'Gallery', attraction: 'Local attraction', activity_venue: 'Activity date',
-  study_spot: 'Quiet hangout', scenic_spot: 'Scenic spot', nightlife: 'Nightlife', shop: 'Market or shop',
-  community_space: 'Community spot', other: 'Local date idea'
-}
-
-function categoryLabel(category) {
-  return categoryLabels[category] || String(category || 'Local date idea').replaceAll('_', ' ')
-}
 
 function queryString(filters) {
   const params = new URLSearchParams({ kind: 'place', date: 'any' })
@@ -25,8 +13,6 @@ function queryString(filters) {
   return params.toString()
 }
 
-function vibrate(pattern) { try { navigator.vibrate?.(pattern) } catch {} }
-
 function daypart() {
   const hour = new Date().getHours()
   if (hour >= 5 && hour <= 11) return 'morning'
@@ -35,199 +21,191 @@ function daypart() {
   return 'late'
 }
 
-function ChoiceNoteModal({ pending, busy, onCancel, onSubmit }) {
-  const [note, setNote] = useState('')
-  if (!pending) return null
-  const perfect = pending.choice === 'perfect'
-  return <div className="date-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onCancel() }}>
-    <section className={`date-choice-sheet swipe-note-sheet ${perfect ? 'is-perfect' : ''}`} role="dialog" aria-modal="true" aria-labelledby="swipe-note-title">
-      <div className="swipe-note-orbit" aria-hidden="true"><span>{perfect ? '★' : '♥'}</span><i /><i /></div>
-      <span className="section-pill">{perfect ? 'Perfect Pick' : 'Save this place'}</span>
-      <h2 id="swipe-note-title">{perfect ? 'This one feels special.' : 'Add it to your shortlist.'}</h2>
-      <p>Add an optional private note about {pending.item.title}. It can be carried into a shared match later.</p>
-      <textarea autoFocus maxLength={280} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Great patio, easy transit, worth trying Friday…" />
-      <div className="swipe-note-meta"><small>{note.length}/280</small><small>Only you can see this until a shared match.</small></div>
-      <div className="date-choice-actions"><button type="button" onClick={onCancel} disabled={busy}>Go back</button><button className={perfect ? 'is-perfect' : ''} type="button" onClick={() => onSubmit(note)} disabled={busy}>{busy ? 'Saving…' : perfect ? 'Make it a Perfect Pick' : 'Save location'}</button></div>
-    </section>
-  </div>
+function FilterSheet({ filters, categories, onChange, onApply, onClose, loading }) {
+  return (
+    <div className="minimal-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section className="minimal-filter-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title">
+        <header><h2 id="filter-title">Filters</h2><button type="button" onClick={onClose} aria-label="Close filters">×</button></header>
+        <label>Search<input value={filters.q || ''} onChange={(event) => onChange('q', event.target.value)} placeholder="Coffee, park, museum…" /></label>
+        <label>Category<select value={filters.category || ''} onChange={(event) => onChange('category', event.target.value)}><option value="">Any category</option>{categories.map((category) => <option value={category} key={category}>{String(category).replaceAll('_', ' ')}</option>)}</select></label>
+        <label>Distance<select value={String(filters.distance || 10)} onChange={(event) => onChange('distance', Number(event.target.value))}>{[2, 5, 10, 25, 50, 100].map((value) => <option value={value} key={value}>{value} km</option>)}</select></label>
+        <label>Price<select value={filters.price || 'any'} onChange={(event) => onChange('price', event.target.value)}><option value="any">Any price</option><option value="1">$</option><option value="2">$$</option><option value="3">$$$</option><option value="4">$$$$</option></select></label>
+        <label className="minimal-filter-check"><input type="checkbox" checked={Boolean(filters.openNow)} onChange={(event) => onChange('openNow', event.target.checked)} /> Open now</label>
+        <label className="minimal-filter-check"><input type="checkbox" checked={Boolean(filters.accessible)} onChange={(event) => onChange('accessible', event.target.checked)} /> Accessible</label>
+        <button className="minimal-primary-button" type="button" onClick={onApply} disabled={loading}>{loading ? 'Loading…' : 'Apply'}</button>
+      </section>
+    </div>
+  )
 }
 
-function HangoutSetupModal({ open, busy, onClose, onCreate }) {
-  const [maxMembers, setMaxMembers] = useState(4)
-  if (!open) return null
-  return <div className="date-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
-    <section className="date-choice-sheet hangout-setup-sheet" role="dialog" aria-modal="true" aria-labelledby="hangout-setup-title">
-      <div className="hangout-people-preview" aria-hidden="true"><span>●</span><span>●</span><span>●</span><span>+</span></div>
-      <span className="section-pill section-pill-mint">Group Hangout Match</span>
-      <h2 id="hangout-setup-title">Let the group choose privately.</h2>
-      <p>Everyone receives the same twelve locations. A place becomes a group match when at least 60% save it and nobody passes.</p>
-      <label>Maximum people
-        <input aria-label="Maximum people" type="range" min="3" max="8" value={maxMembers} onChange={(event) => setMaxMembers(Number(event.target.value))} />
-        <strong>{maxMembers} people</strong>
-      </label>
-      <div className="hangout-rule-grid"><span><b>♥</b> Broad support</span><span><b>★</b> Perfect Picks rank higher</span><span><b>×</b> One Pass is a veto</span></div>
-      <div className="date-choice-actions"><button type="button" onClick={onClose} disabled={busy}>Cancel</button><button type="button" onClick={() => onCreate(maxMembers)} disabled={busy}>{busy ? 'Creating…' : 'Create group deck'}</button></div>
-    </section>
-  </div>
-}
-
-function ShareRoomPanel({ room, onClose, onMessage }) {
-  if (!room) return null
-  const group = room.mode === 'hangout'
+function InviteSheet({ busy, room, onCreate, onClose, onMessage }) {
   async function copy() {
     await navigator.clipboard.writeText(room.url)
-    onMessage(`${group ? 'Hangout Match' : 'DateMatch'} invitation copied.`)
+    onMessage('Invite link copied.')
   }
   async function share() {
     try {
-      if (navigator.share) await navigator.share({ title: group ? 'Puddle Hangout Match' : 'Puddle DateMatch', text: group ? 'Choose hangout locations with us and see where the group agrees.' : 'Choose date locations with me and see where we match.', url: room.url })
+      if (navigator.share) await navigator.share({ title: 'Puddle invite', url: room.url })
       else await copy()
     } catch (error) {
-      if (error?.name !== 'AbortError') onMessage('The invitation could not be shared from this browser.')
+      if (error?.name !== 'AbortError') onMessage('Could not share the invite.')
     }
   }
-  return <div className="date-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section className={`date-choice-sheet date-share-room ${group ? 'is-hangout' : ''}`} role="dialog" aria-modal="true" aria-labelledby="share-room-title">
-      <span className="section-pill">{group ? 'Group Hangout Match' : 'Swipe together'}</span>
-      <h2 id="share-room-title">Your {group ? 'Hangout Match' : 'DateMatch'} room is ready.</h2>
-      <p>{group ? `Invite up to ${room.maxMembers} people. Choices stay private until the group reaches a no-veto match.` : 'The other person gets the same twelve places. Choices stay private until you both choose the same location.'}</p>
-      <input value={room.url} readOnly aria-label="DateMatch invitation link" />
-      <div className="date-choice-actions"><button type="button" onClick={copy}>Copy link</button><button type="button" onClick={share}>Share invitation</button><Link href={room.url}>Open room</Link></div>
-    </section>
-  </div>
+
+  return (
+    <div className="minimal-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
+      <section className="minimal-invite-sheet" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+        <header><h2 id="invite-title">Invite others</h2><button type="button" onClick={onClose} aria-label="Close invite">×</button></header>
+        {room ? <>
+          <p>Your shared deck is ready.</p>
+          <div className="minimal-invite-actions"><button type="button" onClick={copy}>Copy link</button><button type="button" onClick={share}>Share</button><a href={room.url}>Open room</a></div>
+        </> : <div className="minimal-invite-choice">
+          <button type="button" onClick={() => onCreate('date')} disabled={busy}><strong>One person</strong><span>Create a two-person deck</span></button>
+          <button type="button" onClick={() => onCreate('hangout')} disabled={busy}><strong>A group</strong><span>Create a group deck</span></button>
+        </div>}
+      </section>
+    </div>
+  )
 }
 
-function SoloDeckSummary({ feed, choices, onDateMatch, onHangout, busy, onRefresh }) {
-  const selected = feed.items.filter((item) => ['save', 'perfect'].includes(choices[item.content_id]?.choice)).sort((a, b) => Number(choices[b.content_id]?.choice === 'perfect') - Number(choices[a.content_id]?.choice === 'perfect')).slice(0, 4)
-  return <section className="date-deck-summary swipe-v2-summary">
-    <div className="swipe-summary-celebration" aria-hidden="true"><span>♥</span><span>★</span><span>♥</span></div>
-    <span className="section-pill">Deck complete</span>
-    <h2>{selected.length ? 'Your shortlist has real possibilities.' : 'Let’s tune the next deck.'}</h2>
-    <p>{selected.length ? 'Send the same deck to one person or a group and reveal only the locations everyone independently supports.' : 'Try a different mood, radius, or price range instead of forcing a weak choice.'}</p>
-    {selected.length ? <div className="date-summary-grid">{selected.map((item) => <article key={item.content_id}><span>{choices[item.content_id]?.choice === 'perfect' ? '★ Perfect Pick' : '♥ Saved'}</span><h3>{item.title}</h3><p>{item.summary || categoryLabel(item.category)}</p><div><small>{item.distanceLabel}</small><small>{item.priceLabel}</small></div><Link href={item.href}>View location →</Link></article>)}</div> : null}
-    <div className="date-summary-actions"><button type="button" onClick={onDateMatch} disabled={busy || !selected.length}>DateMatch for two</button><button type="button" onClick={onHangout} disabled={busy || !selected.length}>Group Hangout Match</button><button type="button" onClick={onRefresh}>Build another deck</button></div>
-  </section>
-}
-
-export function DateSwipeWorkspaceV2({ initialFeed, googleMapsBrowserKey = '' }) {
+export function DateSwipeWorkspaceV2({ initialFeed }) {
   const [feed, setFeed] = useState({ ...initialFeed, items: initialFeed.items.slice(0, 12) })
   const [filters, setFilters] = useState({ ...initialFeed.filters, kind: 'place', date: 'any', limit: 12 })
   const [index, setIndex] = useState(0)
   const [choices, setChoices] = useState({})
-  const [pendingChoice, setPendingChoice] = useState(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
   const [room, setRoom] = useState(null)
-  const [showHangoutSetup, setShowHangoutSetup] = useState(false)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
-  const [actionEffect, setActionEffect] = useState(null)
-
   const current = feed.items[index] || null
-  const categories = useMemo(() => [...new Set(feed.items.map((item) => item.category).filter(Boolean))].sort(), [feed.items])
-  const positiveCount = useMemo(() => Object.values(choices).filter((entry) => entry.choice === 'save' || entry.choice === 'perfect').length, [choices])
-  const perfectCount = useMemo(() => Object.values(choices).filter((entry) => entry.choice === 'perfect').length, [choices])
-  const progress = feed.items.length ? Math.min(100, Math.round((index / feed.items.length) * 100)) : 0
+  const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
 
   useEffect(() => {
-    function shortcuts(event) {
-      if (!current || busy || event.metaKey || event.ctrlKey || event.altKey) return
-      if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select,[contenteditable="true"]')) return
-      const key = event.key.toLowerCase()
-      if (key === 'z' || key === 'u') { event.preventDefault(); undo() }
-      if (key === 'p') { event.preventDefault(); requestChoice('perfect', current) }
+    if (!message) return
+    const timer = window.setTimeout(() => setMessage(''), 2400)
+    return () => window.clearTimeout(timer)
+  }, [message])
+
+  useEffect(() => {
+    function keyboard(event) {
+      const target = event.target instanceof HTMLElement ? event.target : null
+      if (!current || busy || event.metaKey || event.ctrlKey || event.altKey || target?.closest('input,textarea,select,button')) return
+      if (event.key === 'ArrowLeft') persistChoice('pass', current)
+      if (event.key === 'ArrowRight') persistChoice('save', current)
+      if (event.key.toLowerCase() === 'p') persistChoice('perfect', current)
+      if (event.key.toLowerCase() === 'z' || event.key.toLowerCase() === 'u') undo()
     }
-    window.addEventListener('keydown', shortcuts)
-    return () => window.removeEventListener('keydown', shortcuts)
+    window.addEventListener('keydown', keyboard)
+    return () => window.removeEventListener('keydown', keyboard)
   })
 
-  function updateFilter(name, value) { setFilters((currentFilters) => ({ ...currentFilters, [name]: value, kind: 'place', date: 'any', limit: 12 })) }
-  function flashAction(action, duration = 360) { setActionEffect(action); window.setTimeout(() => setActionEffect((value) => value === action ? null : value), duration) }
-  function recommendationContext(item) { return { mode: 'solo', category: item?.category || filters.category || null, mood: filters.q || null, price: filters.price || 'any', daypart: daypart(), source: 'swipe' } }
+  function updateFilter(name, value) {
+    setFilters((currentFilters) => ({ ...currentFilters, [name]: value, kind: 'place', date: 'any', limit: 12 }))
+  }
+
+  function context(item) {
+    return { mode: 'solo', category: item?.category || filters.category || null, mood: filters.q || null, price: filters.price || 'any', daypart: daypart(), source: 'swipe' }
+  }
 
   async function refresh(nextFilters = filters) {
-    setLoading(true); setMessage('Building a fresh image-first deck…')
+    setLoading(true)
     const normalized = { ...nextFilters, kind: 'place', date: 'any', limit: 12 }
     const response = await fetch(`/api/discovery?${queryString(normalized)}`, { cache: 'no-store' })
     const result = await response.json().catch(() => ({}))
     setLoading(false)
-    if (!response.ok) return setMessage(result.error || 'Your location deck could not refresh.')
-    setFeed({ ...result, items: (result.items || []).slice(0, 12) }); setFilters({ ...result.filters, kind: 'place', date: 'any', limit: 12 }); setIndex(0); setChoices({}); setShowFilters(false)
-    setMessage('New deck ready. Photos and useful descriptions are prioritized first.')
+    if (!response.ok) return setMessage(result.error || 'Could not load a new deck.')
+    setFeed({ ...result, items: (result.items || []).slice(0, 12) })
+    setFilters({ ...result.filters, kind: 'place', date: 'any', limit: 12 })
+    setIndex(0)
+    setChoices({})
+    setRoom(null)
+    setShowFilters(false)
   }
 
-  function useLocation() {
-    if (!navigator.geolocation) return setMessage('Location is not available in this browser.')
-    setMessage('Finding interesting places near you…')
-    navigator.geolocation.getCurrentPosition((position) => { const next = { ...filters, latitude: position.coords.latitude, longitude: position.coords.longitude, kind: 'place', date: 'any', limit: 12 }; setFilters(next); refresh(next) }, () => setMessage('Location permission was not granted.'), { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 })
-  }
-
-  async function persistChoice(action, item, note = '') {
+  async function persistChoice(action, item) {
     if (!item || busy) return
-    setBusy(true); flashAction(action, 620); vibrate(action === 'perfect' ? [25, 20, 55] : action === 'save' ? 24 : 14)
+    setBusy(true)
     const persistedAction = action === 'pass' ? 'dismissed' : action === 'perfect' ? 'perfect' : 'saved'
-    const response = await csrfFetch('/api/discovery/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: persistedAction, contentKind: 'place', contentId: item.content_id, requestId: feed.requestId, context: recommendationContext(item) }) })
+    const response = await csrfFetch('/api/discovery/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: persistedAction, contentKind: 'place', contentId: item.content_id, requestId: feed.requestId, context: context(item) })
+    })
     const result = await response.json().catch(() => ({}))
-    if (!response.ok) { setMessage(result.error || 'That choice could not be saved.'); setBusy(false); return }
-    setChoices((currentChoices) => ({ ...currentChoices, [item.content_id]: { choice: action, note } })); setIndex((currentIndex) => currentIndex + 1)
-    setMessage(action === 'perfect' ? `Perfect Pick · ${item.title}` : action === 'save' ? `Saved · ${item.title}` : `Passed · ${item.title}`); setPendingChoice(null); setBusy(false)
-  }
-
-  function requestChoice(action, item) {
-    if (!item || busy) return
-    if (action === 'save' || action === 'perfect') { flashAction(action); vibrate(action === 'perfect' ? [18, 15, 35] : 18); setPendingChoice({ choice: action, item }) }
-    else persistChoice('pass', item)
+    if (!response.ok) {
+      setBusy(false)
+      setMessage(result.error || 'Could not save that choice.')
+      return
+    }
+    setChoices((currentChoices) => ({ ...currentChoices, [item.content_id]: { choice: action, note: '' } }))
+    setIndex((currentIndex) => currentIndex + 1)
+    setBusy(false)
   }
 
   async function undo() {
-    const previousIndex = Math.max(0, index - 1); const item = feed.items[previousIndex]
+    const previousIndex = Math.max(0, index - 1)
+    const item = feed.items[previousIndex]
     if (!item || index === 0 || busy) return
-    setBusy(true); flashAction('undo', 620); vibrate(18)
-    const response = await csrfFetch('/api/discovery/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'undo', contentKind: 'place', contentId: item.content_id, requestId: feed.requestId }) })
-    if (response.ok) { setIndex(previousIndex); setChoices((currentChoices) => { const next = { ...currentChoices }; delete next[item.content_id]; return next }); setMessage(`Brought back · ${item.title}`) }
-    else setMessage('Your last choice could not be undone.')
+    setBusy(true)
+    const response = await csrfFetch('/api/discovery/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'undo', contentKind: 'place', contentId: item.content_id, requestId: feed.requestId })
+    })
+    if (response.ok) {
+      setIndex(previousIndex)
+      setChoices((currentChoices) => { const next = { ...currentChoices }; delete next[item.content_id]; return next })
+    } else setMessage('Could not undo that choice.')
     setBusy(false)
   }
 
-  async function startSharedDeck(mode = 'date', maxMembers = 2) {
+  async function createSharedDeck(mode) {
     if (busy || feed.items.length < 2) return
-    setBusy(true); setMessage(`Creating a private ${mode === 'hangout' ? 'group' : 'shared'} deck…`)
-    const response = await csrfFetch('/api/date-match/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-      locationIds: feed.items.map((item) => item.content_id), center: feed.center, mode, maxMembers,
-      context: { mood: filters.q || null, category: filters.category || null, price: filters.price || 'any', daypart: daypart() },
-      choices: Object.entries(choices).map(([locationId, value]) => ({ locationId, ...value }))
-    }) })
+    setBusy(true)
+    const response = await csrfFetch('/api/date-match/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        locationIds: feed.items.map((item) => item.content_id),
+        center: feed.center,
+        mode,
+        maxMembers: mode === 'hangout' ? 4 : 2,
+        context: { mood: filters.q || null, category: filters.category || null, price: filters.price || 'any', daypart: daypart() },
+        choices: Object.entries(choices).map(([locationId, value]) => ({ locationId, ...value }))
+      })
+    })
     const result = await response.json().catch(() => ({}))
-    if (response.ok) { setRoom(result); setShowHangoutSetup(false); setMessage(`${mode === 'hangout' ? 'Hangout Match' : 'DateMatch'} room created. Send the invitation when you are ready.`) }
-    else setMessage(result.error || 'The shared deck could not be created.')
     setBusy(false)
+    if (!response.ok) return setMessage(result.error || 'Could not create the shared deck.')
+    setRoom(result)
   }
 
-  return <div className="date-swipe-workspace swipe-v2">
-    <section className="swipe-v2-command-bar">
-      <div className="swipe-v2-progress-copy"><span className="section-pill">Live deck</span><strong>{current ? `${index + 1} of ${feed.items.length}` : 'Complete'}</strong><small>{positiveCount} saved · {perfectCount} perfect</small></div>
-      <div className="swipe-v2-progress" role="progressbar" aria-label="Deck progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}><span style={{ width: `${progress}%` }} /></div>
-      <div className="swipe-v2-tools"><button className="date-filter-toggle" type="button" onClick={() => setShowFilters((value) => !value)} aria-expanded={showFilters}><span aria-hidden="true">⌁</span> Filters</button><button className="date-swipe-together" type="button" onClick={() => startSharedDeck('date', 2)} disabled={busy}><span aria-hidden="true">♡⇄♡</span> Swipe together</button><button className="date-hangout-together" type="button" onClick={() => setShowHangoutSetup(true)} disabled={busy}><span aria-hidden="true">●●●</span> Group hangout</button></div>
+  return (
+    <section className="minimal-swipe-workspace">
+      <header className="minimal-swipe-toolbar">
+        <span aria-live="polite">{message}</span>
+        <button type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        </button>
+      </header>
+
+      {current ? <>
+        <div className="minimal-card-stage"><MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} /></div>
+        <SwipeActionDock
+          onUndo={undo}
+          onPass={() => persistChoice('pass', current)}
+          onSave={() => persistChoice('save', current)}
+          onPerfect={() => persistChoice('perfect', current)}
+          canUndo={index > 0}
+          busy={busy}
+        />
+        <div className="minimal-progress" aria-label={`${index + 1} of ${feed.items.length}`}><span style={{ width: `${Math.max(6, ((index + 1) / Math.max(1, feed.items.length)) * 100)}%` }} /></div>
+      </> : <div className="minimal-deck-complete">
+        <h1>{feed.items.length ? 'Deck complete' : 'No places found'}</h1>
+        <div><button className="minimal-primary-button" type="button" onClick={() => setShowInvite(true)} disabled={!feed.items.length}>Invite others</button><button type="button" onClick={() => refresh()}>Swipe again</button></div>
+      </div>}
+
+      {showFilters ? <FilterSheet filters={filters} categories={categories} onChange={updateFilter} onApply={() => refresh(filters)} onClose={() => setShowFilters(false)} loading={loading} /> : null}
+      {showInvite ? <InviteSheet busy={busy} room={room} onCreate={createSharedDeck} onClose={() => { setShowInvite(false); setRoom(null) }} onMessage={setMessage} /> : null}
     </section>
-
-    {showFilters ? <form className="date-filter-panel swipe-v2-filter-panel" onSubmit={(event) => { event.preventDefault(); refresh() }}>
-      <div className="swipe-filter-heading"><div><span className="section-pill section-pill-yellow">Tune this deck</span><h2>What sounds good right now?</h2></div><button type="button" onClick={() => setShowFilters(false)} aria-label="Close filters">×</button></div>
-      <label className="wide">Mood or idea<input value={filters.q || ''} onChange={(event) => updateFilter('q', event.target.value)} placeholder="Coffee, rooftop, museum, sunset…" /></label>
-      <label>Location type<select value={filters.category || ''} onChange={(event) => updateFilter('category', event.target.value)}><option value="">Anything interesting</option>{categories.map((category) => <option value={category} key={category}>{categoryLabel(category)}</option>)}</select></label>
-      <label>Maximum distance<span className="date-distance-input"><input aria-label="Maximum distance" type="number" min="1" max="100" value={filters.distance || 10} onChange={(event) => updateFilter('distance', Number(event.target.value))} /><small>km</small></span></label>
-      <label>Price<select value={filters.price || 'any'} onChange={(event) => updateFilter('price', event.target.value)}><option value="any">Any price</option><option value="1">$ · inexpensive</option><option value="2">$$ · moderate</option><option value="3">$$$ · higher</option><option value="4">$$$$ · premium</option></select></label>
-      <label>Amenity<input value={filters.amenity || ''} onChange={(event) => updateFilter('amenity', event.target.value)} placeholder="patio, views, parking…" /></label>
-      <label className="date-check"><span>Open now</span><input type="checkbox" checked={Boolean(filters.openNow)} onChange={(event) => updateFilter('openNow', event.target.checked)} /></label>
-      <label className="date-check"><span>Accessible</span><input type="checkbox" checked={Boolean(filters.accessible)} onChange={(event) => updateFilter('accessible', event.target.checked)} /></label>
-      <div className="date-filter-actions"><button type="submit">{loading ? 'Finding places…' : 'Build this deck'}</button><button type="button" onClick={useLocation}>Use my location</button></div>
-    </form> : null}
-
-    {positiveCount >= 4 && current ? <p className="date-swipe-message">Your shortlist is already strong. Keep exploring or invite people now.</p> : null}
-    {message ? <p className={`date-swipe-message swipe-v2-toast ${actionEffect ? `is-${actionEffect}` : ''}`} role="status" aria-live="polite">{message}</p> : null}
-    <div className={`date-deck-stage swipe-v2-stage ${current && index < feed.items.length - 1 ? 'has-next-card' : ''} ${actionEffect ? `is-${actionEffect}` : ''}`}>{current ? <DateLocationCard key={current.content_id} item={current} onChoice={requestChoice} onMessage={setMessage} busy={busy} googleMapsBrowserKey={googleMapsBrowserKey} allowPerfect puddlePick={index === 0} /> : <SoloDeckSummary feed={feed} choices={choices} onDateMatch={() => startSharedDeck('date', 2)} onHangout={() => setShowHangoutSetup(true)} busy={busy} onRefresh={() => refresh()} />}</div>
-    {current ? <SwipeActionDock onUndo={undo} onPass={() => requestChoice('pass', current)} onSave={() => requestChoice('save', current)} onPerfect={() => requestChoice('perfect', current)} canUndo={index > 0} busy={busy} intent={actionEffect} /> : null}
-    <ChoiceNoteModal key={`${pendingChoice?.item?.content_id || 'none'}:${pendingChoice?.choice || ''}`} pending={pendingChoice} busy={busy} onCancel={() => setPendingChoice(null)} onSubmit={(note) => persistChoice(pendingChoice.choice, pendingChoice.item, note)} />
-    <HangoutSetupModal open={showHangoutSetup} busy={busy} onClose={() => setShowHangoutSetup(false)} onCreate={(maxMembers) => startSharedDeck('hangout', maxMembers)} />
-    <ShareRoomPanel room={room} onClose={() => setRoom(null)} onMessage={setMessage} />
-  </div>
+  )
 }

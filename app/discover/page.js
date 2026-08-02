@@ -5,8 +5,8 @@ import { getDiscoveryFeed, logDiscoveryImpressions } from '@/lib/app/discovery'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
-  title: 'Swipe date locations',
-  description: 'Swipe through a curated set of nearby date locations and invite someone to find mutual favourites.'
+  title: 'Swipe',
+  description: 'Swipe through nearby places.'
 }
 
 function textParam(value, max = 80) {
@@ -32,18 +32,9 @@ export default async function DiscoverPage({ searchParams }) {
     const feed = await getDiscoveryFeed(session, feedFilters)
     await logDiscoveryImpressions(session, feed)
 
-    return <>
+    return <div className="minimal-swipe-page">
       <AuthMessage searchParams={params} />
-      {params?.legacy === 'disabled' ? <p className="date-swipe-message" role="status">That older Puddle feature is no longer part of the location-first product. Your location deck is ready here.</p> : null}
-      <section className="date-swipe-heading swipe-v2-heading">
-        <div>
-          <span className="section-pill">Your 12-card location deck</span>
-          <h1 aria-label="Find somewhere you actually want to go. Swipe for somewhere worth going together.">Find somewhere you actually want to go.</h1>
-          <p>Real photos and useful descriptions come first. Pass what misses, save what works, and use Perfect Pick when a place immediately stands out.</p>
-        </div>
-        <div className="swipe-heading-demo" aria-hidden="true"><span>↶</span><strong>×</strong><strong>♥</strong><span>★</span></div>
-      </section>
       <DateSwipeWorkspaceV2 initialFeed={feed} />
-    </>
+    </div>
   })
 }

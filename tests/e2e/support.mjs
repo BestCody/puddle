@@ -146,7 +146,13 @@ export async function signInThroughUi(page, email, password, next = '/dashboard'
 }
 
 export async function signOutThroughUi(page) {
-  const button = page.getByRole('button', { name: 'Sign out' }).first()
+  const menu = page.locator('details.profile-menu')
+  const button = menu.getByRole('button', { name: 'Sign out', exact: true })
+  if (!await button.isVisible().catch(() => false)) {
+    const summary = menu.locator('> summary')
+    await expect(summary).toBeVisible()
+    await summary.click()
+  }
   await expect(button).toBeVisible()
   await button.click()
   await expect(page).toHaveURL(/\/$/)

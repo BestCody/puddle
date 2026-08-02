@@ -1,10 +1,8 @@
 import Link from 'next/link'
 import { PuddleLogo } from './puddle-logo'
 import { ProductNav } from './product-nav'
-import { SystemNoticeBanner } from './system-notice-banner'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
-import { legacySystemsEnabled } from '@/lib/product-vision'
 
 function initials(name) {
   return String(name || 'Puddle person')
@@ -26,38 +24,29 @@ export async function ProductShell({ user, profile, children }) {
   }
 
   return (
-    <div className="product-shell">
-      <aside className="product-sidebar">
-        <div className="sidebar-brand-block">
-          <PuddleLogo />
-          <span className="sidebar-product-badge">location-first</span>
-          <p>Choose the place—not the person.</p>
-        </div>
-        <ProductNav showLegacy={legacySystemsEnabled()} />
-        <div className="sidebar-priority-note">
-          <span aria-hidden="true">✦</span>
-          <div><strong>Better cards first</strong><small>Photos and useful descriptions are prioritized before ratings.</small></div>
-        </div>
-        <Link className="sidebar-splash" href="/discover">
-          <span><small>Quick start</small><strong>Find the date spot</strong><em>Open your 12-card deck →</em></span>
-          <b aria-hidden="true">♡</b>
-        </Link>
+    <div className="product-shell minimal-product-shell">
+      <aside className="product-sidebar minimal-product-sidebar">
+        <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" /></div>
+        <ProductNav />
       </aside>
 
-      <div className="product-stage">
-        <SystemNoticeBanner />
-        <header className="product-header">
-          <div className="product-header-brand"><PuddleLogo compact /></div>
-          <div className="product-header-actions">
-            {showAdmin ? <Link className="quiet-button" href="/admin">Admin</Link> : null}
-            <Link className="header-profile" href="/profile">
+      <div className="product-stage minimal-product-stage">
+        <header className="product-header minimal-product-header">
+          <div className="minimal-header-logo"><PuddleLogo compact href="/discover" /></div>
+          <details className="profile-menu">
+            <summary aria-label="Open profile menu">
               <span className="profile-initials" aria-hidden="true">{initials(profile?.display_name)}</span>
-              <span><strong>{profile?.display_name || 'Puddle person'}</strong><small>@{profile?.username || 'new_here'}</small></span>
-            </Link>
-            <form action={signOut}><button className="quiet-button" type="submit">Sign out</button></form>
-          </div>
+            </summary>
+            <div className="profile-menu-panel">
+              <div className="profile-menu-person"><strong>{profile?.display_name || 'Puddle person'}</strong></div>
+              <Link href="/profile">Profile</Link>
+              <Link href="/account">Settings</Link>
+              {showAdmin ? <Link href="/admin">Admin</Link> : null}
+              <form action={signOut}><button type="submit">Sign out</button></form>
+            </div>
+          </details>
         </header>
-        <main className="product-main">{children}</main>
+        <main className="product-main minimal-product-main">{children}</main>
       </div>
     </div>
   )

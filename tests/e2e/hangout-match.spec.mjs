@@ -5,7 +5,7 @@ function escapePattern(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-async function saveCurrentCard(page, note) {
+async function saveSharedCard(page, note) {
   const card = page.locator('.date-swipe-card')
   const title = await card.locator('h2').innerText()
   await card.getByRole('button', { name: /^Save/i }).click()
@@ -14,6 +14,26 @@ async function saveCurrentCard(page, note) {
   await dialog.getByRole('textbox').fill(note)
   await dialog.getByRole('button', { name: /Save choice/i }).click()
   return title
+}
+
+async function choosePersonalCard(page, action) {
+  const card = page.locator('.minimal-swipe-card')
+  await expect(card).toBeVisible()
+  const previous = await card.getAttribute('aria-label')
+  await page.getByRole('button', { name: action }).click()
+  await expect.poll(async () => {
+    if (await page.getByRole('button', { name: 'Invite others' }).isVisible().catch(() => false)) return 'complete'
+    return page.locator('.minimal-swipe-card').getAttribute('aria-label')
+  }).not.toBe(previous)
+}
+
+async function finishPersonalDeck(page) {
+  const invite = page.getByRole('button', { name: 'Invite others' })
+  for (let index = 0; index < 20; index += 1) {
+    if (await invite.isVisible().catch(() => false)) return
+    await choosePersonalCard(page, 'Pass')
+  }
+  await expect(invite).toBeVisible()
 }
 
 async function createParticipant(displayName) {
@@ -38,40 +58,36 @@ test('three people privately choose and receive a Group Hangout Match', async ({
   const friendTwoPage = await friendTwoContext.newPage()
 
   await signInThroughUi(creatorPage, creator.email, creator.password, '/discover')
-  await creatorPage.getByRole('button', { name: /Group hangout/i }).click()
+  const creatorTitle = await creatorPage.locator('.minimal-swipe-card h1').innerText()
+  await choosePersonalCard(creatorPage, 'Save')
+  await finishPersonalDeck(creatorPage)
+  await creatorPage.getByRole('button', { name: 'Invite others' }).click()
 
-  const setupDialog = creatorPage.getByRole('dialog')
-  await expect(setupDialog.getByRole('heading', { name: /Let the group choose privately/i })).toBeVisible()
-  await setupDialog.getByLabel('Maximum people').fill('3')
-  await setupDialog.getByRole('button', { name: /Create group deck/i }).click()
-
-  const shareDialog = creatorPage.getByRole('dialog')
-  await expect(shareDialog.getByRole('heading', { name: /Your Hangout Match room is ready/i })).toBeVisible()
-  const roomUrl = await shareDialog.getByRole('link', { name: /Open room/i }).getAttribute('href')
+  const inviteDialog = creatorPage.getByRole('dialog')
+  await inviteDialog.getByRole('button', { name: /A group/i }).click()
+  await expect(inviteDialog.getByText(/shared deck is ready/i)).toBeVisible()
+  const roomUrl = await inviteDialog.getByRole('link', { name: /Open room/i }).getAttribute('href')
   expect(roomUrl).toBeTruthy()
   const roomPath = new URL(roomUrl).pathname
   expect(roomPath).toMatch(/^\/hangout\/[a-f0-9]{64}$/i)
 
-  await shareDialog.getByRole('link', { name: /Open room/i }).click()
+  await inviteDialog.getByRole('link', { name: /Open room/i }).click()
   await expect(creatorPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
-  await expect(creatorPage.getByRole('heading', { name: /Choose privately. Reveal where the group agrees/i })).toBeVisible()
-  await expect(creatorPage.getByText(/Invite 2 more people to unlock group matching/i)).toBeVisible()
+  await expect(creatorPage.getByText(/Your choices are saved privately/i)).toBeVisible()
+  await expect(creatorPage.getByText(/Invite 2 more people to start group matching/i)).toBeVisible()
 
   await signInThroughUi(friendOnePage, friendOne.email, friendOne.password, roomPath)
   await signInThroughUi(friendTwoPage, friendTwo.email, friendTwo.password, roomPath)
-  await expect(friendTwoPage.getByText(/3 of 3 joined/i)).toBeVisible()
+  await expect(friendTwoPage.getByText(/3 of 4 joined/i)).toBeVisible()
+  await expect(friendOnePage.locator('.date-swipe-card h2')).toHaveText(creatorTitle)
+  await expect(friendTwoPage.locator('.date-swipe-card h2')).toHaveText(creatorTitle)
 
-  const creatorTitle = await creatorPage.locator('.date-swipe-card h2').innerText()
-  expect(await friendOnePage.locator('.date-swipe-card h2').innerText()).toBe(creatorTitle)
-  expect(await friendTwoPage.locator('.date-swipe-card h2').innerText()).toBe(creatorTitle)
-
-  await saveCurrentCard(creatorPage, 'Easy transit and enough room for everyone.')
-  await expect(creatorPage.getByText(/Group match found/i)).toHaveCount(0)
-
-  await saveCurrentCard(friendOnePage, 'This works well for the whole group.')
+  const friendOneTitle = await saveSharedCard(friendOnePage, 'This works well for the whole group.')
+  expect(friendOneTitle).toBe(creatorTitle)
   await expect(friendOnePage.getByText(/Group match found/i)).toHaveCount(0)
 
-  await saveCurrentCard(friendTwoPage, 'I would happily meet everyone here.')
+  const friendTwoTitle = await saveSharedCard(friendTwoPage, 'I would happily meet everyone here.')
+  expect(friendTwoTitle).toBe(creatorTitle)
   const immediateMatch = friendTwoPage.getByRole('dialog')
   await expect(immediateMatch.getByRole('heading', { name: new RegExp(`Your group agrees on ${escapePattern(creatorTitle)}`, 'i') })).toBeVisible()
   await expect(immediateMatch.getByText(/3 people chose this location with no vetoes/i)).toBeVisible()

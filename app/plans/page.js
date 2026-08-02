@@ -7,41 +7,50 @@ import { getLocationPlansSnapshot } from '@/lib/app/location-plans-data'
 import { legacySystemsEnabled } from '@/lib/product-vision'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Saved and planned locations' }
+export const metadata = { title: 'Saved and plans' }
 
-const tabs = [
-  ['saved', 'Saved'],
-  ['planned', 'Planned'],
-  ['past', 'Past']
-]
+const tabs = [['saved', 'Saved'], ['planned', 'Plans']]
 
-function LocationCard({ item }) {
-  const timestamp = item.planned_for || item.visited_at || null
-  return <article className="plan-content-card">
-    <span>{item.status === 'planned' ? 'planned location' : item.status === 'visited' ? 'past location' : 'saved location'}</span>
-    <h2><Link href={item.href}>{item.title}</Link></h2><p>{item.summary}</p>
-    {item.city ? <small>{item.city}</small> : null}
-    {timestamp ? <small>{new Date(timestamp).toLocaleString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</small> : null}
+function photoUrl(session, path) {
+  if (!path) return null
+  if (String(path).startsWith('/')) return path
+  return session.supabase.storage.from('puddle-public-media').getPublicUrl(path).data.publicUrl
+}
+
+function dateLabel(value) {
+  if (!value) return null
+  return new Date(value).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
+function LocationCard({ item, session, active }) {
+  const image = photoUrl(session, item.cover_path)
+  const participants = item.participants?.length ? item.participants.join(', ') : null
+  return <article className="minimal-place-card">
+    <Link className="minimal-place-photo" href={item.href} style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={item.title} />
+    <div className="minimal-place-copy">
+      <span>{active === 'planned' ? 'Planned' : 'Saved'}</span>
+      <h2><Link href={item.href}>{item.title}</Link></h2>
+      {active === 'planned' && item.planned_for ? <small>{dateLabel(item.planned_for)}</small> : item.city ? <small>{item.city}</small> : null}
+      {participants ? <p>{participants}</p> : null}
+    </div>
+    <details className="minimal-overflow"><summary aria-label={`Options for ${item.title}`}>•••</summary><div><Link href={item.href}>Open</Link>{item.city ? <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title}, ${item.city}`)}`} target="_blank" rel="noreferrer">Map</a> : null}</div></details>
   </article>
 }
 
 export default async function PlansPage({ searchParams }) {
   if (legacySystemsEnabled()) return <LegacyPlansPage searchParams={searchParams} />
   const params = await searchParams
-  const active = tabs.some(([value]) => value === params?.tab) ? params.tab : 'saved'
+  const active = params?.tab === 'planned' ? 'planned' : params?.tab === 'past' ? 'past' : 'saved'
 
   return renderProductPage(async (session) => {
     const snapshot = await getLocationPlansSnapshot(session)
     const items = snapshot[active]
-    return <>
-      <section className="page-heading-row">
-        <div><span className="section-pill section-pill-yellow">Your places</span><h1 className="product-title">Saved, planned, and actually visited.</h1><p>Puddle keeps this area focused on locations selected through solo swiping, DateMatch, or Hangout Match.</p></div>
-        <div className="plans-heading-actions"><Link className="splash-button splash-button-mint" href="/map">Open map</Link><Link className="splash-button splash-button-pink" href="/discover">Swipe more locations</Link></div>
-      </section>
+    return <div className="minimal-list-page">
+      <header className="minimal-page-header"><h1>{active === 'past' ? 'History' : 'Saved'}</h1><Link href="/discover">Swipe</Link></header>
       <AuthMessage searchParams={params} />
-      {params?.legacy === 'disabled' ? <p className="date-swipe-message" role="status">That older Puddle feature is no longer part of the location-first product.</p> : null}
-      <nav className="tab-rail" aria-label="Location plan categories">{tabs.map(([value, label]) => <Link className={active === value ? 'is-active' : ''} href={`/plans?tab=${value}`} key={value}><span>{label}</span><strong>{snapshot.counts[value] || 0}</strong></Link>)}</nav>
-      {items.length ? <section className="plan-content-grid">{items.map((item) => <LocationCard item={item} key={`${active}:${item.location_id}`} />)}</section> : <EmptyState icon={active === 'planned' ? '⌖' : active === 'past' ? '✓' : '♡'} title={active === 'planned' ? 'No location planned yet.' : active === 'past' ? 'No past visits yet.' : 'No saved locations yet.'} description={active === 'planned' ? 'Choose a shared match and set a time when you are ready.' : active === 'past' ? 'Completed location plans will appear here.' : 'Save a location from your swipe deck to build a shortlist.'} actionHref="/discover" actionLabel="Start swiping" />}
-    </>
+      <nav className="minimal-tabs" aria-label="Saved and plans">{tabs.map(([value, label]) => <Link className={active === value ? 'is-active' : ''} href={`/plans?tab=${value}`} key={value}>{label}</Link>)}</nav>
+      {items.length ? <section className="minimal-place-grid">{items.map((item) => <LocationCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}</section> : <EmptyState icon="♡" title={active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : 'Nothing saved yet.'} description={active === 'planned' ? 'Plan a matched place when everyone is ready.' : active === 'past' ? 'Past visits appear here.' : 'Save a place while swiping.'} actionHref="/discover" actionLabel="Start swiping" />}
+      <footer className="minimal-history-link">{active === 'past' ? <Link href="/plans">Back to Saved</Link> : <Link href="/plans?tab=past">History</Link>}</footer>
+    </div>
   })
 }

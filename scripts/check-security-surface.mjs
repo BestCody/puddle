@@ -19,8 +19,6 @@ const protectedMutations = [
   'app/api/discovery/action/route.js',
   'app/api/date-match/start/route.js',
   'app/api/date-match/action/route.js',
-  'app/api/notifications/route.js',
-  'app/api/push/subscriptions/route.js',
   'app/api/media/upload/route.js'
 ]
 for (const path of protectedMutations) await requireMarkers(path, ['verifyCsrf', 'enforceRateLimit'])
@@ -47,7 +45,7 @@ for (const path of testScripts) {
 }
 
 const proxy = await source('proxy.js')
-for (const marker of ['hasSupabaseAuthCookie', 'needsSession', 'publicNoSessionPaths', 'sec-fetch-site', 'content-length']) if (!proxy.includes(marker)) findings.push(`proxy.js: missing ${marker}`)
+for (const marker of ['hasSupabaseAuthCookie', 'needsSession', 'publicNoSessionPaths', 'sec-fetch-site', 'content-length', "'/matches'"]) if (!proxy.includes(marker)) findings.push(`proxy.js: missing ${marker}`)
 const lookup = proxy.indexOf('await updateSession(request, requestHeaders)')
 const gate = proxy.indexOf('if (!needsSession)')
 if (gate < 0 || lookup < 0 || gate > lookup) findings.push('proxy.js: Supabase session lookup is not gated')
