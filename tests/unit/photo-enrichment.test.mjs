@@ -3,8 +3,12 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import {
   boundedInteger,
+  claimBatchSizes,
+  isStatementTimeout,
   parsePhotoImportSummary,
   photoDisplayState,
+  retryAfterMilliseconds,
+  retryDelayMilliseconds,
   shouldContinuePhotoEnrichment,
   validatePhotoImportSummary
 } from '../../lib/app/photo-enrichment.js'
@@ -19,16 +23,30 @@ test('bounds progressive photo worker configuration', () => {
 })
 
 test('parses and validates noisy importer summaries', () => {
-  const output = `provider warning\n${JSON.stringify({ inspected: 3, matched: 1, imported: 1, noMatch: 1, failed: 1, skipped: 0 }, null, 2)}\n`
+  const output = `provider warning\n${JSON.stringify({ inspected: 3, claimLimit: 3, matched: 1, imported: 1, noMatch: 1, failed: 1, skipped: 0 }, null, 2)}\n`
   const summary = validatePhotoImportSummary(parsePhotoImportSummary(output))
   assert.equal(summary.inspected, 3)
   assert.equal(summary.imported, 1)
+  assert.equal(summary.claimLimit, 3)
   assert.equal(shouldContinuePhotoEnrichment(summary, 3), true)
   assert.equal(shouldContinuePhotoEnrichment({ ...summary, inspected: 2 }, 3), false)
+  assert.equal(shouldContinuePhotoEnrichment({ ...summary, inspected: 2, claimLimit: 2 }, 3), true)
   assert.throws(
     () => validatePhotoImportSummary({ inspected: 3, matched: 1, imported: 1, noMatch: 0, failed: 0, skipped: 0 }),
     /settled 1 of 3/
   )
+})
+
+test('backs off statement timeouts and provider throttling deterministically', () => {
+  assert.deepEqual(claimBatchSizes(100), [100, 50, 25, 12, 6, 3, 1])
+  assert.deepEqual(claimBatchSizes(3, { min: 2 }), [3, 2])
+  assert.equal(isStatementTimeout({ code: '57014' }), true)
+  assert.equal(isStatementTimeout(new Error('canceling statement due to statement timeout')), true)
+  assert.equal(isStatementTimeout(new Error('other failure')), false)
+  assert.equal(retryAfterMilliseconds('2'), 2_000)
+  assert.equal(retryAfterMilliseconds(new Date(15_000).toUTCString(), 10_000), 5_000)
+  assert.equal(retryDelayMilliseconds({ attempt: 2, baseMs: 1_000 }), 4_000)
+  assert.equal(retryDelayMilliseconds({ attempt: 1, retryAfterMs: 9_000, baseMs: 1_000 }), 9_000)
 })
 
 test('only a genuine no-match receives the permanent placeholder state', () => {
@@ -39,18 +57,40 @@ test('only a genuine no-match receives the permanent placeholder state', () => {
   assert.equal(photoDisplayState('no_match', false), 'unavailable')
 })
 
-test('photo claims prioritize recent decks and nearby active users while remaining resumable', async () => {
-  const migration = await read('supabase/migrations/10022_progressive_photo_enrichment.sql')
+test('photo claims keep priority while bounding work and recovering transient failures', async () => {
+  const migration = await read('supabase/migrations/10023_photo_pipeline_hardening.sql')
   for (const marker of [
-    'recent_deck_locations',
-    'recommendation_candidates',
-    'recommendation_requests',
-    'near_active_locations',
-    'st_dwithin',
-    "now()-interval '2 hours'",
-    'for update of location skip locked'
-  ]) assert.ok(migration.includes(marker), `photo migration is missing ${marker}`)
-  assert.ok(migration.indexOf('deck.location_id is not null then 0') < migration.indexOf('nearby.location_id is not null then 1'))
+    "array['image/jpeg','image/png','image/webp','image/avif']",
+    'locations_open_photo_queue_idx',
+    'recent_deck_rows as materialized',
+    'limit 10000',
+    'fallback_pool as materialized',
+    'active_profiles_ranked as materialized',
+    'limit 250',
+    'for update of location skip locked',
+    "photo_enrichment_status='pending'"
+  ]) assert.ok(migration.includes(marker), `photo hardening migration is missing ${marker}`)
+  assert.ok(migration.indexOf('deck.id,deck.priority') < migration.indexOf('case when nearby.last_active is null then 2 else 1 end'))
+})
+
+test('the importer throttles providers, reduces timed-out claims, and tries alternate assets', async () => {
+  const importer = await read('scripts/import-open-location-photos.mjs')
+  for (const marker of [
+    'WIKIMEDIA_MIN_INTERVAL_MS',
+    "response.headers.get('retry-after')",
+    'MAX_CANDIDATES_PER_PROVIDER',
+    'claimBatchSizes(LIMIT',
+    'isStatementTimeout(result.error)',
+    'trying the next candidate'
+  ]) assert.ok(importer.includes(marker), `photo importer is missing ${marker}`)
+  assert.equal(importer.includes('&quot;'), false)
+})
+
+test('Geoapify detection requires a hostname boundary', async () => {
+  const geocoding = await read('lib/app/geocoding.js')
+  assert.ok(geocoding.includes("url.hostname === 'geoapify.com'"))
+  assert.ok(geocoding.includes("url.hostname.endsWith('.geoapify.com')"))
+  assert.equal(geocoding.includes("url.hostname.endsWith('geoapify.com')"), false)
 })
 
 test('the active card does not use Google photos and distinguishes search progress from no-match', async () => {
