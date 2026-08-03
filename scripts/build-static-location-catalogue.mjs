@@ -6,11 +6,16 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative } from 'node:path'
 import { gzip } from 'node:zlib'
 import { promisify } from 'node:util'
-import { normalizeOpenPlaceRecord } from '../lib/app/open-place-catalogue.js'
+import {
+  CATALOGUE_CATEGORY_MAPPING_VERSION,
+  CATALOGUE_NORMALIZATION_VERSION,
+  normalizeOpenPlaceRecord
+} from '../lib/app/open-place-catalogue.js'
 import {
   lonLatToTile,
   packStaticDetail,
   packStaticPlace,
+  packStaticProvenance,
   staticCatalogueSchema
 } from '../lib/app/static-catalogue.js'
 
@@ -97,7 +102,7 @@ class TileSpool {
   }
 }
 
-async function finalizeTile(spoolPath, deckPath, detailPath) {
+async function finalizeTile(spoolPath, deckPath, detailPath, provenancePath) {
   const records = []
   const seen = new Set()
   const lines = createInterface({ input: createReadStream(spoolPath), crlfDelay: Infinity })
@@ -105,27 +110,40 @@ async function finalizeTile(spoolPath, deckPath, detailPath) {
     if (!line.trim()) continue
     const record = JSON.parse(line)
     const key = `${record.d?.[0]}:${record.d?.[1]}`
-    if (!record.d || !record.f || seen.has(key)) continue
+    if (!record.d || !record.f || !record.p || seen.has(key)) continue
     seen.add(key)
     records.push(record)
   }
   records.sort((a, b) => String(a.d[2] || '').localeCompare(String(b.d[2] || '')) || Number(a.d[4] || 0) - Number(b.d[4] || 0) || Number(a.d[5] || 0) - Number(b.d[5] || 0))
   const deckBody = Buffer.from(JSON.stringify({ v: staticCatalogueSchema.version, p: records.map((record) => record.d) }))
   const detailBody = Buffer.from(JSON.stringify({ v: staticCatalogueSchema.version, d: records.map((record) => record.f) }))
-  const [deckCompressed, detailCompressed] = await Promise.all([
+  const provenanceBody = Buffer.from(JSON.stringify({ v: staticCatalogueSchema.version, p: records.map((record) => record.p) }))
+  const [deckCompressed, detailCompressed, provenanceCompressed] = await Promise.all([
     gzipAsync(deckBody, { level: 9 }),
-    gzipAsync(detailBody, { level: 9 })
+    gzipAsync(detailBody, { level: 9 }),
+    gzipAsync(provenanceBody, { level: 9 })
   ])
-  await Promise.all([mkdir(dirname(deckPath), { recursive: true }), mkdir(dirname(detailPath), { recursive: true })])
-  await Promise.all([writeFile(deckPath, deckCompressed), writeFile(detailPath, detailCompressed)])
+  await Promise.all([
+    mkdir(dirname(deckPath), { recursive: true }),
+    mkdir(dirname(detailPath), { recursive: true }),
+    mkdir(dirname(provenancePath), { recursive: true })
+  ])
+  await Promise.all([
+    writeFile(deckPath, deckCompressed),
+    writeFile(detailPath, detailCompressed),
+    writeFile(provenancePath, provenanceCompressed)
+  ])
   return {
     places: records.length,
     deckBytes: deckBody.length,
     deckCompressedBytes: deckCompressed.length,
     detailBytes: detailBody.length,
     detailCompressedBytes: detailCompressed.length,
+    provenanceBytes: provenanceBody.length,
+    provenanceCompressedBytes: provenanceCompressed.length,
     deckSha256: sha256(deckCompressed),
-    detailSha256: sha256(detailCompressed)
+    detailSha256: sha256(detailCompressed),
+    provenanceSha256: sha256(provenanceCompressed)
   }
 }
 
@@ -135,6 +153,7 @@ const outputRoot = join(OUTPUT)
 const releaseRoot = join(outputRoot, 'catalogue', 'releases', RELEASE)
 const tileRoot = join(releaseRoot, 'tiles')
 const detailRoot = join(releaseRoot, 'details')
+const provenanceRoot = join(releaseRoot, 'provenance')
 const spool = new TileSpool(spoolRoot)
 const rejectionReasons = {}
 let read = 0
@@ -164,7 +183,8 @@ try {
     const tile = lonLatToTile(item.longitude, item.latitude, ZOOM)
     await spool.append(tile, {
       d: packStaticPlace(item, SOURCE),
-      f: packStaticDetail(item, SOURCE)
+      f: packStaticDetail(item, SOURCE),
+      p: packStaticProvenance(item, SOURCE)
     })
     accepted += 1
     if (accepted % 25_000 === 0) console.log(`Accepted ${accepted.toLocaleString()} places.`)
@@ -176,23 +196,28 @@ try {
   let uniquePlaces = 0
   let deckCompressedBytes = 0
   let detailCompressedBytes = 0
+  let provenanceCompressedBytes = 0
   for (const [index, spoolPath] of spoolFiles.entries()) {
     const relativeBase = relative(spoolRoot, spoolPath).replace(/\.jsonl$/, '.json.gz')
     const result = await finalizeTile(
       spoolPath,
       join(tileRoot, relativeBase),
-      join(detailRoot, relativeBase)
+      join(detailRoot, relativeBase),
+      join(provenanceRoot, relativeBase)
     )
     uniquePlaces += result.places
     deckCompressedBytes += result.deckCompressedBytes
     detailCompressedBytes += result.detailCompressedBytes
+    provenanceCompressedBytes += result.provenanceCompressedBytes
     tiles.push({
       key: relativeBase.replace(/\\/g, '/').replace(/\.json\.gz$/, '.json'),
       places: result.places,
       deckCompressedBytes: result.deckCompressedBytes,
       detailCompressedBytes: result.detailCompressedBytes,
+      provenanceCompressedBytes: result.provenanceCompressedBytes,
       deckSha256: result.deckSha256,
-      detailSha256: result.detailSha256
+      detailSha256: result.detailSha256,
+      provenanceSha256: result.provenanceSha256
     })
     if ((index + 1) % 500 === 0) console.log(`Finalized ${index + 1}/${spoolFiles.length} tiles.`)
   }
@@ -211,15 +236,19 @@ try {
     zoom: ZOOM,
     builtAt,
     sourceFile: basename(FILE),
+    normalizationVersion: CATALOGUE_NORMALIZATION_VERSION,
+    categoryMappingVersion: CATALOGUE_CATEGORY_MAPPING_VERSION,
     read,
     accepted,
     places: uniquePlaces,
     tileCount: tiles.length,
     deckCompressedBytes,
     detailCompressedBytes,
+    provenanceCompressedBytes,
     rejectionReasons,
     deckFields: staticCatalogueSchema.placeFields,
     detailFields: staticCatalogueSchema.detailFields,
+    provenanceFields: staticCatalogueSchema.provenanceFields,
     tiles
   }
   await mkdir(releaseRoot, { recursive: true })
@@ -231,10 +260,13 @@ try {
     source: SOURCE,
     zoom: ZOOM,
     builtAt,
+    normalizationVersion: CATALOGUE_NORMALIZATION_VERSION,
+    categoryMappingVersion: CATALOGUE_CATEGORY_MAPPING_VERSION,
     places: uniquePlaces,
     tileCount: tiles.length,
     deckCompressedBytes,
     detailCompressedBytes,
+    provenanceCompressedBytes,
     placeholdersPrefix: 'catalogue/placeholders',
     mediaPrefix: `catalogue/media/v${staticCatalogueSchema.mediaVersion}`
   }), 'utf8')
@@ -242,7 +274,7 @@ try {
   console.log(JSON.stringify({
     mode: 'build', output: outputRoot, release: RELEASE, source: SOURCE, zoom: ZOOM,
     read, accepted, uniquePlaces, tileCount: tiles.length, deckCompressedBytes,
-    detailCompressedBytes, rejectionReasons
+    detailCompressedBytes, provenanceCompressedBytes, rejectionReasons
   }, null, 2))
 } finally {
   await spool.close().catch(() => {})
