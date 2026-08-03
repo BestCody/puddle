@@ -79,6 +79,11 @@ test('R2 media overlays rank cached photos first and mount Google UI Kit only fo
   await installGoogleUiKitStub(page)
   await openFilteredDeck(page, account, 'E2E Media')
 
+  const actionRequests = []
+  page.on('request', (request) => {
+    if (request.url().includes('/api/discovery/actions')) actionRequests.push(request)
+  })
+
   const card = page.locator('.minimal-swipe-card')
   await expect(card.locator('h1')).toHaveText('E2E Media Photo Cafe')
   await expect(page.locator('.minimal-swipe-photo')).toHaveAttribute('style', /e2e-media\.png/)
@@ -93,6 +98,8 @@ test('R2 media overlays rank cached photos first and mount Google UI Kit only fo
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(card.locator('h1')).toHaveText('E2E Media Placeholder Park')
   await expect(page.locator('gmp-place-details-compact')).toHaveCount(0)
+  await expect.poll(() => actionRequests.length).toBe(1)
+  expect(actionRequests[0].postDataJSON().actions).toHaveLength(2)
 })
 
 test('passing and undoing an R2 card uses compact action state without materializing a location', async ({ page }) => {
@@ -114,7 +121,7 @@ test('passing and undoing an R2 card uses compact action state without materiali
     () => compactAction(account.user.id, first.id),
     { message: 'The compact static dismissal was not stored.' }
   )
-  expect(dismissal.action).toBe('dismissed')
+  expect(Object.keys(dismissal).sort()).toEqual(['expires_at', 'location_id', 'user_id'])
   expect(new Date(dismissal.expires_at).getTime()).toBeGreaterThan(Date.now())
   expect(await locationRow(first.id)).toBeNull()
 
@@ -167,7 +174,7 @@ test('saving an R2 card materializes its exact signed catalogue record and retai
   const catalogueReads = diagnostics.requests
     .map((entry) => entry.path)
     .filter((path) => path.includes('/catalogue/releases/'))
-  const unexpected = catalogueReads.filter((path) => !path.endsWith('.json') || !path.includes('/e2e-static-v2/'))
+  const unexpected = catalogueReads.filter((path) => !path.endsWith('.json') || !path.includes('/e2e-static-v3/'))
   expect(unexpected).toEqual([])
 })
 
