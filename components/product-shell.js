@@ -48,6 +48,8 @@ export async function ProductShell({ user, profile, children }) {
         </header>
         <main className="product-main minimal-product-main">{children}</main>
       </div>
+
+      <ProductNav mobile />
     </div>
   )
 }
