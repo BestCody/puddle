@@ -20,6 +20,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Patch cleanup marker in cutover script
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/permanent-location-first-cutover.py')
+          s=p.read_text()
+          old='''old = """let releases\\nif (registry.releases.length) {\\n  releases = registry.releases.map((entry) => entry.release).filter(Boolean)\\n} else {\\n  const releaseObjects = await allObjects('catalogue/releases/')\\n  releases = [...new Set(releaseObjects.map((object) => object.key.split('/')[2]).filter(Boolean))]\\n}\\nreleases = [...new Set(releases)].sort().reverse()"""'''
+          new='''old = """let releases = registry.releases.map((item) => item?.release).filter(Boolean)\\nif (!releases.length) {\\n  const releaseObjects = await allObjects('catalogue/releases/')\\n  releases = [...new Set(releaseObjects.map((object) => object.key.split('/')[2]).filter(Boolean))].sort().reverse()\\n}"""'''
+          if old not in s: raise SystemExit('cutover script cleanup marker was not found')
+          p.write_text(s.replace(old,new))
+          PY
       - name: Apply cutover
         id: cutover
         continue-on-error: true
