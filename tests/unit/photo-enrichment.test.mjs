@@ -110,13 +110,15 @@ test('the active card uses Google Places UI Kit only as a live fallback and keep
   assert.ok(card.includes('Wikimedia Commons, Mapillary, and KartaView'))
 })
 
-test('catalogue refresh no longer performs the one-off 200-photo pass', async () => {
-  const catalogueWorkflow = await read('.github/workflows/catalogue-refresh.yml')
+test('the active photo worker has one direct-to-R2 path', async () => {
   const photoWorkflow = await read('.github/workflows/photo-enrichment.yml')
-  assert.ok(catalogueWorkflow.includes("CATALOGUE_PHOTO_ENRICH: 'false'"))
-  assert.equal(catalogueWorkflow.includes('CATALOGUE_REFRESH_PHOTO_LIMIT'), false)
+  const packageJson = JSON.parse(await read('package.json'))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_BATCH_SIZE: '100'"))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_MAX_BATCHES: '50'"))
   assert.ok(photoWorkflow.includes("cron: '17 */4 * * *'"))
   assert.ok(photoWorkflow.includes('npm run locations:photos:enrich'))
+  assert.equal(photoWorkflow.includes('PHOTO_ENRICH_MIGRATOR'), false)
+  assert.equal(packageJson.scripts['locations:photos:migrate-r2'], undefined)
+  assert.equal(packageJson.scripts['locations:catalogue:open'], undefined)
+  assert.equal(packageJson.scripts['locations:catalogue:refresh'], undefined)
 })
