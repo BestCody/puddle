@@ -31,14 +31,18 @@ test('real photos prefer primary and trusted first-party sources', () => {
   assert.equal(chooseLocationPhoto(rows.filter((row) => !row.is_primary), now)?.id, 'venue')
 })
 
-test('photo metadata exposes attribution without remote provider URL', () => {
+test('photo metadata exposes attribution and managed storage details without remote provider URL', () => {
   const metadata = photoMetadata({
     id: '123', source: 'provider', provider: 'licensed-provider', attribution_text: 'Photo by Pat',
-    attribution_url: 'https://example.com/photo', license_code: 'display-license', width: 1200, height: 800
+    attribution_url: 'https://example.com/photo', license_code: 'display-license', width: 1200, height: 800,
+    storage_backend: 'r2', storage_key: 'photos/open/ab/abc.avif', byte_size: 42000,
+    remote_url: 'https://provider.example.com/secret-original.jpg'
   })
   assert.deepEqual(metadata, {
     id: '123', source: 'provider', provider: 'licensed-provider', attribution: 'Photo by Pat',
-    attributionUrl: 'https://example.com/photo', license: 'display-license', width: 1200, height: 800
+    attributionUrl: 'https://example.com/photo', license: 'display-license', width: 1200, height: 800,
+    storageBackend: 'r2', storageKey: 'photos/open/ab/abc.avif', byteSize: 42000
   })
+  assert.equal(Object.hasOwn(metadata, 'remoteUrl'), false)
   assert.equal(providerPhotoPath('123'), '/api/location-photos/123')
 })
