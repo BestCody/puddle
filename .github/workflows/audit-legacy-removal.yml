@@ -20,10 +20,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Patch cleanup marker in cutover script
+      - name: Patch and apply cutover
+        id: cutover
+        continue-on-error: true
         shell: bash
         run: |
-          python - <<'PY'
+          {
+            python - <<'PY'
           from pathlib import Path
           p=Path('scripts/permanent-location-first-cutover.py')
           s=p.read_text()
@@ -36,11 +39,8 @@ jobs:
           }"""'''
           p.write_text(s[:start]+replacement+s[end:])
           PY
-      - name: Apply cutover
-        id: cutover
-        continue-on-error: true
-        shell: bash
-        run: python scripts/permanent-location-first-cutover.py > cutover-output.txt 2>&1
+            python scripts/permanent-location-first-cutover.py
+          } > cutover-output.txt 2>&1
       - name: Commit failure diagnostics
         if: steps.cutover.outcome == 'failure'
         shell: bash
