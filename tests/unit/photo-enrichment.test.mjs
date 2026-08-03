@@ -93,10 +93,18 @@ test('Geoapify detection requires a hostname boundary', async () => {
   assert.equal(geocoding.includes("url.hostname.endsWith('geoapify.com')"), false)
 })
 
-test('the active card does not use Google photos and distinguishes search progress from no-match', async () => {
+test('the active card uses Google Places UI Kit only as a live fallback and keeps open-photo states', async () => {
   const card = await read('components/minimal-swipe-card.js')
-  assert.equal(card.includes('GooglePlacePhotoFallback'), false)
-  assert.equal(card.includes('google_place_id'), false)
+  const googleFallback = await read('components/google-place-photo-fallback.js')
+  assert.ok(card.includes('GooglePlacePhotoFallback'))
+  assert.ok(card.includes('item.google_place_id'))
+  assert.ok(card.includes('!mainPhoto && Boolean(item.google_place_id)'))
+  assert.ok(googleFallback.includes("window.google.maps.importLibrary('places')"))
+  assert.ok(googleFallback.includes("document.createElement('gmp-place-details-compact')"))
+  assert.ok(googleFallback.includes("request.setAttribute('place', String(placeId))"))
+  assert.equal(googleFallback.includes('/api/location-google-place/'), false)
+  assert.equal(googleFallback.includes('photoUri'), false)
+  assert.equal(googleFallback.includes('photos.googleapis.com'), false)
   assert.ok(card.includes('/api/location-photo-status/'))
   assert.ok(card.includes("displayState === 'unavailable'"))
   assert.ok(card.includes('Wikimedia Commons, Mapillary, and KartaView'))
