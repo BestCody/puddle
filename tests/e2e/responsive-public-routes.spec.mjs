@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { assertNoHorizontalOverflow } from './support.mjs'
+import { assertImagesLoaded, assertLandingVisualContract, trackFrontendHealth } from './frontend-health.mjs'
 
 const publicPages = [
   ['/', 'Puddle'],
@@ -10,10 +11,10 @@ const publicPages = [
 ]
 
 for (const [path, heading] of publicPages) {
-  test(`${path} renders without horizontal overflow`, async ({ page }) => {
-    const cspErrors = []
-    page.on('console', (message) => {
-      if (message.type() === 'error' && /content security policy/i.test(message.text())) cspErrors.push(message.text())
+  test(`${path} renders without frontend failures or horizontal overflow`, async ({ page }, testInfo) => {
+    const health = trackFrontendHealth(page, {
+      baseURL: testInfo.project.use.baseURL,
+      strictConsole: path === '/'
     })
 
     await page.goto(path)
@@ -22,10 +23,25 @@ for (const [path, heading] of publicPages) {
     } else {
       await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
     }
+
+    await assertImagesLoaded(page)
     await assertNoHorizontalOverflow(page)
-    if (path === '/privacy' || path === '/terms') expect(cspErrors).toEqual([])
+    health.assertHealthy()
   })
 }
+
+test('landing page preserves its desktop and mobile visual structure', async ({ page }, testInfo) => {
+  const health = trackFrontendHealth(page, {
+    baseURL: testInfo.project.use.baseURL,
+    strictConsole: true
+  })
+
+  await page.goto('/')
+  await assertLandingVisualContract(page)
+  await assertImagesLoaded(page)
+  await assertNoHorizontalOverflow(page)
+  health.assertHealthy()
+})
 
 test('landing page links to signup, privacy, and terms', async ({ page }) => {
   await page.goto('/')
