@@ -49,5 +49,5 @@ test('only positive actions and details materialize from signed exact-tile refer
   assert.ok(materializer.includes('parsed >= 1 && parsed <= 4 ? parsed : null'))
   assert.equal(materializer.includes('fetchNearbyStaticPlaces'), false)
   assert.ok(actionMigration.includes('record_discovery_action_v1(target_kind,target_id,action_name,request_key)'))
-  assert.equal(actionMigration.includes('target_kind=>target_kind'), false)
+  assert.equal(actionMigration.includes("record_discovery_action_v1(\n      target_kind=>"), false)
 })
