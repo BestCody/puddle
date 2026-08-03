@@ -23,10 +23,10 @@ test('materialized static slugs are stable and collision resistant', () => {
 })
 
 test('discovery uses one relational overlay RPC without catalogue writes or fallback', async () => {
-  const infrastructure = await read('lib/app/discovery-infrastructure.js')
+  const infrastructure = await read('lib/app/discovery-infrastructure-v2.js')
   assert.equal(infrastructure.includes('upsert_open_catalogue_batch_v1'), false)
   assert.equal(infrastructure.includes(".from('location_source_links')"), false)
-  assert.ok(infrastructure.includes("supabase.rpc('r2_discovery_overlay_v1'"))
+  assert.ok(infrastructure.includes("session.supabase.rpc('r2_discovery_overlay_v1'"))
   assert.ok(infrastructure.includes("catalogue: 'r2-primary'"))
   assert.ok(infrastructure.includes('static_catalogue_ephemeral'))
   assert.ok(infrastructure.includes('static_ref'))
@@ -36,13 +36,15 @@ test('discovery uses one relational overlay RPC without catalogue writes or fall
 
 test('positive actions and shared decks batch exact-tile materialization', async () => {
   const action = await read('app/api/discovery/actions/route.js')
+  const actionMigration = await read('supabase/migrations/10031_discovery_actions_v4.sql')
   const sharedDeck = await read('app/api/date-match/start/route.js')
   const details = await read('app/api/static-catalogue/open/[id]/route.js')
   const materializer = await read('lib/app/static-catalogue-materialization.js')
   const migration = await read('supabase/migrations/10028_r2_runtime_second_optimization.sql')
   assert.ok(action.includes('MATERIALIZING_ACTIONS'))
   assert.ok(action.includes('materializeStaticCatalogueReferences'))
-  assert.ok(action.includes("supabase.rpc('record_discovery_actions_v3'"))
+  assert.ok(action.includes("supabase.rpc('record_discovery_actions_v4'"))
+  assert.ok(actionMigration.includes('return public.record_discovery_actions_v3(actions)'))
   assert.equal(action.includes('radiusKm'), false)
   assert.ok(sharedDeck.includes('staticRefs'))
   assert.ok(details.includes('staticRef'))

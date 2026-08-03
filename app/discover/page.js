@@ -2,7 +2,7 @@ import { after } from 'next/server'
 import { AuthMessage } from '@/components/auth-message'
 import { DateSwipeWorkspaceV2 } from '@/components/date-swipe-workspace-v2'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getInfrastructureDiscoveryFeed, recordSampledInfrastructureAnalytics } from '@/lib/app/discovery-infrastructure'
+import { getInfrastructureDiscoveryFeedV2, recordSampledInfrastructureAnalyticsV2 } from '@/lib/app/discovery-infrastructure-v2'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -32,8 +32,8 @@ export default async function DiscoverPage({ searchParams }) {
       openNow: params?.openNow === 'true',
       accessible: params?.accessible === 'true'
     }
-    const feed = await getInfrastructureDiscoveryFeed(session, feedFilters)
-    after(() => recordSampledInfrastructureAnalytics(session, feed)
+    const feed = await getInfrastructureDiscoveryFeedV2(session, feedFilters)
+    after(() => recordSampledInfrastructureAnalyticsV2(session, feed)
       .catch((error) => console.warn(`Sampled discovery analytics failed: ${error.message}`)))
 
     return <div className="minimal-swipe-page">

@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { DateMatchWorkspace } from '@/components/date-match-workspace'
+import { DateMatchWorkspaceRealtime } from '@/components/date-match-workspace-realtime'
 import { EmptyState } from '@/components/empty-state'
-import { getDateMatchSnapshot } from '@/lib/app/date-match'
+import { getDateMatchSnapshotV2 } from '@/lib/app/date-match-snapshot'
 import { renderProductPage } from '@/lib/app/render-product-page'
 
 export const dynamic = 'force-dynamic'
@@ -14,7 +14,7 @@ export const metadata = {
 export default async function HangoutMatchPage({ params }) {
   const { token } = await params
   return renderProductPage(async (session) => {
-    const snapshot = await getDateMatchSnapshot(session, token)
+    const snapshot = await getDateMatchSnapshotV2(session, token)
     if (!snapshot) {
       return <EmptyState icon="♡♡♡" title="This Hangout Match is unavailable." description="The invitation may be invalid, expired, or the group may already be full." actionHref="/discover" actionLabel="Start a new group deck" />
     }
@@ -42,7 +42,7 @@ export default async function HangoutMatchPage({ params }) {
         </div>
         <div className="date-swipe-heading-mark" aria-hidden="true"><span>♡♡♡</span><strong>⇄</strong></div>
       </section>
-      <DateMatchWorkspace initialSnapshot={snapshot} />
+      <DateMatchWorkspaceRealtime initialSnapshot={snapshot} />
       <p className="date-match-back-link"><Link href="/discover">← Return to your personal deck</Link></p>
     </>
   })
