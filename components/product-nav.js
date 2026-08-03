@@ -43,11 +43,8 @@ function NavItems({ mobile = false }) {
   })
 }
 
-export function ProductNav() {
-  return (
-    <>
-      <nav className="product-nav minimal-product-nav" aria-label="Puddle navigation"><NavItems /></nav>
-      <nav className="mobile-product-nav minimal-mobile-nav" aria-label="Puddle mobile navigation"><NavItems mobile /></nav>
-    </>
-  )
+export function ProductNav({ mobile = false }) {
+  return mobile
+    ? <nav className="mobile-product-nav minimal-mobile-nav" aria-label="Puddle mobile navigation"><NavItems mobile /></nav>
+    : <nav className="product-nav minimal-product-nav" aria-label="Puddle navigation"><NavItems /></nav>
 }
