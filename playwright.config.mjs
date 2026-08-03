@@ -8,12 +8,12 @@ const serverCommand = process.env.CI
 const runtimeEnv = {
   ...process.env,
   E2E_DIAGNOSTICS: 'true',
-  PUDDLE_LEGACY_SYSTEMS_ENABLED: 'false',
   STATIC_CATALOGUE_BASE_URL: r2BaseURL,
   NEXT_PUBLIC_CATALOGUE_ASSET_BASE_URL: r2BaseURL,
   STATIC_CATALOGUE_ALLOW_INSECURE_LOCALHOST: 'true',
   STATIC_CATALOGUE_ACTION_SECRET: process.env.STATIC_CATALOGUE_ACTION_SECRET || 'puddle-e2e-static-reference-secret-2026',
   STATIC_CATALOGUE_MAX_TILES: '16',
+  STATIC_CATALOGUE_TILE_CONCURRENCY: '4',
   STATIC_CATALOGUE_DISCOVERY_LIMIT: '144',
   NEXT_PUBLIC_GOOGLE_PLACES_UI_KIT_ENABLED: 'true',
   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'e2e-google-browser-key'
@@ -39,10 +39,7 @@ export default defineConfig({
     video: 'retain-on-failure'
   },
   projects: [
-    {
-      name: 'desktop-chromium',
-      use: { ...devices['Desktop Chrome'] }
-    },
+    { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
     {
       name: 'mobile-chromium',
       testMatch: /responsive-public-routes\.spec\.mjs/,
