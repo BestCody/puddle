@@ -1,0 +1,1159 @@
+=== MATCHES ===
+supabase/migrations/0001_puddle_core.sql:113:  status text not null default 'interested' check (status in ('interested','going','waitlisted','cancelled','checked_in')),
+supabase/migrations/0001_puddle_core.sql:256:  state text not null default 'open' check (state in ('open','triaged','investigating','actioned','dismissed','appealed')),
+supabase/migrations/0003_unified_product_foundation.sql:130:  state text not null check (state in ('saved','interested','attending','visited','hosting')),
+supabase/migrations/0005_content_creation_and_publication.sql:21:alter table public.events add column if not exists autosaved_at timestamptz;
+supabase/migrations/0005_content_creation_and_publication.sql:46:alter table public.locations add column if not exists autosaved_at timestamptz;
+supabase/migrations/0008_secure_media_and_discovery.sql:234:create table public.discovery_actions (
+supabase/migrations/0008_secure_media_and_discovery.sql:241:  action text not null check (action in ('saved','interested','dismissed','visited')),
+supabase/migrations/0008_secure_media_and_discovery.sql:242:  undone_at timestamptz,
+supabase/migrations/0008_secure_media_and_discovery.sql:246:create index discovery_actions_profile_idx on public.discovery_actions(profile_id,created_at desc);
+supabase/migrations/0008_secure_media_and_discovery.sql:247:create index discovery_actions_target_idx on public.discovery_actions(event_id,location_id,created_at desc);
+supabase/migrations/0008_secure_media_and_discovery.sql:250:alter table public.discovery_actions enable row level security;
+supabase/migrations/0008_secure_media_and_discovery.sql:253:create policy "users read own discovery actions" on public.discovery_actions for select using (profile_id=auth.uid() or public.is_admin());
+supabase/migrations/0008_secure_media_and_discovery.sql:296:create or replace function public.record_discovery_action_v1(target_kind text,target_id uuid,action_name text,request_key text default null)
+supabase/migrations/0008_secure_media_and_discovery.sql:298:declare actor uuid:=auth.uid();request_uuid uuid;previous public.discovery_actions%rowtype;
+supabase/migrations/0008_secure_media_and_discovery.sql:302:  if action_name not in ('saved','interested','dismissed','visited','undo') then raise exception 'invalid action'; end if;
+supabase/migrations/0008_secure_media_and_discovery.sql:308:    select * into previous from public.discovery_actions where profile_id=actor
+supabase/migrations/0008_secure_media_and_discovery.sql:309:      and ((target_kind='event' and event_id=target_id) or (target_kind='place' and location_id=target_id)) and undone_at is null
+supabase/migrations/0008_secure_media_and_discovery.sql:312:    update public.discovery_actions set undone_at=now() where id=previous.id;
+supabase/migrations/0008_secure_media_and_discovery.sql:313:    if previous.action in ('saved','interested','visited') then
+supabase/migrations/0008_secure_media_and_discovery.sql:320:  if action_name in ('saved','interested','visited') then
+supabase/migrations/0008_secure_media_and_discovery.sql:321:    update public.discovery_actions set undone_at=now() where profile_id=actor and action='dismissed' and undone_at is null
+supabase/migrations/0008_secure_media_and_discovery.sql:328:  insert into public.discovery_actions(profile_id,request_id,content_kind,event_id,location_id,action)
+supabase/migrations/0008_secure_media_and_discovery.sql:330:  return jsonb_build_object('saved',true,'action',action_name);
+supabase/migrations/0008_secure_media_and_discovery.sql:336:revoke all on function public.record_discovery_action_v1(text,uuid,text,text) from public,anon;
+supabase/migrations/0008_secure_media_and_discovery.sql:344:grant select on public.discovery_actions to authenticated;
+supabase/migrations/0008_secure_media_and_discovery.sql:345:grant usage,select on sequence public.discovery_impressions_id_seq,public.discovery_actions_id_seq to authenticated;
+supabase/migrations/0008_secure_media_and_discovery.sql:349:grant execute on function public.record_discovery_action_v1(text,uuid,text,text) to authenticated;
+supabase/migrations/0009_plans_rsvps_and_collaboration.sql:15:alter table public.event_rsvps add constraint event_rsvps_status_check check (status in ('interested','requested','going','waitlisted','declined','cancelled','checked_in'));
+supabase/migrations/0009_plans_rsvps_and_collaboration.sql:162:create table public.location_visits (
+supabase/migrations/0009_plans_rsvps_and_collaboration.sql:173:create index location_visits_profile_idx on public.location_visits(profile_id,status,coalesce(planned_for,visited_at,created_at));
+supabase/migrations/0009_plans_rsvps_and_collaboration.sql:319:alter table public.location_visits enable row level security;
+supabase/migrations/0009_plans_rsvps_and_collaboration.sql:333:create policy "users manage own location visits" on public.location_visits for all using (profile_id=auth.uid()) with check (profile_id=auth.uid());
+supabase/migrations/0009_plans_rsvps_and_collaboration.sql:392:grant select,insert,update,delete on public.location_visits,public.plans,public.plan_members,public.plan_availability,public.plan_stops,public.plan_polls,public.plan_poll_options,public.plan_votes,public.plan_messages to authenticated;
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:137:  outcome text not null check (outcome in ('impression','opened','saved','dismissed','interested','rsvp','ticket_purchase','visited','followed_host','undo','report','block')),
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:187:  select e.category,case d.action when 'visited' then 5 when 'saved' then 3 when 'interested' then 2 else 0 end::numeric weight,d.created_at
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:188:  from public.discovery_actions d join actor a on a.id=d.profile_id join public.events e on e.id=d.event_id where d.undone_at is null
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:190:  select l.kind,case d.action when 'visited' then 5 when 'saved' then 3 when 'interested' then 2 else 0 end::numeric,d.created_at
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:191:  from public.discovery_actions d join actor a on a.id=d.profile_id join public.locations l on l.id=d.location_id where d.undone_at is null
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:193:  select e.category,case s.state when 'visited' then 6 when 'attending' then 5 when 'saved' then 3 when 'interested' then 2 else 0 end::numeric,s.created_at
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:194:  from public.user_content_states s join actor a on a.id=s.profile_id join public.events e on e.id=s.event_id where s.state in ('saved','interested','attending','visited')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:196:  select l.kind,case s.state when 'visited' then 6 when 'saved' then 3 else 0 end::numeric,s.created_at
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:197:  from public.user_content_states s join actor a on a.id=s.profile_id join public.locations l on l.id=s.location_id where s.state in ('saved','visited')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:204:  select e.category,case r.status when 'checked_in' then 7 when 'going' then 5 when 'interested' then 2 when 'requested' then 2 else 0 end::numeric,r.created_at
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:205:  from public.event_rsvps r join actor a on a.id=r.profile_id join public.events e on e.id=r.event_id where r.status in ('interested','requested','going','checked_in')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:211:  select l.kind,case v.status when 'visited' then 7 when 'planned' then 2 else 0 end::numeric,v.updated_at from public.location_visits v join actor a on a.id=v.profile_id join public.locations l on l.id=v.location_id where v.status in ('visited','planned')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:216:  from public.discovery_actions d join actor a on a.id=d.profile_id left join public.events e on e.id=d.event_id left join public.locations l on l.id=d.location_id
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:217:  where d.action='dismissed' and d.undone_at is null
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:229:  from public.discovery_actions d join friends f on f.friend_id=d.profile_id join public.profiles fp on fp.id=f.friend_id left join public.events e on e.id=d.event_id left join public.locations l on l.id=d.location_id,prefs
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:230:  where friend_activity_enabled and (fp.activity_visibility in ('friends','public') or (fp.activity_visibility='close_friends' and exists(select 1 from public.friend_close_friends cf where cf.profile_id=fp.id and cf.friend_id=(select id from actor)))) and d.undone_at is null and d.action in ('saved','interested','visited') and d.created_at>now()-interval '60 days'
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:257:    from public.event_rsvps r join public.events e on e.id=r.event_id where r.profile_id=target_profile and r.status in ('interested','requested','going','checked_in')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:259:    select concat_ws(' ',l.name,l.kind,l.summary),case v.status when 'visited' then 7 else 2 end,v.updated_at from public.location_visits v join public.locations l on l.id=v.location_id where v.profile_id=target_profile and v.status in ('visited','planned')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:261:    select concat_ws(' ',e.title,e.category,e.summary),case d.action when 'visited' then 6 when 'saved' then 4 else 2 end,d.created_at from public.discovery_actions d join public.events e on e.id=d.event_id where d.profile_id=target_profile and d.undone_at is null and d.action in ('saved','interested','visited')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:263:    select concat_ws(' ',l.name,l.kind,l.summary),case d.action when 'visited' then 6 when 'saved' then 4 else 2 end,d.created_at from public.discovery_actions d join public.locations l on l.id=d.location_id where d.profile_id=target_profile and d.undone_at is null and d.action in ('saved','interested','visited')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:265:    select concat_ws(' ',e.title,e.category,e.summary),case s.state when 'visited' then 6 when 'attending' then 5 when 'saved' then 4 else 2 end,s.created_at from public.user_content_states s join public.events e on e.id=s.event_id where s.profile_id=target_profile and s.state in ('saved','interested','attending','visited')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:267:    select concat_ws(' ',l.name,l.kind,l.summary),case s.state when 'visited' then 6 else 4 end,s.created_at from public.user_content_states s join public.locations l on l.id=s.location_id where s.profile_id=target_profile and s.state in ('saved','visited')
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:324:drop trigger if exists discovery_actions_queue_preference on public.discovery_actions;
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:325:create trigger discovery_actions_queue_preference after insert or update of action,undone_at on public.discovery_actions for each row execute function public.queue_preference_embedding_v1();
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:330:drop trigger if exists location_visits_queue_preference on public.location_visits;
+supabase/migrations/0015_hybrid_recommendation_foundation.sql:331:create trigger location_visits_queue_preference after insert or delete or update of status on public.location_visits for each row execute function public.queue_preference_embedding_v1();
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:103:      (count(*) filter(where r.status in ('going','checked_in'))*3 + count(*) filter(where r.status in ('interested','requested')) +
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:104:       (select count(*)*2 from public.discovery_actions d where d.event_id=e.id and d.undone_at is null and d.action in ('saved','interested','visited')) +
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:109:    select count(*)::numeric engagement from public.discovery_actions d join friends f on f.friend_id=d.profile_id join public.profiles fp on fp.id=f.friend_id
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:110:    where (fp.activity_visibility in ('friends','public') or (fp.activity_visibility='close_friends' and exists(select 1 from public.friend_close_friends cf where cf.profile_id=fp.id and cf.friend_id=(select id from actor)))) and d.event_id=e.id and d.undone_at is null and d.action in ('saved','interested','visited') and d.created_at>now()-interval '60 days' and prefs.friend_enabled
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:139:    select ((select count(*)*3 from public.location_visits v where v.location_id=l.id and v.status='visited') +
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:140:      (select count(*)*2 from public.discovery_actions d where d.location_id=l.id and d.undone_at is null and d.action in ('saved','interested','visited')))::numeric engagement
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:143:    select count(*)::numeric engagement from public.discovery_actions d join friends f on f.friend_id=d.profile_id join public.profiles fp on fp.id=f.friend_id
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:144:    where (fp.activity_visibility in ('friends','public') or (fp.activity_visibility='close_friends' and exists(select 1 from public.friend_close_friends cf where cf.profile_id=fp.id and cf.friend_id=(select id from actor)))) and d.location_id=l.id and d.undone_at is null and d.action in ('saved','interested','visited') and d.created_at>now()-interval '60 days' and prefs.friend_enabled
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:164:  if target_kind not in ('event','place') or outcome_name not in ('impression','opened','saved','dismissed','interested','rsvp','ticket_purchase','visited','followed_host','undo','report','block') then raise exception 'invalid recommendation outcome'; end if;
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:179:    outcome_name:=case when new.status='checked_in' then 'visited' when new.status in ('going','requested','interested') then 'rsvp' end;
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:184:  elsif tg_table_name='location_visits' then
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:188:    actor:=new.profile_id;kind:='event';target:=new.event_id;outcome_name:='saved';
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:191:    outcome_name:=case when new.direction in ('right','more_like_this') then 'interested' else 'dismissed' end;
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:201:create trigger event_rsvps_capture_recommendation_outcome after insert or update of status on public.event_rsvps for each row when (new.status in ('interested','requested','going','checked_in')) execute function public.capture_operational_recommendation_outcome_v1();
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:204:drop trigger if exists location_visits_capture_recommendation_outcome on public.location_visits;
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:205:create trigger location_visits_capture_recommendation_outcome after insert or update of status on public.location_visits for each row when (new.status='visited') execute function public.capture_operational_recommendation_outcome_v1();
+supabase/migrations/0016_hybrid_recommendation_runtime.sql:261:  delete from public.discovery_actions where profile_id=actor;
+supabase/migrations/0024_stage9_moderation_foundation.sql:89:  state text not null default 'open' check(state in('open','triaged','investigating','waiting','actioned','resolved','dismissed','appealed','closed')),
+supabase/migrations/0024_stage9_moderation_foundation.sql:213:  state text not null default 'open' check(state in('open','acknowledged','investigating','resolved','dismissed')),
+supabase/migrations/0025_stage9_admin_workflows.sql:129:  if operation_name in('notify_attendees','cancel_notify','cancel_refund_notify') then insert into public.bulk_operation_items(operation_id,item_type,item_id) select created,'attendee',profile_id::text from public.event_rsvps where event_id=target_event and status in('going','checked_in','interested','waitlisted','requested') on conflict do nothing;end if;
+supabase/migrations/0026_stage9_security_controls.sql:38:  elsif action_name in('resolve','dismiss') then update public.moderation_cases set state=case when action_name='resolve' then 'resolved' else 'dismissed' end,resolution_code=action_name,resolution_note=reason_value,resolved_at=now() where id=item.id;
+supabase/migrations/0026_stage9_security_controls.sql:61:create or replace function public.admin_dashboard_v1() returns jsonb language plpgsql stable security definer set search_path=public as $$begin if not public.has_privileged_role_v1(array['super_admin','trust_safety','content_moderator','verification','support','finance_ops','security','incident_commander']) then raise exception 'not authorized';end if;return jsonb_build_object('counts',jsonb_build_object('open_cases',(select count(*) from public.moderation_cases where state not in('resolved','dismissed','closed')),'sla_breaches',(select count(*) from public.moderation_cases where state not in('resolved','dismissed','closed') and sla_due_at<now()),'open_alerts',(select count(*) from public.security_alerts where state in('open','acknowledged','investigating')),'pending_scans',(select count(*) from public.media_scan_jobs where status in('pending','processing','error')),'appeals',(select count(*) from public.moderation_appeals where state in('submitted','assigned','reviewing'))),'urgent',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from(select id,case_number,title,priority,sla_due_at from public.moderation_cases where state not in('resolved','dismissed','closed') and priority in('urgent','emergency') order by priority_rank,sla_due_at limit 10)x),'alerts',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from(select id,title,severity,state,created_at from public.security_alerts where state in('open','acknowledged','investigating') order by created_at desc limit 10)x));end$$;
+supabase/migrations/0026_stage9_security_controls.sql:67:create or replace function public.admin_security_dashboard_v1() returns jsonb language plpgsql stable security definer set search_path=public as $$begin if not public.has_privileged_role_v1(array['super_admin','security','incident_commander']) then raise exception 'not authorized';end if;return jsonb_build_object('counts',jsonb_build_object('critical_alerts',(select count(*) from public.security_alerts where severity='critical' and state not in('resolved','dismissed')),'high_events_24h',(select count(*) from public.security_events where severity in('high','critical') and created_at>now()-interval '24 hours'),'rate_blocks_1h',(select count(*) from public.security_events where event_type='rate_limit_block' and created_at>now()-interval '1 hour'),'linked_signals',(select count(*) from public.linked_account_signals where reviewed_at is null)),'alerts',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from(select id,title,severity,state,created_at from public.security_alerts where state not in('resolved','dismissed') order by created_at desc limit 50)x),'rate_limits',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from(select r.action_name,r.dimension_type,sum(c.weight)::bigint count from public.rate_limit_counters c join public.rate_limit_rules r on r.id=c.rule_id where c.updated_at>now()-interval '1 hour' group by r.action_name,r.dimension_type order by count desc limit 30)x),'linked_accounts',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from(select id,profile_a,profile_b,signal_type,confidence,created_at from public.linked_account_signals where reviewed_at is null order by confidence desc limit 30)x));end$$;
+supabase/migrations/0028_stage9_hardening.sql:69:create or replace function public.run_moderation_sla_alerts_v1() returns integer language plpgsql security definer set search_path=public as $$declare affected integer;begin if auth.role()<>'service_role' then raise exception 'service role required';end if;with breached as(update public.moderation_cases set sla_breached_at=coalesce(sla_breached_at,now()),priority=case when priority='low' then 'normal' when priority='normal' then 'high' when priority='high' then 'urgent' else priority end where state not in('resolved','dismissed','closed') and sla_due_at<now() returning id,case_number,priority) insert into public.security_alerts(title,severity,metadata) select 'Moderation SLA breached: '||case_number,case when priority in('urgent','emergency') then 'high' else 'warning' end,jsonb_build_object('case_id',id) from breached;get diagnostics affected=row_count;return affected;end$$;
+supabase/migrations/0028_stage9_hardening.sql:103:  next_state:=case action_value when 'acknowledge' then 'acknowledged' when 'investigate' then 'investigating' when 'resolve' then 'resolved' else 'dismissed' end;
+supabase/migrations/0028_stage9_hardening.sql:104:  update public.security_alerts set state=next_state,assigned_to=case when next_state in('acknowledged','investigating') then actor else assigned_to end,resolved_at=case when next_state in('resolved','dismissed') then now() else null end,metadata=metadata||jsonb_build_object('last_reason',left(reason_value,1000),'last_actor',actor,'last_action',action_value) where id=prior.id;
+supabase/migrations/10006_group_context_map_push.sql:334:      l.name || case when target_mode = 'hangout' then ' is a strong group match.' else ' was saved by both of you.' end,
+supabase/migrations/10007_contextual_recommendation_merge.sql:24:  select e.category,case d.action when 'visited' then 5 when 'saved' then 3 when 'interested' then 2 else 0 end::numeric weight,d.created_at
+supabase/migrations/10007_contextual_recommendation_merge.sql:25:  from public.discovery_actions d join actor a on a.id=d.profile_id join public.events e on e.id=d.event_id where d.undone_at is null
+supabase/migrations/10007_contextual_recommendation_merge.sql:27:  select l.kind,case d.action when 'visited' then 5 when 'saved' then 3 when 'interested' then 2 else 0 end::numeric,d.created_at
+supabase/migrations/10007_contextual_recommendation_merge.sql:28:  from public.discovery_actions d join actor a on a.id=d.profile_id join public.locations l on l.id=d.location_id where d.undone_at is null
+supabase/migrations/10007_contextual_recommendation_merge.sql:30:  select e.category,case s.state when 'visited' then 6 when 'attending' then 5 when 'saved' then 3 when 'interested' then 2 else 0 end::numeric,s.created_at
+supabase/migrations/10007_contextual_recommendation_merge.sql:31:  from public.user_content_states s join actor a on a.id=s.profile_id join public.events e on e.id=s.event_id where s.state in ('saved','interested','attending','visited')
+supabase/migrations/10007_contextual_recommendation_merge.sql:33:  select l.kind,case s.state when 'visited' then 6 when 'saved' then 3 else 0 end::numeric,s.created_at
+supabase/migrations/10007_contextual_recommendation_merge.sql:34:  from public.user_content_states s join actor a on a.id=s.profile_id join public.locations l on l.id=s.location_id where s.state in ('saved','visited')
+supabase/migrations/10007_contextual_recommendation_merge.sql:41:  select e.category,case r.status when 'checked_in' then 7 when 'going' then 5 when 'interested' then 2 when 'requested' then 2 else 0 end::numeric,r.created_at
+supabase/migrations/10007_contextual_recommendation_merge.sql:42:  from public.event_rsvps r join actor a on a.id=r.profile_id join public.events e on e.id=r.event_id where r.status in ('interested','requested','going','checked_in')
+supabase/migrations/10007_contextual_recommendation_merge.sql:48:  select l.kind,case v.status when 'visited' then 7 when 'planned' then 2 else 0 end::numeric,v.updated_at from public.location_visits v join actor a on a.id=v.profile_id join public.locations l on l.id=v.location_id where v.status in ('visited','planned')
+supabase/migrations/10007_contextual_recommendation_merge.sql:64:  from public.discovery_actions d join actor a on a.id=d.profile_id left join public.events e on e.id=d.event_id left join public.locations l on l.id=d.location_id
+supabase/migrations/10007_contextual_recommendation_merge.sql:65:  where d.action='dismissed' and d.undone_at is null
+supabase/migrations/10007_contextual_recommendation_merge.sql:99:  from public.discovery_actions d join friends f on f.friend_id=d.profile_id join public.profiles fp on fp.id=f.friend_id left join public.events e on e.id=d.event_id left join public.locations l on l.id=d.location_id,prefs
+supabase/migrations/10007_contextual_recommendation_merge.sql:100:  where friend_activity_enabled and (fp.activity_visibility in ('friends','public') or (fp.activity_visibility='close_friends' and exists(select 1 from public.friend_close_friends cf where cf.profile_id=fp.id and cf.friend_id=(select id from actor)))) and d.undone_at is null and d.action in ('saved','interested','visited') and d.created_at>now()-interval '60 days'
+supabase/migrations/10009_location_notification_scheduler.sql:36:  from public.location_visits v join public.locations l on l.id=v.location_id
+supabase/migrations/10010_hangout_minimum_consensus.sql:66:      l.name || case when target_mode = 'hangout' then ' is a strong group match.' else ' was saved by both of you.' end,
+supabase/migrations/10011_private_shared_consensus.sql:123:      l.name || case when target_mode = 'hangout' then ' is a strong group match.' else ' was saved by both of you.' end,
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:22:  add column if not exists undone_at timestamptz;
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:47:    when 'pass' then 'dismissed'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:48:    when 'save' then 'saved'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:49:    when 'perfect' then 'saved'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:50:    when 'matched' then 'interested'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:51:    when 'planned' then 'interested'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:108:      check (outcome in ('opened','saved','dismissed','interested','visited'));
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:153:    when new.outcome='dismissed' then 'pass'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:154:    when new.outcome='saved' and lower(coalesce(new.metadata->>'perfect_pick','false')) in ('true','1') then 'perfect'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:155:    when new.outcome='saved' then 'save'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:156:    when new.outcome='interested' and lower(coalesce(new.metadata->>'planned','false')) in ('true','1') then 'planned'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:157:    when new.outcome='interested' then 'matched'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:184:    when 'pass' then 'dismissed'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:185:    when 'save' then 'saved'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:186:    when 'perfect' then 'saved'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:187:    when 'matched' then 'interested'
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql:188:    when 'planned' then 'interested'
+supabase/migrations/10014_contextual_recommendation_learning.sql:13:  outcome text not null check (outcome in ('opened','saved','dismissed','interested','visited')),
+supabase/migrations/10014_contextual_recommendation_learning.sql:25:  undone_at timestamptz,
+supabase/migrations/10014_contextual_recommendation_learning.sql:28:create index if not exists recommendation_context_events_profile_idx on public.recommendation_context_events(profile_id,occurred_at desc) where undone_at is null;
+supabase/migrations/10014_contextual_recommendation_learning.sql:29:create index if not exists recommendation_context_events_location_idx on public.recommendation_context_events(location_id,occurred_at desc) where undone_at is null;
+supabase/migrations/10014_contextual_recommendation_learning.sql:117:      set undone_at=now(),metadata=metadata||jsonb_build_object('undone_by_request',request_key)
+supabase/migrations/10014_contextual_recommendation_learning.sql:118:    where profile_id=actor and location_id=target_id and undone_at is null
+supabase/migrations/10014_contextual_recommendation_learning.sql:123:  learned_outcome:=case when outcome_name in ('opened','saved','dismissed','interested','visited') then outcome_name end;
+supabase/migrations/10014_contextual_recommendation_learning.sql:127:    when learned_outcome='saved' and lower(coalesce(outcome_metadata->>'perfect_pick','false')) in ('true','1') then 7
+supabase/migrations/10014_contextual_recommendation_learning.sql:128:    when learned_outcome='saved' then 4
+supabase/migrations/10014_contextual_recommendation_learning.sql:129:    when learned_outcome='interested' then 3
+supabase/migrations/10014_contextual_recommendation_learning.sql:131:    when learned_outcome='dismissed' then -3
+supabase/migrations/10014_contextual_recommendation_learning.sql:161:    daypart,day_type,intent,filters,metadata,occurred_at,undone_at
+supabase/migrations/10014_contextual_recommendation_learning.sql:171:    filters=excluded.filters,metadata=recommendation_context_events.metadata||excluded.metadata,occurred_at=excluded.occurred_at,undone_at=null;
+supabase/migrations/10014_contextual_recommendation_learning.sql:199:    where e.profile_id=actor and e.undone_at is null
+supabase/migrations/10014_contextual_recommendation_learning.sql:263:    where e.profile_id=target_profile and e.undone_at is null and e.signal_weight>0
+supabase/migrations/10014_contextual_recommendation_learning.sql:274:  after insert or update of signal_weight,undone_at on public.recommendation_context_events
+supabase/migrations/10014_contextual_recommendation_learning.sql:286:    when o.outcome='saved' and lower(coalesce(o.metadata->>'perfect_pick','false')) in ('true','1') then 7
+supabase/migrations/10014_contextual_recommendation_learning.sql:287:    when o.outcome='saved' then 4
+supabase/migrations/10014_contextual_recommendation_learning.sql:288:    when o.outcome='interested' then 3
+supabase/migrations/10014_contextual_recommendation_learning.sql:290:    when o.outcome='dismissed' then -3
+supabase/migrations/10014_contextual_recommendation_learning.sql:306:where o.content_kind='place' and o.outcome in ('opened','saved','dismissed','interested','visited')
+supabase/migrations/10014_contextual_recommendation_learning.sql:333:    learned_outcome:=case when new.choice='pass' then 'dismissed' else 'saved' end;
+supabase/migrations/10014_contextual_recommendation_learning.sql:340:    update public.recommendation_context_events set undone_at=now()
+supabase/migrations/10014_contextual_recommendation_learning.sql:341:      where profile_id=new.profile_id and source_key=learned_source_key and location_id=new.location_id and undone_at is null;
+supabase/migrations/10014_contextual_recommendation_learning.sql:351:  update public.recommendation_context_events set undone_at=now()
+supabase/migrations/10014_contextual_recommendation_learning.sql:352:    where profile_id=new.profile_id and source_key=learned_source_key and location_id=new.location_id and undone_at is null;
+supabase/migrations/10014_contextual_recommendation_learning.sql:364:    daypart,day_type,intent,filters,metadata,occurred_at,undone_at
+supabase/migrations/10014_contextual_recommendation_learning.sql:377:    filters=excluded.filters,metadata=excluded.metadata,occurred_at=excluded.occurred_at,undone_at=null;
+supabase/migrations/10014_contextual_recommendation_learning.sql:400:  delete from public.discovery_actions where profile_id=actor;
+supabase/migrations/10015_contextual_recommendation_compatibility.sql:43:    when 'pass' then 'dismissed'
+supabase/migrations/10015_contextual_recommendation_compatibility.sql:44:    when 'save' then 'saved'
+supabase/migrations/10015_contextual_recommendation_compatibility.sql:45:    when 'perfect' then 'saved'
+supabase/migrations/10015_contextual_recommendation_compatibility.sql:46:    when 'matched' then 'interested'
+supabase/migrations/10015_contextual_recommendation_compatibility.sql:47:    when 'planned' then 'interested'
+supabase/migrations/10015_contextual_recommendation_compatibility.sql:104:    daypart,day_type,intent,filters,metadata,occurred_at,undone_at,deck_id
+supabase/migrations/10015_contextual_recommendation_compatibility.sql:123:    undone_at=null,
+supabase/migrations/10015_contextual_recommendation_compatibility.sql:164:    and e.undone_at is null
+supabase/migrations/10026_r2_runtime_optimizations.sql:94:  action text not null check (action='dismissed'),
+supabase/migrations/10026_r2_runtime_optimizations.sql:118:    check (retention_class in ('opened','saved','perfect','visited','shared','photo','google')),
+supabase/migrations/10026_r2_runtime_optimizations.sql:189:  if action_name<>'dismissed' then raise exception 'unsupported static action'; end if;
+supabase/migrations/10026_r2_runtime_optimizations.sql:193:    actor,target_location,import_source,source_place_id,'dismissed',request_key,now(),now(),now()+interval '90 days'
+supabase/migrations/10026_r2_runtime_optimizations.sql:198:    action='dismissed',
+supabase/migrations/10026_r2_runtime_optimizations.sql:202:  return jsonb_build_object('action','dismissed','locationId',target_location);
+supabase/migrations/10026_r2_runtime_optimizations.sql:224:  if normalized not in ('opened','saved','perfect','visited','shared','photo','google') then
+supabase/migrations/10026_r2_runtime_optimizations.sql:230:        when array_position(array['opened','saved','visited','perfect','shared','photo','google'],normalized)
+supabase/migrations/10026_r2_runtime_optimizations.sql:231:           > array_position(array['opened','saved','visited','perfect','shared','photo','google'],materialization.retention_class)
+supabase/migrations/10026_r2_runtime_optimizations.sql:269:  if is_static_ephemeral and action_name='dismissed' then
+supabase/migrations/10026_r2_runtime_optimizations.sql:280:  if action_name in ('saved','interested','dismissed','visited','undo') then
+supabase/migrations/10026_r2_runtime_optimizations.sql:281:    perform public.record_discovery_action_v1(
+supabase/migrations/10026_r2_runtime_optimizations.sql:299:    when action_name='dismissed' then 'pass'
+supabase/migrations/10026_r2_runtime_optimizations.sql:300:    when action_name in ('saved','interested') then 'save'
+supabase/migrations/10026_r2_runtime_optimizations.sql:316:  if target_kind='place' and action_name in ('saved','interested','visited','opened') then
+supabase/migrations/10026_r2_runtime_optimizations.sql:320:           when action_name in ('saved','interested') then 'saved'
+supabase/migrations/10027_static_action_analytics_boundary.sql:31:  if is_static_ephemeral and action_name='dismissed' then
+supabase/migrations/10027_static_action_analytics_boundary.sql:42:  if action_name in ('saved','interested','dismissed','visited','undo') then
+supabase/migrations/10027_static_action_analytics_boundary.sql:55:      and procedure.proname='record_discovery_action_v1'
+supabase/migrations/10027_static_action_analytics_boundary.sql:62:      raise exception 'record_discovery_action_v1 overload is unavailable';
+supabase/migrations/10027_static_action_analytics_boundary.sql:66:      'select public.record_discovery_action_v1($1::%s,$2::%s,$3::%s,$4::%s)',
+supabase/migrations/10027_static_action_analytics_boundary.sql:86:    when action_name='dismissed' then 'pass'
+supabase/migrations/10027_static_action_analytics_boundary.sql:87:    when action_name in ('saved','interested') then 'save'
+supabase/migrations/10027_static_action_analytics_boundary.sql:103:  if target_kind='place' and action_name in ('saved','interested','visited','opened') then
+supabase/migrations/10027_static_action_analytics_boundary.sql:107:           when action_name in ('saved','interested') then 'saved'
+supabase/migrations/10028_r2_runtime_second_optimization.sql:38:  if action_name<>'dismissed' then raise exception 'unsupported static action'; end if;
+supabase/migrations/10028_r2_runtime_second_optimization.sql:43:  return jsonb_build_object('action','dismissed','locationId',target_location);
+supabase/migrations/10028_r2_runtime_second_optimization.sql:123:  dismissed jsonb;
+supabase/migrations/10028_r2_runtime_second_optimization.sql:130:  into dismissed
+supabase/migrations/10028_r2_runtime_second_optimization.sql:227:    'dismissedIds',coalesce(dismissed,'[]'::jsonb),
+supabase/migrations/10028_r2_runtime_second_optimization.sql:269:create or replace function public.record_discovery_actions_v3(actions jsonb)
+supabase/migrations/10028_r2_runtime_second_optimization.sql:305:revoke all on function public.record_discovery_actions_v3(jsonb) from public,anon;
+supabase/migrations/10028_r2_runtime_second_optimization.sql:306:grant execute on function public.record_discovery_actions_v3(jsonb) to authenticated;
+=== FILE CONTENTS WITH ACTION FUNCTION ===
+--- supabase/migrations/0008_secure_media_and_discovery.sql ---
+-- Stage 3: secure media, PostGIS discovery, rules-based feed logging, and map queries.
+-- Apply after 0007_private_address_integrity.sql.
+
+alter table public.event_rsvps add column if not exists guest_count integer not null default 1 check (guest_count between 1 and 10);
+alter table public.profiles add column if not exists latitude double precision check (latitude between -90 and 90);
+alter table public.profiles add column if not exists longitude double precision check (longitude between -180 and 180);
+alter table public.locations add column if not exists latitude double precision check (latitude between -90 and 90);
+alter table public.locations add column if not exists longitude double precision check (longitude between -180 and 180);
+
+update public.locations set latitude=st_y(point::geometry),longitude=st_x(point::geometry)
+where point is not null and (latitude is null or longitude is null);
+
+create or replace function public.sync_location_point()
+returns trigger language plpgsql set search_path=public as $$
+begin
+  if new.latitude is not null and new.longitude is not null then
+    new.point=st_setsrid(st_makepoint(new.longitude,new.latitude),4326)::geography;
+  elsif new.point is not null then
+    new.latitude=st_y(new.point::geometry);
+    new.longitude=st_x(new.point::geometry);
+  else
+    new.point=null;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists locations_sync_point on public.locations;
+create trigger locations_sync_point before insert or update of latitude,longitude,point on public.locations
+for each row execute function public.sync_location_point();
+
+create index if not exists locations_lat_lng_idx on public.locations(latitude,longitude) where latitude is not null and longitude is not null;
+create index if not exists locations_discovery_gix on public.locations using gist(point) where status='published';
+
+create table public.media_assets (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  purpose text not null check (purpose in ('event_cover','event_gallery','location_cover','location_gallery','host_logo','profile_photo','chat_image','verification_document')),
+  target_type text not null check (target_type in ('event','location','host','profile','conversation','verification')),
+  target_id uuid,
+  bucket_id text not null check (bucket_id in ('puddle-public-media','puddle-private-media','puddle-quarantine')),
+  object_path text not null unique check (object_path !~ '(^|/)\.\.?(/|$)'),
+  original_name text not null check (char_length(original_name) between 1 and 120),
+  mime_type text not null check (mime_type in ('image/webp','application/pdf')),
+  bytes bigint not null check (bytes between 1 and 15000000),
+  width integer check (width is null or width between 1 and 2500),
+  height integer check (height is null or height between 1 and 2500),
+  sha256 text not null check (sha256 ~ '^[0-9a-f]{64}$'),
+  visibility text not null check (visibility in ('public','private')),
+  status text not null default 'quarantined' check (status in ('quarantined','approved','rejected','deleted')),
+  scan_status text not null default 'pending' check (scan_status in ('pending','clean','infected','failed','not_required')),
+  scanner text,
+  approved_at timestamptz,
+  rejected_at timestamptz,
+  deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint public_media_requires_approval check (visibility<>'public' or status='approved'),
+  constraint approved_media_is_clean check (status<>'approved' or scan_status in ('clean','not_required'))
+);
+create index media_assets_owner_idx on public.media_assets(owner_id,created_at desc);
+create index media_assets_target_idx on public.media_assets(target_type,target_id,created_at desc);
+create index media_assets_cleanup_idx on public.media_assets(status,scan_status,created_at);
+
+create table public.event_media (
+  event_id uuid not null references public.events(id) on delete cascade,
+  media_asset_id uuid not null references public.media_assets(id) on delete cascade,
+  sort_order integer not null default 0 check (sort_order between 0 and 999),
+  caption text check (char_length(caption)<=300),
+  created_at timestamptz not null default now(),
+  primary key(event_id,media_asset_id)
+);
+create index event_media_order_idx on public.event_media(event_id,sort_order,created_at);
+
+create table public.location_media (
+  location_id uuid not null references public.locations(id) on delete cascade,
+  media_asset_id uuid not null references public.media_assets(id) on delete cascade,
+  sort_order integer not null default 0 check (sort_order between 0 and 999),
+  caption text check (char_length(caption)<=300),
+  created_at timestamptz not null default now(),
+  primary key(location_id,media_asset_id)
+);
+create index location_media_order_idx on public.location_media(location_id,sort_order,created_at);
+
+create table public.message_media (
+  message_id bigint references public.messages(id) on delete cascade,
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  media_asset_id uuid not null references public.media_assets(id) on delete cascade,
+  attached_by uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key(conversation_id,media_asset_id)
+);
+
+create table public.verification_documents (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  host_profile_id uuid references public.host_profiles(id) on delete cascade,
+  media_asset_id uuid not null unique references public.media_assets(id) on delete cascade,
+  document_kind text not null check (document_kind in ('supporting_document','identity','business','venue_relationship')),
+  review_status text not null default 'pending_scan' check (review_status in ('pending_scan','pending_review','verified','rejected')),
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index verification_documents_profile_idx on public.verification_documents(profile_id,review_status);
+
+create or replace function public.can_view_media_asset(target uuid)
+returns boolean language sql stable security definer set search_path=public as $$
+  select exists(
+    select 1 from public.media_assets m where m.id=target and (
+      m.owner_id=auth.uid()
+      or (m.visibility='public' and m.status='approved')
+      or (m.target_type='event' and m.target_id is not null and public.can_manage_event(m.target_id))
+      or (m.target_type='location' and m.target_id is not null and exists(
+        select 1 from public.locations l where l.id=m.target_id and (
+          l.created_by=auth.uid() or (l.host_profile_id is not null and public.has_host_role(l.host_profile_id,array['owner','editor']))
+        )
+      ))
+      or (m.target_type='host' and m.target_id is not null and public.is_host_member(m.target_id))
+      or (m.target_type='conversation' and m.target_id is not null and exists(
+        select 1 from public.conversation_members cm where cm.conversation_id=m.target_id and cm.profile_id=auth.uid()
+      ))
+      or public.is_admin()
+    )
+  )
+$$;
+
+alter table public.media_assets enable row level security;
+alter table public.event_media enable row level security;
+alter table public.location_media enable row level security;
+alter table public.message_media enable row level security;
+alter table public.verification_documents enable row level security;
+
+create policy "media visible to authorized users" on public.media_assets for select using (public.can_view_media_asset(id));
+-- media_assets and Storage objects are service-role only for writes. Authenticated clients
+-- cannot bypass decoding, signature validation, metadata stripping, or quarantine.
+create policy "event gallery public or manageable" on public.event_media for select using (
+  exists(select 1 from public.events e where e.id=event_id and (e.status='published' or public.can_manage_event(e.id))) or public.is_admin()
+);
+create policy "event managers attach media" on public.event_media for insert with check (
+  public.can_manage_event(event_id) and exists(select 1 from public.media_assets m where m.id=media_asset_id and m.owner_id=auth.uid() and m.target_type='event' and m.target_id=event_id and m.purpose='event_gallery' and m.status='approved' and m.scan_status='clean')
+);
+create policy "event managers update media" on public.event_media for update using (public.can_manage_event(event_id)) with check (public.can_manage_event(event_id));
+create policy "event managers remove media" on public.event_media for delete using (public.can_manage_event(event_id));
+
+create policy "location gallery public or manageable" on public.location_media for select using (
+  exists(select 1 from public.locations l where l.id=location_id and (l.status='published' or l.created_by=auth.uid() or (l.host_profile_id is not null and public.is_host_member(l.host_profile_id)))) or public.is_admin()
+);
+create policy "location managers attach media" on public.location_media for insert with check (
+  exists(select 1 from public.locations l where l.id=location_id and (l.created_by=auth.uid() or (l.host_profile_id is not null and public.has_host_role(l.host_profile_id,array['owner','editor']))))
+  and exists(select 1 from public.media_assets m where m.id=media_asset_id and m.owner_id=auth.uid() and m.target_type='location' and m.target_id=location_id and m.purpose='location_gallery' and m.status='approved' and m.scan_status='clean')
+);
+create policy "location managers update media" on public.location_media for update using (
+  exists(select 1 from public.locations l where l.id=location_id and (l.created_by=auth.uid() or (l.host_profile_id is not null and public.has_host_role(l.host_profile_id,array['owner','editor']))))
+) with check (
+  exists(select 1 from public.locations l where l.id=location_id and (l.created_by=auth.uid() or (l.host_profile_id is not null and public.has_host_role(l.host_profile_id,array['owner','editor']))))
+);
+create policy "location managers remove media" on public.location_media for delete using (
+  exists(select 1 from public.locations l where l.id=location_id and (l.created_by=auth.uid() or (l.host_profile_id is not null and public.has_host_role(l.host_profile_id,array['owner','editor']))))
+);
+
+create policy "conversation members view message media" on public.message_media for select using (
+  exists(select 1 from public.conversation_members cm where cm.conversation_id=conversation_id and cm.profile_id=auth.uid()) or public.is_admin()
+);
+create policy "conversation members attach media" on public.message_media for insert with check (
+  attached_by=auth.uid()
+  and exists(select 1 from public.conversation_members cm where cm.conversation_id=conversation_id and cm.profile_id=auth.uid())
+  and exists(select 1 from public.media_assets m where m.id=media_asset_id and m.owner_id=auth.uid() and m.visibility='private' and m.target_type='conversation' and m.target_id=conversation_id and m.purpose='chat_image' and m.status='approved' and m.scan_status='clean')
+);
+
+create policy "verification owners read documents" on public.verification_documents for select using (
+  profile_id=auth.uid() or (host_profile_id is not null and public.has_host_role(host_profile_id,array['owner'])) or public.is_admin()
+);
+create policy "users submit verification documents" on public.verification_documents for insert with check (
+  profile_id=auth.uid() and (host_profile_id is null or public.has_host_role(host_profile_id,array['owner']))
+  and exists(select 1 from public.media_assets m where m.id=media_asset_id and m.owner_id=auth.uid() and m.target_type='verification' and m.purpose='verification_document' and m.status='quarantined' and m.scan_status='pending')
+);
+create policy "admins review verification documents" on public.verification_documents for update using (public.is_admin()) with check (public.is_admin());
+
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values
+  ('puddle-public-media','puddle-public-media',true,10000000,array['image/webp']),
+  ('puddle-private-media','puddle-private-media',false,10000000,array['image/webp']),
+  ('puddle-quarantine','puddle-quarantine',false,15000000,array['application/pdf'])
+on conflict(id) do update set public=excluded.public,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
+
+-- Storage writes and deletes are deliberately service-role only.
+create policy "owners read private media objects" on storage.objects for select to authenticated
+using (bucket_id='puddle-private-media' and (storage.foldername(name))[1]=auth.uid()::text);
+create policy "owners read quarantined media objects" on storage.objects for select to authenticated
+using (bucket_id='puddle-quarantine' and (storage.foldername(name))[1]=auth.uid()::text);
+
+create or replace function public.assert_media_pointer()
+returns trigger language plpgsql security definer set search_path=public as $$
+declare expected_purpose text; expected_type text; expected_target uuid; object_value text;
+begin
+  if tg_table_name='profiles' then expected_purpose:='profile_photo';expected_type:='profile';expected_target:=new.id;object_value:=new.avatar_path;
+  elsif tg_table_name='host_profiles' then expected_purpose:='host_logo';expected_type:='host';expected_target:=new.id;object_value:=new.logo_path;
+  elsif tg_table_name='events' then expected_purpose:='event_cover';expected_type:='event';expected_target:=new.id;object_value:=new.cover_path;
+  elsif tg_table_name='locations' then expected_purpose:='location_cover';expected_type:='location';expected_target:=new.id;object_value:=new.cover_path;
+  else raise exception 'unsupported media pointer table'; end if;
+  if object_value is not null and not exists(
+    select 1 from public.media_assets m where m.object_path=object_value and m.target_type=expected_type and m.target_id=expected_target
+      and m.purpose=expected_purpose and m.visibility='public' and m.status='approved' and m.scan_status='clean'
+  ) then raise exception 'media pointer is not an approved asset for this record'; end if;
+  return new;
+end;
+$$;
+drop trigger if exists profiles_validate_avatar on public.profiles;
+create trigger profiles_validate_avatar before insert or update of avatar_path on public.profiles for each row execute function public.assert_media_pointer();
+drop trigger if exists host_profiles_validate_logo on public.host_profiles;
+create trigger host_profiles_validate_logo before insert or update of logo_path on public.host_profiles for each row execute function public.assert_media_pointer();
+drop trigger if exists events_validate_cover on public.events;
+create trigger events_validate_cover before insert or update of cover_path on public.events for each row execute function public.assert_media_pointer();
+drop trigger if exists locations_validate_cover on public.locations;
+create trigger locations_validate_cover before insert or update of cover_path on public.locations for each row execute function public.assert_media_pointer();
+
+create table public.discovery_impressions (
+  id bigint generated always as identity primary key,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  request_id uuid not null,
+  content_kind text not null check (content_kind in ('event','place')),
+  event_id uuid references public.events(id) on delete cascade,
+  location_id uuid references public.locations(id) on delete cascade,
+  rank_position integer not null check (rank_position between 1 and 500),
+  score numeric(9,2) not null,
+  reasons text[] not null default '{}',
+  ranking_version text not null,
+  filters jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  constraint discovery_impression_one_target check (num_nonnulls(event_id,location_id)=1)
+);
+create index discovery_impressions_profile_idx on public.discovery_impressions(profile_id,created_at desc);
+create index discovery_impressions_request_idx on public.discovery_impressions(request_id,rank_position);
+
+create table public.discovery_actions (
+  id bigint generated always as identity primary key,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  request_id uuid,
+  content_kind text not null check (content_kind in ('event','place')),
+  event_id uuid references public.events(id) on delete cascade,
+  location_id uuid references public.locations(id) on delete cascade,
+  action text not null check (action in ('saved','interested','dismissed','visited')),
+  undone_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint discovery_action_one_target check (num_nonnulls(event_id,location_id)=1)
+);
+create index discovery_actions_profile_idx on public.discovery_actions(profile_id,created_at desc);
+create index discovery_actions_target_idx on public.discovery_actions(event_id,location_id,created_at desc);
+
+alter table public.discovery_impressions enable row level security;
+alter table public.discovery_actions enable row level security;
+create policy "users log own impressions" on public.discovery_impressions for insert with check (profile_id=auth.uid());
+create policy "users read own impressions" on public.discovery_impressions for select using (profile_id=auth.uid() or public.is_admin());
+create policy "users read own discovery actions" on public.discovery_actions for select using (profile_id=auth.uid() or public.is_admin());
+
+create or replace function public.discover_candidates_v1(user_lat double precision default null,user_lng double precision default null,radius_m integer default 25000,max_rows integer default 200)
+returns table(content_kind text,content_id uuid,slug text,title text,summary text,category text,starts_at timestamptz,ends_at timestamptz,timezone text,price_cents integer,price_level smallint,min_age smallint,capacity integer,remaining_capacity integer,accessibility jsonb,amenities text[],opening_hours jsonb,latitude double precision,longitude double precision,distance_m double precision,cover_path text,host_name text,host_verified boolean,published_at timestamptz)
+language sql stable security definer set search_path=public as $$
+with origin as (
+  select case when user_lat is null or user_lng is null then null else st_setsrid(st_makepoint(user_lng,user_lat),4326)::geography end point
+),event_rows as (
+  select 'event'::text,e.id,e.slug,e.title,e.summary,e.category,e.starts_at,e.ends_at,e.timezone,e.price_from_cents,null::smallint,e.min_age,e.capacity,
+    case when e.capacity is null then null else greatest(0,e.capacity-coalesce((select sum(r.guest_count)::integer from public.event_rsvps r where r.event_id=e.id and r.status in ('going','checked_in')),0)) end,
+    coalesce(e.accessibility,'{}'::jsonb),'{}'::text[],'{}'::jsonb,l.latitude,l.longitude,
+    case when o.point is null or l.point is null then null else st_distance(l.point,o.point) end,e.cover_path,h.name,coalesce(h.verification_status='verified',false),e.published_at
+  from public.events e left join public.locations l on l.id=e.location_id left join public.host_profiles h on h.id=e.host_profile_id cross join origin o
+  where e.status='published' and e.visibility='public' and e.ends_at>now()
+    and (o.point is null or l.point is null or st_dwithin(l.point,o.point,greatest(1000,least(radius_m,200000))))
+),place_rows as (
+  select 'place'::text,l.id,l.slug,l.name,l.summary,l.kind,null::timestamptz,null::timestamptz,l.timezone,null::integer,l.price_level,null::smallint,null::integer,null::integer,
+    coalesce(l.accessibility,'{}'::jsonb),coalesce(l.amenities,'{}'::text[]),coalesce(l.opening_hours,'{}'::jsonb),l.latitude,l.longitude,
+    case when o.point is null or l.point is null then null else st_distance(l.point,o.point) end,l.cover_path,h.name,coalesce(h.verification_status='verified',false),l.updated_at
+  from public.locations l left join public.host_profiles h on h.id=l.host_profile_id cross join origin o
+  where l.status='published' and l.visibility='public'
+    and (o.point is null or l.point is null or st_dwithin(l.point,o.point,greatest(1000,least(radius_m,200000))))
+)
+select * from (select * from event_rows union all select * from place_rows) candidates
+order by 20 nulls last,24 desc nulls last limit greatest(1,least(max_rows,500));
+$$;
+
+create or replace function public.content_in_view_v1(min_lat double precision,min_lng double precision,max_lat double precision,max_lng double precision,max_rows integer default 300)
+returns table(content_kind text,content_id uuid,slug text,title text,latitude double precision,longitude double precision,cover_path text)
+language sql stable security definer set search_path=public as $$
+with bounds as (
+  -- st_makebox2d semantics, represented as an SRID-aware envelope for index use.
+  select st_makeenvelope(min_lng,min_lat,max_lng,max_lat,4326) geom
+)
+select * from (
+  select 'place'::text,l.id,l.slug,l.name,l.latitude,l.longitude,l.cover_path from public.locations l,bounds b
+  where l.status='published' and l.visibility='public' and l.point is not null and l.point::geometry && b.geom
+  union all
+  select 'event'::text,e.id,e.slug,e.title,l.latitude,l.longitude,e.cover_path from public.events e join public.locations l on l.id=e.location_id,bounds b
+  where e.status='published' and e.visibility='public' and e.ends_at>now() and l.point is not null and l.point::geometry && b.geom
+) visible limit greatest(1,least(max_rows,500));
+$$;
+
+create or replace function public.record_discovery_action_v1(target_kind text,target_id uuid,action_name text,request_key text default null)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare actor uuid:=auth.uid();request_uuid uuid;previous public.discovery_actions%rowtype;
+begin
+  if actor is null then raise exception 'authentication required'; end if;
+  if target_kind not in ('event','place') then raise exception 'invalid content kind'; end if;
+  if action_name not in ('saved','interested','dismissed','visited','undo') then raise exception 'invalid action'; end if;
+  begin request_uuid:=request_key::uuid; exception when others then request_uuid:=null; end;
+  if target_kind='event' and not exists(select 1 from public.events where id=target_id and status='published') then raise exception 'event unavailable'; end if;
+  if target_kind='place' and not exists(select 1 from public.locations where id=target_id and status='published') then raise exception 'place unavailable'; end if;
+
+  if action_name='undo' then
+    select * into previous from public.discovery_actions where profile_id=actor
+      and ((target_kind='event' and event_id=target_id) or (target_kind='place' and location_id=target_id)) and undone_at is null
+      order by created_at desc,id desc limit 1 for update;
+    if previous.id is null then return jsonb_build_object('undone',false); end if;
+    update public.discovery_actions set undone_at=now() where id=previous.id;
+    if previous.action in ('saved','interested','visited') then
+      delete from public.user_content_states where profile_id=actor and state=previous.action
+        and ((target_kind='event' and event_id=target_id) or (target_kind='place' and location_id=target_id));
+    end if;
+    return jsonb_build_object('undone',true,'action',previous.action);
+  end if;
+
+  if action_name in ('saved','interested','visited') then
+    update public.discovery_actions set undone_at=now() where profile_id=actor and action='dismissed' and undone_at is null
+      and ((target_kind='event' and event_id=target_id) or (target_kind='place' and location_id=target_id));
+    delete from public.user_content_states where profile_id=actor and state=action_name
+      and ((target_kind='event' and event_id=target_id) or (target_kind='place' and location_id=target_id));
+    insert into public.user_content_states(profile_id,event_id,location_id,state)
+    values(actor,case when target_kind='event' then target_id end,case when target_kind='place' then target_id end,action_name);
+  end if;
+  insert into public.discovery_actions(profile_id,request_id,content_kind,event_id,location_id,action)
+  values(actor,request_uuid,target_kind,case when target_kind='event' then target_id end,case when target_kind='place' then target_id end,action_name);
+  return jsonb_build_object('saved',true,'action',action_name);
+end;
+$$;
+
+revoke all on function public.discover_candidates_v1(double precision,double precision,integer,integer) from public,anon;
+revoke all on function public.content_in_view_v1(double precision,double precision,double precision,double precision,integer) from public,anon;
+revoke all on function public.record_discovery_action_v1(text,uuid,text,text) from public,anon;
+revoke all on function public.can_view_media_asset(uuid) from public;
+revoke all on function public.assert_media_pointer() from public,anon,authenticated;
+
+grant select on public.media_assets,public.event_media,public.location_media to anon,authenticated;
+grant select,insert,update,delete on public.event_media,public.location_media,public.message_media to authenticated;
+grant select,insert,update on public.verification_documents to authenticated;
+grant select,insert on public.discovery_impressions to authenticated;
+grant select on public.discovery_actions to authenticated;
+grant usage,select on sequence public.discovery_impressions_id_seq,public.discovery_actions_id_seq to authenticated;
+grant execute on function public.can_view_media_asset(uuid) to anon,authenticated;
+grant execute on function public.discover_candidates_v1(double precision,double precision,integer,integer) to authenticated;
+grant execute on function public.content_in_view_v1(double precision,double precision,double precision,double precision,integer) to authenticated;
+grant execute on function public.record_discovery_action_v1(text,uuid,text,text) to authenticated;
+--- supabase/migrations/10026_r2_runtime_optimizations.sql ---
+-- Runtime optimization pass for the R2 catalogue, compact static actions,
+-- on-demand materialization retention, Google retry state, and shared media objects.
+
+create table if not exists public.media_objects (
+  id uuid primary key default gen_random_uuid(),
+  storage_backend text not null check (storage_backend in ('r2','supabase','remote')),
+  storage_key text not null,
+  public_url text,
+  content_hash text not null check (content_hash ~ '^[0-9a-f]{64}$'),
+  perceptual_hash text check (perceptual_hash is null or perceptual_hash ~ '^[0-9a-f]{16}$'),
+  byte_size integer not null check (byte_size > 0),
+  width integer check (width is null or width > 0),
+  height integer check (height is null or height > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists media_objects_content_hash_uidx on public.media_objects(content_hash);
+create unique index if not exists media_objects_storage_uidx on public.media_objects(storage_backend,storage_key);
+alter table public.media_objects enable row level security;
+revoke all on table public.media_objects from public,anon,authenticated;
+grant select,insert,update,delete on table public.media_objects to service_role;
+
+alter table public.location_photo_sources
+  add column if not exists media_object_id uuid references public.media_objects(id) on delete restrict;
+create index if not exists location_photo_sources_media_object_idx
+  on public.location_photo_sources(media_object_id)
+  where media_object_id is not null;
+
+insert into public.media_objects(
+  storage_backend,storage_key,public_url,content_hash,perceptual_hash,byte_size,width,height
+)
+select distinct on (source.content_hash)
+  'r2',source.storage_key,source.remote_url,source.content_hash,source.perceptual_hash,
+  source.byte_size,source.width,source.height
+from public.location_photo_sources source
+where source.storage_backend='r2'
+  and source.storage_key is not null
+  and source.content_hash is not null
+  and source.byte_size is not null
+order by source.content_hash,source.verified_at desc nulls last
+on conflict do nothing;
+
+update public.location_photo_sources source
+set media_object_id=media.id,
+    storage_key=null,
+    content_hash=null,
+    perceptual_hash=null,
+    byte_size=null
+from public.media_objects media
+where source.storage_backend='r2'
+  and source.media_object_id is null
+  and source.content_hash=media.content_hash;
+
+drop index if exists public.location_photo_sources_content_hash_idx;
+drop index if exists public.location_photo_sources_perceptual_hash_idx;
+comment on column public.location_photo_sources.media_object_id is
+  'Shared immutable media object. R2 object hashes, keys, dimensions, and byte size live in media_objects rather than being duplicated per attribution row.';
+comment on column public.location_photo_sources.storage_key is 'Deprecated for managed R2 media; use media_object_id.';
+comment on column public.location_photo_sources.content_hash is 'Deprecated for managed R2 media; use media_object_id.';
+comment on column public.location_photo_sources.perceptual_hash is 'Deprecated for managed R2 media; use media_object_id.';
+comment on column public.location_photo_sources.byte_size is 'Deprecated for managed R2 media; use media_object_id.';
+
+create or replace function public.attach_r2_media_object_v1()
+returns trigger
+language plpgsql
+set search_path=public
+as $$
+declare
+  object_id uuid;
+begin
+  if new.storage_backend='r2' and new.content_hash is not null then
+    select id into object_id from public.media_objects where content_hash=new.content_hash;
+    if object_id is null then raise exception 'R2 media object is not registered'; end if;
+    new.media_object_id := object_id;
+    new.storage_key := null;
+    new.content_hash := null;
+    new.perceptual_hash := null;
+    new.byte_size := null;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists location_photo_sources_attach_r2_media on public.location_photo_sources;
+create trigger location_photo_sources_attach_r2_media
+before insert or update of storage_backend,storage_key,content_hash,perceptual_hash,byte_size,width,height
+on public.location_photo_sources
+for each row execute function public.attach_r2_media_object_v1();
+
+create table if not exists public.static_catalogue_actions (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  location_id uuid not null,
+  source text not null check (source in ('overture','fsq_os')),
+  source_place_id text not null check (char_length(source_place_id) between 1 and 240),
+  action text not null check (action='dismissed'),
+  last_request_id uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now()+interval '90 days'),
+  primary key(user_id,location_id)
+);
+create index if not exists static_catalogue_actions_expiry_idx
+  on public.static_catalogue_actions(expires_at);
+alter table public.static_catalogue_actions enable row level security;
+drop policy if exists static_catalogue_actions_select_own on public.static_catalogue_actions;
+create policy static_catalogue_actions_select_own on public.static_catalogue_actions
+  for select to authenticated using (auth.uid()=user_id);
+revoke all on table public.static_catalogue_actions from public,anon;
+grant select on table public.static_catalogue_actions to authenticated;
+grant select,insert,update,delete on table public.static_catalogue_actions to service_role;
+
+create table if not exists public.static_catalogue_materializations (
+  location_id uuid primary key references public.locations(id) on delete cascade,
+  source text not null check (source in ('overture','fsq_os')),
+  source_place_id text not null,
+  materialized_at timestamptz not null default now(),
+  last_touched_at timestamptz not null default now(),
+  retention_class text not null default 'opened'
+    check (retention_class in ('opened','saved','perfect','visited','shared','photo','google')),
+  expires_at timestamptz
+);
+create unique index if not exists static_catalogue_materializations_source_uidx
+  on public.static_catalogue_materializations(source,source_place_id);
+create index if not exists static_catalogue_materializations_expiry_idx
+  on public.static_catalogue_materializations(expires_at)
+  where expires_at is not null;
+alter table public.static_catalogue_materializations enable row level security;
+revoke all on table public.static_catalogue_materializations from public,anon,authenticated;
+grant select,insert,update,delete on table public.static_catalogue_materializations to service_role;
+
+create or replace function public.retain_static_location_with_photo_v1()
+returns trigger
+language plpgsql
+set search_path=public
+as $$
+begin
+  if new.status='approved' and new.is_ai_generated is not true then
+    update public.static_catalogue_materializations
+    set last_touched_at=now(),retention_class='photo',expires_at=null
+    where location_id=new.location_id;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists location_photo_sources_retain_static on public.location_photo_sources;
+create trigger location_photo_sources_retain_static
+after insert or update of status,is_ai_generated
+on public.location_photo_sources
+for each row execute function public.retain_static_location_with_photo_v1();
+
+create table if not exists public.google_place_match_attempts (
+  location_id uuid primary key references public.locations(id) on delete cascade,
+  status text not null check (status in ('no_match','failed')),
+  attempt_count integer not null default 0 check (attempt_count >= 0),
+  last_attempt_at timestamptz not null default now(),
+  retry_after timestamptz not null,
+  last_error text,
+  updated_at timestamptz not null default now()
+);
+create index if not exists google_place_match_attempts_retry_idx
+  on public.google_place_match_attempts(retry_after,status);
+alter table public.google_place_match_attempts enable row level security;
+revoke all on table public.google_place_match_attempts from public,anon,authenticated;
+grant select,insert,update,delete on table public.google_place_match_attempts to service_role;
+
+create or replace function public.record_static_catalogue_action_v1(
+  target_location uuid,
+  import_source text,
+  source_place_id text,
+  action_name text,
+  request_key uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  actor uuid := auth.uid();
+begin
+  if actor is null then raise exception 'authentication required'; end if;
+  if target_location is null then raise exception 'target location is required'; end if;
+  if import_source not in ('overture','fsq_os') then raise exception 'unsupported catalogue source'; end if;
+  if nullif(trim(source_place_id),'') is null then raise exception 'source place id is required'; end if;
+  if action_name='undo' then
+    delete from public.static_catalogue_actions
+    where user_id=actor and location_id=target_location;
+    return jsonb_build_object('action','undo','locationId',target_location);
+  end if;
+  if action_name<>'dismissed' then raise exception 'unsupported static action'; end if;
+  insert into public.static_catalogue_actions(
+    user_id,location_id,source,source_place_id,action,last_request_id,created_at,updated_at,expires_at
+  ) values (
+    actor,target_location,import_source,source_place_id,'dismissed',request_key,now(),now(),now()+interval '90 days'
+  )
+  on conflict(user_id,location_id) do update set
+    source=excluded.source,
+    source_place_id=excluded.source_place_id,
+    action='dismissed',
+    last_request_id=excluded.last_request_id,
+    updated_at=now(),
+    expires_at=now()+interval '90 days';
+  return jsonb_build_object('action','dismissed','locationId',target_location);
+end;
+$$;
+revoke all on function public.record_static_catalogue_action_v1(uuid,text,text,text,uuid) from public,anon;
+grant execute on function public.record_static_catalogue_action_v1(uuid,text,text,text,uuid) to authenticated;
+
+create or replace function public.touch_static_catalogue_materializations_v1(
+  location_ids uuid[],
+  touch_reason text
+)
+returns integer
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  changed integer := 0;
+  normalized text := lower(coalesce(touch_reason,''));
+begin
+  if auth.uid() is null and coalesce(auth.role()::text,'') <> 'service_role' then
+    raise exception 'authentication required';
+  end if;
+  if normalized not in ('opened','saved','perfect','visited','shared','photo','google') then
+    raise exception 'unsupported materialization touch reason';
+  end if;
+  update public.static_catalogue_materializations materialization
+  set last_touched_at=now(),
+      retention_class=case
+        when array_position(array['opened','saved','visited','perfect','shared','photo','google'],normalized)
+           > array_position(array['opened','saved','visited','perfect','shared','photo','google'],materialization.retention_class)
+          then normalized
+        else materialization.retention_class
+      end,
+      expires_at=case
+        when materialization.retention_class<>'opened' or normalized<>'opened' then null
+        else now()+interval '30 days'
+      end
+  where materialization.location_id=any(coalesce(location_ids,'{}'::uuid[]));
+  get diagnostics changed=row_count;
+  return changed;
+end;
+$$;
+revoke all on function public.touch_static_catalogue_materializations_v1(uuid[],text) from public,anon;
+grant execute on function public.touch_static_catalogue_materializations_v1(uuid[],text) to authenticated,service_role;
+
+create or replace function public.record_discovery_action_v2(
+  target_kind text,
+  target_id uuid,
+  action_name text,
+  requested_action text,
+  request_key uuid,
+  context_mode text,
+  context_category text,
+  context_payload jsonb,
+  is_static_ephemeral boolean default false,
+  static_source text default null,
+  static_source_place_id text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  event_name text;
+begin
+  if auth.uid() is null then raise exception 'authentication required'; end if;
+  if is_static_ephemeral and action_name='dismissed' then
+    return public.record_static_catalogue_action_v1(
+      target_id,static_source,static_source_place_id,action_name,request_key
+    );
+  end if;
+  if is_static_ephemeral and action_name='undo' and not exists(select 1 from public.locations where id=target_id) then
+    return public.record_static_catalogue_action_v1(
+      target_id,static_source,static_source_place_id,action_name,request_key
+    );
+  end if;
+
+  if action_name in ('saved','interested','dismissed','visited','undo') then
+    perform public.record_discovery_action_v1(
+      target_kind=>target_kind,
+      target_id=>target_id,
+      action_name=>action_name,
+      request_key=>request_key
+    );
+  end if;
+
+  perform public.record_recommendation_outcome_v1(
+    request_key=>request_key,
+    target_kind=>target_kind,
+    target_id=>target_id,
+    outcome_name=>action_name,
+    outcome_metadata=>jsonb_build_object('surface','discover','perfect_pick',requested_action='perfect')
+  );
+
+  event_name := case
+    when requested_action='perfect' then 'perfect'
+    when action_name='dismissed' then 'pass'
+    when action_name in ('saved','interested') then 'save'
+    when action_name='visited' then 'visited'
+    when action_name='opened' then 'opened'
+    else null
+  end;
+  if target_kind='place' and event_name is not null then
+    perform public.record_recommendation_context_v1(
+      target_location=>target_id,
+      event_name=>event_name,
+      context_mode=>coalesce(context_mode,'solo'),
+      context_category=>context_category,
+      context_payload=>coalesce(context_payload,'{}'::jsonb),
+      context_deck=>null
+    );
+  end if;
+
+  if target_kind='place' and action_name in ('saved','interested','visited','opened') then
+    perform public.touch_static_catalogue_materializations_v1(
+      array[target_id],
+      case when requested_action='perfect' then 'perfect'
+           when action_name in ('saved','interested') then 'saved'
+           else action_name end
+    );
+  end if;
+  return jsonb_build_object('action',action_name,'locationId',target_id,'perfectPick',requested_action='perfect');
+end;
+$$;
+revoke all on function public.record_discovery_action_v2(text,uuid,text,text,uuid,text,text,jsonb,boolean,text,text) from public,anon;
+grant execute on function public.record_discovery_action_v2(text,uuid,text,text,uuid,text,text,jsonb,boolean,text,text) to authenticated;
+
+create or replace function public.materialize_static_catalogue_location_v1(
+  target_location uuid,
+  import_source text,
+  payload jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  source_id text := nullif(trim(payload->>'source_place_id'),'');
+  place_name text := nullif(trim(payload->>'name'),'');
+  place_slug text := nullif(trim(payload->>'slug'),'');
+  place_kind text := nullif(trim(payload->>'kind'),'');
+  place_city text := coalesce(nullif(trim(payload->>'city'),''),nullif(trim(payload->>'region'),''),nullif(trim(payload->>'country'),''),'Unspecified locality');
+  place_latitude double precision;
+  place_longitude double precision;
+  mapped_location uuid;
+begin
+  if target_location is null then raise exception 'target location is required'; end if;
+  if import_source not in ('overture','fsq_os') then raise exception 'unsupported catalogue source'; end if;
+  if source_id is null or char_length(source_id)>240 then raise exception 'invalid source place id'; end if;
+  if place_name is null or char_length(place_name) not between 2 and 120 then raise exception 'invalid place name'; end if;
+  if place_slug is null or place_slug !~ '^[a-z0-9-]{3,100}$' then raise exception 'invalid place slug'; end if;
+  if place_kind not in ('cafe','restaurant','bar','park','museum','gallery','attraction','activity_venue','study_spot','scenic_spot','nightlife','shop','community_space','other') then
+    raise exception 'invalid place kind';
+  end if;
+  place_latitude := (payload->>'latitude')::double precision;
+  place_longitude := (payload->>'longitude')::double precision;
+  if place_latitude not between -90 and 90 or place_longitude not between -180 and 180 then raise exception 'invalid place coordinates'; end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(import_source||':'||source_id,0));
+  if exists(
+    select 1 from public.locations location
+    where location.id=target_location
+      and not exists(
+        select 1 from public.location_source_links link
+        where link.location_id=location.id and link.source=import_source and link.source_place_id=source_id
+      )
+  ) then
+    raise exception 'deterministic location id is already in use';
+  end if;
+  select location_id into mapped_location from public.location_source_links
+  where source=import_source and source_place_id=source_id;
+  if mapped_location is not null then
+    insert into public.static_catalogue_materializations(location_id,source,source_place_id,materialized_at,last_touched_at,retention_class,expires_at)
+    values(mapped_location,import_source,source_id,now(),now(),'opened',now()+interval '30 days')
+    on conflict(location_id) do update set last_touched_at=now();
+    return mapped_location;
+  end if;
+
+  insert into public.locations(
+    id,name,slug,kind,summary,city,neighborhood,region,region_code,country,country_code,
+    postal_code,address_public,latitude,longitude,timezone,timezone_verified,timezone_source,
+    amenities,accessibility,opening_hours,price_level,website_url,phone_public,brand_id,brand_name,
+    source_parent_place_id,duplicate_group_key,catalogue_group_key,category_confidence,
+    normalization_version,category_mapping_version,source_operating_status,source_metadata,
+    status,visibility,has_private_address,source,photo_enrichment_status,published_at
+  ) values (
+    target_location,place_name,place_slug,place_kind,nullif(trim(payload->>'summary'),''),place_city,
+    nullif(trim(payload->>'neighborhood'),''),nullif(trim(payload->>'region'),''),nullif(trim(payload->>'region_code'),''),
+    nullif(trim(payload->>'country'),''),nullif(trim(payload->>'country_code'),''),nullif(trim(payload->>'postal_code'),''),
+    nullif(trim(payload->>'address_public'),''),place_latitude,place_longitude,
+    coalesce(nullif(trim(payload->>'timezone'),''),'UTC'),nullif(trim(payload->>'timezone'),'') is not null,
+    case when nullif(trim(payload->>'timezone'),'') is not null then import_source else null end,
+    coalesce(array(select jsonb_array_elements_text(coalesce(payload->'amenities','[]'::jsonb))),'{}'::text[]),
+    case when jsonb_typeof(coalesce(payload->'accessibility','{}'::jsonb))='object' then coalesce(payload->'accessibility','{}'::jsonb) else '{}'::jsonb end,
+    case when jsonb_typeof(coalesce(payload->'opening_hours','{}'::jsonb))='object' then coalesce(payload->'opening_hours','{}'::jsonb) else '{}'::jsonb end,
+    nullif(payload->>'price_level','')::smallint,nullif(trim(payload->>'website_url'),''),nullif(trim(payload->>'phone_public'),''),
+    nullif(trim(payload->>'brand_id'),''),nullif(trim(payload->>'brand_name'),''),nullif(trim(payload->>'source_parent_place_id'),''),
+    nullif(trim(payload->>'duplicate_group_key'),''),nullif(trim(payload->>'catalogue_group_key'),''),
+    nullif(payload->>'category_confidence','')::numeric,nullif(payload->>'normalization_version','')::integer,
+    nullif(payload->>'category_mapping_version','')::integer,null,'{}'::jsonb,
+    'published','public',false,'import','pending',now()
+  ) on conflict(id) do nothing;
+
+  insert into public.location_source_links(
+    source,source_place_id,location_id,source_confidence,source_updated_at,last_seen_at,payload_hash,
+    source_parent_place_id,source_brand_id,source_release_id,source_operating_status,
+    normalization_version,category_mapping_version,source_metadata,missed_refreshes,stale_since,created_at,updated_at
+  ) values (
+    import_source,source_id,target_location,nullif(payload->>'source_confidence','')::numeric,
+    nullif(payload->>'source_updated_at','')::timestamptz,now(),nullif(trim(payload->>'payload_hash'),''),
+    nullif(trim(payload->>'source_parent_place_id'),''),nullif(trim(payload->>'brand_id'),''),
+    nullif(trim(payload->>'source_release_id'),''),nullif(trim(payload->>'source_operating_status'),''),
+    nullif(payload->>'normalization_version','')::integer,nullif(payload->>'category_mapping_version','')::integer,
+    case when jsonb_typeof(coalesce(payload->'source_metadata','{}'::jsonb))='object' then coalesce(payload->'source_metadata','{}'::jsonb) else '{}'::jsonb end,
+    0,null,now(),now()
+  ) on conflict(source,source_place_id) do nothing;
+
+  select location_id into mapped_location from public.location_source_links
+  where source=import_source and source_place_id=source_id;
+  if mapped_location is distinct from target_location then
+    delete from public.locations orphan where orphan.id=target_location and orphan.source='import'
+      and not exists(select 1 from public.location_source_links link where link.location_id=orphan.id);
+  end if;
+  mapped_location := coalesce(mapped_location,target_location);
+  insert into public.static_catalogue_materializations(location_id,source,source_place_id,materialized_at,last_touched_at,retention_class,expires_at)
+  values(mapped_location,import_source,source_id,now(),now(),'opened',now()+interval '30 days')
+  on conflict(location_id) do update set last_touched_at=now();
+  return mapped_location;
+end;
+$$;
+revoke all on function public.materialize_static_catalogue_location_v1(uuid,text,jsonb) from public,anon,authenticated;
+grant execute on function public.materialize_static_catalogue_location_v1(uuid,text,jsonb) to service_role;
+
+create or replace function public.claim_google_place_candidates_v1(batch_size integer default 100)
+returns table(
+  id uuid,name text,latitude double precision,longitude double precision,city text,region text,
+  country text,country_code text,attempt_count integer
+)
+language sql
+security definer
+set search_path=public
+as $$
+  select location.id,location.name,location.latitude,location.longitude,location.city,location.region,
+         location.country,location.country_code,coalesce(attempt.attempt_count,0)
+  from public.locations location
+  left join public.google_place_match_attempts attempt on attempt.location_id=location.id
+  left join public.static_catalogue_materializations materialization on materialization.location_id=location.id
+  where location.status='published' and location.visibility='public'
+    and location.latitude is not null and location.longitude is not null
+    and not exists(
+      select 1 from public.location_google_places mapping
+      where mapping.location_id=location.id and mapping.status='verified'
+    )
+    and not exists(
+      select 1 from public.location_photo_sources photo
+      where photo.location_id=location.id and photo.status='approved' and photo.is_ai_generated is not true
+    )
+    and (attempt.retry_after is null or attempt.retry_after<=now())
+  order by coalesce(materialization.last_touched_at,location.published_at) desc nulls last,
+           coalesce(attempt.attempt_count,0) asc,
+           location.id
+  limit greatest(1,least(coalesce(batch_size,100),1000));
+$$;
+revoke all on function public.claim_google_place_candidates_v1(integer) from public,anon,authenticated;
+grant execute on function public.claim_google_place_candidates_v1(integer) to service_role;
+
+create or replace function public.delete_cold_static_materialization_v1(target_location uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  candidate public.static_catalogue_materializations%rowtype;
+begin
+  select * into candidate from public.static_catalogue_materializations
+  where location_id=target_location and expires_at is not null and expires_at<now()
+  for update;
+  if not found then return false; end if;
+  if exists(select 1 from public.location_photo_sources where location_id=target_location and status='approved') then return false; end if;
+  if exists(select 1 from public.location_google_places where location_id=target_location and status='verified') then return false; end if;
+  begin
+    delete from public.locations where id=target_location and source='import';
+    return found;
+  exception when foreign_key_violation then
+    return false;
+  end;
+end;
+$$;
+revoke all on function public.delete_cold_static_materialization_v1(uuid) from public,anon,authenticated;
+grant execute on function public.delete_cold_static_materialization_v1(uuid) to service_role;
+
+update public.locations location
+set source_metadata='{}'::jsonb,
+    source_operating_status=null
+where exists(select 1 from public.static_catalogue_materializations materialization where materialization.location_id=location.id);
+--- supabase/migrations/10027_static_action_analytics_boundary.sql ---
+-- Static R2 cards are deliberately absent from the relational recommendation-impression
+-- tables. Their durable user action and contextual-learning event must not fail merely
+-- because there is no relational recommendation row to attach an outcome to.
+
+create or replace function public.record_discovery_action_v2(
+  target_kind text,
+  target_id uuid,
+  action_name text,
+  requested_action text,
+  request_key uuid,
+  context_mode text,
+  context_category text,
+  context_payload jsonb,
+  is_static_ephemeral boolean default false,
+  static_source text default null,
+  static_source_place_id text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  event_name text;
+  action_kind_type text;
+  action_id_type text;
+  action_name_type text;
+  action_request_type text;
+begin
+  if auth.uid() is null then raise exception 'authentication required'; end if;
+  if is_static_ephemeral and action_name='dismissed' then
+    return public.record_static_catalogue_action_v1(
+      target_id,static_source,static_source_place_id,action_name,request_key
+    );
+  end if;
+  if is_static_ephemeral and action_name='undo' and not exists(select 1 from public.locations where id=target_id) then
+    return public.record_static_catalogue_action_v1(
+      target_id,static_source,static_source_place_id,action_name,request_key
+    );
+  end if;
+
+  if action_name in ('saved','interested','dismissed','visited','undo') then
+    -- The existing v1 API is stable at the HTTP boundary, but some deployments use
+    -- domain/enum argument types instead of plain text. Resolve that installed
+    -- overload and cast explicitly instead of relying on an implicit text cast.
+    select
+      format_type(procedure.proargtypes[0],null),
+      format_type(procedure.proargtypes[1],null),
+      format_type(procedure.proargtypes[2],null),
+      format_type(procedure.proargtypes[3],null)
+    into action_kind_type,action_id_type,action_name_type,action_request_type
+    from pg_proc procedure
+    join pg_namespace namespace on namespace.oid=procedure.pronamespace
+    where namespace.nspname='public'
+      and procedure.proname='record_discovery_action_v1'
+      and procedure.pronargs>=4
+      and procedure.pronargs-procedure.pronargdefaults<=4
+    order by procedure.pronargs asc,procedure.oid asc
+    limit 1;
+
+    if action_kind_type is null then
+      raise exception 'record_discovery_action_v1 overload is unavailable';
+    end if;
+
+    execute format(
+      'select public.record_discovery_action_v1($1::%s,$2::%s,$3::%s,$4::%s)',
+      action_kind_type,action_id_type,action_name_type,action_request_type
+    ) using target_kind,target_id,action_name,request_key;
+  end if;
+
+  -- Relational feed items have recommendation request/impression rows. Ephemeral R2
+  -- cards do not, so attempting to attach a relational outcome would roll back the
+  -- real save after the location had already been materialized.
+  if not is_static_ephemeral then
+    perform public.record_recommendation_outcome_v1(
+      request_key=>request_key,
+      target_kind=>target_kind,
+      target_id=>target_id,
+      outcome_name=>action_name,
+      outcome_metadata=>jsonb_build_object('surface','discover','perfect_pick',requested_action='perfect')
+    );
+  end if;
+
+  event_name := case
+    when requested_action='perfect' then 'perfect'
+    when action_name='dismissed' then 'pass'
+    when action_name in ('saved','interested') then 'save'
+    when action_name='visited' then 'visited'
+    when action_name='opened' then 'opened'
+    else null
+  end;
+  if target_kind='place' and event_name is not null then
+    perform public.record_recommendation_context_v1(
+      target_location=>target_id,
+      event_name=>event_name,
+      context_mode=>coalesce(context_mode,'solo'),
+      context_category=>context_category,
+      context_payload=>coalesce(context_payload,'{}'::jsonb),
+      context_deck=>null
+    );
+  end if;
+
+  if target_kind='place' and action_name in ('saved','interested','visited','opened') then
+    perform public.touch_static_catalogue_materializations_v1(
+      array[target_id],
+      case when requested_action='perfect' then 'perfect'
+           when action_name in ('saved','interested') then 'saved'
+           else action_name end
+    );
+  end if;
+  return jsonb_build_object('action',action_name,'locationId',target_id,'perfectPick',requested_action='perfect');
+end;
+$$;
+revoke all on function public.record_discovery_action_v2(text,uuid,text,text,uuid,text,text,jsonb,boolean,text,text) from public,anon;
+grant execute on function public.record_discovery_action_v2(text,uuid,text,text,uuid,text,text,jsonb,boolean,text,text) to authenticated;
