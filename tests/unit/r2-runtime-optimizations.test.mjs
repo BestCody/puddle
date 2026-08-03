@@ -68,7 +68,7 @@ test('catalogue build uses schema-v3 compact filters and separate provenance sha
   assert.ok(await missing('lib/app/discovery.js'))
 })
 
-test('one migration owns independent v3 actions and dry-run cleanup', async () => {
+test('historical R2-named migration owns independent v3 actions and dry-run cleanup', async () => {
   const migration = await read('supabase/migrations/10028_r2_runtime_second_optimization.sql')
   assert.ok(await missing('supabase/migrations/10029_r2_cleanup_batch_preview.sql'))
   for (const marker of [
@@ -87,18 +87,23 @@ test('one migration owns independent v3 actions and dry-run cleanup', async () =
   assert.equal(migration.includes("perform public.record_discovery_action_v2"), false)
 })
 
-test('overlay writes and cleanup use conditional concurrency control and a required registry', async () => {
+test('B2 overlay writes and cleanup use serialized jobs and a required registry', async () => {
   const overlay = await read('lib/app/static-media-overlay.js')
-  const publisher = await read('scripts/publish-static-catalogue-r2.mjs')
-  const cleanup = await read('scripts/cleanup-r2-assets.mjs')
-  assert.ok(overlay.includes("'if-match'"))
-  assert.ok(overlay.includes("'if-none-match'"))
-  assert.ok(overlay.includes('response.status === 412'))
+  const publisher = await read('scripts/publish-static-catalogue-b2.mjs')
+  const cleanup = await read('scripts/cleanup-b2-assets.mjs')
+  const photoWorkflow = await read('.github/workflows/photo-enrichment.yml')
+  const cleanupWorkflow = await read('.github/workflows/b2-cleanup.yml')
+  assert.ok(overlay.includes('b2Request'))
+  assert.equal(overlay.includes("'if-match'"), false)
+  assert.equal(overlay.includes("'if-none-match'"), false)
   assert.ok(publisher.includes('release-registry.json'))
   assert.ok(publisher.includes('updateReleaseRegistry'))
+  assert.equal(publisher.includes("'if-match'"), false)
   assert.ok(cleanup.includes("admin.rpc('prepare_r2_cleanup_v2'"))
   assert.ok(cleanup.includes('release-registry.json is required'))
   assert.equal(cleanup.includes("allObjects('catalogue/releases/')"), false)
+  assert.ok(photoWorkflow.includes('cancel-in-progress: false'))
+  assert.ok(cleanupWorkflow.includes('cancel-in-progress: false'))
 })
 
 test('legacy executable product surfaces are absent', async () => {

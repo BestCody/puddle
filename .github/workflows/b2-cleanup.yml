@@ -1,4 +1,4 @@
-name: Clean R2 catalogue and photos
+name: Clean Backblaze B2 catalogue and photos
 
 on:
   workflow_dispatch:
@@ -13,12 +13,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: r2-catalogue-photo-cleanup
+  group: b2-catalogue-photo-cleanup
   cancel-in-progress: false
 
 jobs:
   cleanup:
-    if: ${{ vars.R2_INFRA_ENABLED == 'true' }}
+    if: ${{ vars.B2_INFRA_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -29,13 +29,15 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Remove stale releases and expired cached photos
-        run: npm run locations:r2:cleanup -- ${{ inputs.apply && '--apply' || '' }}
+        run: npm run locations:b2:cleanup -- ${{ inputs.apply && '--apply' || '' }}
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
-          R2_RELEASES_TO_KEEP: '2'
+          B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+          B2_REGION: ${{ secrets.B2_REGION }}
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
+          B2_RELEASES_TO_KEEP: '2'
+          B2_DELETE_CONCURRENCY: '6'
