@@ -1,0 +1,33 @@
+name: Audit legacy removal
+
+on:
+  push:
+    branches:
+      - agent/r2-runtime-optimization-pass
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: List repository and legacy references
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== PRODUCT VISION IMPORTS ==='
+          grep -RIl --exclude-dir=.git --exclude-dir=node_modules --exclude='*.sql' -E "legacySystemsEnabled|legacyRedirectForPath|isLegacyApiPath|PUDDLE_LEGACY_SYSTEMS_ENABLED" . | sort || true
+          echo '=== LEGACY PAGE/API PATHS ==='
+          for path in \
+            app/events app/create/event app/studio/events app/hosts app/friends app/inbox app/wallet app/orders app/settings/payouts app/admin/finance \
+            app/api/stripe app/api/tickets app/api/check-in app/api/location-sharing app/api/studio/events app/api/events app/api/hosts app/api/friends app/api/conversations app/api/messages app/api/maps app/api/ai/assist app/api/ai/decision; do
+            if [ -e "$path" ]; then find "$path" -type f | sort; fi
+          done
+          echo '=== LEGACY NAMED FILES ==='
+          find app components lib scripts tests -type f \( \
+            -iname '*event*' -o -iname '*ticket*' -o -iname '*stripe*' -o -iname '*friend*' -o -iname '*message*' -o -iname '*conversation*' -o -iname '*location-sharing*' -o -iname '*itinerar*' -o -iname '*finance*' -o -iname '*payout*' -o -iname '*check-in*' -o -iname '*host*' \
+          \) | sort || true
+          echo '=== LEGACY IMPORTS / ROUTE STRINGS ==='
+          grep -RIn --exclude-dir=.git --exclude-dir=node_modules --exclude='*.sql' -E "(/api/(stripe|tickets|check-in|location-sharing|events|hosts|friends|conversations|messages|maps|ai/assist|ai/decision)|/events|/friends|/inbox|/wallet|/orders|/admin/finance|requireLegacy|legacySystemsEnabled)" app components lib scripts tests proxy.js package.json .env.example | head -2000 || true
