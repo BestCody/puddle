@@ -1,4 +1,4 @@
-name: Audit legacy removal
+name: Apply permanent location-first cutover
 
 on:
   push:
@@ -9,34 +9,29 @@ permissions:
   contents: write
 
 jobs:
-  audit:
+  apply:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           ref: agent/r2-runtime-optimization-pass
-      - name: Build action schema audit
-        shell: bash
-        run: |
-          set -euo pipefail
-          report=action-schema-audit.txt
-          : > "$report"
-          {
-            echo '=== MATCHES ==='
-            grep -RIn -E "(create table.*discovery_actions|record_discovery_action_v1|discovery_actions|location_visits|saved|interested|dismissed|undone_at)" supabase/migrations/*.sql | head -5000 || true
-            echo '=== FILE CONTENTS WITH ACTION FUNCTION ==='
-            for file in $(grep -Rl "record_discovery_action_v1" supabase/migrations/*.sql | sort); do
-              echo "--- $file ---"
-              cat "$file"
-            done
-          } >> "$report"
-      - name: Commit action schema audit
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply cutover
+        run: python scripts/permanent-location-first-cutover.py
+      - name: Refresh dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Remove temporary migration aids
+        run: rm -f legacy-audit.txt dependency-audit.txt action-schema-audit.txt scripts/permanent-location-first-cutover.py .github/workflows/audit-legacy-removal.yml
+      - name: Commit permanent cutover
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add action-schema-audit.txt
-          git commit -m "Record discovery action schema audit" || exit 0
+          git add -A
+          git commit -m "Complete permanent R2 location-first cutover"
           git push origin HEAD:agent/r2-runtime-optimization-pass
