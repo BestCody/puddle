@@ -44,8 +44,9 @@ test('catalogue build splits deck and detail data and discovery consumes the med
   assert.ok(discovery.includes('media.googlePlaceId'))
 })
 
-test('database migration stores compact actions, shared media, retention, and Google retry state', async () => {
+test('database migrations store compact actions, shared media, retention, Google retry state, and a static analytics boundary', async () => {
   const migration = await read('supabase/migrations/10026_r2_runtime_optimizations.sql')
+  const boundary = await read('supabase/migrations/10027_static_action_analytics_boundary.sql')
   for (const marker of [
     'create table if not exists public.media_objects',
     'create table if not exists public.static_catalogue_actions',
@@ -57,6 +58,9 @@ test('database migration stores compact actions, shared media, retention, and Go
     "expires_at timestamptz not null default (now()+interval '90 days')"
   ]) assert.ok(migration.includes(marker), `optimization migration is missing ${marker}`)
   assert.equal(migration.includes('return public.upsert_open_catalogue_location_v1'), false)
+  assert.ok(boundary.includes('if not is_static_ephemeral then'))
+  assert.ok(boundary.includes('record_recommendation_outcome_v1'))
+  assert.ok(boundary.includes('record_recommendation_context_v1'))
 })
 
 test('workers update overlays and remember Google no-match outcomes', async () => {
