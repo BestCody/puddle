@@ -1,10 +1,9 @@
-name: End-to-end authentication
+name: End-to-end product
 
 on:
   push:
     branches:
       - main
-      - test/auth-onboarding-e2e
   pull_request:
 
 permissions:
@@ -13,10 +12,11 @@ permissions:
 jobs:
   browser-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       E2E_BASE_URL: http://localhost:3000
+      E2E_R2_BASE_URL: http://127.0.0.1:43110
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -44,7 +44,7 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> "$GITHUB_ENV"
           echo "MAILPIT_URL=$INBUCKET_URL" >> "$GITHUB_ENV"
-      - name: Run browser tests
+      - name: Run current product browser tests
         run: npm run e2e:test
       - name: Upload browser diagnostics
         if: always()
