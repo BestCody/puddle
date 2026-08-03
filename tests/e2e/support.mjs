@@ -147,11 +147,15 @@ export function directConfirmationPath(verificationLink, next = '/onboarding') {
   return `/auth/confirm?${params}`
 }
 
-export async function signInThroughUi(page, email, password, next = '/dashboard') {
+export async function attemptSignInThroughUi(page, email, password, next = '/dashboard') {
   await page.goto(`/signin?next=${encodeURIComponent(next)}`)
   await page.getByLabel('Email').first().fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: /^Sign in/ }).click()
+}
+
+export async function signInThroughUi(page, email, password, next = '/dashboard') {
+  await attemptSignInThroughUi(page, email, password, next)
   await expect(page).not.toHaveURL(/\/signin(?:\?|$)/)
 }
 
