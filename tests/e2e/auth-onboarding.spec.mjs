@@ -33,7 +33,7 @@ async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Low-key
   await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
   await page.getByLabel('City or town').fill(city)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.getByRole('option').first().click()
+  await page.getByRole('listbox', { name: 'Location results' }).getByRole('option').first().click()
   await page.getByLabel('Search radius').fill('25')
   await page.getByLabel('Coffee shops').check()
   await page.getByLabel('Restaurants').check()
