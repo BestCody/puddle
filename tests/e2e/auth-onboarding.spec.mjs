@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   admin,
+  attemptSignInThroughUi,
   completeProfileDirect,
   createConfirmedUser,
   deleteProfile,
@@ -108,7 +109,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await expect(page.getByText(/Password updated/i)).toBeVisible()
 
   await signOutThroughUi(page)
-  await signInThroughUi(page, email, password)
+  await attemptSignInThroughUi(page, email, password)
   await expect(page).toHaveURL(/\/signin\?.*error=/)
   await expect(page.getByText(/Email or password was not accepted/i)).toBeVisible()
 
