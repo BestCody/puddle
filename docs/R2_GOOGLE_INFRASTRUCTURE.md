@@ -1,14 +1,16 @@
 # R2 catalogue and Google Places UI Kit infrastructure
 
-This is the first implementation pass for separating cold global catalogue data from hot application state. It is deliberately feature-gated until the R2 bucket, custom domain, Google project, database migration, and repository secrets are configured.
+This implementation separates cold global catalogue data from hot application state. It remains feature-gated until the R2 bucket, custom domain, Google project, database migrations, and repository secrets are configured.
 
 ## Runtime flow
 
-1. The discovery server reads the versioned R2 catalogue manifest and the nearby Web Mercator tiles.
-2. It materializes a bounded set of nearby places into Supabase through the existing catalogue upsert function. Only locations entering an active user's search area become relational rows.
-3. The normal recommendation pipeline applies blocks, preferences, distance, ratings, diversity, and impression logging to those active rows.
-4. Cards with approved cached photos remain first. Cards with a verified Google Place ID are next. Cards with neither use an R2 category placeholder.
-5. Only the currently mounted swipe card creates a Google Places UI Kit component. Google photo bytes, resource names, and image URLs are never persisted.
+1. The discovery server reads the versioned R2 catalogue manifest and nearby Web Mercator tiles.
+2. R2 places are filtered, deduplicated, and ranked in memory alongside existing Supabase candidates. Merely entering a new area does not insert catalogue rows or impression rows for ephemeral R2 cards.
+3. Each static place receives a deterministic UUID derived from its source and source place ID.
+4. A static place is materialized into Supabase only after a meaningful action: pass, save, Perfect Pick, opening full details, or creating a shared deck. The deterministic UUID means later actions and dismissals address the same row.
+5. Existing Supabase candidates continue through the full recommendation, rating, photo, personalization, and impression pipeline. Static candidates use the same visible card contract with a lightweight distance-based fallback score until materialization.
+6. Cards with approved cached photos remain first. Cards with a verified Google Place ID are next. Cards with neither use an R2 category placeholder.
+7. Only the currently mounted swipe card creates a Google Places UI Kit component. Google photo bytes, resource names, and image URLs are never persisted.
 
 ## R2 object layout
 
@@ -26,7 +28,14 @@ Use an R2 custom domain for production. The development `r2.dev` endpoint is not
 
 ## Required configuration
 
-Apply `supabase/migrations/10024_r2_static_catalogue_photos.sql`, then configure:
+Apply these migrations in order:
+
+```text
+supabase/migrations/10024_r2_static_catalogue_photos.sql
+supabase/migrations/10025_static_catalogue_on_demand.sql
+```
+
+Then configure:
 
 ```text
 R2_ACCOUNT_ID
@@ -42,11 +51,11 @@ GOOGLE_PLACES_API_KEY
 
 Set the repository variable `R2_INFRA_ENABLED=true` only after those values exist. The scheduled photo worker is skipped while that variable is absent or false.
 
-The Google browser key should be restricted to the deployed site origins and the Maps JavaScript API. The server key should be restricted to the Places API and the worker environment. Configure Google billing budgets and quota caps before enabling matching or UI Kit traffic.
+The Google browser key should be restricted to the deployed site origins and the Maps JavaScript API. The server key should be restricted to the Places API and worker environment. Configure Google billing budgets and quota caps before enabling matching or UI Kit traffic.
 
 ## Building and publishing a shard
 
-The static workflow is manual during the first implementation pass:
+The static workflow is manual during this infrastructure phase:
 
 1. Run **Build static place catalogue**.
 2. Supply an Overture bounding box, immutable release label, and tile zoom.
@@ -67,24 +76,22 @@ npm run locations:catalogue:publish-r2 -- \
   --apply
 ```
 
-Publishing multiple independently built shards under one release currently requires combining their output directories before publishing the root manifest. A later optimization pass should add a shard manifest and resumable global build matrix rather than attempting one worldwide runner job.
+Publishing multiple independently built shards under one release currently requires combining their output directories before publishing the root manifest. A later optimization can add a shard manifest and resumable global build matrix rather than attempting one worldwide runner job.
 
 ## Open-photo cache
 
-The existing hardened provider importer still searches Wikimedia Commons, Mapillary, and KartaView off the user-facing path. After each committed enrichment batch, the R2 migrator:
+The hardened provider importer searches Wikimedia Commons, Mapillary, and KartaView off the user-facing path. For an approved candidate it now:
 
-- reads only approved open-licensed images staged in the Puddle Supabase public-media bucket;
-- converts the selected image to AVIF;
+- downloads the provider asset through the existing host allowlist, size limit, redirect limit, timeout, retry, and throttling controls;
+- converts it directly to AVIF in memory;
 - targets 45 KB and rejects output above 60 KB;
-- strips metadata through Sharp's default processing behavior;
+- strips source metadata through Sharp processing;
 - computes SHA-256 and a 64-bit difference hash;
-- reuses byte-identical processed images;
-- records a 64-bit perceptual hash and index so near-duplicate policy can be tightened during the optimization pass without risking incorrect attribution;
-- stores one immutable object in R2;
-- updates the existing attribution row with the R2 key, hashes, dimensions, and byte size;
-- deletes the temporary Supabase object after the database row points to R2.
+- reuses byte-identical processed images already stored in R2;
+- uploads one immutable object directly to R2;
+- writes only the R2 URL, object key, hashes, dimensions, byte size, licence, and attribution to Supabase Postgres.
 
-The staging hop is intentional for this first implementation pass because the provider importer is already production-hardened. The optimization pass should move R2 upload into the provider importer so the open photo never enters Supabase Storage.
+Open-provider photos no longer enter Supabase Storage. `scripts/migrate-open-photos-to-r2.mjs` remains available only to backfill older approved images that were staged before this optimization.
 
 User and venue uploads remain in Supabase Storage.
 
@@ -94,8 +101,8 @@ Persist only the stable Google Place ID and match metadata in `location_google_p
 
 ## Rollback
 
-The existing regional database catalogue workflow remains available as a manual rollback tool, but its schedule is removed. The hardened Supabase open-photo importer remains the provider-discovery stage. The active worker runs `scripts/migrate-open-photos-to-r2.mjs` after every batch through `PHOTO_ENRICH_MIGRATOR`, leaving Supabase Storage as temporary staging rather than permanent open-photo storage.
+The existing regional database catalogue workflow remains available as a manual rollback tool, but its schedule is removed. The legacy R2 migration command remains available for old staged open photos. New open-photo enrichment writes directly to R2.
 
 ## Not completed by this code change
 
-This change does not create the Cloudflare bucket or custom domain, configure Cloudflare cache rules, enable Google billing, add repository secrets, apply the migration, publish worldwide data, or deploy the application. Those are explicit rollout steps after review and optimization.
+This change does not create the Cloudflare bucket or custom domain, configure Cloudflare cache rules, enable Google billing, add repository secrets, apply production migrations, publish worldwide data, or deploy the application. Those remain explicit rollout steps after review.
