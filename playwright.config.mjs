@@ -45,7 +45,7 @@ export default defineConfig({
     },
     {
       name: 'mobile-chromium',
-      testMatch: /public-routes\.spec\.mjs/,
+      testMatch: /responsive-public-routes\.spec\.mjs/,
       use: { ...devices['Pixel 5'] }
     }
   ],
