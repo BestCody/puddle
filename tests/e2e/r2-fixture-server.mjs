@@ -9,6 +9,7 @@ const ONE_PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64'
 )
+const requests = []
 
 function placeholderSvg(category) {
   const label = String(category || 'place').replaceAll('_', ' ')
@@ -27,6 +28,22 @@ const server = http.createServer((request, response) => {
     response.end(JSON.stringify({ ok: true }))
     return
   }
+
+  if (url.pathname === '/__requests') {
+    response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+    response.end(JSON.stringify({ requests }))
+    return
+  }
+
+  if (url.pathname === '/__reset' && request.method === 'POST') {
+    requests.length = 0
+    response.writeHead(204, { 'Cache-Control': 'no-store' })
+    response.end()
+    return
+  }
+
+  requests.push({ method: request.method || 'GET', path: url.pathname, at: new Date().toISOString() })
+  if (requests.length > 2_000) requests.splice(0, requests.length - 2_000)
 
   if (url.pathname === '/photos/e2e-media.png') {
     response.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': ONE_PIXEL_PNG.length })
