@@ -218,7 +218,7 @@ declare
   changed integer := 0;
   normalized text := lower(coalesce(touch_reason,''));
 begin
-  if auth.uid() is null and coalesce(current_setting('request.jwt.claim.role',true),'') <> 'service_role' then
+  if auth.uid() is null and coalesce(auth.role()::text,'') <> 'service_role' then
     raise exception 'authentication required';
   end if;
   if normalized not in ('opened','saved','perfect','visited','shared','photo','google') then
@@ -266,7 +266,12 @@ declare
   event_name text;
 begin
   if auth.uid() is null then raise exception 'authentication required'; end if;
-  if is_static_ephemeral and action_name in ('dismissed','undo') then
+  if is_static_ephemeral and action_name='dismissed' then
+    return public.record_static_catalogue_action_v1(
+      target_id,static_source,static_source_place_id,action_name,request_key
+    );
+  end if;
+  if is_static_ephemeral and action_name='undo' and not exists(select 1 from public.locations where id=target_id) then
     return public.record_static_catalogue_action_v1(
       target_id,static_source,static_source_place_id,action_name,request_key
     );
@@ -355,6 +360,16 @@ begin
   if place_latitude not between -90 and 90 or place_longitude not between -180 and 180 then raise exception 'invalid place coordinates'; end if;
 
   perform pg_advisory_xact_lock(hashtextextended(import_source||':'||source_id,0));
+  if exists(
+    select 1 from public.locations location
+    where location.id=target_location
+      and not exists(
+        select 1 from public.location_source_links link
+        where link.location_id=location.id and link.source=import_source and link.source_place_id=source_id
+      )
+  ) then
+    raise exception 'deterministic location id is already in use';
+  end if;
   select location_id into mapped_location from public.location_source_links
   where source=import_source and source_place_id=source_id;
   if mapped_location is not null then
