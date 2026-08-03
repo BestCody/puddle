@@ -37,6 +37,16 @@ function safeStaticReferences(value, locationIds) {
   }))
 }
 
+function diagnostic(error) {
+  if (process.env.E2E_DIAGNOSTICS !== 'true') return {}
+  return {
+    diagnosticCode: String(error?.code || '').slice(0, 80) || null,
+    diagnosticMessage: String(error?.message || 'unknown failure').slice(0, 500),
+    diagnosticDetails: String(error?.details || '').slice(0, 500) || null,
+    diagnosticHint: String(error?.hint || '').slice(0, 300) || null
+  }
+}
+
 export async function POST(request) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Shared location matching is unavailable.' }, { status: 503 })
@@ -69,7 +79,7 @@ export async function POST(request) {
       references: safeStaticReferences(body.staticRefs, locationIds)
     })
     if (materialization.missing.length) {
-      return NextResponse.json({ error: 'One or more catalogue locations are no longer available.' }, { status: 409 })
+      return NextResponse.json({ error: 'One or more catalogue locations are no longer available.', missing: process.env.E2E_DIAGNOSTICS === 'true' ? materialization.missing : undefined }, { status: 409 })
     }
     const resolvedByOriginal = new Map(locationIds.map((id) => [id, materialization.materialized.get(id)?.id || id]))
     const resolvedLocationIds = [...new Set(locationIds.map((id) => resolvedByOriginal.get(id)))]
@@ -89,12 +99,22 @@ export async function POST(request) {
     })
     const deckId = created.data?.deckId || created.data?.deck_id
     const token = created.data?.token
-    if (created.error || !deckId || !token) return NextResponse.json({ error: 'The shared location deck could not be created.' }, { status: 400 })
+    if (created.error || !deckId || !token) {
+      const failure = created.error || new Error('Shared-deck RPC returned no deck ID or token.')
+      console.warn('Shared location deck creation failed.', {
+        code: failure.code || null,
+        message: String(failure.message || '').slice(0, 240),
+        mode,
+        locationCount: resolvedLocationIds.length
+      })
+      return NextResponse.json({ error: 'The shared location deck could not be created.', ...diagnostic(failure) }, { status: 400 })
+    }
 
-    await supabase.rpc('touch_static_catalogue_materializations_v1', {
+    const touched = await supabase.rpc('touch_static_catalogue_materializations_v1', {
       location_ids: resolvedLocationIds,
       touch_reason: 'shared'
     })
+    if (touched.error) throw touched.error
 
     const choices = Array.isArray(body.choices) ? body.choices.slice(0, MAX_ITEMS) : []
     for (const rawChoice of choices) {
@@ -119,6 +139,6 @@ export async function POST(request) {
     const url = new URL(roomPath, request.nextUrl.origin).toString()
     return NextResponse.json({ ok: true, deckId, token, url, mode, maxMembers, roomPath })
   } catch (error) {
-    return NextResponse.json({ error: safeSecurityError(error, 'The shared location deck could not be created.') }, { status: error?.status || 400 })
+    return NextResponse.json({ error: safeSecurityError(error, 'The shared location deck could not be created.'), ...diagnostic(error) }, { status: error?.status || 400 })
   }
 }
