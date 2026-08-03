@@ -135,7 +135,8 @@ requireIncludes(profile, ['Search radius','Preferences','Account settings','Adva
 
 const runtimeMigration = await read('supabase/migrations/10028_r2_runtime_second_optimization.sql')
 requireIncludes(runtimeMigration, ['record_discovery_actions_v3','discovery_action_receipts','prepare_r2_cleanup_v2','drop function if exists public.record_discovery_action_v2'], 'Permanent R2 migration')
-if (/record_discovery_action_v2\s*\(|prepare_r2_cleanup_v1\s*\(/.test(runtimeMigration.replace(/drop function if exists/g, ''))) throw new Error('Obsolete RPC calls remain in the permanent migration')
+const executableRuntimeMigration = runtimeMigration.replace(/drop function if exists[^;]+;/gi, '')
+if (/record_discovery_action_v2\s*\(|prepare_r2_cleanup_v1\s*\(/.test(executableRuntimeMigration)) throw new Error('Obsolete RPC calls remain in the permanent migration')
 
 const cleanup = await read('scripts/cleanup-r2-assets.mjs')
 requireIncludes(cleanup, ['release-registry.json is required','prepare_r2_cleanup_v2'], 'R2 cleanup')
