@@ -34,25 +34,24 @@ async function runPool(items, worker, concurrency = DELETE_CONCURRENCY) {
 
 async function readRegistry() {
   const response = await r2Request({ method: 'GET', key: 'catalogue/release-registry.json', config })
-  if (response.status === 404) return { etag: null, releases: [] }
+  if (response.status === 404) {
+    throw new Error('catalogue/release-registry.json is required before cleanup can run.')
+  }
   if (!response.ok) throw new Error(`R2 release registry read failed: ${response.status}`)
   const payload = await response.json()
-  return {
-    etag: response.headers.get('etag'),
-    releases: Array.isArray(payload?.releases) ? payload.releases : []
-  }
+  const releases = Array.isArray(payload?.releases) ? payload.releases.filter((item) => item?.release) : []
+  if (!releases.length) throw new Error('catalogue/release-registry.json contains no releases.')
+  return { etag: response.headers.get('etag'), releases }
 }
 
 async function updateRegistry(current, releases) {
   const body = Buffer.from(JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), releases }))
   const response = await r2Request({
-    method: 'PUT',
-    key: 'catalogue/release-registry.json',
-    body,
+    method: 'PUT', key: 'catalogue/release-registry.json', body,
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
-      ...(current.etag ? { 'if-match': current.etag } : { 'if-none-match': '*' })
+      'if-match': current.etag
     },
     config
   })
@@ -61,14 +60,12 @@ async function updateRegistry(current, releases) {
 }
 
 const registry = await readRegistry()
-let releases = registry.releases.map((item) => item?.release).filter(Boolean)
-if (!releases.length) {
-  const releaseObjects = await allObjects('catalogue/releases/')
-  releases = [...new Set(releaseObjects.map((object) => object.key.split('/')[2]).filter(Boolean))].sort().reverse()
-}
+const releases = [...new Set(registry.releases.map((item) => item.release))]
 const staleReleases = releases.slice(KEEP_RELEASES)
 const staleObjects = []
-for (const release of staleReleases) staleObjects.push(...await allObjects(`catalogue/releases/${release}/`))
+for (const release of staleReleases) {
+  staleObjects.push(...await allObjects(`catalogue/releases/${release}/`))
+}
 
 const admin = createAdminClient()
 const prepared = await admin.rpc('prepare_r2_cleanup_v2', {
@@ -94,8 +91,7 @@ if (APPLY) {
     if (result.deleted) deletedObjects += 1
   })
 
-  const r2Media = orphanMedia.filter((media) => media.storageBackend === 'r2' && media.storageKey)
-  await runPool(r2Media, async (media) => {
+  await runPool(orphanMedia.filter((media) => media.storageBackend === 'r2' && media.storageKey), async (media) => {
     const result = await deleteR2Object(media.storageKey, { config })
     if (result.deleted) deletedObjects += 1
   })
@@ -108,9 +104,11 @@ if (APPLY) {
     deletedMediaRows = Number(removed.data || 0)
   }
 
-  if (changedLocationIds.length) overlays = await syncStaticMediaOverlayForLocations(admin, changedLocationIds, { config })
+  if (changedLocationIds.length) {
+    overlays = await syncStaticMediaOverlayForLocations(admin, changedLocationIds, { config })
+  }
 
-  if (registry.releases.length && staleReleases.length) {
+  if (staleReleases.length) {
     await updateRegistry(registry, registry.releases.filter((item) => !staleReleases.includes(item.release)))
   }
 }
