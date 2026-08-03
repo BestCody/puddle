@@ -97,15 +97,16 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
   const rating = ratingLabel(item)
 
   useEffect(() => {
-    setPhotoStatus(item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending'))
-    if (mainPhoto || !item.content_id) return undefined
+    const nextStatus = item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending')
+    setPhotoStatus(nextStatus)
+    if (mainPhoto || item.static_catalogue_ephemeral || !item.content_id || !['pending', 'processing', 'failed'].includes(nextStatus)) return undefined
     let cancelled = false
     fetch(`/api/location-photo-status/${encodeURIComponent(item.content_id)}`, { cache: 'no-store' })
       .then((response) => response.ok ? response.json() : null)
       .then((result) => { if (!cancelled && result?.status) setPhotoStatus(result.status) })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [item.content_id, item.photo_enrichment_status, mainPhoto])
+  }, [item.content_id, item.photo_enrichment_status, item.static_catalogue_ephemeral, mainPhoto])
 
   async function choose(action) {
     if (busy) return
