@@ -19,6 +19,21 @@ test('open-photo storage registers shared Backblaze B2 media objects', async () 
   assert.equal(workflow.includes('R2_SECRET_ACCESS_KEY'), false)
 })
 
+test('active catalogue jobs use B2 commands and supported write headers', async () => {
+  const publisher = await read('scripts/publish-static-catalogue-b2.mjs')
+  const cleanup = await read('scripts/cleanup-b2-assets.mjs')
+  const overlay = await read('lib/app/static-media-overlay.js')
+  const packageJson = await read('package.json')
+  assert.ok(publisher.includes('putB2Object'))
+  assert.ok(cleanup.includes("media.storageBackend === 'b2'"))
+  assert.ok(overlay.includes('b2Request'))
+  assert.equal(publisher.includes("'if-match'"), false)
+  assert.equal(publisher.includes("'if-none-match'"), false)
+  assert.equal(cleanup.includes("'if-match'"), false)
+  assert.ok(packageJson.includes('locations:catalogue:publish-b2'))
+  assert.equal(packageJson.includes('locations:catalogue:publish-r2'), false)
+})
+
 test('Backblaze image processing produces bounded AVIF metadata', async () => {
   const source = await sharp({
     create: { width: 1200, height: 800, channels: 3, background: { r: 120, g: 160, b: 200 } }
