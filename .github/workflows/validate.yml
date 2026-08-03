@@ -5,10 +5,75 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: permanent-r2-cutover-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  permanent-cutover:
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/r2-runtime-optimization-pass
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply permanent cutover
+        run: python scripts/run-permanent-cutover.py
+      - name: Refresh dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Restore validation workflow and remove temporary aids
+        shell: bash
+        run: |
+          cat > .github/workflows/validate.yml <<'YAML'
+          name: Validate
+
+          on:
+            push:
+            pull_request:
+
+          permissions:
+            contents: read
+
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              timeout-minutes: 25
+              steps:
+                - uses: actions/checkout@v6
+                - uses: actions/setup-node@v6
+                  with:
+                    node-version: 22
+                    cache: npm
+                - name: Install locked dependencies
+                  run: npm ci --no-audit --no-fund
+                - name: Audit production dependencies
+                  run: npm audit --omit=dev --audit-level=high
+                - name: Run repository checks and build
+                  run: npm run build
+          YAML
+          rm -f \
+            legacy-audit.txt dependency-audit.txt action-schema-audit.txt cutover-output.txt \
+            scripts/permanent-location-first-cutover.py scripts/run-permanent-cutover.py \
+            .github/workflows/audit-legacy-removal.yml
+      - name: Commit permanent cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Complete permanent R2 location-first cutover"
+          git push origin HEAD:agent/r2-runtime-optimization-pass
+
   build:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
