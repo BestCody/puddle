@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { materializeStaticCatalogueLocations } from '@/lib/app/static-catalogue-materialization'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { object, string, uuid } from '@/lib/security/schema'
@@ -41,6 +43,28 @@ export async function POST(request) {
     const locationIds = [...new Set(rawIds.map((value) => uuid(value, 'locationId')))]
     if (locationIds.length < 2) return NextResponse.json({ error: 'Add at least two location ideas before swiping together.' }, { status: 400 })
 
+    const profile = await supabase
+      .from('profiles')
+      .select('latitude,longitude,search_radius_km')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (profile.error) throw profile.error
+    const centerLatitude = finiteCoordinate(body.center?.latitude, -90, 90) ?? finiteCoordinate(profile.data?.latitude, -90, 90)
+    const centerLongitude = finiteCoordinate(body.center?.longitude, -180, 180) ?? finiteCoordinate(profile.data?.longitude, -180, 180)
+
+    if (centerLatitude !== null && centerLongitude !== null) {
+      const materialization = await materializeStaticCatalogueLocations({
+        admin: createAdminClient(),
+        latitude: centerLatitude,
+        longitude: centerLongitude,
+        radiusKm: Math.max(25, Number(profile.data?.search_radius_km || 25), 100),
+        locationIds
+      })
+      if (materialization.missing.length) {
+        return NextResponse.json({ error: 'One or more catalogue locations are no longer available.' }, { status: 409 })
+      }
+    }
+
     const mode = string(body.mode || 'date', { name: 'mode', choices: ['date', 'hangout'], max: 20 })
     const requestedMembers = Number(body.maxMembers)
     const maxMembers = mode === 'date' ? 2 : Math.min(8, Math.max(3, Number.isFinite(requestedMembers) ? Math.round(requestedMembers) : 4))
@@ -48,8 +72,8 @@ export async function POST(request) {
 
     const created = await supabase.rpc('create_shared_location_deck_v2', {
       location_ids: locationIds,
-      center_lat: finiteCoordinate(body.center?.latitude, -90, 90),
-      center_lng: finiteCoordinate(body.center?.longitude, -180, 180),
+      center_lat: centerLatitude,
+      center_lng: centerLongitude,
       deck_mode: mode,
       member_limit: maxMembers,
       deck_context: context
