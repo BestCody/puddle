@@ -7,6 +7,7 @@ const serverCommand = process.env.CI
   : 'npm run dev -- --hostname localhost'
 const runtimeEnv = {
   ...process.env,
+  E2E_DIAGNOSTICS: 'true',
   PUDDLE_LEGACY_SYSTEMS_ENABLED: 'false',
   STATIC_CATALOGUE_BASE_URL: r2BaseURL,
   NEXT_PUBLIC_CATALOGUE_ASSET_BASE_URL: r2BaseURL,
