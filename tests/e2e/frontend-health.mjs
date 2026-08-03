@@ -73,14 +73,17 @@ export async function assertLandingVisualContract(page) {
   const selectors = [
     '.site-header',
     '.hero-copy h1',
+    '.hero-playground',
     '.phone-shell',
+    '#hero-deck',
     '#how',
-    '#social',
-    '#organizers',
     '#safety',
-    '.final-cta'
+    '.final-cta',
+    '.site-footer'
   ]
   for (const selector of selectors) await expect(page.locator(selector)).toBeVisible()
+  await expect(page.locator('#hero-deck .event-card')).toHaveCount(3)
+  await expect(page.getByRole('link', { name: /Get Started/i })).toBeVisible()
 
   const layout = await page.evaluate(() => {
     const readBox = (selector) => {
