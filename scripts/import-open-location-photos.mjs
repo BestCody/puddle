@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto'
-import sharp from 'sharp'
 import { createAdminClient } from '../lib/supabase/admin.js'
+import { storeOpenPhotoInR2 } from '../lib/app/open-photo-r2.js'
+import { r2Configuration } from '../lib/app/r2-s3.js'
 import { commonsCandidateScore, providerOrderForCategory, streetCandidateScore } from '../lib/app/open-photo-candidates.js'
 import {
   boundedInteger,
@@ -17,7 +17,8 @@ const limitArgument = process.argv.find((value) => value.startsWith('--limit='))
 const LIMIT = boundedInteger(limitArgument || process.env.OPEN_PHOTO_IMPORT_LIMIT, 200, { min: 1, max: 5_000 })
 const MIN_SCORE = Math.max(0.6, Math.min(0.98, Number(process.env.OPEN_PHOTO_MIN_SCORE || 0.76)))
 const MAPILLARY_TOKEN = String(process.env.MAPILLARY_ACCESS_TOKEN || '').trim()
-const BUCKET = 'puddle-public-media'
+const R2_CONFIG = r2Configuration()
+if (APPLY && !R2_CONFIG?.publicBaseUrl) throw new Error('R2 credentials and R2_PUBLIC_BASE_URL are required with --apply.')
 const MAX_BYTES = 10_000_000
 const REQUEST_TIMEOUT_MS = boundedInteger(process.env.OPEN_PHOTO_REQUEST_TIMEOUT_MS, 12_000, { min: 2_000, max: 60_000 })
 const WIKIMEDIA_MIN_INTERVAL_MS = boundedInteger(process.env.OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS, 1_100, { min: 250, max: 10_000 })
@@ -304,46 +305,33 @@ async function candidatesFor(provider, location) {
   return []
 }
 
-async function transformImage(candidate) {
-  const source = await downloadAsset(candidate.assetUrl, candidate.provider)
-  const result = await sharp(source, { limitInputPixels: 40_000_000 })
-    .rotate()
-    .resize({ width: 1600, height: 1000, fit: 'cover', position: 'attention', withoutEnlargement: true })
-    .jpeg({ quality: 84, mozjpeg: true })
-    .toBuffer({ resolveWithObject: true })
-  return { body: result.data, width: result.info.width, height: result.info.height }
-}
-
 async function registerCandidate(admin, location, candidate) {
-  const transformed = await transformImage(candidate)
-  const path = `location-photos/open/${location.id}/${safeSegment(candidate.provider)}-${safeSegment(candidate.externalId)}.jpg`
-  const bucket = admin.storage.from(BUCKET)
-  const upload = await bucket.upload(path, transformed.body, {
-    contentType: 'image/jpeg', cacheControl: '31536000', upsert: true
-  })
-  if (upload.error) throw upload.error
-  const remoteUrl = bucket.getPublicUrl(path).data.publicUrl
-  if (!remoteUrl) throw new Error('Supabase did not return a public photo URL.')
-
+  const source = await downloadAsset(candidate.assetUrl, candidate.provider)
+  const stored = await storeOpenPhotoInR2(admin, source, { config: R2_CONFIG })
   const { error } = await admin.from('location_photo_sources').upsert({
     location_id: location.id,
     source: 'licensed_public',
     provider: candidate.provider,
     external_photo_id: candidate.externalId,
-    remote_url: remoteUrl,
+    remote_url: stored.remoteUrl,
     attribution_text: candidate.attribution,
     attribution_url: candidate.pageUrl,
     license_code: candidate.license,
     terms_url: candidate.licenseUrl,
-    width: transformed.width,
-    height: transformed.height,
+    width: stored.width,
+    height: stored.height,
     is_primary: true,
     sort_order: 0,
     status: 'approved',
     is_ai_generated: false,
     verified_at: new Date().toISOString(),
     expires_at: null,
-    cache_ttl_seconds: 86_400
+    cache_ttl_seconds: 86_400,
+    storage_backend: stored.storageBackend,
+    storage_key: stored.storageKey,
+    content_hash: stored.contentHash,
+    perceptual_hash: stored.perceptualHash,
+    byte_size: stored.byteSize
   }, { onConflict: 'location_id,provider,external_photo_id' })
   if (error) throw error
 }
