@@ -22,6 +22,10 @@ set search_path=public
 as $$
 declare
   event_name text;
+  action_kind_type text;
+  action_id_type text;
+  action_name_type text;
+  action_request_type text;
 begin
   if auth.uid() is null then raise exception 'authentication required'; end if;
   if is_static_ephemeral and action_name='dismissed' then
@@ -36,9 +40,32 @@ begin
   end if;
 
   if action_name in ('saved','interested','dismissed','visited','undo') then
-    -- Positional notation is intentional. The deployed v1 function's argument names
-    -- are not part of its stable SQL contract, while its ordered types are stable.
-    perform public.record_discovery_action_v1(target_kind,target_id,action_name,request_key);
+    -- The existing v1 API is stable at the HTTP boundary, but some deployments use
+    -- domain/enum argument types instead of plain text. Resolve that installed
+    -- overload and cast explicitly instead of relying on an implicit text cast.
+    select
+      format_type(procedure.proargtypes[0],null),
+      format_type(procedure.proargtypes[1],null),
+      format_type(procedure.proargtypes[2],null),
+      format_type(procedure.proargtypes[3],null)
+    into action_kind_type,action_id_type,action_name_type,action_request_type
+    from pg_proc procedure
+    join pg_namespace namespace on namespace.oid=procedure.pronamespace
+    where namespace.nspname='public'
+      and procedure.proname='record_discovery_action_v1'
+      and procedure.pronargs>=4
+      and procedure.pronargs-procedure.pronargdefaults<=4
+    order by procedure.pronargs asc,procedure.oid asc
+    limit 1;
+
+    if action_kind_type is null then
+      raise exception 'record_discovery_action_v1 overload is unavailable';
+    end if;
+
+    execute format(
+      'select public.record_discovery_action_v1($1::%s,$2::%s,$3::%s,$4::%s)',
+      action_kind_type,action_id_type,action_name_type,action_request_type
+    ) using target_kind,target_id,action_name,request_key;
   end if;
 
   -- Relational feed items have recommendation request/impression rows. Ephemeral R2
