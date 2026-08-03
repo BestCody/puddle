@@ -1,0 +1,742 @@
+=== ALL FILES ===
+.env.example
+.github/dependabot.yml
+.github/workflows/audit-legacy-removal.yml
+.github/workflows/code-scanning-zero.yml
+.github/workflows/e2e.yml
+.github/workflows/google-place-match.yml
+.github/workflows/landing-restoration.yml
+.github/workflows/photo-enrichment.yml
+.github/workflows/r2-cleanup.yml
+.github/workflows/security.yml
+.github/workflows/static-catalogue-r2.yml
+.github/workflows/validate-supabase-migrations.yml
+.github/workflows/validate.yml
+.gitignore
+.vercel-redeploy
+README.md
+app/account/actions.js
+app/account/page.js
+app/admin/cases/[id]/page.js
+app/admin/cases/page.js
+app/admin/content/page.js
+app/admin/finance/page.js
+app/admin/layout.js
+app/admin/mfa/page.js
+app/admin/page.js
+app/admin/security/page.js
+app/admin/users/[id]/page.js
+app/admin/users/page.js
+app/api/admin/action/route.js
+app/api/admin/bulk/route.js
+app/api/admin/cases/route.js
+app/api/admin/feature-flags/route.js
+app/api/admin/notices/route.js
+app/api/admin/roles/route.js
+app/api/admin/security-alerts/route.js
+app/api/ai/assist/route.js
+app/api/ai/decision/route.js
+app/api/appeals/route.js
+app/api/auth/session/route.js
+app/api/check-in/lookup/route.js
+app/api/check-in/reverse/route.js
+app/api/check-in/sync/route.js
+app/api/conversations/[id]/messages/route.js
+app/api/date-match/[token]/route.js
+app/api/date-match/action/route.js
+app/api/date-match/start/route.js
+app/api/discovery/action/route.js
+app/api/discovery/actions/route.js
+app/api/discovery/route.js
+app/api/drafts/[kind]/route.js
+app/api/geocode/route.js
+app/api/health/route.js
+app/api/location-photo-status/[id]/route.js
+app/api/location-photos/[id]/route.js
+app/api/location-sharing/expire/route.js
+app/api/location-sharing/route.js
+app/api/location/reverse/route.js
+app/api/location/search/route.js
+app/api/maps/in-view/route.js
+app/api/media/[id]/signed-url/route.js
+app/api/media/upload/route.js
+app/api/recommendations/preferences/route.js
+app/api/security/csp-report/route.js
+app/api/security/csrf/route.js
+app/api/security/media-scans/process/route.js
+app/api/static-catalogue/open/[id]/route.js
+app/api/stripe/checkout/route.js
+app/api/stripe/connect/onboard/route.js
+app/api/stripe/connect/status/route.js
+app/api/stripe/order/[id]/status/route.js
+app/api/stripe/refunds/[id]/decision/route.js
+app/api/stripe/refunds/route.js
+app/api/stripe/webhook/route.js
+app/api/stripe/webhooks/process/route.js
+app/api/studio/events/[id]/ticketing/route.js
+app/api/system/notices/route.js
+app/api/tickets/[id]/qr/route.js
+app/api/tickets/transfer/route.js
+app/appeals/page.js
+app/auth.css
+app/auth/actions.js
+app/auth/callback/route.js
+app/auth/confirm/route.js
+app/auth/error/page.js
+app/change-email/page.js
+app/create/actions.js
+app/create/event/page.js
+app/create/page.js
+app/create/place/page.js
+app/dashboard/page.js
+app/date-match.css
+app/date-match/[token]/page.js
+app/date-swipe.css
+app/discover/page.js
+app/error.js
+app/events/[slug]/calendar/route.js
+app/events/[slug]/join/page.js
+app/events/[slug]/page.js
+app/explore/page.js
+app/forgot-password/page.js
+app/friends/page.js
+app/group-map.css
+app/hangout/[token]/page.js
+app/home-dashboard.css
+app/hosts/[slug]/page.js
+app/inbox/[id]/page.js
+app/inbox/page.js
+app/layout.js
+app/legal.css
+app/loading.js
+app/location-picker.css
+app/map/page.js
+app/matches/page.js
+app/minimal-product.css
+app/onboarding.css
+app/onboarding/actions.js
+app/onboarding/page.js
+app/orders/[id]/page.js
+app/places/[slug]/claim/page.js
+app/places/[slug]/page.js
+app/places/[slug]/plan/page.js
+app/plans/[id]/calendar/route.js
+app/plans/[id]/page.js
+app/plans/actions.js
+app/plans/legacy-page.js
+app/plans/page.js
+app/privacy/layout.js
+app/privacy/page.js
+app/product.css
+app/profile/media/page.js
+app/profile/page.js
+app/real-place-photos.css
+app/report/actions.js
+app/report/page.js
+app/responsive.css
+app/settings/payouts/page.js
+app/settings/recommendations/page.js
+app/sidebar-refresh.css
+app/sidebar-tooltips.css
+app/signin/page.js
+app/signup/page.js
+app/social/actions.js
+app/stage-eight.css
+app/stage-five.css
+app/stage-nine.css
+app/stage-seven.css
+app/stage-six.css
+app/stage-three-four.css
+app/stage-two.css
+app/status/route.js
+app/studio/events/[id]/attendees/page.js
+app/studio/events/[id]/check-in/page.js
+app/studio/events/[id]/finance/page.js
+app/studio/events/[id]/page.js
+app/studio/events/[id]/preview/page.js
+app/studio/hosts/[id]/announcements/page.js
+app/studio/places/[id]/page.js
+app/studio/places/[id]/preview/page.js
+app/swipe-v2.css
+app/terms/layout.js
+app/terms/page.js
+app/update-password/page.js
+app/verify-email/page.js
+app/viewport-responsive.css
+app/wallet/page.js
+app/wallet/tickets/[id]/page.js
+components/admin-bulk-console.js
+components/admin-shell.js
+components/ai-creation-assistant.js
+components/appeal-form.js
+components/attendee-manager.js
+components/auth-message.js
+components/auth-shell.js
+components/birth-date-input.js
+components/check-in-scanner.js
+components/content-action-button.js
+components/date-match-workspace.js
+components/date-swipe-workspace-v2.js
+components/date-swipe-workspace.js
+components/discovery-deck.js
+components/discovery-workspace.js
+components/editor-shared.js
+components/empty-state.js
+components/event-editor.js
+components/feature-flag-console.js
+components/geocode-fields.js
+components/google-place-photo-fallback.js
+components/home-mood-shortcuts.js
+components/legal-page.js
+components/listing-social.js
+components/location-editor.js
+components/location-map.js
+components/location-picker.js
+components/media-uploader.js
+components/mfa-enrollment.js
+components/minimal-swipe-card.js
+components/moderation-case-console.js
+components/open-moderation-case.js
+components/order-status.js
+components/payout-onboarding.js
+components/privileged-role-console.js
+components/product-nav.js
+components/product-shell.js
+components/public-listing.js
+components/puddle-logo.js
+components/realtime-conversation.js
+components/recommendation-settings.js
+components/revision-history.js
+components/secure-media-download.js
+components/security-alert-console.js
+components/service-worker-cleanup.js
+components/submit-button.js
+components/swipe-action-dock.js
+components/system-notice-banner.js
+components/system-notice-console.js
+components/temporary-location-sharing.js
+components/ticket-finance-console.js
+components/ticket-purchase-panel.js
+components/ticket-wallet.js
+components/turnstile-widget.js
+docs/AUTH_SETUP.md
+docs/AUTH_TESTING.md
+docs/DATE_MATCH.md
+docs/GROUP_CONTEXT_MAP.md
+docs/IMPLEMENTATION_SCOPE.md
+docs/LOCATION_FIRST_CUTOVER.md
+docs/LOCATION_PIPELINE.md
+docs/OPEN_PHOTO_PIPELINE.md
+docs/PRODUCTION.md
+docs/R2_GOOGLE_INFRASTRUCTURE.md
+docs/REAL_PLACE_PHOTOS.md
+docs/SECRET_ROTATION.md
+docs/STABILIZATION.md
+docs/STAGE_3_4_SETUP.md
+docs/STAGE_5_SETUP.md
+docs/STAGE_6_SETUP.md
+docs/STAGE_7_SETUP.md
+docs/STAGE_8_SETUP.md
+docs/STAGE_9_SETUP.md
+docs/WORLDWIDE_LOCATIONS.md
+jsconfig.json
+landing-demo.js
+legacy-audit.txt
+lib/ai/embedding-provider.js
+lib/ai/grounding.js
+lib/ai/local-provider.js
+lib/app/admin-data.js
+lib/app/catalogue-batch-writer.js
+lib/app/catalogue-import-runner.js
+lib/app/catalogue-quality.js
+lib/app/catalogue-regions.js
+lib/app/content-input.js
+lib/app/creator-data.js
+lib/app/date-match-rules.js
+lib/app/date-match.js
+lib/app/discovery-infrastructure.js
+lib/app/discovery.js
+lib/app/geocoding.js
+lib/app/google-place-match.js
+lib/app/home-data.js
+lib/app/hybrid-recommendations.js
+lib/app/json-sequence.js
+lib/app/location-map-data.js
+lib/app/location-plans-data.js
+lib/app/location-quality.js
+lib/app/matches-data.js
+lib/app/open-photo-candidates.js
+lib/app/open-photo-r2.js
+lib/app/open-place-catalogue.js
+lib/app/photo-enrichment.js
+lib/app/place-photos.js
+lib/app/plans-data.js
+lib/app/profile-location.js
+lib/app/public-content.js
+lib/app/r2-s3.js
+lib/app/render-product-page.js
+lib/app/social-data.js
+lib/app/stage-one-data.js
+lib/app/static-catalogue-id.js
+lib/app/static-catalogue-materialization.js
+lib/app/static-catalogue-ref.js
+lib/app/static-catalogue.js
+lib/app/static-media-overlay.js
+lib/app/structured-data.js
+lib/app/ticketing-data.js
+lib/auth/errors.js
+lib/auth/origin.js
+lib/auth/privileged.js
+lib/auth/profile.js
+lib/auth/redirect.js
+lib/auth/user.js
+lib/media/pipeline.js
+lib/product-vision.js
+lib/security/audit.js
+lib/security/bulk-worker.js
+lib/security/csrf-client.js
+lib/security/csrf.js
+lib/security/headers.js
+lib/security/malware-scanner.js
+lib/security/media-scan-worker.js
+lib/security/rate-limit.js
+lib/security/request.js
+lib/security/schema.js
+lib/security/turnstile.js
+lib/security/worker-auth.js
+lib/stripe/client.js
+lib/stripe/webhooks.js
+lib/supabase/admin.js
+lib/supabase/client.js
+lib/supabase/env.js
+lib/supabase/proxy.js
+lib/supabase/server.js
+lib/tickets/signing.js
+next.config.mjs
+package-lock.json
+package.json
+playwright.config.mjs
+proxy.js
+public/app.js
+public/avatars/ava.svg
+public/avatars/jules.svg
+public/avatars/kai.svg
+public/avatars/maya.svg
+public/events/ceramics.svg
+public/events/indie-market.svg
+public/events/jazz.svg
+public/events/neon-night.svg
+public/events/rooftop.svg
+public/events/sunset-run.svg
+public/favicon.svg
+public/landing-responsive.css
+public/landing.html
+public/og-puddle.svg
+public/puddle-mark.svg
+public/robots.txt
+public/styles.css
+scripts/build-static-location-catalogue.mjs
+scripts/check-bundle-size.mjs
+scripts/check-client-boundaries.mjs
+scripts/check-duplicate-assets.mjs
+scripts/check-legal-pages.mjs
+scripts/check-product-vision.mjs
+scripts/check-secrets.mjs
+scripts/check-security-surface.mjs
+scripts/check-stage-eight.mjs
+scripts/check-stage-five.mjs
+scripts/check-stage-nine.mjs
+scripts/check-stage-seven.mjs
+scripts/check.mjs
+scripts/cleanup-orphaned-media.mjs
+scripts/cleanup-r2-assets.mjs
+scripts/compute-recommendation-metrics.mjs
+scripts/enrich-open-location-photos.mjs
+scripts/expire-location-sharing.mjs
+scripts/expire-ticket-reservations.mjs
+scripts/generate-content-embeddings.mjs
+scripts/generate-ticket-keys.mjs
+scripts/import-open-location-photos.mjs
+scripts/match-google-places.mjs
+scripts/process-admin-bulk-operations.mjs
+scripts/process-media-scans.mjs
+scripts/process-stripe-webhooks.mjs
+scripts/publish-static-catalogue-r2.mjs
+scripts/reconcile-stripe.mjs
+scripts/register-location-photos.mjs
+scripts/run-security-alerts.mjs
+scripts/stripe-test-mode-integration.mjs
+scripts/sync-static-media-overlays.mjs
+scripts/test-auth-flow.mjs
+scripts/test-landing-restoration.mjs
+scripts/test-live-landing.mjs
+scripts/test-stage-eight-ranking.mjs
+scripts/test-stage-five.mjs
+scripts/test-stage-nine.mjs
+supabase/.temp/gotrue-version
+supabase/.temp/linked-project.json
+supabase/.temp/pooler-url
+supabase/.temp/postgres-version
+supabase/.temp/project-ref
+supabase/.temp/rest-version
+supabase/.temp/storage-migration
+supabase/.temp/storage-version
+supabase/config.toml
+supabase/email-templates/change-email-address.html
+supabase/email-templates/confirm-signup.html
+supabase/email-templates/reset-password.html
+supabase/migrations/0001_puddle_core.sql
+supabase/migrations/0002_authentication.sql
+supabase/migrations/0003_unified_product_foundation.sql
+supabase/migrations/0004_remove_person_matching_legacy.sql
+supabase/migrations/0005_content_creation_and_publication.sql
+supabase/migrations/0006_private_address_isolation.sql
+supabase/migrations/0007_private_address_integrity.sql
+supabase/migrations/0008_secure_media_and_discovery.sql
+supabase/migrations/0009_plans_rsvps_and_collaboration.sql
+supabase/migrations/0010_stage34_profile_access.sql
+supabase/migrations/0011_social_coordination.sql
+supabase/migrations/0012_temporary_location_sharing.sql
+supabase/migrations/0013_stage7_worker_access.sql
+supabase/migrations/0014_ai_creation_and_embeddings.sql
+supabase/migrations/0015_hybrid_recommendation_foundation.sql
+supabase/migrations/0016_hybrid_recommendation_runtime.sql
+supabase/migrations/0017_stage8_authorization.sql
+supabase/migrations/0018_stage8_hardening.sql
+supabase/migrations/0019_stage5_financial_foundation.sql
+supabase/migrations/0020_stage5_checkout_reservations.sql
+supabase/migrations/0021_stage5_fulfillment_tickets_checkin.sql
+supabase/migrations/0022_stage5_management_authorization.sql
+supabase/migrations/0023_stage5_hardening_reconciliation.sql
+supabase/migrations/0024_stage9_moderation_foundation.sql
+supabase/migrations/0025_stage9_admin_workflows.sql
+supabase/migrations/0026_stage9_security_controls.sql
+supabase/migrations/0027_stage9_authorization.sql
+supabase/migrations/0028_stage9_hardening.sql
+supabase/migrations/10000_performance_security_hardening.sql
+supabase/migrations/10001_real_place_photos.sql
+supabase/migrations/10002_google_place_links.sql
+supabase/migrations/10003_date_match.sql
+supabase/migrations/10004_date_match_hardening.sql
+supabase/migrations/10005_location_card_quality.sql
+supabase/migrations/10006_group_context_map_push.sql
+supabase/migrations/10007_contextual_recommendation_merge.sql
+supabase/migrations/10008_push_delivery_tracking.sql
+supabase/migrations/10009_location_notification_scheduler.sql
+supabase/migrations/10010_hangout_minimum_consensus.sql
+supabase/migrations/10011_private_shared_consensus.sql
+supabase/migrations/10012_hangout_join_recalculation.sql
+supabase/migrations/10013_contextual_recommendation_schema_bridge.sql
+supabase/migrations/10014_contextual_recommendation_learning.sql
+supabase/migrations/10015_contextual_recommendation_compatibility.sql
+supabase/migrations/10016_remove_notifications_and_pwa.sql
+supabase/migrations/10017_worldwide_location_foundation.sql
+supabase/migrations/10018_catalogue_import_integrity.sql
+supabase/migrations/10019_catalogue_batch_validation.sql
+supabase/migrations/10020_catalogue_quality.sql
+supabase/migrations/10021_catalogue_quality_backfill.sql
+supabase/migrations/10022_progressive_photo_enrichment.sql
+supabase/migrations/10023_photo_pipeline_hardening.sql
+supabase/migrations/10024_r2_static_catalogue_photos.sql
+supabase/migrations/10025_static_catalogue_on_demand.sql
+supabase/migrations/10026_r2_runtime_optimizations.sql
+supabase/migrations/10027_static_action_analytics_boundary.sql
+supabase/migrations/10028_r2_runtime_second_optimization.sql
+supabase/migrations/10029_r2_cleanup_batch_preview.sql
+supabase/migrations/9999_api_role_privileges.sql
+supabase/seed.sql
+supabase/tests/0003_stage1_authorization.sql
+supabase/tests/0005_stage2_authorization.sql
+supabase/tests/0008_stage3_authorization.sql
+supabase/tests/0009_stage4_authorization.sql
+supabase/tests/0011_stage6_authorization.sql
+supabase/tests/0012_stage7_authorization.sql
+supabase/tests/0014_stage8_authorization.sql
+supabase/tests/0019_stage5_authorization.sql
+supabase/tests/0024_stage9_authorization.sql
+supabase/tests/catalogue_import_integrity.sql
+tests/e2e/auth-onboarding.spec.mjs
+tests/e2e/date-match.spec.mjs
+tests/e2e/date-swipe.spec.mjs
+tests/e2e/hangout-match.spec.mjs
+tests/e2e/public-routes.spec.mjs
+tests/e2e/r2-fixture-data.mjs
+tests/e2e/r2-fixture-server.mjs
+tests/e2e/responsive-public-routes.spec.mjs
+tests/e2e/support.mjs
+tests/fixtures/fake-photo-importer.mjs
+tests/integration/photo-enrichment-runner.test.mjs
+tests/integration/static-catalogue-build.test.mjs
+tests/unit/auth-lifecycle.test.mjs
+tests/unit/catalogue-backfill.test.mjs
+tests/unit/catalogue-batch-writer.test.mjs
+tests/unit/date-match.test.mjs
+tests/unit/google-place-match.test.mjs
+tests/unit/group-context.test.mjs
+tests/unit/location-quality.test.mjs
+tests/unit/open-photo-candidates.test.mjs
+tests/unit/photo-enrichment.test.mjs
+tests/unit/place-photos.test.mjs
+tests/unit/product-vision.test.mjs
+tests/unit/r2-optimizations.test.mjs
+tests/unit/r2-runtime-optimizations.test.mjs
+tests/unit/r2-s3.test.mjs
+tests/unit/static-catalogue-materialization.test.mjs
+tests/unit/static-catalogue.test.mjs
+tests/unit/worldwide-location.test.mjs
+vercel.json
+=== PRODUCT VISION IMPORTS ===
+./.env.example
+./.github/workflows/audit-legacy-removal.yml
+./README.md
+./app/admin/content/page.js
+./app/api/discovery/action/route.js
+./app/api/drafts/[kind]/route.js
+./app/create/actions.js
+./app/plans/actions.js
+./app/plans/page.js
+./components/admin-shell.js
+./docs/LOCATION_FIRST_CUTOVER.md
+./lib/product-vision.js
+./playwright.config.mjs
+./proxy.js
+./scripts/check-product-vision.mjs
+./tests/unit/product-vision.test.mjs
+=== LEGACY PAGE/API PATHS ===
+app/events/[slug]/calendar/route.js
+app/events/[slug]/join/page.js
+app/events/[slug]/page.js
+app/create/event/page.js
+app/studio/events/[id]/attendees/page.js
+app/studio/events/[id]/check-in/page.js
+app/studio/events/[id]/finance/page.js
+app/studio/events/[id]/page.js
+app/studio/events/[id]/preview/page.js
+app/hosts/[slug]/page.js
+app/friends/page.js
+app/inbox/[id]/page.js
+app/inbox/page.js
+app/wallet/page.js
+app/wallet/tickets/[id]/page.js
+app/orders/[id]/page.js
+app/settings/payouts/page.js
+app/admin/finance/page.js
+app/api/stripe/checkout/route.js
+app/api/stripe/connect/onboard/route.js
+app/api/stripe/connect/status/route.js
+app/api/stripe/order/[id]/status/route.js
+app/api/stripe/refunds/[id]/decision/route.js
+app/api/stripe/refunds/route.js
+app/api/stripe/webhook/route.js
+app/api/stripe/webhooks/process/route.js
+app/api/tickets/[id]/qr/route.js
+app/api/tickets/transfer/route.js
+app/api/check-in/lookup/route.js
+app/api/check-in/reverse/route.js
+app/api/check-in/sync/route.js
+app/api/location-sharing/expire/route.js
+app/api/location-sharing/route.js
+app/api/studio/events/[id]/ticketing/route.js
+app/api/conversations/[id]/messages/route.js
+app/api/maps/in-view/route.js
+app/api/ai/assist/route.js
+app/api/ai/decision/route.js
+=== LEGACY NAMED FILES ===
+components/auth-message.js
+components/check-in-scanner.js
+components/event-editor.js
+components/payout-onboarding.js
+components/realtime-conversation.js
+components/temporary-location-sharing.js
+components/ticket-finance-console.js
+components/ticket-purchase-panel.js
+components/ticket-wallet.js
+lib/app/ticketing-data.js
+scripts/expire-location-sharing.mjs
+scripts/expire-ticket-reservations.mjs
+scripts/generate-ticket-keys.mjs
+scripts/process-stripe-webhooks.mjs
+scripts/reconcile-stripe.mjs
+scripts/stripe-test-mode-integration.mjs
+=== LEGACY IMPORTS / ROUTE STRINGS ===
+app/social/actions.js:9:export async function sendFriendRequest(f){const r=await rpc(f,'send_friend_request_v1',{target:clean(f.get('profile_id'),36)},'/friends','Friend request sent.');redirect(pathWithMessage(r.dest,'success',r.data==='accepted'?'You are now friends.':r.message))}
+app/social/actions.js:10:export async function respondFriendRequest(f){const r=await rpc(f,'respond_friend_request_v1',{target:clean(f.get('profile_id'),36),response:clean(f.get('response'),20)},'/friends','Friend request updated.');redirect(pathWithMessage(r.dest,'success',r.message))}
+app/social/actions.js:11:export async function removeFriend(f){const r=await rpc(f,'remove_friend_v1',{target:clean(f.get('profile_id'),36)},'/friends','Friend removed.');redirect(pathWithMessage(r.dest,'success',r.message))}
+app/social/actions.js:12:export async function setCloseFriend(f){const enabled=clean(f.get('enabled'),10)==='true';const r=await rpc(f,'set_close_friend_v1',{target:clean(f.get('profile_id'),36),enabled},'/friends',enabled?'Added to close friends.':'Removed from close friends.');redirect(pathWithMessage(r.dest,'success',r.message))}
+app/social/actions.js:13:export async function blockProfile(f){const r=await rpc(f,'block_profile_v1',{target:clean(f.get('profile_id'),36)},'/friends','Profile blocked.');redirect(pathWithMessage(r.dest,'success',r.message))}
+app/social/actions.js:14:export async function unblockProfile(f){const r=await rpc(f,'unblock_profile_v1',{target:clean(f.get('profile_id'),36)},'/friends','Profile unblocked.');redirect(pathWithMessage(r.dest,'success',r.message))}
+app/social/actions.js:15:export async function followHost(f){const enabled=clean(f.get('enabled'),10)!=='false';const r=await rpc(f,'follow_host_v1',{target:clean(f.get('host_id'),36),enabled},'/friends',enabled?'Host followed.':'Host unfollowed.');redirect(pathWithMessage(r.dest,'success',r.message))}
+app/social/actions.js:16:export async function openDirectConversation(f){const r=await rpc(f,'open_direct_conversation_v1',{target:clean(f.get('profile_id'),36)},'/inbox','');redirect(`/inbox/${r.data}`)}
+app/social/actions.js:17:export async function openSupportConversation(f){const r=await rpc(f,'open_support_conversation_v1',{},'/inbox','');redirect(`/inbox/${r.data}`)}
+app/social/actions.js:18:export async function saveSocialPrivacy(f){const s=await requireUser({onboarding:true});const v=clean(f.get('activity_visibility'),20);const{error}=await s.supabase.from('profiles').update({activity_visibility:['private','close_friends','friends','public'].includes(v)?v:'friends',allow_friend_requests:checked(f,'allow_friend_requests'),allow_event_messages:checked(f,'allow_event_messages')}).eq('id',s.user.id);redirect(pathWithMessage('/friends',error?'error':'success',error?'Privacy settings could not be saved.':'Privacy settings saved.'))}
+app/inbox/page.js:15:    return <><section className="page-heading-row"><div><span className="section-pill">Plan chatter</span><h1 className="product-title">Inbox.</h1><p>Friends, shared plans, event rooms, host help, and Puddle support live together.</p></div><div className="inbox-heading-actions"><span className="inbox-bubble">{data.unreadCount}</span><form action={openSupportConversation}><input type="hidden" name="next" value="/inbox"/><button className="splash-button splash-button-yellow" type="submit">Contact support</button></form></div></section><AuthMessage searchParams={params}/>
+app/inbox/page.js:16:      {data.conversations.length ? <section className="inbox-conversation-grid">{data.conversations.map((conversation)=><Link className={`inbox-conversation-card ${conversation.unread?'is-unread':''}`} href={`/inbox/${conversation.id}`} key={conversation.id}><div className="inbox-conversation-symbol">{conversation.kind==='direct'?'☺':conversation.kind==='event_room'?'✦':conversation.kind==='plan_room'?'◎':'?'}</div><div><span>{conversation.subtitle}</span><h2>{conversation.title}</h2><p>{conversation.lastMessage?.body || 'Start the conversation.'}</p><small>{conversation.lastMessage?.created_at ? new Date(conversation.lastMessage.created_at).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'No messages yet'}{conversation.membership.muted_until ? ' · muted':''}</small></div>{conversation.unread ? <i>new</i> : null}</Link>)}</section> : <EmptyState icon="✉" title="Quiet for now." description="Message a friend, join an event chat, or open a shared-plan chat." actionHref="/friends" actionLabel="Open Friends"/>}
+app/admin/content/page.js:4:import { legacySystemsEnabled } from '@/lib/product-vision'
+app/admin/content/page.js:12:  const showLegacy = legacySystemsEnabled()
+app/create/actions.js:8:import { legacySystemsEnabled } from '@/lib/product-vision'
+app/create/actions.js:16:function requireLegacyEventSystem() {
+app/create/actions.js:17:  if (!legacySystemsEnabled()) redirect(pathWithMessage('/create/place', 'error', 'Event creation is no longer part of the location-first Puddle product.'))
+app/create/actions.js:21:  return id ? `/studio/events/${id}` : '/create/event'
+app/create/actions.js:40:  requireLegacyEventSystem()
+app/create/actions.js:70:  if (privateError) redirect(pathWithMessage(`/studio/events/${data.id}`, 'error', 'The draft saved, but its private address could not be secured.'))
+app/create/actions.js:112:  redirect(pathWithMessage(`/studio/events/${event.id}`, 'success', 'Event draft saved.'))
+app/create/actions.js:118:  if (error) redirect(pathWithMessage(`/studio/events/${event.id}`, 'error', firstError(error, 'This event is not ready to publish yet.')))
+app/create/actions.js:121:  revalidatePath(`/events/${event.slug}`)
+app/create/actions.js:123:  redirect(pathWithMessage(`/studio/events/${event.id}`, 'success', state === 'published' ? 'Event published.' : state === 'scheduled' ? 'Event scheduled for publication.' : 'Event submitted for review.'))
+app/create/actions.js:127:  requireLegacyEventSystem()
+app/create/actions.js:133:  if (error) redirect(pathWithMessage(`/studio/events/${id}`, 'error', firstError(error, 'That event status change is not allowed.')))
+app/create/actions.js:134:  revalidatePath(`/studio/events/${id}`)
+app/create/actions.js:135:  redirect(pathWithMessage(`/studio/events/${id}`, 'success', `Event moved to ${nextStatus.replaceAll('_', ' ')}.`))
+app/plans/actions.js:7:import { legacySystemsEnabled } from '@/lib/product-vision'
+app/plans/actions.js:30:function requireLegacyPlansSystem() {
+app/plans/actions.js:31:  if (!legacySystemsEnabled()) redirect(pathWithMessage('/plans', 'error', 'Complex itineraries and event attendance are disabled in the location-first product.'))
+app/plans/actions.js:35:  requireLegacyPlansSystem()
+app/plans/actions.js:60:  requireLegacyPlansSystem()
+app/plans/actions.js:83:  requireLegacyPlansSystem()
+app/plans/actions.js:93:  requireLegacyPlansSystem()
+app/plans/actions.js:112:  requireLegacyPlansSystem()
+app/plans/actions.js:130:  requireLegacyPlansSystem()
+app/plans/actions.js:163:  requireLegacyPlansSystem()
+app/plans/actions.js:179:  requireLegacyPlansSystem()
+app/plans/actions.js:191:  requireLegacyPlansSystem()
+app/plans/actions.js:209:  if (error) redirect(pathWithMessage(`/events/${slug}/join`, 'error', publicMessage(error, 'Your RSVP could not be saved.')))
+app/plans/actions.js:216:  requireLegacyPlansSystem()
+app/plans/actions.js:227:  requireLegacyPlansSystem()
+app/plans/actions.js:233:  if (error) redirect(pathWithMessage(`/studio/events/${eventId}/attendees`, 'error', publicMessage(error, 'The attendance request could not be updated.')))
+app/plans/actions.js:234:  revalidatePath(`/studio/events/${eventId}/attendees`)
+app/plans/actions.js:235:  redirect(pathWithMessage(`/studio/events/${eventId}/attendees`, 'success', approve ? 'Attendance approved.' : 'Attendance declined.'))
+app/plans/actions.js:239:  requireLegacyPlansSystem()
+app/plans/actions.js:243:  if (error) redirect(pathWithMessage(`/studio/events/${eventId}/attendees`, 'error', publicMessage(error, 'The waitlist could not be promoted.')))
+app/plans/actions.js:244:  revalidatePath(`/studio/events/${eventId}/attendees`)
+app/plans/actions.js:245:  redirect(pathWithMessage(`/studio/events/${eventId}/attendees`, 'success', data ? 'The next eligible person was promoted.' : 'No one currently fits the available capacity.'))
+app/plans/actions.js:249:  requireLegacyPlansSystem()
+app/plans/actions.js:254:  if (error) redirect(pathWithMessage(`/studio/events/${eventId}/attendees`, 'error', publicMessage(error, 'The attendee could not be checked in.')))
+app/plans/actions.js:255:  revalidatePath(`/studio/events/${eventId}/attendees`)
+app/plans/actions.js:256:  redirect(pathWithMessage(`/studio/events/${eventId}/attendees`, 'success', 'Attendee checked in.'))
+app/plans/actions.js:275:  const next = status === 'visited' ? '/plans?tab=past' : legacySystemsEnabled() ? '/plans?tab=saved_places' : '/plans?tab=planned'
+app/plans/legacy-page.js:14:  const href = item.href || (item.ticket_number ? `/wallet/tickets/${item.id}` : item.events?.slug ? `/events/${item.events.slug}` : item.ticket_types?.events?.slug ? `/events/${item.ticket_types.events.slug}` : item.locations?.slug ? `/places/${item.locations.slug}` : '/plans')
+app/plans/legacy-page.js:17:function GoingCard({ item }) { return <article className="plan-content-card"><span>{item.status.replaceAll('_', ' ')}</span><h2><Link href={`/events/${item.events?.slug}`}>{item.events?.title || 'Event'}</Link></h2><p>{item.events?.locations?.name || item.events?.locations?.city || 'Location details in event'}</p>{item.status === 'waitlisted' ? <small>Waitlist position {item.waitlist_position || 'pending'}</small> : null}<form action={cancelEventAttendance}><input type="hidden" name="event_id" value={item.event_id} /><input type="hidden" name="next" value="/plans?tab=going" /><button className="quiet-button" type="submit">Cancel RSVP</button></form></article> }
+app/plans/legacy-page.js:22:  return renderProductPage(async(session)=>{const snapshot=await getPlansSnapshot(session);const items=active==='saved_events'?snapshot.savedEvents:active==='saved_places'?snapshot.savedPlaces:active==='interested'?snapshot.interested:active==='going'?snapshot.going:active==='tickets'?snapshot.tickets:active==='hosting'?snapshot.hosting:active==='shared'?snapshot.sharedPlans:snapshot.past;return <><section className="page-heading-row"><div><span className="section-pill section-pill-yellow">Your orbit</span><h1 className="product-title">Plans, not maybes.</h1><p>Saved events, saved places, attendance, hosting, visits, and collaborative itineraries live together.</p></div><div className="studio-heading-actions">{active==='tickets'?<Link className="splash-button splash-button-mint" href="/wallet">Open full ticket wallet</Link>:null}<Link className="splash-button splash-button-pink" href="/discover">Find something</Link></div></section><AuthMessage searchParams={params}/><nav className="tab-rail" aria-label="Plan categories">{tabs.map(([value,label])=><Link className={active===value?'is-active':''} href={`/plans?tab=${value}`} key={value}><span>{label}</span><strong>{snapshot.counts[value]||0}</strong></Link>)}</nav>{active==='shared'?<section className="shared-plan-builder"><div><span className="section-pill section-pill-mint">Start together</span><h2>Create a shared plan.</h2><p>Invite friends, compare availability, vote on options, and arrange events and places into one itinerary.</p></div><form action={createCollaborativePlan} className="compact-plan-form"><label>Plan name<input name="title" required placeholder="Saturday city wander" /></label><label>City<input name="city" defaultValue={session.profile.city||''}/></label><label>Starts<input name="starts_at" type="datetime-local"/></label><label>Ends<input name="ends_at" type="datetime-local"/></label><label>Meeting point<input name="meeting_label" placeholder="Union Station clock"/></label><label>Meeting latitude<input name="meeting_latitude" type="number" step="any" min="-90" max="90"/></label><label>Meeting longitude<input name="meeting_longitude" type="number" step="any" min="-180" max="180"/></label><label>Privacy<select name="visibility" defaultValue="invite_only"><option value="invite_only">Invite only</option><option value="friends">Friends</option><option value="private">Private</option></select></label><label className="span-two">Description<textarea name="description" placeholder="What kind of day are you planning?"/></label><input type="hidden" name="timezone" value="America/Toronto"/><button className="splash-button splash-button-mint" type="submit">Create shared plan</button></form></section>:null}{items.length?<section className="plan-content-grid">{active==='going'?items.map(item=><GoingCard item={item} key={item.event_id}/>):active==='shared'?items.map(plan=><SharedCard plan={plan} userId={session.user.id} key={plan.id}/>):items.map((item,index)=><ListingCard item={item} key={item.id||item.event_id||item.location_id||index}/>)}</section>:<EmptyState icon={active==='hosting'?'✦':active==='shared'?'☻':'♡'} title={active==='hosting'?'Nothing hosted yet.':active==='shared'?'No shared plans yet.':'This pocket is empty.'} description={active==='hosting'?'Create is always available—hosting is something any Puddle user can do.':active==='shared'?'Create a plan above, then invite friends and add stops.':'Save events and places from Discover or Explore and they will collect here.'} actionHref={active==='hosting'?'/create':'/discover'} actionLabel={active==='hosting'?'Create something':'Start discovering'}/>}</>})
+app/plans/page.js:7:import { legacySystemsEnabled } from '@/lib/product-vision'
+app/plans/page.js:41:  if (legacySystemsEnabled()) return <LegacyPlansPage searchParams={searchParams} />
+app/studio/events/[id]/finance/page.js:13:    return <><section className="page-heading-row"><div><span className="section-pill section-pill-yellow">Stage 5 finance</span><h1 className="product-title">{dashboard.event?.title || 'Event ticketing'}</h1><p>Inventory, orders, refunds, disputes, payouts, and the ledger stay attached to this event.</p></div><Link className="quiet-button" href={`/studio/events/${id}`}>Back to event studio</Link></section><TicketFinanceConsole eventId={id} initialDashboard={dashboard}/></>
+app/studio/events/[id]/check-in/page.js:13:    return <><section className="page-heading-row"><div><span className="section-pill section-pill-mint">Door operations</span><h1 className="product-title">{dashboard.event?.title || 'Check-in scanner'}</h1><p>Camera scans, signed-token verification, offline queueing, synchronization, duplicate warnings, and reversals.</p></div><Link className="quiet-button" href={`/studio/events/${id}/finance`}>Finance dashboard</Link></section><CheckInScanner eventId={id} publicKeyBase64={process.env.TICKET_SIGNING_PUBLIC_KEY_BASE64 || ''} initialDashboard={dashboard}/></>
+app/studio/events/[id]/attendees/page.js:18:    return <><div className="page-heading-row"><div><span className="section-pill section-pill-yellow">Host tools</span><h1 className="product-title">{event.title} attendees.</h1><p>Approve requests, watch capacity, manage the waitlist, and check people in.</p></div><a className="text-link" href={`/studio/events/${event.id}`}>Back to editor →</a></div><AuthMessage searchParams={messages}/><AttendeeManager event={event} attendees={attendees || []}/></>
+app/studio/events/[id]/page.js:17:    return <><div className="page-heading-row"><div><span className="section-pill section-pill-yellow">Event studio</span><h1 className="product-title">{event.title}</h1><p>Autosave, preview, revise, add secure artwork, manage attendees, and move through publication.</p></div><div className="studio-heading-actions"><Link className="quiet-button" href={`/studio/events/${event.id}/finance`}>Ticketing & finance</Link><Link className="quiet-button" href={`/studio/events/${event.id}/check-in`}>Check-in scanner</Link><Link className="splash-button splash-button-yellow" href={`/studio/events/${event.id}/attendees`}>Manage attendees</Link></div></div><AuthMessage searchParams={messages} /><section className="studio-media-grid"><MediaUploader purpose="event_cover" targetId={event.id} /><MediaUploader purpose="event_gallery" targetId={event.id} multiple /></section><EventEditor event={event} {...options} /><AiCreationAssistant contentKind="event" contentId={event.id} /></>
+app/api/stripe/checkout/route.js:35:    const session = await createCheckoutSession({ order:{...result.order,buyer_email:user.email},lineItems:result.line_items,destinationAccount:result.destination_account,successUrl:`${base}/orders/${orderId}?checkout=returned`,cancelUrl:`${base}/events/${result.event_slug}?checkout=cancelled`,expiresAt })
+app/api/drafts/[kind]/route.js:8:import { legacySystemsEnabled } from '@/lib/product-vision'
+app/api/drafts/[kind]/route.js:29:  if (kind === 'event' && !legacySystemsEnabled()) return NextResponse.json({ error: 'Event creation is disabled in the location-first product.' }, { status: 410 })
+app/api/discovery/action/route.js:10:import { legacySystemsEnabled } from '@/lib/product-vision'
+app/api/discovery/action/route.js:15:const KINDS = legacySystemsEnabled() ? ['event', 'place'] : ['place']
+app/friends/page.js:12:  const next = '/friends'
+app/friends/page.js:28:    return <><section className="page-heading-row"><div><span className="section-pill section-pill-mint">Make plans together</span><h1 className="product-title">Your people.</h1><p>Find friends, share events and places, and coordinate real plans. Puddle never swipes through people.</p></div><Link className="splash-button splash-button-mint" href="/inbox">Open inbox</Link></section><AuthMessage searchParams={params}/>
+app/friends/page.js:32:      {search ? <section className="social-section"><div className="social-section-heading"><h2>Search results</h2><span>{data.results.length}</span></div>{data.results.length ? <div className="social-person-list">{data.results.map((person)=><PersonCard person={person} key={person.id}/>)}</div> : <EmptyState icon="⌕" title="No one found." description="Try another username or display name." actionHref="/friends" actionLabel="Clear search"/>}</section> : null}
+app/friends/page.js:34:      <section className="social-section"><div className="social-section-heading"><h2>Friends</h2><span>{data.friends.length}</span></div>{data.friends.length ? <div className="social-person-list">{data.friends.map((person)=><PersonCard person={person} current="friend" key={person.id}/>)}</div> : <EmptyState icon="☺" title="Bring your people in." description="Search by username and send a friend request to start sharing plans." actionHref="/friends?q=puddle" actionLabel="Try a search"/>}</section>
+app/friends/page.js:35:      {data.follows.length ? <section className="social-section"><div className="social-section-heading"><h2>Followed hosts</h2><span>{data.follows.length}</span></div><div className="social-person-list">{data.follows.map((follow)=><article className="social-person-card" key={follow.host_profile_id}><div className="social-avatar">✦</div><div className="social-person-copy"><strong>{follow.host_profiles?.name || 'Puddle host'}</strong><span>{String(follow.host_profiles?.kind || 'host').replaceAll('_',' ')}</span></div><div className="social-person-actions"><Link href={`/hosts/${follow.host_profiles?.slug}`}>View host</Link><form action={followHost}><input type="hidden" name="host_id" value={follow.host_profile_id}/><input type="hidden" name="enabled" value="false"/><input type="hidden" name="next" value="/friends"/><button className="quiet-button" type="submit">Unfollow</button></form></div></article>)}</div></section> : null}
+app/wallet/tickets/[id]/page.js:14:    return <><section className="page-heading-row"><div><span className="section-pill section-pill-yellow">Signed ticket</span><h1 className="product-title">{ticket.events?.title || 'Event ticket'}</h1><p>{ticket.ticket_types?.name} · {ticket.ticket_number}</p></div><Link className="quiet-button" href="/wallet">Back to wallet</Link></section><article className="ticket-detail-card"><img src={`/api/tickets/${ticket.id}/qr`} alt={`QR code for ticket ${ticket.ticket_number}`} /><div><span className={`finance-status ${ticket.status === 'valid' ? 'is-ready' : 'is-pending'}`}>{ticket.status.replaceAll('_',' ')}</span><h2>{ticket.events?.title}</h2><p>{ticket.events?.starts_at ? new Date(ticket.events.starts_at).toLocaleString('en-CA', { dateStyle:'full', timeStyle:'short', timeZone:ticket.events.timezone || undefined }) : ''}</p><p>{ticket.events?.locations?.name || ticket.events?.locations?.city || 'See event details for location.'}</p><small>Show this signed QR code at check-in. Screenshots work, but transfers and refunds invalidate older codes.</small></div></article></>
+app/events/[slug]/calendar/route.js:12:  const body = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Puddle//Events//EN','CALSCALE:GREGORIAN','BEGIN:VEVENT',`UID:${event.id}@puddle.you`,`DTSTAMP:${stamp(new Date())}`,`DTSTART:${stamp(event.starts_at)}`,`DTEND:${stamp(event.ends_at)}`,`SUMMARY:${escapeIcs(event.title)}`,`DESCRIPTION:${escapeIcs(event.summary || event.description || '')}`,location?`LOCATION:${escapeIcs(location)}`:null,`URL:${escapeIcs(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'}/events/${event.slug}`)}`,'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n')
+app/events/[slug]/page.js:21:    alternates: { canonical: `/events/${event.slug}` },
+app/events/[slug]/page.js:26:      url: `/events/${event.slug}`,
+app/events/[slug]/page.js:27:      images: [{ url: event.cover_url || '/events/neon-night.svg', width: 1200, height: 630, alt: event.title }]
+app/events/[slug]/page.js:39:  const structured = eventStructuredData(result.event, `${site}/events/${result.event.slug}`)
+app/events/[slug]/page.js:40:  const returnTo = `/events/${result.event.slug}`
+components/public-listing.js:23:    const href = event ? `/events/${item.slug}` : `/places/${item.slug}`
+components/public-listing.js:38:    <section className="public-listing-hero event-hero"><div className="public-hero-art" style={event.cover_url?{backgroundImage:`linear-gradient(180deg,rgba(23,17,20,.04),rgba(23,17,20,.64)),url(${event.cover_url})`}:undefined}><span>{String(event.category || 'event').toUpperCase()}</span>{!event.cover_url?<strong>✦</strong>:null}<small>{event.status || 'published'}</small></div><div className="public-hero-copy"><span className="section-pill section-pill-yellow">Event</span><h1>{event.title}</h1><p>{event.summary || 'A plan worth leaving the house for.'}</p><div className="public-meta-row"><span>{new Date(event.starts_at).toLocaleString('en-CA', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: event.timezone || undefined })}</span><span>{locationLabel}</span><span>{money(event.price_from_cents, event.currency)}</span>{event.min_age ? <span>{event.min_age}+</span> : <span>All ages</span>}</div><div className="public-action-row"><ContentActionButton contentKind="event" contentId={event.id}>Save this event</ContentActionButton><Link className="public-secondary-cta" href={`/events/${event.slug}/join`}>Join event</Link><Link className="public-secondary-cta" href={`/events/${event.slug}/calendar`}>Add to calendar</Link></div></div></section>
+components/public-listing.js:42:    <section className="public-safety-bar"><div><strong>Something look wrong?</strong><p>Reports are reviewed with the listing and publication history.</p></div><Link href={`/report?target_type=event&target_id=${encodeURIComponent(event.id)}&return_to=${encodeURIComponent(`/events/${event.slug}`)}`}>Report event</Link></section>
+components/temporary-location-sharing.js:4:async function request(body){const r=await fetch('/api/location-sharing',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}),p=await r.json().catch(()=>({}));if(!r.ok)throw new Error(p.error||'Location action failed.');return p.result}
+components/temporary-location-sharing.js:6:export function TemporaryLocationSharing({contextKind,contextId,contextLabel='this plan'}){const[snapshot,setSnapshot]=useState(null),[hidden,setHidden]=useState(false),[selected,setSelected]=useState([]),[precision,setPrecision]=useState('approximate'),[duration,setDuration]=useState('15m'),[confirmed,setConfirmed]=useState(false),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[meetingLabel,setMeetingLabel]=useState('Meet here');const watch=useRef(null),active=useRef(null),last=useRef(0);const load=useCallback(async()=>{const r=await fetch(`/api/location-sharing?contextKind=${contextKind}&contextId=${contextId}`,{cache:'no-store'});if([401,404].includes(r.status)){setHidden(true);return}const p=await r.json().catch(()=>({}));if(!r.ok){setMessage(p.error||'Could not load location coordination.');return}setSnapshot(p)},[contextKind,contextId]);useEffect(()=>{load()},[load]);useEffect(()=>{if(!snapshot?.currentUserId)return;const s=createClient(),refresh=()=>load(),c=s.channel(`location-ui:${contextKind}:${contextId}`).on('postgres_changes',{event:'*',schema:'public',table:'location_sharing_sessions'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'location_viewer_snapshots',filter:`viewer_id=eq.${snapshot.currentUserId}`},refresh).on('postgres_changes',{event:'*',schema:'public',table:'shared_meeting_points'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'context_arrival_statuses'},refresh).subscribe();return()=>s.removeChannel(c)},[snapshot?.currentUserId,contextKind,contextId,load]);useEffect(()=>()=>{if(watch.current!==null)navigator.geolocation?.clearWatch(watch.current)},[]);const sendPoint=useCallback(async(id,p)=>{if(Date.now()-last.current<8000)return;last.current=Date.now();await request({action:'update',sessionId:id,latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy})},[]);const begin=useCallback(id=>{if(!navigator.geolocation)throw new Error('Geolocation is unavailable.');if(watch.current!==null)navigator.geolocation.clearWatch(watch.current);active.current=id;navigator.geolocation.getCurrentPosition(p=>sendPoint(id,p).then(load).catch(e=>setMessage(e.message)),e=>setMessage(e.message),{enableHighAccuracy:true,timeout:15000});watch.current=navigator.geolocation.watchPosition(p=>sendPoint(id,p).catch(e=>setMessage(e.message)),e=>setMessage(e.message),{enableHighAccuracy:true,maximumAge:5000,timeout:20000})},[sendPoint,load]);async function start(e){e.preventDefault();if(!selected.length||!confirmed)return setMessage('Select recipients and confirm this share.');setBusy(true);try{const x=await request({action:'start',contextKind,contextId,recipients:selected,precision,duration,confirmed:true});begin(x.id);setSelected([]);setConfirmed(false);setMessage('Temporary sharing started.');await load()}catch(x){setMessage(x.message)}finally{setBusy(false)}}async function stop(id){setBusy(true);try{await request({action:'stop',sessionId:id});if(active.current===id&&watch.current!==null)navigator.geolocation.clearWatch(watch.current);watch.current=null;active.current=null;setMessage('Sharing stopped and current coordinates were deleted.');await load()}catch(x){setMessage(x.message)}finally{setBusy(false)}}async function arrival(status){try{await request({action:'arrival',contextKind,contextId,status});await load()}catch(x){setMessage(x.message)}}function meeting(){if(!navigator.geolocation)return setMessage('Geolocation is unavailable.');setBusy(true);navigator.geolocation.getCurrentPosition(async p=>{try{await request({action:'meeting',contextKind,contextId,label:meetingLabel,latitude:p.coords.latitude,longitude:p.coords.longitude});await load()}catch(x){setMessage(x.message)}finally{setBusy(false)}},e=>{setMessage(e.message);setBusy(false)},{enableHighAccuracy:true,timeout:15000})}const pairs=useMemo(()=>{const s=snapshot?.directions||[];return s.slice(0,-1).map((x,i)=>({from:x,to:s[i+1],href:`https://www.google.com/maps/dir/?api=1&origin=${x.latitude},${x.longitude}&destination=${s[i+1].latitude},${s[i+1].longitude}`}))},[snapshot?.directions]);if(hidden)return null;if(!snapshot)return <section className="location-sharing-panel">Loading temporary location controls…</section>;const arrivals=<div className="arrival-buttons"><button type="button" onClick={()=>arrival('heading_there')}>Heading there</button><button type="button" onClick={()=>arrival('arrived')}>I’m here</button><button type="button" onClick={()=>arrival('left')}>I left</button></div>;if(snapshot.locationDisabled)return <section className="location-sharing-panel"><span className="section-pill section-pill-yellow">Safety protection</span><h2>Live location is unavailable.</h2><p>Cross-user live location is disabled for minors and accounts without an adult birth date. Meeting points and arrival status remain available.</p>{arrivals}{message?<p>{message}</p>:null}</section>;return <section className="location-sharing-panel"><div className="location-sharing-heading"><div><span className="section-pill section-pill-mint">Temporary location</span><h2>Meet up at {contextLabel}.</h2><p>Only explicitly selected adult friends in this context can view a short-lived current location.</p></div><strong>No movement history</strong></div>{snapshot.outgoing.map(x=><article className="active-location-card" key={x.id}><div><b>Sharing {x.precision}</b><span>{left(x.expires_at)}</span><small>With {x.viewers.map(v=>v.profile?.display_name||v.profile?.username||'friend').join(', ')}</small></div><div><button type="button" onClick={()=>begin(x.id)}>Resume updates</button><button className="location-stop" type="button" onClick={()=>stop(x.id)}>Stop now</button></div></article>)}{snapshot.recipients.length?<form className="location-share-form" onSubmit={start}><fieldset><legend>1. Select recipients</legend>{snapshot.recipients.map(p=><label key={p.profile_id}><input type="checkbox" checked={selected.includes(p.profile_id)} onChange={e=>setSelected(v=>e.target.checked?[...v,p.profile_id]:v.filter(id=>id!==p.profile_id))}/>{p.display_name||`@${p.username}`}</label>)}</fieldset><fieldset><legend>2. Precision</legend>{[['approximate','Approximate area'],['venue','Venue presence'],['precise','Precise temporary']].filter(([v])=>v!=='venue'||contextKind==='event').map(([v,l])=><label key={v}><input type="radio" checked={precision===v} onChange={()=>setPrecision(v)}/>{l}</label>)}</fieldset><fieldset><legend>3. Duration</legend>{[['15m','15 minutes'],['1h','One hour'],['journey','Journey'],['event_end','Until event ends']].filter(([v])=>v!=='event_end'||contextKind==='event').map(([v,l])=><label key={v}><input type="radio" checked={duration===v} onChange={()=>setDuration(v)}/>{l}</label>)}</fieldset><label className="location-confirm"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>I confirm these recipients and this share.</label><button disabled={busy||!selected.length||!confirmed}>Start temporary sharing</button></form>:<p>No eligible adult friends are currently in this context.</p>}{snapshot.incoming.length?<div className="incoming-location-grid">{snapshot.incoming.map(x=><article key={x.id}><b>{x.owner?.display_name||x.owner_name||'Friend'}</b><span>{x.precision==='venue'?(x.venue_presence?'At the venue':'Not at the venue'):x.precision}</span><small>{left(x.expires_at)}</small>{Number.isFinite(Number(x.latitude))?<a target="_blank" rel="noreferrer" href={maps(x.latitude,x.longitude)}>Directions</a>:null}</article>)}</div>:null}<section className="meeting-coordination"><h3>Meeting point and arrival</h3><div><input value={meetingLabel} maxLength="160" onChange={e=>setMeetingLabel(e.target.value)}/><button type="button" onClick={meeting} disabled={busy}>Use my current point</button></div>{arrivals}{snapshot.meetingPoints.map(x=><a key={x.id} target="_blank" rel="noreferrer" href={maps(x.latitude,x.longitude)}>{x.label} · directions →</a>)}{snapshot.arrivals.map(x=><span key={x.profile_id}>{x.profile?.display_name||x.profile?.username||'Friend'} {x.status.replaceAll('_',' ')}</span>)}</section>{pairs.length?<section className="itinerary-directions"><h3>Directions between stops</h3>{pairs.map(x=><a key={`${x.from.id}:${x.to.id}`} target="_blank" rel="noreferrer" href={x.href}>{x.from.label} → {x.to.label}</a>)}</section>:null}{snapshot.accessLogs.length?<details><summary>Location access log</summary>{snapshot.accessLogs.map(x=><div key={x.id}>{x.action} · {new Date(x.created_at).toLocaleString('en-CA')}</div>)}</details>:null}{message?<p role="status">{message}</p>:null}</section>}
+components/realtime-conversation.js:6:async function act(id,body){const r=await fetch(`/api/conversations/${id}/messages`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}),p=await r.json().catch(()=>({}));if(!r.ok)throw new Error(p.error||'Message action failed.');return p.result}
+components/realtime-conversation.js:7:export function RealtimeConversation({conversation,membership,members,initialMessages,currentUserId}){const[messages,setMessages]=useState(initialMessages||[]),[body,setBody]=useState(''),[status,setStatus]=useState(''),[sending,setSending]=useState(false),bottom=useRef(null);const people=useMemo(()=>new Map((members||[]).map(x=>[x.profile_id,x.profiles])),[members]);const title=conversation.title||(conversation.kind==='direct'?(members.find(x=>x.profile_id!==currentUserId)?.profiles?.display_name||'Friend conversation'):conversation.kind.replaceAll('_',' '));useEffect(()=>{const s=createClient(),channel=s.channel(`conversation-ui:${conversation.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`conversation_id=eq.${conversation.id}`},({new:x})=>setMessages(v=>v.some(m=>m.id===x.id)?v:[...v,{...x,profiles:people.get(x.sender_id),message_reactions:[]}])).on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages',filter:`conversation_id=eq.${conversation.id}`},({new:x})=>setMessages(v=>v.map(m=>m.id===x.id?{...m,...x}:m))).subscribe();return()=>s.removeChannel(channel)},[conversation.id,people]);useEffect(()=>bottom.current?.scrollIntoView({behavior:'smooth'}),[messages.length]);useEffect(()=>{const last=messages.at(-1);if(last)act(conversation.id,{action:'read',messageId:last.id}).catch(()=>{})},[conversation.id,messages]);async function send(e){e.preventDefault();if(!body.trim())return;setSending(true);try{await act(conversation.id,{action:'send',body});setBody('')}catch(x){setStatus(x.message)}finally{setSending(false)}}return <><section className="conversation-shell"><header className="conversation-header"><div><Link href="/inbox">← Inbox</Link><span className="section-pill section-pill-yellow">{conversation.kind.replaceAll('_',' ')}</span><h1>{title}</h1></div><button className="quiet-button" type="button" onClick={()=>act(conversation.id,{action:'mute',until:membership.muted_until?null:new Date(Date.now()+3600000).toISOString()}).then(()=>setStatus(membership.muted_until?'Unmuted.':'Muted for one hour.')).catch(x=>setStatus(x.message))}>{membership.muted_until?'Unmute':'Mute 1h'}</button></header><div className="conversation-message-list">{messages.length?messages.map(m=>{const mine=m.sender_id===currentUserId,a=m.profiles||people.get(m.sender_id);return <article className={`conversation-message ${mine?'is-mine':''}`} key={m.id}><div><strong>{mine?'You':a?.display_name||a?.username||'Friend'}</strong><p>{m.deleted_at?'Message deleted':m.body}</p><time>{new Date(m.created_at).toLocaleString('en-CA')}</time></div>{!m.deleted_at?<footer><button onClick={()=>act(conversation.id,{action:'react',messageId:m.id,emoji:'❤'}).catch(x=>setStatus(x.message))} type="button">❤</button>{mine?<button onClick={()=>act(conversation.id,{action:'delete',messageId:m.id}).catch(x=>setStatus(x.message))} type="button">Delete</button>:null}</footer>:null}</article>}):<p>Start the conversation.</p>}<div ref={bottom}/></div><form className="conversation-composer" onSubmit={send}><input value={body} onChange={e=>setBody(e.target.value)} maxLength="5000" placeholder="Write a message"/><button disabled={sending||!body.trim()}>Send</button></form>{status?<p role="status">{status}</p>:null}</section>{conversation.kind==='direct'?<TemporaryLocationSharing contextKind="conversation" contextId={conversation.id} contextLabel={title}/>:null}</>}
+components/ai-creation-assistant.js:86:      const response = await fetch('/api/ai/assist', {
+components/ai-creation-assistant.js:104:    const response = await fetch('/api/ai/decision', {
+components/check-in-scanner.js:39:    const response = await fetch('/api/check-in/sync', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ eventId, deviceId: deviceId(), scans }) })
+components/check-in-scanner.js:74:    const response = await fetch(`/api/check-in/lookup?eventId=${encodeURIComponent(eventId)}&q=${encodeURIComponent(manualQuery)}`, { cache: 'no-store' })
+components/check-in-scanner.js:80:    const response = await fetch('/api/check-in/reverse', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ eventId, checkinId, reason: 'Staff reversal' }) })
+components/ticket-purchase-panel.js:11:  async function checkout(){if(checkoutKey.current)return;const items=tiers.map((tier)=>({ticketTypeId:tier.id,quantity:Number(quantities[tier.id]||0)})).filter((item)=>item.quantity>0);if(!items.length){setMessage('Choose at least one ticket.');return}if(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY&&!turnstile){setMessage('Complete the safety check first.');return}checkoutKey.current=crypto.randomUUID();setLoading(true);setMessage('Holding your tickets…');const response=await fetch('/api/stripe/checkout',{method:'POST',headers:{'content-type':'application/json','x-puddle-csrf':csrf,'x-puddle-device':(()=>{let d=localStorage.getItem('puddle-device-id');if(!d){d=crypto.randomUUID();localStorage.setItem('puddle-device-id',d)}return d})()},body:JSON.stringify({eventId,items,promoCode,idempotencyKey:checkoutKey.current,turnstileToken:turnstile})});const result=await response.json().catch(()=>({}));setLoading(false);if(response.status===401){checkoutKey.current=null;window.location.href=`/signin?next=${encodeURIComponent(`/events/${eventSlug}`)}`;return}if(!response.ok||!result.url){checkoutKey.current=null;setMessage(result.error||'Checkout could not start.');return}window.location.href=result.url}
+components/event-editor.js:34:          window.history.replaceState(null, '', `/studio/events/${result.draft.id}`)
+components/event-editor.js:56:            {canPreview ? <Link className="editor-button" href={`/studio/events/${draftId}/preview`}>Preview</Link> : <span className="editor-button is-disabled">Preview</span>}
+components/admin-shell.js:2:import { legacySystemsEnabled } from '@/lib/product-vision'
+components/admin-shell.js:5:const legacyLinks=[['/admin','Overview'],['/admin/cases','Cases'],['/admin/users','Users'],['/admin/content','Content'],['/admin/finance','Payments'],['/admin/security','Security']]
+components/admin-shell.js:8:  const showLegacy=legacySystemsEnabled()
+components/order-status.js:11:      const response = await fetch(`/api/stripe/order/${order.id}/status`, { cache: 'no-store' })
+components/order-status.js:17:  return <section className="finance-card order-status-card"><span className={`finance-status ${paid ? 'is-ready' : 'is-pending'}`}>{order.status.replaceAll('_', ' ')}</span><h1>{paid ? 'Payment confirmed.' : order.status === 'payment_review' ? 'Payment under review.' : 'Waiting for verified payment confirmation.'}</h1><p>{paid ? 'Your signed tickets are ready in the wallet.' : 'This page never creates tickets. Puddle waits for Stripe’s verified server-to-server event.'}</p><div className="finance-actions">{paid ? <Link className="splash-button splash-button-mint" href="/wallet">Open ticket wallet</Link> : null}<Link className="quiet-button" href={`/events/${order.events?.slug}`}>Back to event</Link></div></section>
+components/payout-onboarding.js:13:    const response = await fetch('/api/stripe/connect/onboard', { method: 'POST' })
+components/payout-onboarding.js:22:    const response = await fetch('/api/stripe/connect/status', { cache: 'no-store' })
+components/ticket-finance-console.js:15:    const response = await fetch(`/api/studio/events/${eventId}/ticketing`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, ...payload }) })
+components/ticket-finance-console.js:35:    <section className="finance-card"><div className="finance-heading"><div><span className="section-pill section-pill-mint">Inventory</span><h2>Ticket tiers</h2></div><Link href={`/studio/events/${eventId}/check-in`}>Open scanner →</Link></div>
+components/ticket-wallet.js:11:    const response = await fetch('/api/tickets/transfer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, ...payload }) })
+components/ticket-wallet.js:19:      <div className="wallet-actions"><Link href={`/wallet/tickets/${ticket.id}`}>Open ticket</Link><Link href={`/events/${ticket.events?.slug}`}>Event details</Link></div>
+lib/security/bulk-worker.js:4:export async function processBulkOperations(admin,batchSize=25){const{data:items,error}=await admin.rpc('claim_bulk_operation_items_v1',{batch_size:Math.max(1,Math.min(100,batchSize))});if(error)throw error;const results=[];for(const item of items||[]){try{let result={};if(item.item_type==='attendee'){const profileId=item.item_id;const{data:event}=await admin.from('events').select('title,slug').eq('id',item.event_id).maybeSingle();await admin.rpc('queue_notification_v1',{target_profile:profileId,actor:null,notification_kind:'event_operation',notification_title:event?.title||'Event update',notification_body:item.reason,notification_href:event?.slug?`/events/${event.slug}`:'/plans',notification_metadata:{bulk_operation_id:item.operation_id,operation:item.operation}});result={notified:true}}else if(item.item_type==='order'){const{data:order,error:orderError}=await admin.from('orders').select('id,buyer_id,stripe_charge_id,amount_total_cents,refund_total_cents,currency,status').eq('id',item.item_id).maybeSingle();if(orderError||!order)throw orderError||new Error('Order unavailable');const amount=Math.max(0,Number(order.amount_total_cents)-Number(order.refund_total_cents));if(!order.stripe_charge_id||amount<=0){result={skipped:true,reason:'nothing_refundable'}}else{let{data:request}=await admin.from('refund_requests').select('id,status,stripe_refund_id').eq('bulk_operation_item_id',item.id).maybeSingle();if(!request){const created=await admin.from('refund_requests').insert({order_id:order.id,requester_id:order.buyer_id,amount_cents:amount,currency:order.currency,reason:item.reason,status:'approved',decision_note:'Stage 9 bulk event operation',decided_at:new Date().toISOString(),bulk_operation_item_id:item.id}).select('id,status,stripe_refund_id').single();if(created.error)throw created.error;request=created.data}if(request.status==='succeeded'||(request.status==='processing'&&request.stripe_refund_id)){result={refund_request_id:request.id,stripe_refund_id:request.stripe_refund_id,already_started:true}}else{const refund=await createStripeRefund({chargeId:order.stripe_charge_id,amount,reason:'requested_by_customer',idempotencyKey:request.id});const updated=await admin.from('refund_requests').update({status:'processing',stripe_refund_id:refund.id,updated_at:new Date().toISOString()}).eq('id',request.id);if(updated.error)throw updated.error;result={refund_request_id:request.id,stripe_refund_id:refund.id}}}}else result={skipped:true};const completed=await admin.rpc('complete_bulk_operation_item_v1',{target_item:item.id,succeeded:true,result_value:result,error_value:null});if(completed.error)throw completed.error;results.push({id:item.id,ok:true,result})}catch(error){await admin.rpc('complete_bulk_operation_item_v1',{target_item:item.id,succeeded:false,result_value:{},error_value:clean(error)});results.push({id:item.id,ok:false,error:clean(error)})}}return results}
+lib/app/discovery.js:349:    href: candidate.content_kind === 'event' ? `/events/${candidate.slug}` : `/places/${candidate.slug}`,
+lib/app/stage-one-data.js:2:  { id: 'demo-event-1', kind: 'EVENT', category: 'LIVE MUSIC', title: 'Neon Garden', meta: 'Friday · 10 PM · The Junction', distance: '2.1 km', badge: 'TONIGHT', symbol: '♫', accent: '#ff4fa3', tags: ['18+', '$18', '3 friends saved'], href: '/events/neon-garden' },
+lib/app/stage-one-data.js:4:  { id: 'demo-event-2', kind: 'EVENT', category: 'ART', title: 'Midnight Museum', meta: 'Saturday · 9 PM · West end', distance: '4.8 km', badge: 'WEEKEND', symbol: '✦', accent: '#7c4dff', tags: ['Free', 'All ages', 'Accessible'], href: '/events/neon-garden' },
+lib/app/stage-one-data.js:20:    href: `/events/${event.slug}`
+lib/app/plans-data.js:11:  if (row.event_id && row.events) return { kind: 'event', id: row.event_id, state: row.state, title: row.events.title, slug: row.events.slug, summary: row.events.summary, startsAt: row.events.starts_at, href: `/events/${row.events.slug}` }
+lib/product-vision.js:23:export function legacySystemsEnabled(env = process.env) {
+lib/product-vision.js:36:  { prefix: '/events', destination: '/discover' },
+lib/product-vision.js:37:  { prefix: '/studio/events', destination: '/discover' },
+lib/product-vision.js:39:  { prefix: '/friends', destination: '/discover' },
+lib/product-vision.js:40:  { prefix: '/inbox', destination: '/discover' },
+lib/product-vision.js:41:  { prefix: '/wallet', destination: '/plans' },
+lib/product-vision.js:42:  { prefix: '/orders', destination: '/plans' },
+lib/product-vision.js:44:  { prefix: '/admin/finance', destination: '/admin' }
+lib/product-vision.js:52:  '/api/stripe',
+lib/product-vision.js:53:  '/api/tickets',
+lib/product-vision.js:54:  '/api/check-in',
+lib/product-vision.js:55:  '/api/location-sharing',
+lib/product-vision.js:56:  '/api/studio/events',
+lib/product-vision.js:57:  '/api/events',
+lib/product-vision.js:58:  '/api/hosts',
+lib/product-vision.js:59:  '/api/friends',
+lib/product-vision.js:60:  '/api/conversations',
+lib/product-vision.js:61:  '/api/messages',
+lib/product-vision.js:63:  '/api/maps',
+lib/product-vision.js:64:  '/api/ai/assist',
+lib/product-vision.js:65:  '/api/ai/decision'
+scripts/check-stage-nine.mjs:12:const webhook=await readFile(join(root,'app/api/stripe/webhook/route.js'),'utf8');if(!webhook.includes('verifyStripeWebhook')||!webhook.includes('storeStripeWebhookEvent'))throw new Error('Stripe webhook replay protections changed')
+scripts/check-security-surface.mjs:37:await requireMarkers('app/api/stripe/webhook/route.js', ['verifyStripeWebhook', 'storeStripeWebhookEvent'])
+scripts/check-stage-seven.mjs:11:  'app/api/location-sharing/route.js',
+scripts/check-stage-seven.mjs:12:  'app/api/location-sharing/expire/route.js',
+scripts/check-stage-seven.mjs:30:  'app/api/location-sharing/route.js',
+scripts/check-stage-seven.mjs:31:  'app/api/location-sharing/expire/route.js',
+scripts/check-product-vision.mjs:27:  '/events',
+scripts/check-product-vision.mjs:28:  '/studio/events',
+scripts/check-product-vision.mjs:29:  '/friends',
+scripts/check-product-vision.mjs:30:  '/inbox',
+scripts/check-product-vision.mjs:31:  '/wallet',
+scripts/check-product-vision.mjs:32:  '/orders',
+scripts/check-product-vision.mjs:33:  '/admin/finance',
+scripts/check-product-vision.mjs:34:  '/api/stripe',
+scripts/check-product-vision.mjs:35:  '/api/location-sharing',
+scripts/check-product-vision.mjs:37:  '/api/ai/assist'
+scripts/check-product-vision.mjs:45:requireIncludes(proxy, ['legacySystemsEnabled()', 'legacyRedirectForPath(pathname)', 'isLegacyApiPath(pathname)', 'status: 410', "'/matches'"], 'Runtime legacy gate')
+scripts/check-product-vision.mjs:53:requireIncludes(drafts, ["kind === 'event' && !legacySystemsEnabled()", 'Event creation is disabled'], 'Event draft guard')
+scripts/check-product-vision.mjs:56:requireIncludes(createActions, ['requireLegacyEventSystem()', 'Event creation is no longer part'], 'Event server-action guard')
+scripts/check-product-vision.mjs:59:requireIncludes(planActions, ['requireLegacyPlansSystem()', 'Complex itineraries and event attendance are disabled'], 'Legacy plans server-action guard')
+scripts/check-product-vision.mjs:62:requireIncludes(admin, ['coreLinks', 'legacyLinks', 'legacySystemsEnabled()'], 'Admin navigation gate')
+scripts/check-stage-five.mjs:6:const required=['proxy.js','app/stage-five.css','lib/stripe/client.js','lib/stripe/webhooks.js','lib/tickets/signing.js','lib/app/ticketing-data.js','components/ticket-purchase-panel.js','components/payout-onboarding.js','components/ticket-wallet.js','components/ticket-finance-console.js','components/check-in-scanner.js','components/order-status.js','app/settings/payouts/page.js','app/wallet/page.js','app/wallet/tickets/[id]/page.js','app/orders/[id]/page.js','app/studio/events/[id]/finance/page.js','app/studio/events/[id]/check-in/page.js','app/api/stripe/connect/onboard/route.js','app/api/stripe/checkout/route.js','app/api/stripe/webhook/route.js','app/api/stripe/webhooks/process/route.js','app/api/tickets/[id]/qr/route.js','app/api/tickets/transfer/route.js','app/api/check-in/sync/route.js','scripts/process-stripe-webhooks.mjs','scripts/expire-ticket-reservations.mjs','scripts/reconcile-stripe.mjs','scripts/test-stage-five.mjs','scripts/stripe-test-mode-integration.mjs','supabase/migrations/0019_stage5_financial_foundation.sql','supabase/migrations/0020_stage5_checkout_reservations.sql','supabase/migrations/0021_stage5_fulfillment_tickets_checkin.sql','supabase/migrations/0022_stage5_management_authorization.sql','supabase/migrations/0023_stage5_hardening_reconciliation.sql','supabase/tests/0019_stage5_authorization.sql','docs/STAGE_5_SETUP.md']
+scripts/check-stage-five.mjs:8:for(const path of ['lib/stripe/client.js','lib/stripe/webhooks.js','lib/tickets/signing.js','lib/app/ticketing-data.js','app/api/stripe/connect/onboard/route.js','app/api/stripe/connect/status/route.js','app/api/stripe/checkout/route.js','app/api/stripe/webhook/route.js','app/api/stripe/webhooks/process/route.js','app/api/stripe/order/[id]/status/route.js','app/api/stripe/refunds/route.js','app/api/stripe/refunds/[id]/decision/route.js','app/api/tickets/[id]/qr/route.js','app/api/tickets/transfer/route.js','app/api/check-in/sync/route.js','app/api/check-in/lookup/route.js','app/api/check-in/reverse/route.js','app/api/studio/events/[id]/ticketing/route.js','scripts/process-stripe-webhooks.mjs','scripts/expire-ticket-reservations.mjs','scripts/reconcile-stripe.mjs','scripts/generate-ticket-keys.mjs','scripts/test-stage-five.mjs','scripts/stripe-test-mode-integration.mjs'])execFileSync(process.execPath,['--check',join(root,path)],{stdio:'pipe'})
+scripts/check-stage-five.mjs:11:const webhook=await readFile(join(root,'app/api/stripe/webhook/route.js'),'utf8');if(!webhook.includes('verifyStripeWebhook')||!webhook.includes('storeStripeWebhookEvent')||webhook.includes('processPendingStripeWebhooks'))throw new Error('Verified replay-safe Stripe webhook route is incomplete')
+scripts/check-stage-five.mjs:12:const checkout=await readFile(join(root,'app/api/stripe/checkout/route.js'),'utf8');if(!checkout.includes('reserve_paid_order_v1')||!checkout.includes('createCheckoutSession')||!checkout.includes('attach_checkout_session_v1'))throw new Error('Transactional Stripe Checkout is incomplete')
+scripts/check-stage-five.mjs:13:const refunds=(await readFile(join(root,'app/api/stripe/refunds/[id]/decision/route.js'),'utf8'))+(await readFile(join(root,'app/api/studio/events/[id]/ticketing/route.js'),'utf8'));if(refunds.includes("refund.status==='succeeded'?'succeeded'"))throw new Error('Refund route bypasses webhook finalization')
+scripts/check-stage-five.mjs:15:const proxy=await readFile(join(root,'proxy.js'),'utf8');for(const route of ['/wallet','/orders','/settings'])if(!proxy.includes(route))throw new Error(`Proxy does not protect ${route}`)
+scripts/check-stage-eight.mjs:7:  'app/api/ai/assist/route.js','app/api/ai/decision/route.js','app/api/recommendations/preferences/route.js',
+scripts/check-stage-eight.mjs:17:  'app/api/ai/assist/route.js','app/api/ai/decision/route.js','app/api/recommendations/preferences/route.js','app/api/discovery/action/route.js',
+tests/unit/product-vision.test.mjs:6:  legacySystemsEnabled
+tests/unit/product-vision.test.mjs:10:  assert.equal(legacySystemsEnabled({}), false)
+tests/unit/product-vision.test.mjs:11:  assert.equal(legacySystemsEnabled({ PUDDLE_LEGACY_SYSTEMS_ENABLED: 'false' }), false)
+tests/unit/product-vision.test.mjs:12:  assert.equal(legacySystemsEnabled({ PUDDLE_LEGACY_SYSTEMS_ENABLED: 'true' }), true)
+tests/unit/product-vision.test.mjs:13:  assert.equal(legacySystemsEnabled({ PUDDLE_LEGACY_SYSTEMS_ENABLED: '1' }), true)
+tests/unit/product-vision.test.mjs:20:  assert.equal(legacyRedirectForPath('/studio/events/123'), '/discover')
+tests/unit/product-vision.test.mjs:21:  assert.equal(legacyRedirectForPath('/events/summer-festival'), '/discover')
+tests/unit/product-vision.test.mjs:22:  assert.equal(legacyRedirectForPath('/wallet/tickets/123'), '/plans')
+tests/unit/product-vision.test.mjs:24:  assert.equal(legacyRedirectForPath('/admin/finance'), '/admin')
+tests/unit/product-vision.test.mjs:33:  assert.equal(isLegacyApiPath('/api/stripe/webhook'), true)
+tests/unit/product-vision.test.mjs:34:  assert.equal(isLegacyApiPath('/api/location-sharing/expire'), true)
+tests/unit/product-vision.test.mjs:35:  assert.equal(isLegacyApiPath('/api/ai/assist'), true)
+tests/unit/product-vision.test.mjs:37:  assert.equal(isLegacyApiPath('/api/maps/in-view'), true)
+proxy.js:6:import { isLegacyApiPath, legacyRedirectForPath, legacySystemsEnabled } from '@/lib/product-vision'
+proxy.js:8:const protectedPrefixes = ['/dashboard','/discover','/date-match','/hangout','/matches','/map','/explore','/plans','/create','/studio','/report','/friends','/inbox','/profile','/onboarding','/account','/change-email','/wallet','/orders','/settings','/appeals','/admin']
+proxy.js:10:const csrfExempt = new Set(['/api/stripe/webhook'])
+proxy.js:59:  const maxBytes = pathname === '/api/media/upload' ? 20_000_000 : pathname === '/api/stripe/webhook' ? 2_000_000 : pathname.startsWith('/api/') ? 256_000 : 2_000_000
+proxy.js:63:  if (!legacySystemsEnabled()) {
