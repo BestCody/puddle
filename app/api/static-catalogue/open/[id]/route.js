@@ -16,7 +16,7 @@ export async function GET(request, context) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    const signIn = new URL('/sign-in', request.url)
+    const signIn = new URL('/signin', request.url)
     signIn.searchParams.set('next', `${new URL(request.url).pathname}${new URL(request.url).search}`)
     return NextResponse.redirect(signIn)
   }
@@ -37,14 +37,21 @@ export async function GET(request, context) {
       if (!result.materialized.has(id)) return NextResponse.redirect(new URL('/discover', request.url))
       resolvedId = result.materialized.get(id)?.id || id
       row = await admin.from('locations').select('slug').eq('id', resolvedId).maybeSingle()
+      if (row.error && row.error.code !== 'PGRST116') throw row.error
     }
     if (!row.data?.slug) return NextResponse.redirect(new URL('/discover', request.url))
-    await supabase.rpc('touch_static_catalogue_materializations_v1', {
+    const touched = await supabase.rpc('touch_static_catalogue_materializations_v1', {
       location_ids: [resolvedId],
       touch_reason: 'opened'
     })
+    if (touched.error) throw touched.error
     return NextResponse.redirect(new URL(`/places/${encodeURIComponent(row.data.slug)}`, request.url))
-  } catch {
+  } catch (error) {
+    console.warn('Static catalogue detail open failed.', {
+      locationId: id,
+      code: String(error?.code || '').slice(0, 40) || null,
+      message: String(error?.message || 'unknown failure').slice(0, 240)
+    })
     return NextResponse.redirect(new URL('/discover', request.url))
   }
 }
