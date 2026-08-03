@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { staticCatalogueLocationId, staticMaterializedSlug } from '../../lib/app/static-catalogue-materialization.js'
+import { staticCatalogueLocationId, staticMaterializedSlug } from '../../lib/app/static-catalogue-id.js'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
@@ -22,22 +22,27 @@ test('materialized static slugs are stable and collision resistant', () => {
   assert.ok(slug.length <= 100)
 })
 
-test('discovery serves R2 cards without catalogue writes', async () => {
+test('discovery serves R2 cards without source-link or catalogue writes', async () => {
   const infrastructure = await read('lib/app/discovery-infrastructure.js')
   assert.equal(infrastructure.includes('upsert_open_catalogue_batch_v1'), false)
+  assert.equal(infrastructure.includes(".from('location_source_links')"), false)
+  assert.equal(infrastructure.includes('existingStaticSources'), false)
   assert.ok(infrastructure.includes('static_catalogue_ephemeral'))
+  assert.ok(infrastructure.includes('static_ref'))
   assert.ok(infrastructure.includes('staticMaterialized: 0'))
-  assert.ok(infrastructure.includes('logInfrastructureDiscoveryImpressions'))
 })
 
-test('meaningful actions materialize only the selected static locations', async () => {
+test('only positive actions and details materialize from signed exact-tile references', async () => {
   const action = await read('app/api/discovery/action/route.js')
   const sharedDeck = await read('app/api/date-match/start/route.js')
   const details = await read('app/api/static-catalogue/open/[id]/route.js')
-  const migration = await read('supabase/migrations/10025_static_catalogue_on_demand.sql')
-  assert.ok(action.includes('materializeStaticCatalogueLocations'))
-  assert.ok(sharedDeck.includes('materializeStaticCatalogueLocations'))
-  assert.ok(details.includes('materializeStaticCatalogueLocations'))
-  assert.ok(migration.includes('materialize_static_catalogue_location_v1'))
-  assert.ok(migration.includes('grant execute on function public.materialize_static_catalogue_location_v1'))
+  const materializer = await read('lib/app/static-catalogue-materialization.js')
+  assert.ok(action.includes('MATERIALIZING_ACTIONS'))
+  assert.ok(action.includes('materializeStaticCatalogueReferences'))
+  assert.ok(action.includes("action_name: action"))
+  assert.equal(action.includes('radiusKm'), false)
+  assert.ok(sharedDeck.includes('staticRefs'))
+  assert.ok(details.includes('staticRef'))
+  assert.ok(materializer.includes('fetchStaticPlaceByReference'))
+  assert.equal(materializer.includes('fetchNearbyStaticPlaces'), false)
 })
