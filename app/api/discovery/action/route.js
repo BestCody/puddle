@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { materializeStaticCatalogueLocations } from '@/lib/app/static-catalogue-materialization'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
@@ -36,6 +38,33 @@ function safeContext(value) {
   }
 }
 
+async function ensureLocationExists(supabase, userId, contentId, action) {
+  const admin = createAdminClient()
+  const existing = await admin.from('locations').select('id').eq('id', contentId).maybeSingle()
+  if (existing.error && existing.error.code !== 'PGRST116') throw existing.error
+  if (existing.data) return true
+  if (action === 'undo') return false
+
+  const profile = await supabase
+    .from('profiles')
+    .select('latitude,longitude,search_radius_km')
+    .eq('id', userId)
+    .maybeSingle()
+  if (profile.error) throw profile.error
+  const latitude = Number(profile.data?.latitude)
+  const longitude = Number(profile.data?.longitude)
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false
+
+  const result = await materializeStaticCatalogueLocations({
+    admin,
+    latitude,
+    longitude,
+    radiusKm: Math.max(25, Number(profile.data?.search_radius_km || 25), 100),
+    locationIds: [contentId]
+  })
+  return result.materialized.has(contentId)
+}
+
 export async function POST(request) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Discovery actions are unavailable.' }, { status: 503 })
@@ -53,6 +82,13 @@ export async function POST(request) {
     const contentKind = string(body.contentKind, { name: 'contentKind', choices: KINDS, max: 10 })
     const contentId = uuid(body.contentId, 'contentId')
     const requestId = body.requestId ? uuid(body.requestId, 'requestId') : null
+
+    if (contentKind === 'place') {
+      const exists = await ensureLocationExists(supabase, user.id, contentId, action)
+      if (!exists && action !== 'undo') {
+        return NextResponse.json({ error: 'That catalogue location is no longer available.' }, { status: 404 })
+      }
+    }
 
     let result = null
     if (DISCOVERY_ACTIONS.has(action)) {
