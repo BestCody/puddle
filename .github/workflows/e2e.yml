@@ -32,11 +32,38 @@ jobs:
       - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
         with:
           version: latest
-      - name: Start local Supabase
+      - name: Prepare isolated E2E Supabase project
+        run: |
+          rm -rf .e2e-local
+          mkdir -p .e2e-local
+          cp -R supabase .e2e-local/supabase
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.e2e-local/supabase/config.toml')
+          value = path.read_text()
+          replacements = {
+              'project_id = "puddle-local"': 'project_id = "puddle-e2e"',
+              'port = 54321': 'port = 55321',
+              'port = 54322': 'port = 55322',
+              'shadow_port = 54320': 'shadow_port = 55320',
+              'port = 54323': 'port = 55323',
+              'port = 54324': 'port = 55324',
+              'smtp_port = 54325': 'smtp_port = 55325',
+              'pop3_port = 54326': 'pop3_port = 55326',
+          }
+          for old, new in replacements.items():
+              if old not in value:
+                  raise SystemExit(f'Missing expected Supabase config value: {old}')
+              value = value.replace(old, new, 1)
+          path.write_text(value)
+          PY
+      - name: Start isolated local Supabase
+        working-directory: .e2e-local
         run: |
           supabase start
           supabase db reset --local
       - name: Export local Supabase environment
+        working-directory: .e2e-local
         run: |
           eval "$(supabase status -o env)"
           echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
@@ -56,6 +83,7 @@ jobs:
             test-results
           if-no-files-found: ignore
           retention-days: 14
-      - name: Stop local Supabase
+      - name: Stop isolated local Supabase
         if: always()
+        working-directory: .e2e-local
         run: supabase stop --no-backup
