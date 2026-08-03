@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { materializeStaticCatalogueLocations } from '@/lib/app/static-catalogue-materialization'
+import { materializeStaticCatalogueReferences } from '@/lib/app/static-catalogue-materialization'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -17,32 +17,32 @@ export async function GET(request, context) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     const signIn = new URL('/sign-in', request.url)
-    signIn.searchParams.set('next', `/api/static-catalogue/open/${id}`)
+    signIn.searchParams.set('next', `${new URL(request.url).pathname}${new URL(request.url).search}`)
     return NextResponse.redirect(signIn)
   }
 
-  const profile = await supabase
-    .from('profiles')
-    .select('latitude,longitude,search_radius_km')
-    .eq('id', user.id)
-    .maybeSingle()
-  const latitude = Number(profile.data?.latitude)
-  const longitude = Number(profile.data?.longitude)
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return NextResponse.redirect(new URL('/account', request.url))
-  }
-
+  const admin = createAdminClient()
   try {
-    const result = await materializeStaticCatalogueLocations({
-      admin: createAdminClient(),
-      latitude,
-      longitude,
-      radiusKm: Math.max(25, Number(profile.data?.search_radius_km || 25), 100),
-      locationIds: [id]
-    })
-    if (!result.materialized.has(id)) return NextResponse.redirect(new URL('/discover', request.url))
-    const row = await createAdminClient().from('locations').select('slug').eq('id', id).maybeSingle()
+    let resolvedId = id
+    let row = await admin.from('locations').select('slug').eq('id', id).maybeSingle()
+    if (row.error && row.error.code !== 'PGRST116') throw row.error
+    if (!row.data?.slug) {
+      const staticRef = new URL(request.url).searchParams.get('ref')
+      if (!staticRef) return NextResponse.redirect(new URL('/discover', request.url))
+      const result = await materializeStaticCatalogueReferences({
+        admin,
+        locationIds: [id],
+        references: [{ id, token: staticRef }]
+      })
+      if (!result.materialized.has(id)) return NextResponse.redirect(new URL('/discover', request.url))
+      resolvedId = result.materialized.get(id)?.id || id
+      row = await admin.from('locations').select('slug').eq('id', resolvedId).maybeSingle()
+    }
     if (!row.data?.slug) return NextResponse.redirect(new URL('/discover', request.url))
+    await supabase.rpc('touch_static_catalogue_materializations_v1', {
+      location_ids: [resolvedId],
+      touch_reason: 'opened'
+    })
     return NextResponse.redirect(new URL(`/places/${encodeURIComponent(row.data.slug)}`, request.url))
   } catch {
     return NextResponse.redirect(new URL('/discover', request.url))
