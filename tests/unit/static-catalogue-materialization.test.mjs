@@ -22,7 +22,7 @@ test('materialized static slugs are stable and collision resistant', () => {
   assert.ok(slug.length <= 100)
 })
 
-test('discovery uses R2 first and one relational overlay RPC without source-link writes', async () => {
+test('discovery uses one relational overlay RPC without catalogue writes or fallback', async () => {
   const infrastructure = await read('lib/app/discovery-infrastructure.js')
   assert.equal(infrastructure.includes('upsert_open_catalogue_batch_v1'), false)
   assert.equal(infrastructure.includes(".from('location_source_links')"), false)
@@ -31,6 +31,7 @@ test('discovery uses R2 first and one relational overlay RPC without source-link
   assert.ok(infrastructure.includes('static_catalogue_ephemeral'))
   assert.ok(infrastructure.includes('static_ref'))
   assert.ok(infrastructure.includes('staticMaterialized: 0'))
+  assert.equal(infrastructure.includes('getDiscoveryFeed'), false)
 })
 
 test('positive actions and shared decks batch exact-tile materialization', async () => {
@@ -51,4 +52,5 @@ test('positive actions and shared decks batch exact-tile materialization', async
   assert.equal(materializer.includes('fetchNearbyStaticPlaces'), false)
   assert.ok(migration.includes('create or replace function public.materialize_static_catalogue_locations_v2'))
   assert.ok(migration.includes('create or replace function public.record_discovery_actions_v3'))
+  assert.equal(migration.includes('perform public.record_discovery_action_v2'), false)
 })
