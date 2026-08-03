@@ -5,6 +5,7 @@ const BATCH_SIZE = boundedInteger(process.env.PHOTO_ENRICH_BATCH_SIZE, 100, { mi
 const MAX_BATCHES = boundedInteger(process.env.PHOTO_ENRICH_MAX_BATCHES, 50, { min: 1, max: 200 })
 const MAX_RUNTIME_MINUTES = boundedInteger(process.env.PHOTO_ENRICH_MAX_RUNTIME_MINUTES, 105, { min: 1, max: 110 })
 const IMPORTER = String(process.env.PHOTO_ENRICH_IMPORTER || 'scripts/import-open-location-photos.mjs').trim()
+const MEDIA_SYNC = 'scripts/sync-static-media-overlays.mjs'
 const OUTPUT_TAIL_LIMIT = 2 * 1024 * 1024
 const RUNTIME_HEADROOM_MS = Math.min(5 * 60_000, Math.max(5_000, Math.floor(MAX_RUNTIME_MINUTES * 60_000 / 5)))
 
@@ -59,6 +60,10 @@ async function main() {
     batches += 1
     for (const field of Object.keys(totals)) totals[field] += Number(summary[field] || 0)
 
+    if (Number(summary.imported || 0) > 0) {
+      await runNodeScript(MEDIA_SYNC, [`--limit=${Math.max(BATCH_SIZE, Number(summary.imported || 0))}`], 'Static media overlay sync')
+    }
+
     console.log(
       `Photo batch ${batches} settled ${summary.inspected} locations ` +
       `(${summary.imported} imported, ${summary.noMatch} no match, ${summary.failed} failed, ${summary.skipped} skipped).`
@@ -72,15 +77,9 @@ async function main() {
   }
 
   const result = {
-    mode: 'apply',
-    batchSize: BATCH_SIZE,
-    maxBatches: MAX_BATCHES,
-    maxRuntimeMinutes: MAX_RUNTIME_MINUTES,
-    batches,
-    complete,
-    stoppedReason,
-    elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
-    totals
+    mode: 'apply', batchSize: BATCH_SIZE, maxBatches: MAX_BATCHES,
+    maxRuntimeMinutes: MAX_RUNTIME_MINUTES, batches, complete, stoppedReason,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1000), totals
   }
   console.log(JSON.stringify(result, null, 2))
 }
