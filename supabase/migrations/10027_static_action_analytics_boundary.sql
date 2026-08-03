@@ -36,12 +36,9 @@ begin
   end if;
 
   if action_name in ('saved','interested','dismissed','visited','undo') then
-    perform public.record_discovery_action_v1(
-      target_kind=>target_kind,
-      target_id=>target_id,
-      action_name=>action_name,
-      request_key=>request_key
-    );
+    -- Positional notation is intentional. The deployed v1 function's argument names
+    -- are not part of its stable SQL contract, while its ordered types are stable.
+    perform public.record_discovery_action_v1(target_kind,target_id,action_name,request_key);
   end if;
 
   -- Relational feed items have recommendation request/impression rows. Ephemeral R2
