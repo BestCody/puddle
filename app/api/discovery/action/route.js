@@ -30,6 +30,16 @@ function safeContext(value) {
   }
 }
 
+function diagnostic(error) {
+  if (process.env.E2E_DIAGNOSTICS !== 'true') return {}
+  return {
+    diagnosticCode: String(error?.code || '').slice(0, 80) || null,
+    diagnosticMessage: String(error?.message || 'unknown failure').slice(0, 500),
+    diagnosticDetails: String(error?.details || '').slice(0, 500) || null,
+    diagnosticHint: String(error?.hint || '').slice(0, 300) || null
+  }
+}
+
 export async function POST(request) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Discovery actions are unavailable.' }, { status: 503 })
@@ -78,10 +88,18 @@ export async function POST(request) {
       static_source: reference?.source || null,
       static_source_place_id: reference?.sourcePlaceId || null
     })
-    if (recorded.error) return NextResponse.json({ error: 'That choice could not be saved.' }, { status: 400 })
+    if (recorded.error) {
+      console.warn('Discovery action RPC failed.', {
+        code: recorded.error.code || null,
+        message: String(recorded.error.message || '').slice(0, 240),
+        staticEphemeral,
+        action
+      })
+      return NextResponse.json({ error: 'That choice could not be saved.', ...diagnostic(recorded.error) }, { status: 400 })
+    }
 
     return NextResponse.json({ ok: true, result: recorded.data, perfectPick: requestedAction === 'perfect' })
   } catch (error) {
-    return NextResponse.json({ error: safeSecurityError(error, 'That discovery action is not valid.') }, { status: error?.status || 400 })
+    return NextResponse.json({ error: safeSecurityError(error, 'That discovery action is not valid.'), ...diagnostic(error) }, { status: error?.status || 400 })
   }
 }
