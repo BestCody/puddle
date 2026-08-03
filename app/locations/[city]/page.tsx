@@ -5,8 +5,12 @@ import {
   geocodingConfigured,
   searchCities,
 } from "@/lib/app/geocoding";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { makePlaceSlug } from "@/lib/seo/place-slug";
 
 export const revalidate = 86_400;
+
+const PLACE_LIMIT = 24;
 
 type PageProps = {
   params: Promise<{
@@ -19,6 +23,15 @@ type ResolvedCity = {
   region: string | null;
   country: string | null;
   label: string;
+};
+
+type CityPlace = {
+  id: string | number;
+  name: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  kind: string | null;
 };
 
 const localDevelopmentFallback = new Map<string, ResolvedCity>([
@@ -63,6 +76,13 @@ function isSafeCitySlug(slug: string): boolean {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 120;
 }
 
+function formatKind(kind: string | null): string {
+  if (!kind) return "Local place";
+  return kind
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 async function resolveCity(slug: string): Promise<ResolvedCity | null> {
   if (!isSafeCitySlug(slug)) return null;
 
@@ -89,6 +109,35 @@ async function resolveCity(slug: string): Promise<ResolvedCity | null> {
   } catch (error) {
     console.warn("Unable to validate SEO city page.", error);
     return null;
+  }
+}
+
+async function getCityPlaces(city: ResolvedCity): Promise<CityPlace[]> {
+  try {
+    const admin = createAdminClient();
+    let query = admin
+      .from("locations")
+      .select("id,name,city,region,country,kind")
+      .ilike("city", city.city)
+      .not("name", "is", null)
+      .order("name", { ascending: true })
+      .limit(PLACE_LIMIT);
+
+    if (city.country) {
+      query = query.ilike("country", city.country);
+    }
+
+    const result = await query;
+
+    if (result.error) {
+      console.warn("Unable to load city places.", result.error.message);
+      return [];
+    }
+
+    return (result.data ?? []) as CityPlace[];
+  } catch (error) {
+    console.warn("Unable to load city places.", error);
+    return [];
   }
 }
 
@@ -128,6 +177,7 @@ export default async function CityLocationsPage({ params }: PageProps) {
 
   if (!resolvedCity) notFound();
 
+  const places = await getCityPlaces(resolvedCity);
   const placeLabel = [resolvedCity.city, resolvedCity.region, resolvedCity.country]
     .filter(Boolean)
     .join(", ");
@@ -147,27 +197,85 @@ export default async function CityLocationsPage({ params }: PageProps) {
           }
         : undefined,
     },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: places.length,
+      itemListElement: places.map((place, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: place.name,
+        url: `/place/${makePlaceSlug(place)}`,
+      })),
+    },
   };
 
   return (
-    <main>
+    <main style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 20px 72px" }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      <section>
-        <p>Puddle local discovery</p>
-        <h1>Places to go in {resolvedCity.city}</h1>
-        <p>
+      <section style={{ marginBottom: 32 }}>
+        <p style={{ margin: 0, opacity: 0.65 }}>Puddle local discovery</p>
+        <h1 style={{ fontSize: "clamp(2rem, 6vw, 4rem)", margin: "8px 0 12px" }}>
+          Places to go in {resolvedCity.city}
+        </h1>
+        <p style={{ maxWidth: 720, fontSize: 18, lineHeight: 1.6 }}>
           Discover restaurants, date spots, hangout locations, and local places
           worth exploring around {placeLabel}.
         </p>
-
-        <div>
-          <Link href="/">Explore Puddle</Link>
-        </div>
       </section>
+
+      {places.length > 0 ? (
+        <section aria-labelledby="city-places-heading">
+          <h2 id="city-places-heading" style={{ marginBottom: 18 }}>
+            Explore {resolvedCity.city}
+          </h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {places.map((place) => (
+              <Link
+                key={String(place.id)}
+                href={`/place/${makePlaceSlug(place)}`}
+                style={{
+                  display: "block",
+                  padding: 20,
+                  border: "1px solid rgba(0, 0, 0, 0.14)",
+                  borderRadius: 18,
+                  color: "inherit",
+                  textDecoration: "none",
+                }}
+              >
+                <p style={{ margin: "0 0 8px", opacity: 0.65 }}>
+                  {formatKind(place.kind)}
+                </p>
+                <h3 style={{ margin: 0, fontSize: 20 }}>{place.name}</h3>
+                <p style={{ margin: "10px 0 0", opacity: 0.75 }}>
+                  {[place.city, place.region].filter(Boolean).join(", ")}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section>
+          <h2>More places are being added</h2>
+          <p>
+            Puddle does not have public listings for {resolvedCity.city} yet.
+            Explore the main discovery experience while the catalogue grows.
+          </p>
+        </section>
+      )}
+
+      <div style={{ marginTop: 36 }}>
+        <Link href="/">Explore all of Puddle</Link>
+      </div>
     </main>
   );
 }
