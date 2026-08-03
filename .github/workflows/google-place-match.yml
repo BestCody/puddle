@@ -9,7 +9,7 @@ on:
         default: '100'
         type: string
       apply:
-        description: 'Save verified Place IDs'
+        description: 'Save verified Place IDs and update B2 media overlays'
         required: false
         default: false
         type: boolean
@@ -38,5 +38,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+          B2_REGION: ${{ secrets.B2_REGION }}
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
           GOOGLE_PLACE_MATCH_MIN_SCORE: '0.86'
           GOOGLE_PLACE_MATCH_DELAY_MS: '250'
