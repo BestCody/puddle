@@ -1,5 +1,6 @@
 import { createAdminClient } from '../lib/supabase/admin.js'
 import { scoreGooglePlaceMatch } from '../lib/app/google-place-match.js'
+import { syncStaticMediaOverlayForLocations } from '../lib/app/static-media-overlay.js'
 
 const APPLY = process.argv.includes('--apply')
 const locationArgument = process.argv.find((value) => value.startsWith('--location='))?.split('=')[1] || null
@@ -43,40 +44,35 @@ async function searchGoogle(location) {
   return response.json()
 }
 
+function retryAfter(attemptCount, failed = false) {
+  if (!failed) return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const hours = Math.min(7 * 24, Math.max(1, 2 ** Math.min(8, Number(attemptCount || 0))))
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
+}
+
 const admin = createAdminClient()
-let query = admin
-  .from('locations')
-  .select('id,name,latitude,longitude,city,region,country,country_code,status,visibility,published_at')
-  .eq('status', 'published')
-  .eq('visibility', 'public')
-  .not('latitude', 'is', null)
-  .not('longitude', 'is', null)
-  .order('published_at', { ascending: false })
-  .limit(LIMIT)
-if (locationArgument) query = query.eq('id', locationArgument)
-const { data: locations, error: locationsError } = await query
-if (locationsError) throw locationsError
+let locations
+if (locationArgument) {
+  const result = await admin
+    .from('locations')
+    .select('id,name,latitude,longitude,city,region,country,country_code')
+    .eq('id', locationArgument)
+    .maybeSingle()
+  if (result.error) throw result.error
+  locations = result.data ? [{ ...result.data, attempt_count: 0 }] : []
+} else {
+  const result = await admin.rpc('claim_google_place_candidates_v1', { batch_size: LIMIT })
+  if (result.error) throw result.error
+  locations = result.data || []
+}
 
 let matched = 0
 let saved = 0
-let skipped = 0
-let photographed = 0
+let noMatch = 0
 let failed = 0
-for (const location of locations || []) {
-  const [existing, photos] = await Promise.all([
-    admin.from('location_google_places').select('google_place_id,status').eq('location_id', location.id).maybeSingle(),
-    admin.from('location_photo_sources').select('id').eq('location_id', location.id).eq('status', 'approved').limit(1)
-  ])
-  if (existing.error && existing.error.code !== 'PGRST116') throw existing.error
-  if (photos.error) throw photos.error
-  if (photos.data?.length) {
-    photographed += 1
-    continue
-  }
-  if (existing.data?.status === 'verified') {
-    skipped += 1
-    continue
-  }
+const changedLocationIds = []
+for (const location of locations) {
+  const attemptCount = Number(location.attempt_count || 0) + 1
   try {
     const payload = await searchGoogle(location)
     const ranked = (payload?.places || [])
@@ -85,14 +81,27 @@ for (const location of locations || []) {
       .sort((a, b) => b.match.score - a.match.score)
     const best = ranked[0]
     if (!best || best.match.score < MIN_SCORE) {
+      noMatch += 1
       console.log(`No verified Google match: ${location.name}`)
+      if (APPLY) {
+        const result = await admin.from('google_place_match_attempts').upsert({
+          location_id: location.id,
+          status: 'no_match',
+          attempt_count: attemptCount,
+          last_attempt_at: new Date().toISOString(),
+          retry_after: retryAfter(attemptCount, false),
+          last_error: null,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'location_id' })
+        if (result.error) throw result.error
+      }
       await sleep(REQUEST_DELAY_MS)
       continue
     }
     matched += 1
     console.log(`${APPLY ? 'Saving' : 'Would save'} ${location.name} → ${best.match.matchedName} (${best.match.score.toFixed(3)}, ${best.match.distanceM.toFixed(1)} m).`)
     if (APPLY) {
-      const { error } = await admin.from('location_google_places').upsert({
+      const mapping = await admin.from('location_google_places').upsert({
         location_id: location.id,
         google_place_id: best.place.id,
         status: 'verified',
@@ -100,18 +109,43 @@ for (const location of locations || []) {
         matched_name: best.match.matchedName,
         matched_at: new Date().toISOString()
       }, { onConflict: 'location_id' })
-      if (error) throw error
+      if (mapping.error) throw mapping.error
+      const cleared = await admin.from('google_place_match_attempts').delete().eq('location_id', location.id)
+      if (cleared.error) throw cleared.error
+      const touched = await admin.rpc('touch_static_catalogue_materializations_v1', {
+        location_ids: [location.id],
+        touch_reason: 'google'
+      })
+      if (touched.error) throw touched.error
+      changedLocationIds.push(location.id)
       saved += 1
     }
   } catch (error) {
     failed += 1
     console.warn(`${location.name}: ${error.message}`)
+    if (APPLY) {
+      const result = await admin.from('google_place_match_attempts').upsert({
+        location_id: location.id,
+        status: 'failed',
+        attempt_count: attemptCount,
+        last_attempt_at: new Date().toISOString(),
+        retry_after: retryAfter(attemptCount, true),
+        last_error: String(error.message || 'Google Places request failed.').slice(0, 900),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'location_id' })
+      if (result.error) throw result.error
+    }
   }
   await sleep(REQUEST_DELAY_MS)
 }
 
+let overlays = null
+if (APPLY && changedLocationIds.length) {
+  overlays = await syncStaticMediaOverlayForLocations(admin, changedLocationIds)
+}
+
 console.log(JSON.stringify({
-  mode: APPLY ? 'apply' : 'dry-run', inspected: locations?.length || 0,
-  matched, saved, skipped, photographed, failed, minimumScore: MIN_SCORE
+  mode: APPLY ? 'apply' : 'dry-run', inspected: locations.length,
+  matched, saved, noMatch, failed, minimumScore: MIN_SCORE, overlays
 }, null, 2))
 if (!APPLY) console.log('Dry run only. Re-run with --apply after reviewing the candidate output.')
