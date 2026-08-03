@@ -120,7 +120,7 @@ requireIncludes(discoverPage, ["kind: 'place'",'DateSwipeWorkspaceV2','recordSam
 requireIncludes(discovery, ['r2_discovery_overlay_v1','r2-primary','R2_CATALOGUE_NOT_CONFIGURED','record_discovery_session_sample_v1'], 'R2 discovery runtime')
 for (const forbidden of ['getDiscoveryFeed','supabase-fallback','logInfrastructureDiscoveryImpressions']) if (discovery.includes(forbidden)) throw new Error(`Discovery fallback remains: ${forbidden}`)
 requireIncludes(actions, ['MAX_ACTIONS = 20','record_discovery_actions_v3','materializeStaticCatalogueReferences'], 'Batched action endpoint')
-requireIncludes(swipe, ['MinimalSwipeCard','SwipeActionDock','FilterSheet','InviteSheet',"'/api/discovery/actions'",'flushPendingActions'], 'Minimal swipe workspace')
+requireIncludes(swipe, ['MinimalSwipeCard','SwipeActionDock','FilterSheet','InviteSheet',"'/api/discovery/actions'",'flushActions','queueDiscoveryAction','drainActions'], 'Minimal swipe workspace')
 requireIncludes(card, ['minimal-swipe-photo','opening_hours','amenities','google.com/maps','Full details'], 'Minimal location card')
 for (const marker of ["key: 'undo'", "key: 'pass'", "key: 'save'", "key: 'perfect'"]) if (!swipeDock.includes(marker)) throw new Error(`Swipe dock is missing ${marker}`)
 
