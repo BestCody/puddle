@@ -8,7 +8,7 @@ async function replace(path, before, after) {
 
 await replace(
   'scripts/import-open-location-photos.mjs',
-  "import sharp from 'sharp'\nimport { createAdminClient } from '../lib/supabase/admin.js'",
+  "import { createHash } from 'node:crypto'\nimport sharp from 'sharp'\nimport { createAdminClient } from '../lib/supabase/admin.js'",
   "import { createAdminClient } from '../lib/supabase/admin.js'\nimport { storeOpenPhotoInR2 } from '../lib/app/open-photo-r2.js'\nimport { r2Configuration } from '../lib/app/r2-s3.js'"
 )
 
@@ -108,12 +108,6 @@ await replace(
       await runNodeScript(MIGRATOR, ['--apply', \`--limit=\${BATCH_SIZE}\`], 'R2 photo migrator')
     }
 `,
-  ''
-)
-
-await replace(
-  '.github/workflows/photo-enrichment.yml',
-  "          PHOTO_ENRICH_MIGRATOR: 'scripts/migrate-open-photos-to-r2.mjs'\n          OPEN_PHOTO_R2_MIGRATION_LIMIT: '100'\n",
   ''
 )
 
