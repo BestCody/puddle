@@ -21,8 +21,8 @@ as $$
   )
   select jsonb_build_object(
     'samples',aggregate.samples,
-    'p50OverlayMs',round(coalesce(aggregate.p50_ms,0),2),
-    'p95OverlayMs',round(coalesce(aggregate.p95_ms,0),2),
+    'p50OverlayMs',round(coalesce(aggregate.p50_ms,0)::numeric,2),
+    'p95OverlayMs',round(coalesce(aggregate.p95_ms,0)::numeric,2),
     'publishedLocations',inventory.locations,
     'postgisInstalled',exists(select 1 from pg_extension where extname='postgis'),
     'recommendPostgis',aggregate.samples>=100 and coalesce(aggregate.p95_ms,0)>=75 and inventory.locations>=100000,
