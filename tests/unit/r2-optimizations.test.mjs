@@ -6,18 +6,18 @@ import { transformOpenPhotoForR2 } from '../../lib/app/open-photo-r2.js'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('open-photo importer uploads processed assets directly to R2', async () => {
+test('open-photo importer uploads processed assets directly to shared R2 media objects', async () => {
   const importer = await read('scripts/import-open-location-photos.mjs')
+  const storage = await read('lib/app/open-photo-r2.js')
   const runner = await read('scripts/enrich-open-location-photos.mjs')
   const workflow = await read('.github/workflows/photo-enrichment.yml')
   assert.ok(importer.includes('storeOpenPhotoInR2'))
-  assert.ok(importer.includes('storage_backend: stored.storageBackend'))
-  assert.ok(importer.includes('content_hash: stored.contentHash'))
+  assert.ok(storage.includes(".from('media_objects')"))
+  assert.ok(storage.includes("onConflict: 'content_hash'"))
   assert.equal(importer.includes('admin.storage.from(BUCKET)'), false)
   assert.equal(importer.includes("contentType: 'image/jpeg'"), false)
-  assert.equal(runner.includes('PHOTO_ENRICH_MIGRATOR'), false)
+  assert.ok(runner.includes('sync-static-media-overlays.mjs'))
   assert.equal(workflow.includes('PHOTO_ENRICH_MIGRATOR'), false)
-  assert.equal(workflow.includes('OPEN_PHOTO_R2_MIGRATION_LIMIT'), false)
 })
 
 test('direct R2 image processing produces bounded AVIF metadata', async () => {
