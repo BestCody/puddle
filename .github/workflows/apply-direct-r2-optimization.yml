@@ -32,6 +32,6 @@ jobs:
           node --check lib/app/open-photo-r2.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/import-open-location-photos.mjs scripts/enrich-open-location-photos.mjs .github/workflows/photo-enrichment.yml
+          git add scripts/import-open-location-photos.mjs scripts/enrich-open-location-photos.mjs
           git commit -m "[direct-r2-patch] Upload open photos directly to R2"
           git push origin HEAD:agent/r2-catalogue-google-ui
