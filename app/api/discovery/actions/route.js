@@ -11,6 +11,7 @@ import { object, string, uuid } from '@/lib/security/schema'
 const ACTIONS = new Set(['saved', 'interested', 'dismissed', 'visited', 'undo', 'opened', 'perfect'])
 const MATERIALIZING_ACTIONS = new Set(['saved', 'interested', 'visited', 'opened', 'perfect'])
 const MAX_ACTIONS = 20
+const ORDERED_FALLBACK_RPC = 'record_discovery_actions_v3'
 
 function safeContext(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { mode: 'solo', category: null, payload: {} }
@@ -103,7 +104,8 @@ export async function POST(request) {
       console.warn('Discovery action batch RPC failed.', {
         code: recorded.error.code || null,
         message: String(recorded.error.message || '').slice(0, 240),
-        count: rpcActions.length
+        count: rpcActions.length,
+        orderedFallback: ORDERED_FALLBACK_RPC
       })
       return NextResponse.json({ error: 'Those choices could not be saved.' }, { status: 400 })
     }
