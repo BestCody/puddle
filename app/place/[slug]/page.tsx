@@ -50,7 +50,7 @@ async function getLocation(slug: string): Promise<LocationRow | null> {
 
   try {
     const response = await fetch(
-      `${config.url}/rest/v1/locations?select=id,name,city,description,address&id=eq.${encodeURIComponent(id)}&limit=1`,
+      `${config.url}/rest/v1/locations?select=id,name,city,description,address&id=eq.${encodeURIComponent(id)}&city=ilike.Toronto&limit=1`,
       {
         headers: {
           apikey: config.key,
@@ -63,14 +63,16 @@ async function getLocation(slug: string): Promise<LocationRow | null> {
     if (!response.ok) return null;
 
     const rows = (await response.json()) as LocationRow[];
-    return rows[0] ?? null;
+    const location = rows[0] ?? null;
+
+    return location?.city?.toLowerCase() === "toronto" ? location : null;
   } catch {
     return null;
   }
 }
 
 function canonicalSlug(location: LocationRow): string {
-  const label = [location.name, location.city].filter(Boolean).join(" ");
+  const label = [location.name, "Toronto"].filter(Boolean).join(" ");
   return `${slugify(label || "place")}--${location.id}`;
 }
 
@@ -79,16 +81,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const location = await getLocation(slug);
 
   if (!location?.name) {
-    return { title: "Place not found | Puddle" };
+    return {
+      title: "Place not found | Puddle",
+      robots: { index: false, follow: false },
+    };
   }
 
-  const cityText = location.city ? ` in ${location.city}` : "";
   const description =
     location.description?.trim() ||
-    `Discover ${location.name}${cityText}, including location details and ideas for your next outing.`;
+    `Discover ${location.name} in Toronto, including location details and ideas for your next outing.`;
 
   return {
-    title: `${location.name}${cityText} | Puddle`,
+    title: `${location.name} in Toronto | Puddle`,
     description: description.slice(0, 160),
     alternates: {
       canonical: `/place/${canonicalSlug(location)}`,
@@ -105,22 +109,17 @@ export default async function PlacePage({ params }: PageProps) {
   return (
     <main>
       <article>
-        <p>Puddle place discovery</p>
-        <h1>{location.name}</h1>
-        {location.city ? <p>{location.city}</p> : null}
+        <p>Puddle Toronto place discovery</p>
+        <h1>{location.name} in Toronto</h1>
         {location.address ? <p>{location.address}</p> : null}
         <p>
           {location.description?.trim() ||
-            `Explore ${location.name}${location.city ? ` in ${location.city}` : ""} and decide whether it belongs on your next Puddle shortlist.`}
+            `Explore ${location.name} in Toronto and decide whether it belongs on your next Puddle shortlist.`}
         </p>
 
         <nav aria-label="Place navigation">
           <Link href="/">Explore Puddle</Link>
-          {location.city ? (
-            <Link href={`/locations/${slugify(location.city)}`}>
-              More places in {location.city}
-            </Link>
-          ) : null}
+          <Link href="/locations/toronto">More places in Toronto</Link>
         </nav>
       </article>
     </main>
