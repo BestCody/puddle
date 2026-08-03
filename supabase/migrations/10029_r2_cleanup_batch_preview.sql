@@ -102,3 +102,5 @@ end;
 $$;
 revoke all on function public.prepare_r2_cleanup_v2(integer,integer,boolean) from public,anon,authenticated;
 grant execute on function public.prepare_r2_cleanup_v2(integer,integer,boolean) to service_role;
+
+drop function if exists public.prepare_r2_cleanup_v1(integer,integer);
