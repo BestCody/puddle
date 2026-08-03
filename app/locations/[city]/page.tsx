@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = "Toronto Events, Date Ideas & Places to Go | Puddle";
+  const title = "Puddle - Toronto Events, Date Ideas & Places to Go";
   const description =
     "Discover Toronto events, date ideas, restaurants, cafes, wedding venues, nightlife, activities, attractions, and places to go with Puddle.";
 
