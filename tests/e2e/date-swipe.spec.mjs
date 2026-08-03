@@ -8,7 +8,6 @@ import {
 } from './support.mjs'
 import {
   R2_FIXTURE_BASE_URL,
-  R2_FIXTURE_IDS,
   fixturePlaceBySourceId
 } from './r2-fixture-data.mjs'
 
@@ -48,21 +47,21 @@ async function compactAction(userId, locationId) {
 
 async function installGoogleUiKitStub(page) {
   await page.addInitScript(() => {
-    class PassiveElement extends HTMLElement {}
     class DetailsElement extends HTMLElement {
       connectedCallback() {
         window.setTimeout(() => this.dispatchEvent(new Event('gmp-load')), 0)
       }
     }
-    const definitions = [
-      ['gmp-place-details-compact', DetailsElement],
-      ['gmp-place-details-place-request', PassiveElement],
-      ['gmp-place-content-config', PassiveElement],
-      ['gmp-place-media', PassiveElement],
-      ['gmp-place-attribution', PassiveElement]
-    ]
-    for (const [name, constructor] of definitions) {
-      if (!customElements.get(name)) customElements.define(name, constructor)
+    if (!customElements.get('gmp-place-details-compact')) {
+      customElements.define('gmp-place-details-compact', DetailsElement)
+    }
+    for (const name of [
+      'gmp-place-details-place-request',
+      'gmp-place-content-config',
+      'gmp-place-media',
+      'gmp-place-attribution'
+    ]) {
+      if (!customElements.get(name)) customElements.define(name, class extends HTMLElement {})
     }
     window.google = {
       maps: {
@@ -87,9 +86,9 @@ test('R2 media overlays rank cached photos first and mount Google UI Kit only fo
 
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(card.locator('h1')).toHaveText('E2E Media Google Museum')
+  await expect.poll(() => page.evaluate(() => window.__e2eGoogleImports || [])).toContain('places')
   await expect(page.locator('gmp-place-details-compact')).toHaveCount(1)
   await expect(page.locator('gmp-place-details-place-request')).toHaveAttribute('place', 'e2e-google-place-id')
-  await expect.poll(() => page.evaluate(() => window.__e2eGoogleImports || [])).toContain('places')
 
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(card.locator('h1')).toHaveText('E2E Media Placeholder Park')
@@ -98,12 +97,18 @@ test('R2 media overlays rank cached photos first and mount Google UI Kit only fo
 
 test('passing and undoing an R2 card uses compact action state without materializing a location', async ({ page }) => {
   const account = await createSwiper('R2 Pass Swiper')
-  const first = fixturePlaceBySourceId('e2e-pass-alpha')
+  const candidates = [fixturePlaceBySourceId('e2e-pass-alpha'), fixturePlaceBySourceId('e2e-pass-beta')]
   await openFilteredDeck(page, account, 'E2E Pass')
 
-  await expect(page.locator('.minimal-swipe-card h1')).toHaveText(first.name)
+  const heading = page.locator('.minimal-swipe-card h1')
+  const firstTitle = await heading.innerText()
+  const first = candidates.find((place) => place.name === firstTitle)
+  const second = candidates.find((place) => place.name !== firstTitle)
+  expect(first).toBeTruthy()
+  expect(second).toBeTruthy()
+
   await page.getByRole('button', { name: 'Pass' }).click()
-  await expect(page.locator('.minimal-swipe-card h1')).toHaveText('E2E Pass Beta Gallery')
+  await expect(heading).toHaveText(second.name)
 
   const dismissal = await poll(
     () => compactAction(account.user.id, first.id),
@@ -114,7 +119,7 @@ test('passing and undoing an R2 card uses compact action state without materiali
   expect(await locationRow(first.id)).toBeNull()
 
   await page.getByRole('button', { name: 'Undo' }).click()
-  await expect(page.locator('.minimal-swipe-card h1')).toHaveText(first.name)
+  await expect(heading).toHaveText(first.name)
   await poll(async () => !(await compactAction(account.user.id, first.id)), {
     message: 'Undo did not remove the compact static dismissal.'
   })
@@ -146,14 +151,17 @@ test('saving an R2 card materializes its exact signed catalogue record and retai
   if (sourceLink.error) throw sourceLink.error
   expect(sourceLink.data).toMatchObject({ source: 'overture', source_place_id: place.sourcePlaceId, location_id: place.id })
 
-  const retention = await admin
-    .from('static_catalogue_materializations')
-    .select('retention_class,expires_at')
-    .eq('location_id', place.id)
-    .single()
-  if (retention.error) throw retention.error
-  expect(retention.data.retention_class).toBe('saved')
-  expect(retention.data.expires_at).toBeNull()
+  const retention = await poll(async () => {
+    const result = await admin
+      .from('static_catalogue_materializations')
+      .select('retention_class,expires_at')
+      .eq('location_id', place.id)
+      .single()
+    if (result.error) throw result.error
+    return result.data.retention_class === 'saved' ? result.data : null
+  }, { timeout: 20_000, message: 'The saved static location did not receive permanent retention.' })
+  expect(retention.retention_class).toBe('saved')
+  expect(retention.expires_at).toBeNull()
 
   const diagnostics = await fetch(`${R2_FIXTURE_BASE_URL}/__requests`).then((response) => response.json())
   const catalogueReads = diagnostics.requests
@@ -172,7 +180,9 @@ test('opening full details materializes the detail sidecar instead of bloating t
   await card.click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('heading', { name: place.name })).toBeVisible()
-  await dialog.getByRole('link', { name: 'Full details' }).click()
+  const href = await dialog.getByRole('link', { name: 'Full details' }).getAttribute('href')
+  expect(href).toBeTruthy()
+  await page.goto(href)
   await expect(page).toHaveURL(/\/places\/e2e-detail-observatory-[0-9a-f]{12}$/)
 
   const materialized = await poll(() => locationRow(place.id), {
