@@ -57,7 +57,7 @@ function DetailsSheet({ item, photos, onClose }) {
           {hours.length ? <details className="minimal-hours"><summary>Opening hours</summary>{hours.map(([day, value]) => <div key={day}><span>{day}</span><strong>{String(value)}</strong></div>)}</details> : null}
           <div className="minimal-details-actions">
             {mapHref ? <a href={mapHref} target="_blank" rel="noreferrer">Map</a> : null}
-            <Link href={item.href}>Full details</Link>
+            <Link href={item.href} prefetch={false}>Full details</Link>
           </div>
         </div>
       </section>
