@@ -35,9 +35,11 @@ test('static references are tile-specific, expiring, and tamper evident', () => 
 
 test('the runtime uses only the ordered batched action endpoint', async () => {
   const batchAction = await read('app/api/discovery/actions/route.js')
+  const fastPath = await read('supabase/migrations/10031_discovery_actions_v4.sql')
   const client = await read('components/date-swipe-workspace-v2.js')
   assert.ok(await missing('app/api/discovery/action/route.js'))
-  assert.ok(batchAction.includes("supabase.rpc('record_discovery_actions_v3'"))
+  assert.ok(batchAction.includes("supabase.rpc('record_discovery_actions_v4'"))
+  assert.ok(fastPath.includes('return public.record_discovery_actions_v3(actions)'))
   assert.ok(batchAction.includes('MAX_ACTIONS = 20'))
   assert.equal(batchAction.includes('radiusKm'), false)
   assert.ok(client.includes("csrfFetch('/api/discovery/actions'"))
