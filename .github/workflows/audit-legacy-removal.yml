@@ -16,38 +16,27 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: agent/r2-runtime-optimization-pass
-      - name: Build dependency audit report
+      - name: Build action schema audit
         shell: bash
         run: |
           set -euo pipefail
-          report=dependency-audit.txt
+          report=action-schema-audit.txt
           : > "$report"
           {
-            echo '=== IMPORTS OF DISCOVERY AND LEGACY MODULES ==='
-            grep -RIn --exclude-dir=.git --exclude-dir=node_modules --exclude='*.sql' -E "(from ['\"](@/|\.\.?/)*(lib/)?app/discovery|from ['\"].*(creator-data|plans-data|social-data|stage-one-data|ticketing-data|stripe/|tickets/)|discovery-workspace|discovery-deck|date-swipe-workspace|listing-social|event-editor|ticket-|check-in-scanner|temporary-location-sharing|realtime-conversation|payout-onboarding|ai-creation-assistant)" app components lib scripts tests || true
-            echo '=== QRCODE DEPENDENCIES ==='
-            grep -RIn --exclude-dir=.git --exclude-dir=node_modules -E "html5-qrcode|from ['\"]qrcode|require\(['\"]qrcode" app components lib scripts tests package.json || true
-            echo '=== MIXED FILES ==='
-            for file in \
-              app/create/actions.js app/plans/actions.js app/plans/page.js app/api/drafts/[kind]/route.js \
-              components/admin-shell.js app/admin/content/page.js app/layout.js playwright.config.mjs README.md \
-              lib/app/discovery-infrastructure.js lib/app/discovery.js \
-              supabase/migrations/10026_r2_runtime_optimizations.sql \
-              supabase/migrations/10027_static_action_analytics_boundary.sql \
-              supabase/migrations/10028_r2_runtime_second_optimization.sql \
-              supabase/migrations/10029_r2_cleanup_batch_preview.sql; do
+            echo '=== MATCHES ==='
+            grep -RIn -E "(create table.*discovery_actions|record_discovery_action_v1|discovery_actions|location_visits|saved|interested|dismissed|undone_at)" supabase/migrations/*.sql | head -5000 || true
+            echo '=== FILE CONTENTS WITH ACTION FUNCTION ==='
+            for file in $(grep -Rl "record_discovery_action_v1" supabase/migrations/*.sql | sort); do
               echo "--- $file ---"
-              if [ -f "$file" ]; then cat "$file"; else echo MISSING; fi
+              cat "$file"
             done
-            echo '=== FILES REFERENCING MIXED EXPORTS ==='
-            grep -RIn --exclude-dir=.git --exclude-dir=node_modules --exclude='*.sql' -E "(createEventDraft|saveEvent|publishEvent|requireLegacyPlansSystem|LegacyPlansPage|legacySystemsEnabled|legacyRedirectForPath|isLegacyApiPath|getDiscoveryFeed|logDiscoveryImpressions|record_discovery_action_v[12]|record_static_catalogue_action_v1)" app components lib scripts tests proxy.js || true
           } >> "$report"
-      - name: Commit dependency audit report
+      - name: Commit action schema audit
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add dependency-audit.txt
-          git commit -m "Record legacy dependency audit" || exit 0
+          git add action-schema-audit.txt
+          git commit -m "Record discovery action schema audit" || exit 0
           git push origin HEAD:agent/r2-runtime-optimization-pass
