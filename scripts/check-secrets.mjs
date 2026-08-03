@@ -16,7 +16,13 @@ const secretPatterns = [
   ['Supabase secret key', /\bsb_secret_[A-Za-z0-9_-]{20,}\b/],
   ['Slack token', /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/]
 ]
-const serverOnlyNames = ['SUPABASE_SECRET_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','CRON_SECRET','TURNSTILE_SECRET_KEY','SECURITY_HASH_SECRET','GEOCODING_API_KEY','EMAIL_DELIVERY_TOKEN','MALWARE_SCANNER_TOKEN','MALWARE_SCANNER_SIGNING_SECRET','TICKET_SIGNING_PRIVATE_KEY_BASE64']
+const serverOnlyNames = ['SUPABASE_SECRET_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','CRON_SECRET','TURNSTILE_SECRET_KEY','SECURITY_HASH_SECRET','GEOCODING_API_KEY','EMAIL_DELIVERY_TOKEN','MALWARE_SCANNER_TOKEN','MALWARE_SCANNER_SIGNING_SECRET','TICKET_SIGNING_PRIVATE_KEY_BASE64','GOOGLE_PLACES_API_KEY','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY']
+const allowedPublicCredentialNames = new Set([
+  'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+  // Google Maps JavaScript keys are intentionally delivered to browsers. The deployed
+  // key must be restricted by HTTP referrer and to the Maps JavaScript API in Google Cloud.
+  'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'
+])
 const findings = []
 
 async function readTrackedText(path) {
@@ -58,7 +64,7 @@ for (const path of tracked) {
   }
 
   for (const match of source.matchAll(/NEXT_PUBLIC_([A-Z0-9_]+)/g)) {
-    if (/(?:SECRET|PRIVATE|SERVICE_ROLE|STRIPE_SECRET|API_KEY|TOKEN)/.test(match[1]) && match[0] !== 'NEXT_PUBLIC_TURNSTILE_SITE_KEY') findings.push(`${path}: suspicious public environment variable ${match[0]}`)
+    if (/(?:SECRET|PRIVATE|SERVICE_ROLE|STRIPE_SECRET|API_KEY|TOKEN)/.test(match[1]) && !allowedPublicCredentialNames.has(match[0])) findings.push(`${path}: suspicious public environment variable ${match[0]}`)
   }
 }
 
