@@ -41,26 +41,24 @@ async function readRegistry() {
   const payload = await response.json()
   const releases = Array.isArray(payload?.releases) ? payload.releases.filter((item) => item?.release) : []
   if (!releases.length) throw new Error('catalogue/release-registry.json contains no releases.')
-  return { etag: response.headers.get('etag'), releases }
+  return releases
 }
 
-async function updateRegistry(current, releases) {
+async function updateRegistry(releases) {
   const body = Buffer.from(JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), releases }))
   const response = await b2Request({
     method: 'PUT', key: 'catalogue/release-registry.json', body,
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-      'if-match': current.etag
+      'cache-control': 'no-store'
     },
     config
   })
-  if (response.status === 412) throw new Error('Backblaze B2 release registry changed during cleanup; retry the job.')
   if (!response.ok) throw new Error(`Backblaze B2 release registry write failed: ${response.status} ${await response.text()}`)
 }
 
-const registry = await readRegistry()
-const releases = [...new Set(registry.releases.map((item) => item.release))]
+const registryReleases = await readRegistry()
+const releases = [...new Set(registryReleases.map((item) => item.release))]
 const staleReleases = releases.slice(KEEP_RELEASES)
 const staleObjects = []
 for (const release of staleReleases) {
@@ -110,7 +108,7 @@ if (APPLY) {
   }
 
   if (staleReleases.length) {
-    await updateRegistry(registry, registry.releases.filter((item) => !staleReleases.includes(item.release)))
+    await updateRegistry(registryReleases.filter((item) => !staleReleases.includes(item.release)))
   }
 }
 
