@@ -80,9 +80,9 @@ Publishing multiple independently built shards under one release currently requi
 
 ## Open-photo cache
 
-The hardened provider importer searches Wikimedia Commons, Mapillary, and KartaView off the user-facing path. For an approved candidate it now:
+The provider importer searches Wikimedia Commons, Mapillary, and KartaView off the user-facing path. For an approved candidate it:
 
-- downloads the provider asset through the existing host allowlist, size limit, redirect limit, timeout, retry, and throttling controls;
+- downloads the provider asset through the host allowlist, size limit, redirect limit, timeout, retry, and throttling controls;
 - converts it directly to AVIF in memory;
 - targets 45 KB and rejects output above 60 KB;
 - strips source metadata through Sharp processing;
@@ -91,17 +91,23 @@ The hardened provider importer searches Wikimedia Commons, Mapillary, and KartaV
 - uploads one immutable object directly to R2;
 - writes only the R2 URL, object key, hashes, dimensions, byte size, licence, and attribution to Supabase Postgres.
 
-Open-provider photos no longer enter Supabase Storage. `scripts/migrate-open-photos-to-r2.mjs` remains available only to backfill older approved images that were staged before this optimization.
-
-User and venue uploads remain in Supabase Storage.
+Open-provider photos never enter Supabase Storage. User and venue uploads remain in Supabase Storage.
 
 ## Google policy boundary
 
 Persist only the stable Google Place ID and match metadata in `location_google_places`. Do not download, transform, proxy into R2, or permanently save Google photo bytes, photo resource names, or photo URLs. UI Kit failure must always fall back to the category placeholder.
 
-## Rollback
+## Active operational commands
 
-The existing regional database catalogue workflow remains available as a manual rollback tool, but its schedule is removed. The legacy R2 migration command remains available for old staged open photos. New open-photo enrichment writes directly to R2.
+```text
+locations:catalogue:build-static
+locations:catalogue:publish-r2
+locations:photos:enrich
+locations:google:match
+locations:r2:cleanup
+```
+
+The obsolete database catalogue import/refresh and Supabase-to-R2 photo migration entrypoints have been removed. There is one supported catalogue path and one supported open-photo path.
 
 ## Not completed by this code change
 
