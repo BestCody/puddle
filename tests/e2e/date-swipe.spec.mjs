@@ -79,9 +79,10 @@ test('R2 media overlays rank cached photos first and mount Google UI Kit only fo
   await installGoogleUiKitStub(page)
   await openFilteredDeck(page, account, 'E2E Media')
 
-  const actionRequests = []
+  const actionBatches = []
   page.on('request', (request) => {
-    if (request.url().includes('/api/discovery/actions')) actionRequests.push(request)
+    if (!request.url().includes('/api/discovery/actions')) return
+    actionBatches.push(request.postDataJSON()?.actions || [])
   })
 
   const card = page.locator('.minimal-swipe-card')
@@ -98,8 +99,9 @@ test('R2 media overlays rank cached photos first and mount Google UI Kit only fo
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(card.locator('h1')).toHaveText('E2E Media Placeholder Park')
   await expect(page.locator('gmp-place-details-compact')).toHaveCount(0)
-  await expect.poll(() => actionRequests.length).toBe(1)
-  expect(actionRequests[0].postDataJSON().actions).toHaveLength(2)
+  await expect.poll(() => actionBatches.flat().length).toBe(2)
+  expect(actionBatches.every((batch) => batch.length > 0 && batch.length <= 20)).toBe(true)
+  expect(actionBatches.flat().map((action) => action.action)).toEqual(['dismissed', 'dismissed'])
 })
 
 test('passing and undoing an R2 card uses compact action state without materializing a location', async ({ page }) => {
