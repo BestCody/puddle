@@ -1,0 +1,42 @@
+name: Match Google Place IDs
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Maximum active locations to inspect'
+        required: false
+        default: '100'
+        type: string
+      apply:
+        description: 'Save verified Place IDs'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-place-id-matching
+  cancel-in-progress: false
+
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Match active locations to stable Google Place IDs
+        run: npm run locations:google:match -- --limit="${{ inputs.limit }}" ${{ inputs.apply && '--apply' || '' }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          GOOGLE_PLACE_MATCH_MIN_SCORE: '0.86'
+          GOOGLE_PLACE_MATCH_DELAY_MS: '250'

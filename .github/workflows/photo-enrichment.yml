@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   enrich:
+    if: ${{ vars.R2_INFRA_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 115
     steps:
@@ -24,12 +25,19 @@ jobs:
           cache: npm
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund
-      - name: Drain prioritized open-photo candidates
+      - name: Drain prioritized open-photo candidates into R2
         run: npm run locations:photos:enrich
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+          OPEN_PHOTO_TARGET_BYTES: '45000'
+          OPEN_PHOTO_HARD_MAX_BYTES: '60000'
           PHOTO_ENRICH_BATCH_SIZE: '100'
           PHOTO_ENRICH_MAX_BATCHES: '50'
           PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '105'

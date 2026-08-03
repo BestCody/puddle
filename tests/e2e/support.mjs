@@ -84,7 +84,7 @@ export async function completeProfileDirect(userId, overrides = {}) {
     search_radius_km: 10,
     bio: 'Prepared for browser tests.',
     profile_visibility: 'friends',
-    interests: ['Live music', 'Food', 'Art'],
+    interests: ['cafe', 'restaurant', 'gallery'],
     onboarding_completed_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...overrides
@@ -147,11 +147,16 @@ export function directConfirmationPath(verificationLink, next = '/onboarding') {
   return `/auth/confirm?${params}`
 }
 
-export async function signInThroughUi(page, email, password, next = '/dashboard') {
+export async function attemptSignInThroughUi(page, email, password, next = '/discover') {
   await page.goto(`/signin?next=${encodeURIComponent(next)}`)
   await page.getByLabel('Email').first().fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: /^Sign in/ }).click()
+}
+
+export async function signInThroughUi(page, email, password, next = '/discover') {
+  await attemptSignInThroughUi(page, email, password, next)
+  await expect(page).not.toHaveURL(/\/signin(?:\?|$)/)
 }
 
 export async function signOutThroughUi(page) {

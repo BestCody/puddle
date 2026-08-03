@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { csrfFetch } from '@/lib/security/csrf-client'
@@ -104,6 +104,8 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(initialFeed.recycled ? 'Showing passed places again.' : '')
+  const actionQueue = useRef(Promise.resolve())
+  const pendingItems = useRef(new Set())
   const current = feed.items[index] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
 
@@ -134,8 +136,24 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
     return { mode: 'solo', category: item?.category || filters.category || null, mood: filters.q || null, price: filters.price || 'any', daypart: daypart(), source: 'swipe' }
   }
 
+  function queueDiscoveryAction(payload, itemId) {
+    const task = async () => {
+      const response = await csrfFetch('/api/discovery/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Could not save that choice.')
+      return result
+    }
+    actionQueue.current = actionQueue.current.catch(() => {}).then(task)
+      .catch((error) => { setMessage(error.message); return null })
+      .finally(() => { if (itemId) pendingItems.current.delete(itemId) })
+    return actionQueue.current
+  }
+
   async function refresh(nextFilters = filters) {
     setLoading(true)
+    await actionQueue.current.catch(() => {})
     const normalized = { ...nextFilters, kind: 'place', date: 'any', limit: 12 }
     const response = await fetch(`/api/discovery?${queryString(normalized)}`, { cache: 'no-store' })
     const result = await response.json().catch(() => ({}))
@@ -150,48 +168,54 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
     setMessage(result.recycled ? 'Showing passed places again.' : '')
   }
 
-  async function persistChoice(action, item) {
-    if (!item || busy) return
-    setBusy(true)
+  function persistChoice(action, item) {
+    if (!item || busy || pendingItems.current.has(item.content_id)) return
+    pendingItems.current.add(item.content_id)
     const persistedAction = action === 'pass' ? 'dismissed' : action === 'perfect' ? 'perfect' : 'saved'
-    const response = await csrfFetch('/api/discovery/action', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: persistedAction, contentKind: 'place', contentId: item.content_id, requestId: feed.requestId, context: context(item) })
-    })
-    const result = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      setBusy(false)
-      setMessage(result.error || 'Could not save that choice.')
-      return
-    }
     setChoices((currentChoices) => ({ ...currentChoices, [item.content_id]: { choice: action, note: '' } }))
     setIndex((currentIndex) => currentIndex + 1)
-    setBusy(false)
+    queueDiscoveryAction({
+      action: persistedAction,
+      contentKind: 'place',
+      contentId: item.content_id,
+      requestId: feed.requestId,
+      context: context(item),
+      staticCatalogueEphemeral: Boolean(item.static_catalogue_ephemeral),
+      staticRef: item.static_ref || undefined
+    }, item.content_id)
   }
 
-  async function undo() {
+  function undo() {
     const previousIndex = Math.max(0, index - 1)
     const item = feed.items[previousIndex]
-    if (!item || index === 0 || busy) return
-    setBusy(true)
-    const response = await csrfFetch('/api/discovery/action', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'undo', contentKind: 'place', contentId: item.content_id, requestId: feed.requestId })
+    if (!item || index === 0 || busy || pendingItems.current.has(`undo:${item.content_id}`)) return
+    const previousChoice = choices[item.content_id]
+    pendingItems.current.add(`undo:${item.content_id}`)
+    setIndex(previousIndex)
+    setChoices((currentChoices) => { const next = { ...currentChoices }; delete next[item.content_id]; return next })
+    queueDiscoveryAction({
+      action: 'undo',
+      contentKind: 'place',
+      contentId: item.content_id,
+      requestId: feed.requestId,
+      staticCatalogueEphemeral: Boolean(item.static_catalogue_ephemeral),
+      staticRef: item.static_ref || undefined
+    }, `undo:${item.content_id}`).then((result) => {
+      if (result) return
+      setIndex((currentIndex) => Math.max(currentIndex, previousIndex + 1))
+      if (previousChoice) setChoices((currentChoices) => ({ ...currentChoices, [item.content_id]: previousChoice }))
     })
-    if (response.ok) {
-      setIndex(previousIndex)
-      setChoices((currentChoices) => { const next = { ...currentChoices }; delete next[item.content_id]; return next })
-    } else setMessage('Could not undo that choice.')
-    setBusy(false)
   }
 
   async function createSharedDeck(mode) {
     if (busy || feed.items.length < 2) return
     setBusy(true)
+    await actionQueue.current.catch(() => {})
     const response = await csrfFetch('/api/date-match/start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         locationIds: feed.items.map((item) => item.content_id),
+        staticRefs: Object.fromEntries(feed.items.filter((item) => item.static_catalogue_ephemeral && item.static_ref).map((item) => [item.content_id, item.static_ref])),
         center: feed.center,
         mode,
         maxMembers: mode === 'hangout' ? 4 : 2,

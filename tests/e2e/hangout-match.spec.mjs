@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { completeProfileDirect, createConfirmedUser, signInThroughUi } from './support.mjs'
+import { admin, completeProfileDirect, createConfirmedUser, poll, signInThroughUi } from './support.mjs'
+import { fixturePlaceBySourceId } from './r2-fixture-data.mjs'
 
 function escapePattern(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -29,7 +30,7 @@ async function choosePersonalCard(page, action) {
 
 async function finishPersonalDeck(page) {
   const invite = page.getByRole('button', { name: 'Invite others' })
-  for (let index = 0; index < 20; index += 1) {
+  for (let index = 0; index < 12; index += 1) {
     if (await invite.isVisible().catch(() => false)) return
     await choosePersonalCard(page, 'Pass')
   }
@@ -39,16 +40,18 @@ async function finishPersonalDeck(page) {
 async function createParticipant(displayName) {
   const account = await createConfirmedUser({ displayName })
   await completeProfileDirect(account.user.id, {
-    interests: ['cafe', 'gallery', 'activity_venue'],
+    interests: ['activity_venue', 'park'],
     search_radius_km: 25
   })
   return account
 }
 
-test('three people privately choose and receive a Group Hangout Match', async ({ browser }) => {
-  const creator = await createParticipant('Hangout Creator')
-  const friendOne = await createParticipant('Hangout Friend One')
-  const friendTwo = await createParticipant('Hangout Friend Two')
+test('three people receive a private group match from a signed R2 deck', async ({ browser }) => {
+  const creator = await createParticipant('R2 Hangout Creator')
+  const friendOne = await createParticipant('R2 Hangout Friend One')
+  const friendTwo = await createParticipant('R2 Hangout Friend Two')
+  const expected = fixturePlaceBySourceId('e2e-group-arcade')
+  const second = fixturePlaceBySourceId('e2e-group-park')
 
   const creatorContext = await browser.newContext()
   const friendOneContext = await browser.newContext()
@@ -58,7 +61,8 @@ test('three people privately choose and receive a Group Hangout Match', async ({
   const friendTwoPage = await friendTwoContext.newPage()
 
   await signInThroughUi(creatorPage, creator.email, creator.password, '/discover')
-  const creatorTitle = await creatorPage.locator('.minimal-swipe-card h1').innerText()
+  await creatorPage.goto('/discover?q=E2E%20Group')
+  await expect(creatorPage.locator('.minimal-swipe-card h1')).toHaveText(expected.name)
   await choosePersonalCard(creatorPage, 'Save')
   await finishPersonalDeck(creatorPage)
   await creatorPage.getByRole('button', { name: 'Invite others' }).click()
@@ -71,31 +75,35 @@ test('three people privately choose and receive a Group Hangout Match', async ({
   const roomPath = new URL(roomUrl).pathname
   expect(roomPath).toMatch(/^\/hangout\/[a-f0-9]{64}$/i)
 
+  await poll(async () => {
+    const result = await admin.from('locations').select('id').in('id', [expected.id, second.id])
+    if (result.error) throw result.error
+    return result.data?.length === 2 ? result.data : null
+  }, { timeout: 20_000, message: 'Group deck did not materialize all signed R2 locations.' })
+
   await inviteDialog.getByRole('link', { name: /Open room/i }).click()
   await expect(creatorPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
-  await expect(creatorPage.getByText(/Your choices are saved privately/i)).toBeVisible()
   await expect(creatorPage.getByText(/Invite 2 more people to start group matching/i)).toBeVisible()
 
   await signInThroughUi(friendOnePage, friendOne.email, friendOne.password, roomPath)
   await signInThroughUi(friendTwoPage, friendTwo.email, friendTwo.password, roomPath)
   await expect(friendTwoPage.getByText(/3 of 4 joined/i)).toBeVisible()
-  await expect(friendOnePage.locator('.date-swipe-card h2')).toHaveText(creatorTitle)
-  await expect(friendTwoPage.locator('.date-swipe-card h2')).toHaveText(creatorTitle)
+  await expect(friendOnePage.locator('.date-swipe-card h2')).toHaveText(expected.name)
+  await expect(friendTwoPage.locator('.date-swipe-card h2')).toHaveText(expected.name)
 
-  const friendOneTitle = await saveSharedCard(friendOnePage, 'This works well for the whole group.')
-  expect(friendOneTitle).toBe(creatorTitle)
+  const friendOneTitle = await saveSharedCard(friendOnePage, 'This R2-backed place works for the whole group.')
+  expect(friendOneTitle).toBe(expected.name)
   await expect(friendOnePage.getByText(/Group match found/i)).toHaveCount(0)
 
   const friendTwoTitle = await saveSharedCard(friendTwoPage, 'I would happily meet everyone here.')
-  expect(friendTwoTitle).toBe(creatorTitle)
+  expect(friendTwoTitle).toBe(expected.name)
   const immediateMatch = friendTwoPage.getByRole('dialog')
-  await expect(immediateMatch.getByRole('heading', { name: new RegExp(`Your group agrees on ${escapePattern(creatorTitle)}`, 'i') })).toBeVisible()
+  await expect(immediateMatch.getByRole('heading', { name: new RegExp(`Your group agrees on ${escapePattern(expected.name)}`, 'i') })).toBeVisible()
   await expect(immediateMatch.getByText(/3 people chose this location with no vetoes/i)).toBeVisible()
   await expect(immediateMatch.getByRole('button', { name: /Plan this hangout/i })).toBeVisible()
 
   const creatorMatch = creatorPage.getByRole('dialog')
-  await expect(creatorMatch.getByRole('heading', { name: new RegExp(`Your group agrees on ${escapePattern(creatorTitle)}`, 'i') })).toBeVisible({ timeout: 20_000 })
-  await expect(creatorMatch.getByRole('button', { name: /Plan this hangout/i })).toBeVisible()
+  await expect(creatorMatch.getByRole('heading', { name: new RegExp(`Your group agrees on ${escapePattern(expected.name)}`, 'i') })).toBeVisible({ timeout: 20_000 })
 
   await creatorContext.close()
   await friendOneContext.close()

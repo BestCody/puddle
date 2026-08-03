@@ -1,10 +1,10 @@
-import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
+import test from 'node:test'
 
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const runner = join(root, 'scripts/enrich-open-location-photos.mjs')

@@ -1,7 +1,7 @@
 import { AuthMessage } from '@/components/auth-message'
 import { DateSwipeWorkspaceV2 } from '@/components/date-swipe-workspace-v2'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getDiscoveryFeed, logDiscoveryImpressions } from '@/lib/app/discovery'
+import { getInfrastructureDiscoveryFeed, logInfrastructureDiscoveryImpressions } from '@/lib/app/discovery-infrastructure'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -29,8 +29,8 @@ export default async function DiscoverPage({ searchParams }) {
       openNow: params?.openNow === 'true',
       accessible: params?.accessible === 'true'
     }
-    const feed = await getDiscoveryFeed(session, feedFilters)
-    await logDiscoveryImpressions(session, feed)
+    const feed = await getInfrastructureDiscoveryFeed(session, feedFilters)
+    await logInfrastructureDiscoveryImpressions(session, feed)
 
     return <div className="minimal-swipe-page">
       <AuthMessage searchParams={params} />

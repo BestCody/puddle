@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { photoDisplayState } from '@/lib/app/photo-enrichment'
 
 const categoryLabels = {
@@ -56,7 +57,7 @@ function DetailsSheet({ item, photos, onClose }) {
           {hours.length ? <details className="minimal-hours"><summary>Opening hours</summary>{hours.map(([day, value]) => <div key={day}><span>{day}</span><strong>{String(value)}</strong></div>)}</details> : null}
           <div className="minimal-details-actions">
             {mapHref ? <a href={mapHref} target="_blank" rel="noreferrer">Map</a> : null}
-            <Link href={item.href}>Full details</Link>
+            <Link href={item.href} prefetch={false}>Full details</Link>
           </div>
         </div>
       </section>
@@ -64,13 +65,14 @@ function DetailsSheet({ item, photos, onClose }) {
   )
 }
 
-function PhotoSearchState({ state }) {
+function PhotoSearchState({ state, placeholderUrl }) {
   const retrying = state === 'retrying'
   return <div
     aria-live="polite"
     style={{
       position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', alignContent: 'center', gap: 10,
-      padding: 24, textAlign: 'center', color: '#756c70', background: 'linear-gradient(145deg,#eee9eb,#ddd6d9)'
+      padding: 24, textAlign: 'center', color: '#756c70',
+      background: placeholderUrl ? `linear-gradient(rgba(238,233,235,.84),rgba(221,214,217,.84)),url(${placeholderUrl}) center/cover` : 'linear-gradient(145deg,#eee9eb,#ddd6d9)'
     }}
   >
     <span aria-hidden="true" style={{ fontSize: '2.3rem' }}>⌖</span>
@@ -88,6 +90,8 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const photos = useMemo(() => [...new Set([...(item.photo_urls || []), item.photo_url, item.cover_url].filter(Boolean))].slice(0, 5), [item])
   const mainPhoto = photos[0] || null
+  const useGoogleUiKit = !mainPhoto && Boolean(item.google_place_id)
+  const placeholderUrl = item.category_placeholder_url || null
   const [photoStatus, setPhotoStatus] = useState(item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending'))
   const displayState = photoDisplayState(photoStatus, Boolean(mainPhoto))
   const rating = ratingLabel(item)
@@ -141,6 +145,12 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
     }
   }
 
+  const photoStyle = mainPhoto
+    ? { backgroundImage: `linear-gradient(180deg,transparent 45%,rgba(10,10,12,.82)),url(${mainPhoto})` }
+    : placeholderUrl
+      ? { backgroundImage: `linear-gradient(180deg,transparent 45%,rgba(10,10,12,.62)),url(${placeholderUrl})` }
+      : undefined
+
   return <>
     <article
       className={`minimal-swipe-card ${dragging ? 'is-dragging' : ''}`}
@@ -157,9 +167,10 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
       }}
       aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
-      <div className="minimal-swipe-photo" style={mainPhoto ? { backgroundImage: `linear-gradient(180deg,transparent 45%,rgba(10,10,12,.82)),url(${mainPhoto})` } : undefined}>
-        {displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found"><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
-        {displayState === 'searching' || displayState === 'retrying' ? <PhotoSearchState state={displayState} /> : null}
+      <div className={`minimal-swipe-photo ${useGoogleUiKit ? 'has-google-fallback' : ''}`} style={photoStyle}>
+        {useGoogleUiKit ? <GooglePlacePhotoFallback title={item.title} placeId={item.google_place_id} placeholderUrl={placeholderUrl} /> : null}
+        {!useGoogleUiKit && displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found" style={placeholderUrl ? { backgroundImage: `url(${placeholderUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
+        {!useGoogleUiKit && (displayState === 'searching' || displayState === 'retrying') ? <PhotoSearchState state={displayState} placeholderUrl={placeholderUrl} /> : null}
         <div className="minimal-swipe-meta">
           <span>{categoryLabel(item.category)}</span>
           {item.distanceLabel ? <span>{item.distanceLabel}</span> : null}

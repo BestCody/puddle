@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   admin,
+  attemptSignInThroughUi,
   completeProfileDirect,
   createConfirmedUser,
   deleteProfile,
@@ -32,7 +33,7 @@ async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Low-key
   await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
   await page.getByLabel('City or town').fill(city)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.getByRole('option').first().click()
+  await page.getByRole('listbox', { name: 'Location results' }).getByRole('option').first().click()
   await page.getByLabel('Search radius').fill('25')
   await page.getByLabel('Coffee shops').check()
   await page.getByLabel('Restaurants').check()
@@ -108,7 +109,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await expect(page.getByText(/Password updated/i)).toBeVisible()
 
   await signOutThroughUi(page)
-  await signInThroughUi(page, email, password)
+  await attemptSignInThroughUi(page, email, password)
   await expect(page).toHaveURL(/\/signin\?.*error=/)
   await expect(page.getByText(/Email or password was not accepted/i)).toBeVisible()
 
