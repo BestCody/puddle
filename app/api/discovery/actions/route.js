@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
@@ -71,10 +71,11 @@ export async function POST(request) {
       return NextResponse.json({ error: `Send between 1 and ${MAX_ACTIONS} actions.` }, { status: 400 })
     }
     const actions = rawActions.map(parseAction).sort((a, b) => a.sequence - b.sequence)
+    const admin = createAdminClient()
     const positive = actions.filter((item) => item.staticEphemeral && MATERIALIZING_ACTIONS.has(item.requestedAction))
     const materialization = positive.length
       ? await materializeStaticCatalogueReferences({
-          admin: createAdminClient(),
+          admin,
           locationIds: positive.map((item) => item.contentId),
           references: positive.map((item) => ({ id: item.contentId, token: item.staticRef }))
         })
@@ -97,7 +98,7 @@ export async function POST(request) {
       staticSource: item.reference?.source || null,
       staticSourcePlaceId: item.reference?.sourcePlaceId || null
     }))
-    const recorded = await supabase.rpc('record_discovery_actions_v3', { actions: rpcActions })
+    const recorded = await supabase.rpc('record_discovery_actions_v4', { actions: rpcActions })
     if (recorded.error) {
       console.warn('Discovery action batch RPC failed.', {
         code: recorded.error.code || null,
@@ -106,6 +107,10 @@ export async function POST(request) {
       })
       return NextResponse.json({ error: 'Those choices could not be saved.' }, { status: 400 })
     }
+    after(async () => {
+      const processed = await admin.rpc('process_discovery_context_outbox_v1', { batch_limit: 100 })
+      if (processed.error) console.warn('Discovery context outbox processing failed.', { code: processed.error.code || null, message: String(processed.error.message || '').slice(0, 240) })
+    })
     return NextResponse.json({ ok: true, results: recorded.data || [], count: rpcActions.length })
   } catch (error) {
     return NextResponse.json({ error: safeSecurityError(error, 'That discovery action batch is not valid.') }, { status: error?.status || 400 })
