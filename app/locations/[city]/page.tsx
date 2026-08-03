@@ -15,9 +15,7 @@ const TORONTO_CITY = {
 } as const;
 
 type PageProps = {
-  params: Promise<{
-    city: string;
-  }>;
+  params: Promise<{ city: string }>;
 };
 
 type ResolvedCity = {
@@ -37,7 +35,7 @@ type CityPlace = {
 };
 
 function formatKind(kind: string | null): string {
-  if (!kind) return "Local place";
+  if (!kind) return "Toronto destination";
   return kind
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -82,16 +80,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = "Best Places to Visit in Toronto | Restaurants, Cafes & Attractions | Puddle";
+  const title = "Toronto Events, Date Ideas & Places to Go | Puddle";
   const description =
-    "Discover restaurants, coffee shops, cafes, parks, attractions, activities, shopping, nightlife, and hidden gems in Toronto, Ontario, Canada.";
+    "Discover Toronto events, date ideas, restaurants, cafes, wedding venues, nightlife, activities, attractions, and places to go with Puddle.";
 
   return {
     title,
     description,
-    alternates: {
-      canonical: "/locations/toronto",
-    },
+    alternates: { canonical: "/locations/toronto" },
     openGraph: {
       title,
       description,
@@ -109,12 +105,12 @@ export default async function CityLocationsPage({ params }: PageProps) {
 
   const places = await getCityPlaces(resolvedCity);
   const pageDescription =
-    "Explore restaurants, coffee shops, cafes, parks, attractions, shopping, nightlife, entertainment, activities, local businesses, and hidden gems in Toronto, Ontario, Canada.";
+    "Find Toronto events, romantic date ideas, restaurants, cafes, wedding and party venues, nightlife, attractions, activities, and memorable places to go.";
 
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Best places to visit in Toronto",
+    name: "Toronto events, date ideas and places to go",
     description: pageDescription,
     about: {
       "@type": "City",
@@ -146,7 +142,7 @@ export default async function CityLocationsPage({ params }: PageProps) {
       <section style={{ marginBottom: 32 }}>
         <p style={{ margin: 0, opacity: 0.65 }}>Puddle Toronto discovery</p>
         <h1 style={{ fontSize: "clamp(2rem, 6vw, 4rem)", margin: "8px 0 12px" }}>
-          Best places to visit in Toronto
+          Toronto events, date ideas and places to go
         </h1>
         <p style={{ maxWidth: 760, fontSize: 18, lineHeight: 1.6 }}>
           {pageDescription}
@@ -154,9 +150,9 @@ export default async function CityLocationsPage({ params }: PageProps) {
       </section>
 
       {places.length > 0 ? (
-        <section aria-labelledby="city-places-heading">
-          <h2 id="city-places-heading" style={{ marginBottom: 18 }}>
-            Restaurants, cafes, attractions and things to do in Toronto
+        <section aria-labelledby="toronto-discovery-heading">
+          <h2 id="toronto-discovery-heading" style={{ marginBottom: 18 }}>
+            Restaurants, venues, attractions and things to do in Toronto
           </h2>
           <div
             style={{
@@ -183,7 +179,7 @@ export default async function CityLocationsPage({ params }: PageProps) {
                 </p>
                 <h3 style={{ margin: 0, fontSize: 20 }}>{place.name}</h3>
                 <p style={{ margin: "10px 0 0", opacity: 0.75 }}>
-                  {[place.city, place.region].filter(Boolean).join(", ")}
+                  A Toronto option for outings, dates, events, and group plans.
                 </p>
               </Link>
             ))}
@@ -191,17 +187,16 @@ export default async function CityLocationsPage({ params }: PageProps) {
         </section>
       ) : (
         <section>
-          <h2>Things to do in Toronto</h2>
+          <h2>Explore Toronto with Puddle</h2>
           <p>
-            Puddle is adding more Toronto restaurants, cafes, attractions,
-            activities, parks, and local businesses. Explore the main discovery
-            experience while the catalogue grows.
+            Puddle is adding Toronto events, date spots, restaurants, cafes,
+            wedding venues, attractions, activities, and nightlife destinations.
           </p>
         </section>
       )}
 
       <div style={{ marginTop: 36 }}>
-        <Link href="/">Explore all of Puddle</Link>
+        <Link href="/">Explore Puddle</Link>
       </div>
     </main>
   );
