@@ -1,7 +1,6 @@
-import { createReadStream } from 'node:fs'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { putR2Object, r2Configuration } from '../lib/app/r2-s3.js'
+import { putR2Object, r2Configuration, r2Request } from '../lib/app/r2-s3.js'
 
 const args = new Map(process.argv.slice(2).filter((value) => value.startsWith('--')).map((value) => {
   const [key, ...rest] = value.slice(2).split('=')
@@ -58,6 +57,50 @@ async function runPool(items, worker) {
   return results
 }
 
+async function readRegistry() {
+  const response = await r2Request({ method: 'GET', key: 'catalogue/release-registry.json', config })
+  if (response.status === 404) return { etag: null, releases: [] }
+  if (!response.ok) throw new Error(`R2 release registry read failed: ${response.status}`)
+  const payload = await response.json()
+  return {
+    etag: response.headers.get('etag'),
+    releases: Array.isArray(payload?.releases) ? payload.releases : []
+  }
+}
+
+async function updateReleaseRegistry(rootManifest) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const current = await readRegistry()
+    const releases = [
+      {
+        release: rootManifest.release,
+        schema: rootManifest.schema,
+        source: rootManifest.source,
+        builtAt: rootManifest.builtAt,
+        tileCount: rootManifest.tileCount,
+        places: rootManifest.places
+      },
+      ...current.releases.filter((item) => item?.release && item.release !== rootManifest.release)
+    ].slice(0, 20)
+    const body = Buffer.from(JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), releases }))
+    const response = await r2Request({
+      method: 'PUT',
+      key: 'catalogue/release-registry.json',
+      body,
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        ...(current.etag ? { 'if-match': current.etag } : { 'if-none-match': '*' })
+      },
+      config
+    })
+    if (response.status === 412) continue
+    if (!response.ok) throw new Error(`R2 release registry write failed: ${response.status} ${await response.text()}`)
+    return releases
+  }
+  throw new Error('R2 release registry changed concurrently too many times.')
+}
+
 const allFiles = await walk(DIRECTORY)
 const objects = allFiles.map((path) => ({ path, ...objectFor(path) }))
   .sort((a, b) => Number(a.mutable) - Number(b.mutable) || a.key.localeCompare(b.key))
@@ -86,12 +129,19 @@ async function uploadObject(object) {
 await runPool(objects.filter((object) => !object.mutable), uploadObject)
 for (const object of objects.filter((candidate) => candidate.mutable)) await uploadObject(object)
 
+let registeredReleases = null
+if (APPLY) {
+  const rootManifest = JSON.parse(await readFile(join(DIRECTORY, 'catalogue', 'manifest.json'), 'utf8'))
+  registeredReleases = await updateReleaseRegistry(rootManifest)
+}
+
 console.log(JSON.stringify({
   mode: APPLY ? 'apply' : 'dry-run',
   directory: DIRECTORY,
   objects: objects.length,
   uploaded,
   bytes,
-  publicBaseUrl: config?.publicBaseUrl || null
+  publicBaseUrl: config?.publicBaseUrl || null,
+  registeredReleases: registeredReleases?.map((item) => item.release) || null
 }, null, 2))
 if (!APPLY) console.log('Dry run only. Re-run with --apply after reviewing the object plan.')

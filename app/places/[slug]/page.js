@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import { PublicLocationView } from '@/components/public-listing'
-import { ListingSocial } from '@/components/listing-social'
 import { getPublicLocation, placeStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
@@ -31,10 +30,8 @@ export default async function PlacePage({ params }) {
   if (!result) notFound()
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'
   const structured = placeStructuredData(result.location, `${site}/places/${result.location.slug}`)
-  const returnTo = `/places/${result.location.slug}`
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(structured) }} />
     <PublicLocationView {...result} />
-    <ListingSocial kind="location" content={result.location} returnTo={returnTo} />
   </>
 }

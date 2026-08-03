@@ -9,8 +9,6 @@ import './sidebar-refresh.css'
 import './home-dashboard.css'
 import './stage-two.css'
 import './stage-three-four.css'
-import './stage-five.css'
-import './stage-six.css'
 import './stage-seven.css'
 import './stage-eight.css'
 import './responsive.css'
@@ -36,7 +34,11 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return <html lang="en">
-    <head><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" /><link rel="preconnect" href="https://tile.openstreetmap.org" /></head>
+    <head>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://tile.openstreetmap.org" />
+    </head>
     <body>{children}<ServiceWorkerCleanup /></body>
   </html>
 }

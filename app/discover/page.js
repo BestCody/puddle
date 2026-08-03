@@ -1,7 +1,8 @@
+import { after } from 'next/server'
 import { AuthMessage } from '@/components/auth-message'
 import { DateSwipeWorkspaceV2 } from '@/components/date-swipe-workspace-v2'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getInfrastructureDiscoveryFeed, logInfrastructureDiscoveryImpressions } from '@/lib/app/discovery-infrastructure'
+import { getInfrastructureDiscoveryFeed, recordSampledInfrastructureAnalytics } from '@/lib/app/discovery-infrastructure'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -20,7 +21,9 @@ export default async function DiscoverPage({ searchParams }) {
     const feedFilters = {
       kind: 'place',
       date: 'any',
-      distance: Number.isFinite(requestedDistance) && requestedDistance > 0 ? Math.min(100, requestedDistance) : session.profile.search_radius_km || 10,
+      distance: Number.isFinite(requestedDistance) && requestedDistance > 0
+        ? Math.min(100, requestedDistance)
+        : session.profile.search_radius_km || 10,
       limit: 12,
       q: textParam(params?.q),
       category: textParam(params?.category, 40),
@@ -30,7 +33,8 @@ export default async function DiscoverPage({ searchParams }) {
       accessible: params?.accessible === 'true'
     }
     const feed = await getInfrastructureDiscoveryFeed(session, feedFilters)
-    await logInfrastructureDiscoveryImpressions(session, feed)
+    after(() => recordSampledInfrastructureAnalytics(session, feed)
+      .catch((error) => console.warn(`Sampled discovery analytics failed: ${error.message}`)))
 
     return <div className="minimal-swipe-page">
       <AuthMessage searchParams={params} />

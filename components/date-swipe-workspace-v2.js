@@ -1,10 +1,13 @@
 "use client"
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { csrfFetch } from '@/lib/security/csrf-client'
+
+const ACTION_BATCH_DELAY_MS = 350
+const ACTION_BATCH_SIZE = 20
 
 function queryString(filters) {
   const params = new URLSearchParams({ kind: 'place', date: 'any' })
@@ -104,7 +107,10 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(initialFeed.recycled ? 'Showing passed places again.' : '')
-  const actionQueue = useRef(Promise.resolve())
+  const actionBuffer = useRef([])
+  const actionSequence = useRef(0)
+  const flushTimer = useRef(null)
+  const inFlight = useRef(Promise.resolve())
   const pendingItems = useRef(new Set())
   const current = feed.items[index] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
@@ -114,6 +120,70 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
     const timer = window.setTimeout(() => setMessage(''), 2400)
     return () => window.clearTimeout(timer)
   }, [message])
+
+  const flushActions = useCallback(({ keepalive = false } = {}) => {
+    if (flushTimer.current) {
+      window.clearTimeout(flushTimer.current)
+      flushTimer.current = null
+    }
+    if (!actionBuffer.current.length) return inFlight.current
+    const entries = actionBuffer.current.splice(0, ACTION_BATCH_SIZE)
+    const task = async () => {
+      const response = await csrfFetch('/api/discovery/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actions: entries.map((entry) => entry.payload) }),
+        keepalive
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Could not save those choices.')
+      for (const entry of entries) entry.resolve(result)
+      return result
+    }
+    inFlight.current = inFlight.current.catch(() => {}).then(task).catch((error) => {
+      setMessage(error.message)
+      for (const entry of entries) entry.resolve(null)
+      return null
+    }).finally(() => {
+      for (const entry of entries) if (entry.itemKey) pendingItems.current.delete(entry.itemKey)
+      if (actionBuffer.current.length) flushActions({ keepalive })
+    })
+    return inFlight.current
+  }, [])
+
+  const queueDiscoveryAction = useCallback((payload, itemKey) => {
+    const sequence = actionSequence.current++
+    return new Promise((resolve) => {
+      actionBuffer.current.push({
+        itemKey,
+        resolve,
+        payload: {
+          ...payload,
+          eventId: crypto.randomUUID(),
+          sequence
+        }
+      })
+      if (actionBuffer.current.length >= ACTION_BATCH_SIZE) flushActions()
+      else if (!flushTimer.current) flushTimer.current = window.setTimeout(() => flushActions(), ACTION_BATCH_DELAY_MS)
+    })
+  }, [flushActions])
+
+  const drainActions = useCallback(async () => {
+    await flushActions()
+    await inFlight.current.catch(() => {})
+  }, [flushActions])
+
+  useEffect(() => {
+    const flushBeforeLeaving = () => { if (actionBuffer.current.length) flushActions({ keepalive: true }) }
+    const visibility = () => { if (document.visibilityState === 'hidden') flushBeforeLeaving() }
+    window.addEventListener('pagehide', flushBeforeLeaving)
+    document.addEventListener('visibilitychange', visibility)
+    return () => {
+      window.removeEventListener('pagehide', flushBeforeLeaving)
+      document.removeEventListener('visibilitychange', visibility)
+      if (flushTimer.current) window.clearTimeout(flushTimer.current)
+    }
+  }, [flushActions])
 
   useEffect(() => {
     function keyboard(event) {
@@ -136,24 +206,9 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
     return { mode: 'solo', category: item?.category || filters.category || null, mood: filters.q || null, price: filters.price || 'any', daypart: daypart(), source: 'swipe' }
   }
 
-  function queueDiscoveryAction(payload, itemId) {
-    const task = async () => {
-      const response = await csrfFetch('/api/discovery/action', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-      })
-      const result = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(result.error || 'Could not save that choice.')
-      return result
-    }
-    actionQueue.current = actionQueue.current.catch(() => {}).then(task)
-      .catch((error) => { setMessage(error.message); return null })
-      .finally(() => { if (itemId) pendingItems.current.delete(itemId) })
-    return actionQueue.current
-  }
-
   async function refresh(nextFilters = filters) {
     setLoading(true)
-    await actionQueue.current.catch(() => {})
+    await drainActions()
     const normalized = { ...nextFilters, kind: 'place', date: 'any', limit: 12 }
     const response = await fetch(`/api/discovery?${queryString(normalized)}`, { cache: 'no-store' })
     const result = await response.json().catch(() => ({}))
@@ -210,7 +265,7 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
   async function createSharedDeck(mode) {
     if (busy || feed.items.length < 2) return
     setBusy(true)
-    await actionQueue.current.catch(() => {})
+    await drainActions()
     const response = await csrfFetch('/api/date-match/start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

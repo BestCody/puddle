@@ -1,6 +1,0 @@
-import { requirePrivileged } from '@/lib/auth/privileged'
-import { AdminShell } from '@/components/admin-shell'
-import { AdminBulkConsole } from '@/components/admin-bulk-console'
-import { OpenModerationCase } from '@/components/open-moderation-case'
-export const dynamic='force-dynamic';export const metadata={title:'Payment operations',robots:{index:false,follow:false}}
-export default async function FinancePage(){const session=await requirePrivileged(['finance_ops','super_admin','incident_commander']);const{data}=await session.supabase.rpc('admin_finance_queue_v1');return <AdminShell access={session.access}><section className="admin-metric-grid">{Object.entries(data?.counts||{}).map(([k,v])=><article className="admin-metric" key={k}><strong>{v}</strong><span>{k.replaceAll('_',' ')}</span></article>)}</section><div className="admin-grid"><AdminBulkConsole/><section className="admin-card"><h2>Exceptions</h2>{(data?.exceptions||[]).map((item)=><article key={`${item.kind}-${item.id}`}><p><strong>{item.kind}</strong> {item.status} · {item.amount_cents?new Intl.NumberFormat('en-US',{style:'currency',currency:item.currency||'USD'}).format(item.amount_cents/100):''}</p><OpenModerationCase compact subjectType={item.kind} subjectId={item.id} title={`Review ${item.kind} exception`} queue="payments" category="payments"/></article>)}</section></div></AdminShell>}

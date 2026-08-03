@@ -3,11 +3,9 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue } from '@/lib/security/headers'
 import { isUnsafeMethod } from '@/lib/security/request'
 import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
-import { isLegacyApiPath, legacyRedirectForPath, legacySystemsEnabled } from '@/lib/product-vision'
 
-const protectedPrefixes = ['/dashboard','/discover','/date-match','/hangout','/matches','/map','/explore','/plans','/create','/studio','/report','/friends','/inbox','/profile','/onboarding','/account','/change-email','/wallet','/orders','/settings','/appeals','/admin']
+const protectedPrefixes = ['/dashboard','/discover','/date-match','/hangout','/matches','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
-const csrfExempt = new Set(['/api/stripe/webhook'])
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
 const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
 const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
@@ -49,28 +47,20 @@ export async function proxy(request) {
     return secured(response, { request, nonce })
   }
 
-  if (isUnsafeMethod(request.method) && !csrfExempt.has(pathname)) {
+  if (isUnsafeMethod(request.method)) {
     const fetchSite = request.headers.get('sec-fetch-site')
     if (fetchSite === 'cross-site' || fetchSite === 'same-site') return forbidden(request, nonce)
     const origin = request.headers.get('origin')
     if (origin && origin !== applicationOrigin(request)) return forbidden(request, nonce, 'Origin is not allowed.')
   }
 
-  const maxBytes = pathname === '/api/media/upload' ? 20_000_000 : pathname === '/api/stripe/webhook' ? 2_000_000 : pathname.startsWith('/api/') ? 256_000 : 2_000_000
+  const maxBytes = pathname === '/api/media/upload' ? 20_000_000 : pathname.startsWith('/api/') ? 256_000 : 2_000_000
   const contentLength = Number(request.headers.get('content-length') || 0)
   if (contentLength > maxBytes) return secured(NextResponse.json({ error: 'Request payload is too large.' }, { status: 413 }), { request, nonce })
 
-  if (!legacySystemsEnabled()) {
-    const destination = legacyRedirectForPath(pathname)
-    if (destination) {
-      const url = new URL(destination, request.url)
-      url.searchParams.set('legacy', 'disabled')
-      return secured(cachePolicy(NextResponse.redirect(url, 307), pathname, true), { request, nonce })
-    }
-    if (isLegacyApiPath(pathname)) return secured(NextResponse.json({ error: 'This legacy Puddle system is disabled in the location-first product.' }, { status: 410 }), { request, nonce })
-  }
-
-  const canonicalTarget = (request.method === 'GET' || request.method === 'HEAD') ? canonicalPuddleAuthUrl(request.url, process.env.NEXT_PUBLIC_SITE_URL, authCanonicalPaths) : null
+  const canonicalTarget = (request.method === 'GET' || request.method === 'HEAD')
+    ? canonicalPuddleAuthUrl(request.url, process.env.NEXT_PUBLIC_SITE_URL, authCanonicalPaths)
+    : null
   if (canonicalTarget) return secured(NextResponse.redirect(canonicalTarget, 307), { request, nonce })
 
   if (publicNoSessionPaths.has(pathname)) {
@@ -90,14 +80,18 @@ export async function proxy(request) {
 
   const { response, user, configured } = await updateSession(request, requestHeaders)
   if (isProtected && !configured) {
-    const url = new URL('/signin', request.url); url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
+    const url = new URL('/signin', request.url)
+    url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
     return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
   }
   if (isProtected && !user) {
-    const url = new URL('/signin', request.url); url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+    const url = new URL('/signin', request.url)
+    url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
   }
-  if (isAuthOnly && user && !hasAuthFailure) return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce })
+  if (isAuthOnly && user && !hasAuthFailure) {
+    return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce })
+  }
   return secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly), { request, nonce })
 }
 

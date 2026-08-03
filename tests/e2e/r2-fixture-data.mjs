@@ -11,7 +11,7 @@ import { staticCatalogueLocationId } from '../../lib/app/static-catalogue-id.js'
 export const R2_FIXTURE_HOST = '127.0.0.1'
 export const R2_FIXTURE_PORT = Number(process.env.E2E_R2_PORT || 43110)
 export const R2_FIXTURE_BASE_URL = process.env.E2E_R2_BASE_URL || `http://${R2_FIXTURE_HOST}:${R2_FIXTURE_PORT}`
-export const R2_FIXTURE_RELEASE = 'e2e-static-v2'
+export const R2_FIXTURE_RELEASE = 'e2e-static-v3'
 export const R2_FIXTURE_ZOOM = 10
 
 const baseDetails = {
@@ -98,11 +98,11 @@ export const R2_FIXTURE_OBJECTS = new Map()
 for (const { tile, places } of tiles.values()) {
   R2_FIXTURE_OBJECTS.set(`/${tileObjectKey(R2_FIXTURE_RELEASE, tile)}`, {
     contentType: 'application/json; charset=utf-8',
-    body: JSON.stringify({ v: 2, p: places.map((place) => packStaticPlace(place)) })
+    body: JSON.stringify({ v: 3, p: places.map((place) => packStaticPlace(place)) })
   })
   R2_FIXTURE_OBJECTS.set(`/${detailObjectKey(R2_FIXTURE_RELEASE, tile)}`, {
     contentType: 'application/json; charset=utf-8',
-    body: JSON.stringify({ v: 2, d: places.map((place) => packStaticDetail(place)) })
+    body: JSON.stringify({ v: 3, d: places.map((place) => packStaticDetail(place)) })
   })
 
   const media = []
@@ -132,11 +132,13 @@ for (const { tile, places } of tiles.values()) {
 R2_FIXTURE_OBJECTS.set('/catalogue/manifest.json', {
   contentType: 'application/json; charset=utf-8',
   body: JSON.stringify({
-    schema: 2,
+    schema: 3,
     release: R2_FIXTURE_RELEASE,
     source: 'overture',
     zoom: R2_FIXTURE_ZOOM,
     builtAt: '2026-08-03T00:00:00.000Z',
+    normalizationVersion: 2,
+    categoryMappingVersion: 2,
     places: R2_FIXTURE_PLACES.length,
     tileCount: tiles.size,
     placeholdersPrefix: 'catalogue/placeholders',

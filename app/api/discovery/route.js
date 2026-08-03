@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { getInfrastructureDiscoveryFeed, logInfrastructureDiscoveryImpressions } from '@/lib/app/discovery-infrastructure'
+import { getInfrastructureDiscoveryFeed, recordSampledInfrastructureAnalytics } from '@/lib/app/discovery-infrastructure'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +19,12 @@ export async function GET(request) {
   const filters = { ...requestedFilters, kind: 'place', date: 'any' }
   const session = { supabase, user, profile: profile || {} }
   const feed = await getInfrastructureDiscoveryFeed(session, filters)
-  await logInfrastructureDiscoveryImpressions({ supabase, user }, feed)
+  after(async () => {
+    try {
+      await recordSampledInfrastructureAnalytics({ supabase, user }, feed)
+    } catch (error) {
+      console.warn(`Sampled discovery analytics failed: ${error.message}`)
+    }
+  })
   return NextResponse.json(feed)
 }

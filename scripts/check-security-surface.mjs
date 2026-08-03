@@ -17,12 +17,13 @@ const protectedMutations = [
   'app/api/drafts/[kind]/route.js',
   'app/api/geocode/route.js',
   'app/api/location/reverse/route.js',
-  'app/api/discovery/action/route.js',
+  'app/api/discovery/actions/route.js',
   'app/api/date-match/start/route.js',
   'app/api/date-match/action/route.js',
   'app/api/media/upload/route.js'
 ]
 for (const path of protectedMutations) await requireMarkers(path, ['verifyCsrf', 'enforceRateLimit'])
+await requireMarkers('app/api/discovery/actions/route.js', ['MAX_ACTIONS = 20', 'record_discovery_actions_v3'])
 
 const adminApis = tracked.filter((path) => path.startsWith('app/api/admin/') && path.endsWith('/route.js'))
 for (const path of adminApis) {
@@ -34,7 +35,6 @@ for (const path of adminApis) {
 const adminPages = tracked.filter((path) => (path === 'app/admin/page.js' || (path.startsWith('app/admin/') && path.endsWith('/page.js'))))
 for (const path of adminPages) await requireMarkers(path, ['requirePrivileged'])
 
-await requireMarkers('app/api/stripe/webhook/route.js', ['verifyStripeWebhook', 'storeStripeWebhookEvent'])
 await requireMarkers('lib/auth/privileged.js', ['privileged_access_v1', 'getAuthenticatorAssuranceLevel', "currentLevel === 'aal2'"])
 await requireMarkers('lib/media/pipeline.js', ['detectedMime', 'declared !== mime', 'limitInputPixels', 'pdfLooksSafe', '/encrypt'])
 await requireMarkers('tests/e2e/support.mjs', ["from 'node:crypto'", 'randomUUID'])
