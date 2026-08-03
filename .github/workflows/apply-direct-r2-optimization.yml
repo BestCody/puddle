@@ -1,0 +1,37 @@
+name: Apply direct R2 optimization patch
+
+on:
+  push:
+    branches:
+      - agent/r2-catalogue-google-ui
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[direct-r2-patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/r2-catalogue-google-ui
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Apply direct R2 patch
+        run: node scripts/apply-direct-r2-optimization-patch.mjs
+      - name: Validate patched scripts
+        run: |
+          node --check scripts/import-open-location-photos.mjs
+          node --check scripts/enrich-open-location-photos.mjs
+          node --check lib/app/open-photo-r2.js
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/import-open-location-photos.mjs scripts/enrich-open-location-photos.mjs .github/workflows/photo-enrichment.yml
+          git commit -m "[direct-r2-patch] Upload open photos directly to R2"
+          git push origin HEAD:agent/r2-catalogue-google-ui
