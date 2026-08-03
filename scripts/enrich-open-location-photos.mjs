@@ -5,6 +5,7 @@ const BATCH_SIZE = boundedInteger(process.env.PHOTO_ENRICH_BATCH_SIZE, 100, { mi
 const MAX_BATCHES = boundedInteger(process.env.PHOTO_ENRICH_MAX_BATCHES, 50, { min: 1, max: 200 })
 const MAX_RUNTIME_MINUTES = boundedInteger(process.env.PHOTO_ENRICH_MAX_RUNTIME_MINUTES, 105, { min: 1, max: 110 })
 const IMPORTER = String(process.env.PHOTO_ENRICH_IMPORTER || 'scripts/import-open-location-photos.mjs').trim()
+const MIGRATOR = String(process.env.PHOTO_ENRICH_MIGRATOR || '').trim()
 const OUTPUT_TAIL_LIMIT = 2 * 1024 * 1024
 const RUNTIME_HEADROOM_MS = Math.min(5 * 60_000, Math.max(5_000, Math.floor(MAX_RUNTIME_MINUTES * 60_000 / 5)))
 
@@ -13,9 +14,9 @@ function appendTail(current, chunk) {
   return combined.length > OUTPUT_TAIL_LIMIT ? combined.slice(-OUTPUT_TAIL_LIMIT) : combined
 }
 
-async function runImporter() {
+async function runNodeScript(script, argumentsList = [], label = script) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [IMPORTER, '--apply', `--limit=${BATCH_SIZE}`], {
+    const child = spawn(process.execPath, [script, ...argumentsList], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: process.env
     })
@@ -34,7 +35,7 @@ async function runImporter() {
       if (code === 0) return resolve(stdoutTail)
       const reason = signal ? `signal ${signal}` : `exit code ${code}`
       const detail = [stderrTail.trim().slice(-1200), stdoutTail.trim().slice(-1800)].filter(Boolean).join('\n')
-      reject(new Error(`Photo importer failed with ${reason}${detail ? `:\n${detail}` : ''}`))
+      reject(new Error(`${label} failed with ${reason}${detail ? `:\n${detail}` : ''}`))
     })
   })
 }
@@ -54,8 +55,12 @@ async function main() {
     }
 
     console.log(`Starting photo enrichment batch ${index + 1}/${MAX_BATCHES} with up to ${BATCH_SIZE} locations.`)
-    const output = await runImporter()
+    const output = await runNodeScript(IMPORTER, ['--apply', `--limit=${BATCH_SIZE}`], 'Photo importer')
     const summary = validatePhotoImportSummary(parsePhotoImportSummary(output))
+    if (MIGRATOR) {
+      console.log(`Migrating newly cached open photos with ${MIGRATOR}.`)
+      await runNodeScript(MIGRATOR, ['--apply', `--limit=${BATCH_SIZE}`], 'R2 photo migrator')
+    }
     batches += 1
     for (const field of Object.keys(totals)) totals[field] += Number(summary[field] || 0)
 

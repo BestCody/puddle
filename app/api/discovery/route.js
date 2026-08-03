@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { getDiscoveryFeed, logDiscoveryImpressions } from '@/lib/app/discovery'
+import { getInfrastructureDiscoveryFeed } from '@/lib/app/discovery-infrastructure'
+import { logDiscoveryImpressions } from '@/lib/app/discovery'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,8 @@ export async function GET(request) {
     .maybeSingle()
   const requestedFilters = Object.fromEntries(request.nextUrl.searchParams)
   const filters = { ...requestedFilters, kind: 'place', date: 'any' }
-  const feed = await getDiscoveryFeed({ supabase, user, profile: profile || {} }, filters)
+  const session = { supabase, user, profile: profile || {} }
+  const feed = await getInfrastructureDiscoveryFeed(session, filters)
   await logDiscoveryImpressions({ supabase, user }, feed)
   return NextResponse.json(feed)
 }
