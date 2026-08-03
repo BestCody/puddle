@@ -1,6 +1,7 @@
 from pathlib import Path
 import runpy
 
+# Patch the one legacy cleanup scan marker before applying the permanent cutover.
 script = Path('scripts/permanent-location-first-cutover.py')
 content = script.read_text(encoding='utf-8')
 start = content.index('old = """let releases')
