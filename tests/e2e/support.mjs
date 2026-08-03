@@ -152,6 +152,7 @@ export async function signInThroughUi(page, email, password, next = '/dashboard'
   await page.getByLabel('Email').first().fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: /^Sign in/ }).click()
+  await expect(page).not.toHaveURL(/\/signin(?:\?|$)/)
 }
 
 export async function signOutThroughUi(page) {
