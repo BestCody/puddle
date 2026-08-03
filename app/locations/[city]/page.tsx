@@ -156,15 +156,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .filter(Boolean)
     .join(", ");
 
+  const title = `Best Places to Visit in ${resolvedCity.city} | Restaurants, Cafes & Attractions | Puddle`;
+  const description = `Discover restaurants, coffee shops, cafes, parks, attractions, activities, shopping, nightlife, and hidden gems in ${placeLabel}.`;
+
   return {
-    title: `Places to Go in ${resolvedCity.city} | Puddle`,
-    description: `Discover restaurants, date spots, hangout locations, and local places worth exploring in ${placeLabel}.`,
+    title,
+    description,
     alternates: {
       canonical: `/locations/${city}`,
     },
     openGraph: {
-      title: `Places to Go in ${resolvedCity.city} | Puddle`,
-      description: `Discover places worth exploring in ${placeLabel}.`,
+      title,
+      description,
       type: "website",
       url: `/locations/${city}`,
     },
@@ -182,11 +185,13 @@ export default async function CityLocationsPage({ params }: PageProps) {
     .filter(Boolean)
     .join(", ");
 
+  const pageDescription = `Explore restaurants, coffee shops, cafes, parks, attractions, shopping, nightlife, entertainment, activities, local businesses, and hidden gems in ${placeLabel}.`;
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `Places to go in ${resolvedCity.city}`,
-    description: `Discover restaurants, date spots, hangout locations, and local places worth exploring in ${placeLabel}.`,
+    name: `Best places to visit in ${resolvedCity.city}`,
+    description: pageDescription,
     about: {
       "@type": "City",
       name: resolvedCity.city,
@@ -219,18 +224,17 @@ export default async function CityLocationsPage({ params }: PageProps) {
       <section style={{ marginBottom: 32 }}>
         <p style={{ margin: 0, opacity: 0.65 }}>Puddle local discovery</p>
         <h1 style={{ fontSize: "clamp(2rem, 6vw, 4rem)", margin: "8px 0 12px" }}>
-          Places to go in {resolvedCity.city}
+          Best places to visit in {resolvedCity.city}
         </h1>
-        <p style={{ maxWidth: 720, fontSize: 18, lineHeight: 1.6 }}>
-          Discover restaurants, date spots, hangout locations, and local places
-          worth exploring around {placeLabel}.
+        <p style={{ maxWidth: 760, fontSize: 18, lineHeight: 1.6 }}>
+          {pageDescription}
         </p>
       </section>
 
       {places.length > 0 ? (
         <section aria-labelledby="city-places-heading">
           <h2 id="city-places-heading" style={{ marginBottom: 18 }}>
-            Explore {resolvedCity.city}
+            Restaurants, cafes, attractions and things to do in {resolvedCity.city}
           </h2>
           <div
             style={{
@@ -265,10 +269,11 @@ export default async function CityLocationsPage({ params }: PageProps) {
         </section>
       ) : (
         <section>
-          <h2>More places are being added</h2>
+          <h2>Things to do in {resolvedCity.city}</h2>
           <p>
-            Puddle does not have public listings for {resolvedCity.city} yet.
-            Explore the main discovery experience while the catalogue grows.
+            Puddle is adding more restaurants, cafes, attractions, activities,
+            parks, and local businesses for {resolvedCity.city}. Explore the main
+            discovery experience while the catalogue grows.
           </p>
         </section>
       )}
