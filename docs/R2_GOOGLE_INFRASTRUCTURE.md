@@ -48,7 +48,10 @@ Apply in order:
 supabase/migrations/10024_r2_static_catalogue_photos.sql
 supabase/migrations/10025_static_catalogue_on_demand.sql
 supabase/migrations/10026_r2_runtime_optimizations.sql
+supabase/migrations/10027_static_action_analytics_boundary.sql
 ```
+
+Migration `10027` keeps ephemeral R2 actions independent from relational recommendation-impression outcomes. Static cards do not create relational impression rows, so their saves must not be rolled back while trying to attach an outcome to a nonexistent relational impression.
 
 ## Required configuration
 
@@ -96,6 +99,20 @@ Open-provider images never enter Supabase Storage. User and venue uploads remain
 ## Google matching
 
 The worker claims candidates in one database query. Verified matches update the tile media overlay. No-match and transient failure outcomes are persisted with attempt counts and retry times, preventing repeated paid searches on every run.
+
+## Automated test boundary
+
+The browser suite starts an isolated local Supabase project and a deterministic local R2-compatible HTTP fixture. It drives the current application through:
+
+- schema-v2 deck tiles, detail sidecars, and media overlays;
+- cached-photo, Google UI Kit, and placeholder card priority;
+- compact pass and undo without materialization;
+- signed exact-tile save and detail materialization;
+- retained hot-state rows;
+- DateMatch and Hangout Match creation from signed static cards;
+- authentication, onboarding, account preferences, and public route behavior.
+
+The Google UI Kit custom-element boundary is stubbed in the browser. The suite does not call live Google services or a live Cloudflare R2 bucket. Separate integration tests execute the real schema-v2 catalogue builder, dry-run publisher, and progressive photo-worker control flow.
 
 ## Active commands
 
