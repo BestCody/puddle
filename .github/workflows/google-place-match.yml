@@ -43,6 +43,6 @@ jobs:
           B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
           B2_BUCKET: ${{ secrets.B2_BUCKET }}
-          B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
+          B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
           GOOGLE_PLACE_MATCH_MIN_SCORE: '0.86'
           GOOGLE_PLACE_MATCH_DELAY_MS: '250'
