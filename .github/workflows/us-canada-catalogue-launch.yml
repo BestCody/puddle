@@ -1,0 +1,495 @@
+name: US and Canada catalogue launch
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Immutable release name, for example us-ca-cities-2026-08-04
+        required: true
+        type: string
+      phase:
+        description: Launch phase to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - catalogue
+          - enrich
+          - audit
+          - activate
+      photo_batches:
+        description: Maximum 1,000-location open-photo batches
+        required: true
+        default: 50
+        type: number
+      google_request_budget:
+        description: Maximum persisted Google Places requests for this release
+        required: true
+        default: 5000
+        type: number
+      activate:
+        description: Publish catalogue/manifest.json after the audit passes
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: us-canada-catalogue-${{ inputs.release }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+  B2_LAUNCH_MAX_BYTES: '9000000000'
+  B2_PHOTO_START_MAX_BYTES: '8900000000'
+  SUPABASE_LAUNCH_MAX_BYTES: '400000000'
+  STATIC_ENRICHMENT_MAX_FAILURE_ATTEMPTS: '3'
+  VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+
+jobs:
+  prepare:
+    name: Validate launch inputs
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.markets.outputs.matrix }}
+      zoom: ${{ steps.markets.outputs.zoom }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Validate GitHub launch configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN" || { echo 'Missing VERCEL_TOKEN secret.' >&2; exit 1; }
+          test -n "$VERCEL_ORG_ID" || { echo 'Missing VERCEL_ORG_ID repository variable.' >&2; exit 1; }
+          test -n "$VERCEL_PROJECT_ID" || { echo 'Missing VERCEL_PROJECT_ID repository variable.' >&2; exit 1; }
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo 'Missing SUPABASE_ACCESS_TOKEN secret.' >&2; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo 'Missing SUPABASE_DB_PASSWORD secret.' >&2; exit 1; }
+          test -n "$SUPABASE_PROJECT_REF" || { echo 'Missing SUPABASE_PROJECT_REF repository variable.' >&2; exit 1; }
+      - name: Validate market plan
+        id: markets
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+          const plan = JSON.parse(readFileSync('config/launch-markets.json', 'utf8'))
+          if (Number(plan.version) !== 1) throw new Error('Unsupported launch market plan version.')
+          if (!Array.isArray(plan.markets) || plan.markets.length === 0) throw new Error('No launch markets configured.')
+          const ids = new Set()
+          for (const market of plan.markets) {
+            if (!/^[a-z0-9-]+$/.test(String(market.id || ''))) throw new Error(`Invalid market id: ${market.id}`)
+            if (ids.has(market.id)) throw new Error(`Duplicate market id: ${market.id}`)
+            ids.add(market.id)
+            if (!['US', 'CA'].includes(market.country)) throw new Error(`Unsupported country for ${market.id}`)
+            if (!Array.isArray(market.bbox) || market.bbox.length !== 4 || market.bbox.some((value) => !Number.isFinite(Number(value)))) {
+              throw new Error(`Invalid bbox for ${market.id}`)
+            }
+            const [west, south, east, north] = market.bbox.map(Number)
+            if (!(west < east && south < north)) throw new Error(`Inverted bbox for ${market.id}`)
+          }
+          console.log(`Validated ${plan.markets.length} US and Canada launch markets.`)
+          NODE
+          echo "matrix=$(jq -c '{include: .markets}' config/launch-markets.json)" >> "$GITHUB_OUTPUT"
+          echo "zoom=$(jq -r '.zoom' config/launch-markets.json)" >> "$GITHUB_OUTPUT"
+      - name: Validate Vercel production variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            node --input-type=module -e '
+              const core = [
+                "NEXT_PUBLIC_SUPABASE_URL",
+                "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+                "SUPABASE_SECRET_KEY",
+                "B2_S3_ENDPOINT",
+                "B2_REGION",
+                "B2_KEY_ID",
+                "B2_APPLICATION_KEY",
+                "B2_BUCKET",
+                "B2_DOWNLOAD_BASE_URL"
+              ];
+              const enrichment = ["GOOGLE_PLACES_API_KEY"];
+              const required = ["all", "enrich"].includes(process.env.LAUNCH_PHASE) ? [...core, ...enrichment] : core;
+              const missing = required.filter((name) => !String(process.env[name] || "").trim());
+              if (missing.length) throw new Error(`Missing Vercel Production variables: ${missing.join(", ")}`);
+              console.log(`Validated ${required.length} Vercel Production variables.`);
+            '
+        env:
+          LAUNCH_PHASE: ${{ inputs.phase }}
+      - name: Apply pending Supabase migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          npx supabase db push --linked --password "$SUPABASE_DB_PASSWORD"
+      - name: Check starting storage and database budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            node scripts/check-launch-budgets.mjs --phase=preflight
+
+  catalogue:
+    name: Build ${{ matrix.name }}
+    if: ${{ inputs.phase == 'all' || inputs.phase == 'catalogue' }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      FSQ_OS_CONNECTION_SQL: ${{ secrets.FSQ_OS_CONNECTION_SQL }}
+      MARKET_BBOX: ${{ join(matrix.bbox, ',') }}
+      MARKET_ID: ${{ matrix.id }}
+      RELEASE: ${{ inputs.release }}
+      ZOOM: ${{ needs.prepare.outputs.zoom }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install application and data clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          python -m pip install --disable-pip-version-check overturemaps duckdb
+      - name: Require FSQ Places Portal access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FSQ_OS_CONNECTION_SQL" || {
+            echo 'Missing FSQ_OS_CONNECTION_SQL. Add the DuckDB connection snippet from the Foursquare Places Portal as a GitHub Actions secret.' >&2
+            exit 1
+          }
+      - name: Download Overture places for market
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/overture"
+          overturemaps download \
+            --bbox="$MARKET_BBOX" \
+            -f geojsonseq \
+            --type=place \
+            -o "$RUNNER_TEMP/overture/$MARKET_ID.geojsonseq"
+      - name: Export FSQ OS places for market
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/fsq"
+          python <<'PY'
+          import os
+          from pathlib import Path
+          import duckdb
+
+          west, south, east, north = [float(value) for value in os.environ['MARKET_BBOX'].split(',')]
+          output = Path(os.environ['RUNNER_TEMP']) / 'fsq' / f"{os.environ['MARKET_ID']}.jsonl"
+          connection_sql = os.environ['FSQ_OS_CONNECTION_SQL'].strip()
+          if not connection_sql:
+              raise RuntimeError('FSQ_OS_CONNECTION_SQL is empty.')
+
+          con = duckdb.connect()
+          con.execute(connection_sql)
+          escaped_output = str(output).replace("'", "''")
+          con.execute(f"""
+            COPY (
+              SELECT *
+              FROM places
+              WHERE date_closed IS NULL
+                AND longitude BETWEEN {west} AND {east}
+                AND latitude BETWEEN {south} AND {north}
+            ) TO '{escaped_output}' (FORMAT JSON, ARRAY false)
+          """)
+          print(f"Exported FSQ OS market file to {output} ({output.stat().st_size} bytes).")
+          PY
+      - name: Build mixed partition
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            npm run locations:catalogue:build-mixed -- \
+              --input="overture:$RUNNER_TEMP/overture" \
+              --input="fsq_os:$RUNNER_TEMP/fsq" \
+              --output="$RUNNER_TEMP/static-catalogue" \
+              --release="$RELEASE" \
+              --partition="$MARKET_ID" \
+              --append-release \
+              --zoom="$ZOOM"
+      - name: Enforce B2 and Supabase hard limits
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            node scripts/check-launch-budgets.mjs \
+              --phase=partition \
+              --incoming-directory="$RUNNER_TEMP/static-catalogue"
+      - name: Upload partition without activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            npm run locations:catalogue:publish-b2 -- \
+              --directory="$RUNNER_TEMP/static-catalogue" \
+              --apply
+      - name: Remove temporary market data
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/overture" "$RUNNER_TEMP/fsq" "$RUNNER_TEMP/static-catalogue"
+
+  finalize:
+    name: Finalize inactive release
+    if: ${{ always() && (inputs.phase == 'all' || inputs.phase == 'catalogue') && needs.catalogue.result == 'success' }}
+    needs: [prepare, catalogue]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      RELEASE: ${{ inputs.release }}
+      ZOOM: ${{ needs.prepare.outputs.zoom }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Build final release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            npm run locations:catalogue:build-mixed -- \
+              --output="$RUNNER_TEMP/static-catalogue" \
+              --release="$RELEASE" \
+              --finalize-release \
+              --zoom="$ZOOM"
+          mkdir -p "$RUNNER_TEMP/root-manifest/catalogue"
+          cp "$RUNNER_TEMP/static-catalogue/catalogue/manifest.json" "$RUNNER_TEMP/root-manifest/catalogue/manifest.json"
+          rm "$RUNNER_TEMP/static-catalogue/catalogue/manifest.json"
+      - name: Check finalized release budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            node scripts/check-launch-budgets.mjs \
+              --phase=partition \
+              --incoming-directory="$RUNNER_TEMP/static-catalogue"
+      - name: Upload finalized release without activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            npm run locations:catalogue:publish-b2 -- \
+              --directory="$RUNNER_TEMP/static-catalogue" \
+              --apply
+      - name: Preserve activation manifest
+        uses: actions/upload-artifact@v6
+        with:
+          name: catalogue-root-${{ inputs.release }}
+          path: ${{ runner.temp }}/root-manifest/catalogue/manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  photos:
+    name: Enrich open photos within free storage
+    if: ${{ always() && (inputs.phase == 'all' || inputs.phase == 'enrich') && (needs.finalize.result == 'success' || needs.finalize.result == 'skipped') }}
+    needs: [prepare, finalize]
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      RELEASE: ${{ inputs.release }}
+      PHOTO_BATCHES: ${{ inputs.photo_batches }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Run bounded open-photo batches
+        shell: bash
+        run: |
+          set -euo pipefail
+          batches=$((PHOTO_BATCHES))
+          if (( batches < 0 || batches > 500 )); then
+            echo 'photo_batches must be between 0 and 500.' >&2
+            exit 1
+          fi
+          exhausted_reason='launch_photo_batch_budget_exhausted'
+          for ((batch=1; batch<=batches; batch++)); do
+            echo "Open-photo batch $batch of $batches"
+            if ! npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+              node scripts/check-launch-budgets.mjs --phase=photos; then
+              exhausted_reason='b2_storage_budget_exhausted'
+              break
+            fi
+            npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+              npm run locations:catalogue:photos-static -- \
+                --release="$RELEASE" \
+                --limit=1000 \
+                --max-tiles=100000 \
+                --max-failure-attempts=3 \
+                --apply
+          done
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            node scripts/settle-static-enrichment-failures.mjs \
+              --release="$RELEASE" \
+              --worker=photos \
+              --include-unattempted \
+              --reason="$exhausted_reason" \
+              --apply
+
+  google:
+    name: Run Google fallback within request and database budgets
+    if: ${{ always() && (inputs.phase == 'all' || inputs.phase == 'enrich') && needs.photos.result == 'success' }}
+    needs: [photos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      RELEASE: ${{ inputs.release }}
+      GOOGLE_REQUEST_BUDGET: ${{ inputs.google_request_budget }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Match only locations without open photos
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            npm run locations:catalogue:google-static -- \
+              --release="$RELEASE" \
+              --limit=5000000 \
+              --max-tiles=100000 \
+              --request-budget="$GOOGLE_REQUEST_BUDGET" \
+              --supabase-max-bytes="$SUPABASE_LAUNCH_MAX_BYTES" \
+              --max-failure-attempts=3 \
+              --apply
+      - name: Settle any interrupted Google failures
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            node scripts/settle-static-enrichment-failures.mjs \
+              --release="$RELEASE" \
+              --worker=google \
+              --include-unattempted \
+              --reason=google_worker_completed_without_remaining_budget \
+              --apply
+
+  audit:
+    name: Audit inactive release
+    if: >-
+      ${{
+        always() &&
+        (inputs.phase == 'all' || inputs.phase == 'enrich' || inputs.phase == 'audit' || inputs.phase == 'activate') &&
+        (needs.google.result == 'success' || needs.google.result == 'skipped') &&
+        (needs.finalize.result == 'success' || needs.finalize.result == 'skipped')
+      }}
+    needs: [finalize, google]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      RELEASE: ${{ inputs.release }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Enforce final byte ceilings
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            node scripts/check-launch-budgets.mjs --phase=audit
+      - name: Verify every enrichment state and object
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            npm run locations:catalogue:audit -- \
+              --release="$RELEASE" \
+              --fail-on-incomplete
+
+  activate:
+    name: Activate audited release
+    if: >-
+      ${{
+        always() &&
+        needs.audit.result == 'success' &&
+        (inputs.phase == 'activate' || (inputs.phase == 'all' && inputs.activate))
+      }}
+    needs: [prepare, audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      RELEASE: ${{ inputs.release }}
+      ZOOM: ${{ needs.prepare.outputs.zoom }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Regenerate the audited root manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            npm run locations:catalogue:build-mixed -- \
+              --output="$RUNNER_TEMP/finalize" \
+              --release="$RELEASE" \
+              --finalize-release \
+              --zoom="$ZOOM"
+          mkdir -p "$RUNNER_TEMP/activate/catalogue"
+          cp "$RUNNER_TEMP/finalize/catalogue/manifest.json" "$RUNNER_TEMP/activate/catalogue/manifest.json"
+      - name: Recheck hard limits immediately before activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            node scripts/check-launch-budgets.mjs \
+              --phase=activate \
+              --incoming-directory="$RUNNER_TEMP/activate"
+      - name: Publish root manifest last
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+            npm run locations:catalogue:publish-b2 -- \
+              --directory="$RUNNER_TEMP/activate" \
+              --apply

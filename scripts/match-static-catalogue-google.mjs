@@ -1,5 +1,5 @@
 import { createAdminClient } from '../lib/supabase/admin.js'
-import { b2Configuration } from '../lib/app/b2-s3.js'
+import { b2Configuration, b2Request } from '../lib/app/b2-s3.js'
 import { scoreGooglePlaceMatch } from '../lib/app/google-place-match.js'
 import {
   isEnrichmentStateSettled,
@@ -7,14 +7,23 @@ import {
 } from '../lib/app/static-catalogue-launch.js'
 import {
   loadStaticReleasePlan,
+  putB2Json,
   readStaticEnrichmentTile,
   readStaticReleaseTile,
   readStaticWorkerCheckpoint,
-  resetStaticWorkerCheckpoint,
   statusForLocation,
   writeStaticEnrichmentTile,
   writeStaticWorkerCheckpoint
 } from '../lib/app/static-catalogue-release.js'
+import {
+  DEFAULT_GOOGLE_REQUEST_BUDGET,
+  DEFAULT_PROVIDER_FAILURE_LIMIT,
+  DEFAULT_SUPABASE_LAUNCH_MAX_BYTES,
+  appendSettlementReason,
+  googleBudgetObjectKey,
+  launchLimit,
+  nextProviderFailure
+} from '../lib/app/static-launch-guards.js'
 import { syncStaticMediaOverlayRecords } from '../lib/app/static-media-overlay.js'
 
 const argv = process.argv.slice(2)
@@ -25,11 +34,26 @@ const RELEASE = String(option('release', '')).trim() || null
 const LIMIT = Math.max(1, Math.min(5_000_000, Number(option('limit', process.env.STATIC_GOOGLE_MATCH_LIMIT || 100_000))))
 const MAX_TILES = Math.max(1, Math.min(100_000, Number(option('max-tiles', process.env.STATIC_GOOGLE_MATCH_MAX_TILES || 1_000))))
 const MIN_SCORE = Math.max(0.75, Math.min(0.99, Number(process.env.GOOGLE_PLACE_MATCH_MIN_SCORE || 0.86)))
+const REQUEST_BUDGET = launchLimit(
+  option('request-budget', process.env.STATIC_GOOGLE_REQUEST_BUDGET),
+  DEFAULT_GOOGLE_REQUEST_BUDGET,
+  { minimum: 0, maximum: 1_000_000 }
+)
+const DATABASE_MAX_BYTES = launchLimit(
+  option('supabase-max-bytes', process.env.SUPABASE_LAUNCH_MAX_BYTES),
+  DEFAULT_SUPABASE_LAUNCH_MAX_BYTES,
+  { minimum: 1 }
+)
+const MAX_FAILURE_ATTEMPTS = launchLimit(
+  option('max-failure-attempts', process.env.STATIC_ENRICHMENT_MAX_FAILURE_ATTEMPTS),
+  DEFAULT_PROVIDER_FAILURE_LIMIT,
+  { minimum: 1, maximum: 20 }
+)
 const API_KEY = String(process.env.GOOGLE_PLACES_API_KEY || '').trim()
 const REQUEST_TIMEOUT_MS = Math.max(3_000, Math.min(30_000, Number(process.env.GOOGLE_PLACE_MATCH_TIMEOUT_MS || 12_000)))
 const REQUEST_DELAY_MS = Math.max(100, Math.min(5_000, Number(process.env.GOOGLE_PLACE_MATCH_DELAY_MS || 250)))
 const config = b2Configuration()
-if (!API_KEY) throw new Error('Set the server-only GOOGLE_PLACES_API_KEY before matching static locations.')
+if (APPLY && REQUEST_BUDGET > 0 && !API_KEY) throw new Error('Set the server-only GOOGLE_PLACES_API_KEY before matching static locations.')
 if (!config) throw new Error('Backblaze B2 credentials are required.')
 
 function sleep(milliseconds) {
@@ -66,6 +90,13 @@ async function searchGoogle(location) {
 
 function relation(value) {
   return Array.isArray(value) ? value[0] || null : value || null
+}
+
+async function databaseBytes(admin) {
+  const result = await admin.rpc('static_catalogue_launch_database_bytes_v1')
+  if (result.error) throw result.error
+  const raw = Array.isArray(result.data) ? result.data[0] : result.data
+  return Number(raw || 0)
 }
 
 async function staticAsset(admin, id) {
@@ -108,12 +139,60 @@ async function saveMatch(admin, place, best) {
   await syncStaticMediaOverlayRecords([overlayRecord(place, asset)], { config, zoom: place.tile.z })
 }
 
+async function readGoogleBudget(release) {
+  const response = await b2Request({ method: 'GET', key: googleBudgetObjectKey(release), config })
+  if (response.status === 404) return { requestsUsed: 0 }
+  if (!response.ok) throw new Error(`Backblaze B2 Google budget read failed: ${response.status}`)
+  const payload = await response.json()
+  if (Number(payload?.v) !== 1 || String(payload?.release) !== String(release)) return { requestsUsed: 0 }
+  return { requestsUsed: Math.max(0, Number(payload.requestsUsed || 0)) }
+}
+
+async function writeGoogleBudget(release, budget) {
+  return putB2Json(googleBudgetObjectKey(release), {
+    v: 1,
+    release,
+    requestsUsed: Math.max(0, Number(budget.requestsUsed || 0)),
+    requestBudget: REQUEST_BUDGET,
+    updatedAt: new Date().toISOString()
+  }, { config, cacheControl: 'no-store' })
+}
+
+function skippedStatus(current, reason) {
+  return mergeEnrichmentStatus(current, {
+    googleState: 'skipped',
+    googleAttemptedAt: current.googleAttemptedAt || new Date().toISOString(),
+    googleError: appendSettlementReason(current.googleError, reason)
+  })
+}
+
 const admin = createAdminClient()
 const plan = await loadStaticReleasePlan({ release: RELEASE, config })
-if (RESET && APPLY) await resetStaticWorkerCheckpoint(plan.release, 'google', { config })
-const checkpoint = await readStaticWorkerCheckpoint(plan.release, 'google', { config })
-const totals = { inspected: 0, attempted: 0, matched: 0, noMatch: 0, failed: 0, skipped: 0, completedTiles: 0 }
+let checkpoint = await readStaticWorkerCheckpoint(plan.release, 'google', { config })
+let budget = await readGoogleBudget(plan.release)
+if (RESET && APPLY) {
+  checkpoint = { completedTiles: new Set(), processedLocations: 0 }
+  budget = { requestsUsed: 0 }
+  await writeStaticWorkerCheckpoint(plan.release, 'google', checkpoint, { config })
+  await writeGoogleBudget(plan.release, budget)
+}
+const totals = {
+  inspected: 0,
+  attempted: 0,
+  apiRequests: 0,
+  wouldRequest: 0,
+  matched: 0,
+  noMatch: 0,
+  retryableFailures: 0,
+  terminalFailures: 0,
+  photoSkipped: 0,
+  budgetSkipped: 0,
+  databaseSkipped: 0,
+  skipped: 0,
+  completedTiles: 0
+}
 let stop = false
+let databaseExhausted = false
 
 for (const tileDescriptor of plan.tiles.slice(0, MAX_TILES)) {
   if (checkpoint.completedTiles.has(tileDescriptor.key)) {
@@ -125,6 +204,7 @@ for (const tileDescriptor of plan.tiles.slice(0, MAX_TILES)) {
     readStaticEnrichmentTile(plan.release, tileDescriptor, { config })
   ])
   let changed = false
+
   for (const place of places) {
     if (totals.inspected >= LIMIT) { stop = true; break }
     totals.inspected += 1
@@ -135,49 +215,124 @@ for (const tileDescriptor of plan.tiles.slice(0, MAX_TILES)) {
     }
 
     const existing = await staticAsset(admin, place.staticLocationId)
-    if (existing?.google_place_id) {
-      enrichment.statuses.set(place.staticLocationId, mergeEnrichmentStatus(current, {
-        googleState: 'matched', googleAttemptedAt: new Date().toISOString(), googleError: null
-      }))
-      changed = true
-      totals.matched += 1
-      if (APPLY) await syncStaticMediaOverlayRecords([overlayRecord(place, existing)], { config, zoom: place.tile.z })
+    if (relation(existing?.media_objects)?.public_url) {
+      totals.photoSkipped += 1
+      if (APPLY) {
+        enrichment.statuses.set(place.staticLocationId, skippedStatus(current, 'open_photo_available'))
+        await syncStaticMediaOverlayRecords([overlayRecord(place, existing)], { config, zoom: place.tile.z })
+        changed = true
+      } else {
+        console.log(`Would skip Google for ${place.name}: open photo already exists.`)
+      }
       continue
     }
 
-    totals.attempted += 1
-    try {
-      const payload = await searchGoogle(place)
-      const ranked = (payload?.places || [])
-        .map((candidate) => ({ place: candidate, match: scoreGooglePlaceMatch(place, candidate) }))
-        .filter((entry) => entry.match)
-        .sort((a, b) => b.match.score - a.match.score)
-      const best = ranked[0]
-      if (!best || best.match.score < MIN_SCORE) {
-        totals.noMatch += 1
-        enrichment.statuses.set(place.staticLocationId, mergeEnrichmentStatus(current, {
-          googleState: 'no_match', googleAttemptedAt: new Date().toISOString(), googleError: null
-        }))
-        changed = true
-        console.log(`No verified Google match: ${place.name}`)
-      } else {
-        totals.matched += 1
-        console.log(`${APPLY ? 'Saving' : 'Would save'} ${place.name} → ${best.match.matchedName} (${best.match.score.toFixed(3)}).`)
-        if (APPLY) await saveMatch(admin, place, best)
+    if (existing?.google_place_id) {
+      totals.matched += 1
+      if (APPLY) {
         enrichment.statuses.set(place.staticLocationId, mergeEnrichmentStatus(current, {
           googleState: 'matched', googleAttemptedAt: new Date().toISOString(), googleError: null
         }))
+        await syncStaticMediaOverlayRecords([overlayRecord(place, existing)], { config, zoom: place.tile.z })
         changed = true
       }
-    } catch (error) {
-      totals.failed += 1
-      enrichment.statuses.set(place.staticLocationId, mergeEnrichmentStatus(current, {
-        googleState: 'retryable_failure', googleAttemptedAt: new Date().toISOString(), googleError: error.message
-      }))
-      changed = true
-      console.warn(`${place.name}: ${error.message}`)
+      continue
     }
-    await sleep(REQUEST_DELAY_MS)
+
+    if (budget.requestsUsed >= REQUEST_BUDGET) {
+      totals.budgetSkipped += 1
+      if (APPLY) {
+        enrichment.statuses.set(place.staticLocationId, skippedStatus(current, 'launch_google_budget_exhausted'))
+        changed = true
+      }
+      continue
+    }
+
+    if (!databaseExhausted) databaseExhausted = (await databaseBytes(admin)) >= DATABASE_MAX_BYTES
+    if (databaseExhausted) {
+      totals.databaseSkipped += 1
+      if (APPLY) {
+        enrichment.statuses.set(place.staticLocationId, skippedStatus(current, 'supabase_database_budget_exhausted'))
+        changed = true
+      }
+      continue
+    }
+
+    if (!APPLY) {
+      totals.wouldRequest += 1
+      console.log(`Would search Google for ${place.name}; ${REQUEST_BUDGET - budget.requestsUsed} persisted requests remain.`)
+      continue
+    }
+
+    let working = current
+    while (!isEnrichmentStateSettled(working.googleState)) {
+      if (budget.requestsUsed >= REQUEST_BUDGET) {
+        totals.budgetSkipped += 1
+        working = skippedStatus(working, 'launch_google_budget_exhausted_during_retry')
+        enrichment.statuses.set(place.staticLocationId, working)
+        changed = true
+        break
+      }
+      databaseExhausted = (await databaseBytes(admin)) >= DATABASE_MAX_BYTES
+      if (databaseExhausted) {
+        totals.databaseSkipped += 1
+        working = skippedStatus(working, 'supabase_database_budget_exhausted_during_retry')
+        enrichment.statuses.set(place.staticLocationId, working)
+        changed = true
+        break
+      }
+
+      totals.attempted += 1
+      budget.requestsUsed += 1
+      await writeGoogleBudget(plan.release, budget)
+      totals.apiRequests += 1
+
+      try {
+        const payload = await searchGoogle(place)
+        const ranked = (payload?.places || [])
+          .map((candidate) => ({ place: candidate, match: scoreGooglePlaceMatch(place, candidate) }))
+          .filter((entry) => entry.match)
+          .sort((a, b) => b.match.score - a.match.score)
+        const best = ranked[0]
+        if (!best || best.match.score < MIN_SCORE) {
+          totals.noMatch += 1
+          working = mergeEnrichmentStatus(working, {
+            googleState: 'no_match', googleAttemptedAt: new Date().toISOString(), googleError: null
+          })
+          enrichment.statuses.set(place.staticLocationId, working)
+          changed = true
+          console.log(`No verified Google match: ${place.name}`)
+        } else {
+          databaseExhausted = (await databaseBytes(admin)) >= DATABASE_MAX_BYTES
+          if (databaseExhausted) {
+            totals.databaseSkipped += 1
+            working = skippedStatus(working, 'supabase_database_budget_exhausted_after_search')
+          } else {
+            totals.matched += 1
+            console.log(`Saving ${place.name} → ${best.match.matchedName} (${best.match.score.toFixed(3)}).`)
+            await saveMatch(admin, place, best)
+            working = mergeEnrichmentStatus(working, {
+              googleState: 'matched', googleAttemptedAt: new Date().toISOString(), googleError: null
+            })
+          }
+          enrichment.statuses.set(place.staticLocationId, working)
+          changed = true
+        }
+      } catch (error) {
+        const failure = nextProviderFailure(working.googleError, error.message, MAX_FAILURE_ATTEMPTS)
+        working = mergeEnrichmentStatus(working, {
+          googleState: failure.state,
+          googleAttemptedAt: new Date().toISOString(),
+          googleError: failure.error
+        })
+        enrichment.statuses.set(place.staticLocationId, working)
+        changed = true
+        if (failure.terminal) totals.terminalFailures += 1
+        else totals.retryableFailures += 1
+        console.warn(`${place.name}: ${failure.error}`)
+      }
+      await sleep(REQUEST_DELAY_MS)
+    }
   }
 
   if (APPLY && changed) await writeStaticEnrichmentTile(plan.release, tileDescriptor, enrichment.statuses, { config })
@@ -195,7 +350,12 @@ console.log(JSON.stringify({
   mode: APPLY ? 'apply' : 'dry-run',
   release: plan.release,
   minimumScore: MIN_SCORE,
+  requestBudget: REQUEST_BUDGET,
+  requestsUsed: budget.requestsUsed,
+  requestsRemaining: Math.max(0, REQUEST_BUDGET - budget.requestsUsed),
+  supabaseMaxBytes: DATABASE_MAX_BYTES,
+  maxFailureAttempts: MAX_FAILURE_ATTEMPTS,
   ...totals,
   checkpointTiles: checkpoint.completedTiles.size
 }, null, 2))
-if (!APPLY) console.log('Dry run only. Re-run with --apply after reviewing the candidate output.')
+if (!APPLY) console.log('Dry run only. No Google API requests or status writes were made.')
