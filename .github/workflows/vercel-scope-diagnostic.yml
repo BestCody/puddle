@@ -1,0 +1,113 @@
+name: Vercel scope diagnostic
+
+on:
+  push:
+    branches:
+      - agent/diagnose-vercel-scope
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      CONFIGURED_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      CONFIGURED_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Inspect accessible Vercel scope safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const token = String(process.env.VERCEL_TOKEN || '').trim()
+          const orgId = String(process.env.CONFIGURED_ORG_ID || '').trim()
+          const projectId = String(process.env.CONFIGURED_PROJECT_ID || '').trim()
+          if (!token) throw new Error('VERCEL_TOKEN is empty.')
+
+          async function request(path) {
+            const response = await fetch(`https://api.vercel.com${path}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+            let body = null
+            try { body = await response.json() } catch { body = null }
+            return { status: response.status, ok: response.ok, body }
+          }
+
+          function safeError(result) {
+            const error = result?.body?.error
+            return error ? { code: error.code || null, message: error.message || null, teamId: error.teamId || null, scope: error.scope || null } : null
+          }
+
+          function safeProject(project) {
+            if (!project) return null
+            return {
+              id: project.id || null,
+              name: project.name || null,
+              accountId: project.accountId || null,
+              framework: project.framework || null,
+              gitRepository: project.link ? {
+                type: project.link.type || null,
+                org: project.link.org || null,
+                repo: project.link.repo || null,
+                repoId: project.link.repoId || null
+              } : null
+            }
+          }
+
+          const user = await request('/v2/user')
+          console.log('Authenticated user:', user.ok ? {
+            id: user.body?.user?.id || user.body?.id || null,
+            username: user.body?.user?.username || user.body?.username || null,
+            email: user.body?.user?.email || user.body?.email || null
+          } : { status: user.status, error: safeError(user) })
+
+          const teams = await request('/v2/teams?limit=100')
+          const teamList = Array.isArray(teams.body?.teams) ? teams.body.teams : []
+          console.log('Accessible teams:', teams.ok
+            ? teamList.map((team) => ({ id: team.id, slug: team.slug, name: team.name }))
+            : { status: teams.status, error: safeError(teams) })
+
+          if (orgId) {
+            const configuredTeam = await request(`/v2/teams/${encodeURIComponent(orgId)}`)
+            console.log('Configured team lookup:', configuredTeam.ok
+              ? { id: configuredTeam.body?.id || null, slug: configuredTeam.body?.slug || null, name: configuredTeam.body?.name || null }
+              : { status: configuredTeam.status, error: safeError(configuredTeam) })
+          }
+
+          const scopedProjects = orgId
+            ? await request(`/v9/projects?limit=100&teamId=${encodeURIComponent(orgId)}`)
+            : { ok: false, status: 0, body: null }
+          const scopedList = Array.isArray(scopedProjects.body?.projects) ? scopedProjects.body.projects : []
+          console.log('Projects under configured team:', scopedProjects.ok
+            ? scopedList.map(safeProject)
+            : { status: scopedProjects.status, error: safeError(scopedProjects) })
+
+          const defaultProjects = await request('/v9/projects?limit=100')
+          const defaultList = Array.isArray(defaultProjects.body?.projects) ? defaultProjects.body.projects : []
+          console.log('Projects under token default scope:', defaultProjects.ok
+            ? defaultList.map(safeProject)
+            : { status: defaultProjects.status, error: safeError(defaultProjects) })
+
+          if (projectId) {
+            const query = orgId ? `?teamId=${encodeURIComponent(orgId)}` : ''
+            const configuredProject = await request(`/v9/projects/${encodeURIComponent(projectId)}${query}`)
+            console.log('Configured project lookup:', configuredProject.ok
+              ? safeProject(configuredProject.body)
+              : { status: configuredProject.status, error: safeError(configuredProject) })
+          }
+
+          const candidates = [...scopedList, ...defaultList]
+            .filter((project, index, array) => project?.id && array.findIndex((item) => item?.id === project.id) === index)
+            .filter((project) => {
+              const name = String(project.name || '').toLowerCase()
+              const repo = String(project.link?.repo || '').toLowerCase()
+              const org = String(project.link?.org || '').toLowerCase()
+              return name === 'puddle' || repo === 'puddle' || (org === 'bestcody' && repo === 'puddle')
+            })
+            .map(safeProject)
+          console.log('Puddle project candidates:', candidates)
+
+          if (!user.ok) process.exitCode = 1
+          NODE
