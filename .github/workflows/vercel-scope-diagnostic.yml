@@ -16,7 +16,7 @@ jobs:
       CONFIGURED_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
       CONFIGURED_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     steps:
-      - name: Inspect accessible Vercel scope safely
+      - name: Inspect Vercel project environment API safely
         shell: bash
         run: |
           set -euo pipefail
@@ -24,7 +24,7 @@ jobs:
           const token = String(process.env.VERCEL_TOKEN || '').trim()
           const orgId = String(process.env.CONFIGURED_ORG_ID || '').trim()
           const projectId = String(process.env.CONFIGURED_PROJECT_ID || '').trim()
-          if (!token) throw new Error('VERCEL_TOKEN is empty.')
+          if (!token || !orgId || !projectId) throw new Error('Vercel diagnostic configuration is incomplete.')
 
           async function request(path) {
             const response = await fetch(`https://api.vercel.com${path}`, {
@@ -37,77 +37,79 @@ jobs:
 
           function safeError(result) {
             const error = result?.body?.error
-            return error ? { code: error.code || null, message: error.message || null, teamId: error.teamId || null, scope: error.scope || null } : null
+            return error ? { code: error.code || null, message: error.message || null } : null
           }
 
-          function safeProject(project) {
-            if (!project) return null
-            return {
-              id: project.id || null,
-              name: project.name || null,
-              accountId: project.accountId || null,
-              framework: project.framework || null,
-              gitRepository: project.link ? {
-                type: project.link.type || null,
-                org: project.link.org || null,
-                repo: project.link.repo || null,
-                repoId: project.link.repoId || null
-              } : null
-            }
-          }
+          const project = await request(`/v9/projects/${encodeURIComponent(projectId)}?teamId=${encodeURIComponent(orgId)}`)
+          if (!project.ok) throw new Error(`Project lookup failed (${project.status}): ${JSON.stringify(safeError(project))}`)
+          console.log('Project API access:', {
+            id: project.body?.id || null,
+            name: project.body?.name || null,
+            accountId: project.body?.accountId || null,
+            gitRepository: project.body?.link ? {
+              type: project.body.link.type || null,
+              org: project.body.link.org || null,
+              repo: project.body.link.repo || null
+            } : null
+          })
 
-          const user = await request('/v2/user')
-          console.log('Authenticated user:', user.ok ? {
-            id: user.body?.user?.id || user.body?.id || null,
-            username: user.body?.user?.username || user.body?.username || null,
-            email: user.body?.user?.email || user.body?.email || null
-          } : { status: user.status, error: safeError(user) })
+          const variants = [
+            `/v10/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}&decrypt=true`,
+            `/v9/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}&decrypt=true`,
+            `/v10/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}`,
+            `/v9/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}`
+          ]
 
-          const teams = await request('/v2/teams?limit=100')
-          const teamList = Array.isArray(teams.body?.teams) ? teams.body.teams : []
-          console.log('Accessible teams:', teams.ok
-            ? teamList.map((team) => ({ id: team.id, slug: team.slug, name: team.name }))
-            : { status: teams.status, error: safeError(teams) })
-
-          if (orgId) {
-            const configuredTeam = await request(`/v2/teams/${encodeURIComponent(orgId)}`)
-            console.log('Configured team lookup:', configuredTeam.ok
-              ? { id: configuredTeam.body?.id || null, slug: configuredTeam.body?.slug || null, name: configuredTeam.body?.name || null }
-              : { status: configuredTeam.status, error: safeError(configuredTeam) })
-          }
-
-          const scopedProjects = orgId
-            ? await request(`/v9/projects?limit=100&teamId=${encodeURIComponent(orgId)}`)
-            : { ok: false, status: 0, body: null }
-          const scopedList = Array.isArray(scopedProjects.body?.projects) ? scopedProjects.body.projects : []
-          console.log('Projects under configured team:', scopedProjects.ok
-            ? scopedList.map(safeProject)
-            : { status: scopedProjects.status, error: safeError(scopedProjects) })
-
-          const defaultProjects = await request('/v9/projects?limit=100')
-          const defaultList = Array.isArray(defaultProjects.body?.projects) ? defaultProjects.body.projects : []
-          console.log('Projects under token default scope:', defaultProjects.ok
-            ? defaultList.map(safeProject)
-            : { status: defaultProjects.status, error: safeError(defaultProjects) })
-
-          if (projectId) {
-            const query = orgId ? `?teamId=${encodeURIComponent(orgId)}` : ''
-            const configuredProject = await request(`/v9/projects/${encodeURIComponent(projectId)}${query}`)
-            console.log('Configured project lookup:', configuredProject.ok
-              ? safeProject(configuredProject.body)
-              : { status: configuredProject.status, error: safeError(configuredProject) })
-          }
-
-          const candidates = [...scopedList, ...defaultList]
-            .filter((project, index, array) => project?.id && array.findIndex((item) => item?.id === project.id) === index)
-            .filter((project) => {
-              const name = String(project.name || '').toLowerCase()
-              const repo = String(project.link?.repo || '').toLowerCase()
-              const org = String(project.link?.org || '').toLowerCase()
-              return name === 'puddle' || repo === 'puddle' || (org === 'bestcody' && repo === 'puddle')
+          let successful = null
+          for (const path of variants) {
+            const result = await request(path)
+            const envs = Array.isArray(result.body?.envs) ? result.body.envs : []
+            console.log('Environment endpoint attempt:', {
+              path: path.replace(projectId, '<project>'),
+              status: result.status,
+              count: envs.length,
+              error: result.ok ? null : safeError(result)
             })
-            .map(safeProject)
-          console.log('Puddle project candidates:', candidates)
+            if (result.ok && !successful) successful = { path, envs }
+          }
 
-          if (!user.ok) process.exitCode = 1
+          if (!successful) throw new Error('No documented Vercel environment endpoint was accessible.')
+
+          const metadata = successful.envs.map((env) => ({
+            id: env.id || null,
+            key: env.key || null,
+            type: env.type || null,
+            target: env.target || null,
+            customEnvironmentIds: env.customEnvironmentIds || null,
+            hasValue: typeof env.value === 'string',
+            valueLength: typeof env.value === 'string' ? env.value.length : null
+          }))
+          console.log('Environment metadata (values hidden):', metadata)
+
+          const required = [
+            'NEXT_PUBLIC_SUPABASE_URL',
+            'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+            'SUPABASE_SECRET_KEY',
+            'B2_S3_ENDPOINT',
+            'B2_REGION',
+            'B2_KEY_ID',
+            'B2_APPLICATION_KEY',
+            'B2_BUCKET',
+            'B2_DOWNLOAD_BASE_URL'
+          ]
+          const production = successful.envs.filter((env) => {
+            const targets = Array.isArray(env.target) ? env.target : [env.target].filter(Boolean)
+            return targets.includes('production')
+          })
+          const byKey = new Map(production.map((env) => [env.key, env]))
+          const missing = required.filter((key) => !byKey.has(key))
+          const withoutValues = required.filter((key) => typeof byKey.get(key)?.value !== 'string' || !byKey.get(key).value)
+          console.log('Required Production environment validation:', {
+            missing,
+            withoutDecryptedValues: withoutValues,
+            usable: missing.length === 0 && withoutValues.length === 0
+          })
+
+          if (missing.length) throw new Error(`Missing required Production variables: ${missing.join(', ')}`)
+          if (withoutValues.length) throw new Error(`Environment endpoint did not return decrypted values for: ${withoutValues.join(', ')}`)
           NODE
