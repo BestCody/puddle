@@ -21,6 +21,8 @@ const landingConnector = await readFile(join(root, 'public/app.js'), 'utf8')
 for (const marker of [
   'Privacy Policy',
   'Information we collect',
+  'Membership and billing information',
+  'Global connection privacy',
   'Location and recommendation controls',
   'Retention and deletion',
   'Your choices and privacy rights',
@@ -34,6 +36,8 @@ for (const marker of [
   'What Puddle provides',
   'Recommendations and place information',
   'DateMatch and shared planning',
+  'Tinder tier and global connections',
+  'Paid subscriptions and billing',
   'Acceptable use',
   'Governing law and disputes'
 ]) {
@@ -55,4 +59,4 @@ if (/<button[^>]+data-open-modal=["'](?:privacy|terms)["']/i.test(landing)) thro
 if (/landing-demo\.js|window\.toast|showToast|makeConfetti|createConfetti/i.test(landingConnector)) throw new Error('Removed landing notification or prototype code returned')
 if (/toast-region|confetti-layer|app-demo/.test(landing)) throw new Error('Legacy landing demo or notification containers returned')
 
-console.log('Legal pages and native landing links validated.')
+console.log('Legal pages, paid tier disclosures, and native landing links validated.')
