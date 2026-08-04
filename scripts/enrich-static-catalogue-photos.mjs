@@ -16,6 +16,11 @@ import {
   writeStaticWorkerCheckpoint
 } from '../lib/app/static-catalogue-release.js'
 import {
+  DEFAULT_PROVIDER_FAILURE_LIMIT,
+  launchLimit,
+  nextProviderFailure
+} from '../lib/app/static-launch-guards.js'
+import {
   downloadStaticOpenPhotoCandidate,
   findStaticOpenPhotoCandidates
 } from '../lib/app/static-open-photo-provider.js'
@@ -30,6 +35,11 @@ const LIMIT = Math.max(1, Math.min(5_000_000, Number(option('limit', process.env
 const MAX_TILES = Math.max(1, Math.min(100_000, Number(option('max-tiles', process.env.STATIC_PHOTO_ENRICH_MAX_TILES || 1_000))))
 const MIN_SCORE = Math.max(0.6, Math.min(0.98, Number(process.env.OPEN_PHOTO_MIN_SCORE || 0.76)))
 const REQUEST_DELAY_MS = Math.max(0, Math.min(5_000, Number(process.env.STATIC_PHOTO_ENRICH_DELAY_MS || 120)))
+const MAX_FAILURE_ATTEMPTS = launchLimit(
+  option('max-failure-attempts', process.env.STATIC_ENRICHMENT_MAX_FAILURE_ATTEMPTS),
+  DEFAULT_PROVIDER_FAILURE_LIMIT,
+  { minimum: 1, maximum: 20 }
+)
 const config = b2Configuration()
 if (!config?.downloadBaseUrl) throw new Error('Backblaze B2 credentials and B2_DOWNLOAD_BASE_URL are required.')
 
@@ -92,7 +102,17 @@ const admin = createAdminClient()
 const plan = await loadStaticReleasePlan({ release: RELEASE, config })
 if (RESET && APPLY) await resetStaticWorkerCheckpoint(plan.release, 'photos', { config })
 const checkpoint = await readStaticWorkerCheckpoint(plan.release, 'photos', { config })
-const totals = { inspected: 0, attempted: 0, matched: 0, imported: 0, noMatch: 0, failed: 0, skipped: 0, completedTiles: 0 }
+const totals = {
+  inspected: 0,
+  attempted: 0,
+  matched: 0,
+  imported: 0,
+  noMatch: 0,
+  retryableFailures: 0,
+  terminalFailures: 0,
+  skipped: 0,
+  completedTiles: 0
+}
 let stop = false
 
 for (const tileDescriptor of plan.tiles.slice(0, MAX_TILES)) {
@@ -153,10 +173,14 @@ for (const tileDescriptor of plan.tiles.slice(0, MAX_TILES)) {
           photoState: 'matched', photoAttemptedAt: new Date().toISOString(), photoError: null
         }))
       } else if (failures.length) {
-        totals.failed += 1
+        const failure = nextProviderFailure(current.photoError, failures.slice(0, 4).join(' | '), MAX_FAILURE_ATTEMPTS)
         enrichment.statuses.set(place.staticLocationId, mergeEnrichmentStatus(current, {
-          photoState: 'retryable_failure', photoAttemptedAt: new Date().toISOString(), photoError: failures.slice(0, 4).join(' | ')
+          photoState: failure.state,
+          photoAttemptedAt: new Date().toISOString(),
+          photoError: failure.error
         }))
+        if (failure.terminal) totals.terminalFailures += 1
+        else totals.retryableFailures += 1
       } else {
         totals.noMatch += 1
         enrichment.statuses.set(place.staticLocationId, mergeEnrichmentStatus(current, {
@@ -166,12 +190,16 @@ for (const tileDescriptor of plan.tiles.slice(0, MAX_TILES)) {
       }
       changed = true
     } catch (error) {
-      totals.failed += 1
+      const failure = nextProviderFailure(current.photoError, error.message, MAX_FAILURE_ATTEMPTS)
       enrichment.statuses.set(place.staticLocationId, mergeEnrichmentStatus(current, {
-        photoState: 'retryable_failure', photoAttemptedAt: new Date().toISOString(), photoError: error.message
+        photoState: failure.state,
+        photoAttemptedAt: new Date().toISOString(),
+        photoError: failure.error
       }))
+      if (failure.terminal) totals.terminalFailures += 1
+      else totals.retryableFailures += 1
       changed = true
-      console.warn(`${place.name}: ${error.message}`)
+      console.warn(`${place.name}: ${failure.error}`)
     }
     await sleep(REQUEST_DELAY_MS)
   }
@@ -191,6 +219,7 @@ console.log(JSON.stringify({
   mode: APPLY ? 'apply' : 'dry-run',
   release: plan.release,
   minimumScore: MIN_SCORE,
+  maxFailureAttempts: MAX_FAILURE_ATTEMPTS,
   ...totals,
   checkpointTiles: checkpoint.completedTiles.size
 }, null, 2))
