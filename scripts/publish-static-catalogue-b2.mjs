@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { access, readdir, readFile, stat } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { putB2Object, b2Configuration, b2Request } from '../lib/app/b2-s3.js'
 
@@ -12,6 +12,10 @@ const CONCURRENCY = Math.max(1, Math.min(12, Number(args.get('concurrency') || p
 const config = b2Configuration()
 if (APPLY && !config) throw new Error('Backblaze B2 credentials are required with --apply.')
 if (APPLY && !config.downloadBaseUrl) throw new Error('B2_DOWNLOAD_BASE_URL is required with --apply.')
+
+async function exists(path) {
+  try { await access(path); return true } catch { return false }
+}
 
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -33,14 +37,21 @@ function objectFor(path) {
     : extension === 'svg' ? 'image/svg+xml; charset=utf-8'
       : extension === 'avif' ? 'image/avif'
         : 'application/octet-stream'
-  const mutable = key === 'catalogue/manifest.json'
+  const rootManifest = key === 'catalogue/manifest.json'
+  const workingMetadata = /\/releases\/[^/]+\/(manifest\.json|partitions\/|canonical-index\/|source-index\/)/.test(key)
+  const mutable = rootManifest || workingMetadata
   return {
     sourceKey,
     key,
     contentType,
     contentEncoding: compressedJson ? 'gzip' : null,
-    cacheControl: mutable ? 'public, max-age=300, stale-while-revalidate=3600' : 'public, max-age=31536000, immutable',
-    mutable
+    cacheControl: rootManifest
+      ? 'public, max-age=300, stale-while-revalidate=3600'
+      : workingMetadata
+        ? 'no-store'
+        : 'public, max-age=31536000, immutable',
+    mutable,
+    rootManifest
   }
 }
 
@@ -72,6 +83,7 @@ async function updateReleaseRegistry(rootManifest) {
       release: rootManifest.release,
       schema: rootManifest.schema,
       source: rootManifest.source,
+      sources: rootManifest.sources || null,
       builtAt: rootManifest.builtAt,
       tileCount: rootManifest.tileCount,
       places: rootManifest.places
@@ -93,9 +105,11 @@ async function updateReleaseRegistry(rootManifest) {
   return releases
 }
 
+const rootManifestPath = join(DIRECTORY, 'catalogue', 'manifest.json')
+const hasRootManifest = await exists(rootManifestPath)
 const allFiles = await walk(DIRECTORY)
 const objects = allFiles.map((path) => ({ path, ...objectFor(path) }))
-  .sort((a, b) => Number(a.mutable) - Number(b.mutable) || a.key.localeCompare(b.key))
+  .sort((a, b) => Number(a.mutable) - Number(b.mutable) || Number(a.rootManifest) - Number(b.rootManifest) || a.key.localeCompare(b.key))
 let uploaded = 0
 let bytes = 0
 
@@ -119,18 +133,22 @@ async function uploadObject(object) {
 }
 
 await runPool(objects.filter((object) => !object.mutable), uploadObject)
-for (const object of objects.filter((candidate) => candidate.mutable)) await uploadObject(object)
+for (const object of objects.filter((candidate) => candidate.mutable && !candidate.rootManifest)) await uploadObject(object)
+for (const object of objects.filter((candidate) => candidate.rootManifest)) await uploadObject(object)
 
 let registeredReleases = null
-if (APPLY) {
-  const rootManifest = JSON.parse(await readFile(join(DIRECTORY, 'catalogue', 'manifest.json'), 'utf8'))
+if (APPLY && hasRootManifest) {
+  const rootManifest = JSON.parse(await readFile(rootManifestPath, 'utf8'))
   registeredReleases = await updateReleaseRegistry(rootManifest)
+} else if (APPLY) {
+  console.log('Partition upload completed without changing catalogue/manifest.json or the release registry.')
 }
 
 console.log(JSON.stringify({
   mode: APPLY ? 'apply' : 'dry-run',
   provider: 'backblaze-b2-private',
   directory: DIRECTORY,
+  partitionUpload: !hasRootManifest,
   objects: objects.length,
   uploaded,
   bytes,
