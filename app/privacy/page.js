@@ -33,14 +33,14 @@ export default function PrivacyPage() {
         <ul>
           <li>Location cards shown to you and actions such as Pass, Save, Perfect Pick, undo, notes, sharing, and opening place details.</li>
           <li>Saved, planned, and past places, selected dates or times, shortlist activity, and post-visit feedback.</li>
-          <li>DateMatch invitations, room membership, availability, mutual place selections, planning decisions, and feedback shared through the room.</li>
+          <li>DateMatch invitations, room membership, availability, private selections, mutual matches, planning decisions, notes, and post-visit feedback submitted through the room.</li>
           <li>Recommendation settings and signals used to improve future decks, such as preferred categories, distance, prior actions, and feedback.</li>
         </ul>
 
         <h3>Contributions, claims, and safety information</h3>
         <ul>
           <li>Place submissions, edits, photos, source information, attribution, ownership or management claims, and supporting materials.</li>
-          <li>Reports, appeals, blocks, moderation decisions, fraud signals, and communications relating to safety, integrity, or policy enforcement.</li>
+          <li>Reports, appeals, moderation decisions, fraud signals, and communications relating to safety, integrity, or policy enforcement.</li>
           <li>Support requests, survey responses, feedback, and other information you choose to send to Puddle.</li>
         </ul>
 
@@ -125,7 +125,7 @@ export default function PrivacyPage() {
         <p>Depending on applicable law, you may ask to access personal information Puddle holds about you, correct inaccurate information, delete information, withdraw consent, object to certain processing, obtain information about disclosures, or challenge Puddle’s privacy practices.</p>
         <ul>
           <li>Update profile, location, radius, interests, visibility, and recommendation settings in the Service where available.</li>
-          <li>Change browser or device permissions for location, camera, and notifications.</li>
+          <li>Change browser or device permissions used by Puddle, including location permission.</li>
           <li>Leave a DateMatch room or stop sharing a place or plan using the available controls.</li>
           <li>Unsubscribe from optional promotional email using the link in the message. Essential account, security, and service messages may still be sent.</li>
           <li>Request account deletion or other privacy assistance through account controls or by contacting the Privacy Officer.</li>
