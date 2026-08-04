@@ -1,16 +1,56 @@
-# Backblaze B2 catalogue and Google Places infrastructure
+# Private Backblaze B2 catalogue and Google Places infrastructure
 
-Puddle stores the worldwide static place catalogue and cached open-licensed photos in Backblaze B2. Supabase remains the system of record for users, saves, matches, dismissals, selected materialized locations, attribution, and Google Place IDs.
+Puddle stores the worldwide static place catalogue and cached open-license photos in a private Backblaze B2 bucket. Supabase remains the system of record for users, saves, matches, dismissals, selected materialized locations, attribution, and Google Place IDs.
 
-Cloudflare R2 and a Cloudflare CDN are not part of this deployment. Browser requests go directly to a public B2 bucket. A CDN can be added later without changing the object layout.
+Cloudflare R2 and a Cloudflare CDN are not part of this deployment. A CDN can be added later without changing the object layout.
 
 ## Runtime flow
 
-1. Discovery reads `catalogue/manifest.json` and nearby schema-v3 catalogue tiles from the public B2 download URL.
-2. Detail sidecars and media overlays are loaded only when needed.
-3. Cached Wikimedia Commons, Mapillary, and KartaView photos are converted to bounded AVIF files and stored in B2.
-4. Google Places UI Kit content remains live Google content. Google photo bytes, photo URLs, and photo resource names are never stored.
-5. GitHub Actions uses a bucket-restricted B2 application key for publishing and cleanup. The browser never receives B2 credentials.
+1. An authenticated discovery request reaches Puddle on Vercel.
+2. The Puddle server obtains a short-lived B2 download token restricted to `catalogue/` and uses it for schema-v3 manifest and tile reads.
+3. The server joins nearby static candidates with Supabase overlay data.
+4. Managed B2 photo and placeholder URLs in the response receive temporary direct-download tokens restricted to `photos/open/` or `catalogue/`.
+5. The browser downloads those assets directly from private B2. Vercel does not proxy the image bytes.
+6. If an image token expires while the page remains open, the browser asks the authenticated `/api/storage/b2-access` route for a replacement prefix token and retries.
+7. Google Places UI Kit content remains live Google content. Google photo bytes, photo URLs, and photo resource names are never stored.
+8. GitHub Actions uses a separate bucket-restricted publishing key for catalogue publishing, photo enrichment, and cleanup.
+
+## Credential separation
+
+### GitHub publishing key
+
+Used only by trusted jobs for S3-compatible operations:
+
+```text
+B2_KEY_ID
+B2_APPLICATION_KEY
+B2_S3_ENDPOINT
+B2_REGION
+```
+
+It may upload, list, replace, and delete managed objects within `puddle-assets`.
+
+### Vercel download-token key
+
+Used only by server code to call `b2_authorize_account` and `b2_get_download_authorization`:
+
+```text
+B2_DOWNLOAD_KEY_ID
+B2_DOWNLOAD_APPLICATION_KEY
+```
+
+It is restricted to `puddle-assets` and must include `shareFiles`. It must not have write or delete access. The browser never receives this key.
+
+### Browser token
+
+The browser receives a temporary bearer token restricted to one prefix:
+
+```text
+catalogue/
+photos/open/
+```
+
+The token is passed as the case-sensitive `Authorization` query parameter. Puddle never logs or persists complete authorized URLs.
 
 ## Object layout
 
@@ -30,20 +70,23 @@ Immutable release files and content-addressed photos use long cache lifetimes. T
 
 ## Required Backblaze setup
 
-Create one public bucket named `puddle-assets` and one application key restricted to that bucket with read and write access. Do not use the master application key and never expose the application key in browser code.
+Create one private bucket named `puddle-assets`. Do not use the master application key.
 
 Before publishing any objects:
 
-1. Configure daily B2 data caps for storage and every available transaction/download category. Choose values based on the maximum amount you are willing to lose in one day.
-2. Set the bucket lifecycle to **Keep Only the Last Version**. B2 otherwise retains hidden older versions when mutable manifests and overlays are replaced, and those versions consume storage.
-3. Keep the repository variable `B2_INFRA_ENABLED` unset or `false` until the bucket, caps, lifecycle, secrets, and migration are ready.
-4. Apply `supabase/migrations/10035_backblaze_b2_storage_backend.sql` before running photo enrichment.
+1. Configure daily B2 caps for storage and every available transaction/download category.
+2. Set the lifecycle to **Keep Only the Last Version** so hidden overwritten manifests and overlays do not accumulate.
+3. Configure exact-origin CORS for the production and exact Vercel preview origins.
+4. Create a bucket-restricted read/write publishing key for GitHub Actions.
+5. Create a separate bucket-restricted key with `shareFiles` for Vercel.
+6. Keep `B2_INFRA_ENABLED` unset or `false` until the bucket, caps, lifecycle, credentials, Vercel variables, and migration are ready.
+7. Apply `supabase/migrations/10035_backblaze_b2_storage_backend.sql` before running photo enrichment.
 
-The public bucket means anyone who knows an object URL can read that object. It does not permit uploads without the restricted application key.
+An unsigned object URL from the private bucket must fail. A signed temporary URL should work only for the prefix authorized by its token.
 
 ## Required configuration
 
-Use the exact S3 endpoint and region shown by Backblaze for the bucket's account region.
+Copy the exact endpoints assigned to the real account instead of assuming the example cluster or region.
 
 ```text
 B2_S3_ENDPOINT=https://s3.us-east-005.backblazeb2.com
@@ -51,18 +94,19 @@ B2_REGION=us-east-005
 B2_KEY_ID
 B2_APPLICATION_KEY
 B2_BUCKET=puddle-assets
-B2_PUBLIC_BASE_URL=https://f005.backblazeb2.com/file/puddle-assets
-NEXT_PUBLIC_CATALOGUE_ASSET_BASE_URL=https://f005.backblazeb2.com/file/puddle-assets
+B2_BUCKET_ID
+B2_DOWNLOAD_BASE_URL=https://f005.backblazeb2.com/file/puddle-assets
 STATIC_CATALOGUE_BASE_URL=https://f005.backblazeb2.com/file/puddle-assets
+B2_DOWNLOAD_KEY_ID
+B2_DOWNLOAD_APPLICATION_KEY
+B2_DOWNLOAD_TOKEN_TTL_SECONDS=14400
 STATIC_CATALOGUE_ACTION_SECRET
 STATIC_CATALOGUE_REF_TTL_SECONDS
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 GOOGLE_PLACES_API_KEY
 ```
 
-The cluster number and region above are examples. Copy the values assigned to the real Backblaze account rather than assuming `f005` or `us-east-005`.
-
-GitHub Actions repository secrets:
+### GitHub Actions repository secrets
 
 ```text
 B2_S3_ENDPOINT
@@ -70,12 +114,24 @@ B2_REGION
 B2_KEY_ID
 B2_APPLICATION_KEY
 B2_BUCKET
-B2_PUBLIC_BASE_URL
+B2_DOWNLOAD_BASE_URL
 NEXT_PUBLIC_SUPABASE_URL
 SUPABASE_SECRET_KEY
 ```
 
-Vercel does not need the B2 application key for normal browser catalogue reads. It needs the public catalogue URLs and existing server-side application settings.
+### Vercel server-side variables
+
+```text
+STATIC_CATALOGUE_BASE_URL
+B2_DOWNLOAD_BASE_URL
+B2_BUCKET
+B2_BUCKET_ID
+B2_DOWNLOAD_KEY_ID
+B2_DOWNLOAD_APPLICATION_KEY
+B2_DOWNLOAD_TOKEN_TTL_SECONDS
+```
+
+No B2 credential may use a `NEXT_PUBLIC_` name. Vercel does not need the publishing key.
 
 ## Building and publishing
 
@@ -92,11 +148,13 @@ npm run locations:catalogue:publish-b2 -- \
   --apply
 ```
 
-The publisher uploads immutable release objects first and mutable root objects last. Test the deployment by opening:
+The publisher uploads immutable release objects first and mutable root objects last. The raw object address is:
 
 ```text
-<B2_PUBLIC_BASE_URL>/catalogue/manifest.json
+<B2_DOWNLOAD_BASE_URL>/catalogue/manifest.json
 ```
+
+Because the bucket is private, that address must fail without authorization. Test the actual catalogue through signed-in Puddle discovery or with a short-lived token generated by the server.
 
 ## Cleanup
 
@@ -112,7 +170,7 @@ After reviewing the output:
 npm run locations:b2:cleanup -- --apply
 ```
 
-The cleanup retains the configured number of catalogue releases and removes expired unreferenced managed media. The B2 lifecycle rule separately prevents overwritten versions of mutable objects from accumulating indefinitely.
+The cleanup retains the configured number of catalogue releases and removes expired unreferenced managed media. The B2 lifecycle rule separately prevents overwritten versions from accumulating indefinitely.
 
 ## Active commands
 
@@ -127,6 +185,6 @@ locations:b2:cleanup
 
 ## Compatibility boundary
 
-Some internal modules, SQL functions, and old migration filenames retain `r2` in their names because they were already part of the repository and database history. Their active object-storage client now routes to Backblaze B2. New workflows, environment variables, commands, tests, and documentation use B2 names.
+Some internal modules, SQL functions, database columns, and old migration filenames retain `r2` or `public_url` in their names because they are already part of repository and database history. Their active object-storage client routes to private Backblaze B2, and stored B2 object URLs require temporary authorization before use.
 
-This repository change does not create the B2 account or bucket, configure billing caps or lifecycle rules, add secrets, publish production data, apply production migrations, or deploy production traffic.
+This repository change does not create the Backblaze account or bucket, configure caps or lifecycle rules, add production secrets, publish data, apply production migrations, or enable production jobs.
