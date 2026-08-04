@@ -1,0 +1,62 @@
+import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { membershipFromSubscription, retrieveSubscription, verifyStripeWebhook } from '@/lib/billing/stripe'
+
+export const dynamic = 'force-dynamic'
+
+async function membershipUserId(admin, subscription, fallbackUserId = null) {
+  const metadataUserId = String(subscription?.metadata?.puddle_user_id || fallbackUserId || '').trim()
+  if (/^[0-9a-f-]{36}$/i.test(metadataUserId)) return metadataUserId
+  const subscriptionId = subscription?.id || null
+  const customerId = typeof subscription?.customer === 'string' ? subscription.customer : subscription?.customer?.id || null
+  let query = admin.from('puddle_memberships').select('user_id')
+  if (subscriptionId) query = query.eq('stripe_subscription_id', subscriptionId)
+  else if (customerId) query = query.eq('stripe_customer_id', customerId)
+  else return null
+  const result = await query.maybeSingle()
+  return result.data?.user_id || null
+}
+
+async function syncSubscription(admin, subscription, fallbackUserId = null) {
+  const userId = await membershipUserId(admin, subscription, fallbackUserId)
+  if (!userId) return false
+  const record = membershipFromSubscription(subscription, userId)
+  const saved = await admin.from('puddle_memberships').upsert(record, { onConflict: 'user_id' })
+  if (saved.error) throw saved.error
+  return true
+}
+
+export async function POST(request) {
+  const rawBody = await request.text()
+  const signature = request.headers.get('stripe-signature')
+  if (!verifyStripeWebhook(rawBody, signature)) return NextResponse.json({ error: 'Invalid webhook signature.' }, { status: 400 })
+
+  let event
+  try { event = JSON.parse(rawBody) }
+  catch { return NextResponse.json({ error: 'Invalid webhook body.' }, { status: 400 }) }
+  if (!event?.id || !event?.type) return NextResponse.json({ error: 'Invalid webhook event.' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const existing = await admin.from('stripe_membership_events').select('event_id').eq('event_id', event.id).maybeSingle()
+  if (existing.data) return NextResponse.json({ received: true, duplicate: true })
+
+  try {
+    const object = event.data?.object || {}
+    if (event.type === 'checkout.session.completed' && object.mode === 'subscription' && object.subscription) {
+      const subscription = await retrieveSubscription(typeof object.subscription === 'string' ? object.subscription : object.subscription.id)
+      await syncSubscription(admin, subscription, object.client_reference_id)
+    } else if (event.type.startsWith('customer.subscription.')) {
+      await syncSubscription(admin, object)
+    }
+    const recorded = await admin.from('stripe_membership_events').insert({ event_id: event.id, event_type: event.type })
+    if (recorded.error && recorded.error.code !== '23505') throw recorded.error
+    return NextResponse.json({ received: true })
+  } catch (error) {
+    console.error('Stripe membership webhook failed.', {
+      eventId: event.id,
+      eventType: event.type,
+      message: String(error?.message || 'unknown').slice(0, 240)
+    })
+    return NextResponse.json({ error: 'Webhook processing failed.' }, { status: 500 })
+  }
+}
