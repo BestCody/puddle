@@ -25,12 +25,19 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
-  VERCEL_CLI_VERSION: '58.5.1'
   B2_LAUNCH_MAX_BYTES: '9000000000'
   B2_PHOTO_START_MAX_BYTES: '8900000000'
   SUPABASE_LAUNCH_MAX_BYTES: '400000000'
-  VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+  B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+  B2_REGION: ${{ secrets.B2_REGION }}
+  B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+  B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+  B2_BUCKET: ${{ secrets.B2_BUCKET }}
+  B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
+  STATIC_CATALOGUE_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
 
 jobs:
   canary:
@@ -38,13 +45,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 330
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
       FSQ_OS_CONNECTION_SQL: ${{ secrets.FSQ_OS_CONNECTION_SQL }}
       MARKET_ID: ${{ inputs.market_id }}
       RELEASE: ${{ inputs.release }}
+
     steps:
       - uses: actions/checkout@v6
 
@@ -65,24 +72,56 @@ jobs:
           npm ci --no-audit --no-fund
           python -m pip install --disable-pip-version-check -r requirements.txt
 
-      - name: Validate GitHub launch configuration
+      - name: Validate GitHub catalogue configuration
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$VERCEL_TOKEN" || { echo 'Missing VERCEL_TOKEN secret.' >&2; exit 1; }
-          test -n "$VERCEL_ORG_ID" || { echo 'Missing VERCEL_ORG_ID repository variable.' >&2; exit 1; }
-          test -n "$VERCEL_PROJECT_ID" || { echo 'Missing VERCEL_PROJECT_ID repository variable.' >&2; exit 1; }
-          test -n "$SUPABASE_ACCESS_TOKEN" || { echo 'Missing SUPABASE_ACCESS_TOKEN secret.' >&2; exit 1; }
-          test -n "$SUPABASE_DB_PASSWORD" || { echo 'Missing SUPABASE_DB_PASSWORD secret.' >&2; exit 1; }
-          test -n "$SUPABASE_PROJECT_REF" || { echo 'Missing SUPABASE_PROJECT_REF repository variable.' >&2; exit 1; }
-          test -n "$FSQ_OS_CONNECTION_SQL" || { echo 'Missing FSQ_OS_CONNECTION_SQL secret.' >&2; exit 1; }
-          [[ "$VERCEL_PROJECT_ID" == prj_* ]] || { echo 'VERCEL_PROJECT_ID must begin with prj_.' >&2; exit 1; }
+          required=(
+            NEXT_PUBLIC_SUPABASE_URL
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+            SUPABASE_SECRET_KEY
+            B2_S3_ENDPOINT
+            B2_REGION
+            B2_KEY_ID
+            B2_APPLICATION_KEY
+            B2_BUCKET
+            B2_DOWNLOAD_BASE_URL
+            SUPABASE_ACCESS_TOKEN
+            SUPABASE_DB_PASSWORD
+            SUPABASE_PROJECT_REF
+            FSQ_OS_CONNECTION_SQL
+          )
+          missing=()
+          for name in "${required[@]}"; do
+            [[ -n "${!name:-}" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing GitHub Actions secrets or variables: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
           [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]] || {
             echo 'SUPABASE_PROJECT_REF must be only the 20-character project reference, not a URL.' >&2
             exit 1
           }
+          node --input-type=module <<'NODE'
+          import { b2Configuration } from './lib/app/b2-s3.js'
 
-      - uses: ./.github/actions/setup-vercel-project
+          const supabase = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL)
+          if (supabase.protocol !== 'https:' || supabase.hostname !== `${process.env.SUPABASE_PROJECT_REF}.supabase.co`) {
+            throw new Error('NEXT_PUBLIC_SUPABASE_URL does not match SUPABASE_PROJECT_REF.')
+          }
+          if (!String(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '').startsWith('sb_publishable_')) {
+            throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable key.')
+          }
+          if (!String(process.env.SUPABASE_SECRET_KEY || '').startsWith('sb_secret_')) {
+            throw new Error('SUPABASE_SECRET_KEY must be a Supabase secret key.')
+          }
+          const b2 = b2Configuration()
+          if (!b2?.downloadBaseUrl) {
+            throw new Error('Backblaze publisher credentials, region, bucket, and download URL are invalid or inconsistent.')
+          }
+          console.log(`Validated direct GitHub runtime configuration for Supabase ${supabase.hostname} and B2 region ${b2.region}.`)
+          NODE
 
       - name: Resolve and validate canary market
         shell: bash
@@ -116,28 +155,6 @@ jobs:
           console.log(`Bounding box: ${market.bbox.join(',')}`)
           console.log(`Inactive release: ${release}`)
           NODE
-
-      - name: Validate Vercel project and production variables
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
-            node --input-type=module -e '
-              const required = [
-                "NEXT_PUBLIC_SUPABASE_URL",
-                "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-                "SUPABASE_SECRET_KEY",
-                "B2_S3_ENDPOINT",
-                "B2_REGION",
-                "B2_KEY_ID",
-                "B2_APPLICATION_KEY",
-                "B2_BUCKET",
-                "B2_DOWNLOAD_BASE_URL"
-              ];
-              const missing = required.filter((name) => !String(process.env[name] || "").trim());
-              if (missing.length) throw new Error(`Missing Vercel Production variables: ${missing.join(", ")}`);
-              console.log(`Validated ${required.length} Vercel Production variables.`);
-            '
 
       - name: Validate FSQ OS connection and market coverage
         shell: bash
@@ -184,8 +201,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
-            node scripts/check-launch-budgets.mjs --phase=preflight
+          node scripts/check-launch-budgets.mjs --phase=preflight
 
       - name: Download Overture places for canary market
         shell: bash
@@ -243,44 +259,40 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
-            npm run locations:catalogue:build-mixed -- \
-              --input="overture:$RUNNER_TEMP/overture" \
-              --input="fsq_os:$RUNNER_TEMP/fsq" \
-              --output="$RUNNER_TEMP/static-catalogue" \
-              --release="$RELEASE" \
-              --partition="$MARKET_ID" \
-              --append-release \
-              --zoom="$ZOOM"
+          npm run locations:catalogue:build-mixed -- \
+            --input="overture:$RUNNER_TEMP/overture" \
+            --input="fsq_os:$RUNNER_TEMP/fsq" \
+            --output="$RUNNER_TEMP/static-catalogue" \
+            --release="$RELEASE" \
+            --partition="$MARKET_ID" \
+            --append-release \
+            --zoom="$ZOOM"
 
       - name: Enforce partition storage limits
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
-            node scripts/check-launch-budgets.mjs \
-              --phase=partition \
-              --incoming-directory="$RUNNER_TEMP/static-catalogue"
+          node scripts/check-launch-budgets.mjs \
+            --phase=partition \
+            --incoming-directory="$RUNNER_TEMP/static-catalogue"
 
       - name: Upload canary partition without activation
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
-            npm run locations:catalogue:publish-b2 -- \
-              --directory="$RUNNER_TEMP/static-catalogue" \
-              --apply
+          npm run locations:catalogue:publish-b2 -- \
+            --directory="$RUNNER_TEMP/static-catalogue" \
+            --apply
 
       - name: Build final inactive canary release
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
-            npm run locations:catalogue:build-mixed -- \
-              --output="$RUNNER_TEMP/static-catalogue-final" \
-              --release="$RELEASE" \
-              --finalize-release \
-              --zoom="$ZOOM"
+          npm run locations:catalogue:build-mixed -- \
+            --output="$RUNNER_TEMP/static-catalogue-final" \
+            --release="$RELEASE" \
+            --finalize-release \
+            --zoom="$ZOOM"
           mkdir -p "$RUNNER_TEMP/root-manifest/catalogue"
           cp "$RUNNER_TEMP/static-catalogue-final/catalogue/manifest.json" "$RUNNER_TEMP/root-manifest/catalogue/manifest.json"
           rm "$RUNNER_TEMP/static-catalogue-final/catalogue/manifest.json"
@@ -289,19 +301,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
-            node scripts/check-launch-budgets.mjs \
-              --phase=partition \
-              --incoming-directory="$RUNNER_TEMP/static-catalogue-final"
+          node scripts/check-launch-budgets.mjs \
+            --phase=partition \
+            --incoming-directory="$RUNNER_TEMP/static-catalogue-final"
 
       - name: Upload finalized canary without activation
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
-            npm run locations:catalogue:publish-b2 -- \
-              --directory="$RUNNER_TEMP/static-catalogue-final" \
-              --apply
+          npm run locations:catalogue:publish-b2 -- \
+            --directory="$RUNNER_TEMP/static-catalogue-final" \
+            --apply
 
       - name: Preserve inactive root manifest for inspection
         uses: actions/upload-artifact@v6
@@ -336,5 +346,4 @@ jobs:
             "$RUNNER_TEMP/fsq" \
             "$RUNNER_TEMP/static-catalogue" \
             "$RUNNER_TEMP/static-catalogue-final" \
-            "$RUNNER_TEMP/root-manifest" \
-            .vercel
+            "$RUNNER_TEMP/root-manifest"
