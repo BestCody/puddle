@@ -11,114 +11,123 @@ export default function TermsPage() {
     <LegalPage
       eyebrow="Legal"
       title="Terms of Service"
-      summary="These Terms govern your access to and use of Puddle’s event-discovery, social, organizer, planning, and ticketing services."
-      updated="July 30, 2026"
+      summary="These Terms govern your use of Puddle’s location discovery, saved and planned places, DateMatch, contribution, and related services."
+      updated="August 3, 2026"
       companionHref="/privacy"
       companionLabel="Read the Privacy Policy"
     >
       <LegalSection id="agreement" title="1. Agreement to these Terms">
-        <p>These Terms of Service (“Terms”) are a binding agreement between you and Puddle (“Puddle,” “we,” “us,” or “our”) governing your use of Puddle websites, applications, event-discovery tools, social features, organizer tools, ticketing features, and related services (collectively, the “Service”).</p>
-        <p>By creating an account, clicking to accept these Terms, purchasing a ticket, publishing content, or otherwise using the Service, you agree to these Terms and the Privacy Policy. If you do not agree, do not use the Service.</p>
+        <p>These Terms of Service (“Terms”) are a binding agreement between you and Puddle (“Puddle,” “we,” “us,” or “our”) governing your access to and use of Puddle websites, applications, location-discovery tools, DateMatch rooms, contribution and moderation tools, and related services (collectively, the “Service”).</p>
+        <p>By creating an account, clicking to accept these Terms, submitting content, or otherwise using the Service, you agree to these Terms and the Privacy Policy. If you do not agree, do not use the Service.</p>
       </LegalSection>
 
-      <LegalSection id="eligibility" title="2. Eligibility and age restrictions">
-        <p>You must be legally capable of entering into this agreement and meet the minimum age required where you live. The Service is not intended for children under 13. A parent or legal guardian must authorize use where local law requires it.</p>
-        <p>Adult-oriented matching and precise live friend-location features are available only to users who are at least 18. You may not misrepresent your age or help another person bypass age restrictions.</p>
+      <LegalSection id="service" title="2. What Puddle provides">
+        <p>Puddle helps users discover places for dates and hangouts, review location cards, Pass, Save, or mark a Perfect Pick, create shortlists, keep saved and planned places, coordinate a place and time in a private DateMatch room, and provide feedback that may improve later recommendations.</p>
+        <p>The Service may also let eligible users contribute or correct place information, upload place media, submit ownership or management claims, report problems, and use recommendation or account controls.</p>
+        <p>Puddle is a discovery and planning service. Unless a feature expressly states otherwise under separate transaction terms, Puddle does not sell tickets, process venue reservations, take payment for a venue, operate the listed places, provide transportation, or guarantee that a venue will admit or serve you.</p>
       </LegalSection>
 
-      <LegalSection id="accounts" title="3. Accounts and account security">
-        <p>You must provide accurate information, keep it reasonably current, protect your login credentials, and promptly notify Puddle of suspected unauthorized access. You are responsible for activity through your account unless caused by Puddle’s failure to use reasonable security safeguards.</p>
-        <p>You may not sell, transfer, rent, or share an account in a way that defeats identity, age, safety, payment, or organizer-verification controls.</p>
+      <LegalSection id="eligibility" title="3. Eligibility and age requirements">
+        <p>You must be at least 13 to create a Puddle account. You must also be legally capable of agreeing to these Terms, and a parent or legal guardian must authorize your use where local law requires it. A higher minimum age applies where required by the law where you live.</p>
+        <p>You must provide an accurate birth date and may not misrepresent your age or help another person bypass an age or safety restriction. Puddle may limit features or request proportionate age or identity information when reasonably necessary for safety, legal compliance, or account integrity.</p>
       </LegalSection>
 
-      <LegalSection id="service" title="4. The Service and recommendations">
-        <p>Puddle helps users discover events and places, save and share plans, communicate with other users, manage attendance, and access organizer and ticketing tools. Recommendations, rankings, distance estimates, availability, schedules, prices, and attendance information may change and are not guarantees.</p>
-        <p>Puddle may add, remove, test, suspend, or modify features. We will provide notice when a change materially affects an ongoing paid service where required by law.</p>
+      <LegalSection id="accounts" title="4. Accounts and account security">
+        <p>You must provide accurate account and profile information, keep it reasonably current, protect your login credentials and email account, and promptly notify Puddle of suspected unauthorized access. You are responsible for activity through your account unless it results from Puddle’s failure to use reasonable safeguards.</p>
+        <p>You may not sell, rent, transfer, or share an account in a way that defeats identity, age, security, moderation, or contribution controls. Usernames may be reclaimed or changed when reasonably necessary to address impersonation, infringement, inactivity, or abuse.</p>
       </LegalSection>
 
-      <LegalSection id="conduct" title="5. Acceptable use">
+      <LegalSection id="recommendations" title="5. Recommendations and place information">
+        <p>Puddle recommendations may consider catalogue quality, distance, place confidence, your selected interests, prior actions, plans, and feedback. A recommendation or ranking is an estimate intended to help you explore options; it is not an endorsement, professional assessment, or guarantee that a place is suitable for you.</p>
+        <p>Place names, categories, addresses, coordinates, travel distances, hours, prices, ratings, accessibility details, amenities, photos, availability, and other facts may come from public datasets, licensed providers, venue representatives, or users. This information can be incomplete, delayed, inaccurate, or changed without notice. Confirm important details directly with the venue before relying on them.</p>
+        <p>You are responsible for considering your own budget, dietary needs, accessibility needs, transportation, local conditions, legal requirements, and personal safety when choosing or visiting a place.</p>
+      </LegalSection>
+
+      <LegalSection id="datematch" title="6. DateMatch and shared planning">
+        <p>DateMatch lets invited participants compare place selections and coordinate a place and time. Information you submit in a room, including availability, mutual picks, planning choices, and feedback, may be visible to the other participant as indicated by the feature.</p>
+        <p>Invite only people you intend to plan with. Do not add, impersonate, pressure, harass, or expose another person, and do not share private room information outside the purpose for which it was provided.</p>
+        <p className="legal-note">Puddle does not choose, screen, verify, supervise, or guarantee your companion or any in-person interaction. Puddle is not an emergency, transportation, medical, security, or personal-safety service.</p>
+      </LegalSection>
+
+      <LegalSection id="conduct" title="7. Acceptable use">
         <p>You agree not to:</p>
         <ul>
-          <li>Harass, threaten, exploit, stalk, impersonate, discriminate against, or endanger another person.</li>
-          <li>Share another person’s private information or precise location without authorization.</li>
-          <li>Use the Service for sexual exploitation, trafficking, illegal sales, violence, fraud, or other unlawful conduct.</li>
-          <li>Evade blocks, reports, age gates, account restrictions, ticket controls, or moderation actions.</li>
-          <li>Upload malware, scrape the Service without permission, overload systems, reverse engineer protected portions of the Service, or interfere with security controls.</li>
-          <li>Publish false, misleading, infringing, deceptive, or unsafe event, venue, ticket, identity, or organizer information.</li>
-          <li>Use automated means to create accounts, manipulate recommendations, reserve inventory unfairly, send spam, or purchase tickets contrary to posted limits.</li>
+          <li>Harass, threaten, exploit, stalk, impersonate, discriminate against, deceive, or endanger another person.</li>
+          <li>Share another person’s personal information, private plans, account data, or location without authorization.</li>
+          <li>Use the Service for sexual exploitation, trafficking, fraud, illegal sales, violence, or other unlawful conduct.</li>
+          <li>Create false venue records, ownership claims, reviews, reports, source attributions, photos, or recommendation activity.</li>
+          <li>Upload malware or unlawful content, evade moderation or security controls, scrape the Service without permission, reverse engineer protected portions, or interfere with systems or other users.</li>
+          <li>Use bots or automated means to create accounts, manipulate rankings, generate artificial engagement, submit bulk contributions, or overload the Service without written permission.</li>
+          <li>Infringe intellectual-property, privacy, publicity, contractual, database, or other rights.</li>
         </ul>
       </LegalSection>
 
-      <LegalSection id="content" title="6. Your content">
-        <p>You retain ownership of content you submit, including profile information, event listings, photos, messages, reviews, and other materials (“User Content”). You grant Puddle a worldwide, non-exclusive, royalty-free licence to host, store, reproduce, adapt, display, distribute, and otherwise use User Content only as reasonably necessary to operate, secure, promote, and improve the Service and to make the content available according to your settings and actions.</p>
-        <p>You represent that you have the rights needed to submit User Content and that it does not violate law or another person’s rights. You may delete content where the Service provides controls, subject to legal, safety, backup, transaction, and shared-record retention requirements described in the Privacy Policy.</p>
+      <LegalSection id="content" title="8. Your content and contributions">
+        <p>You retain ownership of content you submit, such as profile information, place edits, photos, notes, feedback, reports, and supporting materials (“User Content”). You grant Puddle a worldwide, non-exclusive, royalty-free, sublicensable licence to host, store, reproduce, adapt, format, display, distribute, moderate, and otherwise use User Content as reasonably necessary to operate, secure, improve, and promote the Service and to make the content available according to your settings and actions.</p>
+        <p>For factual place contributions intended for the shared catalogue, the licence includes the right to combine, normalize, verify, correct, and redistribute those facts with source and attribution information. This licence continues for public catalogue facts, moderation records, and shared records where removal would impair provenance, safety, legal rights, or another person’s legitimate use.</p>
+        <p>You represent that you have the rights and permissions needed to submit User Content, that required attribution is accurate, and that the content does not violate law, source terms, or another person’s rights. Do not upload a photo merely because it appears elsewhere online.</p>
       </LegalSection>
 
-      <LegalSection id="organizers" title="7. Organizer responsibilities">
-        <p>If you create or manage an event, place, or organizer profile, you are responsible for the accuracy, legality, accessibility, safety, capacity, licensing, pricing, refund terms, taxes, and delivery of what you publish or sell. You must honour valid tickets and consumer rights, communicate material changes promptly, and maintain any permits, insurance, permissions, and approvals required for the activity.</p>
-        <p>Puddle may request identity, business, venue, banking, or event verification and may delay publication or payouts while reviewing safety, fraud, chargeback, or legal concerns.</p>
+      <LegalSection id="claims" title="9. Place claims, corrections, and moderation">
+        <p>A claim to own, manage, or represent a place must be truthful and supported when Puddle requests verification. A verified claim does not transfer ownership of third-party data or guarantee exclusive control over a listing.</p>
+        <p>Puddle may review, reject, edit, merge, attribute, limit, or remove contributions, photos, claims, profiles, or other content when reasonably necessary for accuracy, safety, source compliance, legal obligations, or enforcement of these Terms.</p>
+        <p>Puddle may investigate reports using automated tools and human review. We may preserve relevant records, restrict features, suspend accounts, or refer matters to appropriate parties or authorities. Moderation involves judgment and does not create a duty to monitor every place, contribution, account, or interaction.</p>
       </LegalSection>
 
-      <LegalSection id="tickets" title="8. Tickets, payments, refunds, and payouts">
-        <p>Event-specific price, fees, currency, refund rules, transfer rules, restrictions, and organizer identity should be displayed before purchase. You must review and expressly accept the transaction details before completing an order.</p>
-        <p>Payment services may be provided by third-party processors. Puddle may act as a marketplace or limited payment agent for an organizer, but the organizer remains responsible for producing and operating the event unless the checkout page expressly states otherwise.</p>
-        <p>Refunds, credits, event changes, and cancellations are governed by the terms shown at checkout, mandatory consumer-protection law, and any applicable organizer policy. Puddle may reverse transactions, withhold payouts, or cancel tickets reasonably believed to involve fraud, duplication, chargebacks, prohibited resale, or a material violation of these Terms.</p>
+      <LegalSection id="third-party" title="10. Venues, data sources, and third-party services">
+        <p>Places displayed by Puddle are generally owned and operated by independent third parties. Your visit, purchase, reservation, or other interaction with a venue is between you and that venue or its provider. Their rules, prices, cancellation terms, accessibility, safety practices, and privacy policies may apply separately.</p>
+        <p>The Service may rely on or link to authentication, hosting, maps, geocoding, place details, open-data catalogues, photos, email, security, and other third-party services. Their licences, terms, and privacy practices may apply. Puddle is not responsible for third-party products, content, availability, or conduct that it does not control, subject to rights that cannot legally be excluded.</p>
       </LegalSection>
 
-      <LegalSection id="social-safety" title="9. Social features, meetups, and location sharing">
-        <p>Interactions arranged through Puddle involve independent users and organizers. Use reasonable judgment, meet in appropriate places, tell someone you trust about your plans, and use block and report tools when needed.</p>
-        <p className="legal-note">Puddle is not an emergency, transportation, medical, security, or personal-safety service. Location, attendance, identity, verification, and compatibility indicators can be delayed, inaccurate, incomplete, or changed by users.</p>
-        <p>Precise live location must be deliberately enabled, is limited to eligible adult users, and should be shared only with trusted recipients. You must not record, redistribute, or use another person’s location outside the purpose for which they shared it.</p>
+      <LegalSection id="ip" title="11. Puddle and licensed intellectual property">
+        <p>The Service, excluding User Content and third-party materials, is owned by Puddle or its licensors and is protected by intellectual-property laws. These Terms give you a limited, personal, revocable, non-exclusive, non-transferable licence to use the Service as intended.</p>
+        <p>Place data, photos, maps, and attribution may be provided under separate open or commercial licences. You must preserve attribution and licence notices presented by the Service and may not extract or reuse protected datasets, images, branding, or software except as permitted by the applicable licence or by law.</p>
       </LegalSection>
 
-      <LegalSection id="moderation" title="10. Moderation and enforcement">
-        <p>Puddle may investigate reports and use automated and human review to detect fraud, abuse, unsafe content, or violations. We may remove content, limit visibility, cancel listings or tickets, restrict features, suspend accounts, preserve relevant records, or refer matters to appropriate authorities when reasonably necessary.</p>
-        <p>Moderation decisions involve judgment and do not create a duty to monitor every user, event, message, or interaction. Where appropriate, Puddle may provide notice or an appeal path, subject to safety, legal, and investigative limits.</p>
+      <LegalSection id="privacy" title="12. Privacy">
+        <p>The Privacy Policy explains how Puddle collects, uses, shares, and protects personal information. By using the Service, you acknowledge those practices. Feature-specific notices may provide additional information at the point of collection or sharing.</p>
       </LegalSection>
 
-      <LegalSection id="ip" title="11. Puddle intellectual property">
-        <p>The Service, excluding User Content, is owned by Puddle or its licensors and is protected by intellectual-property laws. These Terms give you a limited, personal, revocable, non-exclusive, non-transferable licence to use the Service as intended. No rights are granted to Puddle names, logos, designs, software, datasets, or other protected materials except as expressly stated.</p>
+      <LegalSection id="changes-service" title="13. Service availability and changes">
+        <p>Puddle may add, remove, test, suspend, or modify features, data sources, coverage areas, ranking methods, limits, and interfaces. Location coverage and media availability vary by region and depend partly on third-party data and operational imports.</p>
+        <p>We do not guarantee that the Service, a particular place, a catalogue release, or any feature will always be available, error-free, current, or supported on every device. Puddle may perform maintenance or restrict access to protect users, systems, data sources, or legal rights.</p>
       </LegalSection>
 
-      <LegalSection id="third-party" title="12. Third-party services and links">
-        <p>The Service may rely on or link to maps, payments, authentication, hosting, communications, venues, organizers, and other third-party services. Their terms and privacy practices may apply separately. Puddle is not responsible for third-party products or conduct that it does not control, subject to rights that cannot legally be excluded.</p>
+      <LegalSection id="termination" title="14. Suspension, termination, and account closure">
+        <p>You may stop using the Service and request account deletion at any time. Puddle may suspend or terminate access for a material or repeated violation, fraud, security or safety risk, legal requirement, prolonged inactivity, misuse of third-party data, or discontinuation of the Service.</p>
+        <p>Where appropriate, Puddle may provide notice or an appeal path, subject to safety, legal, source-licence, and investigative limits. Provisions that by their nature should survive termination will survive, including ownership, licences needed for lawful shared or public records, disclaimers, liability limits, dispute terms, and enforcement rights.</p>
       </LegalSection>
 
-      <LegalSection id="termination" title="13. Suspension, termination, and account closure">
-        <p>You may stop using the Service and request account closure at any time. Puddle may suspend or terminate access for a material or repeated violation, fraud, safety risk, legal requirement, prolonged inactivity, or discontinuation of the Service.</p>
-        <p>Provisions that by their nature should survive termination will survive, including ownership, payment obligations, transaction records, disclaimers, liability limits, dispute provisions, and licences needed to maintain lawful shared or safety records.</p>
-      </LegalSection>
-
-      <LegalSection id="disclaimers" title="14. Disclaimers">
-        <p>To the maximum extent permitted by law, the Service is provided “as is” and “as available.” Puddle does not guarantee that every event, organizer, user, venue, listing, recommendation, ticket, message, map result, or social interaction will be accurate, safe, lawful, available, suitable, or uninterrupted.</p>
+      <LegalSection id="disclaimers" title="15. Disclaimers">
+        <p>To the maximum extent permitted by law, the Service is provided “as is” and “as available.” Puddle does not guarantee that any place, venue, listing, photo, rating, recommendation, route, hour, price, amenity, accessibility statement, DateMatch plan, user, or third-party service will be accurate, safe, lawful, available, suitable, or uninterrupted.</p>
         <p>Nothing in these Terms excludes warranties, remedies, or consumer rights that cannot be waived under applicable law.</p>
       </LegalSection>
 
-      <LegalSection id="liability" title="15. Limitation of liability">
+      <LegalSection id="liability" title="16. Limitation of liability">
         <p>To the maximum extent permitted by law, Puddle and its directors, officers, employees, contractors, and affiliates will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, data, goodwill, opportunities, or business interruption arising from the Service.</p>
-        <p>To the maximum extent permitted by law, Puddle’s aggregate liability arising from the Service will not exceed the greater of the amount you paid to Puddle during the 12 months before the event giving rise to the claim or CAD $100. This limitation does not apply where prohibited by law, including liability that cannot be limited for fraud, wilful misconduct, gross negligence, personal injury, or mandatory consumer rights.</p>
+        <p>To the maximum extent permitted by law, Puddle’s aggregate liability arising from the Service will not exceed the greater of the amount you paid directly to Puddle during the 12 months before the event giving rise to the claim or CAD $100. This limitation does not apply where prohibited by law, including liability that cannot be limited for fraud, wilful misconduct, gross negligence, personal injury, or mandatory consumer rights.</p>
       </LegalSection>
 
-      <LegalSection id="indemnity" title="16. Indemnity">
-        <p>To the extent permitted by law, you will indemnify Puddle from third-party claims, losses, and reasonable costs arising from your User Content, your event or organizer activity, your violation of these Terms, or your infringement of another person’s rights. This obligation does not apply to the extent a claim results from Puddle’s own unlawful conduct.</p>
+      <LegalSection id="indemnity" title="17. Indemnity">
+        <p>To the extent permitted by law, you will indemnify Puddle from third-party claims, losses, liabilities, and reasonable costs arising from your User Content, contributions, place claims, misuse of the Service, violation of these Terms, or infringement of another person’s rights. This obligation does not apply to the extent a claim results from Puddle’s own unlawful conduct.</p>
       </LegalSection>
 
-      <LegalSection id="law" title="17. Governing law and disputes">
+      <LegalSection id="law" title="18. Governing law and disputes">
         <p>These Terms are governed by the laws of Ontario and the federal laws of Canada applicable there, without regard to conflict-of-law rules. Courts located in Toronto, Ontario will have jurisdiction, unless applicable consumer law gives you the right to bring a claim elsewhere.</p>
         <p>Before filing a formal claim, you and Puddle agree to try in good faith to resolve the issue by written notice, unless urgent relief or a limitation period makes that impractical.</p>
       </LegalSection>
 
-      <LegalSection id="changes" title="18. Changes to these Terms">
-        <p>Puddle may update these Terms to reflect changes to the Service, law, safety practices, or business operations. Material changes will be communicated through the Service, email, or another reasonable method. If a change requires your consent, Puddle will request it before the change applies to you.</p>
+      <LegalSection id="changes" title="19. Changes to these Terms">
+        <p>Puddle may update these Terms to reflect changes to the Service, data sources, law, safety practices, or business operations. Material changes will be communicated through the Service, email, or another reasonable method. If a change requires your consent, Puddle will request it before the change applies to you.</p>
       </LegalSection>
 
-      <LegalSection id="general" title="19. General terms">
+      <LegalSection id="general" title="20. General terms">
         <p>If a provision is unenforceable, it will be limited or removed only to the minimum extent necessary, and the remaining provisions will continue. Puddle’s failure to enforce a provision is not a waiver. You may not assign these Terms without Puddle’s consent; Puddle may assign them as part of a reorganization, financing, merger, acquisition, or transfer of the Service.</p>
-        <p>These Terms, the Privacy Policy, and transaction- or feature-specific terms presented to you form the entire agreement concerning the Service and replace prior discussions about the same subject.</p>
+        <p>These Terms, the Privacy Policy, and any feature-specific terms presented to you form the entire agreement concerning the Service and replace prior discussions about the same subject.</p>
       </LegalSection>
 
-      <LegalSection id="contact" title="20. Contact">
-        <p>Questions about these Terms can be sent to <a href="mailto:legal@puddle.you">legal@puddle.you</a>. Support and account questions may also be submitted through the support tools available in the Service.</p>
+      <LegalSection id="contact" title="21. Contact">
+        <p>Questions about these Terms can be sent to <a href="mailto:legal@puddle.you">legal@puddle.you</a>. Privacy requests can be sent to <a href="mailto:privacy@puddle.you">privacy@puddle.you</a>.</p>
       </LegalSection>
     </LegalPage>
   )
