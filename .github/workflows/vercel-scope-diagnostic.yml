@@ -53,63 +53,60 @@ jobs:
             } : null
           })
 
-          const variants = [
-            `/v10/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}&decrypt=true`,
-            `/v9/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}&decrypt=true`,
-            `/v10/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}`,
-            `/v9/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}`
-          ]
+          const listed = await request(`/v10/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}&decrypt=true`)
+          if (!listed.ok) throw new Error(`Environment listing failed (${listed.status}): ${JSON.stringify(safeError(listed))}`)
+          const envs = Array.isArray(listed.body?.envs) ? listed.body.envs : []
+          console.log(`Listed ${envs.length} project environment variables.`)
 
-          let successful = null
-          for (const path of variants) {
-            const result = await request(path)
-            const envs = Array.isArray(result.body?.envs) ? result.body.envs : []
-            console.log('Environment endpoint attempt:', {
-              path: path.replace(projectId, '<project>'),
-              status: result.status,
-              count: envs.length,
-              error: result.ok ? null : safeError(result)
-            })
-            if (result.ok && !successful) successful = { path, envs }
-          }
-
-          if (!successful) throw new Error('No documented Vercel environment endpoint was accessible.')
-
-          const metadata = successful.envs.map((env) => ({
-            id: env.id || null,
-            key: env.key || null,
-            type: env.type || null,
-            target: env.target || null,
-            customEnvironmentIds: env.customEnvironmentIds || null,
-            hasValue: typeof env.value === 'string',
-            valueLength: typeof env.value === 'string' ? env.value.length : null
-          }))
-          console.log('Environment metadata (values hidden):', metadata)
-
-          const required = [
+          const requiredProbeKeys = [
             'NEXT_PUBLIC_SUPABASE_URL',
             'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
             'SUPABASE_SECRET_KEY',
-            'B2_S3_ENDPOINT',
-            'B2_REGION',
-            'B2_KEY_ID',
-            'B2_APPLICATION_KEY',
             'B2_BUCKET',
             'B2_DOWNLOAD_BASE_URL'
           ]
-          const production = successful.envs.filter((env) => {
+          const production = envs.filter((env) => {
             const targets = Array.isArray(env.target) ? env.target : [env.target].filter(Boolean)
             return targets.includes('production')
           })
           const byKey = new Map(production.map((env) => [env.key, env]))
-          const missing = required.filter((key) => !byKey.has(key))
-          const withoutValues = required.filter((key) => typeof byKey.get(key)?.value !== 'string' || !byKey.get(key).value)
-          console.log('Required Production environment validation:', {
-            missing,
-            withoutDecryptedValues: withoutValues,
-            usable: missing.length === 0 && withoutValues.length === 0
-          })
 
-          if (missing.length) throw new Error(`Missing required Production variables: ${missing.join(', ')}`)
-          if (withoutValues.length) throw new Error(`Environment endpoint did not return decrypted values for: ${withoutValues.join(', ')}`)
+          const probeResults = []
+          for (const key of requiredProbeKeys) {
+            const env = byKey.get(key)
+            if (!env?.id) {
+              probeResults.push({ key, found: false, status: null, hasValue: false, valueLength: null, error: null })
+              continue
+            }
+            const variants = [
+              `/v1/projects/${encodeURIComponent(projectId)}/env/${encodeURIComponent(env.id)}?teamId=${encodeURIComponent(orgId)}`,
+              `/v9/projects/${encodeURIComponent(projectId)}/env/${encodeURIComponent(env.id)}?teamId=${encodeURIComponent(orgId)}`,
+              `/v10/projects/${encodeURIComponent(projectId)}/env/${encodeURIComponent(env.id)}?teamId=${encodeURIComponent(orgId)}`
+            ]
+            let resolved = null
+            for (const path of variants) {
+              const result = await request(path)
+              if (result.ok) {
+                resolved = { path, result }
+                break
+              }
+              if (!resolved) resolved = { path, result }
+            }
+            const value = resolved?.result?.body?.value
+            probeResults.push({
+              key,
+              found: true,
+              endpoint: resolved?.path?.replace(projectId, '<project>').replace(env.id, '<env>') || null,
+              status: resolved?.result?.status ?? null,
+              hasValue: typeof value === 'string' && value.length > 0,
+              valueLength: typeof value === 'string' ? value.length : null,
+              error: resolved?.result?.ok ? null : safeError(resolved?.result)
+            })
+          }
+          console.log('Per-variable decrypted-value probes (values hidden):', probeResults)
+
+          const failures = probeResults.filter((item) => !item.found || item.status !== 200 || !item.hasValue)
+          if (failures.length) {
+            throw new Error(`Per-variable decrypted values were unavailable for: ${failures.map((item) => item.key).join(', ')}`)
+          }
           NODE
