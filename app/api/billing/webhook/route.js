@@ -26,6 +26,12 @@ async function syncSubscription(admin, subscription, fallbackUserId = null) {
   return true
 }
 
+async function currentSubscription(value) {
+  const id = typeof value === 'string' ? value : value?.id
+  if (!id) throw new Error('Subscription identifier is missing.')
+  return retrieveSubscription(id)
+}
+
 export async function POST(request) {
   const rawBody = await request.text()
   const signature = request.headers.get('stripe-signature')
@@ -43,10 +49,11 @@ export async function POST(request) {
   try {
     const object = event.data?.object || {}
     if (event.type === 'checkout.session.completed' && object.mode === 'subscription' && object.subscription) {
-      const subscription = await retrieveSubscription(typeof object.subscription === 'string' ? object.subscription : object.subscription.id)
+      const subscription = await currentSubscription(object.subscription)
       await syncSubscription(admin, subscription, object.client_reference_id)
     } else if (event.type.startsWith('customer.subscription.')) {
-      await syncSubscription(admin, object)
+      const subscription = await currentSubscription(object)
+      await syncSubscription(admin, subscription)
     }
     const recorded = await admin.from('stripe_membership_events').insert({ event_id: event.id, event_type: event.type })
     if (recorded.error && recorded.error.code !== '23505') throw recorded.error
