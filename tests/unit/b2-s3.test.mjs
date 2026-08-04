@@ -33,6 +33,15 @@ test('Backblaze B2 list queries are canonically sorted', () => {
   assert.match(signed.url, /list-type=2&max-keys=1000&prefix=catalogue%2F$/)
 })
 
+test('Backblaze B2 version listing preserves the empty versions subresource', () => {
+  const signed = signB2Request({
+    method: 'GET', query: { versions: '', 'max-keys': 1000 },
+    now: new Date('2026-08-02T12:34:56Z'), config
+  })
+  assert.match(signed.url, /\?max-keys=1000&versions=$/)
+  assert.match(signed.canonicalRequest, /max-keys=1000&versions=/)
+})
+
 test('Backblaze configuration rejects non-B2 endpoints and mismatched regions', () => {
   const common = {
     B2_KEY_ID: 'key', B2_APPLICATION_KEY: 'secret', B2_BUCKET: 'bucket',
