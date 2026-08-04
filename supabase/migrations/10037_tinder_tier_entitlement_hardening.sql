@@ -51,6 +51,40 @@ $$;
 revoke all on function public.respond_global_connection_v1(uuid,text) from public,anon;
 grant execute on function public.respond_global_connection_v1(uuid,text) to authenticated;
 
+create or replace function public.send_global_connection_message_v1(target_thread uuid,message_body text)
+returns bigint
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  actor uuid:=auth.uid();
+  other_user uuid;
+  body_value text:=regexp_replace(trim(coalesce(message_body,'')),'\s+',' ','g');
+  message_id bigint;
+begin
+  if actor is null then raise exception 'authentication required'; end if;
+  if char_length(body_value) not between 1 and 1000 then raise exception 'message must be between 1 and 1000 characters'; end if;
+  if not public.puddle_tinder_active_v1(actor) or not public.puddle_adult_v1(actor) then raise exception 'Tinder tier and age 18 or older are required'; end if;
+  select case when thread.requester_id=actor then thread.recipient_id else thread.requester_id end
+  into other_user
+  from public.global_connection_threads thread
+  where thread.id=target_thread and thread.status='accepted'
+    and actor in (thread.requester_id,thread.recipient_id);
+  if other_user is null
+     or not public.puddle_tinder_active_v1(other_user)
+     or not public.puddle_adult_v1(other_user) then
+    raise exception 'conversation is unavailable';
+  end if;
+  insert into public.global_connection_messages(thread_id,sender_id,body)
+  values(target_thread,actor,body_value) returning id into message_id;
+  update public.global_connection_threads set updated_at=now() where id=target_thread;
+  return message_id;
+end;
+$$;
+revoke all on function public.send_global_connection_message_v1(uuid,text) from public,anon;
+grant execute on function public.send_global_connection_message_v1(uuid,text) to authenticated;
+
 create or replace function public.global_connection_snapshot_v1()
 returns jsonb
 language plpgsql
