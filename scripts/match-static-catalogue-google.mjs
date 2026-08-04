@@ -1,5 +1,5 @@
 import { createAdminClient } from '../lib/supabase/admin.js'
-import { b2Configuration, b2Request, deleteB2Object } from '../lib/app/b2-s3.js'
+import { b2Configuration, b2Request } from '../lib/app/b2-s3.js'
 import { scoreGooglePlaceMatch } from '../lib/app/google-place-match.js'
 import {
   isEnrichmentStateSettled,
@@ -11,7 +11,6 @@ import {
   readStaticEnrichmentTile,
   readStaticReleaseTile,
   readStaticWorkerCheckpoint,
-  resetStaticWorkerCheckpoint,
   statusForLocation,
   writeStaticEnrichmentTile,
   writeStaticWorkerCheckpoint
@@ -169,12 +168,14 @@ function skippedStatus(current, reason) {
 
 const admin = createAdminClient()
 const plan = await loadStaticReleasePlan({ release: RELEASE, config })
+let checkpoint = await readStaticWorkerCheckpoint(plan.release, 'google', { config })
+let budget = await readGoogleBudget(plan.release)
 if (RESET && APPLY) {
-  await resetStaticWorkerCheckpoint(plan.release, 'google', { config })
-  await deleteB2Object(googleBudgetObjectKey(plan.release), { config })
+  checkpoint = { completedTiles: new Set(), processedLocations: 0 }
+  budget = { requestsUsed: 0 }
+  await writeStaticWorkerCheckpoint(plan.release, 'google', checkpoint, { config })
+  await writeGoogleBudget(plan.release, budget)
 }
-const checkpoint = await readStaticWorkerCheckpoint(plan.release, 'google', { config })
-const budget = await readGoogleBudget(plan.release)
 const totals = {
   inspected: 0,
   attempted: 0,
