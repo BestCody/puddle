@@ -25,7 +25,7 @@ jobs:
           cache: npm
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund
-      - name: Drain prioritized open-photo candidates into Backblaze B2
+      - name: Drain prioritized open-photo candidates into private Backblaze B2
         run: npm run locations:photos:enrich
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -36,7 +36,7 @@ jobs:
           B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
           B2_BUCKET: ${{ secrets.B2_BUCKET }}
-          B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
+          B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
           OPEN_PHOTO_TARGET_BYTES: '45000'
           OPEN_PHOTO_HARD_MAX_BYTES: '60000'
           PHOTO_ENRICH_BATCH_SIZE: '100'
