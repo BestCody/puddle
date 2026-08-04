@@ -81,7 +81,7 @@ test('the product opens on a minimal swipe-first interface', async () => {
   const packageFile = JSON.parse(await source('package.json'))
   assert.match(dashboard, /redirect\('\/discover'\)/)
   assert.doesNotMatch(layout, /manifest\.webmanifest|PwaClient/)
-  assert.deepEqual([...nav.matchAll(/label: '([^']+)'/g)].map((match) => match[1]), ['Swipe', 'Saved', 'Matches', 'Profile'])
+  assert.deepEqual([...nav.matchAll(/label: '([^']+)'/g)].map((match) => match[1]), ['Swipe', 'Saved', 'Matches', 'Tiers', 'Profile'])
   assert.doesNotMatch(shell, /location-first|Better cards first|Find the date spot/)
   assert.match(swipe, /MinimalSwipeCard/)
   assert.doesNotMatch(swipe, /ChoiceNoteModal|Puddle Pick|recommendation/)
