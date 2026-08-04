@@ -42,7 +42,7 @@ export default defineConfig({
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
     {
       name: 'mobile-chromium',
-      testMatch: /responsive-public-routes\.spec\.mjs/,
+      testMatch: /(responsive-public-routes|authenticated-ui)\.spec\.mjs/,
       use: { ...devices['Pixel 5'] }
     }
   ],
