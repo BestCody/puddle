@@ -11,7 +11,7 @@ const DIRECTORY = String(args.get('directory') || 'dist/static-catalogue')
 const CONCURRENCY = Math.max(1, Math.min(12, Number(args.get('concurrency') || process.env.B2_UPLOAD_CONCURRENCY || 4)))
 const config = b2Configuration()
 if (APPLY && !config) throw new Error('Backblaze B2 credentials are required with --apply.')
-if (APPLY && !config.publicBaseUrl) throw new Error('B2_PUBLIC_BASE_URL is required with --apply.')
+if (APPLY && !config.downloadBaseUrl) throw new Error('B2_DOWNLOAD_BASE_URL is required with --apply.')
 
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -129,12 +129,12 @@ if (APPLY) {
 
 console.log(JSON.stringify({
   mode: APPLY ? 'apply' : 'dry-run',
-  provider: 'backblaze-b2',
+  provider: 'backblaze-b2-private',
   directory: DIRECTORY,
   objects: objects.length,
   uploaded,
   bytes,
-  publicBaseUrl: config?.publicBaseUrl || null,
+  downloadBaseUrl: config?.downloadBaseUrl || null,
   registeredReleases: registeredReleases?.map((item) => item.release) || null
 }, null, 2))
 if (!APPLY) console.log('Dry run only. Re-run with --apply after reviewing the object plan.')
