@@ -40,6 +40,7 @@ export async function ProductShell({ user, profile, children }) {
             <div className="profile-menu-panel">
               <div className="profile-menu-person"><strong>{profile?.display_name || 'Puddle person'}</strong></div>
               <Link href="/profile">Profile</Link>
+              <Link href="/membership">Membership</Link>
               <Link href="/account">Settings</Link>
               {showAdmin ? <Link href="/admin">Admin</Link> : null}
               <form action={signOut}><button type="submit">Sign out</button></form>
