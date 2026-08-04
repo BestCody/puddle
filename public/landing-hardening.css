@@ -1,8 +1,9 @@
 .reveal{opacity:1;transform:none}
 
 @media(max-width:780px){
-  .site-header.menu-open::after{content:none}
-  .site-header.menu-open .desktop-nav{display:flex;order:3;width:100%;margin:12px 0 0;padding:14px 2px 4px;flex-direction:column;align-items:flex-start;gap:14px;border-top:1px solid var(--line)}
-  .site-header.menu-open .header-actions{display:flex;order:4;width:100%;padding:8px 0 2px}
-  .site-header.menu-open .header-actions .button{flex:1}
+  .site-header.menu-open::after{display:none!important;content:none!important}
+  .site-header.menu-open .desktop-nav{display:flex!important;order:3;width:100%;margin:12px 0 0;padding:14px 2px 4px;flex-direction:column;align-items:flex-start;gap:14px;border-top:1px solid var(--line)}
+  .site-header.menu-open .header-actions{display:flex!important;order:4;width:100%;padding:8px 0 2px;gap:10px}
+  .site-header.menu-open .header-actions .button,
+  .site-header.menu-open .header-actions .button--ghost{display:inline-flex!important;flex:1}
 }
