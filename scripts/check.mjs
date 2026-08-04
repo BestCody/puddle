@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
-  'public/landing.html','public/styles.css','public/landing-responsive.css','public/app.js','public/puddle-mark.svg',
+  'public/landing.html','public/styles.css','public/landing-responsive.css','public/landing-hardening.css','public/app.js','public/puddle-mark.svg',
   'app/layout.js','app/auth.css','app/onboarding.css','app/date-swipe.css','app/swipe-v2.css','app/date-match.css','app/real-place-photos.css','app/product.css','app/sidebar-refresh.css','app/minimal-product.css','app/group-map.css','app/loading.js','app/error.js',
   'app/signin/page.js','app/signup/page.js','app/forgot-password/page.js','app/update-password/page.js','app/auth/actions.js','app/auth/callback/route.js','app/auth/confirm/route.js','app/auth/error/page.js',
   'app/onboarding/page.js','app/onboarding/actions.js','app/dashboard/page.js','app/account/page.js','app/discover/page.js','app/date-match/[token]/page.js','app/hangout/[token]/page.js','app/matches/page.js','app/plans/page.js','app/profile/page.js','app/create/place/page.js',
@@ -75,8 +75,12 @@ requireIncludes(proxy, ['publicNoSessionPaths','hasSupabaseAuthCookie','needsSes
 if (proxy.indexOf('if (!needsSession)') > proxy.indexOf('await updateSession(request, requestHeaders)')) throw new Error('Supabase session lookup must be gated')
 if (/legacySystemsEnabled|legacyRedirectForPath|isLegacyApiPath|stripe\/webhook/.test(proxy)) throw new Error('Legacy routing logic remains in proxy')
 
+const landing = await read('public/landing.html')
 const landingConnector = await read('public/app.js')
-requireIncludes(landingConnector, ["replaceButtonWithLink(headerSignInButton, 'Sign In', signInPath)","replaceButtonWithLink(button, 'Register', registrationPath",'renderDeck()'], 'Landing connector')
+requireIncludes(landing, ['href="/signin"','href="/signup"','href="/privacy"','href="/terms"','action="/signup"','name="email"'], 'Landing navigation')
+requireIncludes(landingConnector, ['renderDeck()','closeMobileMenu','pointercancel'], 'Landing enhancement script')
+for (const marker of ['data-open-app','data-open-modal="waitlist"']) if (landing.includes(marker)) throw new Error(`Landing still uses script-only navigation: ${marker}`)
+for (const marker of ['replaceButtonWithLink','connectLandingToAuthentication','alignLandingToDateLocations']) if (landingConnector.includes(marker)) throw new Error(`Landing script still rewrites navigation/content: ${marker}`)
 if (landingConnector.includes('landing-demo.js')) throw new Error('Removed landing prototype is still loaded')
 
 const authShell = await read('components/auth-shell.js')
