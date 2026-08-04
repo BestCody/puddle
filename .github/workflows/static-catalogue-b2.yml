@@ -46,7 +46,7 @@ jobs:
         run: overturemaps download --bbox="${{ inputs.bbox }}" -f geojsonseq --type=place -o overture-places.geojsonseq
       - name: Build compressed static tiles
         run: npm run locations:catalogue:build-static -- --source=overture --file=overture-places.geojsonseq --output=dist/static-catalogue --release="${{ inputs.release }}" --zoom="${{ inputs.zoom }}"
-      - name: Publish immutable release to Backblaze B2
+      - name: Publish immutable release to private Backblaze B2
         run: npm run locations:catalogue:publish-b2 -- --directory=dist/static-catalogue --apply
         env:
           B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
@@ -54,5 +54,5 @@ jobs:
           B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
           B2_BUCKET: ${{ secrets.B2_BUCKET }}
-          B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
+          B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
           B2_UPLOAD_CONCURRENCY: '4'
