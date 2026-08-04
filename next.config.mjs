@@ -14,8 +14,8 @@ const durableAssetCache = [
 ]
 
 const landingAssetCache = [
-  { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800' },
-  { key: 'CDN-Cache-Control', value: 'public, s-maxage=86400, stale-while-revalidate=604800' }
+  { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+  { key: 'CDN-Cache-Control', value: 'public, s-maxage=300, stale-while-revalidate=60' }
 ]
 
 const nextConfig = {
@@ -33,6 +33,7 @@ const nextConfig = {
       { source: '/og-puddle.svg', headers: durableAssetCache },
       { source: '/styles.css', headers: landingAssetCache },
       { source: '/landing-responsive.css', headers: landingAssetCache },
+      { source: '/landing-hardening.css', headers: landingAssetCache },
       { source: '/app.js', headers: landingAssetCache },
       { source: '/:path*', headers: securityHeaders }
     ]
