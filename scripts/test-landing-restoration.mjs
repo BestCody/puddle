@@ -80,9 +80,14 @@ try {
   assert(await page.locator('#app-demo').count() === 0, 'unused application prototype remains in the active DOM')
   assert(await page.locator('#toast-region').count() === 0, 'toast region remains in the active DOM')
 
-  const getStarted = page.locator('.hero-actions a')
-  assert((await getStarted.textContent())?.trim().startsWith('Get Started'), 'Get Started CTA is missing')
+  const getStarted = page.locator('.hero-actions a[href="/signup"]')
+  assert(await getStarted.count() === 1, 'Get Started CTA is missing')
+  assert((await getStarted.textContent())?.trim().startsWith('Get Started'), 'Get Started CTA label is missing')
   assert(new URL(await getStarted.getAttribute('href'), baseUrl).pathname === '/signup', 'Get Started does not link to registration')
+
+  const headerLinks = await page.locator('.header-actions a').evaluateAll((links) => links.map((link) => ({ label: link.textContent.trim(), href: new URL(link.href).pathname })))
+  assert(headerLinks.some((link) => link.label === 'Sign In' && link.href === '/signin'), 'header Sign In link is missing')
+  assert(headerLinks.some((link) => link.label.startsWith('Register') && link.href === '/signup'), 'header Register link is missing')
 
   const finalLinks = await page.locator('.final-cta__inner > div a').evaluateAll((links) => links.map((link) => ({ label: link.textContent.trim(), href: new URL(link.href).pathname })))
   assert(finalLinks.some((link) => link.label.startsWith('Register') && link.href === '/signup'), 'final Register link is missing')
@@ -91,6 +96,11 @@ try {
   const companyLinks = await page.locator('.site-footer a').evaluateAll((links) => links.map((link) => ({ label: link.textContent.trim(), href: new URL(link.href).pathname })))
   assert(companyLinks.some((link) => link.label === 'Privacy' && link.href === '/privacy'), 'Privacy page link is missing')
   assert(companyLinks.some((link) => link.label === 'Terms' && link.href === '/terms'), 'Terms page link is missing')
+
+  const footerForm = page.locator('.footer-form')
+  assert(await footerForm.getAttribute('action') === '/signup', 'footer form does not submit to signup')
+  assert((await footerForm.getAttribute('method'))?.toLowerCase() === 'get', 'footer form is not a native GET form')
+  assert(await footerForm.locator('input[name="email"]').count() === 1, 'footer form email field is missing')
 
   await page.locator('[data-swipe="right"]').click()
   await waitForCardTitle(page, 'Clay & Cabernet')
@@ -103,7 +113,7 @@ try {
   assert(await safetyButton.count() === 1, 'date-safety details button is missing')
   await safetyButton.click()
   await page.waitForSelector('#modal-backdrop.is-open')
-  assert((await page.locator('#modal-title').textContent())?.trim() === 'Date ideas without matching strangers.', 'date-safety modal copy is missing')
+  assert((await page.locator('#modal-title').textContent())?.trim() === 'Date ideas without stranger matching.', 'date-safety modal copy is missing')
   await page.locator('[data-close-modal]').click()
   await page.waitForSelector('#modal-backdrop:not(.is-open)')
 
@@ -129,7 +139,7 @@ try {
   }
 
   assert(pageErrors.length === 0, `browser errors detected:\n${pageErrors.join('\n')}`)
-  console.log('Date-location landing, legal links, responsive cards, and swipe interactions passed.')
+  console.log('Date-location landing, native auth/legal links, responsive cards, and swipe interactions passed.')
 } finally {
   await browser.close()
   await new Promise((resolveClosing) => server.close(resolveClosing))
