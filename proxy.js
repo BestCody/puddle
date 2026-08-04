@@ -21,8 +21,8 @@ function hasSupabaseAuthCookie(request) { return request.cookies.getAll().some((
 function cachePolicy(response, pathname, privateResponse = false) {
   if (privateResponse) { response.headers.set('Cache-Control', 'private, no-store'); return response }
   if (cacheablePublicPaths.has(pathname)) {
-    response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400')
-    response.headers.set('CDN-Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
+    response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60')
   } else response.headers.set('Cache-Control', 'no-store')
   return response
 }
