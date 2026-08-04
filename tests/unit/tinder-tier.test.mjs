@@ -26,7 +26,7 @@ test('the configured active Stripe price maps to Tinder tier and item period exp
     status: 'active',
     cancel_at_period_end: false,
     metadata: { puddle_user_id: '00000000-0000-4000-8000-000000000001' },
-    items: { data: [{ price: { id: 'price_test' }, current_period_end: 2_000_000_000 }] }
+    items: { data: [{ price: { id: 'price_test' }, quantity: 1, current_period_end: 2_000_000_000 }] }
   }
   const membership = membershipFromSubscription(subscription, null, 'price_test')
   assert.equal(membership.tier, 'tinder')
@@ -36,16 +36,25 @@ test('the configured active Stripe price maps to Tinder tier and item period exp
   assert.equal(membershipIsActive(membership, 2_100_000_000_000), false)
 })
 
-test('an active subscription on another Stripe price does not grant Tinder tier', () => {
-  const membership = membershipFromSubscription({
+test('another price or a zero-quantity Tinder item does not grant Tinder tier', () => {
+  const otherPrice = membershipFromSubscription({
     id: 'sub_other',
     customer: 'cus_test',
     status: 'active',
-    items: { data: [{ price: { id: 'price_other' }, current_period_end: 2_000_000_000 }] }
+    items: { data: [{ price: { id: 'price_other' }, quantity: 1, current_period_end: 2_000_000_000 }] }
   }, '00000000-0000-4000-8000-000000000001', 'price_tinder')
-  assert.equal(membership.tier, 'free')
-  assert.equal(membership.stripe_price_id, 'price_other')
-  assert.equal(membershipIsActive(membership), false)
+  assert.equal(otherPrice.tier, 'free')
+  assert.equal(otherPrice.stripe_price_id, 'price_other')
+  assert.equal(membershipIsActive(otherPrice), false)
+
+  const zeroQuantity = membershipFromSubscription({
+    id: 'sub_zero',
+    customer: 'cus_test',
+    status: 'active',
+    items: { data: [{ price: { id: 'price_tinder' }, quantity: 0, current_period_end: 2_000_000_000 }] }
+  }, '00000000-0000-4000-8000-000000000001', 'price_tinder')
+  assert.equal(zeroQuantity.tier, 'free')
+  assert.equal(membershipIsActive(zeroQuantity), false)
 })
 
 test('canceled subscriptions lose the paid entitlement', () => {
@@ -53,7 +62,7 @@ test('canceled subscriptions lose the paid entitlement', () => {
     id: 'sub_canceled',
     customer: 'cus_test',
     status: 'canceled',
-    items: { data: [{ price: { id: 'price_test' } }] }
+    items: { data: [{ price: { id: 'price_test' }, quantity: 1 }] }
   }, '00000000-0000-4000-8000-000000000001', 'price_test')
   assert.equal(membership.tier, 'free')
   assert.equal(membershipIsActive(membership), false)
