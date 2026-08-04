@@ -1,0 +1,48 @@
+name: Catalogue canary autopilot
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/catalogue-canary-autopilot.yml
+      - .github/workflows/us-canada-catalogue-canary.yml
+      - supabase/migrations/10040_compact_legacy_import_revisions.sql
+      - config/launch-markets.json
+      - requirements.txt
+      - scripts/build-mixed-static-location-catalogue.mjs
+      - scripts/check-launch-budgets.mjs
+      - scripts/publish-static-catalogue-b2.mjs
+      - lib/app/b2-s3.js
+      - lib/app/static-catalogue-release.js
+      - lib/app/static-launch-guards.js
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: catalogue-canary-autopilot
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Start inactive Toronto canary
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Dispatch fresh canary run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release="us-ca-canary-auto-${GITHUB_RUN_ID}"
+          jq -n \
+            --arg release "$release" \
+            '{ref:"main",inputs:{release:$release,market_id:"toronto"}}' \
+            | gh api \
+                --method POST \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/us-canada-catalogue-canary.yml/dispatches" \
+                --input -
+          echo "Dispatched inactive Toronto canary: $release"
