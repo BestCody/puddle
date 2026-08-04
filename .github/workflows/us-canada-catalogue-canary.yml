@@ -46,10 +46,12 @@ jobs:
       RELEASE: ${{ inputs.release }}
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
@@ -60,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --no-audit --no-fund
-          python -m pip install --disable-pip-version-check overturemaps duckdb==1.5.5
+          python -m pip install --disable-pip-version-check -r requirements.txt
 
       - name: Validate GitHub launch configuration
         shell: bash
@@ -73,6 +75,26 @@ jobs:
           test -n "$SUPABASE_DB_PASSWORD" || { echo 'Missing SUPABASE_DB_PASSWORD secret.' >&2; exit 1; }
           test -n "$SUPABASE_PROJECT_REF" || { echo 'Missing SUPABASE_PROJECT_REF repository variable.' >&2; exit 1; }
           test -n "$FSQ_OS_CONNECTION_SQL" || { echo 'Missing FSQ_OS_CONNECTION_SQL secret.' >&2; exit 1; }
+
+      - name: Link Vercel project for CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs'
+
+          const orgId = String(process.env.VERCEL_ORG_ID || '').trim()
+          const projectId = String(process.env.VERCEL_PROJECT_ID || '').trim()
+          if (!orgId || !projectId) throw new Error('Missing Vercel project identifiers.')
+
+          writeFileSync(
+            '.vercel/project.json',
+            `${JSON.stringify({ orgId, projectId }, null, 2)}\n`,
+            { mode: 0o600 }
+          )
+          console.log('Created the temporary Vercel project link for this runner.')
+          NODE
 
       - name: Resolve and validate canary market
         shell: bash
@@ -292,4 +314,5 @@ jobs:
             "$RUNNER_TEMP/fsq" \
             "$RUNNER_TEMP/static-catalogue" \
             "$RUNNER_TEMP/static-catalogue-final" \
-            "$RUNNER_TEMP/root-manifest"
+            "$RUNNER_TEMP/root-manifest" \
+            .vercel
