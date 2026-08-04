@@ -19,6 +19,13 @@ test('Stripe webhook verification accepts only a current matching signature', ()
   assert.equal(verifyStripeWebhook(raw, header, secret, (timestamp + 301) * 1000), false)
 })
 
+test('membership page displays Tinder tier at $10 per month', async () => {
+  const page = await source('app/membership/page.js')
+  assert.match(page, /TINDER_TIER_MONTHLY_PRICE = '\$10\/month'/)
+  assert.match(page, /Billed monthly\. Taxes and renewal terms appear before payment\./)
+  assert.doesNotMatch(page, /<h2>Monthly<\/h2>/)
+})
+
 test('subscription webhooks refresh the current Stripe object before changing access', async () => {
   const route = await source('app/api/billing/webhook/route.js')
   assert.match(route, /event\.type\.startsWith\('customer\.subscription\.'\)/)

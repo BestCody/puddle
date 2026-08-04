@@ -7,6 +7,8 @@ import { openMembershipPortal, saveGlobalPreference, startTinderCheckout } from 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Membership' }
 
+const TINDER_TIER_MONTHLY_PRICE = '$10/month'
+
 function periodLabel(value) {
   if (!value) return null
   const date = new Date(value)
@@ -48,7 +50,7 @@ export default async function MembershipPage({ searchParams }) {
 
         <article className={`tier-card tier-card-paid ${snapshot.active ? 'is-current' : ''}`}>
           <div className="tier-heading"><span>Tinder tier</span>{snapshot.active ? <small>Current</small> : <small>Paid</small>}</div>
-          <h2>Monthly</h2>
+          <h2>{TINDER_TIER_MONTHLY_PRICE}</h2>
           <p>Meet people worldwide through places you both genuinely liked.</p>
           <ul>
             <li>See opt-in adults who liked the same location</li>
@@ -58,7 +60,7 @@ export default async function MembershipPage({ searchParams }) {
           {!snapshot.adult ? <p className="tier-requirement">Global connections are limited to users age 18 or older.</p> : null}
           {!snapshot.paymentsConfigured ? <p className="tier-requirement">Payments are not configured yet.</p> : null}
           {snapshot.active ? <form action={openMembershipPortal}><button className="membership-primary" type="submit">Manage billing</button></form> : <form action={startTinderCheckout}><button className="membership-primary" type="submit" disabled={!snapshot.adult || !snapshot.paymentsConfigured}>Continue to checkout</button></form>}
-          <small className="tier-price-note">The exact price and renewal terms appear before payment.</small>
+          <small className="tier-price-note">Billed monthly. Taxes and renewal terms appear before payment.</small>
         </article>
       </section>
 
