@@ -45,6 +45,16 @@ test('authenticated product UI renders across core pages on desktop and mobile',
   await page.goto('/matches')
   await assertPageShell(page, 'Matches')
 
+  await page.goto('/membership')
+  await assertPageShell(page, 'Membership')
+  await expect(page.getByText('Free', { exact: true })).toBeVisible()
+  await expect(page.getByText('Tinder tier', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Tiers' })).toHaveAttribute('aria-current', 'page')
+
+  await page.goto('/global-matches')
+  await assertPageShell(page, 'Global likes')
+  await expect(page.getByRole('heading', { name: 'Included with Tinder tier' })).toBeVisible()
+
   await page.goto('/profile')
   await expect(page.locator('.minimal-profile-card h1')).toHaveText('UI Contract Tester')
   await assertProductVisualContract(page)
