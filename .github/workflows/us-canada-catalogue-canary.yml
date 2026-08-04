@@ -25,6 +25,7 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
+  VERCEL_CLI_VERSION: '58.5.1'
   B2_LAUNCH_MAX_BYTES: '9000000000'
   B2_PHOTO_START_MAX_BYTES: '8900000000'
   SUPABASE_LAUNCH_MAX_BYTES: '400000000'
@@ -75,26 +76,13 @@ jobs:
           test -n "$SUPABASE_DB_PASSWORD" || { echo 'Missing SUPABASE_DB_PASSWORD secret.' >&2; exit 1; }
           test -n "$SUPABASE_PROJECT_REF" || { echo 'Missing SUPABASE_PROJECT_REF repository variable.' >&2; exit 1; }
           test -n "$FSQ_OS_CONNECTION_SQL" || { echo 'Missing FSQ_OS_CONNECTION_SQL secret.' >&2; exit 1; }
+          [[ "$VERCEL_PROJECT_ID" == prj_* ]] || { echo 'VERCEL_PROJECT_ID must begin with prj_.' >&2; exit 1; }
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]] || {
+            echo 'SUPABASE_PROJECT_REF must be only the 20-character project reference, not a URL.' >&2
+            exit 1
+          }
 
-      - name: Link Vercel project for CLI
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .vercel
-          node --input-type=module <<'NODE'
-          import { writeFileSync } from 'node:fs'
-
-          const orgId = String(process.env.VERCEL_ORG_ID || '').trim()
-          const projectId = String(process.env.VERCEL_PROJECT_ID || '').trim()
-          if (!orgId || !projectId) throw new Error('Missing Vercel project identifiers.')
-
-          writeFileSync(
-            '.vercel/project.json',
-            `${JSON.stringify({ orgId, projectId }, null, 2)}\n`,
-            { mode: 0o600 }
-          )
-          console.log('Created the temporary Vercel project link for this runner.')
-          NODE
+      - uses: ./.github/actions/setup-vercel-project
 
       - name: Resolve and validate canary market
         shell: bash
@@ -129,11 +117,11 @@ jobs:
           console.log(`Inactive release: ${release}`)
           NODE
 
-      - name: Validate Vercel production variables
+      - name: Validate Vercel project and production variables
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
             node --input-type=module -e '
               const required = [
                 "NEXT_PUBLIC_SUPABASE_URL",
@@ -151,6 +139,40 @@ jobs:
               console.log(`Validated ${required.length} Vercel Production variables.`);
             '
 
+      - name: Validate FSQ OS connection and market coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          import os
+          import duckdb
+
+          west, south, east, north = [float(value) for value in os.environ['MARKET_BBOX'].split(',')]
+          connection_sql = os.environ['FSQ_OS_CONNECTION_SQL'].strip()
+          con = duckdb.connect()
+          con.execute(connection_sql)
+
+          required_columns = {'fsq_place_id', 'name', 'latitude', 'longitude', 'date_closed'}
+          columns = {
+              row[0]
+              for row in con.execute('DESCRIBE SELECT * FROM places').fetchall()
+          }
+          missing = sorted(required_columns - columns)
+          if missing:
+              raise RuntimeError(f"FSQ OS places view is missing required columns: {', '.join(missing)}")
+
+          count = con.execute(f"""
+              SELECT count(*)
+              FROM places
+              WHERE date_closed IS NULL
+                AND longitude BETWEEN {west} AND {east}
+                AND latitude BETWEEN {south} AND {north}
+          """).fetchone()[0]
+          if count <= 0:
+              raise RuntimeError('FSQ OS returned zero open places for the canary bounding box.')
+          print(f'Validated FSQ OS access with {count} open places in the canary bounding box.')
+          PY
+
       - name: Apply pending Supabase migrations
         shell: bash
         run: |
@@ -162,7 +184,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
             node scripts/check-launch-budgets.mjs --phase=preflight
 
       - name: Download Overture places for canary market
@@ -193,9 +215,6 @@ jobs:
           west, south, east, north = [float(value) for value in os.environ['MARKET_BBOX'].split(',')]
           output = Path(os.environ['RUNNER_TEMP']) / 'fsq' / f"{os.environ['MARKET_ID']}.jsonl"
           connection_sql = os.environ['FSQ_OS_CONNECTION_SQL'].strip()
-          if not connection_sql:
-              raise RuntimeError('FSQ_OS_CONNECTION_SQL is empty.')
-
           con = duckdb.connect()
           con.execute(connection_sql)
           predicate = f"""
@@ -215,6 +234,8 @@ jobs:
               WHERE {predicate}
             ) TO '{escaped_output}' (FORMAT JSON, ARRAY false)
           """)
+          if not output.exists() or output.stat().st_size <= 0:
+              raise RuntimeError('FSQ OS export produced an empty file.')
           print(f"Exported {count} FSQ OS places to {output} ({output.stat().st_size} bytes).")
           PY
 
@@ -222,7 +243,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
             npm run locations:catalogue:build-mixed -- \
               --input="overture:$RUNNER_TEMP/overture" \
               --input="fsq_os:$RUNNER_TEMP/fsq" \
@@ -236,7 +257,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
             node scripts/check-launch-budgets.mjs \
               --phase=partition \
               --incoming-directory="$RUNNER_TEMP/static-catalogue"
@@ -245,7 +266,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
             npm run locations:catalogue:publish-b2 -- \
               --directory="$RUNNER_TEMP/static-catalogue" \
               --apply
@@ -254,7 +275,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
             npm run locations:catalogue:build-mixed -- \
               --output="$RUNNER_TEMP/static-catalogue-final" \
               --release="$RELEASE" \
@@ -268,7 +289,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
             node scripts/check-launch-budgets.mjs \
               --phase=partition \
               --incoming-directory="$RUNNER_TEMP/static-catalogue-final"
@@ -277,7 +298,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest env run -e production --token="$VERCEL_TOKEN" -- \
+          npx --yes "vercel@$VERCEL_CLI_VERSION" env run -e production --token="$VERCEL_TOKEN" -- \
             npm run locations:catalogue:publish-b2 -- \
               --directory="$RUNNER_TEMP/static-catalogue-final" \
               --apply
@@ -288,6 +309,7 @@ jobs:
           name: catalogue-canary-root-${{ inputs.release }}
           path: ${{ runner.temp }}/root-manifest/catalogue/manifest.json
           if-no-files-found: error
+          overwrite: true
           retention-days: 14
 
       - name: Write canary summary
