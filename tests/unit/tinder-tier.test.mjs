@@ -1,7 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import { membershipFromSubscription, membershipIsActive, verifyStripeWebhook } from '../../lib/billing/stripe.js'
+
+const root = fileURLToPath(new URL('../..', import.meta.url))
+const source = (path) => readFile(new URL(path, `file://${root}/`), 'utf8')
 
 test('Stripe webhook verification accepts only a current matching signature', () => {
   const raw = JSON.stringify({ id: 'evt_test', type: 'customer.subscription.updated' })
@@ -35,4 +40,20 @@ test('canceled subscriptions lose the paid entitlement', () => {
   const membership = membershipFromSubscription({ id: 'sub_canceled', customer: 'cus_test', status: 'canceled' }, '00000000-0000-4000-8000-000000000001')
   assert.equal(membership.tier, 'free')
   assert.equal(membershipIsActive(membership), false)
+})
+
+test('global connections require opt-in, adulthood, paid access, and a shared positive place action', async () => {
+  const migration = await source('supabase/migrations/10036_tinder_tier_global_connections.sql')
+  const hardening = await source('supabase/migrations/10037_tinder_tier_entitlement_hardening.sql')
+  assert.match(migration, /discoverable boolean not null default false/)
+  assert.match(migration, /profile\.birth_date<=current_date-interval '18 years'/)
+  assert.match(migration, /action\.action in \('saved','interested'\)/)
+  assert.match(migration, /theirs\.location_id=mine\.location_id/)
+  assert.match(migration, /status text not null default 'pending'/)
+  assert.match(migration, /thread\.status='accepted'/)
+  assert.match(migration, /global_connection_blocks/)
+  assert.match(migration, /global_connection_reports/)
+  assert.match(hardening, /puddle_tinder_active_v1\(auth\.uid\(\)\)/)
+  assert.match(hardening, /puddle_adult_v1\(auth\.uid\(\)\)/)
+  assert.match(hardening, /return jsonb_build_object\('eligible',false,'threads','\[\]'::jsonb\)/)
 })
