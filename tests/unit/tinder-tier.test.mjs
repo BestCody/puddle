@@ -19,25 +19,42 @@ test('Stripe webhook verification accepts only a current matching signature', ()
   assert.equal(verifyStripeWebhook(raw, header, secret, (timestamp + 301) * 1000), false)
 })
 
-test('active subscriptions map to Tinder tier and expired access closes', () => {
+test('the configured active Stripe price maps to Tinder tier and item period expiry closes access', () => {
   const subscription = {
     id: 'sub_test',
     customer: 'cus_test',
     status: 'active',
-    current_period_end: 2_000_000_000,
     cancel_at_period_end: false,
     metadata: { puddle_user_id: '00000000-0000-4000-8000-000000000001' },
-    items: { data: [{ price: { id: 'price_test' } }] }
+    items: { data: [{ price: { id: 'price_test' }, current_period_end: 2_000_000_000 }] }
   }
-  const membership = membershipFromSubscription(subscription)
+  const membership = membershipFromSubscription(subscription, null, 'price_test')
   assert.equal(membership.tier, 'tinder')
   assert.equal(membership.stripe_price_id, 'price_test')
+  assert.equal(membership.current_period_end, new Date(2_000_000_000 * 1000).toISOString())
   assert.equal(membershipIsActive(membership, 1_900_000_000_000), true)
   assert.equal(membershipIsActive(membership, 2_100_000_000_000), false)
 })
 
+test('an active subscription on another Stripe price does not grant Tinder tier', () => {
+  const membership = membershipFromSubscription({
+    id: 'sub_other',
+    customer: 'cus_test',
+    status: 'active',
+    items: { data: [{ price: { id: 'price_other' }, current_period_end: 2_000_000_000 }] }
+  }, '00000000-0000-4000-8000-000000000001', 'price_tinder')
+  assert.equal(membership.tier, 'free')
+  assert.equal(membership.stripe_price_id, 'price_other')
+  assert.equal(membershipIsActive(membership), false)
+})
+
 test('canceled subscriptions lose the paid entitlement', () => {
-  const membership = membershipFromSubscription({ id: 'sub_canceled', customer: 'cus_test', status: 'canceled' }, '00000000-0000-4000-8000-000000000001')
+  const membership = membershipFromSubscription({
+    id: 'sub_canceled',
+    customer: 'cus_test',
+    status: 'canceled',
+    items: { data: [{ price: { id: 'price_test' } }] }
+  }, '00000000-0000-4000-8000-000000000001', 'price_test')
   assert.equal(membership.tier, 'free')
   assert.equal(membershipIsActive(membership), false)
 })
