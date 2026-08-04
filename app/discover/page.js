@@ -1,6 +1,7 @@
 import { after } from 'next/server'
 import { AuthMessage } from '@/components/auth-message'
 import { DateSwipeWorkspaceV2 } from '@/components/date-swipe-workspace-v2'
+import { authorizeDiscoveryFeedB2Assets } from '@/lib/app/b2-feed-assets'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getInfrastructureDiscoveryFeedV2, recordSampledInfrastructureAnalyticsV2 } from '@/lib/app/discovery-infrastructure-v2'
 
@@ -32,7 +33,8 @@ export default async function DiscoverPage({ searchParams }) {
       openNow: params?.openNow === 'true',
       accessible: params?.accessible === 'true'
     }
-    const feed = await getInfrastructureDiscoveryFeedV2(session, feedFilters)
+    const rawFeed = await getInfrastructureDiscoveryFeedV2(session, feedFilters)
+    const feed = await authorizeDiscoveryFeedB2Assets(rawFeed)
     after(() => recordSampledInfrastructureAnalyticsV2(session, feed)
       .catch((error) => console.warn(`Sampled discovery analytics failed: ${error.message}`)))
 

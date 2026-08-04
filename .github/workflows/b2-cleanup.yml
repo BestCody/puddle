@@ -1,4 +1,4 @@
-name: Clean Backblaze B2 catalogue and photos
+name: Clean private Backblaze B2 catalogue and photos
 
 on:
   workflow_dispatch:
@@ -38,6 +38,6 @@ jobs:
           B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
           B2_BUCKET: ${{ secrets.B2_BUCKET }}
-          B2_PUBLIC_BASE_URL: ${{ secrets.B2_PUBLIC_BASE_URL }}
+          B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
           B2_RELEASES_TO_KEEP: '2'
           B2_DELETE_CONCURRENCY: '6'

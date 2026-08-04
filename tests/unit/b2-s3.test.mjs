@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { b2Configuration, signB2Request } from '../../lib/app/b2-s3.js'
+import { b2Configuration, b2PublicUrl, signB2Request } from '../../lib/app/b2-s3.js'
 
 const config = {
   accessKeyId: 'key', secretAccessKey: 'secret', bucket: 'bucket',
+  downloadBaseUrl: 'https://f005.backblazeb2.com/file/bucket',
   publicBaseUrl: 'https://f005.backblazeb2.com/file/bucket',
   endpoint: 'https://s3.us-east-005.backblazeb2.com',
   host: 's3.us-east-005.backblazeb2.com', region: 'us-east-005'
@@ -35,9 +36,12 @@ test('Backblaze B2 list queries are canonically sorted', () => {
 test('Backblaze configuration rejects non-B2 endpoints and mismatched regions', () => {
   const common = {
     B2_KEY_ID: 'key', B2_APPLICATION_KEY: 'secret', B2_BUCKET: 'bucket',
-    B2_PUBLIC_BASE_URL: 'https://f005.backblazeb2.com/file/bucket'
+    B2_DOWNLOAD_BASE_URL: 'https://f005.backblazeb2.com/file/bucket'
   }
   assert.equal(b2Configuration({ ...common, B2_S3_ENDPOINT: 'https://example.com' }), null)
   assert.equal(b2Configuration({ ...common, B2_S3_ENDPOINT: 'https://s3.us-east-005.backblazeb2.com', B2_REGION: 'us-west-004' }), null)
-  assert.equal(b2Configuration({ ...common, B2_S3_ENDPOINT: 'https://s3.us-east-005.backblazeb2.com' })?.region, 'us-east-005')
+  const resolved = b2Configuration({ ...common, B2_S3_ENDPOINT: 'https://s3.us-east-005.backblazeb2.com' })
+  assert.equal(resolved?.region, 'us-east-005')
+  assert.equal(resolved?.downloadBaseUrl, common.B2_DOWNLOAD_BASE_URL)
+  assert.equal(b2PublicUrl('catalogue/manifest.json', resolved), `${common.B2_DOWNLOAD_BASE_URL}/catalogue/manifest.json`)
 })

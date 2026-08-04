@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { photoDisplayState } from '@/lib/app/photo-enrichment'
+import { usePrivateB2Asset } from '@/lib/app/use-private-b2-asset'
 
 const categoryLabels = {
   cafe: 'Coffee shop', restaurant: 'Restaurant', bar: 'Bar or lounge', park: 'Park or garden',
@@ -32,6 +33,21 @@ function mapUrl(item) {
 function openingRows(hours) {
   if (!hours || typeof hours !== 'object' || Array.isArray(hours)) return []
   return Object.entries(hours).filter(([, value]) => value).slice(0, 7)
+}
+
+function photoCandidates(item) {
+  const keys = item.private_b2_asset_keys || {}
+  const candidates = [
+    ...(item.photo_urls || []).map((url, index) => ({ url, key: keys.gallery?.[index] || null })),
+    { url: item.photo_url, key: keys.photo || null },
+    { url: item.cover_url, key: keys.cover || null }
+  ]
+  const seen = new Set()
+  return candidates.filter(({ url }) => {
+    if (!url || seen.has(url)) return false
+    seen.add(url)
+    return true
+  }).slice(0, 5)
 }
 
 function DetailsSheet({ item, photos, onClose }) {
@@ -88,10 +104,15 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const photos = useMemo(() => [...new Set([...(item.photo_urls || []), item.photo_url, item.cover_url].filter(Boolean))].slice(0, 5), [item])
-  const mainPhoto = photos[0] || null
+  const candidates = useMemo(() => photoCandidates(item), [item])
+  const rawMainPhoto = candidates[0]?.url || null
+  const mainPhoto = usePrivateB2Asset(rawMainPhoto, candidates[0]?.key || null)
+  const placeholderUrl = usePrivateB2Asset(
+    item.category_placeholder_url || null,
+    item.private_b2_asset_keys?.placeholder || null
+  )
+  const photos = useMemo(() => [...new Set([mainPhoto, ...candidates.slice(1).map(({ url }) => url)].filter(Boolean))].slice(0, 5), [mainPhoto, candidates])
   const useGoogleUiKit = !mainPhoto && Boolean(item.google_place_id)
-  const placeholderUrl = item.category_placeholder_url || null
   const [photoStatus, setPhotoStatus] = useState(item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending'))
   const displayState = photoDisplayState(photoStatus, Boolean(mainPhoto))
   const rating = ratingLabel(item)
