@@ -80,7 +80,7 @@ begin
         target_location,'licensed_public',asset.photo_provider,asset.external_photo_id,media.public_url,
         asset.attribution_text,asset.attribution_url,asset.license_code,asset.terms_url,
         media.width,media.height,true,0,'approved',false,
-        now(),null,86400,'r2',media.id
+        now(),null,86400,'b2',media.id
       )
       on conflict(location_id,provider,external_photo_id) do update set
         remote_url=excluded.remote_url,
@@ -97,7 +97,7 @@ begin
         verified_at=now(),
         expires_at=null,
         cache_ttl_seconds=86400,
-        storage_backend='r2',
+        storage_backend='b2',
         media_object_id=excluded.media_object_id;
     end if;
   end if;
