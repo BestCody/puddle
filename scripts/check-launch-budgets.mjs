@@ -60,7 +60,7 @@ async function listAllStoredVersions() {
   let keyMarker = null
   let versionIdMarker = null
   do {
-    const query = { versions: 'null', 'max-keys': 1_000 }
+    const query = { versions: '', 'max-keys': 1_000 }
     if (keyMarker) query['key-marker'] = keyMarker
     if (versionIdMarker) query['version-id-marker'] = versionIdMarker
     const response = await b2Request({ method: 'GET', key: '', query, config })
