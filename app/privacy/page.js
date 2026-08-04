@@ -11,109 +11,144 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Privacy"
       title="Privacy Policy"
-      summary="This policy explains what personal information Puddle handles, why we handle it, when it may be shared, and the choices available to you."
-      updated="July 30, 2026"
+      summary="This policy explains how Puddle handles personal information when you build location decks, save and plan places, use DateMatch, contribute place information, or otherwise use the Service."
+      updated="August 3, 2026"
       companionHref="/terms"
       companionLabel="Read the Terms of Service"
     >
       <LegalSection id="scope" title="1. Scope and accountability">
-        <p>This Privacy Policy applies to Puddle websites, applications, event-discovery tools, social features, organizer tools, ticketing features, and related services (collectively, the “Service”). Puddle is responsible for personal information under its control and designates a Privacy Officer to oversee its privacy practices.</p>
-        <p>By using the Service, you acknowledge the practices described here. Where consent is required, Puddle will request it in a form appropriate to the sensitivity of the information and the purpose for which it is used.</p>
+        <p>This Privacy Policy applies to Puddle websites, applications, location-discovery tools, DateMatch rooms, saved and planned location features, contribution and moderation tools, and related services (collectively, the “Service”). It does not describe the independent practices of a venue, map provider, authentication provider, or other third party that operates under its own privacy policy.</p>
+        <p>Puddle is responsible for personal information under its control and designates a Privacy Officer to oversee its privacy practices. Where consent is required, Puddle seeks consent in a form appropriate to the sensitivity of the information and the purpose for which it will be used.</p>
       </LegalSection>
 
       <LegalSection id="collection" title="2. Information we collect">
-        <h3>Information you provide</h3>
+        <h3>Account and profile information</h3>
         <ul>
-          <li>Account details such as your name, email address, authentication information, age or date-of-birth confirmation, and account preferences.</li>
-          <li>Profile information such as a username, photo, biography, interests, accessibility preferences, and visibility settings.</li>
-          <li>Event and plan activity, including saves, swipes, RSVPs, attendance status, shared plans, poll responses, check-ins, and ticket information.</li>
-          <li>Social content such as messages, event-chat posts, reports, blocks, profile interactions, and content you upload.</li>
-          <li>Organizer information such as organization details, event listings, venue information, attendee-management data, payout details, and verification materials.</li>
-          <li>Support, feedback, survey, and waitlist information you choose to submit.</li>
+          <li>Email address, authentication-provider identifiers, account status, and information needed to sign you in, secure the account, or recover access.</li>
+          <li>Display name, username, birth date, biography, profile visibility, preferred location, search radius, and categories of places you select.</li>
+          <li>Profile photos or other media you choose to upload.</li>
         </ul>
-        <h3>Information collected through use of the Service</h3>
+
+        <h3>Discovery, planning, and DateMatch activity</h3>
         <ul>
-          <li>Device and log information, including IP address, browser type, operating system, timestamps, referring pages, error logs, and security events.</li>
-          <li>Usage information, including pages viewed, features used, search filters, recommendations shown, and actions taken on recommendations.</li>
-          <li>Approximate location inferred from an IP address and, only with permission, device location used for nearby discovery.</li>
-          <li>Precise live location only when an eligible user deliberately starts a time-limited sharing session.</li>
-          <li>Transaction records from payment providers, such as purchase status, amount, currency, ticket identifier, and payment token. Puddle does not need to store complete payment-card numbers.</li>
+          <li>Location cards shown to you and actions such as Pass, Save, Perfect Pick, undo, notes, sharing, and opening place details.</li>
+          <li>Saved, planned, and past places, selected dates or times, shortlist activity, and post-visit feedback.</li>
+          <li>DateMatch invitations, room membership, availability, private selections, mutual matches, planning decisions, notes, and post-visit feedback submitted through the room.</li>
+          <li>Recommendation settings and signals used to improve future decks, such as preferred categories, distance, prior actions, and feedback.</li>
+        </ul>
+
+        <h3>Contributions, claims, and safety information</h3>
+        <ul>
+          <li>Place submissions, edits, photos, source information, attribution, ownership or management claims, and supporting materials.</li>
+          <li>Reports, appeals, moderation decisions, fraud signals, and communications relating to safety, integrity, or policy enforcement.</li>
+          <li>Support requests, survey responses, feedback, and other information you choose to send to Puddle.</li>
+        </ul>
+
+        <h3>Location information</h3>
+        <ul>
+          <li>A city, address, map point, or coordinates you enter or select for discovery and account preferences.</li>
+          <li>Device location when you deliberately grant browser or device permission to use it for nearby discovery.</li>
+          <li>Approximate location inferred from an IP address for security, localization, and service operation.</li>
+        </ul>
+        <p className="legal-note">Puddle does not currently provide continuous or live friend-location sharing. Granting location permission is optional, and you can instead choose a location manually.</p>
+
+        <h3>Technical and security information</h3>
+        <ul>
+          <li>IP address, browser and device type, operating system, language, referring page, timestamps, request identifiers, and diagnostic or error information.</li>
+          <li>Session cookies, security events, rate-limit information, bot-detection results, and records used to prevent abuse or unauthorized access.</li>
+          <li>Usage and performance measurements, including sampled discovery actions and aggregated product statistics.</li>
         </ul>
       </LegalSection>
 
-      <LegalSection id="use" title="3. How we use information">
+      <LegalSection id="sources" title="3. Where information comes from">
+        <p>Puddle receives information directly from you, automatically from your browser or device, from another person who invites you to a DateMatch room or reports content, and from service providers that support authentication, hosting, maps, geocoding, security, or communications.</p>
+        <p>Place listings, geographic information, and photos may also come from public or licensed datasets and media sources. Those records can include place names, addresses, coordinates, categories, hours, amenities, website links, photos, creator names, source links, and licence or attribution information.</p>
+      </LegalSection>
+
+      <LegalSection id="use" title="4. How we use information">
         <p>Puddle uses personal information to:</p>
         <ul>
-          <li>Create, authenticate, secure, and support accounts.</li>
-          <li>Provide event discovery, recommendations, maps, plans, RSVPs, tickets, messaging, and organizer services.</li>
-          <li>Personalize recommendations based on interests, location settings, saves, skips, and other activity.</li>
-          <li>Show attendance, profile, and social information according to the visibility choices you make.</li>
-          <li>Process purchases, transfers, refunds, payouts, and fraud checks.</li>
-          <li>Respond to support requests and communicate service, safety, account, and transaction information.</li>
-          <li>Detect abuse, enforce rules, investigate reports, protect users, and comply with legal obligations.</li>
-          <li>Measure and improve performance, accessibility, reliability, and product design.</li>
+          <li>Create, authenticate, maintain, recover, and secure accounts.</li>
+          <li>Build nearby location decks and personalize ranking based on your location settings, interests, saves, passes, picks, plans, and feedback.</li>
+          <li>Provide saved, planned, past, shortlist, sharing, note, and DateMatch features.</li>
+          <li>Display profile or contribution information according to the visibility and sharing choices available for the relevant feature.</li>
+          <li>Review place contributions, ownership claims, reports, appeals, and uploaded media.</li>
+          <li>Detect fraud, abuse, automated misuse, security incidents, and violations of the Terms.</li>
+          <li>Respond to support, privacy, account, and legal requests.</li>
+          <li>Send essential account and service communications and, with any consent required by law, optional product updates or promotional messages.</li>
+          <li>Measure and improve relevance, accessibility, reliability, security, and product design.</li>
+          <li>Comply with legal obligations and protect the rights, safety, and integrity of users, Puddle, and others.</li>
         </ul>
-        <p>Puddle will not use sensitive information for a materially different purpose without obtaining any additional consent required by law.</p>
+        <p>Puddle will not use sensitive personal information for a materially different purpose without providing notice and obtaining any additional consent required by law.</p>
       </LegalSection>
 
-      <LegalSection id="location" title="4. Location and social privacy">
-        <p>Nearby discovery may use approximate or device location when you permit it. You can deny or withdraw device-location permission through your device or browser settings, although location-based features may then be limited.</p>
-        <p className="legal-note">Precise live location is opt-in, is shared only with the people you select, displays who can view it, and ends when you stop it or its timer expires. Puddle does not treat live location as an emergency or personal-safety service.</p>
-        <p>Attendance and profile visibility are controlled by the settings offered for the relevant feature, such as hidden, friends-only, attendees-only, or public. Adult-oriented matching and live friend-location features are restricted to eligible users who are at least 18.</p>
+      <LegalSection id="location" title="5. Location and recommendation controls">
+        <p>You can choose a city or map location manually, change your preferred location and search radius, or grant device-location permission for nearby discovery. Device location is not required to create an account.</p>
+        <p>Recommendations are generated using place quality, distance, catalogue confidence, your selected categories, and your activity. They are intended to help you explore options, not to make decisions that have legal or similarly significant effects.</p>
+        <p>You can change preference information, clear or revise saved and planned items where controls are available, and withdraw browser or device location permission through your settings. Some nearby or personalized features may be less useful after those choices.</p>
       </LegalSection>
 
-      <LegalSection id="sharing" title="5. When information is shared">
-        <p>Puddle may share personal information in the following circumstances:</p>
+      <LegalSection id="sharing" title="6. When information is shared">
+        <p>Puddle may disclose personal information in the following circumstances:</p>
         <ul>
-          <li><strong>At your direction.</strong> With other users, plan members, attendees, friends, or organizers when you choose to post, join, RSVP, message, share location, or otherwise use a social feature.</li>
-          <li><strong>With service providers.</strong> With vendors that provide hosting, databases, authentication, maps, email, analytics, moderation, media processing, customer support, payments, and security. They may use information only to provide contracted services to Puddle.</li>
-          <li><strong>With organizers and venues.</strong> Information reasonably required to administer an event, ticket, refund, entry, safety matter, or attendee request.</li>
-          <li><strong>For safety and legal reasons.</strong> When reasonably necessary to investigate abuse, protect rights or safety, comply with law or valid legal process, or enforce agreements.</li>
-          <li><strong>Business changes.</strong> In connection with a proposed or completed financing, merger, acquisition, reorganization, or sale, subject to appropriate confidentiality and legal safeguards.</li>
+          <li><strong>At your direction.</strong> With a DateMatch participant, a person receiving a shared place or plan, or the public when you choose a public profile or public contribution.</li>
+          <li><strong>Service providers.</strong> With providers that supply hosting, databases, authentication, private object storage, maps, place details, geocoding, email delivery, bot prevention, media processing, monitoring, and security. Current infrastructure may include Vercel, Supabase, Backblaze, Google Maps or Places, Geoapify, and Cloudflare Turnstile.</li>
+          <li><strong>Place and media requests.</strong> When a third-party map, place-detail, or media component is requested, that provider may receive technical information such as your IP address, browser information, and the place or map area requested under its own privacy terms.</li>
+          <li><strong>Moderation and claims.</strong> With a contributor, claimant, rights holder, venue representative, or affected person when reasonably necessary to review a place edit, ownership claim, report, infringement notice, or safety issue.</li>
+          <li><strong>Legal and safety reasons.</strong> When reasonably necessary to comply with law or valid legal process, investigate abuse, protect rights or safety, or enforce agreements.</li>
+          <li><strong>Business changes.</strong> In connection with a proposed or completed financing, merger, acquisition, reorganization, or transfer of the Service, subject to appropriate confidentiality and legal safeguards.</li>
         </ul>
-        <p>Puddle does not sell personal information for money.</p>
+        <p>Puddle does not sell personal information for money and does not use personal information for cross-context behavioural advertising.</p>
       </LegalSection>
 
-      <LegalSection id="retention" title="6. Retention">
-        <p>Puddle retains personal information only as long as reasonably necessary for the purposes described in this policy, including providing the Service, maintaining transaction and safety records, resolving disputes, enforcing agreements, and meeting legal obligations. Retention periods vary by information type and context.</p>
-        <p>When information is no longer required, Puddle will delete it, anonymize it, or securely isolate it until deletion is possible. Content shared with others may remain in their accounts or records where deletion would affect their legitimate use, legal rights, or safety records.</p>
+      <LegalSection id="public-data" title="7. Public place information and contributed content">
+        <p>Place information displayed by Puddle may originate from sources such as FSQ OS, Overture Maps, Wikimedia Commons, Mapillary, KartaView, Google Places, and user contributions. Puddle may store stable place identifiers, factual place data, source links, licence information, and attribution needed to operate the catalogue and comply with source terms.</p>
+        <p>Public contributions may remain associated with your display name, username, source attribution, or account identifier as reasonably necessary to show provenance, investigate misuse, resolve disputes, or maintain an accurate change history. Do not submit personal information about another person unless you are authorized to do so.</p>
       </LegalSection>
 
-      <LegalSection id="security" title="7. Security">
-        <p>Puddle uses administrative, technical, and physical safeguards designed for the sensitivity of the information, including access controls, encryption in transit, restricted service credentials, logging, secure media handling, and incident-response procedures. No online service can guarantee absolute security, so you should use a unique password and promptly report suspected account misuse.</p>
+      <LegalSection id="retention" title="8. Retention and deletion">
+        <p>Puddle keeps personal information only as long as reasonably necessary for the purposes described in this policy. Factors include whether your account is active, whether information is needed to provide a feature, the sensitivity of the information, safety and fraud risks, dispute and appeal periods, backup cycles, and legal requirements.</p>
+        <p>You can request account deletion through the Service where available or by contacting Puddle. Deletion removes or de-identifies account information from active systems except where retention is reasonably necessary for security, fraud prevention, legal compliance, dispute resolution, public-source attribution, or records that cannot be removed without affecting another person’s legitimate use.</p>
+        <p>Residual copies may remain temporarily in protected backups or logs until they are overwritten or expire. Puddle deletes, anonymizes, or securely isolates information when it is no longer required.</p>
       </LegalSection>
 
-      <LegalSection id="transfers" title="8. Service providers and international processing">
-        <p>Puddle and its service providers may process information in Canada, the United States, or other countries. Information processed outside your province or country may be subject to the laws and lawful access rules of that jurisdiction. Puddle uses contractual and technical safeguards intended to protect information wherever it is processed.</p>
+      <LegalSection id="security" title="9. Security">
+        <p>Puddle uses safeguards designed for the sensitivity of the information, including encrypted connections, access controls, restricted server credentials, private object storage, short-lived access tokens for protected assets, request validation, rate limits, logging, and review of uploaded or reported content.</p>
+        <p>No online service can guarantee absolute security. Use a unique password, protect access to your email account, sign out of shared devices, and promptly report suspected account misuse.</p>
       </LegalSection>
 
-      <LegalSection id="choices" title="9. Your choices and rights">
-        <p>Depending on applicable law, you may request access to personal information Puddle holds about you, ask that inaccurate information be corrected, request deletion, withdraw consent, object to certain processing, or ask questions about Puddle’s practices.</p>
+      <LegalSection id="transfers" title="10. International processing">
+        <p>Puddle and its service providers may process information in Canada, the United States, or other countries. Information processed outside your province or country may be subject to the laws and lawful-access rules of that jurisdiction. Puddle uses contractual, organizational, and technical measures intended to protect information under its control wherever it is processed.</p>
+      </LegalSection>
+
+      <LegalSection id="choices" title="11. Your choices and privacy rights">
+        <p>Depending on applicable law, you may ask to access personal information Puddle holds about you, correct inaccurate information, delete information, withdraw consent, object to certain processing, obtain information about disclosures, or challenge Puddle’s privacy practices.</p>
         <ul>
-          <li>Update profile and visibility settings in the Service where available.</li>
-          <li>Change device permissions for camera, notifications, and location at any time.</li>
-          <li>Stop a live-location session immediately from the sharing controls.</li>
-          <li>Unsubscribe from promotional email using the link in the message. Essential account, safety, and transaction messages may still be sent.</li>
-          <li>Request account or data assistance by contacting the Privacy Officer.</li>
+          <li>Update profile, location, radius, interests, visibility, and recommendation settings in the Service where available.</li>
+          <li>Change browser or device permissions used by Puddle, including location permission.</li>
+          <li>Leave a DateMatch room or stop sharing a place or plan using the available controls.</li>
+          <li>Unsubscribe from optional promotional email using the link in the message. Essential account, security, and service messages may still be sent.</li>
+          <li>Request account deletion or other privacy assistance through account controls or by contacting the Privacy Officer.</li>
         </ul>
-        <p>Puddle may need to verify your identity before completing a request. Legal exceptions may apply, and withdrawing consent may prevent Puddle from providing a feature that requires the information.</p>
+        <p>Puddle may need to verify your identity before completing a request. Legal exceptions may apply, and withdrawing consent may prevent Puddle from providing a feature that depends on the information.</p>
       </LegalSection>
 
-      <LegalSection id="children" title="10. Children and age-restricted features">
-        <p>The Service is not directed to children under 13, and Puddle does not knowingly create accounts for children under 13. Where local law requires a higher minimum age or parental authorization, that requirement applies.</p>
-        <p>Features involving adult-oriented matching or precise live friend location are restricted to users who are at least 18. Puddle may use proportionate age-assurance measures to apply these restrictions and protect younger users.</p>
+      <LegalSection id="children" title="12. Children and younger users">
+        <p>Puddle accounts require users to be at least 13. The Service is not directed to children under 13, and Puddle does not knowingly create accounts for them. Where local law requires a higher minimum age or permission from a parent or guardian, that requirement applies.</p>
+        <p>Birth date is used to apply age requirements and may also be used for safety, eligibility, and age-appropriate product controls. Users must provide an accurate birth date and must not help another person bypass age restrictions.</p>
       </LegalSection>
 
-      <LegalSection id="cookies" title="11. Cookies and similar technology">
-        <p>Puddle may use cookies, local storage, and similar technology to keep users signed in, preserve preferences, prevent fraud, understand performance, and remember consent choices. Browser controls can block or delete these technologies, but some Service features may stop working correctly.</p>
+      <LegalSection id="cookies" title="13. Cookies and similar technologies">
+        <p>Puddle uses cookies, local storage, and similar technologies to maintain sessions, preserve preferences, protect forms, prevent abuse, remember consent choices, and understand service performance. Blocking or deleting essential storage may sign you out or prevent parts of the Service from working.</p>
+        <p>Third-party components such as authentication, maps, place details, or bot prevention may set or read their own cookies or similar identifiers under their policies.</p>
       </LegalSection>
 
-      <LegalSection id="changes" title="12. Changes to this policy">
-        <p>Puddle may update this policy as the Service, laws, or privacy practices change. Material changes will be brought to your attention through the Service, email, or another appropriate notice, and additional consent will be requested when required.</p>
+      <LegalSection id="changes" title="14. Changes to this policy">
+        <p>Puddle may update this policy as the Service, vendors, laws, or privacy practices change. Material changes will be brought to your attention through the Service, email, or another appropriate method, and additional consent will be requested when required.</p>
       </LegalSection>
 
-      <LegalSection id="contact" title="13. Contact the Privacy Officer">
-        <p>Questions, privacy requests, or complaints can be sent to <a href="mailto:privacy@puddle.you">privacy@puddle.you</a>. Please include enough detail for Puddle to understand and respond to your request, but do not email passwords, full payment-card details, or unnecessary sensitive information.</p>
+      <LegalSection id="contact" title="15. Contact the Privacy Officer">
+        <p>Questions, access or deletion requests, and privacy complaints can be sent to <a href="mailto:privacy@puddle.you">privacy@puddle.you</a>. Include enough detail for Puddle to understand and respond to the request, but do not email passwords, authentication codes, or unnecessary sensitive information.</p>
       </LegalSection>
     </LegalPage>
   )
