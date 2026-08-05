@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { b2Configuration, b2PublicUrl, signB2Request } from '../../lib/app/b2-s3.js'
+import { b2Configuration, b2PublicUrl, b2Request, signB2Request } from '../../lib/app/b2-s3.js'
 
 const config = {
   accessKeyId: 'key', secretAccessKey: 'secret', bucket: 'bucket',
@@ -53,4 +53,73 @@ test('Backblaze configuration rejects non-B2 endpoints and mismatched regions', 
   assert.equal(resolved?.region, 'us-east-005')
   assert.equal(resolved?.downloadBaseUrl, common.B2_DOWNLOAD_BASE_URL)
   assert.equal(b2PublicUrl('catalogue/manifest.json', resolved), `${common.B2_DOWNLOAD_BASE_URL}/catalogue/manifest.json`)
+})
+
+test('Backblaze B2 GET falls back to the public catalogue URL after a signed 403', async () => {
+  const calls = []
+  const fetchImpl = async (input, init) => {
+    calls.push({ url: String(input), init })
+    if (calls.length === 1) return new Response('forbidden', { status: 403 })
+    return new Response(JSON.stringify({ release: 'v1' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    })
+  }
+
+  const response = await b2Request({
+    method: 'GET',
+    key: 'catalogue/releases/v1/manifest.json',
+    config,
+    fetchImpl,
+    attempts: 1
+  })
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(await response.json(), { release: 'v1' })
+  assert.match(calls[0].url, /^https:\/\/s3\.us-east-005\.backblazeb2\.com\/bucket\//)
+  assert.match(calls[1].url, /^https:\/\/f005\.backblazeb2\.com\/file\/bucket\/catalogue\/releases\/v1\/manifest\.json\?_puddle_read=/)
+  assert.equal(calls[1].init.cache, 'no-store')
+  assert.equal(calls[1].init.headers.Authorization, undefined)
+})
+
+test('Backblaze B2 public fallback does not turn a signed 403 into a missing object', async () => {
+  let call = 0
+  const fetchImpl = async () => {
+    call += 1
+    return call === 1
+      ? new Response('forbidden', { status: 403 })
+      : new Response('missing', { status: 404 })
+  }
+
+  const response = await b2Request({
+    method: 'GET',
+    key: 'catalogue/releases/v1/manifest.json',
+    config,
+    fetchImpl,
+    attempts: 1
+  })
+
+  assert.equal(response.status, 403)
+})
+
+test('Backblaze B2 GET retries bounded transient failures', async () => {
+  let call = 0
+  const fetchImpl = async () => {
+    call += 1
+    return call === 1
+      ? new Response('busy', { status: 503 })
+      : new Response('ok', { status: 200 })
+  }
+
+  const response = await b2Request({
+    method: 'GET',
+    key: 'catalogue/releases/v1/manifest.json',
+    config,
+    fetchImpl,
+    attempts: 2,
+    retryDelayMs: 0
+  })
+
+  assert.equal(response.status, 200)
+  assert.equal(call, 2)
 })
