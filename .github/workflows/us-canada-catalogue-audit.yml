@@ -8,11 +8,20 @@ on:
         required: true
         default: us-ca-cities-2026-08-05-catalogue-01
         type: string
+      mode:
+        description: Structural listing audit or full content and enrichment audit
+        required: true
+        default: structure
+        type: choice
+        options:
+          - structure
+          - full
   push:
     branches:
       - main
     paths:
       - .github/workflows/us-canada-catalogue-audit.yml
+      - scripts/audit-static-catalogue-structure.mjs
 
 permissions:
   contents: read
@@ -36,6 +45,7 @@ env:
   B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
   STATIC_CATALOGUE_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
   RELEASE: ${{ inputs.release || 'us-ca-cities-2026-08-05-catalogue-01' }}
+  AUDIT_MODE: ${{ inputs.mode || 'structure' }}
 
 jobs:
   audit:
@@ -83,7 +93,11 @@ jobs:
             exit 1
           }
           [[ "$RELEASE" != *canary* ]] || {
-            echo 'The full catalogue audit cannot use a canary release name.' >&2
+            echo 'The catalogue audit cannot use a canary release name.' >&2
+            exit 1
+          }
+          [[ "$AUDIT_MODE" == 'structure' || "$AUDIT_MODE" == 'full' ]] || {
+            echo 'audit mode must be structure or full.' >&2
             exit 1
           }
 
@@ -93,7 +107,16 @@ jobs:
           set -euo pipefail
           node scripts/check-launch-budgets.mjs --phase=audit
 
-      - name: Verify every enrichment state and object
+      - name: Verify release object structure using B2 listings
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/audit-static-catalogue-structure.mjs \
+            --release="$RELEASE" \
+            --fail-on-incomplete
+
+      - name: Verify every enrichment state and object by reading content
+        if: ${{ env.AUDIT_MODE == 'full' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -105,5 +128,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "Completed read-only audit for inactive release: $RELEASE"
+          echo "Completed read-only $AUDIT_MODE audit for inactive release: $RELEASE"
           echo 'No catalogue manifest was published and production was not activated.'
