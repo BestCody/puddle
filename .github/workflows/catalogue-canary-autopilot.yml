@@ -14,6 +14,7 @@ on:
       - scripts/check-launch-budgets.mjs
       - scripts/publish-static-catalogue-b2.mjs
       - lib/app/b2-s3.js
+      - lib/app/open-place-catalogue.js
       - lib/app/static-catalogue-release.js
       - lib/app/static-launch-guards.js
 
