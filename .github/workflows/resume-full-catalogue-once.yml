@@ -1,0 +1,45 @@
+name: Resume full catalogue once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/resume-full-catalogue-once.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    name: Resume catalogue-only launch
+    if: contains(github.event.head_commit.message, '[resume-full-catalogue]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resume full US and Canada catalogue without activation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: us-ca-cities-2026-08-05-catalogue-01
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg release "$RELEASE" \
+            '{
+              ref: "main",
+              inputs: {
+                release: $release,
+                phase: "catalogue",
+                photo_batches: "0",
+                google_request_budget: "0",
+                activate: "false"
+              }
+            }' \
+            | gh api \
+                --method POST \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/us-canada-catalogue-launch.yml/dispatches" \
+                --input -
+          echo "Resumed catalogue-only release: $RELEASE"
+          echo "Activation: false"
