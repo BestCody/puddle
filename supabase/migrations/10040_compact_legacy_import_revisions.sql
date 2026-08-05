@@ -2,56 +2,63 @@
 -- Preserve revision history for user, host, seed, and claimed locations while removing redundant
 -- full-row snapshots created by the legacy database catalogue importer.
 
-create temporary table retained_location_revisions on commit drop as
-select
-  revision.id,
-  revision.location_id,
-  revision.revision_no,
-  revision.actor_id,
-  revision.change_source,
-  revision.note,
-  revision.snapshot,
-  revision.created_at
-from public.location_revisions revision
-join public.locations location on location.id = revision.location_id
-where not (
-  location.source = 'import'
-  and location.created_by is null
-  and location.host_profile_id is null
-  and location.claimed_by_host_id is null
-);
+-- Keep the copy, truncate, restore, and sequence repair in one PostgreSQL statement. Supabase can
+-- otherwise execute top-level migration statements in separate transactions during a local reset.
+do $catalogue_compaction$
+begin
+  create temporary table retained_location_revisions on commit drop as
+  select
+    revision.id,
+    revision.location_id,
+    revision.revision_no,
+    revision.actor_id,
+    revision.change_source,
+    revision.note,
+    revision.snapshot,
+    revision.created_at
+  from public.location_revisions revision
+  join public.locations location on location.id = revision.location_id
+  where not (
+    location.source = 'import'
+    and location.created_by is null
+    and location.host_profile_id is null
+    and location.claimed_by_host_id is null
+  );
 
-lock table public.location_revisions in access exclusive mode;
-truncate table public.location_revisions restart identity;
+  -- TRUNCATE takes the required access-exclusive lock itself. Running it inside this block means
+  -- the protected rows are restored atomically or the entire compaction is rolled back.
+  truncate table public.location_revisions restart identity;
 
-insert into public.location_revisions (
-  id,
-  location_id,
-  revision_no,
-  actor_id,
-  change_source,
-  note,
-  snapshot,
-  created_at
-)
-overriding system value
-select
-  id,
-  location_id,
-  revision_no,
-  actor_id,
-  change_source,
-  note,
-  snapshot,
-  created_at
-from retained_location_revisions
-order by id;
+  insert into public.location_revisions (
+    id,
+    location_id,
+    revision_no,
+    actor_id,
+    change_source,
+    note,
+    snapshot,
+    created_at
+  )
+  overriding system value
+  select
+    id,
+    location_id,
+    revision_no,
+    actor_id,
+    change_source,
+    note,
+    snapshot,
+    created_at
+  from retained_location_revisions
+  order by id;
 
-select setval(
-  pg_get_serial_sequence('public.location_revisions', 'id'),
-  coalesce((select max(id) from public.location_revisions), 1),
-  exists(select 1 from public.location_revisions)
-);
+  perform setval(
+    pg_get_serial_sequence('public.location_revisions', 'id'),
+    coalesce((select max(id) from public.location_revisions), 1),
+    exists(select 1 from public.location_revisions)
+  );
+end
+$catalogue_compaction$;
 
 create or replace function public.capture_location_revision()
 returns trigger
