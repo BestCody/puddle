@@ -30,3 +30,15 @@ test('sequential catalogue build keeps the free-tier ceilings', async () => {
   assert.match(workflow, /check-launch-budgets\.mjs[\s\S]*--phase=partition/)
   assert.doesNotMatch(workflow, /google|photo_batches|activate:\s*true/i)
 })
+
+test('sequential catalogue build retries transient Overture failures with bounded backoff', async () => {
+  const workflow = await readFile(workflowPath, 'utf8')
+
+  assert.match(workflow, /overture_max_attempts=5/)
+  assert.match(workflow, /for \(\(attempt=1; attempt<=overture_max_attempts; attempt\+\+\)\); do/)
+  assert.match(workflow, /rm -f "\$overture_file" "\$overture_file\.state"/)
+  assert.match(workflow, /timeout 20m overturemaps download/)
+  assert.match(workflow, /retry_delay=\$\(\(15 \* \(2 \*\* \(attempt - 1\)\)\)\)/)
+  assert.match(workflow, /sleep "\$retry_delay"/)
+  assert.match(workflow, /Overture download failed after \$overture_max_attempts attempts/)
+})
