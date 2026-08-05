@@ -68,6 +68,26 @@ async function runPool(items, worker) {
   return results
 }
 
+function retryableUploadError(error) {
+  const message = String(error?.message || error)
+  return error?.name === 'TimeoutError' || error?.name === 'AbortError' ||
+    /aborted|timeout|\b408\b|\b429\b|\b5\d\d\b/i.test(message)
+}
+
+async function putWithRetry(key, body, options, maxAttempts = 4) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await putB2Object(key, body, options)
+    } catch (error) {
+      if (attempt === maxAttempts || !retryableUploadError(error)) throw error
+      const delayMs = 1000 * (2 ** (attempt - 1))
+      console.warn(`Retrying ${key} after transient upload failure (${attempt}/${maxAttempts}): ${error.message}`)
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+  }
+  throw new Error(`Backblaze B2 upload exhausted retries for ${key}.`)
+}
+
 async function readRegistry() {
   const response = await b2Request({ method: 'GET', key: 'catalogue/release-registry.json', config })
   if (response.status === 404) return []
@@ -121,7 +141,7 @@ async function uploadObject(object) {
     return
   }
   const body = await readFile(object.path)
-  await putB2Object(object.key, body, {
+  await putWithRetry(object.key, body, {
     contentType: object.contentType,
     contentEncoding: object.contentEncoding,
     cacheControl: object.cacheControl,
