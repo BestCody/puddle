@@ -1,0 +1,58 @@
+name: Cancel stale PR 81 runs
+
+on:
+  push:
+    branches:
+      - agent/on-demand-static-media
+    paths:
+      - .github/workflows/cancel-stale-pr-81-runs.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    if: github.repository == 'BestCody/puddle' && github.ref == 'refs/heads/agent/on-demand-static-media'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Cancel obsolete required checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          runs="$(curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${REPOSITORY}/actions/runs?branch=${BRANCH}&per_page=100")"
+
+          mapfile -t stale_ids < <(jq -r --arg current "${CURRENT_SHA}" '
+            .workflow_runs[]
+            | select(.head_sha != $current)
+            | select(.status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "requested" or .status == "pending")
+            | select(
+                .name == "Validate" or
+                .name == "Security" or
+                .name == "Validate Supabase migrations" or
+                .name == "End-to-end product"
+              )
+            | .id
+          ' <<<"${runs}")
+
+          echo "Found ${#stale_ids[@]} obsolete required workflow runs."
+          for run_id in "${stale_ids[@]}"; do
+            echo "Cancelling workflow run ${run_id}"
+            curl --fail --silent --show-error \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${REPOSITORY}/actions/runs/${run_id}/cancel"
+          done
