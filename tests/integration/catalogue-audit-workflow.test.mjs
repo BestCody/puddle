@@ -19,15 +19,16 @@ test('inactive catalogue audit is read-only and cannot activate production', asy
   assert.doesNotMatch(workflow, /environment:\s*production/)
 })
 
-test('inactive catalogue audit preserves free-tier ceilings and has a bounded trigger', async () => {
+test('inactive catalogue audit preserves free-tier ceilings and has bounded structural and full triggers', async () => {
   const workflow = await readFile(workflowPath, 'utf8')
 
   assert.match(workflow, /B2_LAUNCH_MAX_BYTES: '9000000000'/)
   assert.match(workflow, /SUPABASE_LAUNCH_MAX_BYTES: '400000000'/)
   assert.match(workflow, /default: structure/)
-  assert.match(workflow, /AUDIT_MODE: \$\{\{ inputs\.mode \|\| 'structure' \}\}/)
+  assert.match(workflow, /AUDIT_MODE: \$\{\{ github\.event_name == 'push'[\s\S]*\[audit-full-catalogue\][\s\S]*'full' \|\| inputs\.mode \|\| 'structure' \}\}/)
   assert.match(workflow, /paths:[\s\S]*us-canada-catalogue-audit\.yml[\s\S]*audit-static-catalogue-structure\.mjs/)
   assert.match(workflow, /\[audit-inactive-catalogue\]/)
+  assert.match(workflow, /\[audit-full-catalogue\]/)
   assert.match(workflow, /cancel-in-progress: false/)
 })
 
