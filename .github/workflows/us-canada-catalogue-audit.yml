@@ -45,12 +45,12 @@ env:
   B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
   STATIC_CATALOGUE_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
   RELEASE: ${{ inputs.release || 'us-ca-cities-2026-08-05-catalogue-01' }}
-  AUDIT_MODE: ${{ inputs.mode || 'structure' }}
+  AUDIT_MODE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[audit-full-catalogue]') && 'full' || inputs.mode || 'structure' }}
 
 jobs:
   audit:
     name: Audit inactive release
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[audit-inactive-catalogue]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[audit-inactive-catalogue]') || contains(github.event.head_commit.message, '[audit-full-catalogue]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
