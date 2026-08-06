@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { photoDisplayState } from '@/lib/app/photo-enrichment'
 import { usePrivateB2Asset } from '@/lib/app/use-private-b2-asset'
+import { useStaticMediaResolution } from '@/lib/app/use-static-media-resolution'
 
 const categoryLabels = {
   cafe: 'Coffee shop', restaurant: 'Restaurant', bar: 'Bar or lounge', park: 'Park or garden',
@@ -97,7 +98,8 @@ function PhotoSearchState({ state, placeholderUrl }) {
   </div>
 }
 
-export function MinimalSwipeCard({ item, onChoice, busy }) {
+export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
+  const item = useStaticMediaResolution(sourceItem)
   const pointer = useRef(null)
   const origin = useRef({ x: 0, y: 0 })
   const moved = useRef(false)
