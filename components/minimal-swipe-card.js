@@ -74,6 +74,12 @@ function photoCandidates(item) {
   }).slice(0, 5)
 }
 
+function PrivateDetailPhoto({ photo, title, index }) {
+  const resolved = usePrivateB2Asset(photo?.url || null, photo?.key || null)
+  if (!resolved) return null
+  return <img src={resolved} alt={index === 0 ? title : `${title} photo ${index + 1}`} />
+}
+
 function DetailsSheet({ item, photos, busy, onChoice, onClose }) {
   const closeButton = useRef(null)
   const directionsHref = directionsUrl(item)
@@ -105,7 +111,7 @@ function DetailsSheet({ item, photos, busy, onChoice, onClose }) {
       <section className="minimal-details-sheet" role="dialog" aria-modal="true" aria-label={`Full details for ${item.title}`} onKeyDown={(event) => event.stopPropagation()}>
         <button ref={closeButton} className="minimal-details-close" type="button" onClick={onClose} aria-label="Close details">×</button>
         <div className="minimal-details-scroll">
-          {photos.length ? <div className="minimal-details-gallery" aria-label={`${item.title} photos`}>{photos.map((photo, index) => <img src={photo} alt={index === 0 ? item.title : `${item.title} photo ${index + 1}`} key={photo} />)}</div> : null}
+          {photos.length ? <div className="minimal-details-gallery" aria-label={`${item.title} photos`}>{photos.map((photo, index) => <PrivateDetailPhoto photo={photo} title={item.title} index={index} key={`${photo.url}:${index}`} />)}</div> : null}
           <div className="minimal-details-copy">
             <header className="minimal-details-heading">
               <span>{categoryLabel(item.category)}</span>
@@ -191,28 +197,30 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
   const detailItem = useStaticCatalogueDetails(item, detailsOpen)
   const candidates = useMemo(() => photoCandidates(item), [item])
   const rawMainPhoto = candidates[0]?.url || null
-  const mainPhoto = usePrivateB2Asset(rawMainPhoto, candidates[0]?.key || null)
+  const privateMainKey = candidates[0]?.key || null
+  const mainPhoto = usePrivateB2Asset(rawMainPhoto, privateMainKey)
+  const mainPhotoPending = Boolean(rawMainPhoto && privateMainKey && !mainPhoto)
   const placeholderUrl = usePrivateB2Asset(
     item.category_placeholder_url || null,
     item.private_b2_asset_keys?.placeholder || null
   )
-  const photos = useMemo(() => [...new Set([mainPhoto, ...candidates.slice(1).map(({ url }) => url)].filter(Boolean))].slice(0, 5), [mainPhoto, candidates])
-  const useGoogleUiKit = !mainPhoto && Boolean(item.google_place_id)
-  const [photoStatus, setPhotoStatus] = useState(item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending'))
+  const photos = candidates
+  const useGoogleUiKit = !mainPhoto && !mainPhotoPending && Boolean(item.google_place_id)
+  const [photoStatus, setPhotoStatus] = useState(item.photo_enrichment_status || (rawMainPhoto ? 'matched' : 'pending'))
   const displayState = photoDisplayState(photoStatus, Boolean(mainPhoto))
   const rating = ratingLabel(item)
 
   useEffect(() => {
-    const nextStatus = item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending')
+    const nextStatus = item.photo_enrichment_status || (rawMainPhoto ? 'matched' : 'pending')
     setPhotoStatus(nextStatus)
-    if (mainPhoto || item.static_catalogue_ephemeral || !item.content_id || !['pending', 'processing', 'failed'].includes(nextStatus)) return undefined
+    if (rawMainPhoto || item.static_catalogue_ephemeral || !item.content_id || !['pending', 'processing', 'failed'].includes(nextStatus)) return undefined
     let cancelled = false
     fetch(`/api/location-photo-status/${encodeURIComponent(item.content_id)}`, { cache: 'no-store' })
       .then((response) => response.ok ? response.json() : null)
       .then((result) => { if (!cancelled && result?.status) setPhotoStatus(result.status) })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [item.content_id, item.photo_enrichment_status, item.static_catalogue_ephemeral, mainPhoto])
+  }, [item.content_id, item.photo_enrichment_status, item.static_catalogue_ephemeral, rawMainPhoto])
 
   async function choose(action) {
     if (busy) return
@@ -283,8 +291,8 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
     >
       <div className={`minimal-swipe-photo ${useGoogleUiKit ? 'has-google-fallback' : ''}`} style={photoStyle}>
         {useGoogleUiKit ? <GooglePlacePhotoFallback title={item.title} placeId={item.google_place_id} placeholderUrl={placeholderUrl} /> : null}
-        {!useGoogleUiKit && displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found" style={placeholderUrl ? { backgroundImage: `url(${placeholderUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
-        {!useGoogleUiKit && (displayState === 'searching' || displayState === 'retrying') ? <PhotoSearchState state={displayState} placeholderUrl={placeholderUrl} /> : null}
+        {!useGoogleUiKit && !mainPhotoPending && displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found" style={placeholderUrl ? { backgroundImage: `url(${placeholderUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
+        {!useGoogleUiKit && !mainPhotoPending && (displayState === 'searching' || displayState === 'retrying') ? <PhotoSearchState state={displayState} placeholderUrl={placeholderUrl} /> : null}
         <div className="minimal-swipe-meta">
           <span>{categoryLabel(item.category)}</span>
           {item.distanceLabel ? <span>{item.distanceLabel}</span> : null}
