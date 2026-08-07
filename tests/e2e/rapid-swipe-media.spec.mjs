@@ -62,10 +62,20 @@ test('photo resolution sustains one-second swiping with bounded open-photo looka
   })
 
   await signInThroughUi(page, account.email, account.password, '/discover')
-  await page.goto('/discover?q=E2E%20Rapid%20Swipe')
 
   const heading = page.locator('.minimal-swipe-card h1')
   const photo = page.locator('.minimal-swipe-photo')
+  const knownPhotoId = R2_FIXTURE_IDS['e2e-rapid-01']
+
+  // A catalogue/media-overlay photo must pair directly with its location and make
+  // zero resolver calls.
+  await page.goto('/discover?q=E2E%20Rapid%20Swipe%2001')
+  await expect(heading).toHaveText('E2E Rapid Swipe 01')
+  expect(String(await photo.getAttribute('style'))).toContain('e2e-media.png')
+  await page.waitForTimeout(200)
+  expect(mediaRequests.filter((entry) => entry.id === knownPhotoId)).toHaveLength(0)
+
+  await page.goto('/discover?q=E2E%20Rapid%20Swipe')
   await expect(heading).toContainText('E2E Rapid Swipe')
 
   // A real user typically spends about a second on the first card. Use that time
@@ -93,7 +103,7 @@ test('photo resolution sustains one-second swiping with bounded open-photo looka
     photoReadyDurations.push(photoReadyMs)
     expect(photoReadyMs).toBeLessThan(500)
 
-    if (index === 2) {
+    if (index === 4) {
       const title = await heading.innerText()
       const sourceId = rapidSourceId(title)
       const id = sourceId ? R2_FIXTURE_IDS[sourceId] : null
@@ -112,15 +122,13 @@ test('photo resolution sustains one-second swiping with bounded open-photo looka
   expect(p95(photoReadyDurations)).toBeLessThan(500)
   expect(maxActivePrefetch).toBeLessThanOrEqual(3)
   expect(mediaRequests.some((entry) => entry.mode === 'open_only')).toBe(true)
-
-  const knownPhotoId = R2_FIXTURE_IDS['e2e-rapid-01']
   expect(mediaRequests.filter((entry) => entry.id === knownPhotoId)).toHaveLength(0)
 
-  // Verify the in-memory result survives a normal one-card revisit without another
-  // media request. This protects fast undo/review behavior during a swipe session.
+  // The previous warmed card should come back from the browser cache on Undo.
   if (revisit) {
     const beforeUndoCount = mediaRequests.filter((entry) => entry.id === revisit.id).length
     await page.getByRole('button', { name: 'Undo' }).click()
+    await expect(heading).toHaveText(revisit.title)
     await page.waitForTimeout(250)
     const afterUndoCount = mediaRequests.filter((entry) => entry.id === revisit.id).length
     expect(afterUndoCount).toBe(beforeUndoCount)
