@@ -11,8 +11,8 @@ const ACTION_BATCH_DELAY_MS = 350
 const ACTION_BATCH_SIZE = 20
 const ACTION_RETRY_BASE_MS = 1_000
 const ACTION_RETRY_MAX_MS = 30_000
-const ACTION_STORAGE_KEY = 'puddle:pending-discovery-actions:v1'
-const ACTION_STORAGE_LIMIT = 100
+const ACTION_STORAGE_PREFIX = 'puddle:pending-discovery-actions:v1'
+const ACTION_STORAGE_LIMIT = 500
 const DECK_BATCH_SIZE = 12
 const REFILL_THRESHOLD = 5
 const MAX_CONTINUATION_EXCLUDES = 500
@@ -37,10 +37,15 @@ function daypart() {
   return 'late'
 }
 
-function storedDiscoveryActions() {
-  if (typeof window === 'undefined') return []
+function actionStorageKey(profileId) {
+  const owner = String(profileId || '').trim()
+  return owner ? `${ACTION_STORAGE_PREFIX}:${owner}` : null
+}
+
+function storedDiscoveryActions(storageKey) {
+  if (typeof window === 'undefined' || !storageKey) return []
   try {
-    const value = JSON.parse(window.localStorage.getItem(ACTION_STORAGE_KEY) || '[]')
+    const value = JSON.parse(window.localStorage.getItem(storageKey) || '[]')
     if (!Array.isArray(value)) return []
     return value.filter((item) => item && typeof item === 'object' && item.eventId && item.contentId && item.action).slice(0, ACTION_STORAGE_LIMIT)
   } catch {
@@ -48,12 +53,12 @@ function storedDiscoveryActions() {
   }
 }
 
-function persistDiscoveryActions(entries) {
-  if (typeof window === 'undefined') return
+function persistDiscoveryActions(entries, storageKey) {
+  if (typeof window === 'undefined' || !storageKey) return
   try {
     const payloads = entries.map((entry) => entry.payload).filter(Boolean).slice(0, ACTION_STORAGE_LIMIT)
-    if (payloads.length) window.localStorage.setItem(ACTION_STORAGE_KEY, JSON.stringify(payloads))
-    else window.localStorage.removeItem(ACTION_STORAGE_KEY)
+    if (payloads.length) window.localStorage.setItem(storageKey, JSON.stringify(payloads))
+    else window.localStorage.removeItem(storageKey)
   } catch {
     // Persistence is a resilience layer; the in-memory acknowledgement queue remains authoritative.
   }
@@ -146,7 +151,7 @@ function EmptyDeck({ feed, onRefresh, onFilters, onExpand, onInvite, exhausted =
   </div>
 }
 
-export function DateSwipeWorkspaceV2({ initialFeed }) {
+export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const initialItems = initialFeed.items.slice(0, DECK_BATCH_SIZE)
   const [feed, setFeed] = useState({ ...initialFeed, items: withRequestId(initialItems, initialFeed.requestId) })
   const [filters, setFilters] = useState({ ...initialFeed.filters, kind: 'place', date: 'any', limit: DECK_BATCH_SIZE })
@@ -160,6 +165,7 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
   const [exhausted, setExhausted] = useState(initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(initialFeed.recycled ? 'Showing passed places again.' : '')
+  const storageKey = useMemo(() => actionStorageKey(profileId), [profileId])
   const actionBuffer = useRef([])
   const actionSequence = useRef(0)
   const flushTimer = useRef(null)
@@ -212,7 +218,7 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
       }
 
       actionBuffer.current.splice(0, entries.length)
-      persistDiscoveryActions(actionBuffer.current)
+      persistDiscoveryActions(actionBuffer.current, storageKey)
       retryAttempt.current = 0
       for (const entry of entries) {
         if (entry.itemKey) pendingItems.current.delete(entry.itemKey)
@@ -235,7 +241,7 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
       }
 
       actionBuffer.current.splice(0, entries.length)
-      persistDiscoveryActions(actionBuffer.current)
+      persistDiscoveryActions(actionBuffer.current, storageKey)
       setMessage(error.message)
       for (const entry of entries) {
         if (entry.itemKey) pendingItems.current.delete(entry.itemKey)
@@ -246,7 +252,7 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
       if (actionBuffer.current.length && !retryTimer.current && !keepalive) flushActions()
     })
     return inFlight.current
-  }, [])
+  }, [storageKey])
 
   const queueDiscoveryAction = useCallback((payload, itemKey) => {
     const sequence = actionSequence.current++
@@ -260,14 +266,14 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
           sequence
         }
       })
-      persistDiscoveryActions(actionBuffer.current)
+      persistDiscoveryActions(actionBuffer.current, storageKey)
       if (actionBuffer.current.length >= ACTION_BATCH_SIZE) flushActions()
       else if (!flushTimer.current) flushTimer.current = window.setTimeout(() => flushActions(), ACTION_BATCH_DELAY_MS)
     })
-  }, [flushActions])
+  }, [flushActions, storageKey])
 
   useEffect(() => {
-    const restored = storedDiscoveryActions()
+    const restored = storedDiscoveryActions(storageKey)
     if (!restored.length) return
     const existing = new Set(actionBuffer.current.map((entry) => entry.payload?.eventId))
     for (const payload of restored) {
@@ -275,9 +281,9 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
       actionBuffer.current.push({ itemKey: null, payload, resolve: () => {} })
       actionSequence.current = Math.max(actionSequence.current, Number(payload.sequence || 0) + 1)
     }
-    persistDiscoveryActions(actionBuffer.current)
+    persistDiscoveryActions(actionBuffer.current, storageKey)
     flushActions()
-  }, [flushActions])
+  }, [flushActions, storageKey])
 
   const drainActions = useCallback(async () => {
     await flushActions()
@@ -336,7 +342,7 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
 
   useEffect(() => {
     const flushBeforeLeaving = () => {
-      persistDiscoveryActions(actionBuffer.current)
+      persistDiscoveryActions(actionBuffer.current, storageKey)
       if (actionBuffer.current.length) flushActions({ keepalive: true })
     }
     const visibility = () => { if (document.visibilityState === 'hidden') flushBeforeLeaving() }
@@ -345,11 +351,11 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
     return () => {
       window.removeEventListener('pagehide', flushBeforeLeaving)
       document.removeEventListener('visibilitychange', visibility)
-      persistDiscoveryActions(actionBuffer.current)
+      persistDiscoveryActions(actionBuffer.current, storageKey)
       if (flushTimer.current) window.clearTimeout(flushTimer.current)
       if (retryTimer.current) window.clearTimeout(retryTimer.current)
     }
-  }, [flushActions])
+  }, [flushActions, storageKey])
 
   useEffect(() => {
     function keyboard(event) {
