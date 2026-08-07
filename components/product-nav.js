@@ -40,7 +40,10 @@ function NavItems({ mobile = false }) {
         key={item.href}
       >
         <span className={mobile ? 'mobile-product-nav-icon' : 'product-nav-icon'}><NavIcon type={item.icon} /></span>
-        {mobile ? <small>{item.label}</small> : <span className="nav-tooltip" role="presentation">{item.label}</span>}
+        {mobile ? <small>{item.label}</small> : <>
+          <span className="product-nav-label" aria-hidden="true">{item.label}</span>
+          <span className="nav-tooltip" role="presentation">{item.label}</span>
+        </>}
       </Link>
     )
   })

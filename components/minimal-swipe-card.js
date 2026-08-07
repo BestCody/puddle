@@ -1,10 +1,10 @@
 "use client"
 
-import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { photoDisplayState } from '@/lib/app/photo-enrichment'
 import { usePrivateB2Asset } from '@/lib/app/use-private-b2-asset'
+import { useStaticCatalogueDetails } from '@/lib/app/use-static-catalogue-details'
 import { useStaticMediaResolution } from '@/lib/app/use-static-media-resolution'
 
 const categoryLabels = {
@@ -24,16 +24,39 @@ function ratingLabel(item) {
   return count > 0 && rating > 0 ? `${rating.toFixed(1)} ★` : null
 }
 
-function mapUrl(item) {
+function directionsUrl(item) {
   const latitude = Number(item.latitude)
   const longitude = Number(item.longitude)
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
-  return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
+  return `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
 }
 
 function openingRows(hours) {
   if (!hours || typeof hours !== 'object' || Array.isArray(hours)) return []
   return Object.entries(hours).filter(([, value]) => value).slice(0, 7)
+}
+
+function todayHoursLabel(hours) {
+  const rows = openingRows(hours)
+  if (!rows.length) return null
+  const today = new Intl.DateTimeFormat('en-CA', { weekday: 'long' }).format(new Date()).toLowerCase()
+  const match = rows.find(([day]) => {
+    const normalized = String(day).trim().toLowerCase()
+    return normalized === today || normalized.slice(0, 3) === today.slice(0, 3)
+  })
+  return match ? String(match[1]) : null
+}
+
+function usefulSummary(item) {
+  const summary = String(item.summary || '').trim()
+  if (!summary) return null
+  if (item.description_source === 'generated_factual') return null
+  if (/details have not yet been verified\.?$/i.test(summary)) return null
+  return summary
+}
+
+function locationLabel(item) {
+  return item.address_public || item.addressPublic || [item.neighborhood, item.city, item.region].filter(Boolean).join(', ') || null
 }
 
 function photoCandidates(item) {
@@ -51,32 +74,91 @@ function photoCandidates(item) {
   }).slice(0, 5)
 }
 
-function DetailsSheet({ item, photos, onClose }) {
-  const mapHref = mapUrl(item)
+function DetailsSheet({ item, photos, busy, onChoice, onClose }) {
+  const closeButton = useRef(null)
+  const directionsHref = directionsUrl(item)
   const hours = openingRows(item.opening_hours)
+  const todayHours = todayHoursLabel(item.opening_hours)
+  const summary = usefulSummary(item)
+  const place = locationLabel(item)
+  const rating = ratingLabel(item)
+  const amenities = (item.amenities || []).slice(0, 8)
+
+  useEffect(() => {
+    const previousFocus = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    closeButton.current?.focus()
+    function keydown(event) {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', keydown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', keydown)
+      previousFocus?.focus?.()
+    }
+  }, [onClose])
+
   return (
     <div className="minimal-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <section className="minimal-details-sheet" role="dialog" aria-modal="true" aria-labelledby="minimal-details-title">
-        <button className="minimal-details-close" type="button" onClick={onClose} aria-label="Close details">×</button>
-        {photos.length ? <div className="minimal-details-gallery">{photos.map((photo, index) => <img src={photo} alt={index === 0 ? item.title : `${item.title} photo ${index + 1}`} key={photo} />)}</div> : null}
-        <div className="minimal-details-copy">
-          <span>{categoryLabel(item.category)}</span>
-          <h2 id="minimal-details-title">{item.title}</h2>
-          <p>{item.summary || 'A nearby place worth considering.'}</p>
-          <div className="minimal-details-facts">
-            {item.distanceLabel ? <span>{item.distanceLabel}</span> : null}
-            {ratingLabel(item) ? <span>{ratingLabel(item)}</span> : null}
-            {item.priceLabel && item.priceLabel !== 'Price varies' ? <span>{item.priceLabel}</span> : null}
-            <span>{item.open_now ? 'Open now' : 'Check hours'}</span>
-          </div>
-          {item.neighborhood || item.city ? <p className="minimal-address">{[item.neighborhood, item.city].filter(Boolean).join(', ')}</p> : null}
-          {(item.amenities || []).length ? <div className="minimal-amenities">{item.amenities.slice(0, 8).map((value) => <span key={value}>{String(value).replaceAll('_', ' ')}</span>)}</div> : null}
-          {hours.length ? <details className="minimal-hours"><summary>Opening hours</summary>{hours.map(([day, value]) => <div key={day}><span>{day}</span><strong>{String(value)}</strong></div>)}</details> : null}
-          <div className="minimal-details-actions">
-            {mapHref ? <a href={mapHref} target="_blank" rel="noreferrer">Map</a> : null}
-            <Link href={item.href} prefetch={false}>Full details</Link>
+      <section className="minimal-details-sheet" role="dialog" aria-modal="true" aria-label={`Full details for ${item.title}`} onKeyDown={(event) => event.stopPropagation()}>
+        <button ref={closeButton} className="minimal-details-close" type="button" onClick={onClose} aria-label="Close details">×</button>
+        <div className="minimal-details-scroll">
+          {photos.length ? <div className="minimal-details-gallery" aria-label={`${item.title} photos`}>{photos.map((photo, index) => <img src={photo} alt={index === 0 ? item.title : `${item.title} photo ${index + 1}`} key={photo} />)}</div> : null}
+          <div className="minimal-details-copy">
+            <header className="minimal-details-heading">
+              <span>{categoryLabel(item.category)}</span>
+              <h2 id="minimal-details-title">{item.title}</h2>
+              <div className="minimal-details-subline">
+                {item.distanceLabel ? <span>{item.distanceLabel}</span> : null}
+                {place ? <span>{place}</span> : null}
+              </div>
+            </header>
+
+            <div className="minimal-details-facts" aria-label="Quick facts">
+              {rating ? <span>{rating}</span> : null}
+              {item.priceLabel && item.priceLabel !== 'Price varies' ? <span>{item.priceLabel}</span> : null}
+              {item.open_now ? <span className="is-open">Open now</span> : hours.length ? <span>Check hours</span> : null}
+              {todayHours ? <span>Today · {todayHours}</span> : null}
+            </div>
+
+            {summary ? <section className="minimal-detail-section">
+              <h3>Why go</h3>
+              <p>{summary}</p>
+            </section> : null}
+
+            {amenities.length ? <section className="minimal-detail-section">
+              <h3>Good to know</h3>
+              <div className="minimal-amenities">{amenities.map((value) => <span key={value}>{String(value).replaceAll('_', ' ')}</span>)}</div>
+            </section> : null}
+
+            {hours.length ? <section className="minimal-detail-section minimal-details-hours-section">
+              <div className="minimal-detail-section-heading">
+                <h3>Hours</h3>
+                {todayHours ? <strong>Today · {todayHours}</strong> : null}
+              </div>
+              <details className="minimal-hours">
+                <summary>View all hours</summary>
+                {hours.map(([day, value]) => <div key={day}><span>{day}</span><strong>{String(value)}</strong></div>)}
+              </details>
+            </section> : null}
+
+            {place || directionsHref ? <section className="minimal-detail-section minimal-details-location">
+              <div>
+                <h3>Location</h3>
+                {place ? <p>{place}</p> : null}
+              </div>
+              {directionsHref ? <a href={directionsHref} target="_blank" rel="noreferrer">Directions</a> : null}
+            </section> : null}
           </div>
         </div>
+
+        <footer className="minimal-details-decision-bar" aria-label="Choose this place">
+          <button className="is-pass" type="button" onClick={() => onChoice('pass')} disabled={busy}>Pass</button>
+          <button className="is-save" type="button" onClick={() => onChoice('save')} disabled={busy}>Save</button>
+          <button className="is-perfect" type="button" onClick={() => onChoice('perfect')} disabled={busy}>★ Perfect Pick</button>
+        </footer>
       </section>
     </div>
   )
@@ -106,6 +188,7 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const detailItem = useStaticCatalogueDetails(item, detailsOpen)
   const candidates = useMemo(() => photoCandidates(item), [item])
   const rawMainPhoto = candidates[0]?.url || null
   const mainPhoto = usePrivateB2Asset(rawMainPhoto, candidates[0]?.key || null)
@@ -138,6 +221,12 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
     await new Promise((resolve) => window.setTimeout(resolve, 160))
     await onChoice(action, item)
     setDragX(0)
+  }
+
+  async function chooseFromDetails(action) {
+    if (busy) return
+    setDetailsOpen(false)
+    await choose(action)
   }
 
   function pointerDown(event) {
@@ -185,6 +274,7 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
       onPointerCancel={pointerUp}
       tabIndex="0"
       onKeyDown={(event) => {
+        if (detailsOpen) return
         if (event.key === 'ArrowLeft') choose('pass')
         if (event.key === 'ArrowRight') choose('save')
         if (event.key === 'Enter' || event.key === 'ArrowUp') setDetailsOpen(true)
@@ -210,6 +300,6 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
         <strong className="minimal-swipe-save" style={{ opacity: Math.max(0, dragX / 90) }}>SAVE</strong>
       </div>
     </article>
-    {detailsOpen ? <DetailsSheet item={item} photos={photos} onClose={() => setDetailsOpen(false)} /> : null}
+    {detailsOpen ? <DetailsSheet item={detailItem} photos={photos} busy={busy} onChoice={chooseFromDetails} onClose={() => setDetailsOpen(false)} /> : null}
   </>
 }

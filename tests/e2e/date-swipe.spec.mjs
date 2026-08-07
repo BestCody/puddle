@@ -180,37 +180,34 @@ test('saving an R2 card materializes its exact signed catalogue record and retai
   expect(unexpected).toEqual([])
 })
 
-test('opening full details materializes the detail sidecar instead of bloating the deck tile', async ({ page }) => {
+test('opening full details reads the detail sidecar in-deck without materializing a location', async ({ page }) => {
   const account = await createSwiper('R2 Detail Swiper')
   const place = fixturePlaceBySourceId('e2e-detail-observatory')
-  await openFilteredDeck(page, account, 'E2E Detail Observatory')
+  const openRequests = []
+  page.on('request', (request) => {
+    if (request.url().includes(`/api/static-catalogue/open/${place.id}`)) openRequests.push(request.url())
+  })
 
+  await openFilteredDeck(page, account, 'E2E Detail Observatory')
+  const discoverUrl = page.url()
   const card = page.locator('.minimal-swipe-card')
   await card.click()
-  const dialog = page.getByRole('dialog')
+
+  const dialog = page.getByRole('dialog', { name: `Full details for ${place.name}` })
+  await expect(dialog).toBeVisible()
   await expect(dialog.getByRole('heading', { name: place.name })).toBeVisible()
-  const href = await dialog.getByRole('link', { name: 'Full details' }).getAttribute('href')
-  expect(href).toBeTruthy()
-  await page.goto(href)
-  await expect(page).toHaveURL(/\/places\/e2e-detail-observatory-[0-9a-f]{12}$/)
+  await expect(dialog.locator('.minimal-details-location p')).toHaveText('77 Sidecar Lane')
+  await expect(dialog.getByText('viewpoint')).toBeVisible()
+  await expect(dialog.getByRole('link', { name: 'Full details' })).toHaveCount(0)
+  await expect(dialog.getByRole('link', { name: 'Directions' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Pass' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Save' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: /Perfect Pick/i })).toBeVisible()
+  await expect(page).toHaveURL(discoverUrl)
 
-  const materialized = await poll(() => locationRow(place.id), {
-    timeout: 20_000,
-    message: 'Opening static details did not materialize the selected place.'
-  })
-  expect(materialized.address_public).toBe('77 Sidecar Lane')
-  expect(materialized.opening_hours).toMatchObject({ monday: '09:00-17:00', friday: '09:00-20:00' })
-  expect(materialized.accessibility).toMatchObject({ wheelchair_accessible: true, step_free: true })
-  expect(materialized.website_url).toBe('https://example.com/e2e-observatory')
-
-  const retention = await admin
-    .from('static_catalogue_materializations')
-    .select('retention_class,expires_at')
-    .eq('location_id', place.id)
-    .single()
-  if (retention.error) throw retention.error
-  expect(retention.data.retention_class).toBe('opened')
-  expect(new Date(retention.data.expires_at).getTime()).toBeGreaterThan(Date.now())
+  await page.waitForTimeout(500)
+  expect(openRequests).toEqual([])
+  expect(await locationRow(place.id)).toBeNull()
 })
 
 test('account preference changes still shape the current location-first deck', async ({ page }) => {
