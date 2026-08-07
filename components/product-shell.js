@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { PuddleLogo } from './puddle-logo'
+import { ResizableProductSidebar } from './resizable-product-sidebar'
 import { ProductNav } from './product-nav'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
@@ -25,10 +26,7 @@ export async function ProductShell({ user, profile, children }) {
 
   return (
     <div className="product-shell minimal-product-shell">
-      <aside className="product-sidebar minimal-product-sidebar">
-        <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" /></div>
-        <ProductNav />
-      </aside>
+      <ResizableProductSidebar className="minimal-product-sidebar" />
 
       <div className="product-stage minimal-product-stage">
         <header className="product-header minimal-product-header">

@@ -20,13 +20,32 @@ function dateLabel(value) {
   return new Date(value).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+function categoryLabel(value) {
+  return String(value || 'other')
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function savedFolders(items) {
+  const folders = new Map()
+  for (const item of items) {
+    const category = item.category || 'other'
+    const folder = folders.get(category) || []
+    folder.push(item)
+    folders.set(category, folder)
+  }
+  return [...folders.entries()].sort(([left], [right]) => categoryLabel(left).localeCompare(categoryLabel(right)))
+}
+
 function LocationCard({ item, session, active }) {
   const image = photoUrl(session, item.cover_path)
   const participants = item.participants?.length ? item.participants.join(', ') : null
-  return <article className="minimal-place-card">
+  const perfectPick = active === 'saved' && item.perfect_pick
+  return <article className={`minimal-place-card${perfectPick ? ' is-perfect-pick' : ''}`}>
+    {perfectPick ? <span className="minimal-perfect-pick-flag">★ Perfect Pick</span> : null}
     <Link className="minimal-place-photo" href={item.href} style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={item.title} />
     <div className="minimal-place-copy">
-      <span>{active === 'planned' ? 'Planned' : 'Saved'}</span>
+      <span>{active === 'planned' ? 'Planned' : perfectPick ? 'Perfect Pick' : 'Saved'}</span>
       <h2><Link href={item.href}>{item.title}</Link></h2>
       {active === 'planned' && item.planned_for ? <small>{dateLabel(item.planned_for)}</small> : item.city ? <small>{item.city}</small> : null}
       {participants ? <p>{participants}</p> : null}
@@ -39,6 +58,22 @@ function LocationCard({ item, session, active }) {
       </div>
     </details>
   </article>
+}
+
+function SavedFolders({ items, session }) {
+  const folders = savedFolders(items)
+  return <section className="minimal-saved-folders" aria-label="Saved places by category">
+    {folders.map(([category, folderItems]) => <details className="minimal-saved-folder" open key={category}>
+      <summary>
+        <span className="minimal-saved-folder-icon" aria-hidden="true">⌑</span>
+        <strong>{categoryLabel(category)}</strong>
+        <small>{folderItems.length} {folderItems.length === 1 ? 'place' : 'places'}</small>
+      </summary>
+      <div className="minimal-place-grid">
+        {folderItems.map((item) => <LocationCard item={item} session={session} active="saved" key={`saved:${item.location_id}`} />)}
+      </div>
+    </details>)}
+  </section>
 }
 
 export default async function PlansPage({ searchParams }) {
@@ -55,7 +90,9 @@ export default async function PlansPage({ searchParams }) {
         {tabs.map(([value, label]) => <Link className={active === value ? 'is-active' : ''} href={`/plans?tab=${value}`} key={value}>{label}</Link>)}
       </nav>
       {items.length
-        ? <section className="minimal-place-grid">{items.map((item) => <LocationCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}</section>
+        ? active === 'saved'
+          ? <SavedFolders items={items} session={session} />
+          : <section className="minimal-place-grid">{items.map((item) => <LocationCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}</section>
         : <EmptyState icon="♡" title={active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : 'Nothing saved yet.'} description={active === 'planned' ? 'Plan a matched place when everyone is ready.' : active === 'past' ? 'Past visits appear here.' : 'Save a place while swiping.'} actionHref="/discover" actionLabel="Start swiping" />}
       <footer className="minimal-history-link">{active === 'past' ? <Link href="/plans">Back to Saved</Link> : <Link href="/plans?tab=past">History</Link>}</footer>
     </div>
