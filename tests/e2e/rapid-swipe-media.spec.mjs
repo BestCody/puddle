@@ -22,6 +22,27 @@ function p95(values) {
   return sorted[Math.max(0, Math.ceil(sorted.length * 0.95) - 1)] || 0
 }
 
+async function stubStaticMedia(page, delay = 30) {
+  await page.route('**/api/static-catalogue/media/**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, delay))
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        state: 'no_match',
+        photo_url: null,
+        photo_provider: null,
+        photo_attribution: null,
+        photo_attribution_url: null,
+        photo_license: null,
+        has_real_photo: false,
+        google_place_id: null,
+        google_match_score: null
+      })
+    })
+  })
+}
+
 test('photo resolution sustains one-second swiping with bounded open-photo lookahead', async ({ page }) => {
   const account = await createRapidSwiper()
   const mediaRequests = []
@@ -133,4 +154,38 @@ test('photo resolution sustains one-second swiping with bounded open-photo looka
     const afterUndoCount = mediaRequests.filter((entry) => entry.id === revisit.id).length
     expect(afterUndoCount).toBe(beforeUndoCount)
   }
+})
+
+test('discovery refills in the background and keeps swiping past the twelve-card boundary', async ({ page }) => {
+  const account = await createRapidSwiper()
+  await stubStaticMedia(page)
+
+  let continuationRequests = 0
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/discovery') continuationRequests += 1
+  })
+
+  await signInThroughUi(page, account.email, account.password, '/discover')
+  await page.goto('/discover?q=E2E%20Rapid%20Swipe')
+
+  const heading = page.locator('.minimal-swipe-card h1')
+  await expect(heading).toContainText('E2E Rapid Swipe')
+  const titles = []
+
+  for (let index = 0; index < 14; index += 1) {
+    await expect(heading).toBeVisible()
+    const title = await heading.innerText()
+    expect(title).toMatch(/^E2E Rapid Swipe \d{2}$/)
+    expect(titles).not.toContain(title)
+    titles.push(title)
+    if (index === 13) break
+    await page.getByRole('button', { name: 'Pass' }).click()
+    await expect(heading).not.toHaveText(title)
+  }
+
+  expect(titles).toHaveLength(14)
+  expect(new Set(titles).size).toBe(14)
+  expect(continuationRequests).toBeGreaterThan(0)
+  await expect(page.getByText('Deck complete', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Swipe again' })).toHaveCount(0)
 })
