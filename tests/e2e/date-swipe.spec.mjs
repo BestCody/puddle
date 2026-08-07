@@ -180,19 +180,24 @@ test('saving an R2 card materializes its exact signed catalogue record and retai
   expect(unexpected).toEqual([])
 })
 
-test('opening full details materializes the detail sidecar instead of bloating the deck tile', async ({ page }) => {
+test('opening full details materializes the detail sidecar and stays inside the discovery deck', async ({ page }) => {
   const account = await createSwiper('R2 Detail Swiper')
   const place = fixturePlaceBySourceId('e2e-detail-observatory')
   await openFilteredDeck(page, account, 'E2E Detail Observatory')
 
+  const discoverUrl = page.url()
   const card = page.locator('.minimal-swipe-card')
   await card.click()
-  const dialog = page.getByRole('dialog')
+
+  const dialog = page.getByRole('dialog', { name: `Full details for ${place.name}` })
+  await expect(dialog).toBeVisible()
   await expect(dialog.getByRole('heading', { name: place.name })).toBeVisible()
-  const href = await dialog.getByRole('link', { name: 'Full details' }).getAttribute('href')
-  expect(href).toBeTruthy()
-  await page.goto(href)
-  await expect(page).toHaveURL(/\/places\/e2e-detail-observatory-[0-9a-f]{12}$/)
+  await expect(dialog.getByRole('link', { name: 'Full details' })).toHaveCount(0)
+  await expect(dialog.getByRole('link', { name: 'Directions' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Pass' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Save' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: /Perfect Pick/i })).toBeVisible()
+  await expect(page).toHaveURL(discoverUrl)
 
   const materialized = await poll(() => locationRow(place.id), {
     timeout: 20_000,
