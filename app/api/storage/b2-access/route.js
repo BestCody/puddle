@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getB2DownloadAuthorization } from '@/lib/app/b2-private-download'
+import { getB2DownloadAuthorization, managedB2ObjectKey } from '@/lib/app/b2-private-download'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createClient } from '@/lib/supabase/server'
-
-const PREFIXES = Object.freeze({
-  catalogue: 'catalogue/',
-  photos: 'photos/open/'
-})
 
 export const dynamic = 'force-dynamic'
 
@@ -27,20 +22,19 @@ export async function GET(request) {
     })
   }
 
-  const requested = String(request.nextUrl.searchParams.get('prefix') || '')
-  const prefix = PREFIXES[requested]
-  if (!prefix) {
-    return NextResponse.json({ error: 'Unknown private asset prefix.' }, {
+  const key = managedB2ObjectKey(request.nextUrl.searchParams.get('key'))
+  if (!key) {
+    return NextResponse.json({ error: 'Unknown private asset object.' }, {
       status: 400,
       headers: { 'cache-control': 'private, no-store' }
     })
   }
 
   try {
-    const authorization = await getB2DownloadAuthorization(prefix)
+    const authorization = await getB2DownloadAuthorization(key)
     return NextResponse.json({
       baseUrl: authorization.baseUrl,
-      prefix: authorization.prefix,
+      key: authorization.key,
       authorizationToken: authorization.authorizationToken,
       expiresAt: new Date(authorization.expiresAt).toISOString()
     }, {
