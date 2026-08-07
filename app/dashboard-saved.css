@@ -7,12 +7,14 @@
 .minimal-sidebar-resizer:hover::before,.minimal-sidebar-resizer:focus-visible::before,.is-resizing-product-sidebar .minimal-sidebar-resizer::before{background:var(--minimal-accent);box-shadow:0 0 0 3px rgba(255,79,123,.12)}
 .is-resizing-product-sidebar{cursor:col-resize;user-select:none}
 
+.minimal-product-sidebar .product-nav-label{display:none}
 .minimal-product-sidebar.is-expanded{align-items:stretch;padding-left:12px;padding-right:12px}
 .minimal-product-sidebar.is-expanded .minimal-sidebar-logo{display:flex;justify-content:center}
 .minimal-product-sidebar.is-expanded .minimal-product-nav{align-items:stretch;width:100%}
-.minimal-product-sidebar.is-expanded .minimal-product-nav>a{width:100%;justify-content:flex-start;gap:12px;padding-left:12px;padding-right:12px}
-.minimal-product-sidebar.is-expanded .minimal-product-nav .nav-tooltip{position:static;translate:none;transform:none;opacity:1;pointer-events:auto;background:transparent;color:inherit;box-shadow:none;padding:0;white-space:nowrap;font-size:.86rem;font-weight:750}
-.minimal-product-sidebar.is-expanded .minimal-product-nav>a:hover .nav-tooltip,.minimal-product-sidebar.is-expanded .minimal-product-nav>a:focus-visible .nav-tooltip{translate:none;transform:none}
+.minimal-product-sidebar.is-expanded .minimal-product-nav>a{width:100%;display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;justify-items:start;gap:12px;padding-left:12px;padding-right:12px}
+.minimal-product-sidebar.is-expanded .minimal-product-nav .product-nav-icon{width:44px;min-width:44px;height:50px;display:grid;place-items:center;justify-self:start}
+.minimal-product-sidebar.is-expanded .minimal-product-nav .product-nav-label{display:block;min-width:0;color:inherit;white-space:nowrap;font-size:.86rem;font-weight:750;line-height:1;text-align:left}
+.minimal-product-sidebar.is-expanded .minimal-product-nav .nav-tooltip{display:none}
 
 .minimal-saved-folders{display:grid;gap:16px}
 .minimal-saved-folder{overflow:hidden;border:1px solid var(--minimal-line);border-radius:18px;background:#fff}
