@@ -7,6 +7,7 @@ import {
   b2PrivateDownloadConfiguration,
   clearPrivateB2DownloadCacheForTests,
   getB2DownloadAuthorization,
+  managedB2ObjectKey,
   managedB2PrefixForKey
 } from '../../lib/app/b2-private-download.js'
 
@@ -38,7 +39,7 @@ function mockBackblaze() {
       })
     }
     if (String(url).includes('b2_get_download_authorization')) {
-      return Response.json({ authorizationToken: 'prefix-token' })
+      return Response.json({ authorizationToken: 'object-token' })
     }
     return new Response('asset', { status: 200 })
   }
@@ -53,11 +54,14 @@ test('private B2 configuration accepts only the configured HTTPS bucket download
   assert.equal(b2PrivateDownloadConfiguration({ ...env, B2_DOWNLOAD_BASE_URL: 'https://f005.backblazeb2.com/file/other' }), null)
 })
 
-test('managed object parsing is restricted to catalogue and open-photo prefixes', () => {
+test('managed object parsing is restricted to catalogue and open-photo objects', () => {
   const config = b2PrivateDownloadConfiguration(env)
   assert.equal(managedB2PrefixForKey('catalogue/manifest.json'), 'catalogue/')
   assert.equal(managedB2PrefixForKey('photos/open/aa/file.avif'), 'photos/open/')
-  assert.equal(managedB2PrefixForKey('private/users/file.jpg'), null)
+  assert.equal(managedB2ObjectKey('catalogue/manifest.json'), 'catalogue/manifest.json')
+  assert.equal(managedB2ObjectKey('photos/open/aa/file.avif'), 'photos/open/aa/file.avif')
+  assert.equal(managedB2ObjectKey('private/users/file.jpg'), null)
+  assert.equal(managedB2ObjectKey('catalogue/../private.txt'), null)
   assert.equal(
     b2ObjectKeyFromUrl('https://f005.backblazeb2.com/file/puddle-assets/catalogue/manifest.json', config),
     'catalogue/manifest.json'
@@ -66,37 +70,43 @@ test('managed object parsing is restricted to catalogue and open-photo prefixes'
   assert.equal(b2DownloadUrlForKey('private/users/file.jpg', config), null)
 })
 
-test('download authorization uses shareFiles, limits the prefix, and caches the token', async () => {
+test('download authorization scopes and caches credentials by exact object key', async () => {
   clearPrivateB2DownloadCacheForTests()
   const config = b2PrivateDownloadConfiguration(env)
   const { requests, fetchImpl } = mockBackblaze()
-  const first = await getB2DownloadAuthorization('catalogue/', { config, fetchImpl, now: 1_000_000 })
-  const second = await getB2DownloadAuthorization('catalogue/', { config, fetchImpl, now: 1_001_000 })
-  assert.equal(first.authorizationToken, 'prefix-token')
-  assert.equal(second.authorizationToken, 'prefix-token')
+  const first = await getB2DownloadAuthorization('catalogue/manifest.json', { config, fetchImpl, now: 1_000_000 })
+  const second = await getB2DownloadAuthorization('catalogue/manifest.json', { config, fetchImpl, now: 1_001_000 })
+  assert.equal(first.authorizationToken, 'object-token')
+  assert.equal(second.authorizationToken, 'object-token')
+  assert.equal(first.key, 'catalogue/manifest.json')
   assert.equal(requests.length, 2)
   assert.match(requests[0].options.headers.Authorization, /^Basic /)
   const body = JSON.parse(requests[1].options.body)
   assert.deepEqual(body, {
     bucketId: 'bucket-id',
-    fileNamePrefix: 'catalogue/',
+    fileNamePrefix: 'catalogue/manifest.json',
     validDurationInSeconds: 3600
   })
-  await assert.rejects(() => getB2DownloadAuthorization('users/', { config, fetchImpl }), /not allowed/i)
+
+  await getB2DownloadAuthorization('catalogue/placeholders/cafe.svg', { config, fetchImpl, now: 1_002_000 })
+  assert.equal(requests.length, 3, 'a sibling object must require its own B2 grant')
+  assert.equal(JSON.parse(requests[2].options.body).fileNamePrefix, 'catalogue/placeholders/cafe.svg')
+  await assert.rejects(() => getB2DownloadAuthorization('users/private.jpg', { config, fetchImpl }), /not allowed/i)
 })
 
-test('managed private URLs receive the case-sensitive Authorization query parameter', async () => {
+test('managed private URLs receive an object-scoped Authorization query parameter', async () => {
   clearPrivateB2DownloadCacheForTests()
   const config = b2PrivateDownloadConfiguration(env)
-  const { fetchImpl } = mockBackblaze()
+  const { requests, fetchImpl } = mockBackblaze()
   const signed = await authorizeB2DownloadUrl(
     'https://f005.backblazeb2.com/file/puddle-assets/photos/open/aa/photo.avif',
     { config, fetchImpl, now: 2_000_000 }
   )
   const url = new URL(signed)
-  assert.equal(url.searchParams.get('Authorization'), 'prefix-token')
+  assert.equal(url.searchParams.get('Authorization'), 'object-token')
   assert.equal(url.searchParams.has('authorization'), false)
   assert.equal(url.pathname, '/file/puddle-assets/photos/open/aa/photo.avif')
+  assert.equal(JSON.parse(requests[1].options.body).fileNamePrefix, 'photos/open/aa/photo.avif')
   assert.equal(await authorizeB2DownloadUrl('https://images.example/photo.jpg', { config, fetchImpl }), 'https://images.example/photo.jpg')
 })
 
@@ -113,7 +123,7 @@ test('download keys without shareFiles fail closed', async () => {
     }
   })
   await assert.rejects(
-    () => getB2DownloadAuthorization('catalogue/', { config, fetchImpl, now: 3_000_000 }),
+    () => getB2DownloadAuthorization('catalogue/manifest.json', { config, fetchImpl, now: 3_000_000 }),
     /shareFiles/
   )
 })
