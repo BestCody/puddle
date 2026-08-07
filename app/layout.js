@@ -19,6 +19,7 @@ import './membership.css'
 import './sidebar-tooltips.css'
 import './location-picker.css'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata = {
   title: { default: 'Puddle', template: '%s · Puddle' },
@@ -40,6 +41,6 @@ export default function RootLayout({ children }) {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://tile.openstreetmap.org" />
     </head>
-    <body>{children}<ServiceWorkerCleanup /></body>
+    <body>{children}<ServiceWorkerCleanup /><SpeedInsights /></body>
   </html>
 }
