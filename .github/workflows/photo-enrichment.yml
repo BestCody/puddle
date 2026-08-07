@@ -1,9 +1,10 @@
 name: Enrich place photos
 
+# Legacy bulk enrichment is manual-only. Production discovery uses the guarded
+# on-demand static-media resolver so every automatic media write stays behind
+# its runtime budget controls.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 */4 * * *'
 
 permissions:
   contents: read
