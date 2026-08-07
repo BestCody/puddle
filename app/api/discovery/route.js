@@ -19,8 +19,19 @@ export async function GET(request) {
   const requestedFilters = Object.fromEntries(request.nextUrl.searchParams)
   const filters = { ...requestedFilters, kind: 'place', date: 'any' }
   const session = { supabase, user, profile: profile || {} }
-  const rawFeed = await getInfrastructureDiscoveryFeedV2(session, filters)
-  const feed = await authorizeDiscoveryFeedB2Assets(rawFeed)
+
+  let feed
+  try {
+    const rawFeed = await getInfrastructureDiscoveryFeedV2(session, filters)
+    feed = await authorizeDiscoveryFeedB2Assets(rawFeed)
+  } catch (error) {
+    console.error(`Discovery refresh failed: ${error?.message || 'unknown error'}`)
+    return NextResponse.json(
+      { error: 'Could not load nearby places. Please try again.' },
+      { status: 503, headers: { 'Cache-Control': 'private, no-store' } }
+    )
+  }
+
   after(async () => {
     try {
       await recordSampledInfrastructureAnalyticsV2({ supabase, user }, feed)
