@@ -4,10 +4,11 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('dashboard sidebar is resizable, persistent, and keyboard accessible', async () => {
-  const [shell, sidebar, styles] = await Promise.all([
+test('dashboard sidebar is resizable, persistent, keyboard accessible, and aligned when expanded', async () => {
+  const [shell, sidebar, nav, styles] = await Promise.all([
     read('components/product-shell.js'),
     read('components/resizable-product-sidebar.js'),
+    read('components/product-nav.js'),
     read('app/dashboard-saved.css')
   ])
 
@@ -16,9 +17,15 @@ test('dashboard sidebar is resizable, persistent, and keyboard accessible', asyn
   assert.match(sidebar, /role="separator"/)
   assert.match(sidebar, /ArrowLeft/)
   assert.match(sidebar, /ArrowRight/)
+  assert.match(nav, /product-nav-label/)
+  assert.match(nav, /nav-tooltip/)
   assert.match(styles, /--minimal-sidebar-width/)
   assert.match(styles, /cursor:col-resize/)
   assert.match(styles, /\.minimal-product-sidebar\.is-expanded/)
+  assert.match(styles, /grid-template-columns:44px minmax\(0,1fr\)/)
+  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.product-nav-icon/)
+  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.product-nav-label/)
+  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.nav-tooltip\{display:none\}/)
 })
 
 test('saved places are grouped by location category and perfect picks use persisted discovery events', async () => {
