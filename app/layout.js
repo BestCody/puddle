@@ -20,7 +20,6 @@ import './membership.css'
 import './sidebar-tooltips.css'
 import './location-picker.css'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
-import { VercelObservability } from '@/components/vercel-observability'
 
 export const metadata = {
   title: { default: 'Puddle', template: '%s · Puddle' },
@@ -42,6 +41,6 @@ export default function RootLayout({ children }) {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://tile.openstreetmap.org" />
     </head>
-    <body>{children}<ServiceWorkerCleanup /><VercelObservability /></body>
+    <body>{children}<ServiceWorkerCleanup /></body>
   </html>
 }
