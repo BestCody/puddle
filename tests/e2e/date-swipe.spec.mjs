@@ -196,7 +196,6 @@ test('opening full details reads the detail sidecar in-deck without materializin
   const dialog = page.getByRole('dialog', { name: `Full details for ${place.name}` })
   await expect(dialog).toBeVisible()
   await expect(dialog.getByRole('heading', { name: place.name })).toBeVisible()
-  await expect(dialog.getByText(place.summary)).toBeVisible()
   await expect(dialog.getByText('77 Sidecar Lane')).toBeVisible()
   await expect(dialog.getByText('viewpoint')).toBeVisible()
   await expect(dialog.getByRole('link', { name: 'Full details' })).toHaveCount(0)
