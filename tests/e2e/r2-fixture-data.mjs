@@ -54,7 +54,7 @@ function fixturePlace(sourcePlaceId, name, kind, latitude, longitude, details = 
   }
 }
 
-const rapidSwipePlaces = Array.from({ length: 10 }, (_, index) => {
+const rapidSwipePlaces = Array.from({ length: 20 }, (_, index) => {
   const number = String(index + 1).padStart(2, '0')
   return fixturePlace(
     `e2e-rapid-${number}`,
