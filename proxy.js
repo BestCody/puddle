@@ -92,7 +92,7 @@ export async function proxy(request) {
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
   }
-  if (isAuthOnly && user && !hasAuthFailure) {
+  if (isAuthOnly && pathname !== '/signin' && user && !hasAuthFailure) {
     return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce })
   }
   return secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly), { request, nonce })
