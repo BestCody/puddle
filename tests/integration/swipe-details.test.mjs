@@ -5,8 +5,10 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('swipe full details stays inside the deck and keeps decisions in context', async () => {
-  const [card, styles] = await Promise.all([
+  const [card, detailsHook, detailRoute, styles] = await Promise.all([
     read('components/minimal-swipe-card.js'),
+    read('lib/app/use-static-catalogue-details.js'),
+    read('app/api/static-catalogue/details/[id]/route.js'),
     read('app/dashboard-saved.css')
   ])
 
@@ -23,6 +25,14 @@ test('swipe full details stays inside the deck and keeps decisions in context', 
   assert.match(card, />Directions</)
   assert.match(card, />View all hours</)
   assert.match(card, /details have not yet been verified/)
+  assert.match(card, /useStaticCatalogueDetails\(item, detailsOpen\)/)
+  assert.match(detailsHook, /csrfFetch/)
+  assert.match(detailsHook, /\/api\/static-catalogue\/details\//)
+  assert.match(detailRoute, /verifyStaticCatalogueReference/)
+  assert.match(detailRoute, /fetchStaticPlaceByReference/)
+  assert.match(detailRoute, /fetchPrivateB2Asset/)
+  assert.match(detailRoute, /address_public: place\.addressPublic/)
+  assert.doesNotMatch(detailRoute, /materializeStaticCatalogueReferences/)
   assert.match(styles, /\.minimal-details-decision-bar/)
   assert.match(styles, /grid-template-rows:minmax\(0,1fr\) auto/)
   assert.match(styles, /@media\(max-width:620px\)/)
