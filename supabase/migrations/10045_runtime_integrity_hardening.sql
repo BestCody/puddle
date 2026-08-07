@@ -1,6 +1,24 @@
--- Runtime integrity hardening: reject moderated discovery writers at the database
--- boundary and make action receipts cover every v4 side effect, including the
--- recommendation context outbox.
+-- Runtime integrity hardening: enforce moderation state at both the Puddle HTTP
+-- boundary and Supabase's authenticated data boundary, then make discovery
+-- receipts cover every side effect including recommendation learning.
+
+create or replace function public.is_active_profile_v1()
+returns boolean
+language sql
+stable
+security definer
+set search_path=public
+as $$
+  select exists(
+    select 1
+    from public.profiles profile
+    where profile.id=auth.uid()
+      and profile.suspended_at is null
+      and profile.banned_at is null
+  )
+$$;
+revoke all on function public.is_active_profile_v1() from public,anon;
+grant execute on function public.is_active_profile_v1() to authenticated,service_role;
 
 create or replace function public.assert_active_profile_v1()
 returns boolean
@@ -28,9 +46,40 @@ $$;
 revoke all on function public.assert_active_profile_v1() from public,anon;
 grant execute on function public.assert_active_profile_v1() to authenticated,service_role;
 
+-- Add a restrictive policy to every existing RLS table exposed to the
+-- authenticated role. Existing permissive policies still decide what an active
+-- user may access; this policy only adds the global requirement that the account
+-- remain active. Appeal tables are intentionally excluded so a moderated user
+-- can still use the appeal process.
+do $$
+declare
+  target record;
+begin
+  for target in
+    select distinct namespace.nspname as schema_name,relation.relname as table_name
+    from pg_class relation
+    join pg_namespace namespace on namespace.oid=relation.relnamespace
+    join information_schema.role_table_grants grant_row
+      on grant_row.table_schema=namespace.nspname
+     and grant_row.table_name=relation.relname
+     and grant_row.grantee='authenticated'
+    where namespace.nspname='public'
+      and relation.relkind in ('r','p')
+      and relation.relrowsecurity
+      and relation.relname not ilike '%appeal%'
+  loop
+    execute format('drop policy if exists %I on %I.%I','active profile gate',target.schema_name,target.table_name);
+    execute format(
+      'create policy %I on %I.%I as restrictive for all to authenticated using (public.is_active_profile_v1()) with check (public.is_active_profile_v1())',
+      'active profile gate',target.schema_name,target.table_name
+    );
+  end loop;
+end
+$$;
+
 -- Preserve the optimized implementation as an internal function. The public v4
--- wrapper below strips already-receipted events before any state/context writes,
--- then rebuilds the response from receipts in the caller's sequence order.
+-- wrapper strips already-receipted events before any state/context writes, then
+-- rebuilds the response from receipts in the caller's sequence order.
 alter function public.record_discovery_actions_v4(jsonb)
   rename to record_discovery_actions_v4_unchecked;
 revoke all on function public.record_discovery_actions_v4_unchecked(jsonb) from public,anon,authenticated;
