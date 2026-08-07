@@ -26,8 +26,9 @@ test('dashboard sidebar is resizable, persistent, keyboard accessible, and align
   assert.match(styles, /\.minimal-product-sidebar \.minimal-product-nav>a>\.product-nav-icon\{[^}]*border:0;[^}]*background:transparent;[^}]*box-shadow:none/)
   assert.match(styles, /\.minimal-product-sidebar \.minimal-product-nav>a>\.product-nav-label\{[^}]*width:auto;[^}]*height:auto;[^}]*border:0;[^}]*background:transparent;[^}]*box-shadow:none/)
   assert.match(styles, /\.minimal-product-sidebar \.minimal-product-nav>a\.is-active\{[^}]*border:0;[^}]*box-shadow:none;[^}]*transform:none/)
-  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.product-nav-icon/)
-  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.product-nav-label/)
+  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav>a\{[^}]*height:72px;[^}]*align-items:center;[^}]*align-content:center;[^}]*padding:0 12px/)
+  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.product-nav-icon\{[^}]*height:44px;[^}]*align-self:center/)
+  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.product-nav-label\{[^}]*display:flex;[^}]*align-items:center;[^}]*align-self:center;[^}]*height:44px/)
   assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.nav-tooltip\{display:none\}/)
 })
 
