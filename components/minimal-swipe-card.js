@@ -101,7 +101,7 @@ function DetailsSheet({ item, photos, busy, onChoice, onClose }) {
 
   return (
     <div className="minimal-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <section className="minimal-details-sheet" role="dialog" aria-modal="true" aria-labelledby="minimal-details-title">
+      <section className="minimal-details-sheet" role="dialog" aria-modal="true" aria-labelledby="minimal-details-title" onKeyDown={(event) => event.stopPropagation()}>
         <button ref={closeButton} className="minimal-details-close" type="button" onClick={onClose} aria-label="Close details">×</button>
         <div className="minimal-details-scroll">
           {photos.length ? <div className="minimal-details-gallery" aria-label={`${item.title} photos`}>{photos.map((photo, index) => <img src={photo} alt={index === 0 ? item.title : `${item.title} photo ${index + 1}`} key={photo} />)}</div> : null}
