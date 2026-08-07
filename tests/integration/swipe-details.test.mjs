@@ -12,6 +12,8 @@ test('swipe full details stays inside the deck and keeps decisions in context', 
 
   assert.doesNotMatch(card, /Link href=\{item\.href\}/)
   assert.doesNotMatch(card, />Full details<\/Link>/)
+  assert.match(card, /aria-label=\{`Full details for \$\{item\.title\}`\}/)
+  assert.match(card, /onKeyDown=\{\(event\) => event\.stopPropagation\(\)\}/)
   assert.match(card, /minimal-details-decision-bar/)
   assert.match(card, /onChoice\('pass'\)/)
   assert.match(card, /onChoice\('save'\)/)
