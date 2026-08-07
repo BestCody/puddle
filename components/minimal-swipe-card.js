@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { photoDisplayState } from '@/lib/app/photo-enrichment'
 import { usePrivateB2Asset } from '@/lib/app/use-private-b2-asset'
+import { useStaticCatalogueDetails } from '@/lib/app/use-static-catalogue-details'
 import { useStaticMediaResolution } from '@/lib/app/use-static-media-resolution'
 
 const categoryLabels = {
@@ -55,7 +56,7 @@ function usefulSummary(item) {
 }
 
 function locationLabel(item) {
-  return item.address_public || [item.neighborhood, item.city, item.region].filter(Boolean).join(', ') || null
+  return item.address_public || item.addressPublic || [item.neighborhood, item.city, item.region].filter(Boolean).join(', ') || null
 }
 
 function photoCandidates(item) {
@@ -187,6 +188,7 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const detailItem = useStaticCatalogueDetails(item, detailsOpen)
   const candidates = useMemo(() => photoCandidates(item), [item])
   const rawMainPhoto = candidates[0]?.url || null
   const mainPhoto = usePrivateB2Asset(rawMainPhoto, candidates[0]?.key || null)
@@ -298,6 +300,6 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
         <strong className="minimal-swipe-save" style={{ opacity: Math.max(0, dragX / 90) }}>SAVE</strong>
       </div>
     </article>
-    {detailsOpen ? <DetailsSheet item={item} photos={photos} busy={busy} onChoice={chooseFromDetails} onClose={() => setDetailsOpen(false)} /> : null}
+    {detailsOpen ? <DetailsSheet item={detailItem} photos={photos} busy={busy} onChoice={chooseFromDetails} onClose={() => setDetailsOpen(false)} /> : null}
   </>
 }
