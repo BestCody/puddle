@@ -46,11 +46,29 @@ $$;
 revoke all on function public.assert_active_profile_v1() from public,anon;
 grant execute on function public.assert_active_profile_v1() to authenticated,service_role;
 
+create or replace function public.reject_inactive_authenticated_write_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path=public
+as $$
+begin
+  if coalesce(auth.role()::text,'')='authenticated' and not public.is_active_profile_v1() then
+    raise exception 'account unavailable' using errcode='42501';
+  end if;
+  if tg_op='DELETE' then return old; end if;
+  return new;
+end;
+$$;
+revoke all on function public.reject_inactive_authenticated_write_v1() from public,anon,authenticated;
+grant execute on function public.reject_inactive_authenticated_write_v1() to service_role;
+
 -- Add a restrictive policy to every existing RLS table exposed to the
 -- authenticated role. Existing permissive policies still decide what an active
 -- user may access; this policy only adds the global requirement that the account
 -- remain active. Appeal tables are intentionally excluded so a moderated user
--- can still use the appeal process.
+-- can still use the appeal process. A write trigger applies the same rule even
+-- when a security-definer RPC would otherwise bypass table RLS.
 do $$
 declare
   target record;
@@ -72,6 +90,11 @@ begin
     execute format(
       'create policy %I on %I.%I as restrictive for all to authenticated using (public.is_active_profile_v1()) with check (public.is_active_profile_v1())',
       'active profile gate',target.schema_name,target.table_name
+    );
+    execute format('drop trigger if exists %I on %I.%I','active_profile_write_gate',target.schema_name,target.table_name);
+    execute format(
+      'create trigger %I before insert or update or delete on %I.%I for each row execute function public.reject_inactive_authenticated_write_v1()',
+      'active_profile_write_gate',target.schema_name,target.table_name
     );
   end loop;
 end
