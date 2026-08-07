@@ -16,23 +16,60 @@ test('on-demand resolver stays explicitly disabled by default', async () => {
   assert.match(env, /STATIC_MEDIA_B2_BASELINE_BYTES=\n/)
 })
 
-test('visible static cards use the guarded resolver without hidden-card prefetch', async () => {
+test('static cards prefetch only the next three open-photo candidates with bounded concurrency', async () => {
   const card = await read('components/minimal-swipe-card.js')
+  const workspace = await read('components/date-swipe-workspace-v2.js')
   const hook = await read('lib/app/use-static-media-resolution.js')
   assert.match(card, /useStaticMediaResolution\(sourceItem\)/)
-  assert.match(hook, /sourceItem\?\.static_catalogue_ephemeral/)
-  assert.match(hook, /sourceItem\?\.static_ref/)
-  assert.match(hook, /\/api\/static-catalogue\/media\//)
-  assert.doesNotMatch(hook, /next card|prefetch/i)
+  assert.match(workspace, /feed\.items\.slice\(index \+ 1, index \+ 4\)/)
+  assert.match(workspace, /prefetchStaticMedia\(upcoming, \{ limit: 3, concurrency: 3 \}\)/)
+  assert.match(hook, /body: JSON\.stringify\(\{ ref: item\.static_ref, mode \}\)/)
+  assert.match(hook, /mode === 'open_only'/)
+  assert.match(hook, /Math\.min\(3, Number\(concurrency\)/)
+  assert.match(hook, /hasKnownMedia\(item\)/)
+  assert.match(hook, /resolvedMediaCache/)
+  assert.match(hook, /openPrefetchAttempted/)
 })
 
-test('resolver endpoint verifies caller, request and signed catalogue identity', async () => {
+test('open-only prefetch cannot spend a Google lookup and visible failures expose safe Google diagnostics', async () => {
+  const resolver = await read('lib/app/static-media-resolver.js')
+  const openOnlyBranch = resolver.indexOf('if (openOnly) {')
+  const googleLookup = resolver.indexOf('const google = await resolveGoogle')
+  assert.ok(openOnlyBranch >= 0 && googleLookup > openOnlyBranch)
+  assert.match(resolver, /Google Places is not configured\./)
+  assert.match(resolver, /Google request budget is exhausted\./)
+  assert.match(resolver, /google\.error \? `google: \$\{google\.error\}` : null/)
+  assert.match(resolver, /OPEN_PHOTO_MISS_PREFIX/)
+})
+
+test('resolver endpoint verifies caller, signed identity, and explicit prefetch mode', async () => {
   const route = await read('app/api/static-catalogue/media/[id]/route.js')
   assert.match(route, /verifyCsrf\(request\)/)
   assert.match(route, /supabase\.auth\.getUser\(\)/)
   assert.match(route, /enforceRateLimit/)
+  assert.match(route, /\['full', 'open_only'\]\.includes\(mode\)/)
+  assert.match(route, /weight: mode === 'open_only' \? 2 : 5/)
   assert.match(route, /verifyStaticCatalogueReference\(referenceToken, \{ expectedId: id \}\)/)
+  assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode \}\)/)
   assert.match(route, /Cache-Control': 'private, no-store'/)
+})
+
+test('temporary media failures become retryable after one minute', async () => {
+  const resolver = await read('lib/app/static-media-resolver.js')
+  const retryMigration = await read('supabase/migrations/10044_static_media_retry_window.sql')
+  assert.match(resolver, /lease_seconds: 60/)
+  assert.match(resolver, /retry_after_seconds: 60/)
+  assert.match(retryMigration, /retry_after_seconds integer default 60/)
+  assert.match(retryMigration, /safe_retry integer := greatest\(60,/)
+})
+
+test('slow open-photo providers are bounded and KartaView timeout remains non-fatal', async () => {
+  const provider = await read('lib/app/static-open-photo-provider.js')
+  assert.match(provider, /provider: 'kartaview', maxAttempts: 1, baseDelayMs: 500, timeoutMs: 1_500/)
+  assert.match(provider, /provider: 'mapillary', maxAttempts: 1, baseDelayMs: 500, timeoutMs: 2_000/)
+  assert.match(provider, /provider: 'wikimedia-commons', maxAttempts: 1,/)
+  assert.match(provider, /Promise\.all\(providers\.map/)
+  assert.match(provider, /failures\.push\(`\$\{outcome\.provider\} lookup: \$\{outcome\.error\.message\}`\)/)
 })
 
 test('catalogue reads and runtime photo writes use separate B2 credentials', async () => {
