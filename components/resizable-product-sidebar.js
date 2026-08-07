@@ -20,7 +20,7 @@ function applyWidth(value) {
   document.documentElement.style.setProperty('--minimal-sidebar-width', `${clampWidth(value)}px`)
 }
 
-export function ResizableProductSidebar() {
+export function ResizableProductSidebar({ className = 'minimal-product-sidebar' }) {
   const [width, setWidth] = useState(MIN_WIDTH)
   const drag = useRef(null)
 
@@ -79,7 +79,7 @@ export function ResizableProductSidebar() {
 
   const expanded = width >= EXPANDED_WIDTH
 
-  return <aside className={`product-sidebar minimal-product-sidebar${expanded ? ' is-expanded' : ''}`}>
+  return <aside className={`product-sidebar ${className}${expanded ? ' is-expanded' : ''}`}>
     <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" /></div>
     <ProductNav />
     <div
