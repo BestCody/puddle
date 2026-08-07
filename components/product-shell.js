@@ -26,7 +26,7 @@ export async function ProductShell({ user, profile, children }) {
 
   return (
     <div className="product-shell minimal-product-shell">
-      <ResizableProductSidebar />
+      <ResizableProductSidebar className="minimal-product-sidebar" />
 
       <div className="product-stage minimal-product-stage">
         <header className="product-header minimal-product-header">
