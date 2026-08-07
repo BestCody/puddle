@@ -399,7 +399,7 @@ jobs:
             --apply
 
       - name: Preserve activation manifest
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: catalogue-root-${{ inputs.release }}
           path: ${{ runner.temp }}/root-manifest/catalogue/manifest.json
