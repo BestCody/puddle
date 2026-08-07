@@ -2,37 +2,15 @@ import Link from 'next/link'
 import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
-import { signIn, signInWithOAuth, signOut, sendLoginCode, verifyLoginCode } from '@/app/auth/actions'
-import { createClient } from '@/lib/supabase/server'
-import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { signIn, signInWithOAuth, sendLoginCode, verifyLoginCode } from '@/app/auth/actions'
 
 export const metadata = { title: 'Sign in' }
-
-async function currentAuthenticatedUser() {
-  if (!isSupabaseConfigured()) return null
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  return error ? null : user
-}
 
 export default async function SignInPage({ searchParams }) {
   const params = await searchParams
   const next = typeof params?.next === 'string' ? params.next : '/dashboard'
   const email = typeof params?.email === 'string' ? params.email.slice(0, 254) : ''
   const codeSent = params?.code_sent === '1'
-  const hasAuthFailure = Boolean(params?.error || params?.auth_error)
-  const currentUser = hasAuthFailure ? null : await currentAuthenticatedUser()
-
-  if (currentUser) {
-    return (
-      <AuthShell eyebrow="Account active" title="You're already signed in." description="Continue to Puddle, or sign out before using a different account.">
-        <div className="auth-links"><Link href="/dashboard">Continue to Puddle →</Link></div>
-        <form className="auth-form" action={signOut} style={{ marginTop: '1rem' }}>
-          <SubmitButton className="secondary-button" pendingText="Signing out…">Sign out</SubmitButton>
-        </form>
-      </AuthShell>
-    )
-  }
 
   return (
     <AuthShell eyebrow="Welcome back" title="Jump back into your Puddle." description="Your saved plans, people, and tickets are waiting.">
