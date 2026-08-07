@@ -54,6 +54,17 @@ function fixturePlace(sourcePlaceId, name, kind, latitude, longitude, details = 
   }
 }
 
+const rapidSwipePlaces = Array.from({ length: 10 }, (_, index) => {
+  const number = String(index + 1).padStart(2, '0')
+  return fixturePlace(
+    `e2e-rapid-${number}`,
+    `E2E Rapid Swipe ${number}`,
+    'cafe',
+    43.65400 + index * 0.00005,
+    -79.38400 - index * 0.00005
+  )
+})
+
 export const R2_FIXTURE_PLACES = Object.freeze([
   fixturePlace('e2e-media-photo', 'E2E Media Photo Cafe', 'cafe', 43.65300, -79.38300),
   fixturePlace('e2e-media-google', 'E2E Media Google Museum', 'museum', 43.65305, -79.38305),
@@ -76,7 +87,8 @@ export const R2_FIXTURE_PLACES = Object.freeze([
   fixturePlace('e2e-shared-date-gallery', 'E2E Shared Date Gallery', 'gallery', 43.65340, -79.38340),
   fixturePlace('e2e-group-arcade', 'E2E Group Arcade', 'activity_venue', 43.65345, -79.38345),
   fixturePlace('e2e-group-park', 'E2E Group Park', 'park', 43.65350, -79.38350),
-  fixturePlace('e2e-failure-cafe', 'E2E Failure Recovery Cafe', 'cafe', 43.65355, -79.38355)
+  fixturePlace('e2e-failure-cafe', 'E2E Failure Recovery Cafe', 'cafe', 43.65355, -79.38355),
+  ...rapidSwipePlaces
 ])
 
 export const R2_FIXTURE_BY_SOURCE_ID = new Map(R2_FIXTURE_PLACES.map((place) => [place.sourcePlaceId, place]))
@@ -108,7 +120,7 @@ for (const { tile, places } of tiles.values()) {
   const media = []
   for (const place of places) {
     const id = staticCatalogueLocationId(place.source, place.sourcePlaceId)
-    if (place.sourcePlaceId === 'e2e-media-photo') {
+    if (['e2e-media-photo', 'e2e-rapid-01'].includes(place.sourcePlaceId)) {
       media.push([
         id,
         `${R2_FIXTURE_BASE_URL}/photos/e2e-media.png`,

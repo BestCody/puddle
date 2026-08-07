@@ -24,11 +24,16 @@ export async function POST(request, { params }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Sign in to resolve location media.' }, { status: 401 })
 
+    const body = object(await readJsonLimited(request, 8_192))
+    const referenceToken = string(body.ref, { name: 'static catalogue reference', max: 4_096 })
+    const mode = body.mode === undefined ? 'full' : string(body.mode, { name: 'media resolution mode', max: 20 })
+    if (!['full', 'open_only'].includes(mode)) throw Object.assign(new Error('Unsupported media resolution mode.'), { status: 400 })
+
     const limited = await enforceRateLimit({
       headers: request.headers,
       userId: user.id,
       action: 'static_media_resolve',
-      weight: 5
+      weight: mode === 'open_only' ? 2 : 5
     })
     if (!limited.allowed) {
       return NextResponse.json(
@@ -37,10 +42,8 @@ export async function POST(request, { params }) {
       )
     }
 
-    const body = object(await readJsonLimited(request, 8_192))
-    const referenceToken = string(body.ref, { name: 'static catalogue reference', max: 4_096 })
     const reference = verifyStaticCatalogueReference(referenceToken, { expectedId: id })
-    const result = await resolveStaticCatalogueMedia(reference)
+    const result = await resolveStaticCatalogueMedia(reference, { mode })
     return NextResponse.json(result.payload, {
       status: result.status,
       headers: { 'Cache-Control': 'private, no-store' }

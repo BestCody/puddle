@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { csrfFetch } from '@/lib/security/csrf-client'
+import { prefetchStaticMedia } from '@/lib/app/use-static-media-resolution'
 
 const ACTION_BATCH_DELAY_MS = 350
 const ACTION_BATCH_SIZE = 20
@@ -120,6 +121,12 @@ export function DateSwipeWorkspaceV2({ initialFeed }) {
     const timer = window.setTimeout(() => setMessage(''), 2400)
     return () => window.clearTimeout(timer)
   }, [message])
+
+  useEffect(() => {
+    const upcoming = feed.items.slice(index + 1, index + 4)
+    if (!upcoming.length) return
+    prefetchStaticMedia(upcoming, { limit: 3, concurrency: 3 }).catch(() => {})
+  }, [feed.items, index])
 
   const flushActions = useCallback(({ keepalive = false } = {}) => {
     if (flushTimer.current) {
