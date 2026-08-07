@@ -280,7 +280,7 @@ jobs:
             --apply
 
       - name: Preserve activation manifest without publishing it
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: catalogue-root-${{ env.RELEASE }}
           path: ${{ runner.temp }}/root-manifest/catalogue/manifest.json

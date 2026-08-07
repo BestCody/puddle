@@ -79,7 +79,7 @@ jobs:
         run: npm run e2e:test
       - name: Upload browser diagnostics
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
