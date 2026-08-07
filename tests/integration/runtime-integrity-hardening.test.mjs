@@ -4,17 +4,20 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('solo swipe delivery keeps actions durable until acknowledgement', async () => {
+test('solo swipe delivery keeps actions durable until acknowledgement and scoped to one profile', async () => {
   const source = await read('components/date-swipe-workspace-v2.js')
+  const page = await read('app/discover/page.js')
   assert.match(source, /puddle:pending-discovery-actions:v1/)
+  assert.match(source, /actionStorageKey\(profileId\)/)
   assert.match(source, /const entries = actionBuffer\.current\.slice\(0, ACTION_BATCH_SIZE\)/)
   const success = source.indexOf('if (!response.ok)')
   const acknowledgedRemoval = source.indexOf('actionBuffer.current.splice(0, entries.length)', success)
   assert.ok(success >= 0 && acknowledgedRemoval > success, 'the queue must not remove entries before the response is acknowledged')
   assert.match(source, /status === 429 \|\| status >= 500/)
   assert.match(source, /retryDelay\(retryAttempt\.current\+\+, error\?\.retryAfter\)/)
-  assert.match(source, /storedDiscoveryActions\(\)/)
-  assert.match(source, /persistDiscoveryActions\(actionBuffer\.current\)/)
+  assert.match(source, /storedDiscoveryActions\(storageKey\)/)
+  assert.match(source, /persistDiscoveryActions\(actionBuffer\.current, storageKey\)/)
+  assert.match(page, /profileId=\{session\.user\.id\}/)
 })
 
 test('moderated sessions are blocked at HTTP, RLS, and security-definer write boundaries', async () => {
