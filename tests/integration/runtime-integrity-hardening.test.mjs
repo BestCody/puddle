@@ -17,7 +17,7 @@ test('solo swipe delivery keeps actions durable until acknowledgement', async ()
   assert.match(source, /persistDiscoveryActions\(actionBuffer\.current\)/)
 })
 
-test('moderated sessions are blocked at HTTP and database boundaries', async () => {
+test('moderated sessions are blocked at HTTP, RLS, and security-definer write boundaries', async () => {
   const proxy = await read('proxy.js')
   const session = await read('lib/supabase/proxy.js')
   const migration = await read('supabase/migrations/10045_runtime_integrity_hardening.sql')
@@ -27,6 +27,8 @@ test('moderated sessions are blocked at HTTP and database boundaries', async () 
   assert.match(migration, /create or replace function public\.is_active_profile_v1/)
   assert.match(migration, /as restrictive for all to authenticated/)
   assert.match(migration, /relation\.relname not ilike '%appeal%'/)
+  assert.match(migration, /create or replace function public\.reject_inactive_authenticated_write_v1/)
+  assert.match(migration, /before insert or update or delete/)
   assert.match(migration, /perform public\.assert_active_profile_v1\(\)/)
 })
 
@@ -37,6 +39,17 @@ test('discovery retries are filtered by receipt before side effects run', async 
   assert.ok(filter >= 0 && unchecked > filter)
   assert.match(migration, /receipt\.profile_id=actor/)
   assert.match(migration, /receipt\.event_id=\(source\.item->>'eventId'\)::uuid/)
+})
+
+test('private B2 grants are lazy and issued only for rendered object keys', async () => {
+  const feed = await read('lib/app/b2-feed-assets.js')
+  const card = await read('components/minimal-swipe-card.js')
+  assert.doesNotMatch(feed, /authorizeB2DownloadUrl/)
+  assert.match(feed, /private_b2_asset_keys/)
+  assert.match(feed, /lazy: true/)
+  assert.match(card, /usePrivateB2Asset\(rawMainPhoto, privateMainKey\)/)
+  assert.match(card, /mainPhotoPending/)
+  assert.match(card, /function PrivateDetailPhoto/)
 })
 
 test('legacy photo enrichment no longer writes automatically outside runtime budgets', async () => {
