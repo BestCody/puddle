@@ -19,6 +19,43 @@ async function ensureRapidSwipeCatalogueInSupabase() {
   if (!Array.isArray(data) || data.length !== items.length) {
     throw new Error('Supabase did not materialize the complete rapid-swipe fixture catalogue.')
   }
+
+  const { data: mediaObject, error: mediaError } = await admin
+    .from('media_objects')
+    .upsert({
+      storage_backend: 'remote',
+      storage_key: 'e2e/rapid-swipe-01',
+      public_url: `${R2_FIXTURE_BASE_URL}/photos/e2e-media.png`,
+      content_hash: 'e'.repeat(64),
+      byte_size: 1024,
+      width: 640,
+      height: 480
+    }, { onConflict: 'storage_backend,storage_key' })
+    .select('id')
+    .single()
+  if (mediaError) throw mediaError
+
+  const { error: photoError } = await admin
+    .from('location_photo_sources')
+    .upsert({
+      location_id: R2_FIXTURE_IDS['e2e-rapid-01'],
+      source: 'licensed_public',
+      provider: 'wikimedia-commons',
+      external_photo_id: 'e2e-rapid-01-photo',
+      remote_url: 'https://example.com/e2e-media.png',
+      attribution_text: 'E2E Fixture · CC0',
+      attribution_url: 'https://example.com/e2e-photo-attribution',
+      license_code: 'CC0-1.0',
+      width: 640,
+      height: 480,
+      is_primary: true,
+      sort_order: 0,
+      status: 'approved',
+      is_ai_generated: false,
+      storage_backend: 'remote',
+      media_object_id: mediaObject.id
+    }, { onConflict: 'location_id,provider,external_photo_id' })
+  if (photoError) throw photoError
 }
 
 async function createRapidSwiper() {
