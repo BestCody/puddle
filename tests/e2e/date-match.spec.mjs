@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { admin, completeProfileDirect, createConfirmedUser, poll, signInThroughUi } from './support.mjs'
+import { completeProfileDirect, createConfirmedUser, signInThroughUi } from './support.mjs'
 import { fixturePlaceBySourceId } from './r2-fixture-data.mjs'
+import { ensureRelationalFixturePlaces } from './relational-fixture.mjs'
 
 function escapePattern(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -46,11 +47,13 @@ async function finishPersonalDeck(page) {
   await expect(invite).toBeVisible()
 }
 
-test('two people receive a DateMatch from the same signed R2 deck', async ({ browser }) => {
-  const creator = await createParticipant('R2 DateMatch Creator')
-  const partner = await createParticipant('R2 DateMatch Partner')
+test('two people receive a DateMatch from the same relational Supabase deck', async ({ browser }) => {
   const expected = fixturePlaceBySourceId('e2e-shared-date-cafe')
   const second = fixturePlaceBySourceId('e2e-shared-date-gallery')
+  await ensureRelationalFixturePlaces([expected, second])
+
+  const creator = await createParticipant('Relational DateMatch Creator')
+  const partner = await createParticipant('Relational DateMatch Partner')
 
   const creatorContext = await browser.newContext()
   const partnerContext = await browser.newContext()
@@ -71,19 +74,6 @@ test('two people receive a DateMatch from the same signed R2 deck', async ({ bro
   expect(roomUrl).toBeTruthy()
   const roomPath = new URL(roomUrl).pathname
 
-  await poll(async () => {
-    const result = await admin.from('locations').select('id').in('id', [expected.id, second.id])
-    if (result.error) throw result.error
-    return result.data?.length === 2 ? result.data : null
-  }, { timeout: 20_000, message: 'Shared-deck creation did not materialize all signed R2 locations.' })
-  const retention = await admin
-    .from('static_catalogue_materializations')
-    .select('location_id,retention_class,expires_at')
-    .in('location_id', [expected.id, second.id])
-  if (retention.error) throw retention.error
-  expect(retention.data).toHaveLength(2)
-  expect(retention.data.every((row) => row.retention_class === 'shared' && row.expires_at === null)).toBe(true)
-
   await inviteDialog.getByRole('link', { name: /Open room/i }).click()
   await expect(creatorPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
   await expect(creatorPage.getByText(/Your choices are saved privately/i)).toBeVisible()
@@ -93,7 +83,7 @@ test('two people receive a DateMatch from the same signed R2 deck', async ({ bro
   await expect(partnerPage.getByRole('heading', { name: /Choose privately. Match on the locations you both want/i })).toBeVisible()
   await expect(partnerPage.locator('.date-swipe-card h2')).toHaveText(expected.name)
 
-  const partnerTitle = await saveSharedCard(partnerPage, 'I love this R2-backed place too.')
+  const partnerTitle = await saveSharedCard(partnerPage, 'I love this Supabase-backed place too.')
   expect(partnerTitle).toBe(expected.name)
   const partnerMatch = partnerPage.getByRole('dialog')
   await expect(partnerMatch.getByRole('heading', { name: new RegExp(`You both saved ${escapePattern(expected.name)}`, 'i') })).toBeVisible()
@@ -101,7 +91,7 @@ test('two people receive a DateMatch from the same signed R2 deck', async ({ bro
 
   const creatorMatch = creatorPage.getByRole('dialog')
   await expect(creatorMatch.getByRole('heading', { name: new RegExp(`You both saved ${escapePattern(expected.name)}`, 'i') })).toBeVisible({ timeout: 20_000 })
-  await expect(creatorMatch.getByText(/I love this R2-backed place too/i)).toBeVisible()
+  await expect(creatorMatch.getByText(/I love this Supabase-backed place too/i)).toBeVisible()
 
   await creatorContext.close()
   await partnerContext.close()

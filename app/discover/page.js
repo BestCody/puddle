@@ -1,9 +1,9 @@
 import { after } from 'next/server'
 import { AuthMessage } from '@/components/auth-message'
 import { DateSwipeWorkspaceV2 } from '@/components/date-swipe-workspace-v2'
-import { authorizeDiscoveryFeedB2Assets } from '@/lib/app/b2-feed-assets'
+import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational-fallback'
+import { recordSampledDiscoveryAnalytics as recordSampledInfrastructureAnalytics } from '@/lib/app/discovery-analytics'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getInfrastructureDiscoveryFeedV2, recordSampledInfrastructureAnalyticsV2 } from '@/lib/app/discovery-infrastructure-v2'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -73,14 +73,13 @@ export default async function DiscoverPage({ searchParams }) {
 
     let feed
     try {
-      const rawFeed = await getInfrastructureDiscoveryFeedV2(session, feedFilters)
-      feed = await authorizeDiscoveryFeedB2Assets(rawFeed)
+      feed = await getRelationalDiscoveryFeed(session, feedFilters)
     } catch (error) {
       console.error(`Initial discovery feed failed: ${error?.message || 'unknown error'}`)
       feed = unavailableFeed(session, feedFilters)
     }
 
-    after(() => recordSampledInfrastructureAnalyticsV2(session, feed)
+    after(() => recordSampledInfrastructureAnalytics(session, feed)
       .catch((error) => console.warn(`Sampled discovery analytics failed: ${error.message}`)))
 
     return <div className="minimal-swipe-page">
