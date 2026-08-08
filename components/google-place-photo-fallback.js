@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { findGoogleUiKitPlace } from '@/lib/app/google-place-client'
 
 let placesLibraryPromise = null
 
@@ -47,14 +46,19 @@ async function loadPlacesLibrary(apiKey) {
   await Promise.all([
     customElements.whenDefined('gmp-place-details-compact'),
     customElements.whenDefined('gmp-place-details-place-request'),
+    customElements.whenDefined('gmp-place-details-location-request'),
     customElements.whenDefined('gmp-place-content-config'),
     customElements.whenDefined('gmp-place-media'),
-    customElements.whenDefined('gmp-place-attribution'),
-    customElements.whenDefined('gmp-place-search'),
-    customElements.whenDefined('gmp-place-text-search-request'),
-    customElements.whenDefined('gmp-place-all-content')
+    customElements.whenDefined('gmp-place-attribution')
   ])
   return places
+}
+
+function lookupLocation(lookup) {
+  const latitude = Number(lookup?.latitude)
+  const longitude = Number(lookup?.longitude)
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+  return { latitude, longitude }
 }
 
 function fallbackLabel(state, title) {
@@ -81,26 +85,25 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
 
   useEffect(() => {
     const mount = mountRef.current
-    if (!mount || !apiKey || !googleUiEnabled() || (!placeId && !lookup?.allowed)) {
+    const location = lookupLocation(lookup)
+    if (!mount || !apiKey || !googleUiEnabled() || (!placeId && (!lookup?.allowed || !location))) {
       setState('unavailable')
       return undefined
     }
 
     let cancelled = false
     let details = null
-    const fail = () => { if (!cancelled) setState('unavailable') }
+    const fail = (event) => {
+      if (cancelled) return
+      const error = event?.error
+      if (error) console.error('[puddle-google-ui-kit-error]', error.name || 'Error', error.message || String(error))
+      setState('unavailable')
+    }
 
     async function render() {
       try {
         await loadPlacesLibrary(apiKey)
         if (cancelled) return
-        const resolvedPlaceId = placeId
-          ? String(placeId)
-          : (await findGoogleUiKitPlace(mount, lookup))?.placeId || null
-        if (!resolvedPlaceId || cancelled) {
-          fail()
-          return
-        }
 
         details = document.createElement('gmp-place-details-compact')
         details.className = 'date-google-place-details'
@@ -108,8 +111,15 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
         details.setAttribute('truncation-preferred', '')
         details.setAttribute('aria-label', `Google Maps place photo for ${title}`)
 
-        const request = document.createElement('gmp-place-details-place-request')
-        request.setAttribute('place', resolvedPlaceId)
+        let request
+        if (placeId) {
+          request = document.createElement('gmp-place-details-place-request')
+          request.setAttribute('place', String(placeId))
+        } else {
+          request = document.createElement('gmp-place-details-location-request')
+          request.setAttribute('location', `${location.latitude},${location.longitude}`)
+        }
+
         const content = document.createElement('gmp-place-content-config')
         const media = document.createElement('gmp-place-media')
         media.setAttribute('lightbox-preferred', '')
@@ -119,9 +129,11 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
         content.append(media, attribution)
         details.append(request, content)
         details.addEventListener('gmp-load', () => { if (!cancelled) setState('ready') }, { once: true })
+        details.addEventListener('gmp-error', fail)
         details.addEventListener('gmp-requesterror', fail)
         mount.replaceChildren(details)
-      } catch {
+      } catch (error) {
+        if (!cancelled) console.error('[puddle-google-ui-kit-error]', error?.name || 'Error', error?.message || String(error))
         fail()
       }
     }
@@ -130,7 +142,10 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
     render()
     return () => {
       cancelled = true
-      if (details) details.removeEventListener('gmp-requesterror', fail)
+      if (details) {
+        details.removeEventListener('gmp-error', fail)
+        details.removeEventListener('gmp-requesterror', fail)
+      }
       mount.replaceChildren()
     }
   }, [apiKey, placeId, title, lookupKey])
