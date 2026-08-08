@@ -1,0 +1,122 @@
+name: Ops - repair Sushi Kaji photo metadata
+
+on:
+  push:
+    branches:
+      - ops/repair-sushi-kaji-photo
+    paths:
+      - '.github/workflows/ops-repair-sushi-kaji-photo.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  repair-photo-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+      OPEN_PHOTO_MIN_SCORE: '0.60'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Refresh approved Mapillary identity for Sushi Kaji only
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createAdminClient } from './lib/supabase/admin.js'
+          import { findStaticOpenPhotoCandidates } from './lib/app/static-open-photo-provider.js'
+
+          const LOCATION_ID = '4b4fd9de-c44d-4c07-a6bc-f6077d06a4cd'
+          const admin = createAdminClient()
+
+          const locationResult = await admin
+            .from('locations')
+            .select('id,name,kind,city,region,country,country_code,address_public,latitude,longitude,status,visibility')
+            .eq('id', LOCATION_ID)
+            .maybeSingle()
+          if (locationResult.error) throw locationResult.error
+          const location = locationResult.data
+          if (!location || location.name !== 'Sushi Kaji') throw new Error('Target Sushi Kaji location was not found.')
+          if (location.status !== 'published' || location.visibility !== 'public') throw new Error('Target location is not public/published.')
+
+          const sourceResult = await admin
+            .from('location_photo_sources')
+            .select('location_id,provider,external_photo_id,status,is_ai_generated,is_primary,sort_order,verified_at')
+            .eq('location_id', LOCATION_ID)
+            .eq('provider', 'mapillary')
+            .eq('status', 'approved')
+            .eq('is_ai_generated', false)
+            .limit(1)
+            .maybeSingle()
+          if (sourceResult.error) throw sourceResult.error
+          const source = sourceResult.data
+          if (!source) throw new Error('Approved Sushi Kaji Mapillary source was not found.')
+
+          const place = {
+            id: location.id,
+            name: location.name,
+            kind: location.kind,
+            city: location.city,
+            region: location.region,
+            country: location.country,
+            countryCode: location.country_code,
+            addressPublic: location.address_public,
+            latitude: Number(location.latitude),
+            longitude: Number(location.longitude)
+          }
+
+          const candidates = await findStaticOpenPhotoCandidates(place, {
+            minScore: 0.60,
+            maxCandidatesPerProvider: 10
+          })
+          const mapillary = candidates.candidates
+            .filter((candidate) => candidate.provider === 'mapillary')
+            .sort((a, b) => b.score - a.score)
+          if (!mapillary.length) {
+            throw new Error(`No current Mapillary candidate found. Diagnostics: ${candidates.failures.join(' | ') || 'none'}`)
+          }
+
+          const candidate = mapillary[0]
+          const oldId = String(source.external_photo_id || '')
+          const newId = String(candidate.externalId || '')
+          if (!newId) throw new Error('Selected Mapillary candidate has no external ID.')
+
+          const updateResult = await admin
+            .from('location_photo_sources')
+            .update({
+              external_photo_id: newId,
+              attribution_text: candidate.attribution,
+              attribution_url: candidate.pageUrl,
+              license_code: candidate.license,
+              terms_url: candidate.licenseUrl,
+              width: candidate.width || null,
+              height: candidate.height || null,
+              verified_at: new Date().toISOString()
+            })
+            .eq('location_id', LOCATION_ID)
+            .eq('provider', 'mapillary')
+            .eq('status', 'approved')
+            .eq('is_ai_generated', false)
+            .select('location_id,provider,external_photo_id,status,verified_at')
+          if (updateResult.error) throw updateResult.error
+          if (!Array.isArray(updateResult.data) || updateResult.data.length !== 1) {
+            throw new Error(`Expected exactly one approved Mapillary row to update; updated ${updateResult.data?.length || 0}.`)
+          }
+
+          console.log(JSON.stringify({
+            locationId: LOCATION_ID,
+            name: location.name,
+            oldExternalPhotoId: oldId,
+            newExternalPhotoId: newId,
+            candidateScore: Number(candidate.score.toFixed(4)),
+            provider: candidate.provider,
+            updatedRows: updateResult.data.length
+          }, null, 2))
+          NODE
