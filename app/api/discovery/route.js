@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { authorizeDiscoveryFeedB2Assets } from '@/lib/app/b2-feed-assets'
 import { getInfrastructureDiscoveryFeedV2, recordSampledInfrastructureAnalyticsV2 } from '@/lib/app/discovery-infrastructure-v2'
+import { getRelationalDiscoveryFallback } from '@/lib/app/discovery-relational-fallback'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 
@@ -35,11 +36,16 @@ async function discoveryResponse(session, filters, excludeIds = []) {
     const rawFeed = await getInfrastructureDiscoveryFeedV2(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
     feed = await authorizeDiscoveryFeedB2Assets(rawFeed)
   } catch (error) {
-    console.error(`Discovery refresh failed: ${error?.message || 'unknown error'}`)
-    return NextResponse.json(
-      { error: 'Could not load nearby places. Please try again.' },
-      { status: 503, headers: { 'Cache-Control': 'private, no-store' } }
-    )
+    console.warn(`Static discovery unavailable; using Supabase fallback: ${error?.message || 'unknown error'}`)
+    try {
+      feed = await getRelationalDiscoveryFallback(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
+    } catch (fallbackError) {
+      console.error(`Discovery refresh failed: ${fallbackError?.message || 'unknown error'}`)
+      return NextResponse.json(
+        { error: 'Could not load nearby places. Please try again.' },
+        { status: 503, headers: { 'Cache-Control': 'private, no-store' } }
+      )
+    }
   }
 
   after(async () => {
