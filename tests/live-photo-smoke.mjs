@@ -158,7 +158,7 @@ page.on('response', async (response) => {
     try { body = await response.json() } catch {}
     diagnostics.resolverResponses.push({ url: safeExternalUrl(url), status: response.status(), body })
   }
-  if (url.includes('/api/location-open-photo/')) {
+  if (url.includes('/api/location-open-photo/') || url.includes('/storage/v1/object/public/puddle-public-media/')) {
     diagnostics.relationalPhotoResponses.push({
       url: safeExternalUrl(url),
       status: response.status(),
