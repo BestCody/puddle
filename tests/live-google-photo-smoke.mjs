@@ -125,6 +125,19 @@ try {
       response.headers()['x-puddle-google-attributions'] ||
       response.headers()['x-puddle-google-maps-uri']
     )
+    if (response.status() !== 200 || !contentType.startsWith('image/')) {
+      const errorBody = (await response.text().catch(() => '')).slice(0, 1000)
+      console.log(JSON.stringify({
+        locationId: candidate.location_id,
+        name: candidate.name,
+        status: response.status(),
+        contentType,
+        hasAttribution,
+        errorBody
+      }))
+      continue
+    }
+
     console.log(JSON.stringify({
       locationId: candidate.location_id,
       name: candidate.name,
@@ -132,8 +145,6 @@ try {
       contentType,
       hasAttribution
     }))
-
-    if (response.status() !== 200 || !contentType.startsWith('image/')) continue
     const bytes = await response.body()
     assert.ok(bytes.length > 0, 'Google fallback returned an empty image.')
     assert.ok(hasAttribution, 'Google fallback image did not expose attribution metadata.')
