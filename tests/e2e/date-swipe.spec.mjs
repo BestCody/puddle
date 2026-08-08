@@ -52,30 +52,15 @@ async function installGoogleUiKitStub(page) {
         window.setTimeout(() => this.dispatchEvent(new Event('gmp-load')), 0)
       }
     }
-    class SearchElement extends HTMLElement {
-      connectedCallback() {
-        this.places = [{
-          id: 'e2e-google-place-id',
-          displayName: 'E2E Media Google Museum',
-          formattedAddress: 'Toronto, ON, Canada',
-          location: { lat: () => 43.6532, lng: () => -79.3832 }
-        }]
-        window.setTimeout(() => this.dispatchEvent(new Event('gmp-load')), 0)
-      }
-    }
     if (!customElements.get('gmp-place-details-compact')) {
       customElements.define('gmp-place-details-compact', DetailsElement)
     }
-    if (!customElements.get('gmp-place-search')) {
-      customElements.define('gmp-place-search', SearchElement)
-    }
     for (const name of [
       'gmp-place-details-place-request',
+      'gmp-place-details-location-request',
       'gmp-place-content-config',
       'gmp-place-media',
-      'gmp-place-attribution',
-      'gmp-place-text-search-request',
-      'gmp-place-all-content'
+      'gmp-place-attribution'
     ]) {
       if (!customElements.get(name)) customElements.define(name, class extends HTMLElement {})
     }
@@ -110,7 +95,7 @@ test('R2 media overlays rank cached photos first and mount Google UI Kit only fo
   await expect(card.locator('h1')).toHaveText('E2E Media Google Museum')
   await expect.poll(() => page.evaluate(() => window.__e2eGoogleImports || [])).toContain('places')
   await expect(page.locator('gmp-place-details-compact')).toHaveCount(1)
-  await expect(page.locator('gmp-place-details-place-request')).toHaveAttribute('place', 'e2e-google-place-id')
+  await expect(page.locator('gmp-place-details-location-request')).toHaveAttribute('location', /,/)
 
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(card.locator('h1')).toHaveText('E2E Media Placeholder Park')
