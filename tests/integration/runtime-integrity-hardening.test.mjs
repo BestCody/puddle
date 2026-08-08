@@ -24,6 +24,7 @@ test('moderated sessions are blocked at HTTP, RLS, and security-definer write bo
   const proxy = await read('proxy.js')
   const session = await read('lib/supabase/proxy.js')
   const migration = await read('supabase/migrations/10045_runtime_integrity_hardening.sql')
+  const bootstrap = await read('supabase/migrations/10046_profile_bootstrap_moderation_exception.sql')
   assert.match(session, /select\('suspended_at,banned_at'\)/)
   assert.match(proxy, /profileState\?\.suspended_at \|\| profileState\?\.banned_at/)
   assert.match(proxy, /\/api\/appeals/)
@@ -33,6 +34,14 @@ test('moderated sessions are blocked at HTTP, RLS, and security-definer write bo
   assert.match(migration, /create or replace function public\.reject_inactive_authenticated_write_v1/)
   assert.match(migration, /before insert or update or delete/)
   assert.match(migration, /perform public\.assert_active_profile_v1\(\)/)
+
+  assert.match(bootstrap, /create or replace function public\.can_bootstrap_own_profile_v1/)
+  assert.match(bootstrap, /candidate_id=auth\.uid\(\)/)
+  assert.match(bootstrap, /not exists\([\s\S]*from public\.profiles/)
+  assert.match(bootstrap, /for insert[\s\S]*public\.can_bootstrap_own_profile_v1\(id\)/)
+  assert.match(bootstrap, /tg_table_name='profiles'[\s\S]*tg_op='INSERT'[\s\S]*public\.can_bootstrap_own_profile_v1\(new\.id\)/)
+  assert.match(bootstrap, /for update[\s\S]*using \(public\.is_active_profile_v1\(\)\)[\s\S]*with check \(public\.is_active_profile_v1\(\)\)/)
+  assert.match(bootstrap, /for delete[\s\S]*using \(public\.is_active_profile_v1\(\)\)/)
 })
 
 test('discovery retries are filtered by receipt before side effects run', async () => {
