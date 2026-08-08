@@ -13,7 +13,12 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 function productionGooglePlacesKey() {
-  return String(process.env.GOOGLE_PLACES_API_KEY || Reflect.get(process.env, 'GOOGLE_PLACES_API_KEY') || '').trim()
+  return String(
+    process.env.GOOGLE_PLACES_API_KEY ||
+    process.env.GOOGLE_MAPS_API_KEY ||
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+    ''
+  ).trim()
 }
 
 export async function GET(request, { params }) {
