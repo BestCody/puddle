@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { resolveStaticCatalogueMedia } from '@/lib/app/static-media-resolver'
-import { staticMediaRuntimeConfiguration, staticMediaRuntimeDiagnostics } from '@/lib/app/static-media-runtime-config'
+import { staticMediaRuntimeConfiguration } from '@/lib/app/static-media-runtime-config'
 import { markCurrentNoMatch, reopenLegacyNoMatch } from '@/lib/app/static-media-resolution-policy'
 import { verifyStaticCatalogueReference } from '@/lib/app/static-catalogue-ref'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -14,6 +14,21 @@ import { object, string, uuid } from '@/lib/security/schema'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+
+function serverGoogleUnavailable(config, payload) {
+  return !config.googleApiKey &&
+    payload?.state === 'temporary_failure' &&
+    (payload?.diagnostics || []).some((value) => String(value).includes('Google Places is not configured.'))
+}
+
+async function authorizeBrowserGoogleLookup(admin, config) {
+  const result = await admin.rpc('consume_static_google_runtime_budget_v1', {
+    daily_limit: config.googleDailyLimit,
+    monthly_limit: config.googleMonthlyLimit
+  })
+  if (result.error) throw result.error
+  return Boolean(result.data?.allowed)
+}
 
 export async function POST(request, { params }) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
@@ -53,9 +68,30 @@ export async function POST(request, { params }) {
     if (mode === 'full' && result.payload?.state === 'no_match') {
       await markCurrentNoMatch(admin, reference)
     }
-    const payload = !config.googleApiKey && result.payload?.state === 'temporary_failure'
-      ? { ...result.payload, runtime_debug: staticMediaRuntimeDiagnostics() }
-      : result.payload
+
+    let payload = result.payload
+    if (mode === 'full' && serverGoogleUnavailable(config, payload)) {
+      const allowed = await authorizeBrowserGoogleLookup(admin, config)
+      if (allowed) {
+        payload = {
+          ...payload,
+          state: 'google_client_lookup',
+          retryable: false,
+          google_client_lookup: true,
+          google_lookup_min_score: config.googleMinimumScore,
+          diagnostics: (payload.diagnostics || []).filter((value) => !String(value).includes('Google Places is not configured.'))
+        }
+      } else {
+        payload = {
+          ...payload,
+          diagnostics: [
+            ...(payload.diagnostics || []).filter((value) => !String(value).includes('Google Places is not configured.')),
+            'google: Google request budget is exhausted.'
+          ].slice(0, 4)
+        }
+      }
+    }
+
     return NextResponse.json(payload, {
       status: result.status,
       headers: { 'Cache-Control': 'private, no-store' }

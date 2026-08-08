@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
+import { findGoogleClientPlace } from '@/lib/app/google-place-client'
 
 let placesLibraryPromise = null
 
@@ -42,7 +43,7 @@ function installLoader(apiKey) {
 
 async function loadPlacesLibrary(apiKey) {
   installLoader(apiKey)
-  await window.google.maps.importLibrary('places')
+  const places = await window.google.maps.importLibrary('places')
   await Promise.all([
     customElements.whenDefined('gmp-place-details-compact'),
     customElements.whenDefined('gmp-place-details-place-request'),
@@ -50,6 +51,7 @@ async function loadPlacesLibrary(apiKey) {
     customElements.whenDefined('gmp-place-media'),
     customElements.whenDefined('gmp-place-attribution')
   ])
+  return places
 }
 
 function fallbackLabel(state, title) {
@@ -57,14 +59,26 @@ function fallbackLabel(state, title) {
   return `No live Google Maps photo is available for ${title}`
 }
 
-export function GooglePlacePhotoFallback({ title, placeId, placeholderUrl = null }) {
+export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeholderUrl = null }) {
   const mountRef = useRef(null)
   const [state, setState] = useState('loading')
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  const lookupKey = [
+    lookup?.allowed,
+    lookup?.name,
+    lookup?.city,
+    lookup?.region,
+    lookup?.country,
+    lookup?.countryCode,
+    lookup?.addressPublic,
+    lookup?.latitude,
+    lookup?.longitude,
+    lookup?.minimumScore
+  ].join('|')
 
   useEffect(() => {
     const mount = mountRef.current
-    if (!mount || !apiKey || !googleUiEnabled() || !placeId) {
+    if (!mount || !apiKey || !googleUiEnabled() || (!placeId && !lookup?.allowed)) {
       setState('unavailable')
       return undefined
     }
@@ -75,8 +89,16 @@ export function GooglePlacePhotoFallback({ title, placeId, placeholderUrl = null
 
     async function render() {
       try {
-        await loadPlacesLibrary(apiKey)
+        const placesLibrary = await loadPlacesLibrary(apiKey)
         if (cancelled) return
+        const resolvedPlaceId = placeId
+          ? String(placeId)
+          : (await findGoogleClientPlace(placesLibrary?.Place, lookup))?.placeId || null
+        if (!resolvedPlaceId || cancelled) {
+          fail()
+          return
+        }
+
         details = document.createElement('gmp-place-details-compact')
         details.className = 'date-google-place-details'
         details.setAttribute('orientation', 'vertical')
@@ -84,7 +106,7 @@ export function GooglePlacePhotoFallback({ title, placeId, placeholderUrl = null
         details.setAttribute('aria-label', `Google Maps place photo for ${title}`)
 
         const request = document.createElement('gmp-place-details-place-request')
-        request.setAttribute('place', String(placeId))
+        request.setAttribute('place', resolvedPlaceId)
         const content = document.createElement('gmp-place-content-config')
         const media = document.createElement('gmp-place-media')
         media.setAttribute('lightbox-preferred', '')
@@ -108,7 +130,7 @@ export function GooglePlacePhotoFallback({ title, placeId, placeholderUrl = null
       if (details) details.removeEventListener('gmp-error', fail)
       mount.replaceChildren()
     }
-  }, [apiKey, placeId, title])
+  }, [apiKey, placeId, title, lookupKey])
 
   return (
     <div
