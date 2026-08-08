@@ -95,7 +95,7 @@ test('R2 media overlays rank cached photos first and mount Google UI Kit only fo
   await expect(card.locator('h1')).toHaveText('E2E Media Google Museum')
   await expect.poll(() => page.evaluate(() => window.__e2eGoogleImports || [])).toContain('places')
   await expect(page.locator('gmp-place-details-compact')).toHaveCount(1)
-  await expect(page.locator('gmp-place-details-location-request')).toHaveAttribute('location', /,/)
+  await expect(page.locator('gmp-place-details-place-request')).toHaveAttribute('place', 'e2e-google-place-id')
 
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(card.locator('h1')).toHaveText('E2E Media Placeholder Park')
