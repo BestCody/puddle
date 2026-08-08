@@ -32,8 +32,26 @@ jobs:
         shell: bash
         run: |
           node --input-type=module <<'NODE'
-          import { fetchPrivateB2Asset } from './lib/app/b2-private-download.js'
+          import { b2Configuration, b2Request } from './lib/app/b2-s3.js'
           import { fetchNearbyStaticPlaces } from './lib/app/static-catalogue.js'
+
+          const config = b2Configuration()
+          if (!config) throw new Error('Signed Backblaze B2 configuration is missing.')
+          const base = new URL(`${process.env.B2_DOWNLOAD_BASE_URL.replace(/\/$/, '')}/`)
+          const signedFetch = async (value, options = {}) => {
+            const url = new URL(String(value))
+            if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) {
+              return fetch(value, options)
+            }
+            const encoded = url.pathname.slice(base.pathname.length)
+            const key = encoded.split('/').map((part) => decodeURIComponent(part)).join('/')
+            return b2Request({
+              method: options.method || 'GET',
+              key,
+              config,
+              timeoutMs: 10_000
+            })
+          }
 
           try {
             const result = await fetchNearbyStaticPlaces({
@@ -43,7 +61,7 @@ jobs:
               limit: 96,
               includeDetails: false,
               baseUrl: process.env.B2_DOWNLOAD_BASE_URL,
-              fetchImpl: fetchPrivateB2Asset,
+              fetchImpl: signedFetch,
               timeoutMs: 10_000
             })
             const photos = result.places.filter((place) => place.media?.photoUrl)
