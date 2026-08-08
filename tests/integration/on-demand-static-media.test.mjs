@@ -51,7 +51,10 @@ test('resolver endpoint verifies caller, signed identity, explicit runtime confi
   assert.match(route, /weight: mode === 'open_only' \? 2 : 5/)
   assert.match(route, /verifyStaticCatalogueReference\(referenceToken, \{ expectedId: id \}\)/)
   assert.match(route, /const config = staticMediaRuntimeConfiguration\(\)/)
-  assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode, config \}\)/)
+  assert.match(route, /const admin = createAdminClient\(\)/)
+  assert.match(route, /reopenLegacyNoMatch\(admin, reference\)/)
+  assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode, config, admin \}\)/)
+  assert.match(route, /markCurrentNoMatch\(admin, reference\)/)
   assert.match(route, /Cache-Control': 'private, no-store'/)
 })
 

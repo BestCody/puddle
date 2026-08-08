@@ -25,6 +25,20 @@ test('production media route uses explicit runtime environment references for Go
   }
 
   assert.match(route, /const config = staticMediaRuntimeConfiguration\(\)/)
-  assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode, config \}\)/)
+  assert.match(route, /const admin = createAdminClient\(\)/)
+  assert.match(route, /reopenLegacyNoMatch\(admin, reference\)/)
+  assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode, config, admin \}\)/)
+  assert.match(route, /markCurrentNoMatch\(admin, reference\)/)
   assert.doesNotMatch(route, /staticMediaResolverConfiguration\(\)/)
+})
+
+test('historical no-match states are reopened once and current-policy no-match stays terminal', async () => {
+  const policy = await read('lib/app/static-media-resolution-policy.js')
+  assert.match(policy, /MATCH_POLICY = 'google-match-v2'/)
+  assert.match(policy, /current\?\.state !== 'no_match'/)
+  assert.match(policy, /current\?\.last_error === CURRENT_NO_MATCH_MARKER/)
+  assert.match(policy, /state: 'pending'/)
+  assert.match(policy, /attempts: 0/)
+  assert.match(policy, /last_error: RETRY_MARKER/)
+  assert.match(policy, /last_error: CURRENT_NO_MATCH_MARKER/)
 })
