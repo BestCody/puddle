@@ -1,5 +1,6 @@
 name: Ops - verify production Google fallback
 
+# Re-run after the production GOOGLE_PLACES_API_KEY was replaced on 2026-08-08.
 on:
   push:
     branches:
