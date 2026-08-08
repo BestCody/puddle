@@ -109,7 +109,7 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
         details.setAttribute('aria-label', `Google Maps place photo for ${title}`)
 
         const request = document.createElement('gmp-place-details-place-request')
-        request.place = resolvedPlaceId
+        request.setAttribute('place', resolvedPlaceId)
         const content = document.createElement('gmp-place-content-config')
         const media = document.createElement('gmp-place-media')
         media.setAttribute('lightbox-preferred', '')
