@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { chromium } from '@playwright/test'
 
@@ -17,7 +18,7 @@ const diagnostics = {
 }
 
 function uniqueValue(prefix) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  return `${prefix}-${Date.now()}-${randomUUID().replaceAll('-', '').slice(0, 10)}`
 }
 
 async function cardState(page) {
@@ -75,7 +76,7 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 const page = await context.newPage()
 const email = `${uniqueValue('live-photo')}@example.com`
 const password = `Puddle-${uniqueValue('Photo')}-Aa1!`
-const username = `live_${Math.random().toString(36).slice(2, 14)}`
+const username = `live_${randomUUID().replaceAll('-', '').slice(0, 12)}`
 let accountCreated = false
 
 page.on('console', (message) => {
