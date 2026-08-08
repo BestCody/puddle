@@ -25,22 +25,23 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Refresh approved Mapillary identity for Sushi Kaji only
+      - name: Move approved Sushi Kaji photo to Supabase public media
         shell: bash
         run: |
           node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto'
+          import sharp from 'sharp'
           import { createAdminClient } from './lib/supabase/admin.js'
-          import { streetCandidateScore } from './lib/app/open-photo-candidates.js'
 
           const LOCATION_ID = '4b4fd9de-c44d-4c07-a6bc-f6077d06a4cd'
-          const MIN_SCORE = 0.76
+          const BUCKET = 'puddle-public-media'
           const token = String(process.env.MAPILLARY_ACCESS_TOKEN || '').trim()
           if (!token) throw new Error('MAPILLARY_ACCESS_TOKEN is unavailable.')
-          const admin = createAdminClient()
 
+          const admin = createAdminClient()
           const locationResult = await admin
             .from('locations')
-            .select('id,name,kind,city,region,country,country_code,address_public,latitude,longitude,status,visibility')
+            .select('id,name,status,visibility')
             .eq('id', LOCATION_ID)
             .maybeSingle()
           if (locationResult.error) throw locationResult.error
@@ -50,7 +51,7 @@ jobs:
 
           const sourceResult = await admin
             .from('location_photo_sources')
-            .select('location_id,provider,external_photo_id,status,is_ai_generated,is_primary,sort_order,verified_at')
+            .select('location_id,provider,external_photo_id,status,is_ai_generated,media_object_id,storage_backend,remote_url,attribution_text,attribution_url,license_code,terms_url')
             .eq('location_id', LOCATION_ID)
             .eq('provider', 'mapillary')
             .eq('status', 'approved')
@@ -61,112 +62,120 @@ jobs:
           const source = sourceResult.data
           if (!source) throw new Error('Approved Sushi Kaji Mapillary source was not found.')
 
-          const place = {
-            id: location.id,
-            name: location.name,
-            kind: location.kind,
-            city: location.city,
-            region: location.region,
-            country: location.country,
-            countryCode: location.country_code,
-            addressPublic: location.address_public,
-            latitude: Number(location.latitude),
-            longitude: Number(location.longitude)
+          const externalId = String(source.external_photo_id || '').trim()
+          if (!/^\d+$/.test(externalId)) throw new Error('Approved Mapillary external ID is invalid.')
+
+          const bucketResult = await admin.storage.getBucket(BUCKET)
+          if (bucketResult.error) throw bucketResult.error
+          if (!bucketResult.data || bucketResult.data.public !== true) {
+            throw new Error(`${BUCKET} must exist and be public before card delivery can use it.`)
           }
 
-          function bbox(latitude, longitude, radiusM = 45) {
-            const latDelta = radiusM / 111_320
-            const lngDelta = radiusM / (111_320 * Math.max(0.2, Math.cos(Number(latitude) * Math.PI / 180)))
-            return [Number(longitude) - lngDelta, Number(latitude) - latDelta, Number(longitude) + lngDelta, Number(latitude) + latDelta]
+          const graphUrl = new URL(`https://graph.mapillary.com/${encodeURIComponent(externalId)}`)
+          graphUrl.search = new URLSearchParams({
+            fields: 'id,thumb_2048_url,width,height,creator',
+            access_token: token
+          }).toString()
+          const graphResponse = await fetch(graphUrl, {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(20_000)
+          })
+          if (!graphResponse.ok) throw new Error(`Mapillary image lookup returned ${graphResponse.status}.`)
+          const image = await graphResponse.json()
+          if (String(image?.id || '') !== externalId || !image?.thumb_2048_url) {
+            throw new Error('Mapillary did not return the approved photo identity.')
           }
 
-          async function fetchMapillary() {
-            const url = new URL('https://graph.mapillary.com/images')
-            url.search = new URLSearchParams({
-              access_token: token,
-              bbox: bbox(place.latitude, place.longitude).join(','),
-              limit: '30',
-              fields: 'id,computed_geometry,geometry,compass_angle,captured_at,thumb_2048_url,width,height,creator'
-            }).toString()
-            let lastError = null
-            for (let attempt = 1; attempt <= 3; attempt += 1) {
-              try {
-                const response = await fetch(url, {
-                  headers: { Accept: 'application/json' },
-                  cache: 'no-store',
-                  signal: AbortSignal.timeout(15_000)
-                })
-                if (!response.ok) throw new Error(`Mapillary returned ${response.status}.`)
-                return response.json()
-              } catch (error) {
-                lastError = error
-                console.warn(`Mapillary attempt ${attempt} failed: ${error.message}`)
-                if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1_000))
-              }
-            }
-            throw lastError || new Error('Mapillary lookup failed.')
+          const assetUrl = new URL(String(image.thumb_2048_url))
+          const host = assetUrl.hostname.toLowerCase()
+          if (assetUrl.protocol !== 'https:' || !(host === 'fbcdn.net' || host.endsWith('.fbcdn.net') || host === 'mapillary.com' || host.endsWith('.mapillary.com'))) {
+            throw new Error(`Rejected unexpected Mapillary asset host ${host}.`)
           }
+          const assetResponse = await fetch(assetUrl, {
+            headers: { Accept: 'image/*' },
+            redirect: 'follow',
+            cache: 'no-store',
+            signal: AbortSignal.timeout(20_000)
+          })
+          if (!assetResponse.ok) throw new Error(`Mapillary asset returned ${assetResponse.status}.`)
+          const sourceBytes = Buffer.from(await assetResponse.arrayBuffer())
+          if (!sourceBytes.length || sourceBytes.length > 10_000_000) throw new Error('Mapillary asset has an invalid size.')
 
-          const payload = await fetchMapillary()
-          const candidates = (payload?.data || []).flatMap((row) => {
-            const coordinates = row?.computed_geometry?.coordinates || row?.geometry?.coordinates || []
-            const image = {
-              latitude: Number(coordinates[1]),
-              longitude: Number(coordinates[0]),
-              heading: Number(row?.compass_angle),
-              capturedAt: row?.captured_at,
-              width: Number(row?.width),
-              height: Number(row?.height)
-            }
-            const scored = streetCandidateScore({ location: place, image })
-            if (!scored || !row?.thumb_2048_url || scored.score < MIN_SCORE) return []
-            const creator = String(row?.creator?.username || row?.creator?.name || 'Mapillary contributor').trim()
-            return [{
-              externalId: String(row.id),
-              score: scored.score,
-              attribution: `${creator} · Mapillary · CC BY-SA 4.0`,
-              pageUrl: `https://www.mapillary.com/app/?pKey=${encodeURIComponent(String(row.id))}&focus=photo`,
-              license: 'CC-BY-SA-4.0',
-              licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
-              width: Number(row?.width) || null,
-              height: Number(row?.height) || null
-            }]
-          }).sort((a, b) => b.score - a.score)
+          const jpeg = await sharp(sourceBytes)
+            .rotate()
+            .resize({ width: 1600, height: 1200, fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 84, mozjpeg: true })
+            .toBuffer()
+          const metadata = await sharp(jpeg).metadata()
+          if (!metadata.width || !metadata.height) throw new Error('Normalized photo dimensions are unavailable.')
 
-          if (!candidates.length) throw new Error(`No current Mapillary candidate met production score ${MIN_SCORE}.`)
-          const candidate = candidates[0]
-          const oldId = String(source.external_photo_id || '')
-          const newId = candidate.externalId
+          const contentHash = createHash('sha256').update(jpeg).digest('hex')
+          const storageKey = `open-photos/mapillary/${LOCATION_ID}/${externalId}-${contentHash.slice(0, 16)}.jpg`
+          const upload = await admin.storage.from(BUCKET).upload(storageKey, jpeg, {
+            contentType: 'image/jpeg',
+            cacheControl: '31536000',
+            upsert: true
+          })
+          if (upload.error) throw upload.error
+
+          const publicUrl = admin.storage.from(BUCKET).getPublicUrl(storageKey).data.publicUrl
+          if (!/^https:\/\//i.test(String(publicUrl || ''))) throw new Error('Supabase did not return a public HTTPS photo URL.')
+
+          const publicResponse = await fetch(publicUrl, {
+            headers: { Accept: 'image/jpeg,image/*' },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(15_000)
+          })
+          const publicType = String(publicResponse.headers.get('content-type') || '').toLowerCase()
+          if (!publicResponse.ok || !publicType.startsWith('image/')) {
+            throw new Error(`Supabase public photo verification failed with ${publicResponse.status} ${publicType || 'unknown content type'}.`)
+          }
+          const publicBytes = Buffer.from(await publicResponse.arrayBuffer())
+          if (publicBytes.length !== jpeg.length) {
+            throw new Error(`Supabase public photo byte length mismatch: uploaded ${jpeg.length}, fetched ${publicBytes.length}.`)
+          }
 
           const updateResult = await admin
             .from('location_photo_sources')
             .update({
-              external_photo_id: newId,
-              attribution_text: candidate.attribution,
-              attribution_url: candidate.pageUrl,
-              license_code: candidate.license,
-              terms_url: candidate.licenseUrl,
-              width: candidate.width,
-              height: candidate.height,
+              storage_backend: 'supabase',
+              media_object_id: null,
+              remote_url: publicUrl,
+              width: metadata.width,
+              height: metadata.height,
               verified_at: new Date().toISOString()
             })
             .eq('location_id', LOCATION_ID)
             .eq('provider', 'mapillary')
+            .eq('external_photo_id', externalId)
             .eq('status', 'approved')
             .eq('is_ai_generated', false)
-            .select('location_id,provider,external_photo_id,status,verified_at')
+            .select('location_id,provider,external_photo_id,status,storage_backend,media_object_id,remote_url,verified_at')
           if (updateResult.error) throw updateResult.error
           if (!Array.isArray(updateResult.data) || updateResult.data.length !== 1) {
             throw new Error(`Expected exactly one approved Mapillary row to update; updated ${updateResult.data?.length || 0}.`)
+          }
+          const updated = updateResult.data[0]
+          if (updated.storage_backend !== 'supabase' || updated.media_object_id !== null || updated.remote_url !== publicUrl) {
+            throw new Error('Updated photo source did not persist the Supabase delivery state.')
           }
 
           console.log(JSON.stringify({
             locationId: LOCATION_ID,
             name: location.name,
-            oldExternalPhotoId: oldId,
-            newExternalPhotoId: newId,
-            candidateScore: Number(candidate.score.toFixed(4)),
             provider: 'mapillary',
+            externalPhotoId: externalId,
+            previousStorageBackend: source.storage_backend,
+            previousMediaObjectAttached: Boolean(source.media_object_id),
+            storageBackend: updated.storage_backend,
+            storageBucket: BUCKET,
+            storageKey,
+            publicHost: new URL(publicUrl).hostname,
+            byteSize: jpeg.length,
+            width: metadata.width,
+            height: metadata.height,
+            contentHashPrefix: contentHash.slice(0, 16),
             updatedRows: updateResult.data.length
           }, null, 2))
           NODE
