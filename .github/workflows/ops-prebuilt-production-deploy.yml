@@ -15,8 +15,6 @@ jobs:
     timeout-minutes: 30
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: team_aY04PVtKs2MUrxR38csNwmUc
-      VERCEL_PROJECT_ID: prj_7By05EO9g3fqAJkubBtaeYelvwEQ
     steps:
       - name: Check out merged production source
         uses: actions/checkout@v4
@@ -43,11 +41,20 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
+      - name: Verify Vercel identity
+        run: vercel whoami --token="$VERCEL_TOKEN"
+
+      - name: Link production project
+        shell: bash
+        run: |
+          rm -rf .vercel
+          vercel link --yes --project=puddle --scope=bestcodys-projects --token="$VERCEL_TOKEN"
+
       - name: Pull production environment
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        run: vercel pull --yes --environment=production --scope=bestcodys-projects --token="$VERCEL_TOKEN"
 
       - name: Build production output locally
-        run: vercel build --prod --token="$VERCEL_TOKEN"
+        run: vercel build --prod --scope=bestcodys-projects --token="$VERCEL_TOKEN"
 
       - name: Deploy prebuilt output to production
-        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        run: vercel deploy --prebuilt --prod --scope=bestcodys-projects --token="$VERCEL_TOKEN"
