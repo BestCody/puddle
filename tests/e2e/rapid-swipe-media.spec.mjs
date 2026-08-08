@@ -1,8 +1,28 @@
 import { test, expect } from '@playwright/test'
-import { completeProfileDirect, createConfirmedUser, signInThroughUi } from './support.mjs'
-import { R2_FIXTURE_BASE_URL, R2_FIXTURE_IDS } from './r2-fixture-data.mjs'
+import { staticCatalogueMaterializationItem } from '../../lib/app/static-catalogue-bulk-materialization.js'
+import { admin, completeProfileDirect, createConfirmedUser, signInThroughUi } from './support.mjs'
+import {
+  R2_FIXTURE_BASE_URL,
+  R2_FIXTURE_IDS,
+  R2_FIXTURE_RELEASE,
+  R2_RAPID_SWIPE_PLACES
+} from './r2-fixture-data.mjs'
+
+async function ensureRapidSwipeCatalogueInSupabase() {
+  const items = R2_RAPID_SWIPE_PLACES.map((place) => staticCatalogueMaterializationItem(place, {
+    release: R2_FIXTURE_RELEASE,
+    detail: place,
+    provenance: place
+  })).filter(Boolean)
+  const { data, error } = await admin.rpc('materialize_static_catalogue_locations_v2', { items })
+  if (error) throw error
+  if (!Array.isArray(data) || data.length !== items.length) {
+    throw new Error('Supabase did not materialize the complete rapid-swipe fixture catalogue.')
+  }
+}
 
 async function createRapidSwiper() {
+  await ensureRapidSwipeCatalogueInSupabase()
   const account = await createConfirmedUser({ displayName: 'Rapid Media Swiper' })
   await completeProfileDirect(account.user.id, {
     interests: ['cafe'],
