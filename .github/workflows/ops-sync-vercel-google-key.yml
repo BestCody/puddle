@@ -18,6 +18,7 @@ jobs:
       GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: team_aY04PVtKs2MUrxR38csNwmUc
+      VERCEL_SCOPE: bestcodys-projects
       VERCEL_PROJECT_ID: prj_7By05EO9g3fqAJkubBtaeYelvwEQ
       CURRENT_PRODUCTION_DEPLOYMENT: dpl_AMiC1oy7mxbdkyZPTWvvgt1orbdE
     steps:
@@ -39,8 +40,8 @@ jobs:
       - name: Replace production Google Places key
         shell: bash
         run: |
-          printf '%s' "$GOOGLE_PLACES_API_KEY" | npx --yes vercel@latest env update GOOGLE_PLACES_API_KEY production --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
+          printf '%s' "$GOOGLE_PLACES_API_KEY" | npx --yes vercel@latest env update GOOGLE_PLACES_API_KEY production --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_SCOPE"
       - name: Redeploy current production build with new environment
         shell: bash
         run: |
-          npx --yes vercel@latest redeploy "$CURRENT_PRODUCTION_DEPLOYMENT" --target=production --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
+          npx --yes vercel@latest redeploy "$CURRENT_PRODUCTION_DEPLOYMENT" --target=production --token "$VERCEL_TOKEN" --scope "$VERCEL_SCOPE"
