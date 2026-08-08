@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
+// Production relational cards must keep browser media delivery off Backblaze.
 test('Supabase discovery never sends Backblaze card media into the browser path', async () => {
   const feed = await read('lib/app/discovery-relational-fallback.js')
   assert.match(feed, /function isBackblazeUrl/)
