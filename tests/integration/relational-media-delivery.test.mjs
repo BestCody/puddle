@@ -30,16 +30,22 @@ test('relational open-photo delivery resolves the persisted approved identity wi
   assert.doesNotMatch(approved, /b2-private-download|fetchPrivateB2Asset|authorizeB2DownloadUrl/)
 })
 
-test('relational Google delivery uses only the server-side Places credential', async () => {
+test('relational Google delivery uses only the server-side Places credential and exposes safe UI Kit failover identity', async () => {
   const route = await read('app/api/location-google-photo/[id]/route.js')
   const helper = await read('lib/app/google-place-photo-proxy.js')
+  const client = await read('components/google-server-place-photo.js')
   assert.match(route, /location_google_places/)
   assert.match(route, /fetchGooglePlacePhotoById\(mapping\.google_place_id/)
   assert.match(route, /consume_static_google_runtime_budget_v1/)
   assert.match(route, /process\.env\.GOOGLE_PLACES_API_KEY/)
   assert.doesNotMatch(route, /process\.env\.GOOGLE_MAPS_API_KEY/)
   assert.doesNotMatch(route, /process\.env\.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY/)
+  assert.match(route, /X-Puddle-Google-Place-Id/)
+  assert.match(route, /fallbackHeaders\(fallbackPlaceId\)/)
   assert.doesNotMatch(route, /static_ref|verifyStaticCatalogueReference|fetchPrivateB2Asset/)
   assert.match(helper, /export async function fetchGooglePlacePhotoById/)
   assert.match(helper, /googlePlaceDetails\(placeId/)
+  assert.match(client, /x-puddle-google-place-id/)
+  assert.match(client, /GooglePlacePhotoFallback/)
+  assert.match(client, /uiKitPlaceId/)
 })
