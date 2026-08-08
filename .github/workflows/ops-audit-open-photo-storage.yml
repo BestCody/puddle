@@ -1,0 +1,77 @@
+name: Ops - audit approved open photo storage
+
+on:
+  push:
+    branches:
+      - ops/audit-open-photo-storage
+    paths:
+      - '.github/workflows/ops-audit-open-photo-storage.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Inventory approved photo storage
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createAdminClient } from './lib/supabase/admin.js'
+
+          const admin = createAdminClient()
+          const rows = []
+          const pageSize = 500
+          for (let start = 0; ; start += pageSize) {
+            const result = await admin
+              .from('location_photo_sources')
+              .select('id,location_id,provider,external_photo_id,storage_backend,remote_url,media_object_id,status,is_ai_generated,locations(name)')
+              .eq('status', 'approved')
+              .eq('is_ai_generated', false)
+              .range(start, start + pageSize - 1)
+            if (result.error) throw result.error
+            const batch = result.data || []
+            rows.push(...batch)
+            if (batch.length < pageSize) break
+          }
+
+          const summary = {}
+          for (const row of rows) {
+            const backend = String(row.storage_backend || 'unset')
+            const provider = String(row.provider || 'unknown')
+            summary[backend] ||= { total: 0, providers: {} }
+            summary[backend].total += 1
+            summary[backend].providers[provider] = (summary[backend].providers[provider] || 0) + 1
+          }
+
+          const legacy = rows
+            .filter((row) => ['b2', 'r2'].includes(String(row.storage_backend || '').toLowerCase()))
+            .map((row) => ({
+              id: row.id,
+              locationId: row.location_id,
+              name: Array.isArray(row.locations) ? row.locations[0]?.name : row.locations?.name,
+              provider: row.provider,
+              externalPhotoId: row.external_photo_id,
+              storageBackend: row.storage_backend,
+              mediaObjectAttached: Boolean(row.media_object_id),
+              remoteHost: (() => { try { return new URL(row.remote_url).hostname } catch { return null } })()
+            }))
+
+          console.log(JSON.stringify({
+            approvedRows: rows.length,
+            byStorageBackend: summary,
+            legacyBackedRows: legacy.length,
+            legacyRows: legacy.slice(0, 100)
+          }, null, 2))
+          NODE
