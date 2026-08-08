@@ -1,9 +1,8 @@
 import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { authorizeDiscoveryFeedB2Assets } from '@/lib/app/b2-feed-assets'
-import { getInfrastructureDiscoveryFeedV2, recordSampledInfrastructureAnalyticsV2 } from '@/lib/app/discovery-infrastructure-v2'
-import { getRelationalDiscoveryFallback } from '@/lib/app/discovery-relational-fallback'
+import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational-fallback'
+import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 
@@ -33,24 +32,18 @@ async function authenticatedSession() {
 async function discoveryResponse(session, filters, excludeIds = []) {
   let feed
   try {
-    const rawFeed = await getInfrastructureDiscoveryFeedV2(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
-    feed = await authorizeDiscoveryFeedB2Assets(rawFeed)
+    feed = await getRelationalDiscoveryFeed(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
   } catch (error) {
-    console.warn(`Static discovery unavailable; using Supabase fallback: ${error?.message || 'unknown error'}`)
-    try {
-      feed = await getRelationalDiscoveryFallback(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
-    } catch (fallbackError) {
-      console.error(`Discovery refresh failed: ${fallbackError?.message || 'unknown error'}`)
-      return NextResponse.json(
-        { error: 'Could not load nearby places. Please try again.' },
-        { status: 503, headers: { 'Cache-Control': 'private, no-store' } }
-      )
-    }
+    console.error(`Discovery refresh failed: ${error?.message || 'unknown error'}`)
+    return NextResponse.json(
+      { error: 'Could not load nearby places. Please try again.' },
+      { status: 503, headers: { 'Cache-Control': 'private, no-store' } }
+    )
   }
 
   after(async () => {
     try {
-      await recordSampledInfrastructureAnalyticsV2({ supabase: session.supabase, user: session.user }, feed)
+      await recordSampledDiscoveryAnalytics({ supabase: session.supabase, user: session.user }, feed)
     } catch (error) {
       console.warn(`Sampled discovery analytics failed: ${error.message}`)
     }
