@@ -13,17 +13,20 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 function productionGooglePlacesKey() {
-  return String(
-    process.env.GOOGLE_PLACES_API_KEY ||
-    process.env.GOOGLE_MAPS_API_KEY ||
-    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-    ''
-  ).trim()
+  return String(process.env.GOOGLE_PLACES_API_KEY || '').trim()
+}
+
+function fallbackHeaders(placeId) {
+  return {
+    'Cache-Control': 'private, no-store',
+    ...(placeId ? { 'X-Puddle-Google-Place-Id': encodeURIComponent(String(placeId)) } : {})
+  }
 }
 
 export async function GET(request, { params }) {
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Photo delivery is unavailable.' }, { status: 503 })
 
+  let fallbackPlaceId = null
   try {
     const { id: rawId } = await params
     const id = uuid(rawId, 'location id')
@@ -54,10 +57,16 @@ export async function GET(request, { params }) {
     if (!location || location.status !== 'published' || location.visibility !== 'public' || mapping?.status !== 'verified' || !mapping.google_place_id) {
       return NextResponse.json({ error: 'Photo not found.' }, { status: 404 })
     }
+    fallbackPlaceId = mapping.google_place_id
 
     const config = staticMediaRuntimeConfiguration()
     const apiKey = productionGooglePlacesKey()
-    if (!apiKey) return NextResponse.json({ error: 'Photo delivery is unavailable.' }, { status: 503 })
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'Photo delivery is unavailable.' },
+        { status: 503, headers: fallbackHeaders(fallbackPlaceId) }
+      )
+    }
 
     const budget = await admin.rpc('consume_static_google_runtime_budget_v1', {
       daily_limit: config.googleDailyLimit,
@@ -65,7 +74,10 @@ export async function GET(request, { params }) {
     })
     if (budget.error) throw budget.error
     if (!budget.data?.allowed) {
-      return NextResponse.json({ error: 'The live photo budget is temporarily exhausted.' }, { status: 429 })
+      return NextResponse.json(
+        { error: 'The live photo budget is temporarily exhausted.' },
+        { status: 429, headers: fallbackHeaders(fallbackPlaceId) }
+      )
     }
 
     const photo = await fetchGooglePlacePhotoById(mapping.google_place_id, {
@@ -86,7 +98,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     return NextResponse.json(
       { error: safeSecurityError(error, 'That live photo request could not be completed.') },
-      { status: error?.status || 502, headers: { 'Cache-Control': 'private, no-store' } }
+      { status: error?.status || 502, headers: fallbackHeaders(fallbackPlaceId) }
     )
   }
 }
