@@ -1,0 +1,36 @@
+name: Live photo smoke
+
+on:
+  push:
+    branches:
+      - debug/live-photo-smoke
+
+permissions:
+  contents: read
+
+jobs:
+  live-photo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      LIVE_BASE_URL: https://puddle.you
+      PRODUCTION_ACCEPTANCE_COMMIT: fa2b0d0f8d6992e772e24bc3c09c5bd120cdeb74
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install Playwright smoke dependencies
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run production photo smoke
+        run: node tests/live-photo-smoke.mjs
+      - name: Upload live photo diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-photo-diagnostics
+          path: test-results
+          if-no-files-found: error
+          retention-days: 7
