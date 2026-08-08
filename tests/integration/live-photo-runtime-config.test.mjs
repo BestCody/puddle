@@ -4,7 +4,7 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('production media route uses explicit runtime environment references for Google matching', async () => {
+test('production media route reads Google matching configuration at server runtime', async () => {
   const runtimeConfig = await read('lib/app/static-media-runtime-config.js')
   const route = await read('app/api/static-catalogue/media/[id]/route.js')
 
@@ -18,17 +18,25 @@ test('production media route uses explicit runtime environment references for Go
     'STATIC_MEDIA_B2_BASELINE_BYTES',
     'B2_PHOTO_START_MAX_BYTES',
     'STATIC_MEDIA_PHOTO_RESERVATION_BYTES',
-    'SUPABASE_LAUNCH_MAX_BYTES',
-    'GOOGLE_PLACES_API_KEY'
+    'SUPABASE_LAUNCH_MAX_BYTES'
   ]) {
     assert.match(runtimeConfig, new RegExp(`process\\.env\\.${variable}`))
   }
+
+  assert.match(runtimeConfig, /process\.env\.GOOGLE_PLACES_API_KEY/)
+  assert.match(runtimeConfig, /Reflect\.get\(process\.env, name\)/)
+  assert.match(runtimeConfig, /GOOGLE_PLACES_API_KEY: runtimeValue\('GOOGLE_PLACES_API_KEY'\)/)
+  assert.match(runtimeConfig, /google_key_direct_visible/)
+  assert.match(runtimeConfig, /google_key_dynamic_visible/)
+  assert.doesNotMatch(runtimeConfig, /googleApiKey.*slice|GOOGLE_PLACES_API_KEY.*length/)
 
   assert.match(route, /const config = staticMediaRuntimeConfiguration\(\)/)
   assert.match(route, /const admin = createAdminClient\(\)/)
   assert.match(route, /reopenLegacyNoMatch\(admin, reference\)/)
   assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode, config, admin \}\)/)
   assert.match(route, /markCurrentNoMatch\(admin, reference\)/)
+  assert.match(route, /runtime_debug: staticMediaRuntimeDiagnostics\(\)/)
+  assert.match(route, /!config\.googleApiKey && result\.payload\?\.state === 'temporary_failure'/)
   assert.doesNotMatch(route, /staticMediaResolverConfiguration\(\)/)
 })
 
