@@ -93,12 +93,13 @@ test('Geoapify detection requires a hostname boundary', async () => {
   assert.equal(geocoding.includes("url.hostname.endsWith('geoapify.com')"), false)
 })
 
-test('the active card uses Google Places UI Kit only as a live fallback and keeps open-photo states', async () => {
+test('the active card waits for a private B2 grant before using Google Places UI Kit fallback', async () => {
   const card = await read('components/minimal-swipe-card.js')
   const googleFallback = await read('components/google-place-photo-fallback.js')
   assert.ok(card.includes('GooglePlacePhotoFallback'))
   assert.ok(card.includes('item.google_place_id'))
-  assert.ok(card.includes('!mainPhoto && Boolean(item.google_place_id)'))
+  assert.ok(card.includes('!mainPhoto && !mainPhotoPending && Boolean(item.google_place_id)'))
+  assert.ok(card.includes('usePrivateB2Asset(rawMainPhoto, privateMainKey)'))
   assert.ok(googleFallback.includes("window.google.maps.importLibrary('places')"))
   assert.ok(googleFallback.includes("document.createElement('gmp-place-details-compact')"))
   assert.ok(googleFallback.includes("request.setAttribute('place', String(placeId))"))
@@ -110,12 +111,13 @@ test('the active card uses Google Places UI Kit only as a live fallback and keep
   assert.ok(card.includes('Wikimedia Commons, Mapillary, and KartaView'))
 })
 
-test('the active photo worker has one direct-to-R2 path', async () => {
+test('legacy bulk photo enrichment is manual-only while the guarded runtime owns automatic resolution', async () => {
   const photoWorkflow = await read('.github/workflows/photo-enrichment.yml')
   const packageJson = JSON.parse(await read('package.json'))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_BATCH_SIZE: '100'"))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_MAX_BATCHES: '50'"))
-  assert.ok(photoWorkflow.includes("cron: '17 */4 * * *'"))
+  assert.ok(photoWorkflow.includes('workflow_dispatch:'))
+  assert.equal(photoWorkflow.includes('cron:'), false)
   assert.ok(photoWorkflow.includes('npm run locations:photos:enrich'))
   assert.equal(photoWorkflow.includes('PHOTO_ENRICH_MIGRATOR'), false)
   assert.equal(packageJson.scripts['locations:photos:migrate-r2'], undefined)

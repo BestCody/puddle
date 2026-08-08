@@ -85,7 +85,7 @@ export default async function DiscoverPage({ searchParams }) {
 
     return <div className="minimal-swipe-page">
       <AuthMessage searchParams={params} />
-      <DateSwipeWorkspaceV2 initialFeed={feed} />
+      <DateSwipeWorkspaceV2 initialFeed={feed} profileId={session.user.id} />
     </div>
   })
 }

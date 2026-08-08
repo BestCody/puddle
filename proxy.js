@@ -10,6 +10,15 @@ const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsi
 const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
 const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
 const publicNoSessionPaths = new Set([...cacheablePublicPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
+const moderationExemptApiPrefixes = [
+  '/api/appeals',
+  '/api/auth',
+  '/api/security',
+  '/api/health',
+  '/api/system',
+  '/api/location-photos',
+  '/api/billing/webhook'
+]
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
@@ -18,6 +27,9 @@ function carriesCookies(source, target) {
 function secured(response, context) { return applySecurityHeaders(response, context) }
 function forbidden(request, nonce, message = 'Cross-site request blocked.') { return secured(NextResponse.json({ error: message }, { status: 403 }), { request, nonce }) }
 function hasSupabaseAuthCookie(request) { return request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(?:\.\d+)?$/i.test(name)) }
+function requiresModerationGate(pathname) {
+  return pathname.startsWith('/api/') && !moderationExemptApiPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+}
 function cachePolicy(response, pathname, privateResponse = false) {
   if (privateResponse) { response.headers.set('Cache-Control', 'private, no-store'); return response }
   if (staticLandingPaths.has(pathname)) {
@@ -74,14 +86,22 @@ export async function proxy(request) {
   const isProtected = protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
   const isAuthOnly = authOnlyPaths.includes(pathname)
   const hasAuthFailure = request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('auth_error')
-  const needsSession = isProtected || (hasSupabaseAuthCookie(request) && !pathname.startsWith('/api/'))
+  const moderationGate = requiresModerationGate(pathname)
+  const hasAuthCookie = hasSupabaseAuthCookie(request)
+  const needsSession = isProtected || (hasAuthCookie && (!pathname.startsWith('/api/') || moderationGate))
 
   if (!needsSession) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
     return secured(cachePolicy(response, pathname, isAuthOnly), { request, nonce })
   }
 
-  const { response, user, configured } = await updateSession(request, requestHeaders)
+  const { response, user, profileState, profileError, configured } = await updateSession(request, requestHeaders)
+  if (moderationGate && user && profileError) {
+    return secured(cachePolicy(NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }), pathname, true), { request, nonce })
+  }
+  if (moderationGate && user && (profileState?.suspended_at || profileState?.banned_at)) {
+    return secured(cachePolicy(NextResponse.json({ error: profileState?.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }), pathname, true), { request, nonce })
+  }
   if (isProtected && !configured) {
     const url = new URL('/signin', request.url)
     url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
