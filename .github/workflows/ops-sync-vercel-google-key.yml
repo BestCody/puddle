@@ -1,0 +1,46 @@
+name: Ops - sync Google Places key to Vercel
+
+on:
+  push:
+    branches:
+      - ops/sync-vercel-google-key
+    paths:
+      - '.github/workflows/ops-sync-vercel-google-key.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_aY04PVtKs2MUrxR38csNwmUc
+      VERCEL_PROJECT_ID: prj_7By05EO9g3fqAJkubBtaeYelvwEQ
+      CURRENT_PRODUCTION_DEPLOYMENT: dpl_AMiC1oy7mxbdkyZPTWvvgt1orbdE
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify automation credentials
+        shell: bash
+        run: |
+          test -n "$GOOGLE_PLACES_API_KEY" || { echo 'GOOGLE_PLACES_API_KEY secret is missing.'; exit 1; }
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo 'VERCEL_TOKEN_UNAVAILABLE'
+            exit 2
+          fi
+          echo 'VERCEL_TOKEN_AVAILABLE'
+      - name: Link project metadata
+        shell: bash
+        run: |
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+      - name: Replace production Google Places key
+        shell: bash
+        run: |
+          printf '%s' "$GOOGLE_PLACES_API_KEY" | npx --yes vercel@latest env update GOOGLE_PLACES_API_KEY production --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
+      - name: Redeploy current production build with new environment
+        shell: bash
+        run: |
+          npx --yes vercel@latest redeploy "$CURRENT_PRODUCTION_DEPLOYMENT" --target=production --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
