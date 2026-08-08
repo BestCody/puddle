@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { admin, completeProfileDirect, createConfirmedUser, poll, signInThroughUi } from './support.mjs'
+import { completeProfileDirect, createConfirmedUser, signInThroughUi } from './support.mjs'
 import { fixturePlaceBySourceId } from './r2-fixture-data.mjs'
+import { ensureRelationalFixturePlaces } from './relational-fixture.mjs'
 
 function escapePattern(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -46,12 +47,14 @@ async function createParticipant(displayName) {
   return account
 }
 
-test('three people receive a private group match from a signed R2 deck', async ({ browser }) => {
-  const creator = await createParticipant('R2 Hangout Creator')
-  const friendOne = await createParticipant('R2 Hangout Friend One')
-  const friendTwo = await createParticipant('R2 Hangout Friend Two')
+test('three people receive a private group match from a relational Supabase deck', async ({ browser }) => {
   const expected = fixturePlaceBySourceId('e2e-group-arcade')
   const second = fixturePlaceBySourceId('e2e-group-park')
+  await ensureRelationalFixturePlaces([expected, second])
+
+  const creator = await createParticipant('Relational Hangout Creator')
+  const friendOne = await createParticipant('Relational Hangout Friend One')
+  const friendTwo = await createParticipant('Relational Hangout Friend Two')
 
   const creatorContext = await browser.newContext()
   const friendOneContext = await browser.newContext()
@@ -75,12 +78,6 @@ test('three people receive a private group match from a signed R2 deck', async (
   const roomPath = new URL(roomUrl).pathname
   expect(roomPath).toMatch(/^\/hangout\/[a-f0-9]{64}$/i)
 
-  await poll(async () => {
-    const result = await admin.from('locations').select('id').in('id', [expected.id, second.id])
-    if (result.error) throw result.error
-    return result.data?.length === 2 ? result.data : null
-  }, { timeout: 20_000, message: 'Group deck did not materialize all signed R2 locations.' })
-
   await inviteDialog.getByRole('link', { name: /Open room/i }).click()
   await expect(creatorPage).toHaveURL(new RegExp(`${escapePattern(roomPath)}$`))
   await expect(creatorPage.getByText(/Invite 2 more people to start group matching/i)).toBeVisible()
@@ -91,7 +88,7 @@ test('three people receive a private group match from a signed R2 deck', async (
   await expect(friendOnePage.locator('.date-swipe-card h2')).toHaveText(expected.name)
   await expect(friendTwoPage.locator('.date-swipe-card h2')).toHaveText(expected.name)
 
-  const friendOneTitle = await saveSharedCard(friendOnePage, 'This R2-backed place works for the whole group.')
+  const friendOneTitle = await saveSharedCard(friendOnePage, 'This Supabase-backed place works for the whole group.')
   expect(friendOneTitle).toBe(expected.name)
   await expect(friendOnePage.getByText(/Group match found/i)).toHaveCount(0)
 
