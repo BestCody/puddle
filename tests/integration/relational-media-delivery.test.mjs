@@ -15,22 +15,29 @@ test('Supabase discovery never sends Backblaze card media into the browser path'
   assert.doesNotMatch(feed, /categoryPlaceholderUrl\(/)
 })
 
-test('relational open-photo delivery re-fetches the approved provider asset without B2', async () => {
+test('relational open-photo delivery resolves the persisted approved identity without B2', async () => {
   const route = await read('app/api/location-open-photo/[id]/route.js')
-  assert.match(route, /findStaticOpenPhotoCandidates/)
+  const approved = await read('lib/app/approved-open-photo.js')
+  assert.match(route, /findApprovedOpenPhotoCandidate/)
   assert.match(route, /downloadStaticOpenPhotoCandidate/)
   assert.match(route, /external_photo_id/)
-  assert.match(route, /entry\.externalId/)
   assert.match(route, /Content-Type': 'image\/jpeg'/)
+  assert.match(approved, /graph\.mapillary\.com\/\$\{encodeURIComponent\(id\)\}/)
+  assert.match(approved, /thumb_2048_url/)
+  assert.match(approved, /String\(row\?\.id \|\| ''\) !== id/)
   assert.doesNotMatch(route, /b2-private-download|fetchPrivateB2Asset|authorizeB2DownloadUrl/)
+  assert.doesNotMatch(approved, /b2-private-download|fetchPrivateB2Asset|authorizeB2DownloadUrl/)
 })
 
-test('relational Google delivery uses the verified Place ID without a static catalogue reference', async () => {
+test('relational Google delivery uses the verified Place ID and production key aliases', async () => {
   const route = await read('app/api/location-google-photo/[id]/route.js')
   const helper = await read('lib/app/google-place-photo-proxy.js')
   assert.match(route, /location_google_places/)
   assert.match(route, /fetchGooglePlacePhotoById\(mapping\.google_place_id/)
   assert.match(route, /consume_static_google_runtime_budget_v1/)
+  assert.match(route, /process\.env\.GOOGLE_PLACES_API_KEY/)
+  assert.match(route, /process\.env\.GOOGLE_MAPS_API_KEY/)
+  assert.match(route, /process\.env\.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY/)
   assert.doesNotMatch(route, /static_ref|verifyStaticCatalogueReference|fetchPrivateB2Asset/)
   assert.match(helper, /export async function fetchGooglePlacePhotoById/)
   assert.match(helper, /googlePlaceDetails\(placeId/)
