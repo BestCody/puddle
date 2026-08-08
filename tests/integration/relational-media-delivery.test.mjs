@@ -16,6 +16,20 @@ test('Supabase discovery never sends Backblaze card media into the browser path'
   assert.doesNotMatch(feed, /categoryPlaceholderUrl\(/)
 })
 
+test('new approved open-photo imports persist in Supabase public media', async () => {
+  const importer = await read('scripts/import-open-location-photos.mjs')
+  const compatibility = await read('lib/app/open-photo-r2.js')
+  const storage = await read('lib/app/open-photo-supabase.js')
+  assert.match(importer, /storeOpenPhotoInR2/)
+  assert.match(compatibility, /storeOpenPhotoInSupabase as storeOpenPhotoInR2/)
+  assert.match(storage, /OPEN_PHOTO_SUPABASE_BUCKET = 'puddle-public-media'/)
+  assert.match(storage, /admin\.storage\.getBucket/)
+  assert.match(storage, /\.jpeg\(\{ quality: 84, mozjpeg: true \}\)/)
+  assert.match(storage, /storageBackend: 'supabase'/)
+  assert.match(storage, /open-photos\/by-hash/)
+  assert.doesNotMatch(storage, /putB2Object|b2Configuration|B2_DOWNLOAD_BASE_URL/)
+})
+
 test('relational open-photo delivery resolves the persisted approved identity without B2', async () => {
   const route = await read('app/api/location-open-photo/[id]/route.js')
   const approved = await read('lib/app/approved-open-photo.js')
