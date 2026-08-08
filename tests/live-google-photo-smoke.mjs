@@ -85,7 +85,7 @@ await page.route('**/api/location/search**', async (route) => {
   })
 })
 
-let success = null
+const successes = []
 try {
   await page.goto(`${baseUrl}/signup`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
   await page.getByLabel('Display name').fill('Google Photo Smoke')
@@ -109,7 +109,8 @@ try {
   await page.getByRole('button', { name: /Build my date deck/i }).click()
   await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 45_000 })
 
-  for (const candidate of candidates.slice(0, 3)) {
+  const tested = candidates.slice(0, 3)
+  for (const candidate of tested) {
     const before = await admin
       .from('location_photo_sources')
       .select('id,provider,external_photo_id,remote_url')
@@ -125,6 +126,7 @@ try {
       response.headers()['x-puddle-google-attributions'] ||
       response.headers()['x-puddle-google-maps-uri']
     )
+
     if (response.status() !== 200 || !contentType.startsWith('image/')) {
       const errorBody = (await response.text().catch(() => '')).slice(0, 1000)
       console.log(JSON.stringify({
@@ -138,13 +140,6 @@ try {
       continue
     }
 
-    console.log(JSON.stringify({
-      locationId: candidate.location_id,
-      name: candidate.name,
-      status: response.status(),
-      contentType,
-      hasAttribution
-    }))
     const bytes = await response.body()
     assert.ok(bytes.length > 0, 'Google fallback returned an empty image.')
     assert.ok(hasAttribution, 'Google fallback image did not expose attribution metadata.')
@@ -158,7 +153,7 @@ try {
     if (after.error) throw after.error
     assert.deepEqual(after.data || [], before.data || [], 'Google fallback persisted photo identity or URL data.')
 
-    success = {
+    const success = {
       locationId: candidate.location_id,
       name: candidate.name,
       status: response.status(),
@@ -167,11 +162,11 @@ try {
       hasAttribution,
       cacheControl: response.headers()['cache-control'] || null
     }
-    break
+    successes.push(success)
+    console.log(`GOOGLE_FALLBACK_ACCEPTED ${JSON.stringify(success)}`)
   }
 
-  assert.ok(success, 'No tested verified Google fallback candidate returned a production image.')
-  console.log(`GOOGLE_FALLBACK_ACCEPTED ${JSON.stringify(success)}`)
+  assert.equal(successes.length, tested.length, `Only ${successes.length} of ${tested.length} tested Google fallback candidates returned production images.`)
 } finally {
   if (accountCreated) await cleanupAccount(page)
   await browser.close()
