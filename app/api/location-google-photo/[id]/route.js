@@ -1,0 +1,87 @@
+import { NextResponse } from 'next/server'
+import { fetchGooglePlacePhotoById } from '@/lib/app/google-place-photo-proxy'
+import { staticMediaRuntimeConfiguration } from '@/lib/app/static-media-runtime-config'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { enforceRateLimit } from '@/lib/security/rate-limit'
+import { safeSecurityError } from '@/lib/security/request'
+import { uuid } from '@/lib/security/schema'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 30
+
+function productionGooglePlacesKey() {
+  return String(process.env.GOOGLE_PLACES_API_KEY || Reflect.get(process.env, 'GOOGLE_PLACES_API_KEY') || '').trim()
+}
+
+export async function GET(request, { params }) {
+  if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Photo delivery is unavailable.' }, { status: 503 })
+
+  try {
+    const { id: rawId } = await params
+    const id = uuid(rawId, 'location id')
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Sign in to view this location photo.' }, { status: 401 })
+
+    const limited = await enforceRateLimit({
+      headers: request.headers,
+      userId: user.id,
+      action: 'static_google_photo',
+      weight: 5
+    })
+    if (!limited.allowed) {
+      return NextResponse.json(
+        { error: 'Too many photo requests were made. Try again shortly.' },
+        { status: 429, headers: { 'retry-after': String(limited.retryAfter || 60) } }
+      )
+    }
+
+    const admin = createAdminClient()
+    const [{ data: location, error: locationError }, { data: mapping, error: mappingError }] = await Promise.all([
+      admin.from('locations').select('id,status,visibility').eq('id', id).maybeSingle(),
+      admin.from('location_google_places').select('google_place_id,status').eq('location_id', id).maybeSingle()
+    ])
+    if (locationError) throw locationError
+    if (mappingError) throw mappingError
+    if (!location || location.status !== 'published' || location.visibility !== 'public' || mapping?.status !== 'verified' || !mapping.google_place_id) {
+      return NextResponse.json({ error: 'Photo not found.' }, { status: 404 })
+    }
+
+    const config = staticMediaRuntimeConfiguration()
+    const apiKey = productionGooglePlacesKey()
+    if (!apiKey) return NextResponse.json({ error: 'Photo delivery is unavailable.' }, { status: 503 })
+
+    const budget = await admin.rpc('consume_static_google_runtime_budget_v1', {
+      daily_limit: config.googleDailyLimit,
+      monthly_limit: config.googleMonthlyLimit
+    })
+    if (budget.error) throw budget.error
+    if (!budget.data?.allowed) {
+      return NextResponse.json({ error: 'The live photo budget is temporarily exhausted.' }, { status: 429 })
+    }
+
+    const photo = await fetchGooglePlacePhotoById(mapping.google_place_id, {
+      apiKey,
+      timeoutMs: config.googleTimeoutMs
+    })
+
+    return new Response(photo.bytes, {
+      status: 200,
+      headers: {
+        'Content-Type': photo.contentType,
+        'Cache-Control': 'private, no-store, max-age=0',
+        'Content-Disposition': 'inline',
+        'X-Content-Type-Options': 'nosniff',
+        ...photo.headers
+      }
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { error: safeSecurityError(error, 'That live photo request could not be completed.') },
+      { status: error?.status || 502, headers: { 'Cache-Control': 'private, no-store' } }
+    )
+  }
+}
