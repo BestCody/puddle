@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
+import sharp from 'sharp'
+import { OPEN_PHOTO_SUPABASE_BUCKET, storeOpenPhotoInSupabase } from '../../lib/app/open-photo-supabase.js'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
@@ -28,6 +30,57 @@ test('new approved open-photo imports persist in Supabase public media', async (
   assert.match(storage, /storageBackend: 'supabase'/)
   assert.match(storage, /open-photos\/by-hash/)
   assert.doesNotMatch(storage, /putB2Object|b2Configuration|B2_DOWNLOAD_BASE_URL/)
+})
+
+test('Supabase open-photo storage normalizes and uploads a public JPEG', async () => {
+  const calls = { getBucket: [], from: [], upload: [] }
+  const publicBase = 'https://example.supabase.co/storage/v1/object/public'
+  const admin = {
+    storage: {
+      async getBucket(bucket) {
+        calls.getBucket.push(bucket)
+        return { data: { id: bucket, public: true }, error: null }
+      },
+      from(bucket) {
+        calls.from.push(bucket)
+        return {
+          async upload(key, body, options) {
+            calls.upload.push({ key, body, options })
+            return { data: { path: key }, error: null }
+          },
+          getPublicUrl(key) {
+            return { data: { publicUrl: `${publicBase}/${bucket}/${key}` } }
+          }
+        }
+      }
+    }
+  }
+  const source = await sharp({
+    create: { width: 64, height: 48, channels: 3, background: { r: 80, g: 120, b: 160 } }
+  }).png().toBuffer()
+
+  const stored = await storeOpenPhotoInSupabase(admin, source)
+
+  assert.deepEqual(calls.getBucket, [OPEN_PHOTO_SUPABASE_BUCKET])
+  assert.deepEqual(calls.from, [OPEN_PHOTO_SUPABASE_BUCKET])
+  assert.equal(calls.upload.length, 1)
+  assert.match(calls.upload[0].key, /^open-photos\/by-hash\/[0-9a-f]{2}\/[0-9a-f]{64}\.jpg$/)
+  assert.ok(Buffer.isBuffer(calls.upload[0].body))
+  assert.ok(calls.upload[0].body.length > 0)
+  assert.deepEqual(calls.upload[0].options, {
+    contentType: 'image/jpeg',
+    cacheControl: '31536000',
+    upsert: true
+  })
+  assert.equal(stored.storageBackend, 'supabase')
+  assert.equal(stored.mediaObjectId, null)
+  assert.equal(stored.storageKey, calls.upload[0].key)
+  assert.equal(stored.remoteUrl, `${publicBase}/${OPEN_PHOTO_SUPABASE_BUCKET}/${stored.storageKey}`)
+  assert.match(stored.contentHash, /^[0-9a-f]{64}$/)
+  assert.match(stored.perceptualHash, /^[0-9a-f]{16}$/)
+  assert.equal(stored.byteSize, calls.upload[0].body.length)
+  assert.ok(stored.width > 0)
+  assert.ok(stored.height > 0)
 })
 
 test('relational open-photo delivery resolves the persisted approved identity without B2', async () => {
