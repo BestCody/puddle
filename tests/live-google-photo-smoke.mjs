@@ -104,6 +104,7 @@ try {
   await page.getByLabel('Search radius').fill('25')
   await page.getByLabel('Coffee shops').check()
   await page.getByLabel('Restaurants').check()
+  await page.getByLabel('Galleries').check()
   await page.getByLabel('Your ideal date vibe').fill('Google fallback production smoke test.')
   await page.getByRole('button', { name: /Build my date deck/i }).click()
   await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 45_000 })
