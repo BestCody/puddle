@@ -1,0 +1,181 @@
+name: Ops - match live photo cards
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/ops-live-photo-google-match.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-live-photo-google-match
+  cancel-in-progress: false
+
+jobs:
+  match-live-cards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+      B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_REGION: ${{ secrets.B2_REGION }}
+      B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_BUCKET: ${{ secrets.B2_BUCKET }}
+      B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Match exact production smoke cards
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createAdminClient } from './lib/supabase/admin.js'
+          import { b2Configuration } from './lib/app/b2-s3.js'
+          import { scoreGooglePlaceMatch } from './lib/app/google-place-match.js'
+          import { loadStaticReleasePlan, readStaticReleaseTile } from './lib/app/static-catalogue-release.js'
+          import { syncStaticMediaOverlayRecords } from './lib/app/static-media-overlay.js'
+
+          const TARGET_IDS = [
+            'b38cac40-8a46-55a3-b199-4b9c86eccbc1',
+            '231074a7-ead0-53ba-90c3-af694d376245',
+            '78a00dd1-1feb-5c59-8eca-a83341b497d4',
+            '5df74d0a-42a1-52b6-8183-34ba2fdd93dc',
+            '77b59b2d-f2c8-5a35-a46f-1e79389f4412',
+            '2b0a396b-3fe7-5a9b-9603-5c0eba324344'
+          ]
+          const targets = new Set(TARGET_IDS)
+          const apiKey = String(process.env.GOOGLE_PLACES_API_KEY || '').trim()
+          if (!apiKey) throw new Error('GOOGLE_PLACES_API_KEY is required.')
+          const config = b2Configuration()
+          if (!config) throw new Error('Backblaze B2 configuration is required.')
+          const admin = createAdminClient()
+          const plan = await loadStaticReleasePlan({ config })
+          const found = new Map()
+
+          for (const tile of plan.tiles) {
+            if (found.size === targets.size) break
+            const { places } = await readStaticReleaseTile(plan.release, tile, { config })
+            for (const place of places) {
+              if (targets.has(place.staticLocationId)) found.set(place.staticLocationId, place)
+            }
+          }
+
+          function relation(value) {
+            return Array.isArray(value) ? value[0] || null : value || null
+          }
+
+          async function staticAsset(id) {
+            const result = await admin
+              .from('static_location_assets')
+              .select('static_location_id,source,source_place_id,photo_provider,attribution_text,attribution_url,license_code,google_place_id,google_match_score,google_matched_name,media_objects(public_url)')
+              .eq('static_location_id', id)
+              .maybeSingle()
+            if (result.error && result.error.code !== 'PGRST116') throw result.error
+            return result.data || null
+          }
+
+          function overlayRecord(place, asset) {
+            const media = relation(asset?.media_objects)
+            return {
+              staticLocationId: place.staticLocationId,
+              latitude: place.latitude,
+              longitude: place.longitude,
+              photoUrl: media?.public_url || null,
+              photoProvider: asset?.photo_provider || null,
+              attributionText: asset?.attribution_text || null,
+              attributionUrl: asset?.attribution_url || null,
+              licenseCode: asset?.license_code || null,
+              googlePlaceId: asset?.google_place_id || null,
+              googleMatchScore: asset?.google_match_score ?? null
+            }
+          }
+
+          async function searchGoogle(place) {
+            const body = {
+              textQuery: [place.name, place.city, place.region, place.country].filter(Boolean).join(', '),
+              languageCode: 'en',
+              maxResultCount: 5,
+              locationBias: {
+                circle: {
+                  center: { latitude: Number(place.latitude), longitude: Number(place.longitude) },
+                  radius: 200
+                }
+              }
+            }
+            if (/^[A-Z]{2}$/.test(String(place.countryCode || ''))) body.regionCode = place.countryCode
+            const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': apiKey,
+                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType'
+              },
+              body: JSON.stringify(body),
+              cache: 'no-store',
+              signal: AbortSignal.timeout(12_000)
+            })
+            if (!response.ok) throw new Error(`Google Places returned ${response.status}.`)
+            return response.json()
+          }
+
+          let matched = 0
+          let existing = 0
+          let noMatch = 0
+          let missing = 0
+
+          for (const id of TARGET_IDS) {
+            const place = found.get(id)
+            if (!place) {
+              missing += 1
+              console.log(`Target not found in active release: ${id}`)
+              continue
+            }
+            const current = await staticAsset(id)
+            if (current?.google_place_id) {
+              existing += 1
+              await syncStaticMediaOverlayRecords([overlayRecord(place, current)], { config, zoom: place.tile.z })
+              console.log(`Existing verified Google Place ID retained for ${place.name}.`)
+              continue
+            }
+
+            const payload = await searchGoogle(place)
+            const ranked = (payload?.places || [])
+              .map((candidate) => ({ candidate, match: scoreGooglePlaceMatch(place, candidate) }))
+              .filter((entry) => entry.match)
+              .sort((a, b) => b.match.score - a.match.score)
+            const best = ranked[0]
+            if (!best || best.match.score < 0.86) {
+              noMatch += 1
+              console.log(`No verified Google match for ${place.name}.`)
+              continue
+            }
+
+            const saved = await admin.rpc('upsert_static_location_asset_v1', {
+              target_static_location: place.staticLocationId,
+              import_source: place.source,
+              import_source_place_id: place.sourcePlaceId,
+              google_place_value: best.candidate.id,
+              google_score_value: Number(best.match.score.toFixed(4)),
+              google_name_value: best.match.matchedName
+            })
+            if (saved.error) throw saved.error
+            const asset = await staticAsset(id)
+            await syncStaticMediaOverlayRecords([overlayRecord(place, asset)], { config, zoom: place.tile.z })
+            matched += 1
+            console.log(`Matched ${place.name} -> ${best.match.matchedName} (${best.match.score.toFixed(3)}).`)
+          }
+
+          const summary = { release: plan.release, targets: TARGET_IDS.length, found: found.size, matched, existing, noMatch, missing }
+          console.log(JSON.stringify(summary, null, 2))
+          if (matched + existing < 1) throw new Error('No production smoke card has a verified Google Place ID after the targeted run.')
+          NODE
