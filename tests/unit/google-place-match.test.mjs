@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { findGoogleClientPlace } from '../../lib/app/google-place-client.js'
 import { scoreGooglePlaceMatch } from '../../lib/app/google-place-match.js'
 
 test('Google place matching requires a similar nearby venue', () => {
@@ -54,4 +55,72 @@ test('address evidence accepts a modest venue-name variation without matching an
     formattedAddress: '150 King St W, Toronto, ON, Canada',
     location: { latitude: 43.6545, longitude: -79.3832 }
   }), null)
+})
+
+test('browser Google lookup uses bounded fields and the same identity scorer', async () => {
+  let request = null
+  const Place = {
+    async searchByText(value) {
+      request = value
+      return {
+        places: [
+          {
+            id: 'wrong-place',
+            displayName: 'Different Store',
+            formattedAddress: '900 The Queensway, Etobicoke, ON',
+            location: { lat: () => 43.6387, lng: () => -79.5313 }
+          },
+          {
+            id: 'sushi-kaji-place-id',
+            displayName: 'Sushi Kaji',
+            formattedAddress: '860 The Queensway, Etobicoke, ON M8Z 1N7, Canada',
+            location: { lat: () => 43.6389, lng: () => -79.5311 }
+          }
+        ]
+      }
+    }
+  }
+  const found = await findGoogleClientPlace(Place, {
+    allowed: true,
+    name: 'Sushi Kaji',
+    city: 'Toronto',
+    region: 'Ontario',
+    country: 'Canada',
+    countryCode: 'CA',
+    addressPublic: '860 The Queensway, Etobicoke, ON',
+    latitude: 43.638,
+    longitude: -79.532,
+    minimumScore: 0.86
+  })
+
+  assert.equal(found?.placeId, 'sushi-kaji-place-id')
+  assert.deepEqual(request.fields, ['id', 'displayName', 'formattedAddress', 'location'])
+  assert.equal(request.maxResultCount, 5)
+  assert.equal(request.region, 'ca')
+  assert.deepEqual(request.locationBias, { center: { lat: 43.638, lng: -79.532 }, radius: 200 })
+})
+
+test('browser Google lookup refuses unrelated or unbudgeted places', async () => {
+  const Place = {
+    async searchByText() {
+      return {
+        places: [{
+          id: 'wrong-place',
+          displayName: 'Different Store',
+          formattedAddress: '900 The Queensway, Etobicoke, ON',
+          location: { lat: () => 43.6387, lng: () => -79.5313 }
+        }]
+      }
+    }
+  }
+  const lookup = {
+    allowed: true,
+    name: 'Sushi Kaji',
+    city: 'Toronto',
+    country: 'Canada',
+    latitude: 43.638,
+    longitude: -79.532
+  }
+  assert.equal(await findGoogleClientPlace(Place, lookup), null)
+  assert.equal(await findGoogleClientPlace(Place, { ...lookup, allowed: false }), null)
 })
