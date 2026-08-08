@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { findGoogleClientPlace } from '@/lib/app/google-place-client'
+import { findGoogleUiKitPlace } from '@/lib/app/google-place-client'
 
 let placesLibraryPromise = null
 
@@ -49,7 +49,10 @@ async function loadPlacesLibrary(apiKey) {
     customElements.whenDefined('gmp-place-details-place-request'),
     customElements.whenDefined('gmp-place-content-config'),
     customElements.whenDefined('gmp-place-media'),
-    customElements.whenDefined('gmp-place-attribution')
+    customElements.whenDefined('gmp-place-attribution'),
+    customElements.whenDefined('gmp-place-search'),
+    customElements.whenDefined('gmp-place-text-search-request'),
+    customElements.whenDefined('gmp-place-all-content')
   ])
   return places
 }
@@ -89,11 +92,11 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
 
     async function render() {
       try {
-        const placesLibrary = await loadPlacesLibrary(apiKey)
+        await loadPlacesLibrary(apiKey)
         if (cancelled) return
         const resolvedPlaceId = placeId
           ? String(placeId)
-          : (await findGoogleClientPlace(placesLibrary?.Place, lookup))?.placeId || null
+          : (await findGoogleUiKitPlace(mount, lookup))?.placeId || null
         if (!resolvedPlaceId || cancelled) {
           fail()
           return
@@ -116,7 +119,7 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
         content.append(media, attribution)
         details.append(request, content)
         details.addEventListener('gmp-load', () => { if (!cancelled) setState('ready') }, { once: true })
-        details.addEventListener('gmp-error', fail)
+        details.addEventListener('gmp-requesterror', fail)
         mount.replaceChildren(details)
       } catch {
         fail()
@@ -127,7 +130,7 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
     render()
     return () => {
       cancelled = true
-      if (details) details.removeEventListener('gmp-error', fail)
+      if (details) details.removeEventListener('gmp-requesterror', fail)
       mount.replaceChildren()
     }
   }, [apiKey, placeId, title, lookupKey])
