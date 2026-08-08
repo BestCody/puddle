@@ -232,9 +232,12 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
     item.latitude,
     item.longitude
   ])
-  const googleServerPhotoUrl = item.google_photo_proxy_url || null
+  const verifiedGooglePhotoUrl = item.google_place_id && item.static_ref && item.content_id
+    ? `/api/static-catalogue/google-photo/${encodeURIComponent(item.content_id)}?ref=${encodeURIComponent(item.static_ref)}`
+    : null
+  const googleServerPhotoUrl = item.google_photo_proxy_url || verifiedGooglePhotoUrl
   const useGoogleServerPhoto = !mainPhoto && !mainPhotoPending && Boolean(googleServerPhotoUrl)
-  const useGoogleUiKit = !useGoogleServerPhoto && !mainPhoto && !mainPhotoPending && Boolean(item.google_place_id || googleLookup)
+  const useGoogleUiKit = !useGoogleServerPhoto && !mainPhoto && !mainPhotoPending && Boolean(googleLookup)
   const [photoStatus, setPhotoStatus] = useState(item.photo_enrichment_status || (rawMainPhoto ? 'matched' : 'pending'))
   const displayState = photoDisplayState(photoStatus, Boolean(mainPhoto))
   const rating = ratingLabel(item)
@@ -321,7 +324,7 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
       <div className={`minimal-swipe-photo ${useGoogleServerPhoto || useGoogleUiKit ? 'has-google-fallback' : ''}`} style={photoStyle}>
         {useGoogleServerPhoto
           ? <GoogleServerPlacePhoto title={item.title} url={googleServerPhotoUrl} placeholderUrl={placeholderUrl} />
-          : useGoogleUiKit ? <GooglePlacePhotoFallback title={item.title} placeId={item.google_place_id} lookup={googleLookup} placeholderUrl={placeholderUrl} /> : null}
+          : useGoogleUiKit ? <GooglePlacePhotoFallback title={item.title} placeId={null} lookup={googleLookup} placeholderUrl={placeholderUrl} /> : null}
         {!useGoogleServerPhoto && !useGoogleUiKit && !mainPhotoPending && displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found" style={placeholderUrl ? { backgroundImage: `url(${placeholderUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
         {!useGoogleServerPhoto && !useGoogleUiKit && !mainPhotoPending && (displayState === 'searching' || displayState === 'retrying') ? <PhotoSearchState state={displayState} placeholderUrl={placeholderUrl} /> : null}
         <div className="minimal-swipe-meta">
