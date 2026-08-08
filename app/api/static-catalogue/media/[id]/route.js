@@ -15,10 +15,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-function serverGoogleUnavailable(config, payload) {
-  return !config.googleApiKey &&
-    payload?.state === 'temporary_failure' &&
-    (payload?.diagnostics || []).some((value) => String(value).includes('Google Places is not configured.'))
+function productionGooglePlacesKey() {
+  return String(process.env.GOOGLE_PLACES_API_KEY || Reflect.get(process.env, 'GOOGLE_PLACES_API_KEY') || '').trim()
 }
 
 function googlePhotoProxyUrl(id, referenceToken) {
@@ -35,6 +33,10 @@ function withServerGooglePhoto(payload, id, referenceToken, config) {
     google_lookup_min_score: config.googleMinimumScore,
     diagnostics: (payload?.diagnostics || []).filter((value) => !String(value).includes('Google Places is not configured.'))
   }
+}
+
+function hasOpenPhoto(payload) {
+  return payload?.state === 'open_photo_found' && Boolean(payload?.photo_url)
 }
 
 export async function POST(request, { params }) {
@@ -71,20 +73,33 @@ export async function POST(request, { params }) {
     const reference = verifyStaticCatalogueReference(referenceToken, { expectedId: id })
     const admin = createAdminClient()
     await reopenLegacyNoMatch(admin, reference)
+
+    // Visible cards first get the same open-photo pass used by bounded lookahead.
+    // If that does not produce a real stored image, return a transient Google
+    // photo capability and let the authenticated no-store proxy perform the one
+    // Google lookup. This avoids the legacy Google matching state machine from
+    // turning a live card into a terminal no_match before the photo proxy runs.
+    if (mode === 'full' && productionGooglePlacesKey()) {
+      const openResult = await resolveStaticCatalogueMedia(reference, { mode: 'open_only', config, admin })
+      if (hasOpenPhoto(openResult.payload)) {
+        return NextResponse.json(openResult.payload, {
+          status: openResult.status,
+          headers: { 'Cache-Control': 'private, no-store' }
+        })
+      }
+      return NextResponse.json(withServerGooglePhoto(openResult.payload, id, referenceToken, config), {
+        status: 200,
+        headers: { 'Cache-Control': 'private, no-store' }
+      })
+    }
+
     const result = await resolveStaticCatalogueMedia(reference, { mode, config, admin })
     if (mode === 'full' && result.payload?.state === 'no_match') {
       await markCurrentNoMatch(admin, reference)
     }
 
-    let payload = result.payload
-    let status = result.status
-    if (mode === 'full' && (serverGoogleUnavailable(config, payload) || payload?.state === 'google_matched')) {
-      payload = withServerGooglePhoto(payload, id, referenceToken, config)
-      status = 200
-    }
-
-    return NextResponse.json(payload, {
-      status,
+    return NextResponse.json(result.payload, {
+      status: result.status,
       headers: { 'Cache-Control': 'private, no-store' }
     })
   } catch (error) {
