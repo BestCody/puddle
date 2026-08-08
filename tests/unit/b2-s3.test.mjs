@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { b2Configuration, b2PublicUrl, b2Request, signB2Request } from '../../lib/app/b2-s3.js'
+import { b2Configuration, b2PublicUrl, b2Request, putB2Object, signB2Request } from '../../lib/app/b2-s3.js'
 
 const config = {
   accessKeyId: 'key', secretAccessKey: 'secret', bucket: 'bucket',
@@ -23,6 +23,27 @@ test('Backblaze B2 signing is deterministic and uses the endpoint region', () =>
   assert.match(first.headers.Authorization, /\/us-east-005\/s3\/aws4_request/)
   assert.equal(first.headers['x-amz-date'], '20260802T123456Z')
   assert.match(first.canonicalRequest, /content-encoding:gzip/)
+})
+
+test('Backblaze B2 PUT binds content length to the exact uploaded bytes', async () => {
+  const source = Buffer.from('exact binary image bytes')
+  let captured = null
+  const fetchImpl = async (input, init) => {
+    captured = { input: String(input), init }
+    return new Response('', { status: 200, headers: { etag: 'test-etag' } })
+  }
+
+  await putB2Object('photos/open/aa/example.avif', source, {
+    contentType: 'image/avif',
+    config,
+    fetchImpl
+  })
+
+  assert.equal(captured.init.headers['content-length'], String(source.length))
+  assert.match(captured.init.headers.Authorization, /SignedHeaders=.*content-length/)
+  assert.ok(Buffer.isBuffer(captured.init.body))
+  assert.equal(captured.init.body.length, source.length)
+  assert.deepEqual(captured.init.body, source)
 })
 
 test('Backblaze B2 list queries are canonically sorted', () => {
