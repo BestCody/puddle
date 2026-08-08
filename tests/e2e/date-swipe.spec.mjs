@@ -52,14 +52,30 @@ async function installGoogleUiKitStub(page) {
         window.setTimeout(() => this.dispatchEvent(new Event('gmp-load')), 0)
       }
     }
+    class SearchElement extends HTMLElement {
+      connectedCallback() {
+        this.places = [{
+          id: 'e2e-google-place-id',
+          displayName: 'E2E Media Google Museum',
+          formattedAddress: 'Toronto, ON, Canada',
+          location: { lat: () => 43.6532, lng: () => -79.3832 }
+        }]
+        window.setTimeout(() => this.dispatchEvent(new Event('gmp-load')), 0)
+      }
+    }
     if (!customElements.get('gmp-place-details-compact')) {
       customElements.define('gmp-place-details-compact', DetailsElement)
+    }
+    if (!customElements.get('gmp-place-search')) {
+      customElements.define('gmp-place-search', SearchElement)
     }
     for (const name of [
       'gmp-place-details-place-request',
       'gmp-place-content-config',
       'gmp-place-media',
-      'gmp-place-attribution'
+      'gmp-place-attribution',
+      'gmp-place-text-search-request',
+      'gmp-place-all-content'
     ]) {
       if (!customElements.get(name)) customElements.define(name, class extends HTMLElement {})
     }
