@@ -74,7 +74,7 @@ export async function POST(request, { params }) {
     const admin = createAdminClient()
     await reopenLegacyNoMatch(admin, reference)
 
-    // Visible cards first get the same open-photo pass used by bounded lookahead.
+    // Production-visible cards first get the same open-photo pass used by bounded lookahead.
     // If that does not produce a real stored image, return a transient Google
     // photo capability and let the authenticated no-store proxy perform the one
     // Google lookup. This avoids the legacy Google matching state machine from
