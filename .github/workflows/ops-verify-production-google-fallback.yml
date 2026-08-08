@@ -19,6 +19,7 @@ jobs:
       LIVE_BASE_URL: https://puddle.you
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
@@ -26,6 +27,43 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Verify server-only Google Places key directly
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createAdminClient } from './lib/supabase/admin.js'
+          import { fetchGooglePlacePhotoById } from './lib/app/google-place-photo-proxy.js'
+
+          const apiKey = String(process.env.GOOGLE_PLACES_API_KEY || '').trim()
+          if (!apiKey) throw new Error('GitHub GOOGLE_PLACES_API_KEY secret is unavailable.')
+          const admin = createAdminClient()
+          const targets = [
+            '425b99bb-b59b-4723-a5de-698795677079',
+            '518daf66-6e08-492f-8d2c-5ca30729883c'
+          ]
+          for (const locationId of targets) {
+            const mapping = await admin
+              .from('location_google_places')
+              .select('google_place_id,status')
+              .eq('location_id', locationId)
+              .maybeSingle()
+            if (mapping.error) throw mapping.error
+            if (mapping.data?.status !== 'verified' || !mapping.data.google_place_id) {
+              throw new Error(`Verified mapping missing for ${locationId}.`)
+            }
+            const photo = await fetchGooglePlacePhotoById(mapping.data.google_place_id, {
+              apiKey,
+              timeoutMs: 12_000
+            })
+            console.log(JSON.stringify({
+              locationId,
+              directServerKeyStatus: 'success',
+              contentType: photo.contentType,
+              bytes: photo.bytes.length,
+              hasAttribution: Boolean(photo.headers?.['X-Puddle-Google-Attributions'] || photo.headers?.['X-Puddle-Google-Maps-Uri'])
+            }))
+          }
+          NODE
       - run: npm install --no-save --package-lock=false @playwright/test@1.56.1
       - run: npx playwright install --with-deps chromium
       - name: Verify production Google fallback
