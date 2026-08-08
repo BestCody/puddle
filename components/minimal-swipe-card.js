@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
+import { GoogleServerPlacePhoto } from '@/components/google-server-place-photo'
 import { photoDisplayState } from '@/lib/app/photo-enrichment'
 import { usePrivateB2Asset } from '@/lib/app/use-private-b2-asset'
 import { useStaticCatalogueDetails } from '@/lib/app/use-static-catalogue-details'
@@ -231,7 +232,9 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
     item.latitude,
     item.longitude
   ])
-  const useGoogleUiKit = !mainPhoto && !mainPhotoPending && Boolean(item.google_place_id || googleLookup)
+  const googleServerPhotoUrl = item.google_photo_proxy_url || null
+  const useGoogleServerPhoto = !mainPhoto && !mainPhotoPending && Boolean(googleServerPhotoUrl)
+  const useGoogleUiKit = !useGoogleServerPhoto && !mainPhoto && !mainPhotoPending && Boolean(item.google_place_id || googleLookup)
   const [photoStatus, setPhotoStatus] = useState(item.photo_enrichment_status || (rawMainPhoto ? 'matched' : 'pending'))
   const displayState = photoDisplayState(photoStatus, Boolean(mainPhoto))
   const rating = ratingLabel(item)
@@ -315,10 +318,12 @@ export function MinimalSwipeCard({ item: sourceItem, onChoice, busy }) {
       }}
       aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
-      <div className={`minimal-swipe-photo ${useGoogleUiKit ? 'has-google-fallback' : ''}`} style={photoStyle}>
-        {useGoogleUiKit ? <GooglePlacePhotoFallback title={item.title} placeId={item.google_place_id} lookup={googleLookup} placeholderUrl={placeholderUrl} /> : null}
-        {!useGoogleUiKit && !mainPhotoPending && displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found" style={placeholderUrl ? { backgroundImage: `url(${placeholderUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
-        {!useGoogleUiKit && !mainPhotoPending && (displayState === 'searching' || displayState === 'retrying') ? <PhotoSearchState state={displayState} placeholderUrl={placeholderUrl} /> : null}
+      <div className={`minimal-swipe-photo ${useGoogleServerPhoto || useGoogleUiKit ? 'has-google-fallback' : ''}`} style={photoStyle}>
+        {useGoogleServerPhoto
+          ? <GoogleServerPlacePhoto title={item.title} url={googleServerPhotoUrl} placeholderUrl={placeholderUrl} />
+          : useGoogleUiKit ? <GooglePlacePhotoFallback title={item.title} placeId={item.google_place_id} lookup={googleLookup} placeholderUrl={placeholderUrl} /> : null}
+        {!useGoogleServerPhoto && !useGoogleUiKit && !mainPhotoPending && displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found" style={placeholderUrl ? { backgroundImage: `url(${placeholderUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
+        {!useGoogleServerPhoto && !useGoogleUiKit && !mainPhotoPending && (displayState === 'searching' || displayState === 'retrying') ? <PhotoSearchState state={displayState} placeholderUrl={placeholderUrl} /> : null}
         <div className="minimal-swipe-meta">
           <span>{categoryLabel(item.category)}</span>
           {item.distanceLabel ? <span>{item.distanceLabel}</span> : null}
