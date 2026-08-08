@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { resolveStaticCatalogueMedia, staticMediaResolverConfiguration } from '@/lib/app/static-media-resolver'
+import { resolveStaticCatalogueMedia } from '@/lib/app/static-media-resolver'
+import { staticMediaRuntimeConfiguration } from '@/lib/app/static-media-runtime-config'
 import { verifyStaticCatalogueReference } from '@/lib/app/static-catalogue-ref'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
@@ -15,7 +16,8 @@ export const maxDuration = 60
 export async function POST(request, { params }) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Media resolution is unavailable.' }, { status: 503 })
-  if (!staticMediaResolverConfiguration().enabled) return NextResponse.json({ state: 'disabled' }, { status: 503 })
+  const config = staticMediaRuntimeConfiguration()
+  if (!config.enabled) return NextResponse.json({ state: 'disabled' }, { status: 503 })
 
   try {
     const { id: rawId } = await params
@@ -43,7 +45,7 @@ export async function POST(request, { params }) {
     }
 
     const reference = verifyStaticCatalogueReference(referenceToken, { expectedId: id })
-    const result = await resolveStaticCatalogueMedia(reference, { mode })
+    const result = await resolveStaticCatalogueMedia(reference, { mode, config })
     return NextResponse.json(result.payload, {
       status: result.status,
       headers: { 'Cache-Control': 'private, no-store' }
