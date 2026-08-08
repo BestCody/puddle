@@ -12,6 +12,8 @@ const diagnostics = {
   resolverResponses: [],
   b2GrantRequests: [],
   b2PhotoResponses: [],
+  googleRequests: [],
+  googleResponses: [],
   consoleErrors: [],
   requestFailures: [],
   cards: []
@@ -21,17 +23,48 @@ function uniqueValue(prefix) {
   return `${prefix}-${Date.now()}-${randomUUID().replaceAll('-', '').slice(0, 10)}`
 }
 
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(value)
+    for (const name of ['key', 'token', 'authorization', 'sessiontoken']) {
+      if (url.searchParams.has(name)) url.searchParams.set(name, '[redacted]')
+    }
+    return url.toString()
+  } catch {
+    return String(value).slice(0, 1000)
+  }
+}
+
+function isGoogleUrl(value) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase()
+    return hostname === 'maps.googleapis.com' || hostname === 'places.googleapis.com' || hostname.endsWith('.googleapis.com')
+  } catch {
+    return false
+  }
+}
+
 async function cardState(page) {
   return page.evaluate(() => {
     const card = document.querySelector('.minimal-swipe-card')
     const photo = card?.querySelector('.minimal-swipe-photo')
+    const google = photo?.querySelector('.date-google-photo')
     const title = card?.querySelector('.minimal-swipe-title h1')?.textContent?.trim() || null
     const text = photo?.textContent || ''
     const backgroundImage = photo ? getComputedStyle(photo).backgroundImage : ''
-    const googleReady = Boolean(photo?.querySelector('.date-google-photo.is-ready'))
+    const googleReady = Boolean(google?.classList.contains('is-ready'))
     const comingSoon = /Real photo coming soon/i.test(text)
     const searching = /Finding a real photo|Loading a Google Maps photo|Photo search will retry/i.test(text)
-    return { title, backgroundImage, googleReady, comingSoon, searching }
+    return {
+      title,
+      backgroundImage,
+      googleReady,
+      googleClass: google?.className || null,
+      googleAriaLabel: google?.getAttribute('aria-label') || null,
+      googleMountChildren: google?.querySelector('.date-google-photo-mount')?.childElementCount || 0,
+      comingSoon,
+      searching
+    }
   })
 }
 
@@ -50,9 +83,11 @@ async function waitForCardOutcome(page, milliseconds = 18_000) {
     if (isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses)) {
       return { state: latest, rendered: true }
     }
-    if (latest.comingSoon && !latest.searching) return { state: latest, rendered: false }
+    // Do not treat the initial placeholder as terminal. The visible-card resolver
+    // can still finish asynchronously and authorize/render the Google fallback.
     await page.waitForTimeout(500)
   }
+  latest = await cardState(page)
   return { state: latest, rendered: isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses) }
 }
 
@@ -83,13 +118,14 @@ page.on('console', (message) => {
   if (message.type() === 'error') diagnostics.consoleErrors.push(message.text().slice(0, 1000))
 })
 page.on('requestfailed', (request) => {
-  diagnostics.requestFailures.push({ url: request.url(), error: request.failure()?.errorText || 'unknown' })
+  diagnostics.requestFailures.push({ url: safeExternalUrl(request.url()), error: request.failure()?.errorText || 'unknown' })
 })
 page.on('request', (request) => {
   const url = request.url()
   if (url.includes('/api/storage/b2-access?') && /(?:%2F|\/)photos(?:%2F|\/)open(?:%2F|\/)/i.test(url)) {
     diagnostics.b2GrantRequests.push(url.replace(/([?&]authorizationToken=)[^&]+/i, '$1[redacted]'))
   }
+  if (isGoogleUrl(url)) diagnostics.googleRequests.push({ method: request.method(), url: safeExternalUrl(url) })
 })
 page.on('response', async (response) => {
   const url = response.url()
@@ -100,6 +136,9 @@ page.on('response', async (response) => {
   }
   if (/\/photos\/open\//i.test(url) && !url.includes('/api/')) {
     diagnostics.b2PhotoResponses.push({ url: url.split('?')[0], status: response.status() })
+  }
+  if (isGoogleUrl(url)) {
+    diagnostics.googleResponses.push({ url: safeExternalUrl(url), status: response.status() })
   }
 })
 
@@ -145,12 +184,16 @@ try {
   for (let index = 0; index < 8; index += 1) {
     const beforeResolverCount = diagnostics.resolverResponses.length
     const beforeB2Count = diagnostics.b2PhotoResponses.length
+    const beforeGoogleRequestCount = diagnostics.googleRequests.length
+    const beforeGoogleResponseCount = diagnostics.googleResponses.length
     const outcome = await waitForCardOutcome(page)
     diagnostics.cards.push({
       index,
       ...outcome.state,
       resolverResponses: diagnostics.resolverResponses.slice(beforeResolverCount),
-      b2PhotoResponses: diagnostics.b2PhotoResponses.slice(beforeB2Count)
+      b2PhotoResponses: diagnostics.b2PhotoResponses.slice(beforeB2Count),
+      googleRequests: diagnostics.googleRequests.slice(beforeGoogleRequestCount),
+      googleResponses: diagnostics.googleResponses.slice(beforeGoogleResponseCount)
     })
     await page.screenshot({ path: `test-results/live-photo-card-${index + 1}.png`, fullPage: true })
     if (outcome.rendered) {
