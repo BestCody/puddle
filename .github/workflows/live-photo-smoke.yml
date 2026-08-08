@@ -24,6 +24,7 @@ jobs:
         run: npm install --no-save --package-lock=false @playwright/test@1.56.1
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      # Retry after verifying Sushi Kaji's approved Mapillary ID is currently live and eligible.
       - name: Run production photo smoke
         run: node tests/live-photo-smoke.mjs
       - name: Upload live photo diagnostics
