@@ -21,13 +21,20 @@ function serverGoogleUnavailable(config, payload) {
     (payload?.diagnostics || []).some((value) => String(value).includes('Google Places is not configured.'))
 }
 
-async function authorizeBrowserGoogleLookup(admin, config) {
-  const result = await admin.rpc('consume_static_google_runtime_budget_v1', {
-    daily_limit: config.googleDailyLimit,
-    monthly_limit: config.googleMonthlyLimit
-  })
-  if (result.error) throw result.error
-  return Boolean(result.data?.allowed)
+function googlePhotoProxyUrl(id, referenceToken) {
+  return `/api/static-catalogue/google-photo/${encodeURIComponent(id)}?ref=${encodeURIComponent(referenceToken)}`
+}
+
+function withServerGooglePhoto(payload, id, referenceToken, config) {
+  return {
+    ...payload,
+    state: 'google_server_photo',
+    retryable: false,
+    google_server_photo: true,
+    google_photo_proxy_url: googlePhotoProxyUrl(id, referenceToken),
+    google_lookup_min_score: config.googleMinimumScore,
+    diagnostics: (payload?.diagnostics || []).filter((value) => !String(value).includes('Google Places is not configured.'))
+  }
 }
 
 export async function POST(request, { params }) {
@@ -70,30 +77,14 @@ export async function POST(request, { params }) {
     }
 
     let payload = result.payload
-    if (mode === 'full' && serverGoogleUnavailable(config, payload)) {
-      const allowed = await authorizeBrowserGoogleLookup(admin, config)
-      if (allowed) {
-        payload = {
-          ...payload,
-          state: 'google_client_lookup',
-          retryable: false,
-          google_client_lookup: true,
-          google_lookup_min_score: config.googleMinimumScore,
-          diagnostics: (payload.diagnostics || []).filter((value) => !String(value).includes('Google Places is not configured.'))
-        }
-      } else {
-        payload = {
-          ...payload,
-          diagnostics: [
-            ...(payload.diagnostics || []).filter((value) => !String(value).includes('Google Places is not configured.')),
-            'google: Google request budget is exhausted.'
-          ].slice(0, 4)
-        }
-      }
+    let status = result.status
+    if (mode === 'full' && (serverGoogleUnavailable(config, payload) || payload?.state === 'google_matched')) {
+      payload = withServerGooglePhoto(payload, id, referenceToken, config)
+      status = 200
     }
 
     return NextResponse.json(payload, {
-      status: result.status,
+      status,
       headers: { 'Cache-Control': 'private, no-store' }
     })
   } catch (error) {

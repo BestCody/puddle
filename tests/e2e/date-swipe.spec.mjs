@@ -45,61 +45,62 @@ async function compactAction(userId, locationId) {
   return result.data
 }
 
-async function installGoogleUiKitStub(page) {
-  await page.addInitScript(() => {
-    class DetailsElement extends HTMLElement {
-      connectedCallback() {
-        window.setTimeout(() => this.dispatchEvent(new Event('gmp-load')), 0)
-      }
+async function installGoogleServerPhotoStub(page, allowedLocationId) {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2g1sAAAAASUVORK5CYII=', 'base64')
+  await page.route('**/api/static-catalogue/google-photo/**', async (route) => {
+    if (!route.request().url().includes(`/google-photo/${allowedLocationId}`)) {
+      await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'No fixture Google photo.' }) })
+      return
     }
-    if (!customElements.get('gmp-place-details-compact')) {
-      customElements.define('gmp-place-details-compact', DetailsElement)
-    }
-    for (const name of [
-      'gmp-place-details-place-request',
-      'gmp-place-details-location-request',
-      'gmp-place-content-config',
-      'gmp-place-media',
-      'gmp-place-attribution'
-    ]) {
-      if (!customElements.get(name)) customElements.define(name, class extends HTMLElement {})
-    }
-    window.google = {
-      maps: {
-        importLibrary: async (name) => {
-          window.__e2eGoogleImports = [...(window.__e2eGoogleImports || []), name]
-          return {}
-        }
-      }
-    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      headers: {
+        'cache-control': 'private, no-store, max-age=0',
+        'x-puddle-google-attributions': encodeURIComponent(JSON.stringify([{
+          displayName: 'E2E Photographer',
+          uri: 'https://maps.google.com/?cid=e2e-author',
+          photoUri: null
+        }])),
+        'x-puddle-google-maps-uri': encodeURIComponent('https://maps.google.com/?cid=e2e-place')
+      },
+      body: png
+    })
   })
 }
 
-test('R2 media overlays rank cached photos first and mount Google UI Kit only for the visible fallback card', async ({ page }) => {
+test('R2 media overlays rank cached photos first and mount the server Google photo only for the visible fallback card', async ({ page }) => {
   const account = await createSwiper('R2 Media Swiper')
-  await installGoogleUiKitStub(page)
-  await openFilteredDeck(page, account, 'E2E Media')
+  const googlePlace = fixturePlaceBySourceId('e2e-media-google')
+  await installGoogleServerPhotoStub(page, googlePlace.id)
 
+  const googlePhotoRequests = []
   const actionBatches = []
   page.on('request', (request) => {
-    if (!request.url().includes('/api/discovery/actions')) return
-    actionBatches.push(request.postDataJSON()?.actions || [])
+    if (request.url().includes('/api/static-catalogue/google-photo/')) googlePhotoRequests.push(request.url())
+    if (request.url().includes('/api/discovery/actions')) actionBatches.push(request.postDataJSON()?.actions || [])
   })
+
+  await openFilteredDeck(page, account, 'E2E Media')
 
   const card = page.locator('.minimal-swipe-card')
   await expect(card.locator('h1')).toHaveText('E2E Media Photo Cafe')
   await expect(page.locator('.minimal-swipe-photo')).toHaveAttribute('style', /e2e-media\.png/)
-  await expect(page.locator('gmp-place-details-compact')).toHaveCount(0)
+  await expect(page.locator('.date-google-server-photo')).toHaveCount(0)
+  expect(googlePhotoRequests).toHaveLength(0)
 
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(card.locator('h1')).toHaveText('E2E Media Google Museum')
-  await expect.poll(() => page.evaluate(() => window.__e2eGoogleImports || [])).toContain('places')
-  await expect(page.locator('gmp-place-details-compact')).toHaveCount(1)
-  await expect(page.locator('gmp-place-details-place-request')).toHaveAttribute('place', 'e2e-google-place-id')
+  await expect(page.locator('.date-google-server-photo.is-ready')).toHaveCount(1)
+  await expect(page.locator('.date-google-server-photo img[alt="E2E Media Google Museum"]')).toHaveCount(1)
+  await expect(page.getByRole('link', { name: 'Google Maps' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'E2E Photographer' })).toBeVisible()
+  await expect.poll(() => googlePhotoRequests.filter((url) => url.includes(googlePlace.id)).length).toBe(1)
 
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(card.locator('h1')).toHaveText('E2E Media Placeholder Park')
-  await expect(page.locator('gmp-place-details-compact')).toHaveCount(0)
+  await expect(page.getByText('Real photo coming soon')).toBeVisible()
+  await expect(page.locator('.date-google-server-photo.is-ready')).toHaveCount(0)
   await expect.poll(() => actionBatches.flat().length).toBe(2)
   expect(actionBatches.every((batch) => batch.length > 0 && batch.length <= 20)).toBe(true)
   expect(actionBatches.flat().map((action) => action.action)).toEqual(['dismissed', 'dismissed'])
