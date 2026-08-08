@@ -76,7 +76,7 @@ export async function GET(request, { params }) {
     if (!budget.data?.allowed) {
       return NextResponse.json(
         { error: 'The live photo budget is temporarily exhausted.' },
-        { status: 429, headers: fallbackHeaders(fallbackPlaceId) }
+        { status: 429, headers: { 'Cache-Control': 'private, no-store' } }
       )
     }
 
