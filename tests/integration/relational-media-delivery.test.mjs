@@ -19,7 +19,7 @@ test('relational open-photo delivery re-fetches the approved provider asset with
   assert.match(route, /findStaticOpenPhotoCandidates/)
   assert.match(route, /downloadStaticOpenPhotoCandidate/)
   assert.match(route, /external_photo_id/)
-  assert.match(route, /candidate\.externalId/)
+  assert.match(route, /entry\.externalId/)
   assert.match(route, /Content-Type': 'image\/jpeg'/)
   assert.doesNotMatch(route, /b2-private-download|fetchPrivateB2Asset|authorizeB2DownloadUrl/)
 })
