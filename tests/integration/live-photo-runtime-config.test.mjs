@@ -32,9 +32,12 @@ test('production media route reads Google matching configuration at server runti
   assert.match(route, /const config = staticMediaRuntimeConfiguration\(\)/)
   assert.match(route, /const admin = createAdminClient\(\)/)
   assert.match(route, /reopenLegacyNoMatch\(admin, reference\)/)
+  assert.match(route, /productionGooglePlacesKey\(\)/)
+  assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode: 'open_only', config, admin \}\)/)
+  assert.match(route, /if \(hasOpenPhoto\(openResult\.payload\)\)/)
+  assert.match(route, /withServerGooglePhoto\(openResult\.payload, id, referenceToken, config\)/)
   assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode, config, admin \}\)/)
   assert.match(route, /markCurrentNoMatch\(admin, reference\)/)
-  assert.match(route, /serverGoogleUnavailable\(config, payload\)/)
   assert.match(route, /state: 'google_server_photo'/)
   assert.match(route, /google_server_photo: true/)
   assert.match(route, /google_photo_proxy_url: googlePhotoProxyUrl/)
@@ -65,6 +68,9 @@ test('Google card photos use an authenticated no-store server proxy without pers
 
   assert.match(mediaRoute, /google_photo_proxy_url/)
   assert.match(mediaRoute, /google_server_photo/)
+  assert.match(mediaRoute, /mode === 'full' && productionGooglePlacesKey\(\)/)
+  assert.match(mediaRoute, /mode: 'open_only'/)
+  assert.doesNotMatch(mediaRoute, /consume_static_google_runtime_budget_v1/)
   assert.doesNotMatch(mediaRoute, /google_place_value|upsert_static_location_asset_v1/)
 
   assert.match(photoRoute, /process\.env\.GOOGLE_PLACES_API_KEY/)
