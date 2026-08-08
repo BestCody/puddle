@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 25
     env:
       LIVE_BASE_URL: https://puddle.you
-      PRODUCTION_ACCEPTANCE_COMMIT: fa2b0d0f8d6992e772e24bc3c09c5bd120cdeb74
+      PRODUCTION_ACCEPTANCE_COMMIT: e9ab8cc13eec2e4601ab78b83e8e3ff27e490caa
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
