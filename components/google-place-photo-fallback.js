@@ -24,6 +24,7 @@ function installLoader(apiKey) {
           v: 'weekly',
           loading: 'async',
           libraries: [...requestedLibraries].join(','),
+          auth_referrer_policy: 'origin',
           callback: `google.maps.${callback}`
         })
         const script = document.createElement('script')
