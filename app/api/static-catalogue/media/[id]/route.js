@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { resolveStaticCatalogueMedia } from '@/lib/app/static-media-resolver'
-import { staticMediaRuntimeConfiguration } from '@/lib/app/static-media-runtime-config'
+import { staticMediaRuntimeConfiguration, staticMediaRuntimeDiagnostics } from '@/lib/app/static-media-runtime-config'
 import { markCurrentNoMatch, reopenLegacyNoMatch } from '@/lib/app/static-media-resolution-policy'
 import { verifyStaticCatalogueReference } from '@/lib/app/static-catalogue-ref'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -53,7 +53,10 @@ export async function POST(request, { params }) {
     if (mode === 'full' && result.payload?.state === 'no_match') {
       await markCurrentNoMatch(admin, reference)
     }
-    return NextResponse.json(result.payload, {
+    const payload = !config.googleApiKey && result.payload?.state === 'temporary_failure'
+      ? { ...result.payload, runtime_debug: staticMediaRuntimeDiagnostics() }
+      : result.payload
+    return NextResponse.json(payload, {
       status: result.status,
       headers: { 'Cache-Control': 'private, no-store' }
     })
