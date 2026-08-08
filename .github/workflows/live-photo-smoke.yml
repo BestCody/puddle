@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      LIVE_BASE_URL: https://puddle-89izr1w6t-bestcodys-projects.vercel.app
+      LIVE_BASE_URL: https://puddle-bestcodys-projects.vercel.app
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
