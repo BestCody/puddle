@@ -54,7 +54,7 @@ function fixturePlace(sourcePlaceId, name, kind, latitude, longitude, details = 
   }
 }
 
-const rapidSwipePlaces = Array.from({ length: 20 }, (_, index) => {
+export const R2_RAPID_SWIPE_PLACES = Object.freeze(Array.from({ length: 20 }, (_, index) => {
   const number = String(index + 1).padStart(2, '0')
   return fixturePlace(
     `e2e-rapid-${number}`,
@@ -63,7 +63,7 @@ const rapidSwipePlaces = Array.from({ length: 20 }, (_, index) => {
     43.65400 + index * 0.00005,
     -79.38400 - index * 0.00005
   )
-})
+}))
 
 export const R2_FIXTURE_PLACES = Object.freeze([
   fixturePlace('e2e-media-photo', 'E2E Media Photo Cafe', 'cafe', 43.65300, -79.38300),
@@ -88,7 +88,7 @@ export const R2_FIXTURE_PLACES = Object.freeze([
   fixturePlace('e2e-group-arcade', 'E2E Group Arcade', 'activity_venue', 43.65345, -79.38345),
   fixturePlace('e2e-group-park', 'E2E Group Park', 'park', 43.65350, -79.38350),
   fixturePlace('e2e-failure-cafe', 'E2E Failure Recovery Cafe', 'cafe', 43.65355, -79.38355),
-  ...rapidSwipePlaces
+  ...R2_RAPID_SWIPE_PLACES
 ])
 
 export const R2_FIXTURE_BY_SOURCE_ID = new Map(R2_FIXTURE_PLACES.map((place) => [place.sourcePlaceId, place]))
