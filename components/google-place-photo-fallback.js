@@ -86,7 +86,8 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
   useEffect(() => {
     const mount = mountRef.current
     const location = lookupLocation(lookup)
-    if (!mount || !apiKey || !googleUiEnabled() || (!placeId && (!lookup?.allowed || !location))) {
+    const resolvedPlaceId = placeId ? String(placeId) : null
+    if (!mount || !apiKey || !googleUiEnabled() || (!resolvedPlaceId && (!lookup?.allowed || !location))) {
       setState('unavailable')
       return undefined
     }
@@ -112,9 +113,9 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
         details.setAttribute('aria-label', `Google Maps place photo for ${title}`)
 
         let request
-        if (placeId) {
+        if (resolvedPlaceId) {
           request = document.createElement('gmp-place-details-place-request')
-          request.setAttribute('place', String(placeId))
+          request.setAttribute('place', resolvedPlaceId)
         } else {
           request = document.createElement('gmp-place-details-location-request')
           request.setAttribute('location', `${location.latitude},${location.longitude}`)
