@@ -24,7 +24,7 @@ jobs:
         run: npm install --no-save --package-lock=false @playwright/test@1.56.1
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      # Acceptance retry after moving Sushi Kaji's approved open photo to Supabase public media.
+      # Final acceptance: direct Supabase public-media responses now count as rendered open photos.
       - name: Run production photo smoke
         run: node tests/live-photo-smoke.mjs
       - name: Upload live photo diagnostics
