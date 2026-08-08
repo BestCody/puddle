@@ -1,11 +1,7 @@
 name: Ops - sync Google Places key to Vercel
 
 on:
-  push:
-    branches:
-      - ops/sync-vercel-google-key
-    paths:
-      - '.github/workflows/ops-sync-vercel-google-key.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,11 +23,7 @@ jobs:
         shell: bash
         run: |
           test -n "$GOOGLE_PLACES_API_KEY" || { echo 'GOOGLE_PLACES_API_KEY secret is missing.'; exit 1; }
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo 'VERCEL_TOKEN_UNAVAILABLE'
-            exit 2
-          fi
-          echo 'VERCEL_TOKEN_AVAILABLE'
+          test -n "$VERCEL_TOKEN" || { echo 'VERCEL_TOKEN_UNAVAILABLE'; exit 2; }
       - name: Link project metadata
         shell: bash
         run: |
