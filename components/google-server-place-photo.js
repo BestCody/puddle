@@ -20,23 +20,32 @@ function decodeAttributions(value) {
 }
 
 export function GoogleServerPlacePhoto({ title, url, placeId = null, lookup = null, placeholderUrl = null }) {
-  const [photo, setPhoto] = useState({ state: 'loading', src: null, authors: [], googleMapsUri: null })
+  const [photo, setPhoto] = useState({ state: 'loading', src: null, authors: [], googleMapsUri: null, fallbackPlaceId: null })
 
   useEffect(() => {
     if (!url) {
-      setPhoto({ state: 'unavailable', src: null, authors: [], googleMapsUri: null })
+      setPhoto({ state: 'unavailable', src: null, authors: [], googleMapsUri: null, fallbackPlaceId: null })
       return undefined
     }
 
     let cancelled = false
     let objectUrl = null
-    setPhoto({ state: 'loading', src: null, authors: [], googleMapsUri: null })
+    setPhoto({ state: 'loading', src: null, authors: [], googleMapsUri: null, fallbackPlaceId: null })
 
     fetch(url, { cache: 'no-store', credentials: 'same-origin' })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`Live Google photo returned ${response.status}.`)
+        const fallbackPlaceId = decodeHeader(response.headers.get('x-puddle-google-place-id'))
+        if (!response.ok) {
+          const error = new Error(`Live Google photo returned ${response.status}.`)
+          error.fallbackPlaceId = fallbackPlaceId
+          throw error
+        }
         const contentType = String(response.headers.get('content-type') || '').toLowerCase()
-        if (!contentType.startsWith('image/')) throw new Error('Live Google photo returned an invalid content type.')
+        if (!contentType.startsWith('image/')) {
+          const error = new Error('Live Google photo returned an invalid content type.')
+          error.fallbackPlaceId = fallbackPlaceId
+          throw error
+        }
         const blob = await response.blob()
         if (cancelled) return
         objectUrl = URL.createObjectURL(blob)
@@ -44,13 +53,20 @@ export function GoogleServerPlacePhoto({ title, url, placeId = null, lookup = nu
           state: 'ready',
           src: objectUrl,
           authors: decodeAttributions(response.headers.get('x-puddle-google-attributions')),
-          googleMapsUri: decodeHeader(response.headers.get('x-puddle-google-maps-uri'))
+          googleMapsUri: decodeHeader(response.headers.get('x-puddle-google-maps-uri')),
+          fallbackPlaceId: null
         })
       })
       .catch((error) => {
         if (!cancelled) {
           console.error('[puddle-google-server-photo-error]', error?.message || String(error))
-          setPhoto({ state: 'unavailable', src: null, authors: [], googleMapsUri: null })
+          setPhoto({
+            state: 'unavailable',
+            src: null,
+            authors: [],
+            googleMapsUri: null,
+            fallbackPlaceId: error?.fallbackPlaceId || null
+          })
         }
       })
 
@@ -60,10 +76,11 @@ export function GoogleServerPlacePhoto({ title, url, placeId = null, lookup = nu
     }
   }, [url])
 
-  if (photo.state === 'unavailable' && (placeId || lookup?.allowed)) {
+  const uiKitPlaceId = placeId || photo.fallbackPlaceId
+  if (photo.state === 'unavailable' && (uiKitPlaceId || lookup?.allowed)) {
     return <GooglePlacePhotoFallback
       title={title}
-      placeId={placeId}
+      placeId={uiKitPlaceId}
       lookup={lookup}
       placeholderUrl={placeholderUrl}
     />
