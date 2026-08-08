@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { resolveStaticCatalogueMedia } from '@/lib/app/static-media-resolver'
 import { staticMediaRuntimeConfiguration } from '@/lib/app/static-media-runtime-config'
+import { markCurrentNoMatch, reopenLegacyNoMatch } from '@/lib/app/static-media-resolution-policy'
 import { verifyStaticCatalogueReference } from '@/lib/app/static-catalogue-ref'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { verifyCsrf } from '@/lib/security/csrf'
@@ -45,7 +47,12 @@ export async function POST(request, { params }) {
     }
 
     const reference = verifyStaticCatalogueReference(referenceToken, { expectedId: id })
-    const result = await resolveStaticCatalogueMedia(reference, { mode, config })
+    const admin = createAdminClient()
+    await reopenLegacyNoMatch(admin, reference)
+    const result = await resolveStaticCatalogueMedia(reference, { mode, config, admin })
+    if (mode === 'full' && result.payload?.state === 'no_match') {
+      await markCurrentNoMatch(admin, reference)
+    }
     return NextResponse.json(result.payload, {
       status: result.status,
       headers: { 'Cache-Control': 'private, no-store' }
