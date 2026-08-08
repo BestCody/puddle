@@ -10,6 +10,7 @@ const diagnostics = {
   baseUrl,
   startedAt: new Date().toISOString(),
   resolverResponses: [],
+  relationalPhotoResponses: [],
   googleProxyResponses: [],
   b2GrantRequests: [],
   b2PhotoResponses: [],
@@ -81,7 +82,12 @@ async function cardState(page) {
   })
 }
 
-function isRenderedRealPhoto(state, resolverResponses, b2PhotoResponses, googleProxyResponses) {
+function isRenderedRealPhoto(state, resolverResponses, b2PhotoResponses, googleProxyResponses, relationalPhotoResponses) {
+  const relationalOpenLoaded = relationalPhotoResponses.some((entry) =>
+    entry.status >= 200 && entry.status < 300 && /^image\//i.test(entry.contentType || '')
+  )
+  if (relationalOpenLoaded && !state.comingSoon && state.backgroundImage && state.backgroundImage !== 'none') return true
+
   const proxiedGoogleLoaded = googleProxyResponses.some((entry) =>
     entry.status >= 200 && entry.status < 300 && /^image\//i.test(entry.contentType || '')
   )
@@ -97,7 +103,7 @@ async function waitForCardOutcome(page, milliseconds = 18_000) {
   let latest = await cardState(page)
   while (Date.now() - started < milliseconds) {
     latest = await cardState(page)
-    if (isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses, diagnostics.googleProxyResponses)) {
+    if (isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses, diagnostics.googleProxyResponses, diagnostics.relationalPhotoResponses)) {
       return { state: latest, rendered: true }
     }
     await page.waitForTimeout(500)
@@ -105,7 +111,7 @@ async function waitForCardOutcome(page, milliseconds = 18_000) {
   latest = await cardState(page)
   return {
     state: latest,
-    rendered: isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses, diagnostics.googleProxyResponses)
+    rendered: isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses, diagnostics.googleProxyResponses, diagnostics.relationalPhotoResponses)
   }
 }
 
@@ -152,7 +158,16 @@ page.on('response', async (response) => {
     try { body = await response.json() } catch {}
     diagnostics.resolverResponses.push({ url: safeExternalUrl(url), status: response.status(), body })
   }
-  if (url.includes('/api/static-catalogue/google-photo/')) {
+  if (url.includes('/api/location-open-photo/')) {
+    diagnostics.relationalPhotoResponses.push({
+      url: safeExternalUrl(url),
+      status: response.status(),
+      contentType: response.headers()['content-type'] || null,
+      provider: response.headers()['x-puddle-open-provider'] || null,
+      cacheControl: response.headers()['cache-control'] || null
+    })
+  }
+  if (url.includes('/api/static-catalogue/google-photo/') || url.includes('/api/location-google-photo/')) {
     diagnostics.googleProxyResponses.push({
       url: safeExternalUrl(url),
       status: response.status(),
@@ -208,6 +223,7 @@ try {
 
   for (let index = 0; index < 8; index += 1) {
     const beforeResolverCount = diagnostics.resolverResponses.length
+    const beforeRelationalPhotoCount = diagnostics.relationalPhotoResponses.length
     const beforeProxyCount = diagnostics.googleProxyResponses.length
     const beforeB2Count = diagnostics.b2PhotoResponses.length
     const beforeGoogleRequestCount = diagnostics.googleRequests.length
@@ -217,6 +233,7 @@ try {
       index,
       ...outcome.state,
       resolverResponses: diagnostics.resolverResponses.slice(beforeResolverCount),
+      relationalPhotoResponses: diagnostics.relationalPhotoResponses.slice(beforeRelationalPhotoCount),
       googleProxyResponses: diagnostics.googleProxyResponses.slice(beforeProxyCount),
       b2PhotoResponses: diagnostics.b2PhotoResponses.slice(beforeB2Count),
       googleRequests: diagnostics.googleRequests.slice(beforeGoogleRequestCount),
