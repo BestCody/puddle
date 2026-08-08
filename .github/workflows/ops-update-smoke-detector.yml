@@ -1,0 +1,40 @@
+name: Ops - update smoke detector
+
+on:
+  push:
+    branches:
+      - ops/extract-live-photo-artifact
+    paths:
+      - '.github/workflows/ops-update-smoke-detector.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-detector:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: debug/live-photo-smoke
+          fetch-depth: 0
+      - name: Count direct Supabase public-media responses as relational photo loads
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tests/live-photo-smoke.mjs')
+          text = path.read_text()
+          old = "if (url.includes('/api/location-open-photo/')) {"
+          new = "if (url.includes('/api/location-open-photo/') || url.includes('/storage/v1/object/public/puddle-public-media/')) {"
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'expected one detector condition, found {count}')
+          path.write_text(text.replace(old, new))
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/live-photo-smoke.mjs
+          git diff --cached --check
+          git commit -m 'Recognize direct Supabase card photos in smoke test'
+          git push origin HEAD:debug/live-photo-smoke
