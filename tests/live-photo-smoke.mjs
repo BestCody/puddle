@@ -10,6 +10,7 @@ const diagnostics = {
   baseUrl,
   startedAt: new Date().toISOString(),
   resolverResponses: [],
+  googleProxyResponses: [],
   b2GrantRequests: [],
   b2PhotoResponses: [],
   googleRequests: [],
@@ -26,7 +27,7 @@ function uniqueValue(prefix) {
 function safeExternalUrl(value) {
   try {
     const url = new URL(value)
-    for (const name of ['key', 'token', 'authorization', 'sessiontoken']) {
+    for (const name of ['key', 'token', 'authorization', 'sessiontoken', 'ref']) {
       if (url.searchParams.has(name)) url.searchParams.set(name, '[redacted]')
     }
     return url.toString()
@@ -49,10 +50,14 @@ async function cardState(page) {
     const card = document.querySelector('.minimal-swipe-card')
     const photo = card?.querySelector('.minimal-swipe-photo')
     const google = photo?.querySelector('.date-google-photo')
+    const serverGoogle = photo?.querySelector('.date-google-server-photo')
+    const serverImage = serverGoogle?.querySelector('img')
     const title = card?.querySelector('.minimal-swipe-title h1')?.textContent?.trim() || null
     const text = photo?.textContent || ''
     const backgroundImage = photo ? getComputedStyle(photo).backgroundImage : ''
     const googleReady = Boolean(google?.classList.contains('is-ready'))
+    const serverGoogleReady = Boolean(serverGoogle?.classList.contains('is-ready'))
+    const serverImageLoaded = Boolean(serverImage && serverImage.complete && serverImage.naturalWidth > 0 && serverImage.naturalHeight > 0)
     const comingSoon = /Real photo coming soon/i.test(text)
     const searching = /Finding a real photo|Loading a Google Maps photo|Photo search will retry/i.test(text)
     return {
@@ -62,13 +67,25 @@ async function cardState(page) {
       googleClass: google?.className || null,
       googleAriaLabel: google?.getAttribute('aria-label') || null,
       googleMountChildren: google?.querySelector('.date-google-photo-mount')?.childElementCount || 0,
+      serverGoogleReady,
+      serverGoogleClass: serverGoogle?.className || null,
+      serverGoogleAriaLabel: serverGoogle?.getAttribute('aria-label') || null,
+      serverImageLoaded,
+      serverImageWidth: serverImage?.naturalWidth || 0,
+      serverImageHeight: serverImage?.naturalHeight || 0,
+      serverImageSourceKind: serverImage?.currentSrc?.startsWith('blob:') ? 'blob' : serverImage?.currentSrc ? 'other' : null,
+      googleMapsAttributionVisible: Boolean(serverGoogle?.textContent?.includes('Google Maps')),
       comingSoon,
       searching
     }
   })
 }
 
-function isRenderedRealPhoto(state, resolverResponses, b2PhotoResponses) {
+function isRenderedRealPhoto(state, resolverResponses, b2PhotoResponses, googleProxyResponses) {
+  const proxiedGoogleLoaded = googleProxyResponses.some((entry) =>
+    entry.status >= 200 && entry.status < 300 && /^image\//i.test(entry.contentType || '')
+  )
+  if (state.serverGoogleReady && state.serverImageLoaded && state.googleMapsAttributionVisible && proxiedGoogleLoaded && !state.comingSoon) return true
   if (state.googleReady && !state.comingSoon) return true
   const openFound = resolverResponses.some((entry) => entry.body?.state === 'open_photo_found')
   const b2Loaded = b2PhotoResponses.some((entry) => entry.status >= 200 && entry.status < 400)
@@ -80,15 +97,16 @@ async function waitForCardOutcome(page, milliseconds = 18_000) {
   let latest = await cardState(page)
   while (Date.now() - started < milliseconds) {
     latest = await cardState(page)
-    if (isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses)) {
+    if (isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses, diagnostics.googleProxyResponses)) {
       return { state: latest, rendered: true }
     }
-    // Do not treat the initial placeholder as terminal. The visible-card resolver
-    // can still finish asynchronously and authorize/render the Google fallback.
     await page.waitForTimeout(500)
   }
   latest = await cardState(page)
-  return { state: latest, rendered: isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses) }
+  return {
+    state: latest,
+    rendered: isRenderedRealPhoto(latest, diagnostics.resolverResponses, diagnostics.b2PhotoResponses, diagnostics.googleProxyResponses)
+  }
 }
 
 async function cleanupAccount(page) {
@@ -132,14 +150,21 @@ page.on('response', async (response) => {
   if (url.includes('/api/static-catalogue/media/')) {
     let body = null
     try { body = await response.json() } catch {}
-    diagnostics.resolverResponses.push({ url, status: response.status(), body })
+    diagnostics.resolverResponses.push({ url: safeExternalUrl(url), status: response.status(), body })
+  }
+  if (url.includes('/api/static-catalogue/google-photo/')) {
+    diagnostics.googleProxyResponses.push({
+      url: safeExternalUrl(url),
+      status: response.status(),
+      contentType: response.headers()['content-type'] || null,
+      cacheControl: response.headers()['cache-control'] || null,
+      hasAttribution: Boolean(response.headers()['x-puddle-google-attributions'] || response.headers()['x-puddle-google-maps-uri'])
+    })
   }
   if (/\/photos\/open\//i.test(url) && !url.includes('/api/')) {
     diagnostics.b2PhotoResponses.push({ url: url.split('?')[0], status: response.status() })
   }
-  if (isGoogleUrl(url)) {
-    diagnostics.googleResponses.push({ url: safeExternalUrl(url), status: response.status() })
-  }
+  if (isGoogleUrl(url)) diagnostics.googleResponses.push({ url: safeExternalUrl(url), status: response.status() })
 })
 
 await page.route('**/api/location/search**', async (route) => {
@@ -183,6 +208,7 @@ try {
 
   for (let index = 0; index < 8; index += 1) {
     const beforeResolverCount = diagnostics.resolverResponses.length
+    const beforeProxyCount = diagnostics.googleProxyResponses.length
     const beforeB2Count = diagnostics.b2PhotoResponses.length
     const beforeGoogleRequestCount = diagnostics.googleRequests.length
     const beforeGoogleResponseCount = diagnostics.googleResponses.length
@@ -191,6 +217,7 @@ try {
       index,
       ...outcome.state,
       resolverResponses: diagnostics.resolverResponses.slice(beforeResolverCount),
+      googleProxyResponses: diagnostics.googleProxyResponses.slice(beforeProxyCount),
       b2PhotoResponses: diagnostics.b2PhotoResponses.slice(beforeB2Count),
       googleRequests: diagnostics.googleRequests.slice(beforeGoogleRequestCount),
       googleResponses: diagnostics.googleResponses.slice(beforeGoogleResponseCount)
