@@ -43,9 +43,9 @@ test('production media route reads Google matching configuration at server runti
   assert.doesNotMatch(route, /staticMediaResolverConfiguration\(\)/)
 })
 
-test('historical no-match states are reopened once and current-policy no-match stays terminal', async () => {
+test('historical no-match states are reopened once for the browser-fallback policy and then stay terminal', async () => {
   const policy = await read('lib/app/static-media-resolution-policy.js')
-  assert.match(policy, /MATCH_POLICY = 'google-match-v2'/)
+  assert.match(policy, /MATCH_POLICY = 'google-browser-fallback-v3'/)
   assert.match(policy, /current\?\.state !== 'no_match'/)
   assert.match(policy, /current\?\.last_error === CURRENT_NO_MATCH_MARKER/)
   assert.match(policy, /state: 'pending'/)
