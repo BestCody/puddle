@@ -1,4 +1,4 @@
-name: Ops - probe static discovery after photo imports
+name: Ops - probe Backblaze manifest access
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     env:
       B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
       B2_REGION: ${{ secrets.B2_REGION }}
@@ -21,67 +21,35 @@ jobs:
       B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
       B2_BUCKET: ${{ secrets.B2_BUCKET }}
       B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
-      STATIC_CATALOGUE_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
-      NEXT_PUBLIC_CATALOGUE_ASSET_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Load Toronto catalogue with media overlays
+      - name: Read only catalogue manifest once
         shell: bash
         run: |
           node --input-type=module <<'NODE'
-          import { b2Configuration, b2Request } from './lib/app/b2-s3.js'
-          import { fetchNearbyStaticPlaces } from './lib/app/static-catalogue.js'
+          import { b2Configuration, signB2Request } from './lib/app/b2-s3.js'
 
           const config = b2Configuration()
-          if (!config) throw new Error('Signed Backblaze B2 configuration is missing.')
-          const base = new URL(`${process.env.B2_DOWNLOAD_BASE_URL.replace(/\/$/, '')}/`)
-          const signedFetch = async (value, options = {}) => {
-            const url = new URL(String(value))
-            if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) {
-              return fetch(value, options)
-            }
-            const encoded = url.pathname.slice(base.pathname.length)
-            const key = encoded.split('/').map((part) => decodeURIComponent(part)).join('/')
-            return b2Request({
-              method: options.method || 'GET',
-              key,
-              config,
-              timeoutMs: 10_000
-            })
-          }
-
-          try {
-            const result = await fetchNearbyStaticPlaces({
-              latitude: 43.6532,
-              longitude: -79.3832,
-              radiusKm: 25,
-              limit: 96,
-              includeDetails: false,
-              baseUrl: process.env.B2_DOWNLOAD_BASE_URL,
-              fetchImpl: signedFetch,
-              timeoutMs: 10_000
-            })
-            const photos = result.places.filter((place) => place.media?.photoUrl)
-            console.log(JSON.stringify({
-              release: result.manifest?.release,
-              tilesRequested: result.tilesRequested,
-              tilesLoaded: result.tilesLoaded,
-              places: result.places.length,
-              photos: photos.length,
-              photoExamples: photos.slice(0, 10).map((place) => ({
-                id: place.contentId,
-                name: place.name,
-                provider: place.media?.provider,
-                hasPhotoUrl: Boolean(place.media?.photoUrl)
-              }))
-            }, null, 2))
-            if (!result.places.length) throw new Error('Toronto static catalogue returned no places.')
-            if (!photos.length) throw new Error('Toronto static catalogue returned no media-overlay photos.')
-          } catch (error) {
-            console.error(error?.stack || error)
-            process.exitCode = 1
-          }
+          if (!config) throw new Error('Backblaze B2 configuration is missing.')
+          const signed = signB2Request({ method: 'GET', key: 'catalogue/manifest.json', config })
+          const response = await fetch(signed.url, {
+            method: 'GET',
+            headers: signed.headers,
+            redirect: 'error',
+            signal: AbortSignal.timeout(10_000)
+          })
+          const raw = (await response.text()).slice(0, 4000)
+          const safe = raw
+            .replaceAll(config.accessKeyId, '[redacted-key-id]')
+            .replaceAll(config.secretAccessKey, '[redacted-application-key]')
+          console.log(`status=${response.status}`)
+          console.log(`content-type=${response.headers.get('content-type') || ''}`)
+          console.log(`retry-after=${response.headers.get('retry-after') || ''}`)
+          console.log('body-begin')
+          console.log(safe)
+          console.log('body-end')
+          if (!response.ok) process.exitCode = 1
           NODE
