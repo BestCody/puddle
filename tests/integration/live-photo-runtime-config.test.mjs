@@ -45,7 +45,7 @@ test('production media route reads Google matching configuration at server runti
 
 test('historical no-match states are reopened once for the browser-fallback policy and then stay terminal', async () => {
   const policy = await read('lib/app/static-media-resolution-policy.js')
-  assert.match(policy, /MATCH_POLICY = 'google-browser-fallback-v3'/)
+  assert.match(policy, /MATCH_POLICY = 'google-browser-fallback-v4'/)
   assert.match(policy, /current\?\.state !== 'no_match'/)
   assert.match(policy, /current\?\.last_error === CURRENT_NO_MATCH_MARKER/)
   assert.match(policy, /state: 'pending'/)
@@ -70,6 +70,7 @@ test('browser Google fallback stays budget-gated and never persists client ident
   assert.match(fallback, /gmp-place-details-location-request/)
   assert.match(fallback, /lookup\?\.latitude/)
   assert.match(fallback, /lookup\?\.longitude/)
+  assert.match(fallback, /auth_referrer_policy: 'origin'/)
   assert.doesNotMatch(fallback, /findGoogleUiKitPlace/)
   assert.doesNotMatch(route, /google_place_value|upsert_static_location_asset_v1/)
   assert.doesNotMatch(fallback, /fetch\([^)]*static_location_assets|supabase/i)
