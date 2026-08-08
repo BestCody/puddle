@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import sharp from 'sharp'
-import { findStaticOpenPhotoCandidates, downloadStaticOpenPhotoCandidate } from '@/lib/app/static-open-photo-provider'
+import { findApprovedOpenPhotoCandidate } from '@/lib/app/approved-open-photo'
+import { downloadStaticOpenPhotoCandidate } from '@/lib/app/static-open-photo-provider'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
@@ -90,11 +91,7 @@ export async function GET(request, { params }) {
     )
     if (!approved) return NextResponse.json({ error: 'Photo not found.' }, { status: 404 })
 
-    const providerResult = await findStaticOpenPhotoCandidates(locationPayload(location), { maxCandidatesPerProvider: 10 })
-    const candidate = (providerResult.candidates || []).find((entry) =>
-      String(entry.provider || '') === String(approved.provider || '') &&
-      String(entry.externalId || '') === String(approved.external_photo_id || '')
-    )
+    const candidate = await findApprovedOpenPhotoCandidate(locationPayload(location), approved)
     if (!candidate) return NextResponse.json({ error: 'The approved open photo is temporarily unavailable.' }, { status: 404 })
 
     const sourceBytes = await downloadStaticOpenPhotoCandidate(candidate)
