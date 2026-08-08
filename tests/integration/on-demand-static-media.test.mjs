@@ -42,7 +42,7 @@ test('open-only prefetch cannot spend a Google lookup and visible failures expos
   assert.match(resolver, /OPEN_PHOTO_MISS_PREFIX/)
 })
 
-test('resolver endpoint verifies caller, signed identity, and explicit prefetch mode', async () => {
+test('resolver endpoint verifies caller, signed identity, explicit runtime config, and prefetch mode', async () => {
   const route = await read('app/api/static-catalogue/media/[id]/route.js')
   assert.match(route, /verifyCsrf\(request\)/)
   assert.match(route, /supabase\.auth\.getUser\(\)/)
@@ -50,7 +50,8 @@ test('resolver endpoint verifies caller, signed identity, and explicit prefetch 
   assert.match(route, /\['full', 'open_only'\]\.includes\(mode\)/)
   assert.match(route, /weight: mode === 'open_only' \? 2 : 5/)
   assert.match(route, /verifyStaticCatalogueReference\(referenceToken, \{ expectedId: id \}\)/)
-  assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode \}\)/)
+  assert.match(route, /const config = staticMediaRuntimeConfiguration\(\)/)
+  assert.match(route, /resolveStaticCatalogueMedia\(reference, \{ mode, config \}\)/)
   assert.match(route, /Cache-Control': 'private, no-store'/)
 })
 
