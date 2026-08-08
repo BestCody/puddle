@@ -1,0 +1,53 @@
+name: Ops - prebuilt production deploy
+
+on:
+  push:
+    branches:
+      - ops/prebuilt-production-deploy
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_aY04PVtKs2MUrxR38csNwmUc
+      VERCEL_PROJECT_ID: prj_7By05EO9g3fqAJkubBtaeYelvwEQ
+    steps:
+      - name: Check out merged production source
+        uses: actions/checkout@v4
+        with:
+          ref: 11803ce089ee4bde08520f2672cfd42ccc3a2a9e
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Verify deployment credential
+        shell: bash
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN secret is not configured"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull production environment
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build production output locally
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy prebuilt output to production
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
