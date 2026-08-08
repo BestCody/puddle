@@ -47,12 +47,16 @@ jobs:
           }
 
           const summary = {}
+          const hosts = {}
           for (const row of rows) {
             const backend = String(row.storage_backend || 'unset')
             const provider = String(row.provider || 'unknown')
             summary[backend] ||= { total: 0, providers: {} }
             summary[backend].total += 1
             summary[backend].providers[provider] = (summary[backend].providers[provider] || 0) + 1
+            let host = 'invalid-url'
+            try { host = new URL(row.remote_url).hostname } catch {}
+            hosts[host] = (hosts[host] || 0) + 1
           }
 
           const legacy = rows
@@ -68,10 +72,49 @@ jobs:
               remoteHost: (() => { try { return new URL(row.remote_url).hostname } catch { return null } })()
             }))
 
+          const probes = await Promise.all(rows.map(async (row) => {
+            try {
+              const response = await fetch(row.remote_url, {
+                headers: { Accept: 'image/*', Range: 'bytes=0-0' },
+                cache: 'no-store',
+                signal: AbortSignal.timeout(10_000)
+              })
+              const contentType = String(response.headers.get('content-type') || '').toLowerCase()
+              const result = {
+                id: row.id,
+                locationId: row.location_id,
+                provider: row.provider,
+                status: response.status,
+                ok: response.ok && contentType.startsWith('image/'),
+                contentType
+              }
+              try { await response.body?.cancel() } catch {}
+              return result
+            } catch (error) {
+              return {
+                id: row.id,
+                locationId: row.location_id,
+                provider: row.provider,
+                status: null,
+                ok: false,
+                error: error.message
+              }
+            }
+          }))
+          const failures = probes.filter((probe) => !probe.ok)
+
           console.log(JSON.stringify({
             approvedRows: rows.length,
             byStorageBackend: summary,
+            remoteHosts: hosts,
             legacyBackedRows: legacy.length,
-            legacyRows: legacy.slice(0, 100)
+            legacyRows: legacy.slice(0, 100),
+            publicImageChecks: {
+              checked: probes.length,
+              passed: probes.length - failures.length,
+              failed: failures.length,
+              failures: failures.slice(0, 50)
+            }
           }, null, 2))
+          if (failures.length) throw new Error(`${failures.length} approved photo URLs failed public image verification.`)
           NODE
