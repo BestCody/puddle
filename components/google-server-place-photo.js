@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 
 function decodeHeader(value) {
   if (!value) return null
@@ -18,7 +19,7 @@ function decodeAttributions(value) {
   }
 }
 
-export function GoogleServerPlacePhoto({ title, url, placeholderUrl = null }) {
+export function GoogleServerPlacePhoto({ title, url, placeId = null, lookup = null, placeholderUrl = null }) {
   const [photo, setPhoto] = useState({ state: 'loading', src: null, authors: [], googleMapsUri: null })
 
   useEffect(() => {
@@ -58,6 +59,15 @@ export function GoogleServerPlacePhoto({ title, url, placeholderUrl = null }) {
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
   }, [url])
+
+  if (photo.state === 'unavailable' && (placeId || lookup?.allowed)) {
+    return <GooglePlacePhotoFallback
+      title={title}
+      placeId={placeId}
+      lookup={lookup}
+      placeholderUrl={placeholderUrl}
+    />
+  }
 
   const ready = photo.state === 'ready' && photo.src
   const firstAuthor = photo.authors[0] || null
