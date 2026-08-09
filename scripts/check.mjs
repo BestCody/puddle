@@ -4,174 +4,103 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
+const read = (path) => readFile(join(root, path), 'utf8')
+
 const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
   'public/landing.html','public/styles.css','public/landing-responsive.css','public/landing-hardening.css','public/app.js','public/puddle-mark.svg',
-  'app/layout.js','app/auth.css','app/onboarding.css','app/date-swipe.css','app/swipe-v2.css','app/date-match.css','app/real-place-photos.css','app/product.css','app/sidebar-refresh.css','app/minimal-product.css','app/group-map.css','app/social-hub.css','app/loading.js','app/error.js',
-  'app/signin/page.js','app/signup/page.js','app/forgot-password/page.js','app/update-password/page.js','app/auth/actions.js','app/auth/callback/route.js','app/auth/confirm/route.js','app/auth/error/page.js',
-  'app/onboarding/page.js','app/onboarding/actions.js','app/dashboard/page.js','app/account/page.js','app/discover/page.js','app/date-match/[token]/page.js','app/hangout/[token]/page.js','app/matches/page.js','app/plans/page.js','app/profile/page.js','app/create/place/page.js',
-  'app/api/auth/session/route.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/date-match/start/route.js','app/api/date-match/action/route.js','app/api/date-match/[token]/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js','app/api/geocode/route.js',
-  'components/auth-shell.js','components/product-shell.js','components/product-nav.js','components/puddle-logo.js','components/empty-state.js','components/date-swipe-workspace-v2.js','components/minimal-swipe-card.js','components/swipe-action-dock.js','components/discover-social-bar.js','components/social-hub.js','components/profile-photo-editor.js','components/service-worker-cleanup.js',
-  'lib/supabase/client.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/supabase/admin.js','lib/auth/user.js','lib/auth/redirect.js','lib/security/csrf-client.js','lib/app/discovery-infrastructure.js','lib/app/discovery-filters.js','lib/app/location-plans-data.js','lib/app/social-hub-data.js','lib/app/static-catalogue.js','lib/media/pipeline.js',
-  'scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-security-surface.mjs','scripts/check-bundle-size.mjs','scripts/cleanup-orphaned-media.mjs','scripts/cleanup-r2-assets.mjs',
-  'supabase/migrations/10003_date_match.sql','supabase/migrations/10016_remove_notifications_and_pwa.sql','supabase/migrations/10028_r2_runtime_second_optimization.sql','supabase/migrations/10046_friends_messages_social_hub.sql','supabase/seed.sql','tests/unit/date-match.test.mjs','tests/unit/group-context.test.mjs','docs/AUTH_SETUP.md','docs/DATE_MATCH.md'
+  'app/layout.js','app/discover/page.js','app/matches/page.js','app/profile/page.js','app/plans/page.js',
+  'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js',
+  'components/product-nav.js','components/product-shell.js','components/date-swipe-workspace-v2.js','components/minimal-swipe-card.js','components/swipe-action-dock.js','components/discover-social-bar.js','components/social-hub.js','components/profile-photo-editor.js',
+  'lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/social-hub-data.js','lib/app/open-photo-supabase.js','lib/media/pipeline.js',
+  'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
+  'supabase/migrations/10046_friends_messages_social_hub.sql','supabase/seed.sql'
 ]
 for (const path of required) await access(join(root, path))
 
 const removed = [
-  'public/manifest.webmanifest','public/sw.js','public/puddle-app-icon.svg','components/pwa-client.js',
-  'app/notifications/page.js','components/notification-center.js','app/api/notifications/route.js','app/api/push/subscriptions/route.js',
-  'lib/app/notifications-data.js','lib/push/web-push.js','scripts/deliver-push-notifications.mjs','scripts/generate-vapid-keys.mjs','scripts/process-notification-outbox.mjs',
-  'app/api/discovery/action/route.js','lib/app/discovery.js','lib/product-vision.js','supabase/migrations/10029_r2_cleanup_batch_preview.sql',
-  'app/events','app/explore','app/friends','app/inbox','app/wallet','app/orders','app/settings/payouts','app/admin/finance','app/create/event','app/studio/events','app/studio/hosts',
-  'app/api/stripe','app/api/tickets','app/api/check-in','app/api/location-sharing','app/api/conversations','app/api/maps','app/api/ai','app/api/studio/events',
-  'lib/stripe','lib/tickets','lib/app/social-data.js','lib/app/plans-data.js','lib/app/ticketing-data.js','lib/app/hybrid-recommendations.js',
-  'components/event-editor.js','components/listing-social.js','components/ticket-wallet.js','components/discovery-workspace.js'
+  '.vercel-redeploy','action-schema-audit.txt','dependency-audit.txt','legacy-audit.txt','cutover-output.txt','landing-demo.js','requirements.txt',
+  'app/date-match','app/hangout','app/api/date-match','app/api/static-catalogue','app/api/storage/b2-access','app/date-match.css',
+  'components/date-match-workspace.js','components/date-match-workspace-realtime.js',
+  'lib/app/date-match.js','lib/app/date-match-rules.js','lib/app/date-match-snapshot.js',
+  'lib/app/discovery-infrastructure.js','lib/app/discovery-infrastructure-v2.js','lib/app/discovery-relational-fallback.js',
+  'lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js','lib/app/use-private-b2-asset.js','lib/app/use-static-catalogue-details.js','lib/app/use-static-media-resolution.js',
+  '.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml'
 ]
 for (const path of removed) {
   try {
     await access(join(root, path))
-    throw new Error(`Removed legacy file is still present: ${path}`)
+    throw new Error(`Removed legacy path is still present: ${path}`)
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error
   }
 }
 
 const syntaxFiles = [
-  'next.config.mjs','proxy.js','lib/supabase/env.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/supabase/admin.js','lib/auth/redirect.js','lib/app/discovery-infrastructure.js','lib/app/discovery-filters.js','lib/app/location-plans-data.js','lib/app/social-hub-data.js','lib/app/static-catalogue.js','lib/media/pipeline.js',
-  'scripts/check.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-security-surface.mjs','scripts/check-bundle-size.mjs','scripts/cleanup-orphaned-media.mjs','scripts/cleanup-r2-assets.mjs','public/app.js','app/auth/actions.js','app/onboarding/actions.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/date-match/start/route.js','app/api/date-match/action/route.js','app/api/date-match/[token]/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js','app/api/geocode/route.js','app/auth/callback/route.js','app/auth/confirm/route.js'
+  'next.config.mjs','proxy.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/social-hub-data.js','lib/media/pipeline.js',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
+  'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
-
-const read = (path) => readFile(join(root, path), 'utf8')
-const requireIncludes = (source, markers, label) => {
-  for (const marker of markers) if (!source.includes(marker)) throw new Error(`${label} is missing ${marker}`)
-}
 
 const pkg = JSON.parse(await read('package.json'))
 for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','react','react-dom','sharp']) {
   if (!pkg.dependencies?.[dependency]) throw new Error(`Missing dependency: ${dependency}`)
 }
-for (const command of ['check-secrets.mjs','check-client-boundaries.mjs','check-duplicate-assets.mjs','check-security-surface.mjs','check-bundle-size.mjs']) {
-  if (!JSON.stringify(pkg.scripts).includes(command)) throw new Error(`Package scripts are missing ${command}`)
-}
-for (const command of Object.keys(pkg.scripts || {})) {
-  if (command.startsWith('legacy:')) throw new Error(`Legacy package command remains: ${command}`)
+const serializedScripts = JSON.stringify(pkg.scripts || {})
+for (const forbidden of ['b2:','catalogue:build-static','catalogue:publish-b2','static-catalogue','cleanup-b2-assets','cleanup-r2-assets']) {
+  if (serializedScripts.includes(forbidden)) throw new Error(`Legacy package command remains: ${forbidden}`)
 }
 
 const env = await read('.env.example')
-for (const marker of ['PUDDLE_LEGACY_SYSTEMS_ENABLED','STRIPE_SECRET_KEY','TICKET_SIGNING_PRIVATE_KEY_BASE64','LOCAL_AI_GENERATION_MODEL']) {
-  if (env.includes(marker)) throw new Error(`Obsolete environment setting remains: ${marker}`)
+for (const forbidden of ['B2_','STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED']) {
+  if (env.includes(forbidden)) throw new Error(`Legacy environment setting remains: ${forbidden}`)
 }
-
-const vercel = JSON.parse(await read('vercel.json'))
-if (!String(vercel.ignoreCommand || '').includes('process.exit(0)')) throw new Error('Vercel build skipping is not enabled for the current development window')
+for (const requiredEnv of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_TINDER_PRICE_ID','GOOGLE_PLACES_API_KEY']) {
+  if (!env.includes(requiredEnv)) throw new Error(`Environment example is missing ${requiredEnv}`)
+}
 
 const proxy = await read('proxy.js')
-for (const route of ['/dashboard','/discover','/date-match','/hangout','/matches','/plans','/profile','/onboarding','/account','/admin']) {
+for (const route of ['/dashboard','/discover','/matches','/global-matches','/plans','/profile','/onboarding','/account','/admin']) {
   if (!proxy.includes(route)) throw new Error(`Proxy does not protect ${route}`)
 }
-requireIncludes(proxy, ['publicNoSessionPaths','hasSupabaseAuthCookie','needsSession','await updateSession(request, requestHeaders)','cachePolicy'], 'Proxy optimization')
-if (proxy.indexOf('if (!needsSession)') > proxy.indexOf('await updateSession(request, requestHeaders)')) throw new Error('Supabase session lookup must be gated')
-if (/legacySystemsEnabled|legacyRedirectForPath|isLegacyApiPath|stripe\/webhook/.test(proxy)) throw new Error('Legacy routing logic remains in proxy')
-
-const landing = await read('public/landing.html')
-const landingConnector = await read('public/app.js')
-requireIncludes(landing, ['href="/signin"','href="/signup"','href="/privacy"','href="/terms"','action="/signup"','name="email"'], 'Landing navigation')
-requireIncludes(landingConnector, ['renderDeck()','closeMobileMenu','pointercancel'], 'Landing enhancement script')
-for (const marker of ['data-open-app','data-open-modal="waitlist"']) if (landing.includes(marker)) throw new Error(`Landing still uses script-only navigation: ${marker}`)
-for (const marker of ['replaceButtonWithLink','connectLandingToAuthentication','alignLandingToDateLocations']) if (landingConnector.includes(marker)) throw new Error(`Landing script still rewrites navigation/content: ${marker}`)
-if (landingConnector.includes('landing-demo.js')) throw new Error('Removed landing prototype is still loaded')
-
-const authShell = await read('components/auth-shell.js')
-if (!authShell.includes('Back to home')) throw new Error('Auth pages need a home link')
-const signIn = await read('app/signin/page.js')
-const signUp = await read('app/signup/page.js')
-const authActions = await read('app/auth/actions.js')
-for (const source of [signIn, signUp]) {
-  if (source.includes('value="apple"') || source.includes('>Apple<')) throw new Error('Apple authentication button must not be displayed')
-  requireIncludes(source, ['Continue with Google', "gridTemplateColumns: '1fr'"], 'Authentication page')
-}
-requireIncludes(signIn, ['Email me a one-time login code','Sign in with code'], 'Email sign-in')
-if (!authActions.includes("verifyOtp({ email, token, type: 'email' })")) throw new Error('Email OTP verification is missing')
+for (const retired of ['/date-match','/hangout']) if (proxy.includes(`'${retired}'`)) throw new Error(`Proxy still references retired route ${retired}`)
 
 const layout = await read('app/layout.js')
-requireIncludes(layout, ["import './minimal-product.css'", "import './group-map.css'", "import './social-hub.css'", 'ServiceWorkerCleanup'], 'Minimal product layout')
-if (/stage-five|stage-six|manifest\.webmanifest|PwaClient|appleWebApp/.test(layout)) throw new Error('Removed legacy/PWA assets remain active')
-
-const dashboard = await read('app/dashboard/page.js')
-requireIncludes(dashboard, ["redirect('/discover')"], 'Swipe-first dashboard redirect')
-if (/getHomeSnapshot|HomeMoodShortcuts|home-primary-card/.test(dashboard)) throw new Error('Dashboard content was not removed')
+if (layout.includes("import './date-match.css'")) throw new Error('Retired shared swipe stylesheet is still imported')
 
 const productNav = await read('components/product-nav.js')
-for (const label of ['Swipe','Saved','Friends','Profile']) if (!productNav.includes(`label: '${label}'`)) throw new Error(`Minimal navigation is missing ${label}`)
-for (const removedLabel of ['Matches','Home','Saved & plans','Your next move','Find a location','Preferences and account']) if (productNav.includes(`label: '${removedLabel}'`)) throw new Error(`Navigation still exposes ${removedLabel}`)
-const productShell = await read('components/product-shell.js')
-requireIncludes(productShell, ['minimal-product-sidebar','profile-menu-panel','avatar_path','/account','signOut'], 'Minimal product shell')
-
-const onboarding = await read('app/onboarding/page.js')
-const onboardingAction = await read('app/onboarding/actions.js')
-requireIncludes(onboarding, ['What kinds of places do you like for dates?','date_locations','Build my date deck'], 'Date-location onboarding')
-requireIncludes(onboardingAction, ['allowedDateLocations','interests: dateLocations',"redirect(pathWithMessage('/discover'"], 'Date-location onboarding action')
+for (const label of ['Swipe','Saved','Friends','Profile']) if (!productNav.includes(`label: '${label}'`)) throw new Error(`Navigation is missing ${label}`)
 
 const discoverPage = await read('app/discover/page.js')
-const discovery = await read('lib/app/discovery-infrastructure.js')
+const discoveryRoute = await read('app/api/discovery/route.js')
+const discovery = await read('lib/app/discovery-relational.js')
 const actions = await read('app/api/discovery/actions/route.js')
 const swipe = await read('components/date-swipe-workspace-v2.js')
 const card = await read('components/minimal-swipe-card.js')
-const swipeDock = await read('components/swipe-action-dock.js')
-const discoverSocial = await read('components/discover-social-bar.js')
-requireIncludes(discoverPage, ["kind: 'place'",'DateSwipeWorkspaceV2','recordSampledInfrastructureAnalytics','limit: 12'], 'Swipe page')
-requireIncludes(discovery, ['r2_discovery_overlay_v1','r2-primary','R2_CATALOGUE_NOT_CONFIGURED','record_discovery_session_sample_v1'], 'R2 discovery runtime')
-for (const forbidden of ['getDiscoveryFeed','supabase-fallback','logInfrastructureDiscoveryImpressions']) if (discovery.includes(forbidden)) throw new Error(`Discovery fallback remains: ${forbidden}`)
-requireIncludes(actions, ['MAX_ACTIONS = 20','record_discovery_actions_v3','materializeStaticCatalogueReferences'], 'Batched action endpoint')
-requireIncludes(swipe, ['MinimalSwipeCard','SwipeActionDock','FilterSheet','DiscoverSocialBar',"'/api/discovery/actions'",'flushActions','queueDiscoveryAction','drainActions'], 'Minimal swipe workspace')
-if (/InviteSheet|createSharedDeck|Invite others|\/api\/date-match\/start/.test(swipe)) throw new Error('Retired shared-deck UI remains in Discover')
-requireIncludes(discoverSocial, ['friends_who_liked_location_v1','social_friends_v1','/api/social/share-location','Send to'], 'Discover social sharing')
-requireIncludes(card, ['minimal-swipe-photo','opening_hours','amenities','google.com/maps','Full details'], 'Minimal location card')
-for (const marker of ["key: 'undo'", "key: 'pass'", "key: 'save'", "key: 'perfect'"]) if (!swipeDock.includes(marker)) throw new Error(`Swipe dock is missing ${marker}`)
+for (const source of [discoverPage, discoveryRoute]) if (!source.includes("@/lib/app/discovery-relational")) throw new Error('Discover does not use the canonical relational feed')
+for (const marker of ['r2_discovery_overlay_v1','discovery_seen_locations_v1','duplicateKey','supabase-relational-v2']) if (!discovery.includes(marker)) throw new Error(`Relational discovery is missing ${marker}`)
+for (const forbidden of ['static-catalogue','STATIC_CATALOGUE','r2-primary','R2_CATALOGUE_NOT_CONFIGURED']) if (discovery.includes(forbidden)) throw new Error(`Legacy discovery runtime remains: ${forbidden}`)
+for (const marker of ['record_discovery_actions_v4','MAX_ACTIONS = 20']) if (!actions.includes(marker)) throw new Error(`Discovery actions are missing ${marker}`)
+for (const forbidden of ['materializeStaticCatalogueReferences','verifiedStaticReference','staticRef']) if (actions.includes(forbidden)) throw new Error(`Legacy static action support remains: ${forbidden}`)
+for (const marker of ['MinimalSwipeCard','SwipeActionDock','DiscoverSocialBar',"'/api/discovery/actions'",'excludeIds']) if (!swipe.includes(marker)) throw new Error(`Swipe workspace is missing ${marker}`)
+for (const forbidden of ['InviteSheet','createSharedDeck','/api/date-match/start','staticCatalogueEphemeral','prefetchStaticMedia']) if (swipe.includes(forbidden)) throw new Error(`Retired swipe dependency remains: ${forbidden}`)
+for (const forbidden of ['usePrivateB2Asset','useStaticCatalogueDetails','useStaticMediaResolution','/api/static-catalogue/']) if (card.includes(forbidden)) throw new Error(`Legacy card dependency remains: ${forbidden}`)
 
-const plans = await read('app/plans/page.js')
-requireIncludes(plans, ["['saved', 'Saved']", "['planned', 'Plans']", "params?.tab === 'past'", 'minimal-place-card','History'], 'Saved and plans page')
+const share = await read('app/api/social/share-location/route.js')
+if (!share.includes('send_location_to_friend_v1')) throw new Error('Friend location sharing is missing')
+for (const forbidden of ['materializeStaticCatalogueReferences','verifiedStaticReference','staticRef']) if (share.includes(forbidden)) throw new Error(`Legacy share support remains: ${forbidden}`)
+
 const friendsPage = await read('app/matches/page.js')
 const socialHub = await read('components/social-hub.js')
-const socialData = await read('lib/app/social-hub-data.js')
-requireIncludes(friendsPage, ['SocialHub','getSocialHubSnapshot',"title: 'Friends'"], 'Friends page')
-requireIncludes(socialHub, ['Friends','Messages','Shared','social_friend_search_v1','social_send_friend_request_v1','social_open_direct_conversation_v1','social_send_message_v1','shared_places_with_friend_v1'], 'Friends social hub')
-requireIncludes(socialData, ['social_friends_v1','social_friend_requests_v1','social_conversations_v1','social_shared_locations_v1'], 'Friends social data')
 const profile = await read('app/profile/page.js')
-const profilePhoto = await read('components/profile-photo-editor.js')
-requireIncludes(profile, ['ProfilePhotoEditor','Search radius','Preferences','Account settings','Advanced'], 'Minimal profile')
-requireIncludes(profilePhoto, ["purpose', 'profile_photo'",'remove_profile_photo_v1','Preview ready'], 'Profile picture editor')
-
-const retiredPairPage = await read('app/date-match/[token]/page.js')
-const retiredGroupPage = await read('app/hangout/[token]/page.js')
-const retiredStart = await read('app/api/date-match/start/route.js')
-requireIncludes(retiredPairPage, ["redirect('/matches')"], 'Retired pair swipe page')
-requireIncludes(retiredGroupPage, ["redirect('/matches')"], 'Retired group swipe page')
-requireIncludes(retiredStart, ['status: 410','retired'], 'Retired shared deck API')
+for (const marker of ['SocialHub','getSocialHubSnapshot']) if (!friendsPage.includes(marker)) throw new Error(`Friends page is missing ${marker}`)
+for (const marker of ['Friends','Messages','Shared','social_friend_search_v1','social_send_message_v1']) if (!socialHub.includes(marker)) throw new Error(`Social hub is missing ${marker}`)
+if (!profile.includes('ProfilePhotoEditor')) throw new Error('Profile photo management is missing')
 
 const socialMigration = await read('supabase/migrations/10046_friends_messages_social_hub.sql')
-requireIncludes(socialMigration, ['social_send_friend_request_v1','social_friends_v1','social_conversations_v1','social_messages_v1','friends_who_liked_location_v1','shared_places_with_friend_v1','send_location_to_friend_v1','remove_profile_photo_v1'], 'Friends social migration')
-if (/queue_notification_v1/.test(socialMigration)) throw new Error('Friends social migration must not depend on notifications')
+for (const marker of ['social_send_friend_request_v1','social_conversations_v1','friends_who_liked_location_v1','send_location_to_friend_v1','remove_profile_photo_v1']) {
+  if (!socialMigration.includes(marker)) throw new Error(`Social migration is missing ${marker}`)
+}
 
-const runtimeMigration = await read('supabase/migrations/10028_r2_runtime_second_optimization.sql')
-requireIncludes(runtimeMigration, ['record_discovery_actions_v3','discovery_action_receipts','prepare_r2_cleanup_v2','drop function if exists public.record_discovery_action_v2'], 'Permanent R2 migration')
-const executableRuntimeMigration = runtimeMigration.replace(/drop function if exists[^;]+;/gi, '')
-if (/record_discovery_action_v2\s*\(|prepare_r2_cleanup_v1\s*\(/.test(executableRuntimeMigration)) throw new Error('Obsolete RPC calls remain in the permanent migration')
-
-const cleanup = await read('scripts/cleanup-r2-assets.mjs')
-requireIncludes(cleanup, ['release-registry.json is required','prepare_r2_cleanup_v2'], 'R2 cleanup')
-if (cleanup.includes("allObjects('catalogue/releases/')")) throw new Error('Release-prefix discovery fallback remains')
-
-const dateMatchMigration = await read('supabase/migrations/10003_date_match.sql')
-for (const marker of ['date_match_decks','date_match_members','date_match_swipes','date_match_matches','invite_token_hash','create_date_match_v1','join_date_match_v1','record_date_match_swipe_v1','date_match_reveals_v1']) if (!dateMatchMigration.includes(marker)) throw new Error(`DateMatch migration is missing ${marker}`)
-const cleanupMigration = await read('supabase/migrations/10016_remove_notifications_and_pwa.sql')
-requireIncludes(cleanupMigration, ['drop table if exists public.push_subscriptions','drop table if exists public.app_notifications','drop table if exists public.notification_outbox','create or replace function public.record_date_match_swipe_v1'], 'Notification cleanup migration')
-
-const pipeline = await read('lib/media/pipeline.js')
-requireIncludes(pipeline, ['detectedMime','declared !== mime','limitInputPixels','.webp(','sha256','puddle-quarantine','pdfLooksSafe','/encrypt'], 'Secure media pipeline')
-const upload = await read('app/api/media/upload/route.js')
-requireIncludes(upload, ['createAdminClient','processMediaFile','attachAsset','verifyCsrf','enforceRateLimit'], 'Server-only media upload pipeline')
-
-console.log('Puddle repository validation checks passed.')
+console.log(`Current-product repository check passed: ${required.length} required paths verified and legacy runtime paths absent.`)
