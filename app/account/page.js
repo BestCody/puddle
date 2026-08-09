@@ -3,6 +3,7 @@ import { ProductShell } from '@/components/product-shell'
 import { AuthMessage } from '@/components/auth-message'
 import { LocationPicker } from '@/components/location-picker'
 import { SubmitButton } from '@/components/submit-button'
+import { UsernameInput } from '@/components/username-input'
 import { deleteAccount, revokeOtherSessions, updatePassword } from '@/app/auth/actions'
 import { updateDateProfile } from './actions'
 import { requireUser } from '@/lib/auth/user'
@@ -42,12 +43,13 @@ export default async function AccountPage({ searchParams }) {
           <p className="muted">These choices shape the places in your swipe deck. Your selected location is converted to coordinates so Puddle can search nearby anywhere in the world.</p>
           <div className="field-row">
             <label className="field">Display name<input name="display_name" defaultValue={profile?.display_name || ''} required maxLength="60" /></label>
-            <label className="field">Username<input name="username" defaultValue={profile?.username || ''} required pattern="[a-z0-9_]{3,24}" /></label>
+            <label className="field">Username<UsernameInput defaultValue={profile?.username || ''} id="account-username" /></label>
           </div>
           <LocationPicker profile={profile} />
-          <label className="field">Search radius<input name="search_radius_km" type="number" min="1" max="100" step="1" defaultValue={profile?.search_radius_km || 10} required /></label>
+          <label className="field">Search radius<input name="search_radius_km" type="number" inputMode="numeric" min="1" max="100" step="1" defaultValue={profile?.search_radius_km || 10} required /></label>
           <fieldset className="field interest-fieldset date-location-fieldset">
             <legend>What kinds of places do you like?</legend>
+            <p className="field-hint">Keep at least three selected.</p>
             <div className="interest-grid date-location-grid">
               {dateLocationOptions.map((option) => (
                 <label className="interest-chip date-location-chip" key={option.value}>
@@ -57,7 +59,7 @@ export default async function AccountPage({ searchParams }) {
               ))}
             </div>
           </fieldset>
-          <label className="field">Your ideal date vibe<textarea name="bio" defaultValue={profile?.bio || ''} maxLength="500" placeholder="Low-key coffee, a walk somewhere pretty, and enough time to actually talk." /></label>
+          <label className="field">Your ideal date vibe<textarea name="bio" defaultValue={profile?.bio || ''} maxLength="500" placeholder="Low-key coffee, a walk somewhere pretty, and enough time to actually talk." /><small className="field-hint">500 characters maximum.</small></label>
           <label className="field">Profile visibility<select name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Shared-plan attendees</option><option value="hidden">Hidden</option></select></label>
           <SubmitButton pendingText="Saving preferences…">Save profile and date preferences</SubmitButton>
         </form>
@@ -71,8 +73,8 @@ export default async function AccountPage({ searchParams }) {
           <Link className="secondary-button" href="/change-email">Change email address</Link>
 
           <form className="auth-form" action={updatePassword}>
-            <label className="field">New password<input name="password" type="password" minLength="10" required /></label>
-            <label className="field">Confirm password<input name="password_confirmation" type="password" minLength="10" required /></label>
+            <label className="field">New password<input name="password" type="password" minLength="10" maxLength="128" required /></label>
+            <label className="field">Confirm password<input name="password_confirmation" type="password" minLength="10" maxLength="128" required /></label>
             <SubmitButton>Change password</SubmitButton>
           </form>
         </section>
@@ -92,7 +94,7 @@ export default async function AccountPage({ searchParams }) {
           <h2>Delete account</h2>
           <p className="muted">This permanently removes your account and associated Puddle records. Type <span className="code-hint">DELETE</span> to continue.</p>
           <form className="auth-form" action={deleteAccount}>
-            <label className="field">Confirmation<input name="confirmation" autoComplete="off" required /></label>
+            <label className="field">Confirmation<input name="confirmation" autoComplete="off" required minLength="6" maxLength="6" pattern="DELETE" /></label>
             <SubmitButton className="danger-button" pendingText="Deleting…">Delete my account</SubmitButton>
           </form>
         </section>
