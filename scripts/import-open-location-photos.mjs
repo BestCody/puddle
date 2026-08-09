@@ -1,6 +1,7 @@
 import { createAdminClient } from '../lib/supabase/admin.js'
 import { storeOpenPhotoInSupabase } from '../lib/app/open-photo-supabase.js'
 import { commonsCandidateScore, providerOrderForCategory, streetCandidateScore } from '../lib/app/open-photo-candidates.js'
+import { createProviderRequestLimiter } from '../lib/app/provider-request-limiter.js'
 import {
   boundedInteger,
   claimBatchSizes,
@@ -16,14 +17,23 @@ const limitArgument = process.argv.find((value) => value.startsWith('--limit='))
 const LIMIT = boundedInteger(limitArgument || process.env.OPEN_PHOTO_IMPORT_LIMIT, 200, { min: 1, max: 5_000 })
 const MIN_SCORE = Math.max(0.6, Math.min(0.98, Number(process.env.OPEN_PHOTO_MIN_SCORE || 0.76)))
 const MAPILLARY_TOKEN = String(process.env.MAPILLARY_ACCESS_TOKEN || '').trim()
+const KARTAVIEW_TOKEN = String(process.env.KARTAVIEW_ACCESS_TOKEN || '').trim()
 const MAX_BYTES = 10_000_000
 const REQUEST_TIMEOUT_MS = boundedInteger(process.env.OPEN_PHOTO_REQUEST_TIMEOUT_MS, 12_000, { min: 2_000, max: 60_000 })
-const WIKIMEDIA_MIN_INTERVAL_MS = boundedInteger(process.env.OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS, 1_100, { min: 250, max: 10_000 })
+const WIKIMEDIA_MIN_INTERVAL_MS = boundedInteger(process.env.OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS, 350, { min: 300, max: 10_000 })
+const WIKIMEDIA_MAX_CONCURRENCY = boundedInteger(process.env.OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY, 3, { min: 1, max: 3 })
+const MAPILLARY_MAX_CONCURRENCY = boundedInteger(process.env.OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY, 12, { min: 1, max: 32 })
+const KARTAVIEW_MIN_INTERVAL_MS = boundedInteger(
+  process.env.OPEN_PHOTO_KARTAVIEW_MIN_INTERVAL_MS,
+  KARTAVIEW_TOKEN ? 4_000 : 40_000,
+  { min: 1_000, max: 60_000 }
+)
+const LOCATION_CONCURRENCY = boundedInteger(process.env.OPEN_PHOTO_LOCATION_CONCURRENCY, 24, { min: 1, max: 100 })
 const MAX_CANDIDATES_PER_PROVIDER = boundedInteger(process.env.OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER, 3, { min: 1, max: 10 })
 const CLAIM_MIN_BATCH_SIZE = boundedInteger(process.env.OPEN_PHOTO_CLAIM_MIN_BATCH_SIZE, 1, { min: 1, max: LIMIT })
 const USER_AGENT = 'Puddle/1.0 open licensed place photo importer (contact via configured site URL)'
 const RETRYABLE_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
-const providerGates = new Map()
+const providerLimiter = createProviderRequestLimiter()
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(milliseconds) || 0)))
@@ -47,22 +57,6 @@ function boundingBox(latitude, longitude, radiusM = 45) {
   return [Number(longitude) - lngDelta, Number(latitude) - latDelta, Number(longitude) + lngDelta, Number(latitude) + latDelta]
 }
 
-function providerGate(name) {
-  const key = String(name || 'default')
-  if (!providerGates.has(key)) providerGates.set(key, { nextAt: 0 })
-  return providerGates.get(key)
-}
-
-async function waitForProvider(name) {
-  const delay = providerGate(name).nextAt - Date.now()
-  if (delay > 0) await sleep(delay)
-}
-
-function deferProvider(name, delayMs) {
-  const gate = providerGate(name)
-  gate.nextAt = Math.max(gate.nextAt, Date.now() + Math.max(0, Number(delayMs) || 0))
-}
-
 function responseError(url, response) {
   const error = new Error(`${new URL(url).hostname} returned ${response.status}.`)
   error.status = response.status
@@ -73,27 +67,30 @@ function responseError(url, response) {
 async function fetchWithRetry(url, options = {}, policy = {}) {
   const provider = String(policy.provider || new URL(url).hostname)
   const maxAttempts = boundedInteger(policy.maxAttempts, 2, { min: 1, max: 6 })
-  const minIntervalMs = boundedInteger(policy.minIntervalMs, 0, { min: 0, max: 10_000 })
+  const minIntervalMs = boundedInteger(policy.minIntervalMs, 0, { min: 0, max: 60_000 })
+  const maxConcurrent = boundedInteger(policy.maxConcurrent, 1, { min: 1, max: 100 })
   const baseDelayMs = boundedInteger(policy.baseDelayMs, 1_000, { min: 100, max: 30_000 })
   let lastError = null
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    await waitForProvider(provider)
-    if (minIntervalMs > 0) deferProvider(provider, minIntervalMs)
-
     let response
     try {
-      response = await fetch(url, {
-        ...options,
-        headers: { 'User-Agent': USER_AGENT, ...(options.headers || {}) },
-        signal: options.signal || AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        cache: 'no-store'
-      })
+      const release = await providerLimiter.acquire(provider, { maxConcurrent, minIntervalMs })
+      try {
+        response = await fetch(url, {
+          ...options,
+          headers: { 'User-Agent': USER_AGENT, ...(options.headers || {}) },
+          signal: options.signal || AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+          cache: 'no-store'
+        })
+      } finally {
+        release()
+      }
     } catch (error) {
       lastError = error
       if (attempt + 1 >= maxAttempts) throw error
       const delay = retryDelayMilliseconds({ attempt, baseMs: baseDelayMs, maxMs: 30_000 })
-      deferProvider(provider, delay)
+      providerLimiter.defer(provider, delay)
       console.warn(`${provider} request failed; retrying in ${Math.ceil(delay / 1_000)}s: ${error.message}`)
       continue
     }
@@ -103,7 +100,7 @@ async function fetchWithRetry(url, options = {}, policy = {}) {
     lastError = error
     const retryable = RETRYABLE_HTTP_STATUSES.has(response.status)
     if (!retryable || attempt + 1 >= maxAttempts) {
-      if (response.status === 429) deferProvider(provider, Math.max(error.retryAfterMs, 60_000))
+      if (response.status === 429) providerLimiter.defer(provider, Math.max(error.retryAfterMs, 60_000))
       throw error
     }
 
@@ -113,7 +110,7 @@ async function fetchWithRetry(url, options = {}, policy = {}) {
       baseMs: baseDelayMs,
       maxMs: 60_000
     })
-    deferProvider(provider, delay)
+    providerLimiter.defer(provider, delay)
     console.warn(`${provider} returned ${response.status}; retrying in ${Math.ceil(delay / 1_000)}s.`)
   }
 
@@ -136,6 +133,12 @@ function approvedAssetHost(provider, hostname) {
   return false
 }
 
+function mediaConcurrency(provider) {
+  if (provider === 'wikimedia-commons') return 3
+  if (provider === 'mapillary') return MAPILLARY_MAX_CONCURRENCY
+  return 4
+}
+
 async function downloadAsset(value, provider, redirects = 0) {
   const url = new URL(String(value || ''))
   if (url.protocol !== 'https:' || !approvedAssetHost(provider, url.hostname)) throw new Error(`Rejected unexpected ${provider} asset host.`)
@@ -143,9 +146,10 @@ async function downloadAsset(value, provider, redirects = 0) {
     headers: { Accept: 'image/avif,image/webp,image/png,image/jpeg' },
     redirect: 'manual'
   }, {
-    provider,
+    provider: `${provider}-media`,
     maxAttempts: 3,
-    minIntervalMs: provider === 'wikimedia-commons' ? 250 : 0,
+    maxConcurrent: mediaConcurrency(provider),
+    minIntervalMs: 0,
     baseDelayMs: 1_000,
     acceptRedirects: true
   })
@@ -184,8 +188,9 @@ async function wikimediaCandidates(location) {
     iiextmetadatafilter: 'Artist|Credit|ImageDescription|LicenseShortName|UsageTerms'
   }).toString()
   const payload = await fetchJson(url, {}, {
-    provider: 'wikimedia-commons',
+    provider: 'wikimedia-api',
     maxAttempts: 4,
+    maxConcurrent: WIKIMEDIA_MAX_CONCURRENCY,
     minIntervalMs: WIKIMEDIA_MIN_INTERVAL_MS,
     baseDelayMs: 2_000
   })
@@ -224,7 +229,13 @@ async function mapillaryCandidates(location) {
     limit: '30',
     fields: 'id,computed_geometry,geometry,compass_angle,captured_at,thumb_2048_url,width,height,creator'
   }).toString()
-  const payload = await fetchJson(url, {}, { provider: 'mapillary', maxAttempts: 3, baseDelayMs: 1_000 })
+  const payload = await fetchJson(url, {}, {
+    provider: 'mapillary-api',
+    maxAttempts: 3,
+    maxConcurrent: MAPILLARY_MAX_CONCURRENCY,
+    minIntervalMs: 0,
+    baseDelayMs: 1_000
+  })
   return (payload?.data || []).flatMap((row) => {
     const coordinates = row?.computed_geometry?.coordinates || row?.geometry?.coordinates || []
     const image = {
@@ -259,11 +270,19 @@ function kartaAssetUrl(row) {
 
 async function kartaviewCandidates(location) {
   const url = new URL('https://api.openstreetcam.org/2.0/photo/')
-  url.search = new URLSearchParams({
+  const params = {
     lat: String(location.latitude), lng: String(location.longitude), radius: '45', zoomLevel: '18',
     join: 'sequence', orderBy: 'id', orderDirection: 'desc'
-  }).toString()
-  const payload = await fetchJson(url, {}, { provider: 'kartaview', maxAttempts: 3, baseDelayMs: 1_000 })
+  }
+  if (KARTAVIEW_TOKEN) params.access_token = KARTAVIEW_TOKEN
+  url.search = new URLSearchParams(params).toString()
+  const payload = await fetchJson(url, {}, {
+    provider: 'kartaview-api',
+    maxAttempts: 3,
+    maxConcurrent: 1,
+    minIntervalMs: KARTAVIEW_MIN_INTERVAL_MS,
+    baseDelayMs: 1_000
+  })
   return kartaRows(payload).flatMap((row) => {
     const image = {
       latitude: finite(row?.lat ?? row?.latitude ?? row?.gps?.lat),
@@ -454,16 +473,27 @@ async function processLocation(admin, location) {
   }
 }
 
+async function processLocations(admin, locations, totals) {
+  if (!locations.length) return
+  const concurrency = APPLY ? Math.min(LOCATION_CONCURRENCY, locations.length) : 1
+  let cursor = 0
+  await Promise.all(Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const index = cursor
+      cursor += 1
+      if (index >= locations.length) return
+      const counts = await processLocation(admin, locations[index])
+      for (const field of Object.keys(totals)) totals[field] += Number(counts[field] || 0)
+    }
+  }))
+}
+
 const admin = createAdminClient()
 const claim = APPLY ? await claimedCandidates(admin) : await directCandidates(admin)
 const locations = claim.locations
 
 const totals = { matched: 0, imported: 0, noMatch: 0, failed: 0, skipped: 0 }
-for (const location of locations) {
-  const counts = await processLocation(admin, location)
-  for (const field of Object.keys(totals)) totals[field] += Number(counts[field] || 0)
-  await sleep(120)
-}
+await processLocations(admin, locations, totals)
 
 console.log(JSON.stringify({
   mode: APPLY ? 'apply' : 'dry-run',
@@ -471,6 +501,12 @@ console.log(JSON.stringify({
   claimLimit: claim.claimLimit,
   inspected: locations.length,
   ...totals,
-  minimumScore: MIN_SCORE
+  minimumScore: MIN_SCORE,
+  locationConcurrency: APPLY ? LOCATION_CONCURRENCY : 1,
+  providers: {
+    wikimedia: { minIntervalMs: WIKIMEDIA_MIN_INTERVAL_MS, maxConcurrent: WIKIMEDIA_MAX_CONCURRENCY },
+    mapillary: { maxConcurrent: MAPILLARY_MAX_CONCURRENCY },
+    kartaview: { authenticated: Boolean(KARTAVIEW_TOKEN), minIntervalMs: KARTAVIEW_MIN_INTERVAL_MS }
+  }
 }, null, 2))
 if (!APPLY) console.log('Dry run only. Re-run with --apply after reviewing the candidate output.')

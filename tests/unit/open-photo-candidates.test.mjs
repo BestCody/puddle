@@ -45,7 +45,7 @@ test('Commons candidates require both geospatial and title agreement', () => {
   assert.equal(tokenSimilarity('Royal Ontario Museum', 'Royal Ontario Museum exterior'), 1)
 })
 
-test('public attractions check Commons before street imagery', () => {
+test('public attractions check Commons first and rate-limited KartaView stays last elsewhere', () => {
   assert.deepEqual(providerOrderForCategory('museum'), ['wikimedia-commons', 'mapillary', 'kartaview'])
-  assert.deepEqual(providerOrderForCategory('restaurant'), ['mapillary', 'kartaview', 'wikimedia-commons'])
+  assert.deepEqual(providerOrderForCategory('restaurant'), ['mapillary', 'wikimedia-commons', 'kartaview'])
 })

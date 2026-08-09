@@ -81,7 +81,10 @@ test('the importer throttles providers, reduces timed-out claims, and tries alte
     'MAX_CANDIDATES_PER_PROVIDER',
     'claimBatchSizes(LIMIT',
     'isStatementTimeout(result.error)',
-    'trying the next candidate'
+    'trying the next candidate',
+    'createProviderRequestLimiter',
+    'KARTAVIEW_ACCESS_TOKEN',
+    'OPEN_PHOTO_LOCATION_CONCURRENCY'
   ]) assert.ok(importer.includes(marker), `photo importer is missing ${marker}`)
   assert.equal(importer.includes('&quot;'), false)
 })
@@ -118,16 +121,21 @@ test('the active relational card uses Google server photos and UI Kit fallback w
   assert.ok(card.includes('Wikimedia Commons, Mapillary, and KartaView'))
 })
 
-test('bulk photo enrichment automatically drains the relational Supabase queue without obsolete B2 gates', async () => {
+test('bulk photo enrichment aggressively drains the relational Supabase queue without obsolete B2 gates', async () => {
   const photoWorkflow = await read('.github/workflows/photo-enrichment.yml')
   const packageJson = JSON.parse(await read('package.json'))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_BATCH_SIZE: '100'"))
-  assert.ok(photoWorkflow.includes("PHOTO_ENRICH_MAX_BATCHES: '50'"))
+  assert.ok(photoWorkflow.includes("PHOTO_ENRICH_MAX_BATCHES: '200'"))
+  assert.ok(photoWorkflow.includes("PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '110'"))
   assert.ok(photoWorkflow.includes('workflow_dispatch:'))
   assert.ok(photoWorkflow.includes('schedule:'))
-  assert.ok(photoWorkflow.includes("cron: '17 4 * * *'"))
+  assert.ok(photoWorkflow.includes("cron: '17 */2 * * *'"))
   assert.ok(photoWorkflow.includes('npm run locations:photos:enrich'))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_SYNC_MEDIA: 'false'"))
+  assert.ok(photoWorkflow.includes("OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '350'"))
+  assert.ok(photoWorkflow.includes("OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'"))
+  assert.ok(photoWorkflow.includes("OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '12'"))
+  assert.ok(photoWorkflow.includes('KARTAVIEW_ACCESS_TOKEN'))
   assert.equal(photoWorkflow.includes('B2_INFRA_ENABLED'), false)
   assert.equal(photoWorkflow.includes('B2_S3_ENDPOINT'), false)
   assert.equal(photoWorkflow.includes('B2_BUCKET'), false)

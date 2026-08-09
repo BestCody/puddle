@@ -22,10 +22,13 @@ test('relational discovery keeps legacy object-store media off the browser path'
   assert.match(uiKit, /mount\.replaceChildren\(\)\n\s+setState\('unavailable'\)/)
 })
 
-test('progressive place-photo enrichment targets Supabase and is scheduled to keep the queue moving', async () => {
+test('progressive place-photo enrichment targets Supabase and is scheduled to keep the backlog moving', async () => {
   const workflow = await read('.github/workflows/photo-enrichment.yml')
   assert.match(workflow, /schedule:/)
-  assert.match(workflow, /cron: '17 4 \* \* \*'/)
+  assert.match(workflow, /cron: '17 \*\/2 \* \* \*'/)
+  assert.match(workflow, /PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '110'/)
+  assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'/)
+  assert.match(workflow, /OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '12'/)
   assert.match(workflow, /Drain prioritized open-photo candidates into Supabase public media/)
   assert.match(workflow, /PHOTO_ENRICH_SYNC_MEDIA: 'false'/)
   assert.doesNotMatch(workflow, /B2_INFRA_ENABLED|B2_S3_ENDPOINT|B2_BUCKET|B2_APPLICATION_KEY/)
