@@ -4,19 +4,16 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('membership upgrade opens the branded Puddle checkout before Stripe', async () => {
+test('membership upgrade goes directly from the tier card to Stripe checkout', async () => {
   const membership = await read('app/membership/page.js')
-  const checkout = await read('app/membership/checkout/page.js')
 
-  assert.match(membership, /href="\/membership\/checkout"/)
-  assert.doesNotMatch(membership, /form action=\{startTinderCheckout\}/)
-  assert.match(checkout, /form action=\{startTinderCheckout\}/)
-  assert.match(checkout, /Continue to secure payment/)
-  assert.match(checkout, /MONTHLY_PRICE = '\$10\.00'/)
-  assert.match(checkout, /Promotion codes supported/)
+  assert.match(membership, /startTinderCheckout/)
+  assert.match(membership, /form action=\{startTinderCheckout\}/)
+  assert.doesNotMatch(membership, /href="\/membership\/checkout"/)
+  assert.match(membership, />Continue to checkout<\/button>/)
 })
 
-test('Puddle checkout never collects raw payment credentials', async () => {
+test('legacy Puddle checkout never collects raw payment credentials', async () => {
   const checkout = await read('app/membership/checkout/page.js')
 
   assert.doesNotMatch(checkout, /Card number/i)
