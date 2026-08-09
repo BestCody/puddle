@@ -18,12 +18,28 @@ const protectedMutations = [
   'app/api/geocode/route.js',
   'app/api/location/reverse/route.js',
   'app/api/discovery/actions/route.js',
-  'app/api/date-match/start/route.js',
-  'app/api/date-match/action/route.js',
+  'app/api/social/share-location/route.js',
   'app/api/media/upload/route.js'
 ]
 for (const path of protectedMutations) await requireMarkers(path, ['verifyCsrf', 'enforceRateLimit'])
 await requireMarkers('app/api/discovery/actions/route.js', ['MAX_ACTIONS = 20', 'record_discovery_actions_v3'])
+await requireMarkers('app/api/social/share-location/route.js', ['verifiedStaticReference', 'materializeStaticCatalogueReferences', 'send_location_to_friend_v1'])
+
+// Shared swipe mutation endpoints are intentionally retired. A fixed 410 response has
+// no authenticated mutation surface, so requiring CSRF/rate-limit middleware would
+// make the retirement route look active again and would hide its fail-closed contract.
+const retiredMutationRoutes = [
+  'app/api/date-match/start/route.js',
+  'app/api/date-match/action/route.js',
+  'app/api/date-match/[token]/route.js'
+]
+for (const path of retiredMutationRoutes) {
+  const value = await source(path)
+  await requireMarkers(path, ['status: 410', 'retired'], value)
+  for (const forbidden of ['createClient', 'createAdminClient', '.rpc(', '.from(']) {
+    if (value.includes(forbidden)) findings.push(`${path}: retired route still exposes data or mutation access via ${forbidden}`)
+  }
+}
 
 const adminApis = tracked.filter((path) => path.startsWith('app/api/admin/') && path.endsWith('/route.js'))
 for (const path of adminApis) {
@@ -52,4 +68,4 @@ const gate = proxy.indexOf('if (!needsSession)')
 if (gate < 0 || lookup < 0 || gate > lookup) findings.push('proxy.js: Supabase session lookup is not gated')
 
 if (findings.length) throw new Error(`Security surface audit failed:\n${findings.map((item) => `- ${item}`).join('\n')}`)
-console.log(`Security surface audit passed for ${protectedMutations.length} interactive routes, ${adminApis.length} admin APIs, ${adminPages.length} admin pages, and ${testScripts.length} test scripts.`)
+console.log(`Security surface audit passed for ${protectedMutations.length} interactive routes, ${retiredMutationRoutes.length} retired fail-closed routes, ${adminApis.length} admin APIs, ${adminPages.length} admin pages, and ${testScripts.length} test scripts.`)

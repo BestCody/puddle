@@ -34,10 +34,10 @@ test('discovery uses one relational overlay RPC without catalogue writes or fall
   assert.equal(infrastructure.includes('getDiscoveryFeed'), false)
 })
 
-test('positive actions and shared decks batch exact-tile materialization', async () => {
+test('positive actions and friend shares materialize exact static references', async () => {
   const action = await read('app/api/discovery/actions/route.js')
   const actionMigration = await read('supabase/migrations/10031_discovery_actions_v4.sql')
-  const sharedDeck = await read('app/api/date-match/start/route.js')
+  const friendShare = await read('app/api/social/share-location/route.js')
   const details = await read('app/api/static-catalogue/open/[id]/route.js')
   const materializer = await read('lib/app/static-catalogue-materialization.js')
   const migration = await read('supabase/migrations/10028_r2_runtime_second_optimization.sql')
@@ -46,7 +46,11 @@ test('positive actions and shared decks batch exact-tile materialization', async
   assert.ok(action.includes("supabase.rpc('record_discovery_actions_v4'"))
   assert.ok(actionMigration.includes('return public.record_discovery_actions_v3(actions)'))
   assert.equal(action.includes('radiusKm'), false)
-  assert.ok(sharedDeck.includes('staticRefs'))
+  assert.ok(friendShare.includes('staticCatalogueEphemeral'))
+  assert.ok(friendShare.includes('staticRef'))
+  assert.ok(friendShare.includes('verifiedStaticReference'))
+  assert.ok(friendShare.includes('materializeStaticCatalogueReferences'))
+  assert.ok(friendShare.includes("supabase.rpc('send_location_to_friend_v1'"))
   assert.ok(details.includes('staticRef'))
   assert.ok(materializer.includes('fetchStaticPlacesByReferences'))
   assert.ok(materializer.includes("admin.rpc('materialize_static_catalogue_locations_v2'"))
