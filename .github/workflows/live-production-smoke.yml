@@ -58,3 +58,5 @@ jobs:
             test-results
           if-no-files-found: ignore
           retention-days: 14
+
+# Production redeploy marker after Vercel build-rate cooldown.
