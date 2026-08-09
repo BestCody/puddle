@@ -81,31 +81,8 @@ export function DiscoverSocialBar({ item, onMessage }) {
   }
 
   return <>
-    <button
-      type="button"
-      aria-label="Send to"
-      title="Send to"
-      onClick={() => setOpen(true)}
-      style={{
-        gridRow: 1,
-        gridColumn: 1,
-        justifySelf: 'end',
-        alignSelf: 'start',
-        position: 'relative',
-        top: 50,
-        zIndex: 6,
-        width: 42,
-        height: 42,
-        padding: 8,
-        border: '1px solid var(--minimal-line)',
-        borderRadius: '50%',
-        background: '#fff',
-        display: 'grid',
-        placeItems: 'center',
-        cursor: 'pointer'
-      }}
-    >
-      <img src={SHARE_ICON} alt="" aria-hidden="true" style={{ width: 24, height: 24, objectFit: 'contain', display: 'block' }} />
+    <button className="discover-share-trigger" type="button" aria-label="Send to" title="Send to" onClick={() => setOpen(true)}>
+      <img src={SHARE_ICON} alt="" aria-hidden="true" />
     </button>
     {open ? <SendSheet client={client} item={item} friends={friends} onClose={() => setOpen(false)} onSent={sent} /> : null}
   </>
