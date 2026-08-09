@@ -1,0 +1,60 @@
+name: Live production smoke
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    if: contains(github.event.head_commit.message, '[live-smoke]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LIVE_BASE_URL: https://puddle.you
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install Playwright test runner
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Allow production deployment to begin
+        run: sleep 45
+      - name: Run live product smoke until deployed version passes
+        shell: bash
+        run: |
+          set +e
+          for attempt in 1 2 3 4; do
+            echo "Live smoke attempt ${attempt}/4"
+            npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs
+            status=$?
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 4 ]; then
+              echo "Live smoke did not pass yet; waiting 30 seconds for deployment convergence."
+              sleep 30
+            fi
+          done
+          exit 1
+      - name: Upload live browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-production-smoke-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
