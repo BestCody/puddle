@@ -35,6 +35,7 @@ test('authenticated product UI renders across core pages on desktop and mobile',
   await expect(page.locator('.minimal-swipe-card')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Send to' })).toBeVisible()
   await assertProductVisualContract(page)
   await assertImagesLoaded(page)
   await assertNoHorizontalOverflow(page)
@@ -43,7 +44,11 @@ test('authenticated product UI renders across core pages on desktop and mobile',
   await assertPageShell(page, 'Saved')
 
   await page.goto('/matches')
-  await assertPageShell(page, 'Matches')
+  await assertPageShell(page, 'Friends')
+  await expect(page.getByRole('button', { name: 'Friends', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Messages', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Shared', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Friends' })).toHaveAttribute('aria-current', 'page')
 
   await page.goto('/membership')
   await assertPageShell(page, 'Membership')
@@ -57,6 +62,7 @@ test('authenticated product UI renders across core pages on desktop and mobile',
 
   await page.goto('/profile')
   await expect(page.locator('.minimal-profile-card h1')).toHaveText('UI Contract Tester')
+  await expect(page.getByText('Profile picture', { exact: true })).toBeVisible()
   await assertProductVisualContract(page)
   await assertImagesLoaded(page)
   await assertNoHorizontalOverflow(page)
