@@ -52,7 +52,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await page.getByLabel('Display name').fill('Complete Flow')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('checkbox').check()
+  await page.getByLabel(/I agree to Puddle’s Terms and Privacy Policy and confirm/i).check()
   await page.getByRole('button', { name: /Create my Puddle/i }).click()
 
   await expect(page).toHaveURL(/\/onboarding$/)
@@ -120,7 +120,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard|\/signin\?next=\/dashboard/)
 })
 
-test('duplicate usernames preserve date-location onboarding choices', async ({ page }) => {
+test('duplicate usernames keep onboarding values in place with an inline error', async ({ page }) => {
   const sharedUsername = `shared_${uniqueSuffix(12)}`
   const owner = await createConfirmedUser({ displayName: 'Username Owner' })
   await completeProfileDirect(owner.user.id, { username: sharedUsername })
@@ -128,18 +128,42 @@ test('duplicate usernames preserve date-location onboarding choices', async ({ p
   const candidate = await createConfirmedUser({ displayName: 'Username Candidate' })
   await signInThroughUi(page, candidate.email, candidate.password)
   await expect(page).toHaveURL(/\/onboarding$/)
-  await fillOnboarding(page, { username: sharedUsername, city: 'Montreal', bio: 'Keep these date choices even when the username conflicts.' })
+  const bio = 'Keep these date choices even when the username conflicts.'
+  await fillOnboarding(page, { username: sharedUsername, city: 'Montreal', bio })
   await page.getByRole('button', { name: /Build my date deck/i }).click()
 
-  await expect(page).toHaveURL(/\/onboarding\?error=/)
+  await expect(page).toHaveURL(/\/onboarding$/)
   await expect(page.getByText(/username is already taken/i)).toBeVisible()
+  await expect(page.getByLabel('Username')).toHaveValue(sharedUsername)
+  await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
+  await expect(page.getByLabel('City or town')).toHaveValue(/Montreal/)
+  await expect(page.getByLabel('Search radius')).toHaveValue('25')
+  await expect(page.getByLabel('Your ideal date vibe')).toHaveValue(bio)
+  await expect(page.getByLabel('Coffee shops')).toBeChecked()
+  await expect(page.getByLabel('Restaurants')).toBeChecked()
+  await expect(page.getByLabel('Galleries')).toBeChecked()
+  await expect(page.getByLabel('Profile visibility')).toHaveValue('mutuals')
+
   const profile = await waitForProfile(candidate.user.id)
   expect(profile.username).not.toBe(sharedUsername)
   expect(profile.city).toBe('Montreal')
   expect(profile.latitude).toBeCloseTo(45.5017)
-  expect(profile.bio).toBe('Keep these date choices even when the username conflicts.')
+  expect(profile.bio).toBe(bio)
   expect(profile.interests).toEqual(expect.arrayContaining(['cafe', 'restaurant', 'gallery']))
   expect(profile.onboarding_completed_at).toBeNull()
+})
+
+test('birth date rejects impossible dates before onboarding submission', async ({ page }) => {
+  const candidate = await createConfirmedUser({ displayName: 'Date Validation' })
+  await signInThroughUi(page, candidate.email, candidate.password)
+  await expect(page).toHaveURL(/\/onboarding$/)
+
+  const birthDate = page.getByLabel('Birth date')
+  await birthDate.fill('20001340')
+  await birthDate.blur()
+  await expect(birthDate).toHaveValue('2000-13-40')
+  await expect(birthDate).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText(/real calendar date/i)).toBeVisible()
 })
 
 test('a missing profile row is recreated after password sign-in', async ({ page }) => {
