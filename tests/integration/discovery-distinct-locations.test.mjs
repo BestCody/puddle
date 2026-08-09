@@ -115,3 +115,12 @@ test('seen-location RPC tracks completed swipe actions but not detail opens', as
   assert.match(migration, /latest\.undone_at is null/)
   assert.match(migration, /static_catalogue_actions/)
 })
+
+test('overlay removes seen locations before applying the candidate row limit', async () => {
+  const migration = await readFile(new URL('../../supabase/migrations/10049_distinct_discovery_overlay.sql', import.meta.url), 'utf8')
+  assert.match(migration, /discovery_seen_locations_v1\(\)/)
+  assert.match(migration, /into seen_ids/)
+  assert.match(migration, /not \(location\.id=any\(coalesce\(seen_ids,'\{\}'::uuid\[\]\)\)\)/)
+  assert.match(migration, /limit safe_limit/)
+  assert.ok(migration.indexOf("not (location.id=any(coalesce(seen_ids,'{}'::uuid[])))") < migration.indexOf('limit safe_limit'))
+})
