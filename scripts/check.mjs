@@ -25,6 +25,7 @@ const removed = [
   'lib/app/date-match.js','lib/app/date-match-rules.js','lib/app/date-match-snapshot.js',
   'lib/app/discovery-infrastructure.js','lib/app/discovery-infrastructure-v2.js','lib/app/discovery-relational-fallback.js',
   'lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js','lib/app/use-private-b2-asset.js','lib/app/use-static-catalogue-details.js','lib/app/use-static-media-resolution.js',
+  'lib/app/open-photo-r2.js','lib/app/r2-s3.js',
   '.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml',
   '.github/workflows/ops-live-photo-open-import.yml','.github/workflows/ops-live-photo-google-match.yml'
 ]
@@ -39,7 +40,7 @@ for (const path of removed) {
 
 const syntaxFiles = [
   'next.config.mjs','proxy.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/social-hub-data.js','lib/media/pipeline.js',
-  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/import-open-location-photos.mjs',
   'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
@@ -94,6 +95,12 @@ for (const marker of ['discovery_seen_locations_v1','r2_discovery_overlay_v1','r
 }
 for (const forbidden of ['static_catalogue_actions','static_catalogue_materializations','staticEphemeral','touch_static_catalogue_materializations_v1']) {
   if (relationalRuntime.includes(forbidden)) throw new Error(`Legacy database runtime remains in final cutover migration: ${forbidden}`)
+}
+
+const openPhotoImporter = await read('scripts/import-open-location-photos.mjs')
+if (!openPhotoImporter.includes("storeOpenPhotoInSupabase")) throw new Error('Open-photo importer does not use Supabase storage directly')
+for (const forbidden of ['storeOpenPhotoInR2','open-photo-r2','r2-s3','R2_CONFIG','R2_PUBLIC_BASE_URL']) {
+  if (openPhotoImporter.includes(forbidden)) throw new Error(`Legacy open-photo storage compatibility remains: ${forbidden}`)
 }
 
 const share = await read('app/api/social/share-location/route.js')
