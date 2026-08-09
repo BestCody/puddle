@@ -28,7 +28,7 @@ async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Low-key
       body: JSON.stringify({ results: [{ providerId: `test-${city.toLowerCase()}`, city, ...location, label: `${city}, ${location.region}, ${location.country}` }] })
     })
   })
-  await page.getByLabel('Username').fill(username)
+  await page.getByLabel('Username', { exact: true }).fill(username)
   await page.getByLabel('Birth date').fill('19940615')
   await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
   await page.getByLabel('City or town').fill(city)
@@ -134,7 +134,7 @@ test('duplicate usernames keep onboarding values in place with an inline error',
 
   await expect(page).toHaveURL(/\/onboarding$/)
   await expect(page.getByText(/username is already taken/i).first()).toBeVisible()
-  await expect(page.getByLabel('Username')).toHaveValue(sharedUsername)
+  await expect(page.getByLabel('Username', { exact: true })).toHaveValue(sharedUsername)
   await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
   await expect(page.getByLabel('City or town')).toHaveValue(/Montreal/)
   await expect(page.getByLabel('Search radius')).toHaveValue('25')
