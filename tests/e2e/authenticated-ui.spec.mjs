@@ -11,8 +11,6 @@ import {
   trackFrontendHealth
 } from './frontend-health.mjs'
 
-const catalogueOrigin = process.env.E2E_R2_BASE_URL || 'http://127.0.0.1:43110'
-
 async function assertPageShell(page, heading) {
   await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
   await assertProductVisualContract(page)
@@ -26,7 +24,6 @@ test('authenticated product UI renders across core pages on desktop and mobile',
 
   const health = trackFrontendHealth(page, {
     baseURL: testInfo.project.use.baseURL,
-    additionalOrigins: [catalogueOrigin],
     strictConsole: false
   })
 
