@@ -30,16 +30,20 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
   const inputRef = useRef(null)
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
+  const [savedUrl, setSavedUrl] = useState(() => publicMediaUrl(client, currentPath))
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
-  const currentUrl = publicMediaUrl(client, currentPath)
-  const shownUrl = preview || currentUrl
+  const shownUrl = preview || savedUrl
+
+  useEffect(() => {
+    if (!preview) setSavedUrl(publicMediaUrl(client, currentPath))
+  }, [client, currentPath, preview])
 
   useEffect(() => () => { if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview) }, [preview])
 
-  function clearSelection({ keepStatus = false } = {}) {
-    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview)
-    setPreview(null)
+  function clearSelection({ keepStatus = false, keepPreview = false } = {}) {
+    if (!keepPreview && preview?.startsWith('blob:')) URL.revokeObjectURL(preview)
+    if (!keepPreview) setPreview(null)
     setFile(null)
     if (!keepStatus) setStatus('')
     if (inputRef.current) inputRef.current.value = ''
@@ -85,9 +89,19 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
         setBusy(false)
         return
       }
+      const nextUrl = result.asset?.url || publicMediaUrl(client, result.asset?.object_path || result.asset?.objectPath)
+      if (!nextUrl) {
+        setBusy(false)
+        setStatus('The photo uploaded, but its public image URL could not be resolved. Try again.')
+        return
+      }
+      setSavedUrl(nextUrl)
+      if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview)
+      setPreview(null)
+      setFile(null)
+      if (inputRef.current) inputRef.current.value = ''
       setBusy(false)
       setStatus('Profile picture updated.')
-      clearSelection({ keepStatus: true })
       router.refresh()
     } catch {
       setBusy(false)
@@ -96,23 +110,26 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
   }
 
   async function remove() {
-    if (busy || !currentPath) return
+    if (busy || (!currentPath && !savedUrl)) return
     if (!window.confirm('Remove your profile picture?')) return
     setBusy(true)
     const { error } = await client.rpc('remove_profile_photo_v1')
     setBusy(false)
     if (error) return setStatus(error.message || 'Could not remove profile picture.')
+    setSavedUrl(null)
     setStatus('Profile picture removed.')
     router.refresh()
   }
 
   return <div className="profile-photo-editor">
-    <span className="social-avatar is-large" style={shownUrl ? { backgroundImage: `url(${shownUrl})` } : undefined}>{shownUrl ? null : initials(displayName)}</span>
+    <span className="social-avatar is-large" style={{ overflow: 'hidden' }}>
+      {shownUrl ? <img src={shownUrl} alt="Profile preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
+    </span>
     <div>
       <div className="profile-photo-actions">
-        <label>{file ? 'Choose another' : currentPath ? 'Change photo' : 'Add photo'}<input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={choose} disabled={busy} /></label>
+        <label>{file ? 'Choose another' : (currentPath || savedUrl) ? 'Change photo' : 'Add photo'}<input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={choose} disabled={busy} /></label>
         {file ? <><button type="button" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save photo'}</button><button type="button" onClick={() => clearSelection()} disabled={busy}>Cancel</button></> : null}
-        {!file && currentPath ? <button type="button" onClick={remove} disabled={busy}>Remove</button> : null}
+        {!file && (currentPath || savedUrl) ? <button type="button" onClick={remove} disabled={busy}>Remove</button> : null}
       </div>
       <div className="profile-photo-status">{status || 'JPEG, PNG, WebP, or AVIF · up to 10 MB'}</div>
     </div>
