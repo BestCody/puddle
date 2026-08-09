@@ -1,12 +1,15 @@
 name: Match Google Place IDs
 
+# Initial catalogue backfill deliberately consumes the full monthly no-cost
+# allowance for each matching SKU, then pauses only the paid verification path
+# until the UTC month resets. IDs-only Text Search remains the free discovery step.
 on:
   workflow_dispatch:
     inputs:
       limit:
         description: 'Maximum published photo-less locations to inspect'
         required: false
-        default: '100'
+        default: '2000'
         type: string
       apply:
         description: 'Save verified Place IDs to Supabase'
@@ -14,13 +17,14 @@ on:
         default: false
         type: boolean
   schedule:
-    - cron: '29 5 * * *'
+    - cron: '29 * * * *'
   push:
     branches: [main]
     paths:
       - '.github/workflows/google-place-match.yml'
       - 'scripts/match-google-places.mjs'
       - 'lib/app/google-place-match.js'
+      - 'supabase/migrations/10052_google_places_free_quota_matching.sql'
 
 permissions:
   contents: read
@@ -32,7 +36,7 @@ concurrency:
 jobs:
   match:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
@@ -40,15 +44,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Persist verified Google Place IDs
+      - name: Maximize free Google Place ID coverage
         if: github.event_name != 'workflow_dispatch'
-        run: npm run locations:google:match -- --limit=250 --apply
+        run: npm run locations:google:match -- --limit=2000 --apply
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           GOOGLE_PLACE_MATCH_MIN_SCORE: '0.86'
-          GOOGLE_PLACE_MATCH_DELAY_MS: '250'
+          GOOGLE_PLACE_MATCH_DELAY_MS: '100'
+          GOOGLE_PLACE_MATCH_MAX_DETAILS_CANDIDATES: '5'
       - name: Match Google Place IDs manually
         if: github.event_name == 'workflow_dispatch'
         run: npm run locations:google:match -- --limit="${{ inputs.limit }}" ${{ inputs.apply && '--apply' || '' }}
@@ -57,4 +62,5 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           GOOGLE_PLACE_MATCH_MIN_SCORE: '0.86'
-          GOOGLE_PLACE_MATCH_DELAY_MS: '250'
+          GOOGLE_PLACE_MATCH_DELAY_MS: '100'
+          GOOGLE_PLACE_MATCH_MAX_DETAILS_CANDIDATES: '5'
