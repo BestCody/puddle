@@ -24,7 +24,7 @@ function deviceId() {
   return value
 }
 
-export function ProfilePhotoEditor({ currentPath, displayName }) {
+export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
   const router = useRouter()
   const client = useMemo(() => createClient(), [])
   const inputRef = useRef(null)
@@ -36,6 +36,14 @@ export function ProfilePhotoEditor({ currentPath, displayName }) {
   const shownUrl = preview || currentUrl
 
   useEffect(() => () => { if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview) }, [preview])
+
+  function clearSelection({ keepStatus = false } = {}) {
+    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview)
+    setPreview(null)
+    setFile(null)
+    if (!keepStatus) setStatus('')
+    if (inputRef.current) inputRef.current.value = ''
+  }
 
   function choose(event) {
     const selected = event.target.files?.[0] || null
@@ -56,22 +64,14 @@ export function ProfilePhotoEditor({ currentPath, displayName }) {
     setStatus('Preview ready. Save when it looks right.')
   }
 
-  function cancel() {
-    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview)
-    setPreview(null)
-    setFile(null)
-    setStatus('')
-    if (inputRef.current) inputRef.current.value = ''
-  }
-
   async function save() {
-    if (!file || busy) return
+    if (!file || busy || !userId) return
     setBusy(true)
     setStatus('Uploading…')
     const form = new FormData()
     form.set('file', file)
     form.set('purpose', 'profile_photo')
-    form.set('target_id', '')
+    form.set('target_id', userId)
     form.set('sort_order', '0')
     try {
       const response = await csrfFetch('/api/media/upload', {
@@ -85,9 +85,9 @@ export function ProfilePhotoEditor({ currentPath, displayName }) {
         setBusy(false)
         return
       }
-      setStatus('Profile picture updated.')
       setBusy(false)
-      cancel()
+      setStatus('Profile picture updated.')
+      clearSelection({ keepStatus: true })
       router.refresh()
     } catch {
       setBusy(false)
@@ -111,7 +111,7 @@ export function ProfilePhotoEditor({ currentPath, displayName }) {
     <div>
       <div className="profile-photo-actions">
         <label>{file ? 'Choose another' : currentPath ? 'Change photo' : 'Add photo'}<input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={choose} disabled={busy} /></label>
-        {file ? <><button type="button" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save photo'}</button><button type="button" onClick={cancel} disabled={busy}>Cancel</button></> : null}
+        {file ? <><button type="button" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save photo'}</button><button type="button" onClick={() => clearSelection()} disabled={busy}>Cancel</button></> : null}
         {!file && currentPath ? <button type="button" onClick={remove} disabled={busy}>Remove</button> : null}
       </div>
       <div className="profile-photo-status">{status || 'JPEG, PNG, WebP, or AVIF · up to 10 MB'}</div>
