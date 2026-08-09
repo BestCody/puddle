@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { materializeStaticCatalogueReferences, verifiedStaticReference } from '@/lib/app/static-catalogue-materialization'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
@@ -26,26 +24,9 @@ export async function POST(request) {
     const friendId = uuid(body.friendId, 'friendId')
     const locationId = uuid(body.locationId, 'locationId')
     const note = body.note ? string(body.note, { name: 'note', max: 1000 }) : null
-    const staticEphemeral = body.staticCatalogueEphemeral === true
-    let resolvedLocationId = locationId
-
-    if (staticEphemeral) {
-      const staticRef = string(body.staticRef, { name: 'staticRef', max: 4096 })
-      const reference = verifiedStaticReference(staticRef, locationId)
-      if (!reference) return NextResponse.json({ error: 'That place is no longer available.' }, { status: 409 })
-      const admin = createAdminClient()
-      const materialized = await materializeStaticCatalogueReferences({
-        admin,
-        locationIds: [locationId],
-        references: [{ id: locationId, token: staticRef }]
-      })
-      if (materialized.missing?.length) return NextResponse.json({ error: 'That place is no longer available.' }, { status: 409 })
-      resolvedLocationId = materialized.materialized?.get(locationId)?.id || locationId
-    }
-
     const shared = await supabase.rpc('send_location_to_friend_v1', {
       target_friend: friendId,
-      target_location: resolvedLocationId,
+      target_location: locationId,
       share_note: note
     })
     if (shared.error) return NextResponse.json({ error: 'That place could not be sent to this friend.' }, { status: 400 })
