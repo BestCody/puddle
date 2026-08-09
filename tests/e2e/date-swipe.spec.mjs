@@ -73,7 +73,7 @@ test('Discover filters own location, distance, and place categories', async ({ p
   await page.goto('/discover')
   await page.getByRole('button', { name: 'Open filters' }).click()
   await expect(page.getByLabel('Location')).toBeVisible()
-  await expect(page.getByLabel('Search')).toHaveCount(0)
+  await expect(page.locator('input[placeholder="Coffee, park, museum…"]')).toHaveCount(0)
 
   const category = page.getByLabel('Category')
   const optionValues = await category.locator('option').evaluateAll((options) => options.map((option) => option.value))
