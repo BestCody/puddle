@@ -20,6 +20,21 @@ function initialLocation(profile = {}) {
   }
 }
 
+function emptyLocation() {
+  return {
+    city: '',
+    region: '',
+    country: '',
+    countryCode: '',
+    latitude: '',
+    longitude: '',
+    timezone: 'UTC',
+    label: '',
+    source: '',
+    accuracy: ''
+  }
+}
+
 function normalizedResult(result, source, accuracy = '') {
   return {
     city: result.city || '',
@@ -35,12 +50,19 @@ function normalizedResult(result, source, accuracy = '') {
   }
 }
 
-export function LocationPicker({ profile = {} }) {
+export function LocationPicker({ profile = {}, error = '' }) {
   const [location, setLocation] = useState(() => initialLocation(profile))
   const [query, setQuery] = useState(location.label || location.city || '')
   const [results, setResults] = useState([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+
+  function editQuery(nextQuery) {
+    setQuery(nextQuery.slice(0, 160))
+    setResults([])
+    setMessage('')
+    if (nextQuery !== location.label) setLocation(emptyLocation())
+  }
 
   async function search() {
     const value = query.trim()
@@ -53,8 +75,8 @@ export function LocationPicker({ profile = {} }) {
       if (!response.ok) throw new Error(payload.error || 'City search is unavailable.')
       setResults(payload.results || [])
       if (!(payload.results || []).length) setMessage('No matching cities found.')
-    } catch (error) {
-      setMessage(error.message || 'City search is unavailable.')
+    } catch (errorValue) {
+      setMessage(errorValue.message || 'City search is unavailable.')
     } finally {
       setBusy(false)
     }
@@ -89,21 +111,21 @@ export function LocationPicker({ profile = {} }) {
         setQuery(next.label)
         setResults([])
         setMessage('Current location selected.')
-      } catch (error) {
-        setMessage(error.message || 'We could not identify your location.')
+      } catch (errorValue) {
+        setMessage(errorValue.message || 'We could not identify your location.')
       } finally {
         setBusy(false)
       }
-    }, (error) => {
+    }, (locationError) => {
       setBusy(false)
-      setMessage(error.code === 1 ? 'Location permission was not granted.' : 'Your location could not be read.')
+      setMessage(locationError.code === 1 ? 'Location permission was not granted.' : 'Your location could not be read.')
     }, { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 })
   }
 
   return <div className="location-picker">
     <label className="field location-search-field">City or town
       <div className="location-search-row">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); search() } }} placeholder="Search anywhere in the world" autoComplete="off" />
+        <input value={query} onChange={(event) => editQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); search() } }} placeholder="Search anywhere in the world" autoComplete="off" maxLength={160} aria-invalid={Boolean(error)} aria-describedby="location-picker-error" />
         <button type="button" onClick={search} disabled={busy || query.trim().length < 2}>Search</button>
       </div>
     </label>
@@ -117,6 +139,7 @@ export function LocationPicker({ profile = {} }) {
 
     {location.latitude !== '' && location.longitude !== '' ? <div className="location-selected"><span>Selected location</span><strong>{location.label}</strong></div> : null}
     <p className="location-picker-message" aria-live="polite">{message}</p>
+    <small className="field-error" id="location-picker-error" aria-live="polite">{error}</small>
 
     <input type="hidden" name="city" value={location.city} />
     <input type="hidden" name="region" value={location.region} />
