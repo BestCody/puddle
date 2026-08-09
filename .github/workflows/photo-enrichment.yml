@@ -1,10 +1,16 @@
 name: Enrich place photos
 
-# Legacy bulk enrichment is manual-only. Production discovery uses the guarded
-# on-demand static-media resolver so every automatic media write stays behind
-# its runtime budget controls.
+# Relational discovery reads approved open-photo rows directly from Supabase.
+# Keep the catalogue moving in the background and run once when this workflow is
+# changed so a stalled queue resumes immediately after deployment.
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/photo-enrichment.yml'
 
 permissions:
   contents: read
@@ -15,7 +21,6 @@ concurrency:
 
 jobs:
   enrich:
-    if: ${{ vars.B2_INFRA_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 115
     steps:
@@ -26,20 +31,13 @@ jobs:
           cache: npm
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund
-      - name: Drain prioritized open-photo candidates into private Backblaze B2
+      - name: Drain prioritized open-photo candidates into Supabase public media
         run: npm run locations:photos:enrich
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
-          B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
-          B2_REGION: ${{ secrets.B2_REGION }}
-          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
-          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-          B2_BUCKET: ${{ secrets.B2_BUCKET }}
-          B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
-          OPEN_PHOTO_TARGET_BYTES: '45000'
-          OPEN_PHOTO_HARD_MAX_BYTES: '60000'
+          PHOTO_ENRICH_SYNC_MEDIA: 'false'
           PHOTO_ENRICH_BATCH_SIZE: '100'
           PHOTO_ENRICH_MAX_BATCHES: '50'
           PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '105'

@@ -58,9 +58,12 @@ test('relational photo delivery no longer depends on private B2 grants', async (
   assert.match(card, /GoogleServerPlacePhoto/)
 })
 
-test('photo enrichment no longer writes automatically outside runtime budgets', async () => {
+test('photo enrichment automatically drains approved open providers into Supabase without obsolete B2 writes', async () => {
   const workflow = await read('.github/workflows/photo-enrichment.yml')
   assert.match(workflow, /workflow_dispatch:/)
-  assert.doesNotMatch(workflow, /\bschedule:/)
-  assert.doesNotMatch(workflow, /\bcron:/)
+  assert.match(workflow, /\bschedule:/)
+  assert.match(workflow, /cron: '17 4 \* \* \*'/)
+  assert.match(workflow, /PHOTO_ENRICH_SYNC_MEDIA: 'false'/)
+  assert.match(workflow, /Supabase public media/)
+  assert.doesNotMatch(workflow, /B2_INFRA_ENABLED|B2_S3_ENDPOINT|B2_BUCKET|B2_APPLICATION_KEY/)
 })

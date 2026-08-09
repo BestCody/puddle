@@ -99,6 +99,7 @@ export function GooglePlacePhotoFallback({ title, placeId, lookup = null, placeh
       if (cancelled) return
       const error = event?.error
       if (error) console.error('[puddle-google-ui-kit-error]', error.name || 'Error', error.message || String(error))
+      mount.replaceChildren()
       setState('unavailable')
     }
 
