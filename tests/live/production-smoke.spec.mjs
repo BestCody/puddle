@@ -50,7 +50,7 @@ test('production share, profile photo, and Stripe handoff work end to end', asyn
     await page.getByLabel('Display name').fill('Puddle Live Smoke')
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Password').fill(password)
-    await page.getByRole('checkbox').check()
+    await page.getByRole('checkbox', { name: /confirm the information I/i }).check()
     await page.getByRole('button', { name: 'Create my Puddle →' }).click()
     await page.waitForURL(/\/onboarding(?:\?|$)/, { timeout: 30_000 })
     accountCreated = true
