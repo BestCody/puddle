@@ -133,7 +133,7 @@ test('duplicate usernames keep onboarding values in place with an inline error',
   await page.getByRole('button', { name: /Build my date deck/i }).click()
 
   await expect(page).toHaveURL(/\/onboarding$/)
-  await expect(page.getByText(/username is already taken/i)).toBeVisible()
+  await expect(page.getByText(/username is already taken/i).first()).toBeVisible()
   await expect(page.getByLabel('Username')).toHaveValue(sharedUsername)
   await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
   await expect(page.getByLabel('City or town')).toHaveValue(/Montreal/)
