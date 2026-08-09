@@ -96,7 +96,7 @@ export async function POST(request) {
 
     const objectPath = mediaObjectPath(user.id, processed.extension)
     const admin = createAdminClient()
-    const uploadBody = storageUploadBody(processed.buffer)
+    const uploadBody = storageUploadBody(processed.buffer, processed.mimeType)
     const { error: uploadError } = await admin.storage.from(processed.bucket).upload(objectPath, uploadBody, {
       contentType: processed.mimeType,
       cacheControl: processed.visibility === 'public' ? '31536000' : '3600',
