@@ -108,6 +108,30 @@ test('approved relational media renders directly without static-media resolution
   expect(staticMediaRequests).toEqual([])
 })
 
+test('a swiped location stays out of discovery after the deck is reloaded', async ({ page }) => {
+  const account = await createRapidSwiper()
+  await stubStaticMedia(page)
+
+  await signInThroughUi(page, account.email, account.password, '/discover')
+  await page.goto('/discover?q=E2E%20Rapid%20Swipe')
+
+  const heading = page.locator('.minimal-swipe-card h1')
+  await expect(heading).toContainText('E2E Rapid Swipe')
+  const swipedTitle = await heading.innerText()
+  const actionSaved = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return response.request().method() === 'POST' && url.pathname === '/api/discovery/actions' && response.ok()
+  })
+
+  await page.getByRole('button', { name: 'Pass' }).click()
+  await actionSaved
+  await page.reload()
+
+  await expect(heading).toBeVisible()
+  await expect(heading).not.toHaveText(swipedTitle)
+  await expect(heading).toContainText('E2E Rapid Swipe')
+})
+
 test('discovery refills in the background and keeps swiping past the twelve-card boundary', async ({ page }) => {
   const account = await createRapidSwiper()
   await stubStaticMedia(page)
