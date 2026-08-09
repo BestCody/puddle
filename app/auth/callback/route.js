@@ -47,6 +47,7 @@ export async function GET(request) {
   const code = exchangeableCode(rawCode)
   const providerError = knownProviderError(url.searchParams.get('error'))
   const next = safeNextPath(url.searchParams.get('next'), '/dashboard')
+  const legalConsent = url.searchParams.get('legal_consent') === '1'
 
   const supabase = await createClient()
   const { error } = await supabase.auth.exchangeCodeForSession(code)
@@ -64,6 +65,16 @@ export async function GET(request) {
   if (!user) return authFailure('session_not_created')
   const { profile, error: profileError } = await ensureProfile(supabase, user)
   if (profileError) return authFailure('profile_recovery_failed')
+
+  if (legalConsent) {
+    const acceptedAt = new Date().toISOString()
+    await supabase.auth.updateUser({ data: { legal_consent_at: acceptedAt, legal_consent_version: 'current' } })
+    await supabase.from('security_events').insert({
+      profile_id: user.id,
+      event_type: 'legal_consent_accepted',
+      metadata: { terms: true, privacy: true, version: 'current', accepted_at: acceptedAt, source: 'google_signup' }
+    })
+  }
 
   return NextResponse.redirect(appUrl(authenticatedDestination(profile, next)))
 }
