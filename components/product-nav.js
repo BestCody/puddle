@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 function NavIcon({ type }) {
   if (type === 'swipe') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3.5" width="12" height="17" rx="3"/><path d="M9 7h6M4 9l-2 3 2 3M20 9l2 3-2 3"/></svg>
   if (type === 'saved') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V21l-6-3.8L6 21V4.5Z"/></svg>
-  if (type === 'matches') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.6c0 5-8.8 10.4-8.8 10.4S3.2 13.6 3.2 8.6A4.6 4.6 0 0 1 12 6.7a4.6 4.6 0 0 1 8.8 1.9Z"/><path d="m9.5 11.5 1.6 1.6 3.6-3.8"/></svg>
+  if (type === 'friends') return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.2" r="2.4"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0M14.2 15.2A4.4 4.4 0 0 1 21 19"/></svg>
   if (type === 'billing') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 9.5h19M6.5 15h4"/></svg>
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
 }
@@ -14,14 +14,14 @@ function NavIcon({ type }) {
 const items = [
   { href: '/discover', label: 'Swipe', icon: 'swipe' },
   { href: '/plans', label: 'Saved', icon: 'saved' },
-  { href: '/matches', label: 'Matches', icon: 'matches' },
+  { href: '/matches', label: 'Friends', icon: 'friends' },
   { href: '/membership', label: 'Tiers', icon: 'billing' },
   { href: '/profile', label: 'Profile', icon: 'profile' }
 ]
 
 function isActive(pathname, href) {
   if (href === '/plans') return pathname === '/plans' || pathname.startsWith('/plans/')
-  if (href === '/matches') return pathname === '/matches' || pathname.startsWith('/matches/') || pathname.startsWith('/date-match/') || pathname.startsWith('/hangout/')
+  if (href === '/matches') return pathname === '/matches' || pathname.startsWith('/matches/')
   if (href === '/membership') return pathname === '/membership' || pathname.startsWith('/global-matches')
   return pathname === href || pathname.startsWith(`${href}/`)
 }
