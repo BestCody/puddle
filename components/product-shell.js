@@ -15,11 +15,26 @@ function initials(name) {
 }
 
 export async function ProductShell({ user, profile, children }) {
+  let supabase = null
+  async function database() {
+    if (!supabase) supabase = await createClient()
+    return supabase
+  }
+
+  let avatarUrl = null
+  if (profile?.avatar_path) {
+    if (String(profile.avatar_path).startsWith('/') || String(profile.avatar_path).startsWith('http')) avatarUrl = profile.avatar_path
+    else {
+      const client = await database()
+      avatarUrl = client.storage.from('puddle-public-media').getPublicUrl(profile.avatar_path).data.publicUrl
+    }
+  }
+
   let showAdmin = ['admin', 'moderator', 'support', 'finance'].includes(profile?.role)
   if (!showAdmin) {
     try {
-      const supabase = await createClient()
-      const { data } = await supabase.rpc('privileged_access_v1', { required_roles: [] })
+      const client = await database()
+      const { data } = await client.rpc('privileged_access_v1', { required_roles: [] })
       showAdmin = Boolean(data?.allowed)
     } catch {}
   }
@@ -33,7 +48,7 @@ export async function ProductShell({ user, profile, children }) {
           <div className="minimal-header-logo"><PuddleLogo compact href="/discover" /></div>
           <details className="profile-menu">
             <summary aria-label="Open profile menu">
-              <span className="profile-initials" aria-hidden="true">{initials(profile?.display_name)}</span>
+              <span className="profile-initials" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} aria-hidden="true">{avatarUrl ? null : initials(profile?.display_name)}</span>
             </summary>
             <div className="profile-menu-panel">
               <div className="profile-menu-person"><strong>{profile?.display_name || 'Puddle person'}</strong></div>
