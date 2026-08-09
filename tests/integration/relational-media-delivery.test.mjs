@@ -21,13 +21,12 @@ test('relational discovery keeps legacy object-store media off the browser path'
   assert.match(uiKit, /lookupLocation\(lookup\)/)
 })
 
-test('new approved open-photo imports persist in Supabase public media', async () => {
+test('new approved open-photo imports persist directly in Supabase public media', async () => {
   const importer = await read('scripts/import-open-location-photos.mjs')
-  const compatibility = await read('lib/app/open-photo-r2.js')
   const storage = await read('lib/app/open-photo-supabase.js')
-  assert.match(importer, /storeOpenPhotoInR2/)
-  assert.match(compatibility, /storeOpenPhotoInSupabase as storeOpenPhotoInR2/)
-  assert.doesNotMatch(compatibility, /open-photo-b2|putB2Object|b2Configuration/)
+  assert.match(importer, /storeOpenPhotoInSupabase/)
+  assert.match(importer, /from '\.\.\/lib\/app\/open-photo-supabase\.js'/)
+  assert.doesNotMatch(importer, /storeOpenPhotoInR2|open-photo-r2|r2-s3|R2_CONFIG|R2_PUBLIC_BASE_URL/)
   assert.match(storage, /OPEN_PHOTO_SUPABASE_BUCKET = 'puddle-public-media'/)
   assert.match(storage, /admin\.storage\.getBucket/)
   assert.match(storage, /\.jpeg\(\{ quality: 84, mozjpeg: true \}\)/)
