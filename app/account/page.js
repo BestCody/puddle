@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { ProductShell } from '@/components/product-shell'
 import { AuthMessage } from '@/components/auth-message'
-import { LocationPicker } from '@/components/location-picker'
 import { SubmitButton } from '@/components/submit-button'
 import { UsernameInput } from '@/components/username-input'
 import { deleteAccount, revokeOtherSessions, updatePassword } from '@/app/auth/actions'
@@ -11,25 +10,9 @@ import { requireUser } from '@/lib/auth/user'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Account settings' }
 
-const dateLocationOptions = [
-  { value: 'cafe', label: 'Coffee shops' },
-  { value: 'restaurant', label: 'Restaurants' },
-  { value: 'bar', label: 'Bars & lounges' },
-  { value: 'park', label: 'Parks & gardens' },
-  { value: 'museum', label: 'Museums' },
-  { value: 'gallery', label: 'Galleries' },
-  { value: 'attraction', label: 'Local attractions' },
-  { value: 'activity_venue', label: 'Activity dates' },
-  { value: 'scenic_spot', label: 'Scenic spots' },
-  { value: 'nightlife', label: 'Nightlife' },
-  { value: 'shop', label: 'Markets & bookstores' },
-  { value: 'community_space', label: 'Community spaces' }
-]
-
 export default async function AccountPage({ searchParams }) {
   const { user, profile } = await requireUser({ onboarding: true })
   const sessionExpiry = user.aud ? 'Managed securely by Supabase Auth' : 'Active'
-  const selectedLocations = new Set(profile?.interests || [])
 
   return (
     <ProductShell user={user} profile={profile}>
@@ -39,29 +22,15 @@ export default async function AccountPage({ searchParams }) {
 
       <div className="settings-grid">
         <form className="settings-card full" action={updateDateProfile}>
-          <h2>Profile and date preferences</h2>
-          <p className="muted">These choices shape the places in your swipe deck. Your selected location is converted to coordinates so Puddle can search nearby anywhere in the world.</p>
+          <h2>Profile settings</h2>
+          <p className="muted">Manage your profile details, date vibe, and visibility. Swipe location and place preferences are controlled from Discover filters.</p>
           <div className="field-row">
             <label className="field">Display name<input name="display_name" defaultValue={profile?.display_name || ''} required maxLength="60" /></label>
             <label className="field">Username<UsernameInput defaultValue={profile?.username || ''} id="account-username" /></label>
           </div>
-          <LocationPicker profile={profile} />
-          <label className="field">Search radius<input name="search_radius_km" type="number" inputMode="numeric" min="1" max="100" step="1" defaultValue={profile?.search_radius_km || 10} required /></label>
-          <fieldset className="field interest-fieldset date-location-fieldset">
-            <legend>What kinds of places do you like?</legend>
-            <p className="field-hint">Keep at least three selected.</p>
-            <div className="interest-grid date-location-grid">
-              {dateLocationOptions.map((option) => (
-                <label className="interest-chip date-location-chip" key={option.value}>
-                  <span><strong>{option.label}</strong></span>
-                  <input type="checkbox" name="date_locations" value={option.value} defaultChecked={selectedLocations.has(option.value)} aria-label={option.label} />
-                </label>
-              ))}
-            </div>
-          </fieldset>
           <label className="field">Your ideal date vibe<textarea name="bio" defaultValue={profile?.bio || ''} maxLength="500" placeholder="Low-key coffee, a walk somewhere pretty, and enough time to actually talk." /><small className="field-hint">500 characters maximum.</small></label>
           <label className="field">Profile visibility<select name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Shared-plan attendees</option><option value="hidden">Hidden</option></select></label>
-          <SubmitButton pendingText="Saving preferences…">Save profile and date preferences</SubmitButton>
+          <SubmitButton pendingText="Saving profile…">Save profile</SubmitButton>
         </form>
 
         <section className="settings-card">

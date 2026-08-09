@@ -1,10 +1,10 @@
 "use client"
 
-import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { DiscoverSocialBar } from '@/components/discover-social-bar'
+import { DiscoveryFilterSheet } from '@/components/discovery-filter-sheet'
 import { csrfFetch } from '@/lib/security/csrf-client'
 
 const ACTION_BATCH_DELAY_MS = 350
@@ -70,34 +70,17 @@ function retryDelay(attempt, retryAfterSeconds = 0) {
   return Math.min(ACTION_RETRY_MAX_MS, ACTION_RETRY_BASE_MS * (2 ** Math.min(5, attempt)))
 }
 
-function FilterSheet({ filters, categories, onChange, onApply, onClose, loading }) {
-  return (
-    <div className="minimal-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <section className="minimal-filter-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title">
-        <header><h2 id="filter-title">Filters</h2><button type="button" onClick={onClose} aria-label="Close filters">×</button></header>
-        <label>Search<input value={filters.q || ''} onChange={(event) => onChange('q', event.target.value)} maxLength={100} placeholder="Coffee, park, museum…" /></label>
-        <label>Category<select value={filters.category || ''} onChange={(event) => onChange('category', event.target.value)}><option value="">Any category</option>{categories.map((category) => <option value={category} key={category}>{String(category).replaceAll('_', ' ')}</option>)}</select></label>
-        <label>Distance<select value={String(filters.distance || 10)} onChange={(event) => onChange('distance', Number(event.target.value))}>{[2, 5, 10, 25, 50, 100].map((value) => <option value={value} key={value}>{value} km</option>)}</select></label>
-        <label>Price<select value={filters.price || 'any'} onChange={(event) => onChange('price', event.target.value)}><option value="any">Any price</option><option value="1">$</option><option value="2">$$</option><option value="3">$$$</option><option value="4">$$$$</option></select></label>
-        <label className="minimal-filter-check"><input type="checkbox" checked={Boolean(filters.openNow)} onChange={(event) => onChange('openNow', event.target.checked)} /> Open now</label>
-        <label className="minimal-filter-check"><input type="checkbox" checked={Boolean(filters.accessible)} onChange={(event) => onChange('accessible', event.target.checked)} /> Accessible</label>
-        <button className="minimal-primary-button" type="button" onClick={onApply} disabled={loading}>{loading ? 'Loading…' : 'Apply'}</button>
-      </section>
-    </div>
-  )
-}
-
 function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) {
   if (feed.emptyReason === 'location_required') return <div className="minimal-deck-complete">
     <h1>Choose your location</h1>
     <p>Puddle needs a city or your current location before it can find nearby places.</p>
-    <div><Link className="minimal-primary-button" href="/account">Set location</Link></div>
+    <div><button className="minimal-primary-button" type="button" onClick={onFilters}>Choose location</button></div>
   </div>
 
   if (feed.emptyReason === 'catalogue_sync_pending') return <div className="minimal-deck-complete">
     <h1>Places are being added nearby</h1>
-    <p>{feed.centerLabel ? `Puddle has your location in ${feed.centerLabel}, but this area needs a location refresh.` : 'This area needs a location refresh.'}</p>
-    <div><button className="minimal-primary-button" type="button" onClick={onRefresh}>Try again</button><Link href="/account">Edit location</Link></div>
+    <p>No places are available around the selected location yet.</p>
+    <div><button className="minimal-primary-button" type="button" onClick={onRefresh}>Try again</button><button type="button" onClick={onFilters}>Change location</button></div>
   </div>
 
   if (!exhausted && feed.emptyReason === 'filters') return <div className="minimal-deck-complete">
@@ -123,7 +106,16 @@ function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) 
 export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const initialItems = initialFeed.items.slice(0, DECK_BATCH_SIZE)
   const [feed, setFeed] = useState({ ...initialFeed, items: withRequestId(initialItems, initialFeed.requestId) })
-  const [filters, setFilters] = useState({ ...initialFeed.filters, kind: 'place', date: 'any', limit: DECK_BATCH_SIZE })
+  const [filters, setFilters] = useState({
+    ...initialFeed.filters,
+    q: '',
+    latitude: initialFeed.center?.latitude ?? initialFeed.filters?.latitude ?? null,
+    longitude: initialFeed.center?.longitude ?? initialFeed.filters?.longitude ?? null,
+    locationLabel: initialFeed.filters?.locationLabel || initialFeed.centerLabel || '',
+    kind: 'place',
+    date: 'any',
+    limit: DECK_BATCH_SIZE
+  })
   const [index, setIndex] = useState(0)
   const [choices, setChoices] = useState({})
   const [showFilters, setShowFilters] = useState(false)
@@ -254,7 +246,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const loadMore = useCallback(async () => {
     if (continuationInFlight.current || exhausted) return continuationInFlight.current
     const generation = deckGeneration.current
-    const normalized = { ...filters, kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
+    const normalized = { ...filters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
     const excludeIds = [...sessionIds.current].slice(0, MAX_CONTINUATION_EXCLUDES)
     setLoadingMore(true)
     const task = (async () => {
@@ -332,18 +324,18 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   })
 
   function updateFilter(name, value) {
-    setFilters((currentFilters) => ({ ...currentFilters, [name]: value, kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }))
+    setFilters((currentFilters) => ({ ...currentFilters, [name]: value, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }))
   }
 
   function context(item) {
-    return { mode: 'solo', category: item?.category || filters.category || null, mood: filters.q || null, price: filters.price || 'any', daypart: daypart(), source: 'swipe' }
+    return { mode: 'solo', category: item?.category || filters.category || null, mood: null, price: filters.price || 'any', daypart: daypart(), source: 'swipe' }
   }
 
   async function refresh(nextFilters = filters) {
     setLoading(true)
     deckGeneration.current += 1
     await drainActions()
-    const normalized = { ...nextFilters, kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
+    const normalized = { ...nextFilters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
     const response = await fetch(`/api/discovery?${queryString(normalized)}`, { cache: 'no-store' })
     const result = await response.json().catch(() => ({}))
     setLoading(false)
@@ -351,7 +343,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     const nextItems = (result.items || []).slice(0, DECK_BATCH_SIZE)
     sessionIds.current = new Set(nextItems.map((item) => item.content_id))
     setFeed({ ...result, items: withRequestId(nextItems, result.requestId) })
-    setFilters({ ...result.filters, kind: 'place', date: 'any', limit: DECK_BATCH_SIZE })
+    setFilters({ ...result.filters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE })
     setIndex(0)
     setChoices({})
     setShowFilters(false)
@@ -440,7 +432,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
         onExpand={expandDistance}
       /> : <EmptyDeck feed={feed} onRefresh={() => refresh()} onFilters={() => setShowFilters(true)} onExpand={expandDistance} />}
 
-      {showFilters ? <FilterSheet filters={filters} categories={categories} onChange={updateFilter} onApply={() => refresh(filters)} onClose={() => setShowFilters(false)} loading={loading} /> : null}
+      {showFilters ? <DiscoveryFilterSheet filters={filters} categories={categories} onChange={updateFilter} onApply={() => refresh(filters)} onClose={() => setShowFilters(false)} loading={loading} /> : null}
     </section>
   )
 }

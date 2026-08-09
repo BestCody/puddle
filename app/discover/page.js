@@ -55,9 +55,9 @@ export default async function DiscoverPage({ searchParams }) {
       date: 'any',
       distance: Number.isFinite(requestedDistance) && requestedDistance > 0
         ? Math.min(100, requestedDistance)
-        : session.profile.search_radius_km || 10,
+        : 10,
       limit: 12,
-      q: textParam(params?.q),
+      q: '',
       category: textParam(params?.category, 40),
       price: textParam(params?.price, 10) || 'any',
       amenity: textParam(params?.amenity, 60),
