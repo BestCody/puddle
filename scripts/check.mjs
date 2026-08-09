@@ -7,14 +7,14 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
   'public/landing.html','public/styles.css','public/landing-responsive.css','public/landing-hardening.css','public/app.js','public/puddle-mark.svg',
-  'app/layout.js','app/auth.css','app/onboarding.css','app/date-swipe.css','app/swipe-v2.css','app/date-match.css','app/real-place-photos.css','app/product.css','app/sidebar-refresh.css','app/minimal-product.css','app/group-map.css','app/loading.js','app/error.js',
+  'app/layout.js','app/auth.css','app/onboarding.css','app/date-swipe.css','app/swipe-v2.css','app/date-match.css','app/real-place-photos.css','app/product.css','app/sidebar-refresh.css','app/minimal-product.css','app/group-map.css','app/social-hub.css','app/loading.js','app/error.js',
   'app/signin/page.js','app/signup/page.js','app/forgot-password/page.js','app/update-password/page.js','app/auth/actions.js','app/auth/callback/route.js','app/auth/confirm/route.js','app/auth/error/page.js',
   'app/onboarding/page.js','app/onboarding/actions.js','app/dashboard/page.js','app/account/page.js','app/discover/page.js','app/date-match/[token]/page.js','app/hangout/[token]/page.js','app/matches/page.js','app/plans/page.js','app/profile/page.js','app/create/place/page.js',
-  'app/api/auth/session/route.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/date-match/start/route.js','app/api/date-match/action/route.js','app/api/date-match/[token]/route.js','app/api/media/upload/route.js','app/api/geocode/route.js',
-  'components/auth-shell.js','components/product-shell.js','components/product-nav.js','components/puddle-logo.js','components/empty-state.js','components/date-swipe-workspace-v2.js','components/minimal-swipe-card.js','components/swipe-action-dock.js','components/date-match-workspace.js','components/service-worker-cleanup.js',
-  'lib/supabase/client.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/supabase/admin.js','lib/auth/user.js','lib/auth/redirect.js','lib/security/csrf-client.js','lib/app/discovery-infrastructure.js','lib/app/discovery-filters.js','lib/app/date-match.js','lib/app/date-match-rules.js','lib/app/location-plans-data.js','lib/app/matches-data.js','lib/app/static-catalogue.js','lib/media/pipeline.js',
+  'app/api/auth/session/route.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/date-match/start/route.js','app/api/date-match/action/route.js','app/api/date-match/[token]/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js','app/api/geocode/route.js',
+  'components/auth-shell.js','components/product-shell.js','components/product-nav.js','components/puddle-logo.js','components/empty-state.js','components/date-swipe-workspace-v2.js','components/minimal-swipe-card.js','components/swipe-action-dock.js','components/discover-social-bar.js','components/social-hub.js','components/profile-photo-editor.js','components/service-worker-cleanup.js',
+  'lib/supabase/client.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/supabase/admin.js','lib/auth/user.js','lib/auth/redirect.js','lib/security/csrf-client.js','lib/app/discovery-infrastructure.js','lib/app/discovery-filters.js','lib/app/location-plans-data.js','lib/app/social-hub-data.js','lib/app/static-catalogue.js','lib/media/pipeline.js',
   'scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-security-surface.mjs','scripts/check-bundle-size.mjs','scripts/cleanup-orphaned-media.mjs','scripts/cleanup-r2-assets.mjs',
-  'supabase/migrations/10003_date_match.sql','supabase/migrations/10016_remove_notifications_and_pwa.sql','supabase/migrations/10028_r2_runtime_second_optimization.sql','supabase/seed.sql','tests/unit/date-match.test.mjs','tests/unit/group-context.test.mjs','docs/AUTH_SETUP.md','docs/DATE_MATCH.md'
+  'supabase/migrations/10003_date_match.sql','supabase/migrations/10016_remove_notifications_and_pwa.sql','supabase/migrations/10028_r2_runtime_second_optimization.sql','supabase/migrations/10046_friends_messages_social_hub.sql','supabase/seed.sql','tests/unit/date-match.test.mjs','tests/unit/group-context.test.mjs','docs/AUTH_SETUP.md','docs/DATE_MATCH.md'
 ]
 for (const path of required) await access(join(root, path))
 
@@ -38,8 +38,8 @@ for (const path of removed) {
 }
 
 const syntaxFiles = [
-  'next.config.mjs','proxy.js','lib/supabase/env.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/supabase/admin.js','lib/auth/redirect.js','lib/app/discovery-infrastructure.js','lib/app/discovery-filters.js','lib/app/date-match.js','lib/app/date-match-rules.js','lib/app/location-plans-data.js','lib/app/matches-data.js','lib/app/static-catalogue.js','lib/media/pipeline.js',
-  'scripts/check.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-security-surface.mjs','scripts/check-bundle-size.mjs','scripts/cleanup-orphaned-media.mjs','scripts/cleanup-r2-assets.mjs','public/app.js','app/auth/actions.js','app/onboarding/actions.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/date-match/start/route.js','app/api/date-match/action/route.js','app/api/date-match/[token]/route.js','app/api/media/upload/route.js','app/api/geocode/route.js','app/auth/callback/route.js','app/auth/confirm/route.js'
+  'next.config.mjs','proxy.js','lib/supabase/env.js','lib/supabase/server.js','lib/supabase/proxy.js','lib/supabase/admin.js','lib/auth/redirect.js','lib/app/discovery-infrastructure.js','lib/app/discovery-filters.js','lib/app/location-plans-data.js','lib/app/social-hub-data.js','lib/app/static-catalogue.js','lib/media/pipeline.js',
+  'scripts/check.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-security-surface.mjs','scripts/check-bundle-size.mjs','scripts/cleanup-orphaned-media.mjs','scripts/cleanup-r2-assets.mjs','public/app.js','app/auth/actions.js','app/onboarding/actions.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/date-match/start/route.js','app/api/date-match/action/route.js','app/api/date-match/[token]/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js','app/api/geocode/route.js','app/auth/callback/route.js','app/auth/confirm/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
 
@@ -96,7 +96,7 @@ requireIncludes(signIn, ['Email me a one-time login code','Sign in with code'], 
 if (!authActions.includes("verifyOtp({ email, token, type: 'email' })")) throw new Error('Email OTP verification is missing')
 
 const layout = await read('app/layout.js')
-requireIncludes(layout, ["import './minimal-product.css'", "import './group-map.css'", 'ServiceWorkerCleanup'], 'Minimal product layout')
+requireIncludes(layout, ["import './minimal-product.css'", "import './group-map.css'", "import './social-hub.css'", 'ServiceWorkerCleanup'], 'Minimal product layout')
 if (/stage-five|stage-six|manifest\.webmanifest|PwaClient|appleWebApp/.test(layout)) throw new Error('Removed legacy/PWA assets remain active')
 
 const dashboard = await read('app/dashboard/page.js')
@@ -104,10 +104,10 @@ requireIncludes(dashboard, ["redirect('/discover')"], 'Swipe-first dashboard red
 if (/getHomeSnapshot|HomeMoodShortcuts|home-primary-card/.test(dashboard)) throw new Error('Dashboard content was not removed')
 
 const productNav = await read('components/product-nav.js')
-for (const label of ['Swipe','Saved','Matches','Profile']) if (!productNav.includes(`label: '${label}'`)) throw new Error(`Minimal navigation is missing ${label}`)
-for (const removedLabel of ['Home','Saved & plans','Your next move','Find a location','Preferences and account']) if (productNav.includes(`'${removedLabel}'`)) throw new Error(`Navigation still exposes ${removedLabel}`)
+for (const label of ['Swipe','Saved','Friends','Profile']) if (!productNav.includes(`label: '${label}'`)) throw new Error(`Minimal navigation is missing ${label}`)
+for (const removedLabel of ['Matches','Home','Saved & plans','Your next move','Find a location','Preferences and account']) if (productNav.includes(`label: '${removedLabel}'`)) throw new Error(`Navigation still exposes ${removedLabel}`)
 const productShell = await read('components/product-shell.js')
-requireIncludes(productShell, ['minimal-product-sidebar','profile-menu-panel','/account','signOut'], 'Minimal product shell')
+requireIncludes(productShell, ['minimal-product-sidebar','profile-menu-panel','avatar_path','/account','signOut'], 'Minimal product shell')
 
 const onboarding = await read('app/onboarding/page.js')
 const onboardingAction = await read('app/onboarding/actions.js')
@@ -120,22 +120,40 @@ const actions = await read('app/api/discovery/actions/route.js')
 const swipe = await read('components/date-swipe-workspace-v2.js')
 const card = await read('components/minimal-swipe-card.js')
 const swipeDock = await read('components/swipe-action-dock.js')
+const discoverSocial = await read('components/discover-social-bar.js')
 requireIncludes(discoverPage, ["kind: 'place'",'DateSwipeWorkspaceV2','recordSampledInfrastructureAnalytics','limit: 12'], 'Swipe page')
 requireIncludes(discovery, ['r2_discovery_overlay_v1','r2-primary','R2_CATALOGUE_NOT_CONFIGURED','record_discovery_session_sample_v1'], 'R2 discovery runtime')
 for (const forbidden of ['getDiscoveryFeed','supabase-fallback','logInfrastructureDiscoveryImpressions']) if (discovery.includes(forbidden)) throw new Error(`Discovery fallback remains: ${forbidden}`)
 requireIncludes(actions, ['MAX_ACTIONS = 20','record_discovery_actions_v3','materializeStaticCatalogueReferences'], 'Batched action endpoint')
-requireIncludes(swipe, ['MinimalSwipeCard','SwipeActionDock','FilterSheet','InviteSheet',"'/api/discovery/actions'",'flushActions','queueDiscoveryAction','drainActions'], 'Minimal swipe workspace')
+requireIncludes(swipe, ['MinimalSwipeCard','SwipeActionDock','FilterSheet','DiscoverSocialBar',"'/api/discovery/actions'",'flushActions','queueDiscoveryAction','drainActions'], 'Minimal swipe workspace')
+if (/InviteSheet|createSharedDeck|Invite others|\/api\/date-match\/start/.test(swipe)) throw new Error('Retired shared-deck UI remains in Discover')
+requireIncludes(discoverSocial, ['friends_who_liked_location_v1','social_friends_v1','/api/social/share-location','Send to'], 'Discover social sharing')
 requireIncludes(card, ['minimal-swipe-photo','opening_hours','amenities','google.com/maps','Full details'], 'Minimal location card')
 for (const marker of ["key: 'undo'", "key: 'pass'", "key: 'save'", "key: 'perfect'"]) if (!swipeDock.includes(marker)) throw new Error(`Swipe dock is missing ${marker}`)
 
 const plans = await read('app/plans/page.js')
 requireIncludes(plans, ["['saved', 'Saved']", "['planned', 'Plans']", "params?.tab === 'past'", 'minimal-place-card','History'], 'Saved and plans page')
-const matches = await read('app/matches/page.js')
-const matchesData = await read('lib/app/matches-data.js')
-requireIncludes(matches, ['Active rooms','Matched places','getMatchesSnapshot'], 'Matches page')
-requireIncludes(matchesData, ['date_match_members','date_match_decks','date_match_matches'], 'Matches data')
+const friendsPage = await read('app/matches/page.js')
+const socialHub = await read('components/social-hub.js')
+const socialData = await read('lib/app/social-hub-data.js')
+requireIncludes(friendsPage, ['SocialHub','getSocialHubSnapshot',"title: 'Friends'"], 'Friends page')
+requireIncludes(socialHub, ['Friends','Messages','Shared','social_friend_search_v1','social_send_friend_request_v1','social_open_direct_conversation_v1','social_send_message_v1','shared_places_with_friend_v1'], 'Friends social hub')
+requireIncludes(socialData, ['social_friends_v1','social_friend_requests_v1','social_conversations_v1','social_shared_locations_v1'], 'Friends social data')
 const profile = await read('app/profile/page.js')
-requireIncludes(profile, ['Search radius','Preferences','Account settings','Advanced'], 'Minimal profile')
+const profilePhoto = await read('components/profile-photo-editor.js')
+requireIncludes(profile, ['ProfilePhotoEditor','Search radius','Preferences','Account settings','Advanced'], 'Minimal profile')
+requireIncludes(profilePhoto, ["purpose', 'profile_photo'",'remove_profile_photo_v1','Preview ready'], 'Profile picture editor')
+
+const retiredPairPage = await read('app/date-match/[token]/page.js')
+const retiredGroupPage = await read('app/hangout/[token]/page.js')
+const retiredStart = await read('app/api/date-match/start/route.js')
+requireIncludes(retiredPairPage, ["redirect('/matches')"], 'Retired pair swipe page')
+requireIncludes(retiredGroupPage, ["redirect('/matches')"], 'Retired group swipe page')
+requireIncludes(retiredStart, ['status: 410','retired'], 'Retired shared deck API')
+
+const socialMigration = await read('supabase/migrations/10046_friends_messages_social_hub.sql')
+requireIncludes(socialMigration, ['social_send_friend_request_v1','social_friends_v1','social_conversations_v1','social_messages_v1','friends_who_liked_location_v1','shared_places_with_friend_v1','send_location_to_friend_v1','remove_profile_photo_v1'], 'Friends social migration')
+if (/queue_notification_v1/.test(socialMigration)) throw new Error('Friends social migration must not depend on notifications')
 
 const runtimeMigration = await read('supabase/migrations/10028_r2_runtime_second_optimization.sql')
 requireIncludes(runtimeMigration, ['record_discovery_actions_v3','discovery_action_receipts','prepare_r2_cleanup_v2','drop function if exists public.record_discovery_action_v2'], 'Permanent R2 migration')
