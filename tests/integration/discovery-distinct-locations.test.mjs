@@ -106,21 +106,24 @@ test('continuation exclusions remove every row in the same physical duplicate gr
   assert.deepEqual(feed.items.map((item) => item.content_id), [distinct.id])
 })
 
-test('seen-location RPC tracks completed swipe actions but not detail opens', async () => {
-  const migration = await readFile(new URL('../../supabase/migrations/10048_distinct_discovery_locations.sql', import.meta.url), 'utf8')
+test('installed seen-location runtime tracks relational swipe state only', async () => {
+  const migration = await readFile(new URL('../../supabase/migrations/10050_relational_discovery_runtime.sql', import.meta.url), 'utf8')
   assert.match(migration, /discovery_seen_locations_v1/)
   assert.match(migration, /action\.action in \('saved','interested','dismissed','visited'\)/)
   assert.doesNotMatch(migration, /action\.action in \([^)]*'opened'/)
   assert.match(migration, /order by action\.location_id,action\.id desc/)
   assert.match(migration, /latest\.undone_at is null/)
-  assert.match(migration, /static_catalogue_actions/)
+  assert.doesNotMatch(migration, /static_catalogue_actions/)
 })
 
-test('overlay removes seen locations before applying the candidate row limit', async () => {
-  const migration = await readFile(new URL('../../supabase/migrations/10049_distinct_discovery_overlay.sql', import.meta.url), 'utf8')
+test('installed overlay removes seen rows before its limit and has no static materialization gate', async () => {
+  const migration = await readFile(new URL('../../supabase/migrations/10050_relational_discovery_runtime.sql', import.meta.url), 'utf8')
   assert.match(migration, /discovery_seen_locations_v1\(\)/)
   assert.match(migration, /into seen_ids/)
   assert.match(migration, /not \(location\.id=any\(coalesce\(seen_ids,'\{\}'::uuid\[\]\)\)\)/)
   assert.match(migration, /limit safe_limit/)
   assert.ok(migration.indexOf("not (location.id=any(coalesce(seen_ids,'{}'::uuid[])))") < migration.indexOf('limit safe_limit'))
+  assert.doesNotMatch(migration, /static_catalogue_materializations/)
+  assert.doesNotMatch(migration, /staticEphemeral/)
+  assert.doesNotMatch(migration, /touch_static_catalogue_materializations_v1/)
 })
