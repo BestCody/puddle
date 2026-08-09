@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { ProductShell } from '@/components/product-shell'
 import { AuthMessage } from '@/components/auth-message'
-import { LocationPicker } from '@/components/location-picker'
 import { SubmitButton } from '@/components/submit-button'
 import { UsernameInput } from '@/components/username-input'
 import { deleteAccount, revokeOtherSessions, updatePassword } from '@/app/auth/actions'
@@ -23,16 +22,15 @@ export default async function AccountPage({ searchParams }) {
 
       <div className="settings-grid">
         <form className="settings-card full" action={updateDateProfile}>
-          <h2>Profile and date preferences</h2>
-          <p className="muted">Manage your profile details, location, date vibe, and visibility.</p>
+          <h2>Profile settings</h2>
+          <p className="muted">Manage your profile details, date vibe, and visibility. Swipe location and place preferences are controlled from Discover filters.</p>
           <div className="field-row">
             <label className="field">Display name<input name="display_name" defaultValue={profile?.display_name || ''} required maxLength="60" /></label>
             <label className="field">Username<UsernameInput defaultValue={profile?.username || ''} id="account-username" /></label>
           </div>
-          <LocationPicker profile={profile} />
           <label className="field">Your ideal date vibe<textarea name="bio" defaultValue={profile?.bio || ''} maxLength="500" placeholder="Low-key coffee, a walk somewhere pretty, and enough time to actually talk." /><small className="field-hint">500 characters maximum.</small></label>
           <label className="field">Profile visibility<select name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Shared-plan attendees</option><option value="hidden">Hidden</option></select></label>
-          <SubmitButton pendingText="Saving preferences…">Save profile and date preferences</SubmitButton>
+          <SubmitButton pendingText="Saving profile…">Save profile</SubmitButton>
         </form>
 
         <section className="settings-card">
