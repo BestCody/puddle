@@ -11,7 +11,7 @@ export default function ForgotPasswordPage({ searchParams }) {
     <AuthShell eyebrow="No panic" title="Let’s get you back in." description="Enter your email and we’ll send a secure password-reset link.">
       <AuthMessage searchParams={searchParams} />
       <form className="auth-form" action={requestPasswordReset}>
-        <label className="field">Email<input name="email" type="email" autoComplete="email" required placeholder="you@example.com" /></label>
+        <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" placeholder="you@example.com" /></label>
         <SubmitButton>Send reset link →</SubmitButton>
       </form>
       <div className="auth-links"><Link href="/signin">Back to sign in</Link></div>

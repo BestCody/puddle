@@ -15,15 +15,17 @@ export default async function SignUpPage({ searchParams }) {
       <AuthMessage searchParams={params} />
       <form className="auth-form" action={signUp}>
         <label className="field">Display name<input name="display_name" autoComplete="name" required maxLength="60" placeholder="Ava" /></label>
-        <label className="field">Email<input name="email" type="email" autoComplete="email" required defaultValue={email} placeholder="you@example.com" /></label>
-        <label className="field">Password<input name="password" type="password" autoComplete="new-password" required minLength="10" placeholder="At least 10 characters" /></label>
-        <label className="checkbox"><input type="checkbox" required /> <span>I agree to Puddle’s Terms and Privacy Policy and confirm the information I provide is accurate.</span></label>
+        <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} placeholder="you@example.com" /></label>
+        <label className="field">Password<input name="password" type="password" autoComplete="new-password" required minLength="10" maxLength="128" placeholder="10–128 characters" /></label>
+        <label className="checkbox"><input type="checkbox" name="terms_accepted" value="yes" required /> <span>I agree to Puddle’s Terms and Privacy Policy and confirm the information I provide is accurate.</span></label>
         <SubmitButton>Create my Puddle →</SubmitButton>
       </form>
       <div className="auth-divider">or</div>
       <div className="oauth-grid" style={{ gridTemplateColumns: '1fr' }}>
         <form className="auth-form" action={signInWithOAuth}>
           <input type="hidden" name="provider" value="google" />
+          <input type="hidden" name="signup_intent" value="1" />
+          <label className="checkbox"><input type="checkbox" name="terms_accepted" value="yes" required /> <span>I agree to Puddle’s Terms and Privacy Policy before continuing with Google.</span></label>
           <SubmitButton className="oauth-button" pendingText="Opening Google…">Continue with Google</SubmitButton>
         </form>
       </div>

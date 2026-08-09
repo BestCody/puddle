@@ -17,7 +17,7 @@ export default async function SignInPage({ searchParams }) {
       <AuthMessage searchParams={params} />
       <form className="auth-form" action={signIn}>
         <input type="hidden" name="next" value={next} />
-        <label className="field">Email<input name="email" type="email" autoComplete="email" required defaultValue={email} placeholder="you@example.com" /></label>
+        <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} placeholder="you@example.com" /></label>
         <label className="field">Password<input name="password" type="password" autoComplete="current-password" required placeholder="••••••••••" /></label>
         <SubmitButton>Sign in →</SubmitButton>
       </form>
@@ -35,7 +35,7 @@ export default async function SignInPage({ searchParams }) {
         <>
           <form className="auth-form" action={verifyLoginCode}>
             <input type="hidden" name="next" value={next} />
-            <label className="field">Email<input name="email" type="email" autoComplete="email" required defaultValue={email} /></label>
+            <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} /></label>
             <label className="field">One-time login code<input name="token" inputMode="numeric" autoComplete="one-time-code" required minLength="6" maxLength="8" pattern="[0-9]{6,8}" placeholder="123456" /></label>
             <SubmitButton pendingText="Checking code…">Sign in with code →</SubmitButton>
           </form>
@@ -48,7 +48,7 @@ export default async function SignInPage({ searchParams }) {
       ) : (
         <form className="auth-form" action={sendLoginCode}>
           <input type="hidden" name="next" value={next} />
-          <label className="field">Email<input name="email" type="email" autoComplete="email" required defaultValue={email} placeholder="you@example.com" /></label>
+          <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} placeholder="you@example.com" /></label>
           <SubmitButton className="secondary-button" pendingText="Sending code…">Email me a one-time login code</SubmitButton>
         </form>
       )}

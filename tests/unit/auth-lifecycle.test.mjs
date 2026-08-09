@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { authLinkErrorMessage, isDuplicateUsernameError, profileWriteErrorMessage, safeAuthErrorCode } from '../../lib/auth/errors.js'
 import { authenticatedDestination } from '../../lib/auth/profile.js'
 import { pathWithMessage, safeNextPath } from '../../lib/auth/redirect.js'
+import { birthDateError, formatBirthDateDigits, isValidEmail, sanitizeUsername } from '../../lib/app/input-validation.js'
 
 test('expired and reused authentication links receive a useful message', () => {
   assert.match(authLinkErrorMessage('otp_expired'), /expired|already been used/i)
@@ -40,6 +41,52 @@ test('new or recovered profiles are always sent through onboarding', () => {
 
 test('password recovery is allowed before onboarding is complete', () => {
   assert.equal(authenticatedDestination(null, '/update-password'), '/update-password')
+})
+
+test('birth date entry keeps only eight digits and formats them predictably', () => {
+  assert.equal(formatBirthDateDigits('2000abc0219xyz999'), '2000-02-19')
+  assert.equal(formatBirthDateDigits('200002'), '2000-02')
+  assert.equal(formatBirthDateDigits('2000-02-19'), '2000-02-19')
+})
+
+test('birth date validation rejects impossible, future, underage, and implausibly old dates', () => {
+  const now = new Date('2026-08-09T12:00:00Z')
+  assert.equal(birthDateError('2000-02-29', now), '')
+  assert.match(birthDateError('2000-13-01', now), /real calendar date/i)
+  assert.match(birthDateError('2001-02-29', now), /real calendar date/i)
+  assert.match(birthDateError('2027-01-01', now), /future/i)
+  assert.match(birthDateError('2014-08-10', now), /at least 13/i)
+  assert.match(birthDateError('1900-01-01', now), /realistic/i)
+})
+
+test('email and username normalization match the form contracts', () => {
+  assert.equal(isValidEmail('person@example.com'), true)
+  assert.equal(isValidEmail('person@example'), false)
+  assert.equal(isValidEmail(`${'a'.repeat(245)}@example.com`), false)
+  assert.equal(sanitizeUsername(' Ava.Smith! '), 'avasmith')
+  assert.equal(sanitizeUsername('USER_NAME'), 'user_name')
+})
+
+test('signup and onboarding enforce consent and preserve validation state', async () => {
+  const signup = await readFile(new URL('../../app/signup/page.js', import.meta.url), 'utf8')
+  const authActions = await readFile(new URL('../../app/auth/actions.js', import.meta.url), 'utf8')
+  const onboarding = await readFile(new URL('../../components/onboarding-form.js', import.meta.url), 'utf8')
+  const onboardingActions = await readFile(new URL('../../app/onboarding/actions.js', import.meta.url), 'utf8')
+
+  assert.match(signup, /name="terms_accepted"/)
+  assert.match(authActions, /termsAccepted/)
+  assert.match(authActions, /legal_consent_accepted/)
+  assert.match(onboarding, /useActionState/)
+  assert.match(onboardingActions, /Your entries have not been cleared/)
+  assert.doesNotMatch(onboardingActions, /ageFromBirthDate/)
+})
+
+test('profile birth dates are guarded at the database boundary', async () => {
+  const migration = await readFile(new URL('../../supabase/migrations/10051_profile_birth_date_guard.sql', import.meta.url), 'utf8')
+  assert.match(migration, /before insert or update of birth_date/i)
+  assert.match(migration, /years_old < 13/i)
+  assert.match(migration, /years_old > 120/i)
+  assert.match(migration, /birth_date > current_date/i)
 })
 
 test('authenticated and service API roles receive required database privileges', async () => {
