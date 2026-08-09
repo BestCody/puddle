@@ -1,20 +1,23 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { birthDateError, formatBirthDateDigits } from '@/lib/app/input-validation'
 
-function formatBirthDate(value) {
-  const digits = String(value || '').replace(/\D/g, '').slice(0, 8)
-  if (digits.length <= 4) return digits
-  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`
-}
+export function BirthDateInput({ defaultValue = '', serverError = '' }) {
+  const [value, setValue] = useState(formatBirthDateDigits(defaultValue))
+  const [touched, setTouched] = useState(false)
+  const inputRef = useRef(null)
+  const localError = value.length === 10 ? birthDateError(value) : touched && value ? 'Enter all 8 birth-date numbers in YYYY-MM-DD format.' : ''
+  const error = localError || serverError
 
-export function BirthDateInput({ defaultValue = '' }) {
-  const [value, setValue] = useState(formatBirthDate(defaultValue))
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(error || '')
+  }, [error])
 
   return (
     <>
       <input
+        ref={inputRef}
         name="birth_date"
         type="text"
         inputMode="numeric"
@@ -23,11 +26,17 @@ export function BirthDateInput({ defaultValue = '' }) {
         pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
         maxLength={10}
         value={value}
-        onChange={(event) => setValue(formatBirthDate(event.target.value))}
-        aria-describedby="birth-date-hint"
+        onChange={(event) => {
+          setValue(formatBirthDateDigits(event.target.value))
+          if (touched) setTouched(true)
+        }}
+        onBlur={() => setTouched(true)}
+        aria-describedby="birth-date-hint birth-date-error"
+        aria-invalid={Boolean(error)}
         required
       />
-      <small className="field-hint" id="birth-date-hint">Use a four-digit year, then month and day.</small>
+      <small className="field-hint" id="birth-date-hint">8 numbers only. Puddle accounts require users to be 13 or older.</small>
+      <small className="field-error" id="birth-date-error" aria-live="polite">{error}</small>
     </>
   )
 }
