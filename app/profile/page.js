@@ -25,7 +25,7 @@ export default async function ProfilePage() {
       </section>
 
       <section className="minimal-profile-settings">
-        <div className="minimal-profile-photo-setting"><span>Profile picture</span><ProfilePhotoEditor currentPath={session.profile.avatar_path || null} displayName={session.profile.display_name} /></div>
+        <div className="minimal-profile-photo-setting"><span>Profile picture</span><ProfilePhotoEditor userId={session.user.id} currentPath={session.profile.avatar_path || null} displayName={session.profile.display_name} /></div>
         <div><span>Location</span><strong>{locationLabel}</strong></div>
         <div><span>Search radius</span><strong>{session.profile.search_radius_km || 10} km</strong></div>
         <div className="minimal-profile-preferences"><span>Preferences</span><div>{preferences.length ? preferences.map((value) => <small key={value}>{String(value).replaceAll('_', ' ')}</small>) : <small>Not set</small>}</div></div>
