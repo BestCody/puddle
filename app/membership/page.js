@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getMembershipSnapshot } from '@/lib/app/membership-data'
-import { openMembershipPortal, saveGlobalPreference } from './actions'
+import { openMembershipPortal, saveGlobalPreference, startTinderCheckout } from './actions'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Membership' }
@@ -62,7 +62,7 @@ export default async function MembershipPage({ searchParams }) {
           {snapshot.active
             ? <form action={openMembershipPortal}><button className="membership-primary" type="submit">Manage billing</button></form>
             : snapshot.adult && snapshot.paymentsConfigured
-              ? <Link className="membership-primary" href="/membership/checkout">Continue to checkout</Link>
+              ? <form action={startTinderCheckout}><button className="membership-primary" type="submit">Continue to checkout</button></form>
               : <button className="membership-primary" type="button" disabled>Continue to checkout</button>}
           <small className="tier-price-note">Billed monthly. Taxes and renewal terms appear before payment.</small>
         </article>

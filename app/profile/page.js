@@ -9,17 +9,24 @@ function initials(name) {
   return String(name || 'Puddle person').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
 }
 
+function profilePhotoUrl(session, path) {
+  if (!path) return null
+  const value = String(path)
+  if (value.startsWith('/') || /^https?:\/\//i.test(value)) return value
+  return session.supabase.storage.from('puddle-public-media').getPublicUrl(value).data.publicUrl
+}
+
 export default async function ProfilePage() {
   return renderProductPage(async (session) => {
-    const avatarUrl = session.profile.avatar_path
-      ? (String(session.profile.avatar_path).startsWith('/') ? session.profile.avatar_path : session.supabase.storage.from('puddle-public-media').getPublicUrl(session.profile.avatar_path).data.publicUrl)
-      : null
+    const avatarUrl = profilePhotoUrl(session, session.profile.avatar_path)
     const preferences = session.profile.interests || []
     const locationLabel = session.profile.location_label || [session.profile.city, session.profile.region, session.profile.country].filter(Boolean).join(', ') || 'Add your location'
 
     return <div className="minimal-profile-page">
       <section className="minimal-profile-card">
-        <div className="minimal-profile-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? null : initials(session.profile.display_name)}</div>
+        <div className="minimal-profile-avatar" style={{ overflow: 'hidden' }}>
+          {avatarUrl ? <img src={avatarUrl} alt={`${session.profile.display_name || 'Puddle person'} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(session.profile.display_name)}
+        </div>
         <div><h1>{session.profile.display_name || 'Puddle person'}</h1>{session.profile.username ? <small>@{session.profile.username}</small> : null}<p>{locationLabel}</p></div>
         <Link href="/account">Edit</Link>
       </section>
