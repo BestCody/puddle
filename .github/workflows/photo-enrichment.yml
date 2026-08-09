@@ -1,16 +1,20 @@
 name: Enrich place photos
 
 # Relational discovery reads approved open-photo rows directly from Supabase.
-# Keep the catalogue moving in the background and run once when this workflow is
-# changed so a stalled queue resumes immediately after deployment.
+# During the initial catalogue backfill, run nearly continuously while each
+# provider is independently paced below its published or observed limits.
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 4 * * *'
+    - cron: '17 */2 * * *'
   push:
     branches: [main]
     paths:
       - '.github/workflows/photo-enrichment.yml'
+      - 'scripts/import-open-location-photos.mjs'
+      - 'scripts/enrich-open-location-photos.mjs'
+      - 'lib/app/open-photo-candidates.js'
+      - 'lib/app/provider-request-limiter.js'
 
 permissions:
   contents: read
@@ -22,7 +26,7 @@ concurrency:
 jobs:
   enrich:
     runs-on: ubuntu-latest
-    timeout-minutes: 115
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
@@ -37,12 +41,16 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+          KARTAVIEW_ACCESS_TOKEN: ${{ secrets.KARTAVIEW_ACCESS_TOKEN }}
           PHOTO_ENRICH_SYNC_MEDIA: 'false'
           PHOTO_ENRICH_BATCH_SIZE: '100'
-          PHOTO_ENRICH_MAX_BATCHES: '50'
-          PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '105'
+          PHOTO_ENRICH_MAX_BATCHES: '200'
+          PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '110'
           OPEN_PHOTO_MIN_SCORE: '0.76'
           OPEN_PHOTO_REQUEST_TIMEOUT_MS: '12000'
-          OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '1100'
+          OPEN_PHOTO_LOCATION_CONCURRENCY: '24'
+          OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '350'
+          OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'
+          OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '12'
           OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER: '3'
           OPEN_PHOTO_CLAIM_MIN_BATCH_SIZE: '1'
