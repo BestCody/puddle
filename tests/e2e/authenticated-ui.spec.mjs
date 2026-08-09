@@ -43,7 +43,7 @@ test('authenticated product UI renders across core pages on desktop and mobile',
   const shareBox = await shareButton.boundingBox()
   expect(filterBox).toBeTruthy()
   expect(shareBox).toBeTruthy()
-  expect(shareBox.y).toBeGreaterThan(filterBox.y)
+  expect(shareBox.y).toBeGreaterThanOrEqual(filterBox.y + filterBox.height + 4)
   await shareButton.click()
   await expect(page.getByRole('heading', { name: 'Send to' })).toBeVisible()
   await page.getByRole('button', { name: 'Close' }).click()
@@ -108,6 +108,7 @@ test('changing a profile picture uploads and renders the actual color image afte
   await page.reload()
   const profileImage = page.locator('.minimal-profile-avatar img')
   await expect(profileImage).toBeVisible()
+  await expect.poll(async () => profileImage.evaluate((image) => image.complete && image.naturalWidth > 0)).toBeTruthy()
   const src = await profileImage.getAttribute('src')
   expect(src).toBeTruthy()
 
