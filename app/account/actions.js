@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { profileLocationFromForm } from '@/lib/app/profile-location'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
 import { pathWithMessage } from '@/lib/auth/redirect'
 
@@ -22,12 +21,6 @@ export async function updateDateProfile(formData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/signin?next=/account')
-
-  const { data: currentProfile } = await supabase
-    .from('profiles')
-    .select('city,region,country,country_code,timezone,location_label,location_source,location_accuracy_m,latitude,longitude')
-    .eq('id', user.id)
-    .maybeSingle()
 
   const displayName = value(formData, 'display_name')
   const username = value(formData, 'username').toLowerCase()
@@ -47,17 +40,9 @@ export async function updateDateProfile(formData) {
     redirect(pathWithMessage('/account', 'error', 'Choose a valid profile visibility.'))
   }
 
-  let location
-  try {
-    location = profileLocationFromForm(formData, currentProfile || {})
-  } catch (error) {
-    redirect(pathWithMessage('/account', 'error', error.message || 'Choose a valid location.'))
-  }
-
   const { error } = await supabase.from('profiles').update({
     display_name: displayName,
     username,
-    ...location,
     bio: bio || null,
     profile_visibility: requestedVisibility,
     updated_at: new Date().toISOString()
@@ -72,6 +57,5 @@ export async function updateDateProfile(formData) {
 
   revalidatePath('/account')
   revalidatePath('/profile')
-  revalidatePath('/discover')
-  redirect(pathWithMessage('/account', 'success', 'Profile and date preferences saved.'))
+  redirect(pathWithMessage('/account', 'success', 'Profile saved.'))
 }
