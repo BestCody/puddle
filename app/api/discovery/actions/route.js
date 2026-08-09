@@ -2,23 +2,20 @@ import { after, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { materializeStaticCatalogueReferences, verifiedStaticReference } from '@/lib/app/static-catalogue-materialization'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 import { object, string, uuid } from '@/lib/security/schema'
 
 const ACTIONS = new Set(['saved', 'interested', 'dismissed', 'visited', 'undo', 'opened', 'perfect'])
-const MATERIALIZING_ACTIONS = new Set(['saved', 'interested', 'visited', 'opened', 'perfect'])
 const MAX_ACTIONS = 20
 const ORDERED_FALLBACK_RPC = 'record_discovery_actions_v3'
 
 function safeContext(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { mode: 'solo', category: null, payload: {} }
-  const mode = ['solo', 'date', 'hangout'].includes(value.mode) ? value.mode : 'solo'
   const daypart = ['morning', 'afternoon', 'evening', 'late', 'any'].includes(value.daypart) ? value.daypart : 'any'
   return {
-    mode,
+    mode: 'solo',
     category: String(value.category || '').trim().slice(0, 80) || null,
     payload: {
       daypart,
@@ -32,25 +29,14 @@ function safeContext(value) {
 function parseAction(raw, index) {
   const value = object(raw)
   const requestedAction = string(value.action, { name: `actions[${index}].action`, choices: [...ACTIONS], max: 20 })
-  const contentKind = string(value.contentKind || 'place', { name: `actions[${index}].contentKind`, choices: ['place'], max: 10 })
-  const contentId = uuid(value.contentId, `actions[${index}].contentId`)
-  const requestId = value.requestId ? uuid(value.requestId, `actions[${index}].requestId`) : null
-  const eventId = value.eventId ? uuid(value.eventId, `actions[${index}].eventId`) : crypto.randomUUID()
-  const sequence = Math.max(0, Math.min(1_000_000_000, Math.trunc(Number(value.sequence) || index)))
-  const staticEphemeral = value.staticCatalogueEphemeral === true
-  const staticRef = staticEphemeral ? string(value.staticRef, { name: `actions[${index}].staticRef`, max: 4_096 }) : null
-  const reference = staticEphemeral ? verifiedStaticReference(staticRef, contentId) : null
   return {
     requestedAction,
     action: requestedAction === 'perfect' ? 'saved' : requestedAction,
-    contentKind,
-    contentId,
-    requestId,
-    eventId,
-    sequence,
-    staticEphemeral,
-    staticRef,
-    reference,
+    contentKind: string(value.contentKind || 'place', { name: `actions[${index}].contentKind`, choices: ['place'], max: 10 }),
+    contentId: uuid(value.contentId, `actions[${index}].contentId`),
+    requestId: value.requestId ? uuid(value.requestId, `actions[${index}].requestId`) : null,
+    eventId: value.eventId ? uuid(value.eventId, `actions[${index}].eventId`) : crypto.randomUUID(),
+    sequence: Math.max(0, Math.min(1_000_000_000, Math.trunc(Number(value.sequence) || index))),
     context: safeContext(value.context)
   }
 }
@@ -72,32 +58,15 @@ export async function POST(request) {
       return NextResponse.json({ error: `Send between 1 and ${MAX_ACTIONS} actions.` }, { status: 400 })
     }
     const actions = rawActions.map(parseAction).sort((a, b) => a.sequence - b.sequence)
-    const admin = createAdminClient()
-    const positive = actions.filter((item) => item.staticEphemeral && MATERIALIZING_ACTIONS.has(item.requestedAction))
-    const materialization = positive.length
-      ? await materializeStaticCatalogueReferences({
-          admin,
-          locationIds: positive.map((item) => item.contentId),
-          references: positive.map((item) => ({ id: item.contentId, token: item.staticRef }))
-        })
-      : { materialized: new Map(), missing: [] }
-
-    if (materialization.missing.length) {
-      return NextResponse.json({ error: 'One or more catalogue locations are no longer available.' }, { status: 409 })
-    }
-
     const rpcActions = actions.map((item) => ({
       eventId: item.eventId,
       sequence: item.sequence,
       contentKind: item.contentKind,
-      contentId: materialization.materialized.get(item.contentId)?.id || item.contentId,
+      contentId: item.contentId,
       action: item.action,
       requestedAction: item.requestedAction,
       requestId: item.requestId,
-      context: item.context,
-      staticEphemeral: item.staticEphemeral,
-      staticSource: item.reference?.source || null,
-      staticSourcePlaceId: item.reference?.sourcePlaceId || null
+      context: item.context
     }))
     const recorded = await supabase.rpc('record_discovery_actions_v4', { actions: rpcActions })
     if (recorded.error) {
@@ -110,6 +79,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Those choices could not be saved.' }, { status: 400 })
     }
     after(async () => {
+      const admin = createAdminClient()
       const processed = await admin.rpc('process_discovery_context_outbox_v1', { batch_limit: 100 })
       if (processed.error) console.warn('Discovery context outbox processing failed.', { code: processed.error.code || null, message: String(processed.error.message || '').slice(0, 240) })
     })
