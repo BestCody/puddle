@@ -1,8 +1,8 @@
 import { after } from 'next/server'
 import { AuthMessage } from '@/components/auth-message'
 import { DateSwipeWorkspaceV2 } from '@/components/date-swipe-workspace-v2'
-import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational-fallback'
-import { recordSampledDiscoveryAnalytics as recordSampledInfrastructureAnalytics } from '@/lib/app/discovery-analytics'
+import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational'
+import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { renderProductPage } from '@/lib/app/render-product-page'
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +29,7 @@ function unavailableFeed(session, filters) {
     categories: [],
     recycled: false,
     emptyReason: null,
+    continuation: { excluded: 0, candidateLimit: 0, hasMore: false },
     fallback: true,
     fallbackReason: 'temporary_failure',
     rankingVersion: 'unavailable',
@@ -36,18 +37,11 @@ function unavailableFeed(session, filters) {
     rejections: [],
     personalization: { behavioral: false, friendActivity: false, vector: false, explicitInterestsOnly: true },
     infrastructure: {
-      catalogue: 'unavailable',
-      staticRelease: null,
-      staticFetched: 0,
-      staticServed: 0,
+      source: 'supabase-relational',
       relationalServed: 0,
-      staticMaterialized: 0,
-      staticTilesLoaded: 0,
-      staticTilesRequested: 0,
       googleUiKitEligible: 0,
       overlayRpc: 'r2_discovery_overlay_v1',
-      candidateCache: { status: 'bypass' },
-      timings: { catalogueMs: 0, overlayMs: 0, totalMs: 0 }
+      timings: { queryMs: 0, totalMs: 0 }
     }
   }
 }
@@ -79,7 +73,7 @@ export default async function DiscoverPage({ searchParams }) {
       feed = unavailableFeed(session, feedFilters)
     }
 
-    after(() => recordSampledInfrastructureAnalytics(session, feed)
+    after(() => recordSampledDiscoveryAnalytics(session, feed)
       .catch((error) => console.warn(`Sampled discovery analytics failed: ${error.message}`)))
 
     return <div className="minimal-swipe-page">
