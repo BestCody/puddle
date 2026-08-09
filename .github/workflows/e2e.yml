@@ -20,7 +20,6 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       E2E_BASE_URL: http://localhost:3000
-      E2E_R2_BASE_URL: http://127.0.0.1:43110
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7

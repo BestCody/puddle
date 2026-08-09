@@ -6,7 +6,6 @@ import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { DiscoverSocialBar } from '@/components/discover-social-bar'
 import { csrfFetch } from '@/lib/security/csrf-client'
-import { prefetchStaticMedia } from '@/lib/app/use-static-media-resolution'
 
 const ACTION_BATCH_DELAY_MS = 350
 const ACTION_BATCH_SIZE = 20
@@ -97,7 +96,7 @@ function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) 
 
   if (feed.emptyReason === 'catalogue_sync_pending') return <div className="minimal-deck-complete">
     <h1>Places are being added nearby</h1>
-    <p>{feed.centerLabel ? `Puddle has your location in ${feed.centerLabel}, but this area needs a catalogue refresh.` : 'This area needs a catalogue refresh.'}</p>
+    <p>{feed.centerLabel ? `Puddle has your location in ${feed.centerLabel}, but this area needs a location refresh.` : 'This area needs a location refresh.'}</p>
     <div><button className="minimal-primary-button" type="button" onClick={onRefresh}>Try again</button><Link href="/account">Edit location</Link></div>
   </div>
 
@@ -131,7 +130,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [exhausted, setExhausted] = useState(initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
-  const [message, setMessage] = useState(initialFeed.recycled ? 'Showing passed places again.' : '')
+  const [message, setMessage] = useState('')
   const storageKey = useMemo(() => actionStorageKey(profileId), [profileId])
   const actionBuffer = useRef([])
   const actionSequence = useRef(0)
@@ -152,12 +151,6 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     const timer = window.setTimeout(() => setMessage(''), 2400)
     return () => window.clearTimeout(timer)
   }, [message])
-
-  useEffect(() => {
-    const upcoming = feed.items.slice(index + 1, index + 4)
-    if (!upcoming.length) return
-    prefetchStaticMedia(upcoming, { limit: 3, concurrency: 3 }).catch(() => {})
-  }, [feed.items, index])
 
   const flushActions = useCallback(({ keepalive = false } = {}) => {
     if (flushTimer.current) {
@@ -363,7 +356,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     setChoices({})
     setShowFilters(false)
     setExhausted(nextItems.length < DECK_BATCH_SIZE && nextItems.length > 0)
-    setMessage(result.recycled ? 'Showing passed places again.' : '')
+    setMessage('')
   }
 
   function persistChoice(action, item) {
@@ -377,9 +370,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
       contentKind: 'place',
       contentId: item.content_id,
       requestId: item.__discovery_request_id || feed.requestId,
-      context: context(item),
-      staticCatalogueEphemeral: Boolean(item.static_catalogue_ephemeral),
-      staticRef: item.static_ref || undefined
+      context: context(item)
     }, item.content_id).then((result) => {
       if (result) return
       setChoices((currentChoices) => {
@@ -402,9 +393,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
       action: 'undo',
       contentKind: 'place',
       contentId: item.content_id,
-      requestId: item.__discovery_request_id || feed.requestId,
-      staticCatalogueEphemeral: Boolean(item.static_catalogue_ephemeral),
-      staticRef: item.static_ref || undefined
+      requestId: item.__discovery_request_id || feed.requestId
     }, `undo:${item.content_id}`).then((result) => {
       if (result) return
       setIndex((currentIndex) => Math.max(currentIndex, previousIndex + 1))

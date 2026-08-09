@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { fetchGooglePlacePhotoById } from '@/lib/app/google-place-photo-proxy'
-import { staticMediaRuntimeConfiguration } from '@/lib/app/static-media-runtime-config'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
@@ -11,6 +10,23 @@ import { uuid } from '@/lib/security/schema'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
+
+const HARD_GOOGLE_DAILY_LIMIT = 500
+const HARD_GOOGLE_MONTHLY_LIMIT = 5_000
+
+function boundedInteger(value, fallback, { minimum = 0, maximum = Number.MAX_SAFE_INTEGER } = {}) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(minimum, Math.min(maximum, Math.trunc(parsed)))
+}
+
+function googlePhotoRuntimeConfiguration() {
+  return {
+    googleDailyLimit: boundedInteger(process.env.GOOGLE_PHOTO_DAILY_LIMIT, 100, { maximum: HARD_GOOGLE_DAILY_LIMIT }),
+    googleMonthlyLimit: boundedInteger(process.env.GOOGLE_PHOTO_MONTHLY_LIMIT, 5_000, { maximum: HARD_GOOGLE_MONTHLY_LIMIT }),
+    googleTimeoutMs: boundedInteger(process.env.GOOGLE_PLACE_MATCH_TIMEOUT_MS, 5_000, { minimum: 1_500, maximum: 15_000 })
+  }
+}
 
 function productionGooglePlacesKey() {
   return String(process.env.GOOGLE_PLACES_API_KEY || '').trim()
@@ -59,7 +75,7 @@ export async function GET(request, { params }) {
     }
     fallbackPlaceId = mapping.google_place_id
 
-    const config = staticMediaRuntimeConfiguration()
+    const config = googlePhotoRuntimeConfiguration()
     const apiKey = productionGooglePlacesKey()
     if (!apiKey) {
       return NextResponse.json(

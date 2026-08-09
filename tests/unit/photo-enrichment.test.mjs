@@ -93,17 +93,18 @@ test('Geoapify detection requires a hostname boundary', async () => {
   assert.equal(geocoding.includes("url.hostname.endsWith('geoapify.com')"), false)
 })
 
-test('the active card waits for a private B2 grant before using server Google photos or the UI Kit compatibility fallback', async () => {
+test('the active relational card uses Google server photos and UI Kit fallback without private object-store grants', async () => {
   const card = await read('components/minimal-swipe-card.js')
   const googleServerPhoto = await read('components/google-server-place-photo.js')
   const googleFallback = await read('components/google-place-photo-fallback.js')
   assert.ok(card.includes('GoogleServerPlacePhoto'))
   assert.ok(card.includes('GooglePlacePhotoFallback'))
-  assert.ok(card.includes('item.google_place_id && item.static_ref && item.content_id'))
-  assert.ok(card.includes('/api/static-catalogue/google-photo/'))
-  assert.ok(card.includes('!mainPhoto && !mainPhotoPending && Boolean(googleServerPhotoUrl)'))
-  assert.ok(card.includes('!useGoogleServerPhoto && !mainPhoto && !mainPhotoPending && Boolean(googleLookup)'))
-  assert.ok(card.includes('usePrivateB2Asset(rawMainPhoto, privateMainKey)'))
+  assert.ok(card.includes('item.google_photo_proxy_url'))
+  assert.ok(card.includes('!mainPhoto && Boolean(googleServerPhotoUrl)'))
+  assert.ok(card.includes('!useGoogleServerPhoto && !mainPhoto && Boolean(googleLookup)'))
+  assert.equal(card.includes('usePrivateB2Asset'), false)
+  assert.equal(card.includes('/api/static-catalogue/'), false)
+  assert.equal(card.includes('static_ref'), false)
   assert.ok(googleServerPhoto.includes("fetch(url, { cache: 'no-store', credentials: 'same-origin' })"))
   assert.ok(googleServerPhoto.includes('URL.createObjectURL'))
   assert.ok(googleFallback.includes("window.google.maps.importLibrary('places')"))
@@ -116,7 +117,7 @@ test('the active card waits for a private B2 grant before using server Google ph
   assert.ok(card.includes('Wikimedia Commons, Mapillary, and KartaView'))
 })
 
-test('legacy bulk photo enrichment is manual-only while the guarded runtime owns automatic resolution', async () => {
+test('bulk photo enrichment remains manual-only while the guarded relational runtime owns automatic resolution', async () => {
   const photoWorkflow = await read('.github/workflows/photo-enrichment.yml')
   const packageJson = JSON.parse(await read('package.json'))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_BATCH_SIZE: '100'"))

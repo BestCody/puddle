@@ -49,18 +49,16 @@ test('discovery retries are filtered by receipt before side effects run', async 
   assert.match(migration, /receipt\.event_id=\(source\.item->>'eventId'\)::uuid/)
 })
 
-test('private B2 grants are lazy and issued only for rendered object keys', async () => {
-  const feed = await read('lib/app/b2-feed-assets.js')
+test('relational photo delivery no longer depends on private B2 grants', async () => {
   const card = await read('components/minimal-swipe-card.js')
-  assert.doesNotMatch(feed, /authorizeB2DownloadUrl/)
-  assert.match(feed, /private_b2_asset_keys/)
-  assert.match(feed, /lazy: true/)
-  assert.match(card, /usePrivateB2Asset\(rawMainPhoto, privateMainKey\)/)
-  assert.match(card, /mainPhotoPending/)
-  assert.match(card, /function PrivateDetailPhoto/)
+  const feed = await read('lib/app/discovery-relational.js')
+  assert.doesNotMatch(card, /usePrivateB2Asset|private_b2_asset|mainPhotoPending/)
+  assert.doesNotMatch(feed, /authorizeB2DownloadUrl|private_b2_asset|b2-feed-assets/)
+  assert.match(feed, /candidateSources: \['supabase_relational'\]/)
+  assert.match(card, /GoogleServerPlacePhoto/)
 })
 
-test('legacy photo enrichment no longer writes automatically outside runtime budgets', async () => {
+test('photo enrichment no longer writes automatically outside runtime budgets', async () => {
   const workflow = await read('.github/workflows/photo-enrichment.yml')
   assert.match(workflow, /workflow_dispatch:/)
   assert.doesNotMatch(workflow, /\bschedule:/)

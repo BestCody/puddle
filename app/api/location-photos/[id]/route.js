@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { authorizeB2DownloadUrl, b2ObjectKeyFromUrl } from '@/lib/app/b2-private-download'
 import { allowedPhotoHosts, approvedPhotoUrl } from '@/lib/app/place-photos'
 
 export const dynamic = 'force-dynamic'
@@ -74,18 +73,6 @@ export async function GET(_request, context) {
   }
 
   try {
-    if (b2ObjectKeyFromUrl(photo.remote_url)) {
-      const authorized = await authorizeB2DownloadUrl(photo.remote_url)
-      return NextResponse.redirect(authorized, {
-        status: 307,
-        headers: {
-          'cache-control': 'private, no-store',
-          'referrer-policy': 'no-referrer',
-          'x-content-type-options': 'nosniff'
-        }
-      })
-    }
-
     const asset = await fetchPhotoAsset(photo.remote_url, hosts)
     const ttl = Math.max(0, Math.min(86_400, Number(photo.cache_ttl_seconds || 0)))
     return new NextResponse(asset.body, {

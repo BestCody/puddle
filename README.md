@@ -1,6 +1,6 @@
 # Puddle
 
-Puddle is a swipe-and-match product for choosing **date locations and hangout locations**.
+Puddle is a place-discovery product for finding somewhere worth going, saving places you like, and sharing them with people you know.
 
 ## Active product
 
@@ -8,37 +8,31 @@ The primary flow is:
 
 ```text
 location preferences
-→ twelve nearby location cards
+→ nearby place cards
 → Pass, Save, or Perfect Pick
-→ solo shortlist or DateMatch
-→ choose a location and time
-→ post-visit feedback improves future decks
+→ Saved / Plans
+→ share places with friends or message them directly
 ```
 
-Current location-first capabilities include:
+Current capabilities include:
 
-- Supabase email/password, Google OAuth, email-code login, recovery, SSR sessions, onboarding, account settings, and deletion
-- image-rich location cards with factual descriptions, attribution, amenities, distance, price, and known opening status
-- strict ranking priority: card quality first, confidence-adjusted Puddle rating second, personalization third
-- finite twelve-card decks with Pass, Save, Perfect Pick, details, sharing, notes, undo, and a shortlist summary
-- private two-person DateMatch rooms with mutual matches, scheduling, and post-date feedback
-- Saved, Planned, and Past location views
-- FSQ OS and Overture catalogue imports plus Wikimedia, Mapillary, and KartaView image enrichment
-- location contribution, editing, claims, media moderation, reports, recommendation controls, and security administration
+- Supabase authentication, onboarding, account settings, and profile-photo management
+- relational Supabase discovery with distinct-location filtering across swipes and reloads
+- image-rich place cards with open licensed photos and Google Places fallback
+- Pass, Save, Perfect Pick, details, filters, undo, and continuous nearby-place refill
+- Friends, friend requests, direct messages, rich shared-place messages, and places in common
+- indicators for friends who also liked a place and a Send to action from Discover
+- Saved, Planned, and Past place views
+- optional Tinder-tier worldwide adult connections under the separate global-matches flow
+- location contribution, editing, media moderation, reports, and security administration
 
-The global catalogue and open-photo jobs are operational inputs. A deployment must still import regional data and run enrichment before it has broad location coverage.
+The active browser path does not depend on the retired shared pair/group deck system or the retired B2/R2 static-catalogue runtime.
 
-## Location-first cutover
+## Data and media
 
-The previous event marketplace, creator studio, social network, live-location sharing, complex itineraries, ticketing, checkout, payouts, refunds, and check-in systems are disabled by default.
+Published places are served from relational Supabase data. Approved Wikimedia Commons, Mapillary, and KartaView photos are normalized and stored in the `puddle-public-media` Supabase bucket. Google Places is used as a non-persisted photo fallback where eligible.
 
-```dotenv
-PUDDLE_LEGACY_SYSTEMS_ENABLED=false
-```
-
-Their source and migrations remain preserved for rollback, historical records, and a later controlled decommissioning. Production legacy pages redirect to the nearest location-first screen, while legacy APIs return `410 Gone`.
-
-See `docs/LOCATION_FIRST_CUTOVER.md` for the exact route map and rollback contract.
+Historical database migrations remain in `supabase/migrations/` because applied migrations are immutable deployment history even when the runtime feature they originally supported has been retired.
 
 ## Run locally
 
@@ -51,18 +45,18 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Location data operations
+## Location photo operations
 
 ```bash
 # Dry run first
-npm run locations:catalogue:open -- --source=fsq_os --file=/data/fsq-places.jsonl
-npm run locations:catalogue:open -- --source=overture --file=/data/overture-places.jsonl
 npm run locations:photos:open -- --limit=200
 
-# Apply only after reviewing the dry-run report
-npm run locations:catalogue:open -- --source=fsq_os --file=/data/fsq-places.jsonl --apply
-npm run locations:catalogue:open -- --source=overture --file=/data/overture-places.jsonl --apply
+# Persist approved results to Supabase public media
 npm run locations:photos:open -- --limit=200 --apply
+
+# Existing enrichment / Google matching helpers
+npm run locations:photos:enrich
+npm run locations:google:match
 ```
 
 ## Validation
@@ -72,5 +66,3 @@ npm run check
 npm run build
 npm run e2e:test
 ```
-
-The Playwright regression server temporarily enables the legacy rollback flag so preserved historical flows continue to compile and remain testable. Normal builds and deployments default to the location-first product.

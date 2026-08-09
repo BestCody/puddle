@@ -1,6 +1,5 @@
 import { createAdminClient } from '../lib/supabase/admin.js'
-import { storeOpenPhotoInR2 } from '../lib/app/open-photo-r2.js'
-import { r2Configuration } from '../lib/app/r2-s3.js'
+import { storeOpenPhotoInSupabase } from '../lib/app/open-photo-supabase.js'
 import { commonsCandidateScore, providerOrderForCategory, streetCandidateScore } from '../lib/app/open-photo-candidates.js'
 import {
   boundedInteger,
@@ -17,8 +16,6 @@ const limitArgument = process.argv.find((value) => value.startsWith('--limit='))
 const LIMIT = boundedInteger(limitArgument || process.env.OPEN_PHOTO_IMPORT_LIMIT, 200, { min: 1, max: 5_000 })
 const MIN_SCORE = Math.max(0.6, Math.min(0.98, Number(process.env.OPEN_PHOTO_MIN_SCORE || 0.76)))
 const MAPILLARY_TOKEN = String(process.env.MAPILLARY_ACCESS_TOKEN || '').trim()
-const R2_CONFIG = r2Configuration()
-if (APPLY && !R2_CONFIG?.publicBaseUrl) throw new Error('R2 credentials and R2_PUBLIC_BASE_URL are required with --apply.')
 const MAX_BYTES = 10_000_000
 const REQUEST_TIMEOUT_MS = boundedInteger(process.env.OPEN_PHOTO_REQUEST_TIMEOUT_MS, 12_000, { min: 2_000, max: 60_000 })
 const WIKIMEDIA_MIN_INTERVAL_MS = boundedInteger(process.env.OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS, 1_100, { min: 250, max: 10_000 })
@@ -42,14 +39,6 @@ function stripHtml(value) {
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-function safeSegment(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100) || createHash('sha256').update(String(value || '')).digest('hex').slice(0, 20)
 }
 
 function boundingBox(latitude, longitude, radiusM = 45) {
@@ -307,7 +296,7 @@ async function candidatesFor(provider, location) {
 
 async function registerCandidate(admin, location, candidate) {
   const source = await downloadAsset(candidate.assetUrl, candidate.provider)
-  const stored = await storeOpenPhotoInR2(admin, source, { config: R2_CONFIG })
+  const stored = await storeOpenPhotoInSupabase(admin, source)
   const { error } = await admin.from('location_photo_sources').upsert({
     location_id: location.id,
     source: 'licensed_public',

@@ -6,8 +6,7 @@ import {
   poll,
   signInThroughUi
 } from './support.mjs'
-import { fixturePlaceBySourceId } from './r2-fixture-data.mjs'
-import { ensureRelationalFixturePlaces } from './relational-fixture.mjs'
+import { ensureRelationalFixturePlaces, fixturePlaceBySourceId } from './relational-fixture.mjs'
 
 async function createSwiper(displayName) {
   const account = await createConfirmedUser({ displayName })

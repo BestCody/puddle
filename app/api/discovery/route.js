@@ -1,7 +1,7 @@
 import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational-fallback'
+import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational'
 import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
@@ -17,10 +17,10 @@ function continuationExcludes(value) {
 }
 
 async function authenticatedSession() {
-  if (!isSupabaseConfigured()) return { error: NextResponse.json({ error: 'Date-location discovery is unavailable.' }, { status: 503 }) }
+  if (!isSupabaseConfigured()) return { error: NextResponse.json({ error: 'Discovery is unavailable.' }, { status: 503 }) }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'Sign in to swipe through date locations.' }, { status: 401 }) }
+  if (!user) return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   const { data: profile } = await supabase
     .from('profiles')
     .select('id,birth_date,interests,latitude,longitude,city,region,country,country_code,timezone,location_label,search_radius_km')
@@ -51,7 +51,7 @@ async function discoveryResponse(session, filters, excludeIds = []) {
   return NextResponse.json(feed, {
     headers: {
       'Cache-Control': 'private, no-store',
-      'server-timing': `catalogue;dur=${feed.infrastructure?.timings?.catalogueMs || 0}, overlay;dur=${feed.infrastructure?.timings?.overlayMs || 0}`
+      'server-timing': `query;dur=${feed.infrastructure?.timings?.queryMs || 0}, total;dur=${feed.infrastructure?.timings?.totalMs || 0}`
     }
   })
 }

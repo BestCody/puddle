@@ -1,4 +1,0 @@
-# Python data clients used by the catalogue import workflows.
-# This file also provides actions/setup-python with a stable pip cache key.
-overturemaps
-duckdb==1.5.5
