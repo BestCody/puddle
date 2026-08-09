@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import sharp from 'sharp'
 import {
   assertNoHorizontalOverflow,
   completeProfileDirect,
@@ -32,7 +33,21 @@ test('authenticated product UI renders across core pages on desktop and mobile',
   await expect(page.locator('.minimal-swipe-card')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Send to' })).toBeVisible()
+
+  const filterButton = page.getByRole('button', { name: 'Open filters' })
+  const shareButton = page.getByRole('button', { name: 'Send to' })
+  await expect(filterButton).toBeVisible()
+  await expect(shareButton).toBeVisible()
+  await expect(shareButton.locator('img')).toHaveAttribute('src', /^data:image\/png;base64,/)
+  const filterBox = await filterButton.boundingBox()
+  const shareBox = await shareButton.boundingBox()
+  expect(filterBox).toBeTruthy()
+  expect(shareBox).toBeTruthy()
+  expect(shareBox.y).toBeGreaterThan(filterBox.y)
+  await shareButton.click()
+  await expect(page.getByRole('heading', { name: 'Send to' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close' }).click()
+
   await assertProductVisualContract(page)
   await assertImagesLoaded(page)
   await assertNoHorizontalOverflow(page)
@@ -67,4 +82,43 @@ test('authenticated product UI renders across core pages on desktop and mobile',
   const activeLabels = await page.locator('[aria-current="page"]').allTextContents()
   expect(activeLabels.join(' ')).toContain('Profile')
   health.assertHealthy()
+})
+
+test('changing a profile picture uploads and renders the actual color image after reload', async ({ page, request }) => {
+  const account = await createConfirmedUser({ displayName: 'Profile Photo Tester' })
+  await completeProfileDirect(account.user.id, { display_name: 'Profile Photo Tester' })
+  await signInThroughUi(page, account.email, account.password, '/profile')
+  await expect(page.locator('.minimal-profile-card h1')).toHaveText('Profile Photo Tester')
+
+  const imageBuffer = await sharp({
+    create: {
+      width: 96,
+      height: 96,
+      channels: 3,
+      background: { r: 238, g: 70, b: 122 }
+    }
+  }).png().toBuffer()
+
+  const input = page.locator('.profile-photo-editor input[type="file"]')
+  await input.setInputFiles({ name: 'profile-test.png', mimeType: 'image/png', buffer: imageBuffer })
+  await expect(page.getByAltText('Profile preview')).toBeVisible()
+  await page.getByRole('button', { name: 'Save photo' }).click()
+  await expect(page.getByText('Profile picture updated.')).toBeVisible({ timeout: 20_000 })
+
+  await page.reload()
+  const profileImage = page.locator('.minimal-profile-avatar img')
+  await expect(profileImage).toBeVisible()
+  const src = await profileImage.getAttribute('src')
+  expect(src).toBeTruthy()
+
+  const response = await request.get(src)
+  expect(response.ok()).toBeTruthy()
+  expect(response.headers()['content-type'] || '').toMatch(/^image\//)
+  const persisted = await response.body()
+  const stats = await sharp(persisted).stats()
+  expect(stats.channels[0].mean).toBeGreaterThan(stats.channels[1].mean + 80)
+  expect(stats.channels[0].mean).toBeGreaterThan(stats.channels[2].mean + 50)
+
+  await expect(page.locator('.profile-photo-editor img')).toBeVisible()
+  await assertImagesLoaded(page)
 })
