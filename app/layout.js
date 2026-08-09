@@ -1,4 +1,5 @@
 import './auth.css'
+import './input-validation.css'
 import './onboarding.css'
 import './date-swipe.css'
 import './swipe-v2.css'
