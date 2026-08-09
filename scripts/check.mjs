@@ -14,7 +14,7 @@ const required = [
   'components/product-nav.js','components/product-shell.js','components/date-swipe-workspace-v2.js','components/minimal-swipe-card.js','components/swipe-action-dock.js','components/discover-social-bar.js','components/social-hub.js','components/profile-photo-editor.js',
   'lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/social-hub-data.js','lib/app/open-photo-supabase.js','lib/media/pipeline.js',
   'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
-  'supabase/migrations/10046_friends_messages_social_hub.sql','supabase/seed.sql'
+  'supabase/migrations/10046_friends_messages_social_hub.sql','supabase/migrations/10050_relational_discovery_runtime.sql','supabase/seed.sql'
 ]
 for (const path of required) await access(join(root, path))
 
@@ -25,7 +25,8 @@ const removed = [
   'lib/app/date-match.js','lib/app/date-match-rules.js','lib/app/date-match-snapshot.js',
   'lib/app/discovery-infrastructure.js','lib/app/discovery-infrastructure-v2.js','lib/app/discovery-relational-fallback.js',
   'lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js','lib/app/use-private-b2-asset.js','lib/app/use-static-catalogue-details.js','lib/app/use-static-media-resolution.js',
-  '.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml'
+  '.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml',
+  '.github/workflows/ops-live-photo-open-import.yml','.github/workflows/ops-live-photo-google-match.yml'
 ]
 for (const path of removed) {
   try {
@@ -82,10 +83,18 @@ for (const source of [discoverPage, discoveryRoute]) if (!source.includes("@/lib
 for (const marker of ['r2_discovery_overlay_v1','discovery_seen_locations_v1','duplicateKey','supabase-relational-v2']) if (!discovery.includes(marker)) throw new Error(`Relational discovery is missing ${marker}`)
 for (const forbidden of ['static-catalogue','STATIC_CATALOGUE','r2-primary','R2_CATALOGUE_NOT_CONFIGURED']) if (discovery.includes(forbidden)) throw new Error(`Legacy discovery runtime remains: ${forbidden}`)
 for (const marker of ['record_discovery_actions_v4','MAX_ACTIONS = 20']) if (!actions.includes(marker)) throw new Error(`Discovery actions are missing ${marker}`)
-for (const forbidden of ['materializeStaticCatalogueReferences','verifiedStaticReference','staticRef']) if (actions.includes(forbidden)) throw new Error(`Legacy static action support remains: ${forbidden}`)
+for (const forbidden of ['materializeStaticCatalogueReferences','verifiedStaticReference','staticRef','staticEphemeral']) if (actions.includes(forbidden)) throw new Error(`Legacy static action support remains: ${forbidden}`)
 for (const marker of ['MinimalSwipeCard','SwipeActionDock','DiscoverSocialBar',"'/api/discovery/actions'",'excludeIds']) if (!swipe.includes(marker)) throw new Error(`Swipe workspace is missing ${marker}`)
 for (const forbidden of ['InviteSheet','createSharedDeck','/api/date-match/start','staticCatalogueEphemeral','prefetchStaticMedia']) if (swipe.includes(forbidden)) throw new Error(`Retired swipe dependency remains: ${forbidden}`)
 for (const forbidden of ['usePrivateB2Asset','useStaticCatalogueDetails','useStaticMediaResolution','/api/static-catalogue/']) if (card.includes(forbidden)) throw new Error(`Legacy card dependency remains: ${forbidden}`)
+
+const relationalRuntime = await read('supabase/migrations/10050_relational_discovery_runtime.sql')
+for (const marker of ['discovery_seen_locations_v1','r2_discovery_overlay_v1','record_discovery_actions_v3','record_discovery_actions_v4_unchecked']) {
+  if (!relationalRuntime.includes(marker)) throw new Error(`Relational discovery runtime is missing ${marker}`)
+}
+for (const forbidden of ['static_catalogue_actions','static_catalogue_materializations','staticEphemeral','touch_static_catalogue_materializations_v1']) {
+  if (relationalRuntime.includes(forbidden)) throw new Error(`Legacy database runtime remains in final cutover migration: ${forbidden}`)
+}
 
 const share = await read('app/api/social/share-location/route.js')
 if (!share.includes('send_location_to_friend_v1')) throw new Error('Friend location sharing is missing')
