@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { findGoogleClientPlace } from '../../lib/app/google-place-client.js'
-import { scoreGooglePlaceMatch } from '../../lib/app/google-place-match.js'
+import { scoreGooglePlaceEssentialsMatch, scoreGooglePlaceMatch } from '../../lib/app/google-place-match.js'
 
 test('Google place matching requires a similar nearby venue', () => {
   const location = { name: 'Puddle Cafe', latitude: 43.65, longitude: -79.38 }
@@ -54,6 +54,34 @@ test('address evidence accepts a modest venue-name variation without matching an
     displayName: { text: 'Hero Certified Burgers' },
     formattedAddress: '150 King St W, Toronto, ON, Canada',
     location: { latitude: 43.6545, longitude: -79.3832 }
+  }), null)
+})
+
+test('Essentials-only verification requires an exact street number, near-identical public address, and nearby pin', () => {
+  const location = {
+    name: 'Sushi Kaji',
+    latitude: 43.638,
+    longitude: -79.532,
+    addressPublic: '860 The Queensway, Etobicoke, ON'
+  }
+  const match = scoreGooglePlaceEssentialsMatch(location, {
+    id: 'sushi-kaji-place-id',
+    formattedAddress: '860 The Queensway, Etobicoke, ON M8Z 1N7, Canada',
+    location: { latitude: 43.6385, longitude: -79.5317 }
+  })
+  assert.ok(match)
+  assert.ok(match.score >= 0.94)
+  assert.equal(match.streetNumberMatch, true)
+
+  assert.equal(scoreGooglePlaceEssentialsMatch(location, {
+    id: 'wrong-number',
+    formattedAddress: '862 The Queensway, Etobicoke, ON M8Z 1N7, Canada',
+    location: { latitude: 43.6385, longitude: -79.5317 }
+  }), null)
+  assert.equal(scoreGooglePlaceEssentialsMatch({ ...location, addressPublic: null }, {
+    id: 'no-source-address',
+    formattedAddress: '860 The Queensway, Etobicoke, ON M8Z 1N7, Canada',
+    location: { latitude: 43.6385, longitude: -79.5317 }
   }), null)
 })
 
