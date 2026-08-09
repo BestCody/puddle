@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { csrfFetch } from '@/lib/security/csrf-client'
 
 function initialLocation(profile = {}) {
@@ -56,12 +56,20 @@ export function LocationPicker({ profile = {}, error = '' }) {
   const [results, setResults] = useState([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [editedAfterError, setEditedAfterError] = useState(false)
+  const visibleError = editedAfterError ? '' : error
+
+  useEffect(() => {
+    setEditedAfterError(false)
+  }, [error])
 
   function editQuery(nextQuery) {
-    setQuery(nextQuery.slice(0, 160))
+    const next = nextQuery.slice(0, 160)
+    setQuery(next)
     setResults([])
     setMessage('')
-    if (nextQuery !== location.label) setLocation(emptyLocation())
+    setEditedAfterError(true)
+    if (next !== location.label) setLocation(emptyLocation())
   }
 
   async function search() {
@@ -87,6 +95,7 @@ export function LocationPicker({ profile = {}, error = '' }) {
     setLocation(next)
     setQuery(next.label)
     setResults([])
+    setEditedAfterError(true)
     setMessage('Location selected.')
   }
 
@@ -110,6 +119,7 @@ export function LocationPicker({ profile = {}, error = '' }) {
         setLocation(next)
         setQuery(next.label)
         setResults([])
+        setEditedAfterError(true)
         setMessage('Current location selected.')
       } catch (errorValue) {
         setMessage(errorValue.message || 'We could not identify your location.')
@@ -125,7 +135,7 @@ export function LocationPicker({ profile = {}, error = '' }) {
   return <div className="location-picker">
     <label className="field location-search-field">City or town
       <div className="location-search-row">
-        <input value={query} onChange={(event) => editQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); search() } }} placeholder="Search anywhere in the world" autoComplete="off" maxLength={160} aria-invalid={Boolean(error)} aria-describedby="location-picker-error" />
+        <input value={query} onChange={(event) => editQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); search() } }} placeholder="Search anywhere in the world" autoComplete="off" maxLength={160} aria-invalid={Boolean(visibleError)} aria-describedby="location-picker-error" />
         <button type="button" onClick={search} disabled={busy || query.trim().length < 2}>Search</button>
       </div>
     </label>
@@ -139,7 +149,7 @@ export function LocationPicker({ profile = {}, error = '' }) {
 
     {location.latitude !== '' && location.longitude !== '' ? <div className="location-selected"><span>Selected location</span><strong>{location.label}</strong></div> : null}
     <p className="location-picker-message" aria-live="polite">{message}</p>
-    <small className="field-error" id="location-picker-error" aria-live="polite">{error}</small>
+    <small className="field-error" id="location-picker-error" aria-live="polite">{visibleError}</small>
 
     <input type="hidden" name="city" value={location.city} />
     <input type="hidden" name="region" value={location.region} />
