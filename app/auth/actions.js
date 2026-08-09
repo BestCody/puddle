@@ -9,12 +9,17 @@ import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
 import { authenticatedDestination, ensureProfile } from '@/lib/auth/profile'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
+import { birthDateError, isValidEmail, MAX_PASSWORD_LENGTH } from '@/lib/app/input-validation'
 
 const allowedInterests = new Set(['Live music','Nightlife','Food','Pop-ups','Art','Film','Workshops','Sports','Wellness','Markets','Comedy','Outdoors'])
 const allowedVisibility = new Set(['hidden', 'friends', 'mutuals', 'attendees', 'public'])
 
 function value(formData, key) {
   return String(formData.get(key) || '').trim()
+}
+
+function rawValue(formData, key) {
+  return String(formData.get(key) || '')
 }
 
 async function siteUrl() {
@@ -32,17 +37,6 @@ function publicError(error, fallback) {
 
 function ensureConfigured(path) {
   if (!isSupabaseConfigured()) redirect(pathWithMessage(path, 'error', 'Accounts are temporarily unavailable. Please try again later.'))
-}
-
-function ageFromBirthDate(birthDate) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return -1
-  const birthday = new Date(`${birthDate}T00:00:00Z`)
-  if (Number.isNaN(birthday.getTime())) return -1
-  const today = new Date()
-  let age = today.getUTCFullYear() - birthday.getUTCFullYear()
-  const month = today.getUTCMonth() - birthday.getUTCMonth()
-  if (month < 0 || (month === 0 && today.getUTCDate() < birthday.getUTCDate())) age -= 1
-  return age
 }
 
 async function authenticatedProfile(path) {
@@ -66,7 +60,10 @@ function onboardingInput(formData, user, profile, { complete }) {
 
   if (displayName.length < 1 || displayName.length > 60) return { error: 'Add a display name between 1 and 60 characters.' }
   if (username && !/^[a-z0-9_]{3,24}$/.test(username)) return { error: 'Username must be 3–24 lowercase letters, numbers, or underscores.' }
-  if (birthDate && ageFromBirthDate(birthDate) < 13) return { error: 'Puddle accounts require users to be at least 13.' }
+  if (birthDate) {
+    const dateError = birthDateError(birthDate)
+    if (dateError) return { error: dateError }
+  }
   if (complete && !username) return { error: 'Choose a username before building your feed.' }
   if (complete && !birthDate) return { error: 'Add your birth date before building your feed.' }
   if (complete && !city) return { error: 'Add your city before building your feed.' }
@@ -98,16 +95,19 @@ export async function signUp(formData) {
   ensureConfigured('/signup')
   const displayName = value(formData, 'display_name')
   const email = value(formData, 'email').toLowerCase()
-  const password = value(formData, 'password')
+  const password = rawValue(formData, 'password')
+  const termsAccepted = value(formData, 'terms_accepted') === 'yes'
   if (displayName.length < 1 || displayName.length > 60) redirect(pathWithMessage('/signup', 'error', 'Add a display name between 1 and 60 characters.'))
-  if (!email.includes('@')) redirect(pathWithMessage('/signup', 'error', 'Enter a valid email address.'))
-  if (password.length < 10) redirect(pathWithMessage('/signup', 'error', 'Use at least 10 characters for your password.'))
+  if (!isValidEmail(email)) redirect(pathWithMessage('/signup', 'error', 'Enter a valid email address.'))
+  if (password.length < 10 || password.length > MAX_PASSWORD_LENGTH) redirect(pathWithMessage('/signup', 'error', `Use a password from 10 to ${MAX_PASSWORD_LENGTH} characters.`))
+  if (!termsAccepted) redirect(pathWithMessage('/signup', 'error', 'Agree to the Terms and Privacy Policy before creating an account.'))
 
+  const acceptedAt = new Date().toISOString()
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { display_name: displayName } }
+    options: { data: { display_name: displayName, legal_consent_at: acceptedAt, legal_consent_version: 'current' } }
   })
   if (error || !data.user) redirect(pathWithMessage('/signup', 'error', publicError(error, 'We could not create your account. Please try again.')))
 
@@ -130,14 +130,20 @@ export async function signUp(formData) {
 
   const { profile, error: profileError } = await ensureProfile(supabase, user)
   if (profileError) redirect(pathWithMessage('/onboarding', 'error', 'Your account was created, but your profile could not be prepared. Please retry.'))
+  await supabase.from('security_events').insert({
+    profile_id: user.id,
+    event_type: 'legal_consent_accepted',
+    metadata: { terms: true, privacy: true, version: 'current', accepted_at: acceptedAt, source: 'email_signup' }
+  })
   redirect(authenticatedDestination(profile, '/onboarding'))
 }
 
 export async function signIn(formData) {
   ensureConfigured('/signin')
   const email = value(formData, 'email').toLowerCase()
-  const password = value(formData, 'password')
+  const password = rawValue(formData, 'password')
   const next = safeNextPath(value(formData, 'next'))
+  if (!isValidEmail(email)) redirect(pathWithMessage('/signin', 'error', 'Email or password was not accepted.', { next }))
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.user) redirect(pathWithMessage('/signin', 'error', 'Email or password was not accepted.', { next }))
@@ -150,7 +156,7 @@ export async function sendLoginCode(formData) {
   ensureConfigured('/signin')
   const email = value(formData, 'email').toLowerCase()
   const next = safeNextPath(value(formData, 'next'))
-  if (!email.includes('@')) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', { next }))
+  if (!isValidEmail(email)) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', { next }))
 
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
@@ -165,7 +171,7 @@ export async function verifyLoginCode(formData) {
   const next = safeNextPath(value(formData, 'next'))
   const retry = { code_sent: '1', email, next }
 
-  if (!email.includes('@')) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', retry))
+  if (!isValidEmail(email)) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', retry))
   if (!/^\d{6,8}$/.test(token)) redirect(pathWithMessage('/signin', 'error', 'Enter the code from your email.', retry))
 
   const supabase = await createClient()
@@ -179,20 +185,23 @@ export async function verifyLoginCode(formData) {
 export async function signInWithOAuth(formData) {
   ensureConfigured('/signin')
   const provider = value(formData, 'provider')
+  const signupIntent = value(formData, 'signup_intent') === '1'
   if (provider !== 'google') redirect(pathWithMessage('/signin', 'error', 'That sign-in option is not supported.'))
+  if (signupIntent && value(formData, 'terms_accepted') !== 'yes') redirect(pathWithMessage('/signup', 'error', 'Agree to the Terms and Privacy Policy before creating an account.'))
   const supabase = await createClient()
+  const legalQuery = signupIntent ? '&legal_consent=1' : ''
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: `${await siteUrl()}/auth/callback?next=/onboarding` }
+    options: { redirectTo: `${await siteUrl()}/auth/callback?next=/onboarding${legalQuery}` }
   })
-  if (error || !data.url) redirect(pathWithMessage('/signin', 'error', publicError(error, 'That sign-in option is temporarily unavailable.')))
+  if (error || !data.url) redirect(pathWithMessage(signupIntent ? '/signup' : '/signin', 'error', publicError(error, 'That sign-in option is temporarily unavailable.')))
   redirect(data.url)
 }
 
 export async function requestPasswordReset(formData) {
   ensureConfigured('/forgot-password')
   const email = value(formData, 'email').toLowerCase()
-  if (!email.includes('@')) redirect(pathWithMessage('/forgot-password', 'error', 'Enter a valid email address.'))
+  if (!isValidEmail(email)) redirect(pathWithMessage('/forgot-password', 'error', 'Enter a valid email address.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${await siteUrl()}/auth/callback?next=/update-password`
@@ -203,9 +212,9 @@ export async function requestPasswordReset(formData) {
 
 export async function updatePassword(formData) {
   ensureConfigured('/update-password')
-  const password = value(formData, 'password')
-  const confirmation = value(formData, 'password_confirmation')
-  if (password.length < 10) redirect(pathWithMessage('/update-password', 'error', 'Use at least 10 characters.'))
+  const password = rawValue(formData, 'password')
+  const confirmation = rawValue(formData, 'password_confirmation')
+  if (password.length < 10 || password.length > MAX_PASSWORD_LENGTH) redirect(pathWithMessage('/update-password', 'error', `Use a password from 10 to ${MAX_PASSWORD_LENGTH} characters.`))
   if (password !== confirmation) redirect(pathWithMessage('/update-password', 'error', 'The passwords do not match.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ password })
@@ -273,7 +282,7 @@ export async function updateProfile(formData) {
 export async function updateEmail(formData) {
   ensureConfigured('/account')
   const email = value(formData, 'email').toLowerCase()
-  if (!email.includes('@')) redirect(pathWithMessage('/account', 'error', 'Enter a valid email address.'))
+  if (!isValidEmail(email)) redirect(pathWithMessage('/account', 'error', 'Enter a valid email address.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/account` })
   if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not update your email. Please try again.')))
