@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
-  admin,
   completeProfileDirect,
   createConfirmedUser,
-  poll,
   signInThroughUi
 } from './support.mjs'
 import { ensureRelationalFixturePlaces, fixturePlaceBySourceId } from './relational-fixture.mjs'
@@ -18,10 +16,10 @@ async function createSwiper(displayName) {
   return account
 }
 
-async function openFilteredDeck(page, account, query) {
+async function openFilteredDeck(page, account, category = 'gallery') {
   await signInThroughUi(page, account.email, account.password, '/discover')
   await expect(page).toHaveURL(/\/discover$/)
-  await page.goto(`/discover?q=${encodeURIComponent(query)}`)
+  await page.goto(`/discover?category=${encodeURIComponent(category)}`)
   await expect(page.locator('.minimal-swipe-card')).toBeVisible()
 }
 
@@ -35,7 +33,7 @@ test('initial Discover renders relational Supabase places without a static catal
     if (new URL(request.url()).pathname.startsWith('/api/static-catalogue/')) staticRequests.push(request.url())
   })
 
-  await openFilteredDeck(page, account, 'E2E Pass')
+  await openFilteredDeck(page, account)
 
   const title = await page.locator('.minimal-swipe-card h1').innerText()
   expect(places.map((place) => place.name)).toContain(title)
@@ -47,7 +45,7 @@ test('passing and undoing works on the relational Supabase deck', async ({ page 
   const places = [fixturePlaceBySourceId('e2e-pass-alpha'), fixturePlaceBySourceId('e2e-pass-beta')]
   await ensureRelationalFixturePlaces(places)
   const account = await createSwiper('Relational Pass Swiper')
-  await openFilteredDeck(page, account, 'E2E Pass')
+  await openFilteredDeck(page, account)
 
   const heading = page.locator('.minimal-swipe-card h1')
   const firstTitle = await heading.innerText()
@@ -61,23 +59,43 @@ test('passing and undoing works on the relational Supabase deck', async ({ page 
   await expect(heading).toHaveText(firstTitle)
 })
 
-test('account preference changes persist for relational discovery', async ({ page }) => {
-  const account = await createSwiper('Preference Swiper')
+test('Discover filters own location, distance, and place categories', async ({ page }) => {
+  const places = [fixturePlaceBySourceId('e2e-pass-alpha'), fixturePlaceBySourceId('e2e-pass-beta')]
+  await ensureRelationalFixturePlaces(places)
+  const account = await createSwiper('Filter Preference Swiper')
+
   await signInThroughUi(page, account.email, account.password, '/account')
   await expect(page.getByRole('heading', { name: /Account settings/i })).toBeVisible()
-  await page.getByLabel('Coffee shops').uncheck()
-  await page.getByLabel('Galleries').uncheck()
-  await page.getByLabel('Scenic spots').uncheck()
-  await page.getByLabel('Restaurants').check()
-  await page.getByLabel('Parks & gardens').check()
-  await page.getByLabel('Activity dates').check()
-  await page.getByRole('button', { name: /Save profile and date preferences/i }).click()
-  await expect(page).toHaveURL(/\/account\?success=/)
+  await expect(page.getByLabel('Search radius')).toHaveCount(0)
+  await expect(page.getByLabel('City or town')).toHaveCount(0)
+  await expect(page.getByText('What kinds of places do you like?')).toHaveCount(0)
 
-  const profile = await poll(async () => {
-    const result = await admin.from('profiles').select('interests').eq('id', account.user.id).single()
-    if (result.error) throw result.error
-    return result.data?.interests?.includes('activity_venue') ? result.data : null
-  })
-  expect(profile.interests).toEqual(expect.arrayContaining(['restaurant', 'park', 'activity_venue']))
+  await page.goto('/discover')
+  await page.getByRole('button', { name: 'Open filters' }).click()
+  await expect(page.getByLabel('Location')).toBeVisible()
+  await expect(page.getByLabel('Search')).toHaveCount(0)
+
+  const category = page.getByLabel('Category')
+  const optionValues = await category.locator('option').evaluateAll((options) => options.map((option) => option.value))
+  expect(optionValues).toEqual(expect.arrayContaining([
+    'cafe',
+    'restaurant',
+    'bar',
+    'park',
+    'museum',
+    'gallery',
+    'attraction',
+    'activity_venue',
+    'scenic_spot',
+    'nightlife',
+    'shop',
+    'community_space'
+  ]))
+
+  await category.selectOption('gallery')
+  await page.getByLabel('Distance').selectOption('25')
+  await page.getByRole('button', { name: 'Apply' }).click()
+  await expect(page.locator('.minimal-swipe-card')).toBeVisible()
+  const title = await page.locator('.minimal-swipe-card h1').innerText()
+  expect(places.map((place) => place.name)).toContain(title)
 })
