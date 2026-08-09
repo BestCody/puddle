@@ -46,6 +46,7 @@ export async function updateDateProfile(formData) {
   const displayName = value(formData, 'display_name')
   const username = value(formData, 'username').toLowerCase()
   const radius = Number(value(formData, 'search_radius_km'))
+  const bio = value(formData, 'bio')
   const requestedVisibility = value(formData, 'profile_visibility')
   const dateLocations = [...new Set(
     formData.getAll('date_locations').map(String).filter((location) => allowedDateLocations.has(location))
@@ -57,11 +58,17 @@ export async function updateDateProfile(formData) {
   if (!/^[a-z0-9_]{3,24}$/.test(username)) {
     redirect(pathWithMessage('/account', 'error', 'Username must be 3–24 lowercase letters, numbers, or underscores.'))
   }
-  if (!Number.isFinite(radius) || radius < 1 || radius > 100) {
-    redirect(pathWithMessage('/account', 'error', 'Choose a search radius from 1 to 100 km.'))
+  if (!Number.isFinite(radius) || !Number.isInteger(radius) || radius < 1 || radius > 100) {
+    redirect(pathWithMessage('/account', 'error', 'Choose a whole-number search radius from 1 to 100 km.'))
   }
   if (dateLocations.length < 3) {
     redirect(pathWithMessage('/account', 'error', 'Choose at least three kinds of places you like for dates.'))
+  }
+  if (bio.length > 500) {
+    redirect(pathWithMessage('/account', 'error', 'Keep your date vibe to 500 characters or fewer.'))
+  }
+  if (!allowedVisibility.has(requestedVisibility)) {
+    redirect(pathWithMessage('/account', 'error', 'Choose a valid profile visibility.'))
   }
 
   let location
@@ -75,9 +82,9 @@ export async function updateDateProfile(formData) {
     display_name: displayName,
     username,
     ...location,
-    bio: value(formData, 'bio') || null,
-    search_radius_km: Math.round(radius),
-    profile_visibility: allowedVisibility.has(requestedVisibility) ? requestedVisibility : 'public',
+    bio: bio || null,
+    search_radius_km: radius,
+    profile_visibility: requestedVisibility,
     interests: dateLocations,
     updated_at: new Date().toISOString()
   }).eq('id', user.id)
