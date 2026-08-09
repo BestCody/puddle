@@ -6,9 +6,14 @@ import { birthDateError, formatBirthDateDigits } from '@/lib/app/input-validatio
 export function BirthDateInput({ defaultValue = '', serverError = '' }) {
   const [value, setValue] = useState(formatBirthDateDigits(defaultValue))
   const [touched, setTouched] = useState(false)
+  const [editedAfterServerError, setEditedAfterServerError] = useState(false)
   const inputRef = useRef(null)
   const localError = value.length === 10 ? birthDateError(value) : touched && value ? 'Enter all 8 birth-date numbers in YYYY-MM-DD format.' : ''
-  const error = localError || serverError
+  const error = localError || (editedAfterServerError ? '' : serverError)
+
+  useEffect(() => {
+    setEditedAfterServerError(false)
+  }, [serverError])
 
   useEffect(() => {
     inputRef.current?.setCustomValidity(error || '')
@@ -28,7 +33,7 @@ export function BirthDateInput({ defaultValue = '', serverError = '' }) {
         value={value}
         onChange={(event) => {
           setValue(formatBirthDateDigits(event.target.value))
-          if (touched) setTouched(true)
+          setEditedAfterServerError(true)
         }}
         onBlur={() => setTouched(true)}
         aria-describedby="birth-date-hint birth-date-error"
