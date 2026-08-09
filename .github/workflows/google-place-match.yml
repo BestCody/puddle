@@ -4,15 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       limit:
-        description: 'Maximum active locations to inspect'
+        description: 'Maximum published photo-less locations to inspect'
         required: false
         default: '100'
         type: string
       apply:
-        description: 'Save verified Place IDs and update B2 media overlays'
+        description: 'Save verified Place IDs to Supabase'
         required: false
         default: false
         type: boolean
+  schedule:
+    - cron: '29 5 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/google-place-match.yml'
+      - 'scripts/match-google-places.mjs'
+      - 'lib/app/google-place-match.js'
 
 permissions:
   contents: read
@@ -24,7 +32,7 @@ concurrency:
 jobs:
   match:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
@@ -32,17 +40,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Match active locations to stable Google Place IDs
+      - name: Persist verified Google Place IDs
+        if: github.event_name != 'workflow_dispatch'
+        run: npm run locations:google:match -- --limit=250 --apply
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          GOOGLE_PLACE_MATCH_MIN_SCORE: '0.86'
+          GOOGLE_PLACE_MATCH_DELAY_MS: '250'
+      - name: Match Google Place IDs manually
+        if: github.event_name == 'workflow_dispatch'
         run: npm run locations:google:match -- --limit="${{ inputs.limit }}" ${{ inputs.apply && '--apply' || '' }}
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
-          B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
-          B2_REGION: ${{ secrets.B2_REGION }}
-          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
-          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-          B2_BUCKET: ${{ secrets.B2_BUCKET }}
-          B2_DOWNLOAD_BASE_URL: ${{ secrets.B2_DOWNLOAD_BASE_URL }}
           GOOGLE_PLACE_MATCH_MIN_SCORE: '0.86'
           GOOGLE_PLACE_MATCH_DELAY_MS: '250'

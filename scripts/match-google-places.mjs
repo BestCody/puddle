@@ -1,6 +1,5 @@
 import { createAdminClient } from '../lib/supabase/admin.js'
 import { scoreGooglePlaceMatch } from '../lib/app/google-place-match.js'
-import { syncStaticMediaOverlayForLocations } from '../lib/app/static-media-overlay.js'
 
 const APPLY = process.argv.includes('--apply')
 const locationArgument = process.argv.find((value) => value.startsWith('--location='))?.split('=')[1] || null
@@ -70,7 +69,6 @@ let matched = 0
 let saved = 0
 let noMatch = 0
 let failed = 0
-const changedLocationIds = []
 for (const location of locations) {
   const attemptCount = Number(location.attempt_count || 0) + 1
   try {
@@ -112,12 +110,6 @@ for (const location of locations) {
       if (mapping.error) throw mapping.error
       const cleared = await admin.from('google_place_match_attempts').delete().eq('location_id', location.id)
       if (cleared.error) throw cleared.error
-      const touched = await admin.rpc('touch_static_catalogue_materializations_v1', {
-        location_ids: [location.id],
-        touch_reason: 'google'
-      })
-      if (touched.error) throw touched.error
-      changedLocationIds.push(location.id)
       saved += 1
     }
   } catch (error) {
@@ -139,13 +131,8 @@ for (const location of locations) {
   await sleep(REQUEST_DELAY_MS)
 }
 
-let overlays = null
-if (APPLY && changedLocationIds.length) {
-  overlays = await syncStaticMediaOverlayForLocations(admin, changedLocationIds)
-}
-
 console.log(JSON.stringify({
   mode: APPLY ? 'apply' : 'dry-run', inspected: locations.length,
-  matched, saved, noMatch, failed, minimumScore: MIN_SCORE, overlays
+  matched, saved, noMatch, failed, minimumScore: MIN_SCORE
 }, null, 2))
 if (!APPLY) console.log('Dry run only. Re-run with --apply after reviewing the candidate output.')
