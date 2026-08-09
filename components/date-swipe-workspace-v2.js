@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
+import { DiscoverSocialBar } from '@/components/discover-social-bar'
 import { csrfFetch } from '@/lib/security/csrf-client'
 import { prefetchStaticMedia } from '@/lib/app/use-static-media-resolution'
 
@@ -87,37 +88,7 @@ function FilterSheet({ filters, categories, onChange, onApply, onClose, loading 
   )
 }
 
-function InviteSheet({ busy, room, onCreate, onClose, onMessage }) {
-  async function copy() {
-    await navigator.clipboard.writeText(room.url)
-    onMessage('Invite link copied.')
-  }
-  async function share() {
-    try {
-      if (navigator.share) await navigator.share({ title: 'Puddle invite', url: room.url })
-      else await copy()
-    } catch (error) {
-      if (error?.name !== 'AbortError') onMessage('Could not share the invite.')
-    }
-  }
-
-  return (
-    <div className="minimal-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
-      <section className="minimal-invite-sheet" role="dialog" aria-modal="true" aria-labelledby="invite-title">
-        <header><h2 id="invite-title">Invite others</h2><button type="button" onClick={onClose} aria-label="Close invite">×</button></header>
-        {room ? <>
-          <p>Your shared deck is ready.</p>
-          <div className="minimal-invite-actions"><button type="button" onClick={copy}>Copy link</button><button type="button" onClick={share}>Share</button><a href={room.url}>Open room</a></div>
-        </> : <div className="minimal-invite-choice">
-          <button type="button" onClick={() => onCreate('date')} disabled={busy}><strong>One person</strong><span>Create a two-person deck</span></button>
-          <button type="button" onClick={() => onCreate('hangout')} disabled={busy}><strong>A group</strong><span>Create a group deck</span></button>
-        </div>}
-      </section>
-    </div>
-  )
-}
-
-function EmptyDeck({ feed, onRefresh, onFilters, onExpand, onInvite, exhausted = false }) {
+function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) {
   if (feed.emptyReason === 'location_required') return <div className="minimal-deck-complete">
     <h1>Choose your location</h1>
     <p>Puddle needs a city or your current location before it can find nearby places.</p>
@@ -139,8 +110,7 @@ function EmptyDeck({ feed, onRefresh, onFilters, onExpand, onInvite, exhausted =
     <h1>You've seen all nearby places</h1>
     <p>{Number(feed.filters?.distance) < 100 ? `That's everything in the current ${feed.filters?.distance || 10} km search.` : 'That is everything available for the current filters.'}</p>
     <div>
-      {onInvite ? <button className="minimal-primary-button" type="button" onClick={onInvite}>Invite others</button> : null}
-      {Number(feed.filters?.distance) < 100 ? <button type="button" onClick={onExpand}>Expand distance</button> : null}
+      {Number(feed.filters?.distance) < 100 ? <button className="minimal-primary-button" type="button" onClick={onExpand}>Expand distance</button> : null}
       <button type="button" onClick={onFilters}>Change filters</button>
     </div>
   </div>
@@ -158,12 +128,9 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const [index, setIndex] = useState(0)
   const [choices, setChoices] = useState({})
   const [showFilters, setShowFilters] = useState(false)
-  const [showInvite, setShowInvite] = useState(false)
-  const [room, setRoom] = useState(null)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [exhausted, setExhausted] = useState(initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
-  const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(initialFeed.recycled ? 'Showing passed places again.' : '')
   const storageKey = useMemo(() => actionStorageKey(profileId), [profileId])
   const actionBuffer = useRef([])
@@ -178,6 +145,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const sessionIds = useRef(new Set(initialItems.map((item) => item.content_id)))
   const current = feed.items[index] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
+  const busy = false
 
   useEffect(() => {
     if (!message) return
@@ -393,7 +361,6 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     setFilters({ ...result.filters, kind: 'place', date: 'any', limit: DECK_BATCH_SIZE })
     setIndex(0)
     setChoices({})
-    setRoom(null)
     setShowFilters(false)
     setExhausted(nextItems.length < DECK_BATCH_SIZE && nextItems.length > 0)
     setMessage(result.recycled ? 'Showing passed places again.' : '')
@@ -445,28 +412,6 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     })
   }
 
-  async function createSharedDeck(mode) {
-    if (busy || feed.items.length < 2) return
-    setBusy(true)
-    await drainActions()
-    const response = await csrfFetch('/api/date-match/start', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        locationIds: feed.items.map((item) => item.content_id),
-        staticRefs: Object.fromEntries(feed.items.filter((item) => item.static_catalogue_ephemeral && item.static_ref).map((item) => [item.content_id, item.static_ref])),
-        center: feed.center,
-        mode,
-        maxMembers: mode === 'hangout' ? 4 : 2,
-        context: { mood: filters.q || null, category: filters.category || null, price: filters.price || 'any', daypart: daypart() },
-        choices: Object.entries(choices).map(([locationId, value]) => ({ locationId, ...value }))
-      })
-    })
-    const result = await response.json().catch(() => ({}))
-    setBusy(false)
-    if (!response.ok) return setMessage(result.error || 'Could not create the shared deck.')
-    setRoom(result)
-  }
-
   function expandDistance() {
     const distance = Math.min(100, Math.max(Number(filters.distance || 10) + 5, Number(filters.distance || 10) * 2))
     refresh({ ...filters, distance })
@@ -486,6 +431,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
 
       {current ? <>
         <div className="minimal-card-stage"><MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} /></div>
+        <DiscoverSocialBar item={current} onMessage={setMessage} />
         <SwipeActionDock
           onUndo={undo}
           onPass={() => persistChoice('pass', current)}
@@ -503,11 +449,9 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
         onRefresh={() => refresh()}
         onFilters={() => setShowFilters(true)}
         onExpand={expandDistance}
-        onInvite={() => setShowInvite(true)}
       /> : <EmptyDeck feed={feed} onRefresh={() => refresh()} onFilters={() => setShowFilters(true)} onExpand={expandDistance} />}
 
       {showFilters ? <FilterSheet filters={filters} categories={categories} onChange={updateFilter} onApply={() => refresh(filters)} onClose={() => setShowFilters(false)} loading={loading} /> : null}
-      {showInvite ? <InviteSheet busy={busy} room={room} onCreate={createSharedDeck} onClose={() => { setShowInvite(false); setRoom(null) }} onMessage={setMessage} /> : null}
     </section>
   )
 }
