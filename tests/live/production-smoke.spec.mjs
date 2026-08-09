@@ -19,7 +19,7 @@ async function deleteDisposableAccount(page) {
 
 test('production share, profile photo, and Stripe handoff work end to end', async ({ page, request }) => {
   test.setTimeout(120_000)
-  const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`
+  const suffix = `${Date.now().toString(36)}${crypto.randomUUID().replaceAll('-', '').slice(0, 8)}`
   const email = `puddle-live-${suffix}@example.com`
   const password = `LiveSmoke-${suffix}-A9!`
   const username = `live_${suffix}`.slice(0, 24)
