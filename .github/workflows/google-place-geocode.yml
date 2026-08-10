@@ -1,0 +1,61 @@
+name: Repair Google Place matching addresses
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Maximum addressless locations to inspect'
+        required: false
+        default: '1000'
+        type: string
+      apply:
+        description: 'Persist candidate and retry evidence to Supabase'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: '43 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/google-place-geocode.yml'
+      - 'scripts/repair-google-place-addresses.mjs'
+      - 'lib/app/google-place-discovery.js'
+      - 'supabase/migrations/10054_google_place_matching_architecture.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-place-address-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Reverse geocode addressless locations and seed IDs-only candidates
+        if: github.event_name != 'workflow_dispatch'
+        run: npm run locations:google:geocode -- --limit=1000 --apply
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          GOOGLE_PLACE_GEOCODE_DELAY_MS: '100'
+      - name: Repair Google matching addresses manually
+        if: github.event_name == 'workflow_dispatch'
+        run: npm run locations:google:geocode -- --limit="${{ inputs.limit }}" ${{ inputs.apply && '--apply' || '' }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          GOOGLE_PLACE_GEOCODE_DELAY_MS: '100'
