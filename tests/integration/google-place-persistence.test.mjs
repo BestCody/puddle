@@ -51,9 +51,15 @@ test('Google Place ID matching exhausts free rich SKUs while parallel discovery 
 
   assert.match(geocodeWorkflow, /cron: '43 \* \* \* \*'/)
   assert.match(geocodeWorkflow, /google-place-address-repair/)
+  assert.match(geocodeWorkflow, /GOOGLE_GEOCODING_API_KEY/)
   assert.match(geocoder, /maps\.googleapis\.com\/maps\/api\/geocode\/json/)
   assert.match(geocoder, /target_sku: GEOCODING_SKU/)
   assert.match(geocoder, /addressOverride: geocode\.address/)
+  assert.match(geocoder, /GOOGLE_GEOCODING_API_KEY \|\| ''/)
+  assert.match(geocoder, /fatalConfigurationError/)
+  assert.match(geocoder, /status === 'REQUEST_DENIED'/)
+  assert.match(geocoder, /process\.exitCode = 1/)
+  assert.doesNotMatch(geocoder, /GOOGLE_GEOCODING_API_KEY \|\| PLACES_API_KEY/)
   assert.doesNotMatch(geocoder, /address_public\s*:/)
 
   assert.match(migration, /'text_search_pro' then 5000/)
