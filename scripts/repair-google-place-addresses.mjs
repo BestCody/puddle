@@ -8,14 +8,16 @@ const APPLY = process.argv.includes('--apply')
 const limitArgument = process.argv.find((value) => value.startsWith('--limit='))?.split('=')[1]
 const LIMIT = Math.max(1, Math.min(5_000, Number(limitArgument || process.env.GOOGLE_PLACE_GEOCODE_LIMIT || 1_000)))
 const PLACES_API_KEY = String(process.env.GOOGLE_PLACES_API_KEY || '').trim()
-const GEOCODING_API_KEY = String(process.env.GOOGLE_GEOCODING_API_KEY || PLACES_API_KEY).trim()
+const GEOCODING_API_KEY = String(process.env.GOOGLE_GEOCODING_API_KEY || '').trim()
 const REQUEST_TIMEOUT_MS = Math.max(3_000, Math.min(30_000, Number(process.env.GOOGLE_PLACE_GEOCODE_TIMEOUT_MS || 12_000)))
 const REQUEST_DELAY_MS = Math.max(25, Math.min(2_000, Number(process.env.GOOGLE_PLACE_GEOCODE_DELAY_MS || 100)))
 const RETRYABLE_HTTP = new Set([408, 425, 429, 500, 502, 503, 504])
 const GEOCODING_SKU = 'geocoding'
 
 if (!PLACES_API_KEY) throw new Error('Set GOOGLE_PLACES_API_KEY before seeding Google Place ID candidates.')
-if (!GEOCODING_API_KEY) throw new Error('Set GOOGLE_GEOCODING_API_KEY or GOOGLE_PLACES_API_KEY before reverse geocoding.')
+if (!GEOCODING_API_KEY) {
+  throw new Error('Set a server-only GOOGLE_GEOCODING_API_KEY that is explicitly permitted to call the Google Geocoding API.')
+}
 const admin = createAdminClient()
 
 function sleep(milliseconds) {
@@ -28,6 +30,12 @@ function retryAfterMilliseconds(value) {
   if (/^\d+$/.test(raw)) return Math.max(0, Number(raw) * 1_000)
   const timestamp = Date.parse(raw)
   return Number.isFinite(timestamp) ? Math.max(0, timestamp - Date.now()) : 0
+}
+
+function fatalConfigurationError(message) {
+  const error = new Error(message)
+  error.fatalConfiguration = true
+  return error
 }
 
 async function reserveGeocoding() {
@@ -66,6 +74,9 @@ async function reverseGeocode(location) {
 
     if (!response.ok) {
       await releaseGeocoding()
+      if (response.status === 401 || response.status === 403) {
+        throw fatalConfigurationError(`Google Geocoding rejected the configured API key with HTTP ${response.status}.`)
+      }
       const error = new Error(`Google Geocoding returned HTTP ${response.status}.`)
       error.status = response.status
       lastError = error
@@ -78,9 +89,16 @@ async function reverseGeocode(location) {
     if (payload?.status === 'ZERO_RESULTS') return { exhausted: false, address: null }
     if (payload?.status !== 'OK') {
       await releaseGeocoding()
-      const error = new Error(`Google Geocoding returned ${payload?.status || 'UNKNOWN_ERROR'}.`)
+      const status = String(payload?.status || 'UNKNOWN_ERROR')
+      const detail = String(payload?.error_message || '').trim()
+      if (status === 'REQUEST_DENIED') {
+        throw fatalConfigurationError(
+          `Google Geocoding returned REQUEST_DENIED.${detail ? ` ${detail}` : ''}`
+        )
+      }
+      const error = new Error(`Google Geocoding returned ${status}.`)
       lastError = error
-      if (attempt === 2 || !['OVER_QUERY_LIMIT', 'UNKNOWN_ERROR'].includes(payload?.status)) throw error
+      if (attempt === 2 || !['OVER_QUERY_LIMIT', 'UNKNOWN_ERROR'].includes(status)) throw error
       await sleep(750 * (2 ** attempt))
       continue
     }
@@ -188,6 +206,7 @@ let candidatesSeen = 0
 let noResult = 0
 let quotaDeferred = 0
 let failed = 0
+let configurationFailure = null
 
 for (const location of locations) {
   const attemptCount = Number(location.attempt_count || 0) + 1
@@ -225,6 +244,12 @@ for (const location of locations) {
     seeded += locationSeeds > 0 ? 1 : 0
     await saveAttempt(location.id, locationSeeds > 0 ? 'seeded' : 'no_result', attemptCount, resetAt)
   } catch (error) {
+    if (error?.fatalConfiguration) {
+      configurationFailure = error.message
+      console.error(`Stopping reverse-geocoding worker: ${error.message}`)
+      process.exitCode = 1
+      break
+    }
     failed += 1
     console.warn(`${location.name}: ${error.message}`)
     const hours = Math.min(7 * 24, Math.max(1, 2 ** Math.min(8, attemptCount)))
@@ -255,6 +280,7 @@ console.log(JSON.stringify({
   noResult,
   quotaDeferred,
   failed,
+  configurationFailure,
   freeSkuUsage: usage.data || []
 }, null, 2))
 if (!APPLY) console.log('Dry run only. Reverse-geocoding and IDs-only requests are sent, but no candidate or retry state is persisted without --apply.')
