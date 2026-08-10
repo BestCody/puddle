@@ -1,0 +1,59 @@
+name: Discover Google Place ID candidates
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Maximum unmatched locations to inspect'
+        required: false
+        default: '1500'
+        type: string
+      apply:
+        description: 'Persist candidate evidence to Supabase'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: '7 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/google-place-discovery.yml'
+      - 'scripts/discover-google-place-ids.mjs'
+      - 'lib/app/google-place-discovery.js'
+      - 'supabase/migrations/10054_google_place_matching_architecture.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-place-id-discovery
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Build no-cost Google Place ID candidate evidence
+        if: github.event_name != 'workflow_dispatch'
+        run: npm run locations:google:discover -- --limit=1500 --apply
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          GOOGLE_PLACE_DISCOVERY_DELAY_MS: '80'
+      - name: Discover Google Place IDs manually
+        if: github.event_name == 'workflow_dispatch'
+        run: npm run locations:google:discover -- --limit="${{ inputs.limit }}" ${{ inputs.apply && '--apply' || '' }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          GOOGLE_PLACE_DISCOVERY_DELAY_MS: '80'

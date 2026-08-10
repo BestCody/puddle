@@ -1,9 +1,11 @@
 import { createAdminClient } from '../lib/supabase/admin.js'
 import {
   scoreGoogleAutocompletePrediction,
+  scoreGoogleNearbyPlaceMatch,
   scoreGooglePlaceEssentialsMatch,
   scoreGooglePlaceMatch
 } from '../lib/app/google-place-match.js'
+import { googlePrimaryTypesForKind } from '../lib/app/google-place-discovery.js'
 
 const APPLY = process.argv.includes('--apply')
 const locationArgument = process.argv.find((value) => value.startsWith('--location='))?.split('=')[1] || null
@@ -19,12 +21,17 @@ const SKU = Object.freeze({
   TEXT_SEARCH_PRO: 'text_search_pro',
   PLACE_DETAILS_PRO: 'place_details_pro',
   PLACE_DETAILS_ESSENTIALS: 'place_details_essentials',
-  AUTOCOMPLETE_REQUESTS: 'autocomplete_requests'
+  AUTOCOMPLETE_REQUESTS: 'autocomplete_requests',
+  NEARBY_SEARCH_PRO: 'nearby_search_pro'
 })
-const PRIMARY_VERIFICATION_SKUS = [
+const AUTOCOMPLETE_UNLOCK_SKUS = [
   SKU.TEXT_SEARCH_PRO,
   SKU.PLACE_DETAILS_PRO,
   SKU.PLACE_DETAILS_ESSENTIALS
+]
+const NEARBY_UNLOCK_SKUS = [
+  ...AUTOCOMPLETE_UNLOCK_SKUS,
+  SKU.AUTOCOMPLETE_REQUESTS
 ]
 if (!API_KEY) throw new Error('Set the server-only GOOGLE_PLACES_API_KEY before matching locations.')
 
@@ -35,7 +42,8 @@ const requests = {
   textSearchIdsOnly: 0,
   placeDetailsPro: 0,
   placeDetailsEssentials: 0,
-  autocompleteRequests: 0
+  autocompleteRequests: 0,
+  nearbySearchPro: 0
 }
 
 function sleep(milliseconds) {
@@ -45,7 +53,8 @@ function sleep(milliseconds) {
 function normalizedLocation(location) {
   return {
     ...location,
-    addressPublic: location.addressPublic ?? location.address_public ?? null
+    addressPublic: location.addressPublic ?? location.address_public ?? null,
+    candidatePlaceIds: location.candidatePlaceIds ?? location.candidate_place_ids ?? []
   }
 }
 
@@ -61,6 +70,8 @@ function googleSearchBody(location) {
       }
     }
   }
+  const [includedType] = googlePrimaryTypesForKind(location.kind)
+  if (includedType) body.includedType = includedType
   if (/^[A-Z]{2}$/.test(String(location.country_code || ''))) body.regionCode = location.country_code
   return body
 }
@@ -81,7 +92,27 @@ function googleAutocompleteBody(location) {
       }
     }
   }
+  const includedPrimaryTypes = googlePrimaryTypesForKind(location.kind)
+  if (includedPrimaryTypes.length) body.includedPrimaryTypes = includedPrimaryTypes
   if (/^[A-Z]{2}$/.test(String(location.country_code || ''))) body.regionCode = location.country_code.toLowerCase()
+  return body
+}
+
+function googleNearbyBody(location, typed = true) {
+  const body = {
+    languageCode: 'en',
+    maxResultCount: 10,
+    rankPreference: 'DISTANCE',
+    locationRestriction: {
+      circle: {
+        center: { latitude: Number(location.latitude), longitude: Number(location.longitude) },
+        radius: 180
+      }
+    }
+  }
+  const includedPrimaryTypes = googlePrimaryTypesForKind(location.kind)
+  if (typed && includedPrimaryTypes.length) body.includedPrimaryTypes = includedPrimaryTypes
+  if (/^[A-Z]{2}$/.test(String(location.country_code || ''))) body.regionCode = location.country_code
   return body
 }
 
@@ -100,7 +131,11 @@ function observeBudget(budget) {
 }
 
 function autocompleteUnlocked() {
-  return PRIMARY_VERIFICATION_SKUS.every((sku) => exhaustedSkus.has(sku))
+  return AUTOCOMPLETE_UNLOCK_SKUS.every((sku) => exhaustedSkus.has(sku))
+}
+
+function nearbyUnlocked() {
+  return NEARBY_UNLOCK_SKUS.every((sku) => exhaustedSkus.has(sku))
 }
 
 async function loadExhaustedSkuState() {
@@ -123,8 +158,6 @@ async function releaseSku(sku) {
     console.warn(`Could not release ${sku} quota reservation: ${result.error.message}`)
     return
   }
-  // A released reservation necessarily restores at least one request below the
-  // hard cap, so do not leave a stale exhausted latch in this worker process.
   exhaustedSkus.delete(sku)
 }
 
@@ -133,6 +166,7 @@ function countSuccessfulRequest(sku) {
   else if (sku === SKU.PLACE_DETAILS_PRO) requests.placeDetailsPro += 1
   else if (sku === SKU.PLACE_DETAILS_ESSENTIALS) requests.placeDetailsEssentials += 1
   else if (sku === SKU.AUTOCOMPLETE_REQUESTS) requests.autocompleteRequests += 1
+  else if (sku === SKU.NEARBY_SEARCH_PRO) requests.nearbySearchPro += 1
   else requests.textSearchIdsOnly += 1
 }
 
@@ -182,7 +216,7 @@ async function searchGooglePro(location) {
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': API_KEY,
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location'
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types'
     },
     body: JSON.stringify(googleSearchBody(location))
   }, { sku: SKU.TEXT_SEARCH_PRO, label: 'Google Text Search Pro' })
@@ -202,7 +236,7 @@ async function searchGoogleIdsOnly(location) {
 
 async function googlePlaceDetails(placeId, sku) {
   const fieldMask = sku === SKU.PLACE_DETAILS_PRO
-    ? 'id,displayName,formattedAddress,location'
+    ? 'id,displayName,formattedAddress,location,primaryType,types'
     : 'id,formattedAddress,location'
   const label = sku === SKU.PLACE_DETAILS_PRO ? 'Google Place Details Pro' : 'Google Place Details Essentials'
   return requestJson(`https://places.googleapis.com/v1/places/${encodeURIComponent(String(placeId))}`, {
@@ -231,6 +265,18 @@ async function searchGoogleAutocomplete(location) {
   }, { sku: SKU.AUTOCOMPLETE_REQUESTS, label: 'Google Autocomplete' })
 }
 
+async function searchGoogleNearby(location, typed = true) {
+  return requestJson('https://places.googleapis.com/v1/places:searchNearby', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': API_KEY,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types'
+    },
+    body: JSON.stringify(googleNearbyBody(location, typed))
+  }, { sku: SKU.NEARBY_SEARCH_PRO, label: 'Google Nearby Search Pro' })
+}
+
 function rankedRichMatches(location, places) {
   return (places || [])
     .map((place) => ({ place, match: scoreGooglePlaceMatch(location, place) }))
@@ -238,9 +284,11 @@ function rankedRichMatches(location, places) {
     .sort((a, b) => b.match.score - a.match.score)
 }
 
-function uniquePlaceIds(payload) {
-  return [...new Set((payload?.places || []).map((place) => String(place?.id || '').trim()).filter(Boolean))]
-    .slice(0, MAX_DETAILS_CANDIDATES)
+function uniquePlaceIds(payload, preDiscovered = []) {
+  return [...new Set([
+    ...(preDiscovered || []).map((value) => String(value || '').trim()),
+    ...(payload?.places || []).map((place) => String(place?.id || '').trim())
+  ].filter(Boolean))].slice(0, MAX_DETAILS_CANDIDATES)
 }
 
 function autocompletePredictions(payload) {
@@ -249,16 +297,44 @@ function autocompletePredictions(payload) {
     .filter((prediction) => String(prediction?.placeId || '').trim())
 }
 
+function chooseUnambiguousNearby(location, places) {
+  const matches = (places || [])
+    .map((place) => ({ place, match: scoreGoogleNearbyPlaceMatch(location, place) }))
+    .filter((entry) => entry.match && entry.match.score >= MIN_SCORE)
+    .sort((a, b) => b.match.score - a.match.score)
+  if (!matches.length) return null
+  if (matches.length > 1 && matches[0].match.score - matches[1].match.score < 0.05) return { ambiguous: true }
+  return matches[0]
+}
+
+async function findNearbyMatch(location) {
+  if (!nearbyUnlocked()) return { status: 'quota_deferred', mode: 'nearby_locked' }
+  const hasTypes = googlePrimaryTypesForKind(location.kind).length > 0
+  const typed = await searchGoogleNearby(location, hasTypes)
+  if (typed.exhausted) return { status: 'quota_deferred', mode: 'nearby_search_pro' }
+
+  let best = chooseUnambiguousNearby(location, typed.payload?.places)
+  if (best?.ambiguous) return { status: 'no_match', mode: 'nearby_search_pro_ambiguous' }
+  if (best) return { status: 'matched', place: best.place, match: best.match, mode: 'nearby_search_pro' }
+
+  if (hasTypes) {
+    const untyped = await searchGoogleNearby(location, false)
+    if (untyped.exhausted) return { status: 'quota_deferred', mode: 'nearby_search_pro' }
+    best = chooseUnambiguousNearby(location, untyped.payload?.places)
+    if (best?.ambiguous) return { status: 'no_match', mode: 'nearby_search_pro_untyped_ambiguous' }
+    if (best) return { status: 'matched', place: best.place, match: best.match, mode: 'nearby_search_pro_untyped' }
+  }
+  return { status: 'no_match', mode: 'nearby_search_pro' }
+}
+
 async function findAutocompleteMatch(location) {
-  // Without a source address there is not enough independent evidence to make a
-  // final-stage Place ID durable. Skip the request rather than spend free quota on
-  // a prediction the strict scorer cannot safely verify.
   if (!String(location.addressPublic || '').trim()) {
+    if (nearbyUnlocked()) return findNearbyMatch(location)
     return { status: 'no_match', mode: 'autocomplete_ineligible' }
   }
 
   const autocomplete = await searchGoogleAutocomplete(location)
-  if (autocomplete.exhausted) return { status: 'quota_deferred', mode: 'autocomplete' }
+  if (autocomplete.exhausted) return findNearbyMatch(location)
 
   const matches = autocompletePredictions(autocomplete.payload)
     .map((prediction) => ({
@@ -290,7 +366,7 @@ async function findVerifiedMatch(location) {
   }
 
   const idsSearch = await searchGoogleIdsOnly(location)
-  const ids = uniquePlaceIds(idsSearch.payload)
+  const ids = uniquePlaceIds(idsSearch.payload, location.candidatePlaceIds)
   if (!ids.length) {
     if (autocompleteUnlocked()) return findAutocompleteMatch(location)
     return { status: 'no_match', mode: 'ids_only' }
@@ -313,10 +389,6 @@ async function findVerifiedMatch(location) {
     return { status: 'no_match', mode: 'ids_only_place_details_pro' }
   }
 
-  // Rich Place Details quota is gone. Spend the larger Essentials allowance only
-  // on the candidates that were not already rejected with richer evidence, and
-  // accept a mapping only when exactly one candidate survives the strict address
-  // and distance scorer after every remaining candidate has been checked.
   const remainingIds = ids.slice(proExhaustedAt)
   const essentialsMatches = []
   for (let index = 0; index < remainingIds.length; index += 1) {
@@ -350,9 +422,10 @@ function retryAfter(attemptCount, failed = false) {
   return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
 }
 
-function nextMonthRetry() {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 5, 0)).toISOString()
+async function nextMonthRetry() {
+  const result = await admin.rpc('google_places_next_free_reset_v1')
+  if (result.error) throw result.error
+  return result.data || new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString()
 }
 
 async function saveAttempt(location, { status, attemptCount, retryAfterValue, error = null }) {
@@ -370,18 +443,30 @@ async function saveAttempt(location, { status, attemptCount, retryAfterValue, er
 }
 
 await loadExhaustedSkuState()
+const quotaResetAt = await nextMonthRetry()
 
 let locations
 if (locationArgument) {
   const result = await admin
     .from('locations')
-    .select('id,name,latitude,longitude,city,region,country,country_code,address_public')
+    .select('id,name,kind,latitude,longitude,city,region,country,country_code,address_public')
     .eq('id', locationArgument)
     .maybeSingle()
   if (result.error) throw result.error
-  locations = result.data ? [{ ...result.data, attempt_count: 0 }] : []
+  if (result.data) {
+    const candidates = await admin.rpc('google_place_candidate_ids_v1', {
+      target_location_id: result.data.id,
+      max_candidates: MAX_DETAILS_CANDIDATES
+    })
+    if (candidates.error) throw candidates.error
+    locations = [{
+      ...result.data,
+      attempt_count: 0,
+      candidate_place_ids: (candidates.data || []).map((candidate) => candidate.google_place_id)
+    }]
+  } else locations = []
 } else {
-  const result = await admin.rpc('claim_google_place_candidates_v2', { batch_size: LIMIT })
+  const result = await admin.rpc('claim_google_place_candidates_v3', { batch_size: LIMIT })
   if (result.error) throw result.error
   locations = result.data || []
 }
@@ -405,7 +490,7 @@ for (const rawLocation of locations) {
       await saveAttempt(location, {
         status: 'quota_deferred',
         attemptCount: Number(location.attempt_count || 0),
-        retryAfterValue: nextMonthRetry()
+        retryAfterValue: quotaResetAt
       })
       await sleep(REQUEST_DELAY_MS)
       continue
@@ -425,7 +510,8 @@ for (const rawLocation of locations) {
 
     matched += 1
     const matchedName = result.match.matchedName || null
-    console.log(`${APPLY ? 'Saving' : 'Would save'} ${location.name} → ${matchedName || result.place.id} (${result.match.score.toFixed(3)}, ${result.match.distanceM.toFixed(1)} m, ${result.mode}).`)
+    const distanceLabel = Number.isFinite(Number(result.match.distanceM)) ? `${Number(result.match.distanceM).toFixed(1)} m` : 'distance n/a'
+    console.log(`${APPLY ? 'Saving' : 'Would save'} ${location.name} → ${matchedName || result.place.id} (${result.match.score.toFixed(3)}, ${distanceLabel}, ${result.mode}).`)
     if (APPLY) {
       const mapping = await admin.from('location_google_places').upsert({
         location_id: location.id,
@@ -438,6 +524,8 @@ for (const rawLocation of locations) {
       if (mapping.error) throw mapping.error
       const cleared = await admin.from('google_place_match_attempts').delete().eq('location_id', location.id)
       if (cleared.error) throw cleared.error
+      const candidateCleanup = await admin.from('google_place_id_candidates').delete().eq('location_id', location.id)
+      if (candidateCleanup.error) throw candidateCleanup.error
       saved += 1
     }
   } catch (error) {
