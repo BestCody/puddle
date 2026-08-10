@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { findGoogleClientPlace } from '../../lib/app/google-place-client.js'
-import { scoreGooglePlaceEssentialsMatch, scoreGooglePlaceMatch } from '../../lib/app/google-place-match.js'
+import {
+  scoreGoogleAutocompletePrediction,
+  scoreGooglePlaceEssentialsMatch,
+  scoreGooglePlaceMatch
+} from '../../lib/app/google-place-match.js'
 
 test('Google place matching requires a similar nearby venue', () => {
   const location = { name: 'Puddle Cafe', latitude: 43.65, longitude: -79.38 }
@@ -82,6 +86,77 @@ test('Essentials-only verification requires an exact street number, near-identic
     id: 'no-source-address',
     formattedAddress: '860 The Queensway, Etobicoke, ON M8Z 1N7, Canada',
     location: { latitude: 43.6385, longitude: -79.5317 }
+  }), null)
+})
+
+test('Autocomplete verification requires one strongly matching nearby prediction', () => {
+  const location = {
+    name: 'Sushi Kaji',
+    latitude: 43.638,
+    longitude: -79.532,
+    addressPublic: '860 The Queensway, Etobicoke, ON'
+  }
+  const match = scoreGoogleAutocompletePrediction(location, {
+    placeId: 'sushi-kaji-place-id',
+    structuredFormat: {
+      mainText: { text: 'Sushi Kaji' },
+      secondaryText: { text: '860 The Queensway, Etobicoke, ON, Canada' }
+    },
+    distanceMeters: 74
+  })
+  assert.ok(match)
+  assert.ok(match.score >= 0.94)
+  assert.equal(match.streetNumberMatch, true)
+  assert.equal(match.matchedName, 'Sushi Kaji')
+
+  assert.equal(scoreGoogleAutocompletePrediction(location, {
+    placeId: 'wrong-number',
+    structuredFormat: {
+      mainText: { text: 'Sushi Kaji' },
+      secondaryText: { text: '862 The Queensway, Etobicoke, ON, Canada' }
+    },
+    distanceMeters: 20
+  }), null)
+  assert.equal(scoreGoogleAutocompletePrediction(location, {
+    placeId: 'too-far',
+    structuredFormat: {
+      mainText: { text: 'Sushi Kaji' },
+      secondaryText: { text: '860 The Queensway, Etobicoke, ON, Canada' }
+    },
+    distanceMeters: 121
+  }), null)
+  assert.equal(scoreGoogleAutocompletePrediction({ ...location, addressPublic: null }, {
+    placeId: 'no-source-address',
+    structuredFormat: {
+      mainText: { text: 'Sushi Kaji' },
+      secondaryText: { text: '860 The Queensway, Etobicoke, ON, Canada' }
+    },
+    distanceMeters: 10
+  }), null)
+})
+
+test('Autocomplete verification is stricter for addresses without street numbers', () => {
+  const location = {
+    name: 'High Park',
+    latitude: 43.6465,
+    longitude: -79.4637,
+    addressPublic: 'High Park, Toronto, ON'
+  }
+  assert.ok(scoreGoogleAutocompletePrediction(location, {
+    placeId: 'high-park',
+    structuredFormat: {
+      mainText: { text: 'High Park' },
+      secondaryText: { text: 'High Park, Toronto, ON, Canada' }
+    },
+    distanceMeters: 50
+  }))
+  assert.equal(scoreGoogleAutocompletePrediction(location, {
+    placeId: 'high-park-far',
+    structuredFormat: {
+      mainText: { text: 'High Park' },
+      secondaryText: { text: 'High Park, Toronto, ON, Canada' }
+    },
+    distanceMeters: 81
   }), null)
 })
 
