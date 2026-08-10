@@ -1,8 +1,7 @@
 name: Match Google Place IDs
 
-# Initial catalogue backfill deliberately consumes the full monthly no-cost
-# allowance for each matching SKU, then pauses only after Autocomplete Requests
-# is also exhausted. IDs-only Text Search remains the free discovery step.
+# Spend each capped no-cost rich verification SKU in order. Continuous IDs-only
+# discovery and reverse-geocoding repair run in separate concurrency groups.
 on:
   workflow_dispatch:
     inputs:
@@ -24,8 +23,10 @@ on:
       - '.github/workflows/google-place-match.yml'
       - 'scripts/match-google-places.mjs'
       - 'lib/app/google-place-match.js'
+      - 'lib/app/google-place-discovery.js'
       - 'supabase/migrations/10052_google_places_free_quota_matching.sql'
       - 'supabase/migrations/10053_google_places_autocomplete_matching.sql'
+      - 'supabase/migrations/10054_google_place_matching_architecture.sql'
 
 permissions:
   contents: read
