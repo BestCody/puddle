@@ -27,6 +27,7 @@ on:
       - 'supabase/migrations/10052_google_places_free_quota_matching.sql'
       - 'supabase/migrations/10053_google_places_autocomplete_matching.sql'
       - 'supabase/migrations/10054_google_place_matching_architecture.sql'
+      - 'supabase/migrations/10055_google_place_matching_stage_progression.sql'
 
 permissions:
   contents: read
