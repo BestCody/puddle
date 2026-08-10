@@ -1,9 +1,9 @@
 -- Let ordinary no-match locations re-enter the matcher within the same Google
 -- billing month after richer upstream SKUs become exhausted. The worker may still
--- write a conservative retry_after value, but V4 gives no-match rows a bounded
+-- write a conservative retry_after value, but V3 gives no-match rows a bounded
 -- six-hour stage-progression retry while preserving explicit quota/failed delays.
 
-create or replace function public.claim_google_place_candidates_v4(batch_size integer default 100)
+create or replace function public.claim_google_place_candidates_v3(batch_size integer default 100)
 returns table(
   id uuid,
   name text,
@@ -78,5 +78,5 @@ as $$
   limit greatest(1,least(coalesce(batch_size,100),5000));
 $$;
 
-revoke all on function public.claim_google_place_candidates_v4(integer) from public,anon,authenticated;
-grant execute on function public.claim_google_place_candidates_v4(integer) to service_role;
+revoke all on function public.claim_google_place_candidates_v3(integer) from public,anon,authenticated;
+grant execute on function public.claim_google_place_candidates_v3(integer) to service_role;
