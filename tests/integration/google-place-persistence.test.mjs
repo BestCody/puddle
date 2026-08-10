@@ -12,12 +12,14 @@ test('Google Place ID matching exhausts free rich SKUs while parallel discovery 
   const discovery = await read('scripts/discover-google-place-ids.mjs')
   const geocoder = await read('scripts/repair-google-place-addresses.mjs')
   const migration = await read('supabase/migrations/10054_google_place_matching_architecture.sql')
+  const progression = await read('supabase/migrations/10055_google_place_matching_stage_progression.sql')
 
   assert.match(workflow, /cron: '29 \* \* \* \*'/)
   assert.match(workflow, /--limit=2000 --apply/)
   assert.match(workflow, /GOOGLE_PLACE_MATCH_DELAY_MS: '100'/)
   assert.match(workflow, /GOOGLE_PLACE_MATCH_MAX_DETAILS_CANDIDATES: '5'/)
   assert.match(workflow, /concurrency:[\s\S]*google-place-id-matching/)
+  assert.match(workflow, /10055_google_place_matching_stage_progression\.sql/)
   assert.match(workflow, /GOOGLE_PLACES_API_KEY/)
   assert.doesNotMatch(workflow, /B2_/)
 
@@ -67,6 +69,10 @@ test('Google Place ID matching exhausts free rich SKUs while parallel discovery 
   assert.match(migration, /claim_google_place_discovery_candidates_v1/)
   assert.match(migration, /claim_google_place_geocode_candidates_v1/)
   assert.match(migration, /grant execute on function public\.reserve_google_places_free_sku_v1\(text\) to service_role/)
+
+  assert.match(progression, /claim_google_place_candidates_v3/)
+  assert.match(progression, /attempt\.status='no_match'/)
+  assert.match(progression, /interval '6 hours'/)
 })
 
 test('Discover prefers a stored Google Place ID and only uses coordinates when no ID exists', async () => {
