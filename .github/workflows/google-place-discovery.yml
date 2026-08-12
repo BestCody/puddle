@@ -22,6 +22,7 @@ on:
       - 'scripts/discover-google-place-ids.mjs'
       - 'lib/app/google-place-discovery.js'
       - 'supabase/migrations/10054_google_place_matching_architecture.sql'
+      - 'supabase/migrations/10056_google_place_claim_query_optimization.sql'
 
 permissions:
   contents: read

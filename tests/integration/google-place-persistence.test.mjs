@@ -13,6 +13,7 @@ test('Google Place ID matching exhausts free rich SKUs while parallel discovery 
   const geocoder = await read('scripts/repair-google-place-addresses.mjs')
   const migration = await read('supabase/migrations/10054_google_place_matching_architecture.sql')
   const progression = await read('supabase/migrations/10055_google_place_matching_stage_progression.sql')
+  const optimization = await read('supabase/migrations/10056_google_place_claim_query_optimization.sql')
 
   assert.match(workflow, /cron: '29 \* \* \* \*'/)
   assert.match(workflow, /--limit=2000 --apply/)
@@ -20,6 +21,7 @@ test('Google Place ID matching exhausts free rich SKUs while parallel discovery 
   assert.match(workflow, /GOOGLE_PLACE_MATCH_MAX_DETAILS_CANDIDATES: '5'/)
   assert.match(workflow, /concurrency:[\s\S]*google-place-id-matching/)
   assert.match(workflow, /10055_google_place_matching_stage_progression\.sql/)
+  assert.match(workflow, /10056_google_place_claim_query_optimization\.sql/)
   assert.match(workflow, /GOOGLE_PLACES_API_KEY/)
   assert.doesNotMatch(workflow, /B2_/)
 
@@ -44,6 +46,7 @@ test('Google Place ID matching exhausts free rich SKUs while parallel discovery 
   assert.match(discoveryWorkflow, /cron: '7 \* \* \* \*'/)
   assert.match(discoveryWorkflow, /google-place-id-discovery/)
   assert.match(discoveryWorkflow, /locations:google:discover/)
+  assert.match(discoveryWorkflow, /10056_google_place_claim_query_optimization\.sql/)
   assert.match(discovery, /'X-Goog-FieldMask': 'places\.id'/)
   assert.match(discovery, /googleIdsOnlyQueryVariants/)
   assert.match(discovery, /record_google_place_id_candidate_v1/)
@@ -52,6 +55,7 @@ test('Google Place ID matching exhausts free rich SKUs while parallel discovery 
   assert.match(geocodeWorkflow, /cron: '43 \* \* \* \*'/)
   assert.match(geocodeWorkflow, /google-place-address-repair/)
   assert.match(geocodeWorkflow, /GOOGLE_GEOCODING_API_KEY/)
+  assert.match(geocodeWorkflow, /10056_google_place_claim_query_optimization\.sql/)
   assert.match(geocoder, /maps\.googleapis\.com\/maps\/api\/geocode\/json/)
   assert.match(geocoder, /target_sku: GEOCODING_SKU/)
   assert.match(geocoder, /addressOverride: geocode\.address/)
@@ -79,6 +83,16 @@ test('Google Place ID matching exhausts free rich SKUs while parallel discovery 
   assert.match(progression, /claim_google_place_candidates_v3/)
   assert.match(progression, /attempt\.status='no_match'/)
   assert.match(progression, /interval '6 hours'/)
+
+  assert.match(optimization, /locations_google_place_match_queue_idx/)
+  assert.match(optimization, /locations_google_place_geocode_queue_idx/)
+  assert.match(optimization, /candidate_grouped as materialized/)
+  assert.match(optimization, /candidate_ranked as materialized/)
+  assert.match(optimization, /row_number\(\) over/)
+  assert.match(optimization, /selected as materialized/)
+  assert.match(optimization, /claim_google_place_discovery_candidates_v1/)
+  assert.match(optimization, /claim_google_place_geocode_candidates_v1/)
+  assert.doesNotMatch(optimization, /left join lateral/)
 })
 
 test('Discover prefers a stored Google Place ID and only uses coordinates when no ID exists', async () => {
