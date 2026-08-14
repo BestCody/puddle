@@ -27,7 +27,6 @@ const server = createServer(async (request, response) => {
     const requestedPath = url.pathname === '/' ? 'landing.html' : url.pathname.replace(/^\/+/, '')
     const filePath = resolve(publicRoot, requestedPath)
     if (filePath !== publicRoot && !filePath.startsWith(publicPrefix)) throw new Error('Path escapes public root')
-
     handle = await open(filePath, 'r')
     const info = await handle.stat()
     if (!info.isFile()) throw new Error('Not a file')
@@ -55,9 +54,7 @@ async function assertDeckVisible(page, label) {
   await page.waitForFunction(() => document.querySelectorAll('#hero-deck .event-card').length === 3)
   const card = page.locator('#hero-deck .event-card:last-child')
   const box = await card.boundingBox()
-  assert(box && box.width > 200 && box.height > 300, `${label}: top date-location card is not visible`)
-  const footerBox = await card.locator('.event-card__footer').boundingBox()
-  assert(footerBox && footerBox.y + footerBox.height <= box.y + box.height + 2, `${label}: date-location card footer is clipped`)
+  assert(box && box.width > 200 && box.height > 300, `${label}: top Figma location card is not visible`)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
   assert(overflow <= 2, `${label}: page horizontally overflows by ${overflow}px`)
 }
@@ -71,38 +68,27 @@ try {
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await assertDeckVisible(page, 'desktop')
   await waitForCardTitle(page, 'Moonlight Café')
-  assert(await page.title() === 'Puddle — swipe for your next date spot', 'date-location browser title is missing')
-  assert((await page.locator('.hero-copy h1').textContent())?.trim() === 'Find the date spot one swipe at a time.', 'date-location hero promise is missing')
-  assert((await page.locator('.hero-lede').textContent())?.includes('Coffee shops, restaurants, parks'), 'date-location hero description is missing')
-  assert(await page.locator('#social').count() === 0, 'generic social event section remains in the active landing page')
-  assert(await page.locator('#organizers').count() === 0, 'organizer section remains in the active landing page')
-  assert(await page.locator('.section--tickets').count() === 0, 'ticketing section remains in the active landing page')
-  assert(await page.locator('#app-demo').count() === 0, 'unused application prototype remains in the active DOM')
-  assert(await page.locator('#toast-region').count() === 0, 'toast region remains in the active DOM')
+  assert(await page.title() === 'Puddle — discover places together', 'Figma landing browser title is missing')
+  assert((await page.locator('.hero-copy h1').textContent())?.includes('Discover places.'), 'Figma landing hero promise is missing')
+  assert((await page.locator('.hero-copy h1').textContent())?.includes('See who’s there.'), 'Figma landing social promise is missing')
+  assert(await page.locator('.feature-card').count() === 4, 'four Figma feature panels are required')
+  assert(await page.locator('.phone-shell').count() === 1, 'Figma phone preview is missing')
+  assert(await page.locator('#social').count() === 0, 'retired generic social section remains')
+  assert(await page.locator('#organizers').count() === 0, 'retired organizer section remains')
+  assert(await page.locator('.section--tickets').count() === 0, 'retired ticketing section remains')
+  assert(await page.locator('#app-demo').count() === 0, 'retired demo overlay remains')
+  assert(await page.locator('#toast-region').count() === 0, 'retired toast region remains')
 
-  const getStarted = page.locator('.hero-actions a[href="/signup"]')
-  assert(await getStarted.count() === 1, 'Get Started CTA is missing')
-  assert((await getStarted.textContent())?.trim().startsWith('Get Started'), 'Get Started CTA label is missing')
-  assert(new URL(await getStarted.getAttribute('href'), baseUrl).pathname === '/signup', 'Get Started does not link to registration')
-
-  const headerLinks = await page.locator('.header-actions a').evaluateAll((links) => links.map((link) => ({ label: link.textContent.trim(), href: new URL(link.href).pathname })))
-  assert(headerLinks.some((link) => link.label === 'Sign In' && link.href === '/signin'), 'header Sign In link is missing')
-  assert(headerLinks.some((link) => link.label.startsWith('Register') && link.href === '/signup'), 'header Register link is missing')
-
-  const finalLinks = await page.locator('.final-cta__inner > div a').evaluateAll((links) => links.map((link) => ({ label: link.textContent.trim(), href: new URL(link.href).pathname })))
-  assert(finalLinks.some((link) => link.label.startsWith('Register') && link.href === '/signup'), 'final Register link is missing')
-  assert(finalLinks.some((link) => link.label === 'Sign In' && link.href === '/signin'), 'final Sign In link is missing')
-
-  const companyLinks = await page.locator('.site-footer a').evaluateAll((links) => links.map((link) => ({ label: link.textContent.trim(), href: new URL(link.href).pathname })))
-  assert(companyLinks.some((link) => link.label === 'Privacy' && link.href === '/privacy'), 'Privacy page link is missing')
-  assert(companyLinks.some((link) => link.label === 'Terms' && link.href === '/terms'), 'Terms page link is missing')
+  for (const path of ['/signin', '/signup', '/privacy', '/terms']) {
+    assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} native route link is missing`)
+  }
 
   const footerForm = page.locator('.footer-form')
   assert(await footerForm.getAttribute('action') === '/signup', 'footer form does not submit to signup')
   assert((await footerForm.getAttribute('method'))?.toLowerCase() === 'get', 'footer form is not a native GET form')
   assert(await footerForm.locator('input[name="email"]').count() === 1, 'footer form email field is missing')
 
-  await page.locator('[data-swipe="right"]').click()
+  await page.locator('[data-swipe="right"]').first().click()
   await waitForCardTitle(page, 'Clay & Cabernet')
   await page.locator('[data-swipe="left"]').click()
   await waitForCardTitle(page, 'Rooftop Cinema Club')
@@ -110,12 +96,17 @@ try {
   await waitForCardTitle(page, 'Clay & Cabernet')
 
   const safetyButton = page.locator('[data-open-modal="safety"]').first()
-  assert(await safetyButton.count() === 1, 'date-safety details button is missing')
+  assert(await safetyButton.count() === 1, 'Figma safety details button is missing')
   await safetyButton.click()
   await page.waitForSelector('#modal-backdrop.is-open')
-  assert((await page.locator('#modal-title').textContent())?.trim() === 'Date ideas without stranger matching.', 'date-safety modal copy is missing')
+  assert((await page.locator('#modal-title').textContent())?.trim() === 'Shared places first. Privacy controls always.', 'current safety modal copy is missing')
   await page.locator('[data-close-modal]').click()
-  await page.waitForSelector('#modal-backdrop:not(.is-open)')
+  await page.waitForSelector('#modal-backdrop', { state: 'hidden' })
+
+  await page.locator('.menu-button').click()
+  assert((await page.locator('#site-header').getAttribute('class'))?.includes('menu-open'), 'Figma header menu did not open')
+  assert(await page.locator('.header-actions a[href="/signin"]').count() === 1, 'menu Sign in action is missing')
+  assert(await page.locator('.header-actions a[href="/signup"]').count() === 1, 'menu Create account action is missing')
 
   for (const viewport of [
     { width: 1024, height: 768, label: 'laptop' },
@@ -126,20 +117,20 @@ try {
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
     await page.goto(baseUrl, { waitUntil: 'networkidle' })
     await assertDeckVisible(page, viewport.label)
-    assert((await page.locator('.hero-copy h1').textContent())?.includes('Find the date spot'), `${viewport.label}: date-location headline is missing`)
+    assert((await page.locator('.hero-copy h1').textContent())?.includes('Discover places.'), `${viewport.label}: Figma headline is missing`)
   }
 
   const privacySource = await readFile(join(root, 'app/privacy/page.js'), 'utf8')
   const termsSource = await readFile(join(root, 'app/terms/page.js'), 'utf8')
-  for (const marker of ['Information we collect', 'Location and social privacy', 'Your choices and rights']) assert(privacySource.includes(marker), `privacy page is missing ${marker}`)
-  for (const marker of ['Acceptable use', 'Tickets, payments, refunds, and payouts', 'Governing law and disputes']) assert(termsSource.includes(marker), `terms page is missing ${marker}`)
+  for (const marker of ['Information we collect', 'Location and recommendation controls', 'Your choices and privacy rights']) assert(privacySource.includes(marker), `privacy page is missing ${marker}`)
+  for (const marker of ['Paid subscriptions and billing', 'Acceptable use', 'Governing law and disputes']) assert(termsSource.includes(marker), `terms page is missing ${marker}`)
 
   for (const removed of ['index.html','styles.css','app.js','public/landing-demo.js']) {
     try { await access(join(root, removed)); throw new Error(`${removed} still exists`) } catch (error) { if (error?.code !== 'ENOENT') throw error }
   }
 
   assert(pageErrors.length === 0, `browser errors detected:\n${pageErrors.join('\n')}`)
-  console.log('Date-location landing, native auth/legal links, responsive cards, and swipe interactions passed.')
+  console.log('Official Figma landing, native auth/legal links, responsive cards, menu, modal, and swipe interactions passed.')
 } finally {
   await browser.close()
   await new Promise((resolveClosing) => server.close(resolveClosing))

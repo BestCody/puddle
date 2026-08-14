@@ -1,85 +1,96 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ff4fa3" />
-    <meta name="description" content="Swipe through nearby places and save locations that feel right for a date." />
-    <meta property="og:title" content="Puddle — find a date spot by swiping" />
-    <meta property="og:description" content="Coffee shops, restaurants, activity dates, scenic spots and more—one place at a time." />
-    <meta property="og:image" content="/og-puddle.svg" />
-    <link rel="canonical" href="https://puddle.you/" />
-    <link rel="icon" href="/puddle-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/styles.css?v=3" />
-    <link rel="stylesheet" href="/landing-responsive.css?v=3" />
-    <link rel="stylesheet" href="/landing-hardening.css?v=3" />
-    <title>Puddle — swipe for your next date spot</title>
-  </head>
-  <body>
-    <div class="ambient ambient--one" aria-hidden="true"></div>
-    <div class="ambient ambient--two" aria-hidden="true"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#4ca5f7" />
+  <meta name="description" content="Discover places, save favorites, see what friends share, and find somewhere worth going together." />
+  <meta property="og:title" content="Puddle — discover places together" />
+  <meta property="og:description" content="Swipe places, save favorites, browse the feed, and plan somewhere worth going together." />
+  <meta property="og:image" content="/og-puddle.svg" />
+  <link rel="canonical" href="https://puddle.you/" />
+  <link rel="icon" href="/puddle-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/figma-landing.css?v=1" />
+  <link rel="stylesheet" href="/figma-landing-overflow-fix.css?v=1" />
+  <title>Puddle — discover places together</title>
+</head>
+<body>
+  <header class="site-header" id="site-header">
+    <a class="brand" href="#home" aria-label="Puddle home"><img src="/puddle-mark.svg" alt="" /><span>puddle</span></a>
+    <nav class="desktop-nav" aria-label="Primary navigation"><a href="#how">Features</a><a href="#safety">Safety</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav>
+    <div class="header-actions"><a class="button" href="/signin">Sign in</a><a class="button button--ink" href="/signup">Create account</a></div>
+    <button class="menu-button" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="site-header"><span></span><span></span></button>
+  </header>
 
-    <header class="site-header" id="site-header">
-      <a class="brand" href="#home" aria-label="Puddle home"><img src="/puddle-mark.svg" alt="" /><span>puddle</span></a>
-      <nav class="desktop-nav" aria-label="Primary navigation"><a href="#how">How it works</a><a href="#ideas">Date ideas</a><a href="#safety">Safety</a></nav>
-      <div class="header-actions"><a class="button button--ghost" href="/signin">Sign In</a><a class="button button--ink" href="/signup">Register <span>↗</span></a></div>
-      <button class="menu-button" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="site-header"><span></span><span></span></button>
-    </header>
-
-    <main id="home">
-      <section class="hero page-shell">
-        <div class="hero-copy reveal is-visible">
-          <div class="eyebrow"><span class="pulse-dot"></span> Toronto beta · made for better dates</div>
-          <h1>Find the date spot <em>one swipe</em> at a time.</h1>
-          <p class="hero-lede">Coffee shops, restaurants, parks, galleries, activity dates and hidden gems nearby—served as a deck you can actually swipe through.</p>
-          <div class="hero-actions"><a class="button button--pink button--large" href="/signup">Get Started <span>→</span></a><a class="button button--cream button--large" href="/signin">Sign In</a></div>
-          <div class="social-proof"><div class="avatar-stack" aria-hidden="true"><img src="/avatars/ava.svg" alt="" /><img src="/avatars/jules.svg" alt="" /><img src="/avatars/kai.svg" alt="" /><img src="/avatars/maya.svg" alt="" /></div><p><strong>Skip the “where should we go?” spiral.</strong><br />Save places that feel right and share the shortlist.</p></div>
+  <main id="home">
+    <section class="hero page-shell">
+      <div class="hero-copy">
+        <div class="eyebrow">Log in</div>
+        <h1>Discover places.<br /><em>See who’s there.</em></h1>
+        <p class="hero-lede">Puddle turns nearby places into something you can swipe, save, share, and actually make plans around.</p>
+        <div class="hero-login" aria-label="Continue to Puddle">
+          <a class="login-row" href="/signin">Email or username</a>
+          <a class="login-row" href="/signin">Password</a>
+          <a class="button button--blue" href="/signin">Continue</a>
+          <div class="auth-divider" aria-hidden="true" style="text-align:center;color:#b7b7b7;font-weight:700">or</div>
+          <a class="button button--google" href="/signin">Continue with Google</a>
+          <a class="button" href="/signup">Continue with email</a>
         </div>
+        <div class="hero-links"><a href="/signup">Sign up</a><a href="/forgot-password">Forgot password?</a></div>
+      </div>
 
-        <div class="hero-playground reveal is-visible" aria-label="Interactive Puddle date-location deck">
-          <div class="sticker sticker--spark">♡ date night?</div><div class="sticker sticker--arrow">swipe a place <span>↘</span></div>
-          <div class="phone-shell">
-            <div class="phone-topbar"><span class="mini-brand"><img src="/puddle-mark.svg" alt="" />puddle</span><button class="icon-button" type="button" aria-label="Filters are available after signing in">☰</button></div>
-            <div class="deck" id="hero-deck">
-              <article class="event-card" aria-label="Rooftop Cinema Club, Movie date">
-                <div class="event-card__image"><img src="/events/rooftop.svg" alt="Rooftop Cinema Club location artwork" /><div class="event-card__badges"><span class="badge">Movie date</span><span class="badge">Great second stop</span></div></div>
-                <div class="event-card__body"><div class="event-card__meta"><span>Sunset screenings</span><span>• 1.8 km</span></div><h3>Rooftop Cinema Club</h3><p>Cult classics, skyline views, popcorn, and blankets above the city.</p><div class="event-card__footer"><span class="event-card__friends">Swipe to choose</span><span class="event-card__price">$$</span></div></div>
-              </article>
-              <article class="event-card" aria-label="Clay and Cabernet, Activity date">
-                <div class="event-card__image"><img src="/events/ceramics.svg" alt="Clay and Cabernet location artwork" /><div class="event-card__badges"><span class="badge">Activity date</span><span class="badge">Playful pick</span></div></div>
-                <div class="event-card__body"><div class="event-card__meta"><span>Saturday evenings</span><span>• 3.1 km</span></div><h3>Clay &amp; Cabernet</h3><p>Make something slightly wonky together, with wine and alcohol-free drinks available.</p><div class="event-card__footer"><span class="event-card__friends">Swipe to choose</span><span class="event-card__price">$$$</span></div></div>
-              </article>
-              <article class="event-card" aria-label="Moonlight Café, Coffee date">
-                <div class="event-card__image"><img src="/events/jazz.svg" alt="Moonlight Café location artwork" /><div class="event-card__badges"><span class="badge">Coffee date</span><span class="badge">Easy conversation</span></div></div>
-                <div class="event-card__body"><div class="event-card__meta"><span>Open late</span><span>• 1.5 km</span></div><h3>Moonlight Café</h3><p>Late-night espresso, vinyl, soft lights, and enough quiet to actually talk.</p><div class="event-card__footer"><span class="event-card__friends">Swipe to choose</span><span class="event-card__price">$$</span></div></div>
-              </article>
-            </div>
-            <div class="deck-actions"><button class="round-action round-action--undo" type="button" data-swipe="undo" aria-label="Undo last swipe">↶</button><button class="round-action round-action--no" type="button" data-swipe="left" aria-label="Pass on this location">×</button><button class="round-action round-action--yes" type="button" data-swipe="right" aria-label="Save this location for a date">♥</button><button class="round-action round-action--share" type="button" aria-label="Sharing is available after signing in">↗</button></div>
-            <div class="phone-nav" aria-hidden="true"><span class="active">⌂</span><span>⌕</span><span>♡</span><span>☻</span></div>
+      <div class="hero-playground" aria-label="Interactive Puddle swipe preview">
+        <div class="hero-collage" aria-hidden="true"><img src="/events/ceramics.svg" alt="" /><img src="/events/neon-night.svg" alt="" /><img src="/events/rooftop.svg" alt="" /></div>
+        <div class="phone-shell">
+          <div class="phone-topbar"><span class="mini-brand"><img src="/puddle-mark.svg" alt="" />puddle</span></div>
+          <div class="deck" id="hero-deck">
+            <article class="event-card" aria-label="Rooftop Cinema Club, Movie date"><div class="event-card__image"><img src="/events/rooftop.svg" alt="Rooftop Cinema Club location artwork" /></div><div class="event-card__body"><h3>Rooftop Cinema Club</h3></div></article>
+            <article class="event-card" aria-label="Clay and Cabernet, Activity date"><div class="event-card__image"><img src="/events/ceramics.svg" alt="Clay and Cabernet location artwork" /></div><div class="event-card__body"><h3>Clay &amp; Cabernet</h3></div></article>
+            <article class="event-card" aria-label="Moonlight Café, Coffee date"><div class="event-card__image"><img src="/events/jazz.svg" alt="Moonlight Café location artwork" /></div><div class="event-card__body"><h3>Moonlight Café</h3></div></article>
           </div>
-          <div class="floating-bubble floating-bubble--friends">send it to your date</div><div class="floating-bubble floating-bubble--match">great for conversation</div>
+          <div class="deck-actions"><button class="round-action round-action--undo" type="button" data-swipe="undo" aria-label="Back">↶</button><button class="round-action round-action--no" type="button" data-swipe="left" aria-label="Pass">×</button><button class="round-action round-action--yes" type="button" data-swipe="right" aria-label="Save">♡</button><button class="round-action round-action--share" type="button" data-swipe="right" aria-label="Star">☆</button></div>
+          <div class="phone-nav" aria-hidden="true">Back&nbsp;&nbsp;&nbsp; Pass&nbsp;&nbsp;&nbsp; Save&nbsp;&nbsp;&nbsp; Star</div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="marquee" id="ideas" aria-label="Date location categories"><div class="marquee-track"><span>COFFEE DATES ♡</span><span>DINNER DATES ♡</span><span>ACTIVITY DATES ♡</span><span>PARKS &amp; GARDENS ♡</span><span>MUSEUMS ♡</span><span>SCENIC SPOTS ♡</span><span>DESSERT SPOTS ♡</span><span>COFFEE DATES ♡</span><span>DINNER DATES ♡</span><span>ACTIVITY DATES ♡</span></div></section>
+    <section class="discovery-intro page-shell"><h2>Discover what’s around you, social media style.</h2></section>
 
-      <section class="section page-shell" id="how">
-        <div class="section-heading reveal is-visible"><span class="section-number">01</span><div><p class="eyebrow">No endless review tabs</p><h2>Choosing the place should feel fun.</h2></div><p>Tell Puddle what kinds of date locations you like. Every pass and save sharpens the next deck while keeping enough variety to surprise you.</p></div>
-        <div class="feature-bento">
-          <article class="bento-card bento-card--pink reveal is-visible"><span class="bento-kicker">Swipe</span><h3>One nearby date spot at a time.</h3><p>Pass, save, inspect details, or share without leaving the swipe page.</p><div class="mini-deck" aria-hidden="true"><img src="/events/neon-night.svg" alt="" /><img src="/events/ceramics.svg" alt="" /><img src="/events/rooftop.svg" alt="" /></div></article>
-          <article class="bento-card bento-card--cream reveal is-visible"><span class="bento-kicker">Choose</span><h3>Filter for the date you have in mind.</h3><div class="mini-map" aria-hidden="true"><span class="map-road map-road--a"></span><span class="map-road map-road--b"></span><span class="map-road map-road--c"></span><i style="--x:22%;--y:34%;--c:#ff4fa3">♪</i><i style="--x:65%;--y:24%;--c:#7c4dff">✦</i><i style="--x:48%;--y:66%;--c:#f4b83f">☕</i><i style="--x:78%;--y:72%;--c:#40c49d">⚽</i><div class="map-card"><strong>Date ideas near you</strong><span>within your travel radius</span></div></div></article>
-          <article class="bento-card bento-card--purple reveal is-visible"><span class="bento-kicker">Plan</span><h3>Turn a saved place into a real date.</h3><div class="calendar-strip" aria-hidden="true"><div><span>THU</span><strong>30</strong></div><div class="selected"><span>FRI</span><strong>31</strong></div><div><span>SAT</span><strong>01</strong></div><div><span>SUN</span><strong>02</strong></div></div><div class="calendar-event"><span>8:00</span><img src="/events/jazz.svg" alt="" /><strong>Dinner, then a sunset walk</strong><b>saved</b></div></article>
+    <section class="feature-stack" id="how" aria-label="Puddle features">
+      <article class="feature-card feature-card--swipe"><h3>Swipe</h3><p>Pass, save, inspect details, or share without leaving the swipe page.</p><div class="feature-phone" aria-hidden="true"></div><span class="interactive-pill"><b>Interactive!</b><br />Give it a swipe.</span></article>
+      <article class="feature-card feature-card--save"><h3>Save</h3><p>Save your favorite places. Plan trips together, effortlessly.</p><div class="feature-phone" aria-hidden="true"></div><span class="interactive-pill"><b>Interactive!</b><br />Give it a swipe.</span></article>
+      <article class="feature-card feature-card--feed"><h3>Feed</h3><p>Find what people are sharing in feed or map view.</p><div class="feature-phone" aria-hidden="true"></div><span class="interactive-pill"><b>Interactive!</b><br />Explore the feed.</span></article>
+      <article class="feature-card feature-card--profile"><h3>Profile</h3><p>Add what you love. Places, preferences, profile details, and more.</p><div class="feature-phone" aria-hidden="true"></div><span class="interactive-pill"><b>Interactive!</b><br />Make it yours.</span></article>
+    </section>
+
+    <h2 class="trust-title">Puddle is built on trust and privacy</h2>
+    <section class="section page-shell" id="safety">
+      <div class="safety-panel">
+        <h2>Meet people who like the same places you do, safely.</h2>
+        <button class="button" type="button" data-open-modal="safety">See our safety model</button>
+        <div class="safety-cards">
+          <article><span>01</span><div><strong>You control what you share</strong><p>Saved places and profile details stay under your control.</p></div></article>
+          <article><span>02</span><div><strong>Shared place context first</strong><p>Social connections are built around places and mutual actions, not precise live location.</p></div></article>
+          <article><span>03</span><div><strong>Clear privacy controls</strong><p>Visibility, account, billing, blocking, and reporting controls remain available in the app.</p></div></article>
+          <article><span>04</span><div><strong>Optional global connections</strong><p>The paid connection feature is opt-in, age-gated, and can be disabled at any time.</p></div></article>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="section page-shell" id="safety"><div class="safety-panel reveal is-visible"><div class="safety-copy"><span class="section-number">02</span><p class="eyebrow">Places, not people</p><h2>Date discovery without stranger matching.</h2><p>Puddle helps you choose where to go. It does not match you with strangers, and sharing a plan or temporary location is always optional and controlled by you.</p><button class="button button--ink" type="button" data-open-modal="safety">See our safety model</button></div><div class="safety-cards"><article><span>01</span><div><strong>You control the shortlist</strong><p>Save privately, share only when you choose, and remove a place at any time.</p></div></article><article><span>02</span><div><strong>Location sharing expires</strong><p>Temporary sharing has a timer, visible recipients, and one-tap stop.</p></div></article><article><span>03</span><div><strong>Clear account controls</strong><p>Blocking, reporting, and privacy settings stay available from your account.</p></div></article><article><span>04</span><div><strong>No stranger matching</strong><p>Puddle recommends locations. It does not create a dating-profile marketplace.</p></div></article></div></div></section>
+    <section class="section final-cta"><div class="page-shell final-cta__inner"><img src="/puddle-mark.svg" alt="" /><h2>Find somewhere worth going together.</h2><p>Create your account and start discovering places.</p><a class="button button--ink" href="/signup">Create account</a></div></section>
+  </main>
 
-      <section class="section final-cta"><div class="page-shell final-cta__inner reveal is-visible"><img class="cta-squiggle" src="/puddle-mark.svg" alt="" /><p class="eyebrow">Make the next plan easier</p><h2>Find somewhere worth going together.</h2><p>Create an account, choose the kinds of places you like, and build your first date deck.</p><div><a class="button button--ink button--large" href="/signup">Register <span>→</span></a><a class="button button--cream button--large" href="/signin">Sign In</a></div></div></section>
-    </main>
+  <footer class="site-footer">
+    <div class="page-shell footer-grid">
+      <div><strong>Explore</strong><a href="#how">Features</a><a href="#safety">Safety</a><a href="/signup">Sign up</a></div>
+      <div><strong>Company</strong><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/signin">Sign in</a></div>
+      <div><strong>Connect</strong><span>Instagram</span><span>X (Twitter)</span><span>TikTok</span><span>Discord</span></div>
+      <form class="footer-form" action="/signup" method="get"><label class="sr-only" for="footer-email">Email address</label><input id="footer-email" name="email" type="email" required placeholder="you@email.com" /><button type="submit" aria-label="Continue to registration">→</button></form>
+    </div>
+    <div class="footer-word" aria-hidden="true">puddle</div>
+  </footer>
 
-    <footer class="site-footer"><div class="page-shell footer-grid"><div><a class="brand brand--footer" href="#home"><img src="/puddle-mark.svg" alt="" /><span>puddle</span></a><p>Swipe through nearby places and find somewhere worth going together.</p><span>© 2026 Puddle · puddle.you</span></div><div><strong>Explore</strong><a href="#how">How it works</a><a href="#ideas">Date ideas</a><a href="#safety">Safety</a></div><div><strong>Company</strong><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div><div><strong>Create your account</strong><form class="footer-form" action="/signup" method="get"><input name="email" type="email" required placeholder="you@email.com" aria-label="Email address" /><button type="submit" aria-label="Continue to registration">→</button></form><small>Already registered? Use Sign In at the top of the page.</small></div></div></footer>
-
-    <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" type="button" data-close-modal aria-label="Close">×</button><div id="modal-content"></div></section></div>
-    <script src="/app.js?v=3" defer></script>
-  </body>
+  <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" type="button" data-close-modal aria-label="Close">×</button><div id="modal-content"></div></section></div>
+  <script src="/app.js?v=4" defer></script>
+</body>
 </html>

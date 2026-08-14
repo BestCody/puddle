@@ -27,13 +27,14 @@ import './figma-core-pages.css'
 import './figma-social-pass.css'
 import './figma-profile-settings.css'
 import './figma-feed-map.css'
+import './figma-public.css'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 
 export const metadata = {
   title: { default: 'Puddle', template: '%s · Puddle' },
-  description: 'Swipe through nearby places and find somewhere worth going together.',
+  description: 'Discover places, save favorites, and find somewhere worth going together.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   applicationName: 'Puddle',
   icons: { icon: '/puddle-mark.svg' }
