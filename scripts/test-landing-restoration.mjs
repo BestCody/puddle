@@ -122,7 +122,7 @@ try {
 
   const privacySource = await readFile(join(root, 'app/privacy/page.js'), 'utf8')
   const termsSource = await readFile(join(root, 'app/terms/page.js'), 'utf8')
-  for (const marker of ['Information we collect', 'Location and social privacy', 'Your choices and rights']) assert(privacySource.includes(marker), `privacy page is missing ${marker}`)
+  for (const marker of ['Information we collect', 'Location and recommendation controls', 'Your choices and privacy rights']) assert(privacySource.includes(marker), `privacy page is missing ${marker}`)
   for (const marker of ['Acceptable use', 'Tickets, payments, refunds, and payouts', 'Governing law and disputes']) assert(termsSource.includes(marker), `terms page is missing ${marker}`)
 
   for (const removed of ['index.html','styles.css','app.js','public/landing-demo.js']) {
