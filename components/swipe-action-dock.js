@@ -14,10 +14,10 @@ function PerfectIcon() {
 }
 
 const actions = [
-  { key: 'undo', label: 'Undo', Icon: UndoIcon },
+  { key: 'undo', label: 'Back', Icon: UndoIcon },
   { key: 'pass', label: 'Pass', Icon: PassIcon },
   { key: 'save', label: 'Save', Icon: SaveIcon },
-  { key: 'perfect', label: 'Perfect', Icon: PerfectIcon }
+  { key: 'perfect', label: 'Star', Icon: PerfectIcon }
 ]
 
 export function SwipeActionDock({ onUndo, onPass, onSave, onPerfect, canUndo, busy }) {
