@@ -22,6 +22,7 @@ import './social-hub.css'
 import './discover-share.css'
 import './sidebar-tooltips.css'
 import './location-picker.css'
+import './figma-official.css'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
@@ -35,7 +36,7 @@ export const metadata = {
 }
 
 export const viewport = {
-  themeColor: '#ff4f7b',
+  themeColor: '#4ca5f7',
   colorScheme: 'light'
 }
 
