@@ -65,7 +65,7 @@ test('Discover filters own location, distance, and place categories', async ({ p
   const account = await createSwiper('Filter Preference Swiper')
 
   await signInThroughUi(page, account.email, account.password, '/account')
-  await expect(page.getByRole('heading', { name: /Account settings/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Profile settings/i })).toBeVisible()
   await expect(page.getByLabel('Search radius')).toHaveCount(0)
   await expect(page.getByLabel('City or town')).toHaveCount(0)
   await expect(page.getByText('What kinds of places do you like?')).toHaveCount(0)
