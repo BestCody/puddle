@@ -41,7 +41,7 @@ test('initial Discover renders relational Supabase places without a static catal
   expect(staticRequests).toEqual([])
 })
 
-test('passing and undoing works on the relational Supabase deck', async ({ page }) => {
+test('passing and going back works on the relational Supabase deck', async ({ page }) => {
   const places = [fixturePlaceBySourceId('e2e-pass-alpha'), fixturePlaceBySourceId('e2e-pass-beta')]
   await ensureRelationalFixturePlaces(places)
   const account = await createSwiper('Relational Pass Swiper')
@@ -55,7 +55,7 @@ test('passing and undoing works on the relational Supabase deck', async ({ page 
   await page.getByRole('button', { name: 'Pass' }).click()
   await expect(heading).toHaveText(second.name)
 
-  await page.getByRole('button', { name: 'Undo' }).click()
+  await page.getByRole('button', { name: 'Back' }).click()
   await expect(heading).toHaveText(firstTitle)
 })
 
