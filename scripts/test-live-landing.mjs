@@ -31,8 +31,8 @@ async function waitForText(page, selector, expected) {
 
 async function assertNoNotifications(page, label) {
   await page.waitForTimeout(100)
-  assert(await page.locator('#toast-region').count() === 0, `${label}: toast region still exists`)
-  assert(await page.locator('.toast').count() === 0, `${label}: bottom-right notification appeared`)
+  assert(await page.locator('#toast-region').count() === 0, `${label}: retired toast region still exists`)
+  assert(await page.locator('.toast').count() === 0, `${label}: unexpected notification appeared`)
 }
 
 async function runLiveChecks() {
@@ -47,62 +47,64 @@ async function runLiveChecks() {
     const separator = landingUrl.includes('?') ? '&' : '?'
     await page.goto(`${landingUrl}${separator}landing-e2e=${Date.now()}`, { waitUntil: 'networkidle', timeout: 30000 })
 
-    await waitUntil(async () => (await page.locator('#hero-deck .event-card').count()) === 3, 'landing deck did not load')
-    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Neon Garden')
+    await waitUntil(async () => (await page.locator('#hero-deck .event-card').count()) === 3, 'Figma landing deck did not load')
+    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Moonlight Café')
     await assertNoNotifications(page, 'initial load')
+
+    assert((await page.locator('.hero-copy h1').textContent())?.includes('Discover places.'), 'Figma hero headline is missing')
+    assert((await page.locator('.hero-copy h1').textContent())?.includes('See who’s there.'), 'Figma hero social promise is missing')
+    assert(await page.locator('.feature-card').count() === 4, 'four Figma feature panels are not live')
 
     const card = page.locator('#hero-deck .event-card:last-child')
     const cardBox = await card.boundingBox()
-    const footerBox = await card.locator('.event-card__footer').boundingBox()
-    assert(cardBox && cardBox.width > 200 && cardBox.height > 300, 'phone event card is not visible')
-    assert(footerBox && footerBox.y + footerBox.height <= cardBox.y + cardBox.height + 2, 'phone event card footer is clipped')
+    assert(cardBox && cardBox.width > 200 && cardBox.height > 300, 'phone location card is not visible')
 
-    const getStarted = page.locator('.hero-actions a')
-    assert(new URL(await getStarted.getAttribute('href'), landingUrl).pathname === '/signup', 'Get Started does not link to registration')
+    for (const path of ['/signin', '/signup', '/privacy', '/terms']) {
+      assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} native route link is missing`)
+    }
 
     const legalLinks = await page.locator('.site-footer a').evaluateAll((items) => items.map((item) => ({ label: item.textContent.trim(), path: new URL(item.href).pathname })))
     assert(legalLinks.some((link) => link.label === 'Privacy' && link.path === '/privacy'), 'Privacy link is missing')
     assert(legalLinks.some((link) => link.label === 'Terms' && link.path === '/terms'), 'Terms link is missing')
 
-    await page.locator('[data-swipe="right"]').click()
+    await page.locator('[data-swipe="right"]').first().click()
     await waitForText(page, '#hero-deck .event-card:last-child h3', 'Clay & Cabernet')
-    await assertNoNotifications(page, 'heart swipe')
+    await assertNoNotifications(page, 'save swipe')
 
     await page.locator('[data-swipe="left"]').click()
     await waitForText(page, '#hero-deck .event-card:last-child h3', 'Rooftop Cinema Club')
-    await assertNoNotifications(page, 'skip swipe')
+    await page.locator('[data-swipe="undo"]').click()
+    await waitForText(page, '#hero-deck .event-card:last-child h3', 'Clay & Cabernet')
 
-    await page.locator('.round-action--share').click()
-    await assertNoNotifications(page, 'share')
+    const safetyButton = page.locator('[data-open-modal="safety"]').first()
+    assert(await safetyButton.count() === 1, 'safety model button is missing')
+    await safetyButton.click()
+    await page.locator('#modal-backdrop.is-open').waitFor({ state: 'visible' })
+    await waitForText(page, '#modal-title', 'Shared places first. Privacy controls always.')
+    await page.locator('[data-close-modal]').click()
+    await waitUntil(async () => !(await page.locator('#modal-backdrop').getAttribute('class'))?.includes('is-open'), 'safety modal did not close')
 
-    await page.locator('.mini-like').first().click()
-    assert((await page.locator('.mini-like').first().getAttribute('class'))?.includes('is-liked'), 'social like interaction failed')
-    await assertNoNotifications(page, 'social like')
-
-    for (const type of ['organizer', 'safety']) {
-      await page.locator(`[data-open-modal="${type}"]`).first().click()
-      await page.locator('#modal-backdrop.is-open').waitFor({ state: 'visible' })
-      await page.locator('[data-close-modal]').click()
-      await waitUntil(async () => !(await page.locator('#modal-backdrop').getAttribute('class'))?.includes('is-open'), `${type} modal did not close`)
-    }
-
-    await page.evaluate(() => window.openApp())
-    await page.locator('#app-demo.is-open').waitFor({ state: 'visible' })
-    await waitUntil(async () => (await page.locator('#demo-deck .event-card').count()) === 3, 'demo deck did not load')
-    await page.locator('#app-demo [data-demo-swipe="right"]').click()
-    await assertNoNotifications(page, 'demo swipe')
-    await page.locator('[data-close-app]').click()
+    await page.locator('.menu-button').click()
+    assert((await page.locator('#site-header').getAttribute('class'))?.includes('menu-open'), 'header menu did not open')
+    assert(await page.locator('.header-actions a[href="/signin"]').count() === 1, 'header Sign in link is missing')
+    assert(await page.locator('.header-actions a[href="/signup"]').count() === 1, 'header Create account link is missing')
 
     await page.setViewportSize({ width: 390, height: 844 })
     await page.reload({ waitUntil: 'networkidle' })
-    await waitUntil(async () => (await page.locator('#hero-deck .event-card').count()) === 3, 'mobile deck did not load')
+    await waitUntil(async () => (await page.locator('#hero-deck .event-card').count()) === 3, 'mobile Figma deck did not load')
     const mobileCard = page.locator('#hero-deck .event-card:last-child')
     const mobileBox = await mobileCard.boundingBox()
-    const mobileFooter = await mobileCard.locator('.event-card__footer').boundingBox()
-    assert(mobileBox && mobileBox.width > 200 && mobileBox.height > 300, 'event card is not visible on mobile')
-    assert(mobileFooter && mobileFooter.y + mobileFooter.height <= mobileBox.y + mobileBox.height + 2, 'event card footer is clipped on mobile')
+    assert(mobileBox && mobileBox.width > 200 && mobileBox.height > 300, 'location card is not visible on mobile')
     assert(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 2, 'mobile landing page overflows horizontally')
     await assertNoNotifications(page, 'mobile')
+
+    for (const auth of [
+      { path: '/signin', title: 'Discover places. See who’s there.' },
+      { path: '/signup', title: 'Make plans that leave the chat.' }
+    ]) {
+      await page.goto(new URL(auth.path, landingUrl).href, { waitUntil: 'networkidle', timeout: 30000 })
+      await waitForText(page, 'h1', auth.title)
+    }
 
     for (const policy of [
       { path: '/privacy', title: 'Privacy Policy', marker: 'Information we collect' },
@@ -126,7 +128,7 @@ try {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       await runLiveChecks()
-      console.log(`Live landing and legal-page checks passed at ${landingUrl}`)
+      console.log(`Live official Figma landing, auth, and legal-page checks passed at ${landingUrl}`)
       lastError = null
       break
     } catch (error) {
