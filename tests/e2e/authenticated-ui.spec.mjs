@@ -121,4 +121,4 @@ test('changing a profile picture uploads and renders the actual color image afte
   const persisted = await response.body()
   const stats = await sharp(persisted).stats()
   expect(stats.channels[0].mean).toBeGreaterThan(stats.channels[1].mean + 80)
-}
+})
