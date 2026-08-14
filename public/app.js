@@ -7,8 +7,8 @@ const events = [
 
 const modalCopy = {
   safety: [
-    'Date ideas without stranger matching.',
-    'Puddle recommends places—not people—and gives you privacy controls, blocking, reporting, and time-limited location sharing for plans you choose to make.'
+    'Shared places first. Privacy controls always.',
+    'Puddle centers social discovery on places and mutual actions. You control profile visibility and sharing, with blocking, reporting, account controls, and opt-in age-gated global connections.'
   ]
 }
 
