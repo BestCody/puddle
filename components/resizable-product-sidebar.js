@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { PuddleLogo } from './puddle-logo'
 import { ProductNav } from './product-nav'
 
-const STORAGE_KEY = 'puddle:figma-product-sidebar-width'
+const STORAGE_KEY = 'puddle:product-sidebar-width'
 const MIN_WIDTH = 88
 const MAX_WIDTH = 288
 const EXPANDED_WIDTH = 180
@@ -27,7 +27,7 @@ export function ResizableProductSidebar({ className = 'minimal-product-sidebar',
 
   useEffect(() => {
     const rawStored = window.localStorage.getItem(STORAGE_KEY)
-    const stored = rawStored === null ? DEFAULT_WIDTH : clampWidth(rawStored)
+    const stored = rawStored === null || Number(rawStored) <= 76 ? DEFAULT_WIDTH : clampWidth(rawStored)
     setWidth(stored)
     applyWidth(stored)
     return () => document.documentElement.style.removeProperty('--minimal-sidebar-width')
