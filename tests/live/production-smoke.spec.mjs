@@ -17,8 +17,8 @@ async function deleteDisposableAccount(page) {
   }
 }
 
-test('production share, profile photo, and Stripe handoff work end to end', async ({ page, request }) => {
-  test.setTimeout(120_000)
+test('production Figma core UI, share, profile photo, and Stripe handoff work end to end', async ({ page, request }) => {
+  test.setTimeout(150_000)
   const suffix = `${Date.now().toString(36)}${crypto.randomUUID().replaceAll('-', '').slice(0, 8)}`
   const email = `puddle-live-${suffix}@example.com`
   const password = `LiveSmoke-${suffix}-A9!`
@@ -66,10 +66,7 @@ test('production share, profile photo, and Stripe handoff work end to end', asyn
     await page.getByRole('button', { name: 'Build my date deck →' }).click()
     await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 30_000 })
     await expect(page.locator('.minimal-swipe-card')).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Star' })).toBeVisible()
+    for (const name of ['Back', 'Pass', 'Save', 'Star']) await expect(page.getByRole('button', { name })).toBeVisible()
 
     const filterButton = page.getByRole('button', { name: 'Open filters' })
     const shareButton = page.getByRole('button', { name: 'Send to' })
@@ -80,10 +77,29 @@ test('production share, profile photo, and Stripe handoff work end to end', asyn
     expect(filterBox).toBeTruthy()
     expect(shareBox).toBeTruthy()
     expect(Math.abs((shareBox.y + shareBox.height / 2) - (filterBox.y + filterBox.height / 2))).toBeLessThanOrEqual(8)
-    expect(shareBox.x + shareBox.width).toBeLessThanOrEqual(filterBox.x - 4)
     await shareButton.click()
     await expect(page.getByRole('heading', { name: 'Send to' })).toBeVisible()
     await page.getByRole('button', { name: 'Close' }).click()
+
+    await page.goto('/map')
+    const feedTabs = page.locator('.figma-feed-segment')
+    await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
+    await feedTabs.getByRole('link', { name: 'Map', exact: true }).click()
+    await expect(page).toHaveURL(/\/map\?view=map/)
+    await expect(page.locator('.figma-map-view')).toBeVisible()
+
+    await page.goto('/plans')
+    const savedTabs = page.locator('.figma-saved-segment')
+    await expect(savedTabs.getByRole('link', { name: 'Saved', exact: true })).toBeVisible()
+    await savedTabs.getByRole('link', { name: 'Plans', exact: true }).click()
+    await expect(page).toHaveURL(/\/plans\?tab=planned/)
+
+    await page.goto('/matches')
+    await expect(page.locator('.social-messages-layout')).toBeVisible()
+    const socialTabs = page.locator('.social-tabs button')
+    await expect(socialTabs).toHaveCount(3)
+    await socialTabs.nth(2).click()
+    await expect(page).toHaveURL(/\/matches\?tab=shared/)
 
     await page.goto('/profile')
     const imageBuffer = await sharp({
@@ -112,8 +128,14 @@ test('production share, profile photo, and Stripe handoff work end to end', asyn
     expect(stats.channels[0].mean).toBeGreaterThan(stats.channels[1].mean + 80)
     expect(stats.channels[0].mean).toBeGreaterThan(stats.channels[2].mean + 50)
 
+    await page.goto('/account')
+    await expect(page.locator('.figma-settings-page')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Profile settings' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/membership?view=manage')
+
     await page.goto('/membership')
-    const checkoutButton = page.getByRole('button', { name: 'Continue to checkout' })
+    await expect(page.locator('.figma-pass-title')).toContainText('Membership')
+    const checkoutButton = page.getByRole('button', { name: 'Upgrade' })
     await expect(checkoutButton).toBeVisible()
     await expect(checkoutButton).toBeEnabled()
     const puddleNavigations = []

@@ -7,7 +7,7 @@ export const metadata = { title: 'Friends' }
 
 export default async function FriendsPage({ searchParams }) {
   const params = await searchParams
-  const tab = ['friends', 'messages', 'shared'].includes(params?.tab) ? params.tab : 'friends'
+  const tab = ['friends', 'messages', 'shared'].includes(params?.tab) ? params.tab : 'messages'
   const conversationId = typeof params?.conversation === 'string' ? params.conversation : null
 
   return renderProductPage(async (session) => {
