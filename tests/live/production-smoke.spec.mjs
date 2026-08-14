@@ -96,7 +96,9 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
 
     await page.goto('/matches')
     await expect(page.locator('.social-messages-layout')).toBeVisible()
-    await page.getByRole('button', { name: 'Shared', exact: true }).click()
+    const socialTabs = page.locator('.social-tabs button')
+    await expect(socialTabs).toHaveCount(3)
+    await socialTabs.nth(2).click()
     await expect(page).toHaveURL(/\/matches\?tab=shared/)
 
     await page.goto('/profile')
