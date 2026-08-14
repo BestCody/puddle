@@ -4,14 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 import { PuddleLogo } from './puddle-logo'
 import { ProductNav } from './product-nav'
 
-const STORAGE_KEY = 'puddle:product-sidebar-width'
-const MIN_WIDTH = 76
-const MAX_WIDTH = 300
-const EXPANDED_WIDTH = 156
+const STORAGE_KEY = 'puddle:figma-product-sidebar-width'
+const MIN_WIDTH = 88
+const MAX_WIDTH = 288
+const EXPANDED_WIDTH = 180
+const DEFAULT_WIDTH = 288
 
 function clampWidth(value) {
   const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return MIN_WIDTH
+  if (!Number.isFinite(parsed)) return DEFAULT_WIDTH
   return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(parsed)))
 }
 
@@ -20,12 +21,13 @@ function applyWidth(value) {
   document.documentElement.style.setProperty('--minimal-sidebar-width', `${clampWidth(value)}px`)
 }
 
-export function ResizableProductSidebar({ className = 'minimal-product-sidebar' }) {
-  const [width, setWidth] = useState(MIN_WIDTH)
+export function ResizableProductSidebar({ className = 'minimal-product-sidebar', avatarUrl = null }) {
+  const [width, setWidth] = useState(DEFAULT_WIDTH)
   const drag = useRef(null)
 
   useEffect(() => {
-    const stored = clampWidth(window.localStorage.getItem(STORAGE_KEY))
+    const rawStored = window.localStorage.getItem(STORAGE_KEY)
+    const stored = rawStored === null ? DEFAULT_WIDTH : clampWidth(rawStored)
     setWidth(stored)
     applyWidth(stored)
     return () => document.documentElement.style.removeProperty('--minimal-sidebar-width')
@@ -81,7 +83,7 @@ export function ResizableProductSidebar({ className = 'minimal-product-sidebar' 
 
   return <aside className={`product-sidebar ${className}${expanded ? ' is-expanded' : ''}`}>
     <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" /></div>
-    <ProductNav />
+    <ProductNav avatarUrl={avatarUrl} />
     <div
       className="minimal-sidebar-resizer"
       role="separator"
