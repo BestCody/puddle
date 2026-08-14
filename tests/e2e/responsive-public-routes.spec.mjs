@@ -63,6 +63,29 @@ test('landing page preserves the official Figma desktop and mobile structure', a
   health.assertHealthy()
 })
 
+test('landing Figma swipe, safety modal, and menu controls work', async ({ page }) => {
+  await page.goto('/')
+  const topCardTitle = page.locator('#hero-deck .event-card:last-child h3')
+  const firstTitle = await topCardTitle.innerText()
+
+  await page.getByRole('button', { name: 'Pass', exact: true }).click()
+  await expect.poll(async () => topCardTitle.innerText()).not.toBe(firstTitle)
+  await page.getByRole('button', { name: 'Back', exact: true }).click()
+  await expect(topCardTitle).toHaveText(firstTitle)
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Star', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'See our safety model', exact: true }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Shared places first. Privacy controls always.', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(page.getByRole('dialog')).not.toBeVisible()
+
+  await page.getByRole('button', { name: 'Open menu', exact: true }).click()
+  await expect(page.locator('.header-actions a[href="/signin"]')).toBeVisible()
+  await expect(page.locator('.header-actions a[href="/signup"]')).toBeVisible()
+})
+
 test('landing page exposes native auth and legal links', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('a[href="/signin"]')).not.toHaveCount(0)
@@ -93,6 +116,15 @@ test('footer registration form submits directly to signup', async ({ page }) => 
   await page.locator('.footer-form button[type="submit"]').click()
   await expect(page).toHaveURL(/\/signup\?email=landing-route%40example\.com$/)
   await expect(page.locator('input[name="email"]')).toHaveValue('landing-route@example.com')
+})
+
+test('Figma 404 gives the user a working route home', async ({ page }) => {
+  await page.goto('/this-puddle-does-not-exist')
+  await expect(page.getByRole('heading', { name: 'This puddle dried up.' })).toBeVisible()
+  await expect(page.getByText('404', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Back to Puddle' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.locator('.hero-copy h1')).toContainText('Discover places.')
 })
 
 test('critical landing routes work when JavaScript is disabled', async ({ browser }, testInfo) => {
