@@ -4,7 +4,7 @@ import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
 import { signIn, signInWithOAuth, sendLoginCode, verifyLoginCode } from '@/app/auth/actions'
 
-export const metadata = { title: 'Sign in' }
+export const metadata = { title: 'Log in' }
 
 export default async function SignInPage({ searchParams }) {
   const params = await searchParams
@@ -13,13 +13,13 @@ export default async function SignInPage({ searchParams }) {
   const codeSent = params?.code_sent === '1'
 
   return (
-    <AuthShell eyebrow="Welcome back" title="Jump back into your Puddle." description="Your saved plans, people, and tickets are waiting.">
+    <AuthShell eyebrow="Log in" title="Discover places. See who’s there." description="Sign in to return to your swipe deck, saved places, feed, friends, and plans.">
       <AuthMessage searchParams={params} />
       <form className="auth-form" action={signIn}>
         <input type="hidden" name="next" value={next} />
         <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} placeholder="you@example.com" /></label>
         <label className="field">Password<input name="password" type="password" autoComplete="current-password" required placeholder="••••••••••" /></label>
-        <SubmitButton>Sign in →</SubmitButton>
+        <SubmitButton>Continue</SubmitButton>
       </form>
 
       <div className="auth-divider">or</div>
@@ -31,29 +31,24 @@ export default async function SignInPage({ searchParams }) {
       </div>
 
       <div className="auth-divider">or use a one-time code</div>
-      {codeSent ? (
-        <>
-          <form className="auth-form" action={verifyLoginCode}>
-            <input type="hidden" name="next" value={next} />
-            <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} /></label>
-            <label className="field">One-time login code<input name="token" inputMode="numeric" autoComplete="one-time-code" required minLength="6" maxLength="8" pattern="[0-9]{6,8}" placeholder="123456" /></label>
-            <SubmitButton pendingText="Checking code…">Sign in with code →</SubmitButton>
-          </form>
-          <form className="auth-form" action={sendLoginCode} style={{ marginTop: '1rem' }}>
-            <input type="hidden" name="next" value={next} />
-            <input type="hidden" name="email" value={email} />
-            <SubmitButton className="secondary-button" pendingText="Sending another code…">Send a new code</SubmitButton>
-          </form>
-        </>
-      ) : (
-        <form className="auth-form" action={sendLoginCode}>
+      {codeSent ? <>
+        <form className="auth-form" action={verifyLoginCode}>
           <input type="hidden" name="next" value={next} />
-          <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} placeholder="you@example.com" /></label>
-          <SubmitButton className="secondary-button" pendingText="Sending code…">Email me a one-time login code</SubmitButton>
+          <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} /></label>
+          <label className="field">One-time login code<input name="token" inputMode="numeric" autoComplete="one-time-code" required minLength="6" maxLength="8" pattern="[0-9]{6,8}" placeholder="123456" /></label>
+          <SubmitButton pendingText="Checking code…">Sign in with code</SubmitButton>
         </form>
-      )}
+        <form className="auth-form" action={sendLoginCode} style={{ marginTop: '1rem' }}>
+          <input type="hidden" name="next" value={next} /><input type="hidden" name="email" value={email} />
+          <SubmitButton className="secondary-button" pendingText="Sending another code…">Send a new code</SubmitButton>
+        </form>
+      </> : <form className="auth-form" action={sendLoginCode}>
+        <input type="hidden" name="next" value={next} />
+        <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} placeholder="you@example.com" /></label>
+        <SubmitButton className="secondary-button" pendingText="Sending code…">Email me a one-time login code</SubmitButton>
+      </form>}
 
-      <div className="auth-links"><Link href="/signup">Create an account</Link><Link href="/forgot-password">Forgot password?</Link></div>
+      <div className="auth-links"><Link href="/signup">Sign up</Link><Link href="/forgot-password">Forgot password?</Link></div>
     </AuthShell>
   )
 }
