@@ -101,7 +101,7 @@ try {
   await page.waitForSelector('#modal-backdrop.is-open')
   assert((await page.locator('#modal-title').textContent())?.trim() === 'Shared places first. Privacy controls always.', 'current safety modal copy is missing')
   await page.locator('[data-close-modal]').click()
-  await page.waitForSelector('#modal-backdrop:not(.is-open)')
+  await page.waitForSelector('#modal-backdrop', { state: 'hidden' })
 
   await page.locator('.menu-button').click()
   assert((await page.locator('#site-header').getAttribute('class'))?.includes('menu-open'), 'Figma header menu did not open')
