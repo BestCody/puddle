@@ -11,7 +11,7 @@ const tabs = [['saved', 'Saved'], ['planned', 'Plans']]
 
 function photoUrl(session, path) {
   if (!path) return null
-  if (String(path).startsWith('/')) return path
+  if (String(path).startsWith('/') || String(path).startsWith('http')) return path
   return session.supabase.storage.from('puddle-public-media').getPublicUrl(path).data.publicUrl
 }
 
@@ -21,9 +21,18 @@ function dateLabel(value) {
 }
 
 function categoryLabel(value) {
-  return String(value || 'other')
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  return String(value || 'other').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function categoryGlyph(value) {
+  const key = String(value || '').toLowerCase()
+  if (key.includes('court') || key.includes('sport')) return '◉'
+  if (key.includes('theatre') || key.includes('cinema')) return '▦'
+  if (key.includes('park') || key.includes('scenic')) return '⌾'
+  if (key.includes('restaurant') || key.includes('food') || key.includes('cafe')) return '◇'
+  if (key.includes('bar') || key.includes('night')) return '☾'
+  if (key.includes('shop')) return '□'
+  return '○'
 }
 
 function savedFolders(items) {
@@ -41,59 +50,73 @@ function LocationCard({ item, session, active }) {
   const image = photoUrl(session, item.cover_path)
   const participants = item.participants?.length ? item.participants.join(', ') : null
   const perfectPick = active === 'saved' && item.perfect_pick
-  return <article className={`minimal-place-card${perfectPick ? ' is-perfect-pick' : ''}`}>
+  return <article className={`minimal-place-card figma-saved-card${perfectPick ? ' is-perfect-pick' : ''}`}>
     {perfectPick ? <span className="minimal-perfect-pick-flag">★ Perfect Pick</span> : null}
-    <Link className="minimal-place-photo" href={item.href} style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={item.title} />
-    <div className="minimal-place-copy">
-      <span>{active === 'planned' ? 'Planned' : perfectPick ? 'Perfect Pick' : 'Saved'}</span>
+    <Link className="minimal-place-photo figma-saved-photo" href={item.href} style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
+      {!image ? <span className="figma-photo-placeholder" aria-hidden="true">Puddle</span> : null}
+    </Link>
+    <div className="minimal-place-copy figma-saved-copy">
       <h2><Link href={item.href}>{item.title}</Link></h2>
-      {active === 'planned' && item.planned_for ? <small>{dateLabel(item.planned_for)}</small> : item.city ? <small>{item.city}</small> : null}
-      {participants ? <p>{participants}</p> : null}
-    </div>
-    <details className="minimal-overflow">
-      <summary aria-label={`Options for ${item.title}`}>•••</summary>
-      <div>
-        <Link href={item.href}>Open</Link>
-        {item.city ? <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title}, ${item.city}`)}`} target="_blank" rel="noreferrer">Map</a> : null}
+      <div className="figma-saved-meta">
+        {active === 'planned' && item.planned_for ? <small>{dateLabel(item.planned_for)}</small> : item.city ? <small>{item.city}</small> : <small>{categoryLabel(item.category)}</small>}
+        {participants ? <small>{participants}</small> : null}
       </div>
-    </details>
+    </div>
+    <Link className="figma-card-open" href={item.href} aria-label={`View details for ${item.title}`}>+</Link>
   </article>
 }
 
-function SavedFolders({ items, session }) {
-  const folders = savedFolders(items)
+function SavedFolders({ folders, session, selectedCategory }) {
+  const visible = selectedCategory === 'all' ? folders.flatMap(([, items]) => items) : (folders.find(([category]) => category === selectedCategory)?.[1] || [])
   return <section className="minimal-saved-folders" aria-label="Saved places by category">
-    {folders.map(([category, folderItems]) => <details className="minimal-saved-folder" open key={category}>
-      <summary>
-        <span className="minimal-saved-folder-icon" aria-hidden="true">⌑</span>
-        <strong>{categoryLabel(category)}</strong>
-        <small>{folderItems.length} {folderItems.length === 1 ? 'place' : 'places'}</small>
-      </summary>
-      <div className="minimal-place-grid">
-        {folderItems.map((item) => <LocationCard item={item} session={session} active="saved" key={`saved:${item.location_id}`} />)}
+    <div className="minimal-saved-folder" data-category={selectedCategory}>
+      <div className="minimal-place-grid figma-saved-grid">
+        {visible.map((item) => <LocationCard item={item} session={session} active="saved" key={`saved:${item.location_id}`} />)}
       </div>
-    </details>)}
+    </div>
   </section>
 }
 
 export default async function PlansPage({ searchParams }) {
   const params = await searchParams
   const active = params?.tab === 'planned' ? 'planned' : params?.tab === 'past' ? 'past' : 'saved'
+  const requestedCategory = typeof params?.category === 'string' ? params.category : 'all'
+  const query = typeof params?.q === 'string' ? params.q.trim().toLowerCase() : ''
 
   return renderProductPage(async (session) => {
     const snapshot = await getLocationPlansSnapshot(session)
-    const items = snapshot[active]
-    return <div className="minimal-list-page">
-      <header className="minimal-page-header"><h1>{active === 'past' ? 'History' : 'Saved'}</h1><Link href="/discover">Swipe</Link></header>
+    const rawItems = snapshot[active]
+    const items = query ? rawItems.filter((item) => `${item.title || ''} ${item.city || ''} ${item.category || ''}`.toLowerCase().includes(query)) : rawItems
+    const folders = savedFolders(items)
+    const selectedCategory = requestedCategory === 'all' || folders.some(([category]) => category === requestedCategory) ? requestedCategory : 'all'
+
+    return <div className="minimal-list-page figma-saved-page">
       <AuthMessage searchParams={params} />
-      <nav className="minimal-tabs" aria-label="Saved and plans">
+      <nav className="minimal-tabs figma-segmented-tabs figma-saved-segment" aria-label="Saved and plans">
         {tabs.map(([value, label]) => <Link className={active === value ? 'is-active' : ''} href={`/plans?tab=${value}`} key={value}>{label}</Link>)}
       </nav>
+
+      {active === 'saved' ? <>
+        <nav className="figma-category-tabs" aria-label="Saved categories">
+          <Link className={selectedCategory === 'all' ? 'is-active' : ''} href="/plans?tab=saved">All</Link>
+          {folders.map(([category]) => <Link className={selectedCategory === category ? 'is-active' : ''} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}><span aria-hidden="true">{categoryGlyph(category)}</span>{categoryLabel(category)}</Link>)}
+        </nav>
+        <div className="figma-saved-rule" aria-hidden="true" />
+      </> : null}
+
       {items.length
         ? active === 'saved'
-          ? <SavedFolders items={items} session={session} />
-          : <section className="minimal-place-grid">{items.map((item) => <LocationCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}</section>
-        : <EmptyState icon="♡" title={active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : 'Nothing saved yet.'} description={active === 'planned' ? 'Plan a matched place when everyone is ready.' : active === 'past' ? 'Past visits appear here.' : 'Save a place while swiping.'} actionHref="/discover" actionLabel="Start swiping" />}
+          ? <SavedFolders folders={folders} session={session} selectedCategory={selectedCategory} />
+          : <section className="minimal-place-grid figma-saved-grid figma-plans-grid">{items.map((item) => <LocationCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}</section>
+        : <EmptyState icon="♡" title={active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'} description={active === 'planned' ? 'Plan a matched place when everyone is ready.' : active === 'past' ? 'Past visits appear here.' : query ? 'Try a different name, city, or category.' : 'Save a place while swiping.'} actionHref="/discover" actionLabel="Start swiping" />}
+
+      {active === 'saved' ? <form className="figma-saved-search" action="/plans" method="get">
+        <input type="hidden" name="tab" value="saved" />
+        {selectedCategory !== 'all' ? <input type="hidden" name="category" value={selectedCategory} /> : null}
+        <label><span className="sr-only">Search saved puddles</span><input type="search" name="q" defaultValue={params?.q || ''} placeholder="Search a saved puddle..." /></label>
+        <button type="submit" aria-label="Search saved puddles">↑</button>
+      </form> : null}
+
       <footer className="minimal-history-link">{active === 'past' ? <Link href="/plans">Back to Saved</Link> : <Link href="/plans?tab=past">History</Link>}</footer>
     </div>
   })
