@@ -59,8 +59,8 @@ export default async function LocationMapPage({ searchParams }) {
 
     return <div className="figma-feed-page">
       <nav className="figma-segmented-tabs figma-feed-segment" aria-label="Feed or map">
-        <Link className={view === 'feed' ? 'is-active' : ''} href="/map">Feed</Link>
-        <Link className={view === 'map' ? 'is-active' : ''} href="/map?view=map">Map</Link>
+        <a className={view === 'feed' ? 'is-active' : ''} href="/map">Feed</a>
+        <a className={view === 'map' ? 'is-active' : ''} href="/map?view=map">Map</a>
       </nav>
 
       <form className="figma-feed-search" action="/map" method="get">
