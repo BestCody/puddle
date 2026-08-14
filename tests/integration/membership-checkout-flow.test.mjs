@@ -4,13 +4,13 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('membership upgrade goes directly from the tier card to Stripe checkout', async () => {
+test('membership upgrade goes directly from the Pass card to Stripe checkout', async () => {
   const membership = await read('app/membership/page.js')
 
   assert.match(membership, /startTinderCheckout/)
   assert.match(membership, /form action=\{startTinderCheckout\}/)
   assert.doesNotMatch(membership, /href="\/membership\/checkout"/)
-  assert.match(membership, />Continue to checkout<\/button>/)
+  assert.match(membership, />Upgrade<\/button>/)
 })
 
 test('legacy Puddle checkout never collects raw payment credentials', async () => {
