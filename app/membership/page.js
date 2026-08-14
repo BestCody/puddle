@@ -5,7 +5,7 @@ import { getMembershipSnapshot } from '@/lib/app/membership-data'
 import { openMembershipPortal, saveGlobalPreference, startTinderCheckout } from './actions'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Membership' }
+export const metadata = { title: 'Pass' }
 
 const TINDER_TIER_MONTHLY_PRICE = '$10/month'
 
@@ -20,65 +20,68 @@ export default async function MembershipPage({ searchParams }) {
   return renderProductPage(async (session) => {
     const snapshot = await getMembershipSnapshot(session)
     const params = await searchParams
+    const view = params?.view === 'manage' ? 'manage' : 'plans'
     const checkoutNotice = params?.checkout === 'success'
-      ? 'Payment received. Your tier will unlock as soon as Stripe confirms the subscription.'
+      ? 'Payment received. Your Pass will unlock as soon as Stripe confirms the subscription.'
       : params?.checkout === 'canceled'
-        ? 'Checkout was canceled. Your Free tier is unchanged.'
+        ? 'Checkout was canceled. Your Free plan is unchanged.'
         : null
     const periodEnd = periodLabel(snapshot.membership?.current_period_end)
 
-    return <div className="membership-page">
-      <header className="minimal-page-header">
-        <div><h1>Membership</h1><p>Two simple tiers. Upgrade only for global connections.</p></div>
-        {snapshot.active ? <Link href="/global-matches">Global likes</Link> : null}
-      </header>
+    return <div className="membership-page figma-pass-page">
+      <nav className="figma-segmented-tabs figma-pass-segment" aria-label="Pass sections">
+        <Link className={view === 'plans' ? 'is-active' : ''} href="/membership">Plans</Link>
+        <Link className={view === 'manage' ? 'is-active' : ''} href="/membership?view=manage">Manage</Link>
+      </nav>
 
-      <AuthMessage searchParams={searchParams} />
+      <AuthMessage searchParams={params} />
       {checkoutNotice ? <p className="membership-notice">{checkoutNotice}</p> : null}
 
-      <section className="tier-grid" aria-label="Puddle membership tiers">
-        <article className={`tier-card ${snapshot.active ? '' : 'is-current'}`}>
-          <div className="tier-heading"><span>Free</span>{snapshot.active ? null : <small>Current</small>}</div>
-          <h2>$0</h2>
-          <p>Keep the complete swipe-first Puddle experience.</p>
-          <ul>
-            <li>Nearby twelve-place decks</li>
-            <li>Pass, Save, and Perfect Pick</li>
-            <li>Saved places, plans, and DateMatch</li>
-          </ul>
-        </article>
+      {view === 'plans' ? <>
+        <h1 className="figma-pass-title"><span>puddle</span> Membership</h1>
+        <section className="tier-grid figma-pass-grid" aria-label="Puddle membership tiers">
+          <article className={`tier-card figma-pass-card figma-pass-free ${snapshot.active ? '' : 'is-current'}`}>
+            <div className="figma-pass-price"><span>Free</span><strong>$0</strong></div>
+            <div className="figma-pass-features">
+              <p>Swipe nearby places, save favorites, plan outings, and coordinate with friends.</p>
+            </div>
+            {snapshot.active ? <span className="figma-plan-state">Available</span> : <span className="figma-plan-state is-current">Current</span>}
+          </article>
 
-        <article className={`tier-card tier-card-paid ${snapshot.active ? 'is-current' : ''}`}>
-          <div className="tier-heading"><span>Tinder tier</span>{snapshot.active ? <small>Current</small> : <small>Paid</small>}</div>
-          <h2>{TINDER_TIER_MONTHLY_PRICE}</h2>
-          <p>Meet people worldwide through places you both genuinely liked.</p>
-          <ul>
-            <li>See opt-in adults who liked the same location</li>
-            <li>Send a date, hangout, or either message request</li>
-            <li>Message after the other person accepts</li>
-          </ul>
-          {!snapshot.adult ? <p className="tier-requirement">Global connections are limited to users age 18 or older.</p> : null}
-          {!snapshot.paymentsConfigured ? <p className="tier-requirement">Payments are not configured yet.</p> : null}
-          {snapshot.active
-            ? <form action={openMembershipPortal}><button className="membership-primary" type="submit">Manage billing</button></form>
-            : snapshot.adult && snapshot.paymentsConfigured
-              ? <form action={startTinderCheckout}><button className="membership-primary" type="submit">Continue to checkout</button></form>
-              : <button className="membership-primary" type="button" disabled>Continue to checkout</button>}
-          <small className="tier-price-note">Billed monthly. Taxes and renewal terms appear before payment.</small>
-        </article>
-      </section>
-
-      {snapshot.active && snapshot.adult ? <section className="global-visibility-card">
-        <div><span className="membership-kicker">Tinder tier privacy</span><h2>Global connections</h2><p>Off by default. Turn this on to appear only to paid adults who liked the same location. Your private passes and exact location are never shown.</p></div>
-        <form action={saveGlobalPreference}>
-          <label className="membership-toggle"><input type="checkbox" name="discoverable" defaultChecked={snapshot.preference.discoverable} /><span>Let matching people find me</span></label>
-          <label>What are you open to?<select name="intent" defaultValue={snapshot.preference.intent}><option value="either">Date or hangout</option><option value="date">Date</option><option value="hangout">Hangout</option></select></label>
-          <button className="membership-primary" type="submit">Save privacy setting</button>
-        </form>
-        {snapshot.preference.discoverable ? <Link className="membership-secondary" href="/global-matches">Open global likes →</Link> : null}
-      </section> : null}
-
-      {snapshot.active ? <footer className="membership-status"><span>Status: {snapshot.membership.status}</span>{periodEnd ? <span>{snapshot.membership.cancel_at_period_end ? 'Ends' : 'Renews'} {periodEnd}</span> : null}</footer> : null}
+          <article className={`tier-card figma-pass-card figma-pass-paid ${snapshot.active ? 'is-current' : ''}`}>
+            <span className="sr-only">Tinder tier</span>
+            <div className="figma-pass-price"><span>Pass</span><strong>{TINDER_TIER_MONTHLY_PRICE}</strong></div>
+            <div className="figma-pass-features">
+              <p>Meet opt-in adults worldwide through places you both genuinely liked.</p>
+              {!snapshot.adult ? <small>Pass connections are limited to users age 18 or older.</small> : null}
+              {!snapshot.paymentsConfigured ? <small>Payments are not configured yet.</small> : null}
+            </div>
+            {snapshot.active
+              ? <Link className="figma-pass-cta" href="/membership?view=manage">Manage</Link>
+              : snapshot.adult && snapshot.paymentsConfigured
+                ? <form action={startTinderCheckout}><button className="figma-pass-cta" type="submit">Upgrade</button></form>
+                : <button className="figma-pass-cta" type="button" disabled>Upgrade</button>}
+          </article>
+        </section>
+        <p className="figma-pass-disclosure">Pass is the $10/month Tinder tier entitlement. Taxes and renewal terms appear before payment.</p>
+      </> : <section className="figma-pass-manage">
+        <header><span>Pass</span><h1>Manage membership</h1><p>Billing, privacy, and global connection controls.</p></header>
+        {snapshot.active ? <>
+          <div className="figma-manage-card">
+            <div><small>Subscription</small><strong>{snapshot.membership.status}</strong>{periodEnd ? <span>{snapshot.membership.cancel_at_period_end ? 'Ends' : 'Renews'} {periodEnd}</span> : null}</div>
+            <form action={openMembershipPortal}><button className="membership-primary" type="submit">Manage billing</button></form>
+          </div>
+          {snapshot.adult ? <div className="figma-manage-card global-visibility-card">
+            <div><small>Privacy</small><h2>Global connections</h2><p>Off by default. Appear only to paid adults who liked the same location. Private passes and exact location stay private.</p></div>
+            <form action={saveGlobalPreference}>
+              <label className="membership-toggle"><input type="checkbox" name="discoverable" defaultChecked={snapshot.preference.discoverable} /><span>Let matching people find me</span></label>
+              <label>What are you open to?<select name="intent" defaultValue={snapshot.preference.intent}><option value="either">Date or hangout</option><option value="date">Date</option><option value="hangout">Hangout</option></select></label>
+              <button className="membership-primary" type="submit">Save privacy setting</button>
+            </form>
+            {snapshot.preference.discoverable ? <Link className="membership-secondary" href="/global-matches">Open global likes →</Link> : null}
+          </div> : null}
+        </> : <div className="figma-manage-card is-empty"><h2>You are on Free.</h2><p>Upgrade to Pass to unlock global connections and billing management.</p><Link className="membership-primary" href="/membership">See plans</Link></div>}
+      </section>}
     </div>
   })
 }
