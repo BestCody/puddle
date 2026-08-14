@@ -134,7 +134,6 @@ export async function assertProductVisualContract(page) {
   await expect(shell).toBeVisible()
   await expect(header).toBeVisible()
   await expect(main).toBeVisible()
-  await expect(page.getByLabel('Open profile menu')).toBeVisible()
 
   const layout = await page.evaluate(() => {
     const read = (selector) => {
@@ -162,21 +161,27 @@ export async function assertProductVisualContract(page) {
       mobileNav: read('.minimal-mobile-nav'),
       stage: read('.minimal-product-stage'),
       header: read('.minimal-product-header'),
+      headerLogo: read('.minimal-header-logo'),
+      profileMenu: read('.profile-menu'),
       main: read('.minimal-product-main')
     }
   })
 
   expect(layout.shell?.width || 0).toBeGreaterThan(300)
   expect(layout.main?.width || 0).toBeGreaterThan(280)
-  expect(layout.header?.height || 0).toBeGreaterThanOrEqual(50)
 
   if (layout.viewportWidth >= 768) {
+    await expect(page.getByLabel('Open profile menu')).toBeVisible()
+    expect(layout.header?.height || 0).toBeGreaterThanOrEqual(50)
     expect(layout.sidebar?.display).not.toBe('none')
     expect(layout.desktopNav?.display).not.toBe('none')
     expect(layout.mobileNav?.display).toBe('none')
-    expect(layout.sidebar?.width || 0).toBeGreaterThanOrEqual(60)
+    expect(layout.sidebar?.width || 0).toBeGreaterThanOrEqual(240)
     expect(layout.stage?.x || 0).toBeGreaterThanOrEqual((layout.sidebar?.right || 0) - 1)
   } else {
+    await expect(page.locator('.minimal-header-logo')).toBeVisible()
+    expect(layout.header?.height || 0).toBeGreaterThanOrEqual(38)
+    expect(layout.profileMenu?.display).toBe('none')
     expect(layout.sidebar?.display).toBe('none')
     expect(layout.mobileNav?.display).not.toBe('none')
     expect(layout.mobileNav?.position).toBe('fixed')

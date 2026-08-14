@@ -5,15 +5,6 @@ import { ProductNav } from './product-nav'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
 
-function initials(name) {
-  return String(name || 'Puddle person')
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'P'
-}
-
 export async function ProductShell({ user, profile, children }) {
   let supabase = null
   async function database() {
@@ -41,19 +32,19 @@ export async function ProductShell({ user, profile, children }) {
 
   return (
     <div className="product-shell minimal-product-shell">
-      <ResizableProductSidebar className="minimal-product-sidebar" />
+      <ResizableProductSidebar className="minimal-product-sidebar" avatarUrl={avatarUrl} />
 
       <div className="product-stage minimal-product-stage">
         <header className="product-header minimal-product-header">
           <div className="minimal-header-logo"><PuddleLogo compact href="/discover" /></div>
           <details className="profile-menu">
             <summary aria-label="Open profile menu">
-              <span className="profile-initials" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined} aria-hidden="true">{avatarUrl ? null : initials(profile?.display_name)}</span>
+              <span className="figma-menu-icon" aria-hidden="true"><i /><i /><i /></span>
             </summary>
             <div className="profile-menu-panel">
               <div className="profile-menu-person"><strong>{profile?.display_name || 'Puddle person'}</strong></div>
               <Link href="/profile">Profile</Link>
-              <Link href="/membership">Membership</Link>
+              <Link href="/membership">Pass</Link>
               <Link href="/account">Settings</Link>
               {showAdmin ? <Link href="/admin">Admin</Link> : null}
               <form action={signOut}><button type="submit">Sign out</button></form>
@@ -63,7 +54,7 @@ export async function ProductShell({ user, profile, children }) {
         <main className="product-main minimal-product-main">{children}</main>
       </div>
 
-      <ProductNav mobile />
+      <ProductNav mobile avatarUrl={avatarUrl} />
     </div>
   )
 }
