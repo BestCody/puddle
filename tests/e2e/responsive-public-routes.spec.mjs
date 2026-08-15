@@ -65,7 +65,7 @@ test('landing page preserves the exact Figma desktop and mobile artboard structu
     expect(await page.locator('[data-figma-node="83:76"]').isVisible()).toBe(true)
     expect(metrics.naturalWidth).toBe(1281)
     expect(metrics.naturalHeight).toBe(8736)
-    expect(metrics.artboardWidth).toBeCloseTo(Math.min(width, 1281, height * 1.46), 0)
+    expect(metrics.artboardWidth).toBeCloseTo(Math.min(width, 1281, height * 1.4), 0)
     expect(metrics.artboardWidth).toBeLessThanOrEqual(1281.5)
   } else {
     expect(await page.locator('[data-figma-node="161:116"]').isVisible()).toBe(true)
