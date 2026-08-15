@@ -4,93 +4,97 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#4ca5f7" />
-  <meta name="description" content="Discover places, save favorites, see what friends share, and find somewhere worth going together." />
-  <meta property="og:title" content="Puddle — discover places together" />
-  <meta property="og:description" content="Swipe places, save favorites, browse the feed, and plan somewhere worth going together." />
+  <meta name="description" content="Discover places. See who’s there." />
+  <meta property="og:title" content="Puddle — Discover places. See who’s there." />
+  <meta property="og:description" content="Discover what’s around you, social media style." />
   <meta property="og:image" content="/og-puddle.svg" />
   <link rel="canonical" href="https://puddle.you/" />
   <link rel="icon" href="/puddle-mark.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/figma-landing.css?v=1" />
-  <link rel="stylesheet" href="/figma-landing-overflow-fix.css?v=1" />
-  <title>Puddle — discover places together</title>
+  <link rel="preload" as="image" href="/figma/landing-desktop.png" media="(min-width: 761px)" />
+  <link rel="preload" as="image" href="/figma/landing-mobile.png" media="(max-width: 760px)" />
+  <link rel="stylesheet" href="/figma-landing.css?v=5" />
+  <title>Puddle — Discover places. See who’s there.</title>
 </head>
 <body>
-  <header class="site-header" id="site-header">
-    <a class="brand" href="#home" aria-label="Puddle home"><img src="/puddle-mark.svg" alt="" /><span>puddle</span></a>
-    <nav class="desktop-nav" aria-label="Primary navigation"><a href="#how">Features</a><a href="#safety">Safety</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav>
-    <div class="header-actions"><a class="button" href="/signin">Sign in</a><a class="button button--ink" href="/signup">Create account</a></div>
-    <button class="menu-button" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="site-header"><span></span><span></span></button>
-  </header>
+  <main class="figma-landing" aria-labelledby="landing-title">
+    <h1 class="sr-only" id="landing-title">Discover places. See who’s there.</h1>
+    <p class="sr-only">Discover what’s around you, social media style.</p>
 
-  <main id="home">
-    <section class="hero page-shell">
-      <div class="hero-copy">
-        <div class="eyebrow">Log in</div>
-        <h1>Discover places.<br /><em>See who’s there.</em></h1>
-        <p class="hero-lede">Puddle turns nearby places into something you can swipe, save, share, and actually make plans around.</p>
-        <div class="hero-login" aria-label="Continue to Puddle">
-          <a class="login-row" href="/signin">Email or username</a>
-          <a class="login-row" href="/signin">Password</a>
-          <a class="button button--blue" href="/signin">Continue</a>
-          <div class="auth-divider" aria-hidden="true" style="text-align:center;color:#b7b7b7;font-weight:700">or</div>
-          <a class="button button--google" href="/signin">Continue with Google</a>
-          <a class="button" href="/signup">Continue with email</a>
-        </div>
-        <div class="hero-links"><a href="/signup">Sign up</a><a href="/forgot-password">Forgot password?</a></div>
-      </div>
+    <div class="figma-artboard figma-artboard--desktop" data-figma-node="83:76" aria-label="Puddle landing page">
+      <img class="figma-artboard__image" src="/figma/landing-desktop.png" width="1281" height="8736" alt="" aria-hidden="true" draggable="false" fetchpriority="high" />
 
-      <div class="hero-playground" aria-label="Interactive Puddle swipe preview">
-        <div class="hero-collage" aria-hidden="true"><img src="/events/ceramics.svg" alt="" /><img src="/events/neon-night.svg" alt="" /><img src="/events/rooftop.svg" alt="" /></div>
-        <div class="phone-shell">
-          <div class="phone-topbar"><span class="mini-brand"><img src="/puddle-mark.svg" alt="" />puddle</span></div>
-          <div class="deck" id="hero-deck">
-            <article class="event-card" aria-label="Rooftop Cinema Club, Movie date"><div class="event-card__image"><img src="/events/rooftop.svg" alt="Rooftop Cinema Club location artwork" /></div><div class="event-card__body"><h3>Rooftop Cinema Club</h3></div></article>
-            <article class="event-card" aria-label="Clay and Cabernet, Activity date"><div class="event-card__image"><img src="/events/ceramics.svg" alt="Clay and Cabernet location artwork" /></div><div class="event-card__body"><h3>Clay &amp; Cabernet</h3></div></article>
-            <article class="event-card" aria-label="Moonlight Café, Coffee date"><div class="event-card__image"><img src="/events/jazz.svg" alt="Moonlight Café location artwork" /></div><div class="event-card__body"><h3>Moonlight Café</h3></div></article>
-          </div>
-          <div class="deck-actions"><button class="round-action round-action--undo" type="button" data-swipe="undo" aria-label="Back">↶</button><button class="round-action round-action--no" type="button" data-swipe="left" aria-label="Pass">×</button><button class="round-action round-action--yes" type="button" data-swipe="right" aria-label="Save">♡</button><button class="round-action round-action--share" type="button" data-swipe="right" aria-label="Star">☆</button></div>
-          <div class="phone-nav" aria-hidden="true">Back&nbsp;&nbsp;&nbsp; Pass&nbsp;&nbsp;&nbsp; Save&nbsp;&nbsp;&nbsp; Star</div>
-        </div>
-      </div>
+      <a class="hotspot d-signin-email" href="/signin" aria-label="Log in with email or username"></a>
+      <a class="hotspot d-signin-password" href="/signin" aria-label="Log in with password"></a>
+      <a class="hotspot d-signin-continue" href="/signin" aria-label="Continue to log in"></a>
+      <a class="hotspot d-forgot-password" href="/forgot-password" aria-label="Forgot password?"></a>
+      <a class="hotspot d-google" href="/signin" aria-label="Continue with Google"></a>
+      <a class="hotspot d-email-signup" href="/signup" aria-label="Continue with email"></a>
+      <a class="hotspot d-menu" href="#footer-links-d" aria-label="Open navigation"></a>
+
+      <span class="landmark-anchor d-features-anchor" id="features-d" aria-hidden="true"></span>
+      <span class="landmark-anchor d-safety-anchor" id="safety-d" aria-hidden="true"></span>
+      <button class="hotspot d-safety-button" type="button" data-open-safety aria-label="See our safety model"></button>
+      <a class="hotspot d-create-account" href="/signup" aria-label="Create account"></a>
+
+      <nav class="hotspot-nav" id="footer-links-d" aria-label="Footer navigation">
+        <a class="hotspot d-footer-features" href="#features-d" aria-label="Features"></a>
+        <a class="hotspot d-footer-safety" href="#safety-d" aria-label="Safety"></a>
+        <a class="hotspot d-footer-signup" href="/signup" aria-label="Sign up"></a>
+        <a class="hotspot d-footer-privacy" href="/privacy" aria-label="Privacy"></a>
+        <a class="hotspot d-footer-terms" href="/terms" aria-label="Terms"></a>
+      </nav>
+    </div>
+
+    <div class="figma-artboard figma-artboard--mobile" data-figma-node="161:116" aria-label="Puddle mobile landing page">
+      <img class="figma-artboard__image" src="/figma/landing-mobile.png" width="704" height="9660" alt="" aria-hidden="true" draggable="false" fetchpriority="high" />
+
+      <span class="mobile-jump-mask" aria-hidden="true"></span>
+      <a class="hotspot m-jump-in" href="#mobile-auth" aria-label="Jump in"></a>
+      <a class="hotspot m-menu" href="#footer-links-m" aria-label="Open navigation"></a>
+      <span class="landmark-anchor m-auth-anchor" id="mobile-auth" aria-hidden="true"></span>
+      <a class="hotspot m-google" href="/signin" aria-label="Continue with Google"></a>
+      <a class="hotspot m-email-signup" href="/signup" aria-label="Continue with email"></a>
+
+      <span class="landmark-anchor m-features-anchor" id="features-m" aria-hidden="true"></span>
+      <span class="landmark-anchor m-safety-anchor" id="safety-m" aria-hidden="true"></span>
+      <button class="hotspot m-safety-button" type="button" data-open-safety aria-label="See our safety model"></button>
+      <a class="hotspot m-create-account" href="/signup" aria-label="Create account"></a>
+
+      <nav class="hotspot-nav" id="footer-links-m" aria-label="Footer navigation">
+        <a class="hotspot m-footer-features" href="#features-m" aria-label="Features"></a>
+        <a class="hotspot m-footer-safety" href="#safety-m" aria-label="Safety"></a>
+        <a class="hotspot m-footer-privacy" href="/privacy" aria-label="Privacy"></a>
+        <a class="hotspot m-footer-terms" href="/terms" aria-label="Terms"></a>
+      </nav>
+    </div>
+
+    <section class="sr-only" aria-label="Puddle features">
+      <h2>Discover what’s around you, social media style.</h2>
+      <h3>Swipe</h3><p>Pass, save, inspect details, or share without leaving the swipe page.</p>
+      <h3>Save</h3><p>Save your favorite places. Plan trips together, effortlessly.</p>
+      <h3>Feed</h3><p>Find where everyone’s hanging out, in feed or map view.</p>
+      <h3>Profile</h3><p>Add what you love. Places, preferences, colors, and more.</p>
+      <h2>Puddle is built on trust and privacy</h2>
+      <p>Meet people who like the same places you do, safely.</p>
+      <h2>Find somewhere worth going together.</h2>
     </section>
 
-    <section class="discovery-intro page-shell"><h2>Discover what’s around you, social media style.</h2></section>
-
-    <section class="feature-stack" id="how" aria-label="Puddle features">
-      <article class="feature-card feature-card--swipe"><h3>Swipe</h3><p>Pass, save, inspect details, or share without leaving the swipe page.</p><div class="feature-phone" aria-hidden="true"></div><span class="interactive-pill"><b>Interactive!</b><br />Give it a swipe.</span></article>
-      <article class="feature-card feature-card--save"><h3>Save</h3><p>Save your favorite places. Plan trips together, effortlessly.</p><div class="feature-phone" aria-hidden="true"></div><span class="interactive-pill"><b>Interactive!</b><br />Give it a swipe.</span></article>
-      <article class="feature-card feature-card--feed"><h3>Feed</h3><p>Find what people are sharing in feed or map view.</p><div class="feature-phone" aria-hidden="true"></div><span class="interactive-pill"><b>Interactive!</b><br />Explore the feed.</span></article>
-      <article class="feature-card feature-card--profile"><h3>Profile</h3><p>Add what you love. Places, preferences, profile details, and more.</p><div class="feature-phone" aria-hidden="true"></div><span class="interactive-pill"><b>Interactive!</b><br />Make it yours.</span></article>
-    </section>
-
-    <h2 class="trust-title">Puddle is built on trust and privacy</h2>
-    <section class="section page-shell" id="safety">
-      <div class="safety-panel">
-        <h2>Meet people who like the same places you do, safely.</h2>
-        <button class="button" type="button" data-open-modal="safety">See our safety model</button>
-        <div class="safety-cards">
-          <article><span>01</span><div><strong>You control what you share</strong><p>Saved places and profile details stay under your control.</p></div></article>
-          <article><span>02</span><div><strong>Shared place context first</strong><p>Social connections are built around places and mutual actions, not precise live location.</p></div></article>
-          <article><span>03</span><div><strong>Clear privacy controls</strong><p>Visibility, account, billing, blocking, and reporting controls remain available in the app.</p></div></article>
-          <article><span>04</span><div><strong>Optional global connections</strong><p>The paid connection feature is opt-in, age-gated, and can be disabled at any time.</p></div></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section final-cta"><div class="page-shell final-cta__inner"><img src="/puddle-mark.svg" alt="" /><h2>Find somewhere worth going together.</h2><p>Create your account and start discovering places.</p><a class="button button--ink" href="/signup">Create account</a></div></section>
+    <form class="sr-only" action="/signup" method="get">
+      <label for="footer-email">Email address</label>
+      <input id="footer-email" name="email" type="email" />
+      <button type="submit">Sign up</button>
+    </form>
+    <div class="sr-only"><a href="/signin">Sign in</a><a href="/signup">Sign up</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>
   </main>
 
-  <footer class="site-footer">
-    <div class="page-shell footer-grid">
-      <div><strong>Explore</strong><a href="#how">Features</a><a href="#safety">Safety</a><a href="/signup">Sign up</a></div>
-      <div><strong>Company</strong><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/signin">Sign in</a></div>
-      <div><strong>Connect</strong><span>Instagram</span><span>X (Twitter)</span><span>TikTok</span><span>Discord</span></div>
-      <form class="footer-form" action="/signup" method="get"><label class="sr-only" for="footer-email">Email address</label><input id="footer-email" name="email" type="email" required placeholder="you@email.com" /><button type="submit" aria-label="Continue to registration">→</button></form>
-    </div>
-    <div class="footer-word" aria-hidden="true">puddle</div>
-  </footer>
+  <div class="safety-dialog-backdrop" id="safety-dialog-backdrop" aria-hidden="true">
+    <section class="safety-dialog" role="dialog" aria-modal="true" aria-labelledby="safety-dialog-title">
+      <button class="safety-dialog__close" type="button" data-close-safety aria-label="Close">×</button>
+      <h2 id="safety-dialog-title">Puddle is built on trust and privacy</h2>
+      <p>Puddle centers social discovery on places and mutual actions. You control what you share, and blocking, reporting, privacy, and account controls remain available in the app.</p>
+    </section>
+  </div>
 
-  <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" type="button" data-close-modal aria-label="Close">×</button><div id="modal-content"></div></section></div>
-  <script src="/app.js?v=4" defer></script>
+  <script src="/app.js?v=5" defer></script>
 </body>
 </html>
