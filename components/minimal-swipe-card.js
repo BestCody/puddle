@@ -181,13 +181,28 @@ function PhotoSearchState({ state, placeholderUrl }) {
   </div>
 }
 
-export function MinimalSwipeCard({ item, onChoice, busy }) {
+export function MinimalSwipePreviewCard({ item }) {
+  const candidates = photoCandidates(item)
+  const photo = candidates[0] || item.category_placeholder_url || null
+  const rating = ratingLabel(item)
+  const photoStyle = photo ? { backgroundImage: `linear-gradient(180deg,transparent 45%,rgba(10,10,12,.82)),url(${photo})` } : undefined
+  return <article className="minimal-swipe-card-preview" aria-hidden="true">
+    <div className="minimal-swipe-photo" style={photoStyle}>
+      {!photo ? <div className="minimal-photo-placeholder"><span aria-hidden="true">⌖</span></div> : null}
+      <div className="minimal-swipe-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
+      <div className="minimal-swipe-title"><h1>{item.title}</h1><div>{rating ? <span>{rating}</span> : null}</div></div>
+    </div>
+  </article>
+}
+
+export function MinimalSwipeCard({ item, onChoice, busy, actionRequest }) {
   const pointer = useRef(null)
   const origin = useRef({ x: 0, y: 0 })
   const moved = useRef(false)
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const choiceInFlight = useRef(false)
   const candidates = useMemo(() => photoCandidates(item), [item])
   const mainPhoto = candidates[0] || null
   const placeholderUrl = item.category_placeholder_url || null
@@ -238,13 +253,25 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
   }, [item.content_id, item.photo_enrichment_status, mainPhoto])
 
   async function choose(action) {
-    if (busy) return
-    setDragging(false)
-    setDragX(action === 'pass' ? -720 : 720)
-    await new Promise((resolve) => window.setTimeout(resolve, 160))
+  if (busy || choiceInFlight.current) return
+  choiceInFlight.current = true
+  setDragging(false)
+  setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const motionMs = reducedMotion ? 0 : action === 'save' ? 560 : action === 'pass' ? 280 : 0
+  try {
+    if (motionMs) await new Promise((resolve) => window.setTimeout(resolve, motionMs))
     await onChoice(action, item)
+  } finally {
     setDragX(0)
+    choiceInFlight.current = false
   }
+}
+
+useEffect(() => {
+  if (!actionRequest?.id) return
+  choose(actionRequest.action)
+}, [actionRequest?.id])
 
   async function chooseFromDetails(action) {
     if (busy) return
