@@ -1,3 +1,4 @@
+// Landing visuals are sourced directly from the exact desktop and mobile Figma artboards.
 const $ = (selector, root = document) => root.querySelector(selector)
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)]
 
