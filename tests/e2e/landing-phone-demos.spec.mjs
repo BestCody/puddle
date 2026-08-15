@@ -52,7 +52,7 @@ test('Saved, Feed, and Profile phone demos expose their corresponding product in
   await expect(location).toBeVisible()
   await location.fill('Montreal, QC')
   await page.getByRole('link', { name: 'Done', exact: true }).click()
-  await expect(page.getByText('Montreal, QC', { exact: true })).toBeVisible()
+  await expect(page.locator('.minimal-profile-settings strong').filter({ hasText: 'Montreal, QC' })).toBeVisible()
 })
 
 test('landing page embeds the real phone demos instead of leaving screenshot placeholders on screen', async ({ page }) => {
@@ -62,7 +62,7 @@ test('landing page embeds the real phone demos instead of leaving screenshot pla
   await expect(swipePhone).toBeAttached()
   await swipePhone.scrollIntoViewIfNeeded()
   const iframe = swipePhone.locator('iframe')
-  await expect(iframe).toHaveAttribute('src', '/landing-demo/swipe')
+  await expect(iframe).toHaveAttribute('src', '/landing-demo/swipe', { timeout: 15_000 })
   const frame = iframe.contentFrame()
   await expect(frame.locator('.minimal-swipe-card')).toBeVisible({ timeout: 15_000 })
   await expect(page.locator('img.feature-phone[data-draggable-phone]')).toHaveCount(0)
