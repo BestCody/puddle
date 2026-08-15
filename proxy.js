@@ -71,7 +71,7 @@ export async function proxy(request) {
 
   const maxBytes = pathname === '/api/media/upload' ? 20_000_000 : pathname.startsWith('/api/') ? 256_000 : 2_000_000
   const contentLength = Number(request.headers.get('content-length') || 0)
-  if (contentLength > maxBytes) return secured(NextResponse.json({ error: 'Request payload is too large.' }, { status: 413 }), pathname, true)
+  if (contentLength > maxBytes) return secured(NextResponse.json({ error: 'Request payload is too large.' }, { status: 413 }), { request, nonce })
 
   const canonicalTarget = (request.method === 'GET' || request.method === 'HEAD')
     ? canonicalPuddleAuthUrl(request.url, process.env.NEXT_PUBLIC_SITE_URL, authCanonicalPaths)
