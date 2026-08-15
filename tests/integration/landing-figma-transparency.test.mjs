@@ -31,11 +31,13 @@ test('latest Figma glyph assets keep transparent canvases', async () => {
   assert.match(css, /move-profile\.svg/)
 })
 
-test('latest desktop Figma uses exact Profile masks and hides only its hero phone', async () => {
+test('latest desktop Figma uses exact Profile masks, correct hero visibility, and no repeated city crop', async () => {
   const css = await read('public/figma-landing-v2.css')
   assert.match(css, /\.hero-phone-composite--desktop\{display:none!important\}/)
   assert.doesNotMatch(css, /\.hero-phone-composite--mobile\{display:none/)
   assert.match(css, /\.profile-backdrop--desktop\{[^}]*left:298px;top:4526px;width:685px;height:988px;/)
   assert.match(css, /background-position:0 17px,1px 84px,197px 0,179px 933px/)
   assert.match(css, /background-size:685px 76px,190px 904px,488px 988px,385px 55px/)
+  assert.match(css, /\.landing-canvas--desktop::before\{[^}]*top:3309px;[^}]*background:#61c9ee/)
+  assert.doesNotMatch(css, /city-exact\.png[^}]*repeat-y/, 'lower desktop must not repeat the first city crop')
 })
