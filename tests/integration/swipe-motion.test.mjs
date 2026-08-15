@@ -8,12 +8,17 @@ const motionCss = await readFile(new URL('../../app/swipe-motion.css', import.me
 
 test('save swipe follows the Figma Animation storyboard without changing persistence semantics', () => {
   assert.match(cardSource, /action === 'pass' \? -720 : action === 'save' \? 720 : 0/)
-  assert.match(cardSource, /action === 'save' \? 560 : 280/)
+  assert.match(cardSource, /action === 'save' \? 560 : action === 'pass' \? 280 : 0/)
   assert.match(cardSource, /prefers-reduced-motion: reduce/)
+  assert.match(cardSource, /choiceInFlight/)
+  assert.match(cardSource, /actionRequest\?\.id/)
   assert.match(cardSource, /await onChoice\(action, item\)/)
   assert.match(cardSource, /export function MinimalSwipePreviewCard/)
   assert.match(workspaceSource, /const next = feed\.items\[index \+ 1\] \|\| null/)
   assert.match(workspaceSource, /<MinimalSwipePreviewCard item=\{next\} \/>/)
+  assert.match(workspaceSource, /onSave=\{\(\) => requestChoice\('save'\)\}/)
+  assert.match(workspaceSource, /onPass=\{\(\) => requestChoice\('pass'\)\}/)
+  assert.match(workspaceSource, /actionRequest=\{actionRequest\}/)
   assert.match(motionCss, /puddle-save-card-depth/)
   assert.match(motionCss, /puddle-next-card-rise/)
   assert.match(motionCss, /puddle-save-control-pulse/)
