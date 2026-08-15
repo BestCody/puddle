@@ -1,0 +1,26 @@
+/* Swipe motion transcribed from the Figma Animation storyboard (node 114:214).
+   The storyboard depicts the saved card moving out to the right while the Save
+   action grows/pulses before the next card becomes active. */
+.minimal-swipe-card{transition:transform .28s cubic-bezier(.2,.78,.24,1),opacity .22s ease}
+.minimal-swipe-card[style*="translateX(720px)"]{transition-duration:.56s,.42s;transition-timing-function:cubic-bezier(.16,.84,.22,1),ease;animation:puddle-save-card-depth .56s cubic-bezier(.16,.84,.22,1) both}
+.minimal-swipe-page:has(.minimal-swipe-card[style*="translateX(720px)"]) .minimal-swipe-action.is-save>span{animation:puddle-save-control-pulse .56s cubic-bezier(.16,.84,.22,1) both;position:relative;z-index:2}
+.minimal-swipe-page:has(.minimal-swipe-card[style*="translateX(720px)"]) .minimal-swipe-action.is-save small{font-weight:850;color:var(--minimal-accent)}
+
+@keyframes puddle-save-card-depth{
+  0%{scale:1;opacity:1}
+  22%{scale:.92;opacity:1}
+  58%{scale:.88;opacity:.96}
+  100%{scale:1.03;opacity:.9}
+}
+@keyframes puddle-save-control-pulse{
+  0%{scale:1;box-shadow:0 5px 16px rgba(23,17,20,.08)}
+  28%{scale:1.2}
+  58%{scale:1.62;box-shadow:0 12px 30px rgba(255,79,123,.2)}
+  78%{scale:1.35}
+  100%{scale:1}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .minimal-swipe-card,.minimal-swipe-card[style*="translateX(720px)"]{transition-duration:.01ms!important;animation:none!important}
+  .minimal-swipe-page:has(.minimal-swipe-card[style*="translateX(720px)"]) .minimal-swipe-action.is-save>span{animation:none!important}
+}
