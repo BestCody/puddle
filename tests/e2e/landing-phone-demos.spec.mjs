@@ -48,7 +48,7 @@ test('Saved, Feed, and Profile phone demos expose their corresponding product in
   await expect(page.locator('.minimal-profile-page')).toBeVisible()
   await expect(page.getByText('Advanced', { exact: true })).toHaveCount(0)
   await page.getByRole('link', { name: 'Edit', exact: true }).click()
-  const location = page.locator('.minimal-profile-settings input').first()
+  const location = page.locator('.minimal-profile-settings input:not([type="file"]):not([type="range"])').first()
   await expect(location).toBeVisible()
   await location.fill('Montreal, QC')
   await page.getByRole('link', { name: 'Done', exact: true }).click()
