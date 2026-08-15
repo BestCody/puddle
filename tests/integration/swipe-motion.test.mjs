@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const cardSource = await readFile(new URL('../../components/minimal-swipe-card.js', import.meta.url), 'utf8')
+const workspaceSource = await readFile(new URL('../../components/date-swipe-workspace-v2.js', import.meta.url), 'utf8')
 const motionCss = await readFile(new URL('../../app/swipe-motion.css', import.meta.url), 'utf8')
 
 test('save swipe follows the Figma Animation storyboard without changing persistence semantics', () => {
@@ -10,8 +11,12 @@ test('save swipe follows the Figma Animation storyboard without changing persist
   assert.match(cardSource, /action === 'save' \? 560 : 280/)
   assert.match(cardSource, /prefers-reduced-motion: reduce/)
   assert.match(cardSource, /await onChoice\(action, item\)/)
+  assert.match(cardSource, /export function MinimalSwipePreviewCard/)
+  assert.match(workspaceSource, /const next = feed\.items\[index \+ 1\] \|\| null/)
+  assert.match(workspaceSource, /<MinimalSwipePreviewCard item=\{next\} \/>/)
   assert.match(motionCss, /puddle-save-card-depth/)
+  assert.match(motionCss, /puddle-next-card-rise/)
   assert.match(motionCss, /puddle-save-control-pulse/)
   assert.match(motionCss, /translateX\(720px\)/)
-  assert.match(motionCss, /scale:1\.62/)
+  assert.match(motionCss, /scale:1\.72/)
 })
