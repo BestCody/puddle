@@ -1,11 +1,13 @@
 /* Exact geometry corrections derived from Figma nodes 83:76 and 161:116. */
 
-/* Hero phone is a real composed component: screen + device frame, positioned using Figma's negative child offsets. */
-.hero-phone-composite{position:absolute;z-index:4;width:191px;height:565px;overflow:visible;pointer-events:none}
-.hero-phone-composite--desktop{left:1028px;top:149px}
-.hero-phone-composite--mobile{left:413px;top:723px}
-.hero-phone-screen{position:absolute;z-index:2;left:-219px;top:-2px;width:292px;height:633px;max-width:none;object-fit:fill;border-radius:46px}
-.hero-phone-frame{position:absolute;z-index:1;left:-238.365px;top:-19.57px;width:330.595px;height:665.569px;max-width:none;object-fit:fill}
+/* Hero phone: exact Figma phone component export. The semantic page remains real DOM; this is an individual visual component. */
+.hero-phone-composite{position:absolute;z-index:4;width:430px;height:666px;overflow:hidden;pointer-events:none;background:url('/figma/assets/hero-phone-exact.png') center/100% 100% no-repeat}
+.hero-phone-composite--desktop{left:789.635px;top:129.43px}
+.hero-phone-composite--mobile{left:174.635px;top:703.43px}
+.hero-phone-screen,.hero-phone-frame{display:none!important}
+
+/* Use the exact exported Figma artwork for the tall city image rather than reconstructing its internal crop. */
+.city-photo-wrap img{content:url('/figma/assets/city-exact.png');left:0!important;top:0!important;width:100%!important;height:100%!important;object-fit:fill!important}
 
 /* Exact Figma headline/card geometry. */
 .discovery--desktop h2{left:707.297px;top:1455.761px;width:459.476px}
@@ -15,12 +17,16 @@
 .feature-card--feed h3{left:218.390px;top:58.694px}
 .feature-card--profile h3{left:180.194px;top:51.739px}
 .feature-card>p{left:56.929px;top:138.393px;width:443.991px}
-.feature-icon--swipe{left:126px;top:55px;width:69.881px;height:69.881px}
+.feature-icon--swipe{left:130px;top:59px;width:69.881px;height:69.881px}
 .feature-icon--save{left:170.218px;top:76.428px;width:28.463px;height:45.677px}
-.feature-icon--feed{left:157px;top:68px;width:55.007px;height:55.007px}
+.feature-icon--feed{left:161px;top:72px;width:55.007px;height:55.007px}
 
-/* Individual phone exports include transparent export padding. The visible frame now matches Figma's width and top edge. */
-.feature-phone{left:51.3px;top:90.4px;width:453.1px;height:982.4px;max-width:none;object-fit:fill}
+/* Exact clipped iPhone component exports for each card. The visible export is 453×690 and starts at the Figma effect bound x=56,y=206. */
+.feature-phone{left:56px;top:206px;width:453px;height:690px;max-width:none;object-fit:fill}
+.feature-card--swipe .feature-phone{content:url('/figma/assets/phone-swipe-exact.png')}
+.feature-card--save .feature-phone{content:url('/figma/assets/phone-save-exact.png')}
+.feature-card--feed .feature-phone{content:url('/figma/assets/phone-feed-exact.png')}
+.feature-card--profile .feature-phone{content:url('/figma/assets/phone-profile-exact.png')}
 .feature-card--swipe .interactive-pill{left:309px;top:811px}
 .feature-card--save .interactive-pill{left:300px;top:805.729px}
 .feature-card--feed .interactive-pill,.feature-card--profile .interactive-pill{left:298px;top:797.592px}
@@ -29,6 +35,8 @@
 .trust-heading--desktop h2{left:684.347px;top:5641.206px;width:527.882px}
 .trust-heading--mobile h2{left:62.822px;top:6398.773px;width:527.882px}
 .safety-panel h2{left:48.661px;top:158.889px;width:541.665px}
+.safety-panel .safety-model-button{left:139px;top:391px}
+.safety-posts div:nth-child(1){left:37px;top:497px}.safety-posts div:nth-child(2){left:40px;top:752px}.safety-posts div:nth-child(3){left:41px;top:1008px}.safety-posts div:nth-child(4){left:43px;top:1262px}
 .final-cta--desktop h2{left:700.445px;top:7566.895px;width:527.882px}
 .final-cta--mobile h2{left:88.059px;top:8316.151px;width:527.882px}
 
@@ -46,36 +54,30 @@
 .collage-card--m-four{left:202.10px;top:1689.52px}
 .collage-card--m-five{left:432.61px;top:1886.71px}
 
-/* Footer text/navigation stays semantic DOM. Blue gradient, huge wordmark and glass are CSS layers matching Figma. */
+/* Footer links stay semantic DOM. The bottom gradient/wordmark is one decorative Figma artwork; glass remains a live blend layer. */
 .site-footer{background:transparent;isolation:isolate}
-.footer-bottom-art,.footer-glass-art{display:none!important}
+.footer-bottom-art{display:block!important;position:absolute;z-index:1;max-width:none;pointer-events:none}
+.footer-bottom-art--desktop{left:-49.695px;top:263.2px;width:1458px;height:530px}
+.footer-bottom-art--mobile{left:-4px;top:491.432px;width:831.167px;height:302.139px}
+.footer-glass-art{display:none!important}
 .footer-columns{z-index:4;pointer-events:none}
 .footer-columns a{pointer-events:auto}
-.site-footer::before,.site-footer::after{position:absolute;display:flex;pointer-events:none}
-.site-footer::before{content:"";z-index:1;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--blue))}
-.site-footer::after{content:"puddle";z-index:2;align-items:center;justify-content:center;font-family:var(--martian);font-weight:800;line-height:1.4;color:var(--slight-grey);text-align:center;white-space:nowrap}
-.site-footer--desktop::before{left:-49.695px;top:263.2px;width:1458px;height:530px}
-.site-footer--desktop::after{left:93.251px;top:403.412px;width:1150px;height:383px;font-size:273.545px}
-.site-footer--mobile::before{left:-4px;top:491.432px;width:831.167px;height:302.139px}
-.site-footer--mobile::after{left:77.489px;top:571.363px;width:656px;height:218px;font-size:155.941px}
+.site-footer::before,.site-footer::after{display:none!important}
 .footer-columns::before,.footer-columns::after{content:"";position:absolute;z-index:1;pointer-events:none;mix-blend-mode:overlay;background-image:linear-gradient(to left,rgba(255,255,255,.2),rgba(0,0,0,.2) 26.442%,rgba(255,255,255,.2));background-repeat:repeat-x}
 .footer-columns>section{z-index:2}
-.site-footer--desktop .footer-columns::before{left:2.413px;top:49.455px;width:669.18px;height:754.615px;background-size:121.61px 100%}
-.site-footer--desktop .footer-columns::after{left:672.151px;top:85.65px;width:667.875px;height:732.307px;background-size:121.61px 100%}
+.site-footer--desktop .footer-columns::before{left:2.413px;top:49.455px;width:669.18px;height:754.615px;background-size:126.491px 100%}
+.site-footer--desktop .footer-columns::after{left:672.151px;top:85.65px;width:667.875px;height:732.307px;background-size:126.491px 100%}
 .site-footer--mobile .footer-columns::before{left:38.504px;top:364.096px;width:381.482px;height:430.186px;background-size:72.109px 100%}
 .site-footer--mobile .footer-columns::after{left:422.133px;top:379.244px;width:380.738px;height:417.469px;background-size:72.109px 100%}
 .footer-blue{display:none!important}
 
-/* Desktop footer text positions, mapped from Figma centers. */
-.site-footer--desktop .footer-columns section{top:210px}
-.site-footer--desktop .footer-columns section:nth-child(1){left:117px;width:137px}
-.site-footer--desktop .footer-columns section:nth-child(2){left:567px;width:137px}
-.site-footer--desktop .footer-columns section:nth-child(3){left:986px;width:137px}
+/* Footer text positions mapped from global Figma coordinates into each footer frame. */
+.site-footer--desktop .footer-columns section{top:210.859px}
+.site-footer--desktop .footer-columns section:nth-child(1){left:126.15px;width:137px}
+.site-footer--desktop .footer-columns section:nth-child(2){left:576.131px;width:137px}
+.site-footer--desktop .footer-columns section:nth-child(3){left:995.021px;width:137px}
 .site-footer--desktop .footer-columns h2{margin-bottom:8px}
-.site-footer--desktop .footer-columns section:nth-child(1) a:nth-of-type(3){margin-top:2px}
 .site-footer--desktop .footer-extra{display:none}
-
-/* Mobile footer visible content. Figma clips Instagram/X outside the mobile frame; TikTok/Discord are the visible Connect links. */
 .site-footer--mobile .mobile-hidden-social{display:none}
 .site-footer--mobile .footer-columns section{top:208px}
 .site-footer--mobile .footer-columns section:nth-child(1){left:73px;width:137px}
