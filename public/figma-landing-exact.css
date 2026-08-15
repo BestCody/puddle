@@ -37,6 +37,7 @@
 .menu-button--mobile{left:550px;top:444px}
 .mobile-arrow-wrap{position:absolute;z-index:6;left:416.36px;top:-20.54px;width:141.425px;height:459.223px;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .mobile-arrow-wrap .mobile-arrow{position:static;width:458.42px;height:50.468px;max-width:none;transform:rotate(101.58deg);transform-origin:center;object-fit:fill}
+.brand--mobile img{content:url('/figma/assets/mobile-logo.png');filter:none;width:45.548px;height:46.779px;object-fit:contain}
 
 /* Exact rotated collage effect bounds. */
 .collage-card--one{left:643.85px;top:1118.02px}
@@ -76,7 +77,3 @@
 .site-footer--mobile .footer-columns section:nth-child(2){left:297px;width:137px}
 .site-footer--mobile .footer-columns section:nth-child(3){left:560px;width:137px}
 .site-footer--mobile .footer-columns h2{margin-bottom:8px}
-
-@media(max-width:760px){
-  .brand--mobile img{filter:none}
-}
