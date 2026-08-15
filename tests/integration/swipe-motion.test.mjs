@@ -14,6 +14,8 @@ test('drag, dock, and keyboard save actions follow the Figma Animation storyboar
   assert.match(cardSource, /actionRequest\?\.id/)
   assert.match(cardSource, /await onChoice\(action, item\)/)
   assert.match(cardSource, /export function MinimalSwipePreviewCard/)
+  assert.match(cardSource, /className="minimal-swipe-card-preview"/)
+  assert.doesNotMatch(cardSource, /className="minimal-swipe-card minimal-swipe-card-preview"/)
   assert.match(workspaceSource, /const next = feed\.items\[index \+ 1\] \|\| null/)
   assert.match(workspaceSource, /<MinimalSwipePreviewCard item=\{next\} \/>/)
   assert.match(workspaceSource, /onSave=\{\(\) => requestChoice\('save'\)\}/)
