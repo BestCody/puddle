@@ -95,9 +95,8 @@ function initInteractivePhoneDemos() {
 
     const frame = document.createElement('iframe')
     frame.className = 'feature-phone-demo__frame'
-    frame.src = `/landing-demo/${view}`
+    frame.dataset.src = `/landing-demo/${view}`
     frame.title = title
-    frame.loading = 'lazy'
     frame.referrerPolicy = 'same-origin'
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups')
     frame.setAttribute('allow', 'clipboard-write')
@@ -105,6 +104,44 @@ function initInteractivePhoneDemos() {
     shell.append(frame)
     placeholder.replaceWith(shell)
   })
+}
+
+function initPhoneDemoLoading() {
+  const frames = $$('.feature-phone-demo__frame')
+  if (!frames.length) return
+
+  const loadFrame = (frame) => {
+    if (frame.dataset.loaded === 'true') return
+    const source = frame.dataset.src || frame.getAttribute('src')
+    if (!source || source === 'about:blank') return
+    frame.dataset.src = source
+    frame.loading = 'eager'
+    frame.src = source
+    frame.dataset.loaded = 'true'
+  }
+
+  frames.forEach((frame) => {
+    const source = frame.dataset.src || frame.getAttribute('src')
+    if (!source || source === 'about:blank') return
+    frame.dataset.src = source
+    frame.removeAttribute('src')
+  })
+
+  if (!('IntersectionObserver' in window)) {
+    frames.forEach(loadFrame)
+    return
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return
+      const frame = entry.target.querySelector('.feature-phone-demo__frame')
+      if (frame) loadFrame(frame)
+      observer.unobserve(entry.target)
+    })
+  }, { root: null, rootMargin: '500px 0px', threshold: 0.01 })
+
+  $$('.feature-phone-demo').forEach((shell) => observer.observe(shell))
 }
 
 function initDraggablePhones() {
@@ -150,6 +187,7 @@ function initLanding() {
   protectInteractiveLayers()
   updateMobileJump()
   initInteractivePhoneDemos()
+  initPhoneDemoLoading()
   window.addEventListener('resize', fitLanding, { passive: true })
   window.addEventListener('orientationchange', fitLanding, { passive: true })
   window.addEventListener('scroll', updateMobileJump, { passive: true })
