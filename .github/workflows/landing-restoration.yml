@@ -7,6 +7,7 @@ on:
       - public/app.js
       - public/landing.html
       - public/figma-landing.css
+      - public/figma-landing-exact.css
       - public/figma/**
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
@@ -20,6 +21,7 @@ on:
       - public/app.js
       - public/landing.html
       - public/figma-landing.css
+      - public/figma-landing-exact.css
       - public/figma/**
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
@@ -45,10 +47,18 @@ jobs:
         run: |
           npm install --no-save --package-lock=false playwright@1.54.1 sharp@0.35.3
           npx playwright install --with-deps chromium
-      - name: Test exact Figma landing page
+      - name: Test genuine Figma landing page
         run: |
           node scripts/test-landing-restoration.mjs
           node scripts/test-responsive-landing.mjs
+      - name: Upload landing comparison renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: genuine-landing-renders
+          path: landing-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
 
   live-production-test:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
