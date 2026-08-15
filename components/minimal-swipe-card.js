@@ -186,7 +186,7 @@ export function MinimalSwipePreviewCard({ item }) {
   const photo = candidates[0] || item.category_placeholder_url || null
   const rating = ratingLabel(item)
   const photoStyle = photo ? { backgroundImage: `linear-gradient(180deg,transparent 45%,rgba(10,10,12,.82)),url(${photo})` } : undefined
-  return <article className="minimal-swipe-card minimal-swipe-card-preview" aria-hidden="true">
+  return <article className="minimal-swipe-card-preview" aria-hidden="true">
     <div className="minimal-swipe-photo" style={photoStyle}>
       {!photo ? <div className="minimal-photo-placeholder"><span aria-hidden="true">⌖</span></div> : null}
       <div className="minimal-swipe-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
