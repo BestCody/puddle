@@ -26,22 +26,10 @@ jobs:
 
           card = Path('components/minimal-swipe-card.js')
           text = card.read_text()
-          text = text.replace(
-              'export function MinimalSwipeCard({ item, onChoice, busy }) {',
-              'export function MinimalSwipeCard({ item, onChoice, busy, actionRequest }) {', 1)
-          text = text.replace(
-              "  const [detailsOpen, setDetailsOpen] = useState(false)\n",
-              "  const [detailsOpen, setDetailsOpen] = useState(false)\n  const choiceInFlight = useRef(false)\n", 1)
-          old_choose = '''  async function choose(action) {
-            if (busy) return
-            setDragging(false)
-            setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
-            const motionMs = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : action === 'save' ? 560 : 280
-            await new Promise((resolve) => window.setTimeout(resolve, motionMs))
-            await onChoice(action, item)
-            setDragX(0)
-          }
-          '''
+          text = text.replace('export function MinimalSwipeCard({ item, onChoice, busy }) {', 'export function MinimalSwipeCard({ item, onChoice, busy, actionRequest }) {', 1)
+          text = text.replace("  const [detailsOpen, setDetailsOpen] = useState(false)\n", "  const [detailsOpen, setDetailsOpen] = useState(false)\n  const choiceInFlight = useRef(false)\n", 1)
+          choose_start = text.index('  async function choose(action) {')
+          choose_end = text.index('  async function chooseFromDetails(action) {', choose_start)
           new_choose = '''  async function choose(action) {
             if (busy || choiceInFlight.current) return
             choiceInFlight.current = true
@@ -62,19 +50,15 @@ jobs:
             if (!actionRequest?.id) return
             choose(actionRequest.action)
           }, [actionRequest?.id])
+
           '''
-          if old_choose not in text: raise SystemExit('choose block not found')
-          text = text.replace(old_choose, new_choose, 1)
+          text = text[:choose_start] + new_choose + text[choose_end:]
           card.write_text(text)
 
           workspace = Path('components/date-swipe-workspace-v2.js')
           text = workspace.read_text()
-          text = text.replace(
-              "  const [message, setMessage] = useState('')\n",
-              "  const [message, setMessage] = useState('')\n  const [actionRequest, setActionRequest] = useState(null)\n", 1)
-          text = text.replace(
-              '  const actionSequence = useRef(0)\n',
-              '  const actionSequence = useRef(0)\n  const actionRequestSequence = useRef(0)\n', 1)
+          text = text.replace("  const [message, setMessage] = useState('')\n", "  const [message, setMessage] = useState('')\n  const [actionRequest, setActionRequest] = useState(null)\n", 1)
+          text = text.replace('  const actionSequence = useRef(0)\n', '  const actionSequence = useRef(0)\n  const actionRequestSequence = useRef(0)\n', 1)
           anchor = '  function updateFilter(name, value) {'
           helper = '''  function requestChoice(action) {
             if (!current || busy) return
@@ -88,9 +72,7 @@ jobs:
           text = text.replace("if (event.key === 'ArrowLeft') persistChoice('pass', current)", "if (event.key === 'ArrowLeft') requestChoice('pass')", 1)
           text = text.replace("if (event.key === 'ArrowRight') persistChoice('save', current)", "if (event.key === 'ArrowRight') requestChoice('save')", 1)
           text = text.replace("if (event.key.toLowerCase() === 'p') persistChoice('perfect', current)", "if (event.key.toLowerCase() === 'p') requestChoice('perfect')", 1)
-          text = text.replace(
-              '<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} />',
-              '<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} />', 1)
+          text = text.replace('<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} />', '<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} />', 1)
           text = text.replace("onPass={() => persistChoice('pass', current)}", "onPass={() => requestChoice('pass')}", 1)
           text = text.replace("onSave={() => persistChoice('save', current)}", "onSave={() => requestChoice('save')}", 1)
           text = text.replace("onPerfect={() => persistChoice('perfect', current)}", "onPerfect={() => requestChoice('perfect')}", 1)
