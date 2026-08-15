@@ -1,7 +1,6 @@
-/* Revised landing geometry from Puddle Official (Copy), desktop node 83:76 and mobile node 161:116. */
+/* Revised landing geometry from the current Puddle Official (Copy), desktop node 83:76 and mobile node 161:116. */
 
-/* The revised desktop comp uses the same blue artwork as the existing exact city asset,
-   enlarged across the page and repeated as a decorative background behind the real DOM. */
+/* The revised desktop comp uses the blue artwork across the page behind the real DOM. */
 .landing-canvas--desktop{isolation:isolate}
 .landing-canvas--desktop::before{content:"";position:absolute;z-index:0;left:0;top:860px;width:1291px;height:7085px;pointer-events:none;background:url('/figma/assets/city-exact.png') center top/1291px 2449px repeat-y}
 .landing-canvas--desktop::after{content:"";position:absolute;z-index:2;left:5px;top:2730px;width:1276px;height:5215px;pointer-events:none;mix-blend-mode:overlay;background:repeating-linear-gradient(90deg,rgba(255,255,255,.2) 0 72px,rgba(0,0,0,.2) 72px 256px,rgba(255,255,255,.2) 256px 437px,rgba(0,0,0,.2) 437px 617px,rgba(255,255,255,.2) 617px 797px,rgba(0,0,0,.2) 797px 1046px,rgba(255,255,255,.2) 1046px 1276px);opacity:.82}
@@ -25,6 +24,12 @@
 .feature-card--d-feed{left:378px;top:3630px}
 .feature-card--d-profile{left:378px;top:4561px}
 
+/* Figma continues the opaque 685px feature lane behind Profile only, then returns
+   to the blue/glass artwork before the Lock at y=5557. Keep this as a separate
+   layer instead of extending the feature gradient so the Lock can never inherit white. */
+.profile-backdrop{position:absolute;pointer-events:none}
+.profile-backdrop--desktop{z-index:4;left:298px;top:4543px;width:685px;height:971px;background:#fff}
+.trust-heading--desktop,.trust-heading--desktop img{background:transparent!important}
 .trust-heading--desktop img{left:594px;top:5557px}
 .trust-heading--desktop h2{left:377px;top:5656px;width:527.882px}
 .safety-panel--desktop{left:325px;top:5877px}
@@ -37,5 +42,6 @@
 .mobile-jump{opacity:0;transform:translateY(-5px);pointer-events:none;transition:opacity .28s ease,transform .28s ease}
 .landing-canvas--mobile.is-scrolled .mobile-jump{opacity:1;transform:translateY(0);pointer-events:auto}
 .menu-button--mobile{top:444px}
+.trust-heading--mobile,.trust-heading--mobile img{background:transparent!important}
 
 @media (prefers-reduced-motion:reduce){.mobile-jump{transition:none}}
