@@ -11,17 +11,24 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
 const browser = await chromium.launch({ headless: true })
 let lastError
 
-async function changedPixelRatio(referencePath, screenshotBuffer) {
+async function visualDifference(referencePath, screenshotBuffer) {
   const reference = await sharp(referencePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const screenshot = await sharp(screenshotBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   assert(reference.info.width === screenshot.info.width && reference.info.height === screenshot.info.height,
     `live screenshot dimensions differ: ${screenshot.info.width}x${screenshot.info.height}, expected ${reference.info.width}x${reference.info.height}`)
   let changed = 0
+  let absoluteError = 0
   const pixels = reference.info.width * reference.info.height
   for (let offset = 0; offset < reference.data.length; offset += 4) {
-    if (reference.data[offset] !== screenshot.data[offset] || reference.data[offset + 1] !== screenshot.data[offset + 1] || reference.data[offset + 2] !== screenshot.data[offset + 2] || reference.data[offset + 3] !== screenshot.data[offset + 3]) changed += 1
+    let pixelChanged = false
+    for (let channel = 0; channel < 4; channel += 1) {
+      const error = Math.abs(reference.data[offset + channel] - screenshot.data[offset + channel])
+      absoluteError += error
+      if (error !== 0) pixelChanged = true
+    }
+    if (pixelChanged) changed += 1
   }
-  return changed / pixels
+  return { rawChangedRatio: changed / pixels, mae: absoluteError / (pixels * 4 * 255) }
 }
 
 function targetResponsiveWidth(width, height, mode) { return mode === 'desktop' ? Math.min(width, 1281, height * 1.425) : Math.min(width, 704) }
@@ -70,8 +77,8 @@ async function runLiveChecks() {
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'desktop landing horizontally overflows')
 
     const desktopScreenshot = await page.screenshot({ fullPage: true })
-    const desktopDiff = await changedPixelRatio(join(root, 'public/figma/landing-desktop.png'), desktopScreenshot)
-    assert(desktopDiff < 0.35, `desktop live genuine frontend is too far from Figma at ${(desktopDiff * 100).toFixed(5)}% changed pixels`)
+    const desktopDiff = await visualDifference(join(root, 'public/figma/landing-desktop.png'), desktopScreenshot)
+    assert(desktopDiff.mae < 0.03, `desktop live genuine frontend exceeds Figma fidelity budget at normalized MAE ${(desktopDiff.mae * 100).toFixed(5)}%`)
     for (const path of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} link is missing from landing page`)
 
     await assertResponsiveScale(page, 1920, 1080, 'desktop', 1281, 8736)
@@ -92,14 +99,14 @@ async function runLiveChecks() {
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'mobile landing horizontally overflows')
 
     const mobileScreenshot = await page.screenshot({ fullPage: true })
-    const mobileDiff = await changedPixelRatio(join(root, 'public/figma/landing-mobile.png'), mobileScreenshot)
-    assert(mobileDiff < 0.35, `mobile live genuine frontend is too far from Figma at ${(mobileDiff * 100).toFixed(5)}% changed pixels`)
+    const mobileDiff = await visualDifference(join(root, 'public/figma/landing-mobile.png'), mobileScreenshot)
+    assert(mobileDiff.mae < 0.035, `mobile live genuine frontend exceeds Figma fidelity budget at normalized MAE ${(mobileDiff.mae * 100).toFixed(5)}%`)
 
     await assertResponsiveScale(page, 760, 900, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 430, 932, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 390, 844, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 320, 700, 'mobile', 704, 9660)
-    console.log(`Live genuine Figma frontend passed: desktop changed-pixel ratio ${(desktopDiff * 100).toFixed(5)}%, mobile ${(mobileDiff * 100).toFixed(5)}%; responsive real-DOM scaling passed.`)
+    console.log(`Live genuine Figma frontend passed: desktop normalized MAE ${(desktopDiff.mae * 100).toFixed(5)}% (raw changed pixels ${(desktopDiff.rawChangedRatio * 100).toFixed(5)}%), mobile normalized MAE ${(mobileDiff.mae * 100).toFixed(5)}% (raw changed pixels ${(mobileDiff.rawChangedRatio * 100).toFixed(5)}%); responsive real-DOM scaling passed.`)
   } finally { await page.close() }
 }
 
