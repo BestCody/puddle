@@ -32,6 +32,39 @@ async function changedPixelRatio(referencePath, screenshotBuffer) {
   return changed / pixels
 }
 
+async function assertResponsiveScale(page, width, mode, sourceWidth, sourceHeight) {
+  await page.setViewportSize({ width, height: 900 })
+  const separator = landingUrl.includes('?') ? '&' : '?'
+  await page.goto(`${landingUrl}${separator}responsive=${mode}-${width}-${Date.now()}`, { waitUntil: 'networkidle', timeout: 30000 })
+
+  const selector = `.figma-artboard--${mode}`
+  const otherSelector = mode === 'desktop' ? '.figma-artboard--mobile' : '.figma-artboard--desktop'
+  assert(await page.locator(selector).isVisible(), `${mode} artboard is hidden at ${width}px`)
+  assert(!(await page.locator(otherSelector).isVisible()), `wrong artboard is visible at ${width}px`)
+
+  const metrics = await page.locator(selector).evaluate((node) => {
+    const image = node.querySelector('img')
+    const nodeRect = node.getBoundingClientRect()
+    const imageRect = image.getBoundingClientRect()
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      artboardWidth: nodeRect.width,
+      imageWidth: imageRect.width,
+      imageHeight: imageRect.height,
+      scrollWidth: document.documentElement.scrollWidth
+    }
+  })
+
+  const expectedHeight = metrics.viewportWidth * sourceHeight / sourceWidth
+  assert(Math.abs(metrics.artboardWidth - metrics.viewportWidth) < 0.6,
+    `${mode} artboard width ${metrics.artboardWidth} does not fill ${metrics.viewportWidth}px viewport`)
+  assert(Math.abs(metrics.imageWidth - metrics.viewportWidth) < 0.6,
+    `${mode} image width ${metrics.imageWidth} does not fill ${metrics.viewportWidth}px viewport`)
+  assert(Math.abs(metrics.imageHeight - expectedHeight) < 1.1,
+    `${mode} aspect ratio changed at ${width}px`)
+  assert(metrics.scrollWidth <= metrics.viewportWidth, `${mode} page horizontally overflows at ${width}px`)
+}
+
 async function runLiveChecks() {
   const page = await browser.newPage({ viewport: { width: 1281, height: 900 } })
   try {
@@ -52,6 +85,11 @@ async function runLiveChecks() {
       assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} link is missing from the landing page`)
     }
 
+    await assertResponsiveScale(page, 1920, 'desktop', 1281, 8736)
+    await assertResponsiveScale(page, 1440, 'desktop', 1281, 8736)
+    await assertResponsiveScale(page, 1024, 'desktop', 1281, 8736)
+    await assertResponsiveScale(page, 800, 'desktop', 1281, 8736)
+
     await page.setViewportSize({ width: 704, height: 900 })
     await page.goto(`${landingUrl}${separator}figma-mobile=${Date.now()}`, { waitUntil: 'networkidle', timeout: 30000 })
 
@@ -69,7 +107,12 @@ async function runLiveChecks() {
     const mobileDiff = await changedPixelRatio(join(root, 'public/figma/landing-mobile.png'), mobileScreenshot)
     assert(mobileDiff < 0.0001, `mobile live page differs from Figma at ${(mobileDiff * 100).toFixed(5)}% of pixels`)
 
-    console.log(`Live Figma verification passed: desktop diff ${(desktopDiff * 100).toFixed(5)}%, mobile diff ${(mobileDiff * 100).toFixed(5)}%.`)
+    await assertResponsiveScale(page, 760, 'mobile', 704, 9660)
+    await assertResponsiveScale(page, 430, 'mobile', 704, 9660)
+    await assertResponsiveScale(page, 390, 'mobile', 704, 9660)
+    await assertResponsiveScale(page, 320, 'mobile', 704, 9660)
+
+    console.log(`Live Figma verification passed: desktop diff ${(desktopDiff * 100).toFixed(5)}%, mobile diff ${(mobileDiff * 100).toFixed(5)}%; responsive scaling passed across desktop and mobile widths.`)
   } finally {
     await page.close()
   }

@@ -6,8 +6,8 @@ button,input{font:inherit}
 
 .figma-landing{width:100%;min-height:100vh;background:#fff}
 .figma-artboard{position:relative;margin:0 auto;background:#fff;overflow:hidden}
-.figma-artboard--desktop{display:block;width:min(100%,1281px)}
-.figma-artboard--mobile{display:none;width:min(100%,704px)}
+.figma-artboard--desktop{display:block;width:100%;max-width:none}
+.figma-artboard--mobile{display:none;width:100%;max-width:none}
 .figma-artboard__image{display:block;width:100%;height:auto;margin:0;padding:0;user-select:none;-webkit-user-drag:none}
 
 .hotspot{position:absolute;z-index:3;display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:transparent;text-decoration:none;cursor:pointer;appearance:none;-webkit-appearance:none}
