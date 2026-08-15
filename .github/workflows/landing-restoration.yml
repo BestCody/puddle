@@ -8,7 +8,10 @@ on:
       - public/landing.html
       - public/figma-landing.css
       - public/figma-landing-exact.css
+      - public/figma-landing-v2.css
       - public/figma/**
+      - app/swipe-motion.css
+      - components/minimal-swipe-card.js
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
       - scripts/test-responsive-landing.mjs
@@ -22,7 +25,10 @@ on:
       - public/landing.html
       - public/figma-landing.css
       - public/figma-landing-exact.css
+      - public/figma-landing-v2.css
       - public/figma/**
+      - app/swipe-motion.css
+      - components/minimal-swipe-card.js
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
       - scripts/test-responsive-landing.mjs
@@ -45,7 +51,7 @@ jobs:
           node-version: 22
       - name: Install landing verification dependencies
         run: |
-          npm install --no-save --package-lock=false playwright@1.54.1 sharp@0.35.3
+          npm install --no-save --package-lock=false playwright@1.54.1
           npx playwright install --with-deps chromium
       - name: Test genuine Figma landing page
         run: |
@@ -72,9 +78,9 @@ jobs:
           node-version: 22
       - name: Install landing verification dependencies
         run: |
-          npm install --no-save --package-lock=false playwright@1.54.1 sharp@0.35.3
+          npm install --no-save --package-lock=false playwright@1.54.1
           npx playwright install --with-deps chromium
-      - name: Wait for deployment and compare production with Figma
+      - name: Wait for deployment and verify production
         env:
           LANDING_URL: https://puddle.you/
           LANDING_TEST_ATTEMPTS: 3
