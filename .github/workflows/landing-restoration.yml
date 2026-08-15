@@ -10,6 +10,7 @@ on:
       - public/figma/**
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
+      - scripts/test-responsive-landing.mjs
       - scripts/test-live-landing.mjs
       - tests/live/public-figma-smoke.spec.mjs
       - .github/workflows/landing-restoration.yml
@@ -22,6 +23,7 @@ on:
       - public/figma/**
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
+      - scripts/test-responsive-landing.mjs
       - scripts/test-live-landing.mjs
       - tests/live/public-figma-smoke.spec.mjs
       - .github/workflows/landing-restoration.yml
@@ -44,7 +46,9 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.54.1 sharp@0.35.3
           npx playwright install --with-deps chromium
       - name: Test exact Figma landing page
-        run: node scripts/test-landing-restoration.mjs
+        run: |
+          node scripts/test-landing-restoration.mjs
+          node scripts/test-responsive-landing.mjs
 
   live-production-test:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
