@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { mkdir, open, readFile } from 'node:fs/promises'
+import { copyFile, mkdir, open, readFile } from 'node:fs/promises'
 import { extname, join, resolve, sep } from 'node:path'
 import { chromium } from 'playwright'
 import sharp from 'sharp'
@@ -29,17 +29,33 @@ const server = createServer(async (request, response) => {
   } finally { await handle?.close() }
 })
 
-async function differenceRatio(referencePath, screenshotPath) {
+async function differenceReport(referencePath, screenshotPath, bandSize = 1000) {
   const reference = await sharp(referencePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const screenshot = await sharp(screenshotPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   assert(reference.info.width === screenshot.info.width && reference.info.height === screenshot.info.height,
     `visual comparison dimensions differ: ${reference.info.width}x${reference.info.height} vs ${screenshot.info.width}x${screenshot.info.height}`)
+
+  const { width, height } = reference.info
   let changed = 0
-  const pixels = reference.info.width * reference.info.height
-  for (let offset = 0; offset < reference.data.length; offset += 4) {
-    if (reference.data[offset] !== screenshot.data[offset] || reference.data[offset + 1] !== screenshot.data[offset + 1] || reference.data[offset + 2] !== screenshot.data[offset + 2] || reference.data[offset + 3] !== screenshot.data[offset + 3]) changed += 1
+  const bands = []
+  for (let startY = 0; startY < height; startY += bandSize) bands.push({ startY, endY: Math.min(height, startY + bandSize), changed: 0, pixels: 0 })
+
+  for (let y = 0; y < height; y += 1) {
+    const band = bands[Math.floor(y / bandSize)]
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4
+      const isChanged = reference.data[offset] !== screenshot.data[offset] || reference.data[offset + 1] !== screenshot.data[offset + 1] || reference.data[offset + 2] !== screenshot.data[offset + 2] || reference.data[offset + 3] !== screenshot.data[offset + 3]
+      band.pixels += 1
+      if (isChanged) { changed += 1; band.changed += 1 }
+    }
   }
-  return changed / pixels
+
+  return { ratio: changed / (width * height), bands: bands.map((band) => ({ ...band, ratio: band.changed / band.pixels })) }
+}
+
+function printBands(label, report) {
+  console.log(`${label} changed-pixel bands:`)
+  for (const band of report.bands) console.log(`  y=${band.startY}-${band.endY}: ${(band.ratio * 100).toFixed(3)}%`)
 }
 
 const landingHtml = await readFile(join(publicRoot, 'landing.html'), 'utf8')
@@ -50,6 +66,8 @@ assert(landingHtml.includes('feature-card'), 'landing must contain real feature-
 assert(landingHtml.includes('site-footer'), 'landing must contain a real footer')
 
 await mkdir(artifacts, { recursive: true })
+await copyFile(join(publicRoot, 'figma/landing-desktop.png'), join(artifacts, 'desktop-figma-reference.png'))
+await copyFile(join(publicRoot, 'figma/landing-mobile.png'), join(artifacts, 'mobile-figma-reference.png'))
 await new Promise((resolveListening) => server.listen(0, '127.0.0.1', resolveListening))
 const baseUrl = `http://127.0.0.1:${server.address().port}/`
 const browser = await chromium.launch({ headless: true })
@@ -75,7 +93,8 @@ try {
 
   const desktopShot = join(artifacts, 'desktop-real-dom.png')
   await page.screenshot({ path: desktopShot, fullPage: true })
-  const desktopDiff = await differenceRatio(join(publicRoot, 'figma/landing-desktop.png'), desktopShot)
+  const desktopReport = await differenceReport(join(publicRoot, 'figma/landing-desktop.png'), desktopShot)
+  printBands('Desktop', desktopReport)
 
   for (const route of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${route}"]`).count() > 0, `${route} route link is missing`)
   await page.locator('.safety-panel--desktop [data-open-safety]').click()
@@ -97,12 +116,13 @@ try {
 
   const mobileShot = join(artifacts, 'mobile-real-dom.png')
   await page.screenshot({ path: mobileShot, fullPage: true })
-  const mobileDiff = await differenceRatio(join(publicRoot, 'figma/landing-mobile.png'), mobileShot)
+  const mobileReport = await differenceReport(join(publicRoot, 'figma/landing-mobile.png'), mobileShot)
+  printBands('Mobile', mobileReport)
 
-  assert(desktopDiff < 0.35, `desktop genuine frontend is still too far from Figma: ${(desktopDiff * 100).toFixed(3)}% changed pixels`)
-  assert(mobileDiff < 0.35, `mobile genuine frontend is still too far from Figma: ${(mobileDiff * 100).toFixed(3)}% changed pixels`)
+  assert(desktopReport.ratio < 0.35, `desktop genuine frontend is still too far from Figma: ${(desktopReport.ratio * 100).toFixed(3)}% changed pixels`)
+  assert(mobileReport.ratio < 0.35, `mobile genuine frontend is still too far from Figma: ${(mobileReport.ratio * 100).toFixed(3)}% changed pixels`)
   assert(errors.length === 0, `browser errors detected:\n${errors.join('\n')}`)
-  console.log(`Genuine Figma landing rendered as DOM. Desktop changed-pixel ratio ${(desktopDiff * 100).toFixed(5)}%; mobile ${(mobileDiff * 100).toFixed(5)}%. Full-page Figma screenshots are test references only, not rendered by the site.`)
+  console.log(`Genuine Figma landing rendered as DOM. Desktop changed-pixel ratio ${(desktopReport.ratio * 100).toFixed(5)}%; mobile ${(mobileReport.ratio * 100).toFixed(5)}%. Full-page Figma screenshots are test references only, not rendered by the site.`)
 } finally {
   await browser.close()
   await new Promise((resolveClosing) => server.close(resolveClosing))
