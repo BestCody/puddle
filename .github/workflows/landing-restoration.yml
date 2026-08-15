@@ -7,6 +7,7 @@ on:
       - public/app.js
       - public/landing.html
       - public/figma-landing.css
+      - public/figma-landing-exact.css
       - public/figma/**
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
@@ -20,6 +21,7 @@ on:
       - public/app.js
       - public/landing.html
       - public/figma-landing.css
+      - public/figma-landing-exact.css
       - public/figma/**
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
