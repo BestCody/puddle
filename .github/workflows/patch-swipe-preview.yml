@@ -18,45 +18,34 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feat/figma-landing-v2-swipe-motion
-      - name: Add non-interactive next card beneath active swipe
+      - name: Add next card beneath active swipe
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-
+          from textwrap import dedent
           card = Path('components/minimal-swipe-card.js')
           text = card.read_text()
           anchor = 'export function MinimalSwipeCard({ item, onChoice, busy }) {'
-          preview = '''export function MinimalSwipePreviewCard({ item }) {
-  const candidates = photoCandidates(item)
-  const photo = candidates[0] || item.category_placeholder_url || null
-  const rating = ratingLabel(item)
-  const photoStyle = photo
-    ? { backgroundImage: `linear-gradient(180deg,transparent 45%,rgba(10,10,12,.82)),url(${photo})` }
-    : undefined
+          preview = dedent('''\
+          export function MinimalSwipePreviewCard({ item }) {
+            const candidates = photoCandidates(item)
+            const photo = candidates[0] || item.category_placeholder_url || null
+            const rating = ratingLabel(item)
+            const photoStyle = photo ? { backgroundImage: `linear-gradient(180deg,transparent 45%,rgba(10,10,12,.82)),url(${photo})` } : undefined
+            return <article className="minimal-swipe-card minimal-swipe-card-preview" aria-hidden="true">
+              <div className="minimal-swipe-photo" style={photoStyle}>
+                {!photo ? <div className="minimal-photo-placeholder"><span aria-hidden="true">⌖</span></div> : null}
+                <div className="minimal-swipe-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
+                <div className="minimal-swipe-title"><h1>{item.title}</h1><div>{rating ? <span>{rating}</span> : null}</div></div>
+              </div>
+            </article>
+          }
 
-  return <article className="minimal-swipe-card minimal-swipe-card-preview" aria-hidden="true">
-    <div className="minimal-swipe-photo" style={photoStyle}>
-      {!photo ? <div className="minimal-photo-placeholder"><span aria-hidden="true">⌖</span></div> : null}
-      <div className="minimal-swipe-meta">
-        <span>{categoryLabel(item.category)}</span>
-        {item.distanceLabel ? <span>{item.distanceLabel}</span> : null}
-      </div>
-      <div className="minimal-swipe-title">
-        <h1>{item.title}</h1>
-        <div>{rating ? <span>{rating}</span> : null}</div>
-      </div>
-    </div>
-  </article>
-}
-
-'''
-          if anchor not in text:
-              raise SystemExit('MinimalSwipeCard export anchor not found')
-          if 'MinimalSwipePreviewCard' not in text:
-              text = text.replace(anchor, preview + anchor, 1)
+          ''')
+          if anchor not in text: raise SystemExit('card anchor not found')
+          if 'MinimalSwipePreviewCard' not in text: text = text.replace(anchor, preview + anchor, 1)
           card.write_text(text)
-
           workspace = Path('components/date-swipe-workspace-v2.js')
           text = workspace.read_text()
           old_import = "import { MinimalSwipeCard } from '@/components/minimal-swipe-card'"
@@ -64,11 +53,8 @@ jobs:
           current_anchor = '  const current = feed.items[index] || null\n'
           stage_old = '        <div className="minimal-card-stage"><MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} /></div>'
           stage_new = '        <div className="minimal-card-stage">{next ? <MinimalSwipePreviewCard item={next} /> : null}<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} /></div>'
-          if old_import not in text or current_anchor not in text or stage_old not in text:
-              raise SystemExit('workspace swipe anchors not found')
-          text = text.replace(old_import, new_import, 1)
-          text = text.replace(current_anchor, current_anchor + '  const next = feed.items[index + 1] || null\n', 1)
-          text = text.replace(stage_old, stage_new, 1)
+          if old_import not in text or current_anchor not in text or stage_old not in text: raise SystemExit('workspace anchor not found')
+          text = text.replace(old_import, new_import, 1).replace(current_anchor, current_anchor + '  const next = feed.items[index + 1] || null\n', 1).replace(stage_old, stage_new, 1)
           workspace.write_text(text)
           PY
       - name: Commit preview layering
