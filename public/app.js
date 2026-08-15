@@ -39,6 +39,17 @@ function protectInteractiveLayers() {
   })
 }
 
+function updateMobileJump() {
+  const canvas = $('.landing-canvas--mobile')
+  const jump = $('.mobile-jump')
+  if (!canvas || !jump) return
+  const visible = window.scrollY > 24
+  canvas.classList.toggle('is-scrolled', visible)
+  jump.setAttribute('aria-hidden', visible ? 'false' : 'true')
+  if (visible) jump.removeAttribute('tabindex')
+  else jump.setAttribute('tabindex', '-1')
+}
+
 function openSafetyDialog() {
   const backdrop = $('#safety-dialog-backdrop')
   if (!backdrop) return
@@ -104,8 +115,10 @@ function initDraggablePhones() {
 function initLanding() {
   fitLanding()
   protectInteractiveLayers()
+  updateMobileJump()
   window.addEventListener('resize', fitLanding, { passive: true })
   window.addEventListener('orientationchange', fitLanding, { passive: true })
+  window.addEventListener('scroll', updateMobileJump, { passive: true })
 
   $$('[data-open-safety]').forEach((button) => button.addEventListener('click', openSafetyDialog))
   $$('[data-close-safety]').forEach((button) => button.addEventListener('click', closeSafetyDialog))
