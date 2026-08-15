@@ -47,6 +47,34 @@ function assertBox(box, expected, label) {
   for (const [key, value] of Object.entries(expected)) assert(near(box[key], value), `${label} ${key} ${box[key]} does not match revised Figma ${value}`)
 }
 
+async function assertLatestFigmaLayers(page) {
+  const state = await page.evaluate(() => {
+    const lock = document.querySelector('.trust-heading--desktop img')
+    const trust = document.querySelector('.trust-heading--desktop')
+    const desktopPhone = document.querySelector('.hero-phone-composite--desktop')
+    const mobilePhone = document.querySelector('.hero-phone-composite--mobile')
+    const lockStyle = getComputedStyle(lock)
+    const maskStyle = getComputedStyle(trust, '::before')
+    return {
+      lockContent: lockStyle.content,
+      lockBackground: lockStyle.backgroundColor,
+      desktopPhoneDisplay: getComputedStyle(desktopPhone).display,
+      mobilePhoneDisplay: getComputedStyle(mobilePhone).display,
+      maskLeft: Number.parseFloat(maskStyle.left),
+      maskTop: Number.parseFloat(maskStyle.top),
+      maskWidth: Number.parseFloat(maskStyle.width),
+      maskHeight: Number.parseFloat(maskStyle.height),
+      maskImages: maskStyle.backgroundImage,
+    }
+  })
+  assert(state.lockContent.includes('lock.svg'), `production Lock is not using the transparent Figma SVG: ${state.lockContent}`)
+  assert(state.lockBackground === 'rgba(0, 0, 0, 0)', `production Lock has an opaque background: ${state.lockBackground}`)
+  assert(state.desktopPhoneDisplay === 'none', 'desktop hero phone is visible even though the latest Figma desktop Phone frame is hidden')
+  assert(state.mobilePhoneDisplay !== 'none', 'mobile hero phone was incorrectly hidden')
+  assert(near(state.maskLeft, 298) && near(state.maskTop, 4526) && near(state.maskWidth, 685) && near(state.maskHeight, 988), 'desktop Profile backing mask does not match latest Figma bounds')
+  assert((state.maskImages.match(/linear-gradient/g) || []).length === 4, 'desktop Profile backing is missing one or more intentional Figma white masks')
+}
+
 async function runLiveChecks() {
   const page = await browser.newPage({ viewport: { width: 1281, height: 900 } })
   try {
@@ -63,6 +91,7 @@ async function runLiveChecks() {
     assertBox(await cssBox(page, '.discovery--desktop .city-photo-wrap'), { left: 0, top: 860, width: 1291, height: 2449 }, 'production blue artwork')
     assertBox(await cssBox(page, '.feature-card--d-swipe'), { left: 367, top: 1715, width: 550, height: 896 }, 'production Swipe card')
     assertBox(await cssBox(page, '.safety-panel--desktop'), { left: 325, top: 5877, width: 631, height: 1530 }, 'production safety panel')
+    await assertLatestFigmaLayers(page)
     for (const path of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} link is missing from landing page`)
 
     await assertResponsiveScale(page, 1920, 1080, 'desktop', 1281, 8736)
@@ -78,6 +107,7 @@ async function runLiveChecks() {
     assert(await page.locator('[data-figma-node="161:116"]').isVisible(), 'mobile real-DOM Figma canvas is not live')
     assert(!(await page.locator('[data-figma-node="83:76"]').isVisible()), 'desktop canvas is visible on mobile')
     assert(await page.locator('.feature-card--m-swipe').isVisible(), 'production mobile Swipe card is not real DOM')
+    assert((await page.locator('.trust-heading--mobile img').evaluate((node) => getComputedStyle(node).content)).includes('lock.svg'), 'mobile Lock is not using the transparent Figma SVG')
     const jump = page.locator('.mobile-jump')
     assert(await jump.getAttribute('aria-hidden') === 'true', 'production Jump In must start hidden')
     await page.evaluate(() => window.scrollTo(0, 80))
@@ -88,7 +118,7 @@ async function runLiveChecks() {
     await assertResponsiveScale(page, 430, 932, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 390, 844, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 320, 700, 'mobile', 704, 9660)
-    console.log('Live revised Figma frontend passed: genuine DOM, exact revised geometry signature, mobile Jump In scroll behavior, links, and responsive scaling passed.')
+    console.log('Live latest-Figma frontend passed: genuine DOM, transparent Figma glyphs, intentional Profile masks, desktop/mobile hero visibility, revised geometry, links, and responsive scaling passed.')
   } finally { await page.close() }
 }
 
