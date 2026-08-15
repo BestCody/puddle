@@ -1,0 +1,41 @@
+/* Revised landing geometry from Puddle Official (Copy), desktop node 83:76 and mobile node 161:116. */
+
+/* The revised desktop comp uses the same blue artwork as the existing exact city asset,
+   enlarged across the page and repeated as a decorative background behind the real DOM. */
+.landing-canvas--desktop{isolation:isolate}
+.landing-canvas--desktop::before{content:"";position:absolute;z-index:0;left:0;top:860px;width:1291px;height:7085px;pointer-events:none;background:url('/figma/assets/city-exact.png') center top/1291px 2449px repeat-y}
+.landing-canvas--desktop::after{content:"";position:absolute;z-index:2;left:5px;top:2730px;width:1276px;height:5215px;pointer-events:none;mix-blend-mode:overlay;background:repeating-linear-gradient(90deg,rgba(255,255,255,.2) 0 72px,rgba(0,0,0,.2) 72px 256px,rgba(255,255,255,.2) 256px 437px,rgba(0,0,0,.2) 437px 617px,rgba(255,255,255,.2) 617px 797px,rgba(0,0,0,.2) 797px 1046px,rgba(255,255,255,.2) 1046px 1276px);opacity:.82}
+.hero--desktop{z-index:6}
+.discovery--desktop{z-index:3}
+.discovery--desktop .city-photo-wrap{left:0;top:860px;width:1291px;height:2449px;z-index:1}
+.discovery--desktop .city-photo-wrap img{width:100%!important;height:100%!important;left:0!important;top:0!important;object-fit:fill!important}
+.discovery--desktop .glass-strips--desktop{left:5px;top:862px;width:1041px;height:1890.318px;overflow:hidden}
+.discovery--desktop .glass-strips--desktop i:nth-child(1){width:71.729px;flex:0 0 71.729px}
+.discovery--desktop .glass-strips--desktop i:nth-child(2),.discovery--desktop .glass-strips--desktop i:nth-child(3),.discovery--desktop .glass-strips--desktop i:nth-child(4),.discovery--desktop .glass-strips--desktop i:nth-child(5){width:184.445px;flex:0 0 184.445px}
+.discovery--desktop .glass-strips--desktop i:nth-child(6){width:250.318px;flex:0 0 250.318px}
+.discovery--desktop .discovery-fade{left:298px;top:1291px;width:685px;height:3252px;background:linear-gradient(180deg,rgba(255,255,255,0) 0%,#fff 11.538%,#fff 31.731%,#fff 100%)}
+.discovery--desktop h2{left:411.297px;top:1492.761px;width:459.476px}
+
+.collage-card--one{left:274.971px;top:1176.748px}
+.collage-card--four{left:507px;top:1002.75px}
+.collage-card--five{left:820.991px;top:1157.137px}
+
+.feature-card--d-swipe{left:367px;top:1715px}
+.feature-card--d-save{left:376px;top:2673px}
+.feature-card--d-feed{left:378px;top:3630px}
+.feature-card--d-profile{left:378px;top:4561px}
+
+.trust-heading--desktop img{left:594px;top:5557px}
+.trust-heading--desktop h2{left:377px;top:5656px;width:527.882px}
+.safety-panel--desktop{left:325px;top:5877px}
+.final-cta--desktop>img{left:587px;top:7459px}
+.final-cta--desktop h2{left:377px;top:7572px;width:527.882px}
+.final-cta--desktop>a{left:459px;top:7836px}
+
+/* Mobile layout stays on the native 704px canvas. The Figma annotation specifies
+   that Jump In appears only after the user has started scrolling. */
+.mobile-jump{opacity:0;transform:translateY(-5px);pointer-events:none;transition:opacity .28s ease,transform .28s ease}
+.landing-canvas--mobile.is-scrolled .mobile-jump{opacity:1;transform:translateY(0);pointer-events:auto}
+.menu-button--mobile{top:444px}
+
+@media (prefers-reduced-motion:reduce){.mobile-jump{transition:none}}
