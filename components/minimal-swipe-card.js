@@ -240,8 +240,9 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
   async function choose(action) {
     if (busy) return
     setDragging(false)
-    setDragX(action === 'pass' ? -720 : 720)
-    await new Promise((resolve) => window.setTimeout(resolve, 160))
+    setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
+    const motionMs = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : action === 'save' ? 560 : 280
+    await new Promise((resolve) => window.setTimeout(resolve, motionMs))
     await onChoice(action, item)
     setDragX(0)
   }
