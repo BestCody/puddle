@@ -30,6 +30,15 @@ function fitLanding() {
   document.documentElement.dataset.landingMode = mobile ? 'mobile' : 'desktop'
 }
 
+function protectInteractiveLayers() {
+  $$('.trust-heading, .final-cta').forEach((section) => {
+    section.style.pointerEvents = 'none'
+  })
+  $$('.final-cta > a').forEach((link) => {
+    link.style.pointerEvents = 'auto'
+  })
+}
+
 function openSafetyDialog() {
   const backdrop = $('#safety-dialog-backdrop')
   if (!backdrop) return
@@ -94,6 +103,7 @@ function initDraggablePhones() {
 
 function initLanding() {
   fitLanding()
+  protectInteractiveLayers()
   window.addEventListener('resize', fitLanding, { passive: true })
   window.addEventListener('orientationchange', fitLanding, { passive: true })
 
