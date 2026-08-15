@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MinimalSwipeCard } from '@/components/minimal-swipe-card'
+import { MinimalSwipeCard, MinimalSwipePreviewCard } from '@/components/minimal-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { DiscoverSocialBar } from '@/components/discover-social-bar'
 import { DiscoveryFilterSheet } from '@/components/discovery-filter-sheet'
@@ -135,6 +135,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const deckGeneration = useRef(0)
   const sessionIds = useRef(new Set(initialItems.map((item) => item.content_id)))
   const current = feed.items[index] || null
+  const next = feed.items[index + 1] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
   const busy = false
 
@@ -411,7 +412,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
       </header>
 
       {current ? <>
-        <div className="minimal-card-stage"><MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} /></div>
+        <div className="minimal-card-stage">{next ? <MinimalSwipePreviewCard item={next} /> : null}<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} /></div>
         <DiscoverSocialBar item={current} onMessage={setMessage} />
         <SwipeActionDock
           onUndo={undo}
