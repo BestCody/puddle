@@ -63,26 +63,35 @@ async function runLiveChecks() {
     assertBox(await cssBox(page, '.discovery--desktop .city-photo-wrap'), { left: 0, top: 860, width: 1291, height: 2449 }, 'production blue artwork')
     assertBox(await cssBox(page, '.feature-card--d-swipe'), { left: 367, top: 1715, width: 550, height: 896 }, 'production Swipe card')
     const profileBackdrop = await cssBox(page, '.profile-backdrop--desktop')
-    assertBox(profileBackdrop, { left: 298, top: 4543, width: 685, height: 971 }, 'production Profile backdrop')
+    assertBox(profileBackdrop, { left: 298, top: 4526, width: 685, height: 988 }, 'production Profile mask field')
     assertBox(await cssBox(page, '.feature-card--d-profile'), { left: 378, top: 4561, width: 550, height: 898 }, 'production Profile card')
     const lockBox = await cssBox(page, '.trust-heading--desktop img')
     assertBox(lockBox, { left: 594, top: 5557, width: 92.395, height: 92.395 }, 'production Lock')
-    assert(profileBackdrop.top + profileBackdrop.height < lockBox.top, 'production Profile white backdrop leaks behind the Lock')
+    assert(profileBackdrop.top + profileBackdrop.height < lockBox.top, 'production Profile masks leak behind the Lock')
     const fidelity = await page.evaluate(() => {
       const backdrop = document.querySelector('.profile-backdrop--desktop')
       const trust = document.querySelector('.trust-heading--desktop')
       const lock = trust?.querySelector('img')
+      const heart = document.querySelector('.safety-panel--desktop .safety-heart')
+      const desktopPhone = document.querySelector('.hero-phone-composite--desktop')
+      const backdropStyle = backdrop ? getComputedStyle(backdrop) : null
       return {
-        profile: backdrop ? getComputedStyle(backdrop).backgroundColor : null,
+        profileColor: backdropStyle?.backgroundColor || null,
+        profileImages: backdropStyle?.backgroundImage || null,
         trust: trust ? getComputedStyle(trust).backgroundColor : null,
         lock: lock ? getComputedStyle(lock).backgroundColor : null,
-        lockSrc: lock?.getAttribute('src') || null
+        lockSrc: lock?.getAttribute('src') || null,
+        heartContent: heart ? getComputedStyle(heart).content : null,
+        desktopPhoneDisplay: desktopPhone ? getComputedStyle(desktopPhone).display : null,
       }
     })
-    assert(fidelity.profile === 'rgb(255, 255, 255)', `production Profile backdrop is ${fidelity.profile}`)
+    assert(fidelity.profileColor === 'rgba(0, 0, 0, 0)', `production Profile mask field is ${fidelity.profileColor}`)
+    assert((fidelity.profileImages?.match(/linear-gradient/g) || []).length === 4, 'production Profile field is missing intentional Figma white masks')
     assert(fidelity.trust === 'rgba(0, 0, 0, 0)', `production trust background is ${fidelity.trust}`)
     assert(fidelity.lock === 'rgba(0, 0, 0, 0)', `production Lock background is ${fidelity.lock}`)
     assert(fidelity.lockSrc === '/figma/assets/lock.svg', `production Lock is using ${fidelity.lockSrc}`)
+    assert(fidelity.heartContent?.includes('heart.svg'), `production Heart is not using the transparent Figma SVG: ${fidelity.heartContent}`)
+    assert(fidelity.desktopPhoneDisplay === 'none', 'production desktop hero Phone is visible although latest Figma hides it')
     assertBox(await cssBox(page, '.safety-panel--desktop'), { left: 325, top: 5877, width: 631, height: 1530 }, 'production safety panel')
     for (const path of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} link is missing from landing page`)
 
@@ -100,6 +109,7 @@ async function runLiveChecks() {
     assert(!(await page.locator('[data-figma-node="83:76"]').isVisible()), 'desktop canvas is visible on mobile')
     assert(await page.locator('.feature-card--m-swipe').isVisible(), 'production mobile Swipe card is not real DOM')
     assert(await page.locator('.trust-heading--mobile img').getAttribute('src') === '/figma/assets/lock.svg', 'production mobile Lock is not the transparent Figma SVG')
+    assert(await page.locator('.hero-phone-composite--mobile').evaluate((node) => getComputedStyle(node).display !== 'none'), 'production mobile hero Phone was incorrectly hidden')
     const jump = page.locator('.mobile-jump')
     assert(await jump.getAttribute('aria-hidden') === 'true', 'production Jump In must start hidden')
     await page.evaluate(() => window.scrollTo(0, 80))
@@ -110,7 +120,7 @@ async function runLiveChecks() {
     await assertResponsiveScale(page, 430, 932, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 390, 844, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 320, 700, 'mobile', 704, 9660)
-    console.log('Live current Figma frontend passed: genuine DOM, Profile backdrop, transparent Lock, geometry, mobile Jump In, links, and responsive scaling passed.')
+    console.log('Live latest Figma frontend passed: genuine DOM, exact Profile masks, transparent design-system glyphs, desktop/mobile Phone visibility, geometry, mobile Jump In, links, and responsive scaling passed.')
   } finally { await page.close() }
 }
 

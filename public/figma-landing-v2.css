@@ -1,10 +1,13 @@
 /* Revised landing geometry from the current Puddle Official (Copy), desktop node 83:76 and mobile node 161:116. */
 
-/* The revised desktop comp uses the blue artwork across the page behind the real DOM. */
+/* The first Figma city artwork is the real image at y=860..3309. Below that, the current
+   comp resolves into the cyan/glass field rather than repeating the same city crop. */
 .landing-canvas--desktop{isolation:isolate}
-.landing-canvas--desktop::before{content:"";position:absolute;z-index:0;left:0;top:860px;width:1291px;height:7085px;pointer-events:none;background:url('/figma/assets/city-exact.png') center top/1291px 2449px repeat-y}
+.landing-canvas--desktop::before{content:"";position:absolute;z-index:0;left:0;top:3309px;width:1281px;height:4636px;pointer-events:none;background:#61c9ee}
 .landing-canvas--desktop::after{content:"";position:absolute;z-index:2;left:5px;top:2730px;width:1276px;height:5215px;pointer-events:none;mix-blend-mode:overlay;background:repeating-linear-gradient(90deg,rgba(255,255,255,.2) 0 72px,rgba(0,0,0,.2) 72px 256px,rgba(255,255,255,.2) 256px 437px,rgba(0,0,0,.2) 437px 617px,rgba(255,255,255,.2) 617px 797px,rgba(0,0,0,.2) 797px 1046px,rgba(255,255,255,.2) 1046px 1276px);opacity:.82}
 .hero--desktop{z-index:6}
+/* In the latest desktop Figma the Phone frame (108:402) is hidden. Mobile keeps its phone. */
+.hero-phone-composite--desktop{display:none!important}
 .discovery--desktop{z-index:3}
 .discovery--desktop .city-photo-wrap{left:0;top:860px;width:1291px;height:2449px;z-index:1}
 .discovery--desktop .city-photo-wrap img{width:100%!important;height:100%!important;left:0!important;top:0!important;object-fit:fill!important}
@@ -24,11 +27,10 @@
 .feature-card--d-feed{left:378px;top:3630px}
 .feature-card--d-profile{left:378px;top:4561px}
 
-/* Figma continues the opaque 685px feature lane behind Profile only, then returns
-   to the blue/glass artwork before the Lock at y=5557. Keep this as a separate
-   layer instead of extending the feature gradient so the Lock can never inherit white. */
+/* The current Figma continues the feature lane behind Profile using four deliberate white
+   masks (201:398, 201:392, 201:396, 201:399), then returns to blue/glass before the Lock. */
 .profile-backdrop{position:absolute;pointer-events:none}
-.profile-backdrop--desktop{z-index:4;left:298px;top:4543px;width:685px;height:971px;background:#fff}
+.profile-backdrop--desktop{z-index:4;left:298px;top:4526px;width:685px;height:988px;background-color:transparent;background-image:linear-gradient(#fff,#fff),linear-gradient(#fff,#fff),linear-gradient(#fff,#fff),linear-gradient(#fff,#fff);background-repeat:no-repeat;background-position:0 17px,1px 84px,197px 0,179px 933px;background-size:685px 76px,190px 904px,488px 988px,385px 55px}
 .trust-heading--desktop,.trust-heading--desktop img{background:transparent!important}
 .trust-heading--desktop img{left:594px;top:5557px}
 .trust-heading--desktop h2{left:377px;top:5656px;width:527.882px}
@@ -36,6 +38,14 @@
 .final-cta--desktop>img{left:587px;top:7459px}
 .final-cta--desktop h2{left:377px;top:7572px;width:527.882px}
 .final-cta--desktop>a{left:459px;top:7836px}
+
+/* Figma's design-system glyph instances have transparent canvases. Use exact SVG content
+   instead of the old white-matted PNG exports so the same artifact cannot recur elsewhere. */
+.safety-heart{content:url('/figma/assets/heart.svg');background:transparent!important}
+.feature-card--swipe .interactive-pill>img{content:url('/figma/assets/move-swipe.svg');background:transparent!important}
+.feature-card--save .interactive-pill>img{content:url('/figma/assets/move-save.svg');background:transparent!important}
+.feature-card--feed .interactive-pill>img{content:url('/figma/assets/move-feed.svg');background:transparent!important}
+.feature-card--profile .interactive-pill>img{content:url('/figma/assets/move-profile.svg');background:transparent!important}
 
 /* Mobile layout stays on the native 704px canvas. The Figma annotation specifies
    that Jump In appears only after the user has started scrolling. */
