@@ -13,6 +13,7 @@
   <link rel="preload" as="image" href="/figma/assets/hero-left.png" />
   <link rel="preload" as="image" href="/figma/assets/hero-right.png" />
   <link rel="stylesheet" href="/figma-landing.css?v=8" />
+  <link rel="stylesheet" href="/figma-landing-exact.css?v=1" />
   <title>Puddle — Discover places. See who’s there.</title>
 </head>
 <body>
@@ -22,37 +23,26 @@
         <section class="hero hero--desktop" aria-labelledby="desktop-title">
           <img class="hero-photo hero-photo--left" src="/figma/assets/hero-left.png" alt="" aria-hidden="true" />
           <img class="hero-photo hero-photo--right" src="/figma/assets/hero-right.png" alt="" aria-hidden="true" />
-
-          <a class="brand brand--desktop" href="/" aria-label="Puddle home">
-            <img src="/figma/assets/logo.svg" alt="" />
-            <span>puddle</span>
-          </a>
-          <a class="menu-button menu-button--desktop" href="#footer-d" aria-label="Open navigation">
-            <img src="/figma/assets/menu.svg" alt="" />
-          </a>
+          <a class="brand brand--desktop" href="/" aria-label="Puddle home"><img src="/figma/assets/logo.svg" alt="" /><span>puddle</span></a>
+          <a class="menu-button menu-button--desktop" href="#footer-d" aria-label="Open navigation"><img src="/figma/assets/menu.svg" alt="" /></a>
 
           <section class="login-panel" aria-label="Log in">
             <h1 id="desktop-title">Discover places.<br />See who’s there.</h1>
-            <div class="login-label-row">
-              <strong>Log in</strong>
-              <a href="/forgot-password">Forgot password?</a>
-            </div>
+            <div class="login-label-row"><strong>Log in</strong><a href="/forgot-password">Forgot password?</a></div>
             <form class="landing-login-form" data-signin-handoff>
-              <label class="sr-only" for="landing-email">Email or username</label>
-              <input id="landing-email" name="email" type="text" autocomplete="username" placeholder="Email or  username" />
-              <label class="sr-only" for="landing-password">Password</label>
-              <input id="landing-password" name="password" type="password" autocomplete="current-password" placeholder="Password" />
+              <label class="sr-only" for="landing-email">Email or username</label><input id="landing-email" name="email" type="text" autocomplete="username" placeholder="Email or  username" />
+              <label class="sr-only" for="landing-password">Password</label><input id="landing-password" name="password" type="password" autocomplete="current-password" placeholder="Password" />
               <button class="continue-button" type="submit">Continue</button>
             </form>
             <div class="or-divider" aria-hidden="true"><span></span><b>or</b><span></span></div>
-            <a class="auth-choice auth-choice--google" href="/signin" aria-label="Continue with Google">
-              <img src="/figma/assets/google.png" alt="" />
-              <span>Continue with Google</span>
-            </a>
+            <a class="auth-choice auth-choice--google" href="/signin" aria-label="Continue with Google"><img src="/figma/assets/google.png" alt="" /><span>Continue with Google</span></a>
             <a class="auth-choice" href="/signup">Continue with email</a>
           </section>
 
-          <img class="hero-device hero-device--desktop" src="/figma/assets/hero-phone.png" alt="Puddle swipe experience shown on a phone" />
+          <div class="hero-phone-composite hero-phone-composite--desktop" aria-label="Puddle swipe experience shown on a phone">
+            <img class="hero-phone-screen" src="/figma/assets/hero-phone-screen.png" alt="" />
+            <img class="hero-phone-frame" src="/figma/assets/iphone-frame.png" alt="" />
+          </div>
         </section>
 
         <section class="discovery discovery--desktop" id="features-d" aria-labelledby="discover-heading-d">
@@ -65,62 +55,24 @@
           <h2 id="discover-heading-d">Discover what’s around you, social media style.</h2>
         </section>
 
-        <section class="feature-card feature-card--swipe feature-card--d-swipe" aria-labelledby="feature-swipe-d">
-          <img class="feature-icon feature-icon--swipe" src="/figma/assets/feature-swipe.svg" alt="" />
-          <h3 id="feature-swipe-d">Swipe</h3>
-          <p>Pass, save, inspect details, or share without leaving the swipe page.</p>
-          <img class="feature-phone" data-draggable-phone src="/figma/assets/phone-swipe.png" alt="Swipe feature shown on a phone" />
-          <div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div>
-        </section>
+        <section class="feature-card feature-card--swipe feature-card--d-swipe" aria-labelledby="feature-swipe-d"><img class="feature-icon feature-icon--swipe" src="/figma/assets/feature-swipe.svg" alt="" /><h3 id="feature-swipe-d">Swipe</h3><p>Pass, save, inspect details, or share without leaving the swipe page.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-swipe.png" alt="Swipe feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div></section>
+        <section class="feature-card feature-card--save feature-card--d-save" aria-labelledby="feature-save-d"><img class="feature-icon feature-icon--save" src="/figma/assets/feature-save.svg" alt="" /><h3 id="feature-save-d">Save</h3><p>Save your favorite places. Plan trips together, effortlessly.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-save.png" alt="Save feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div></section>
+        <section class="feature-card feature-card--feed feature-card--d-feed" aria-labelledby="feature-feed-d"><img class="feature-icon feature-icon--feed" src="/figma/assets/feature-feed.svg" alt="" /><h3 id="feature-feed-d">Feed</h3><p>Find where everyone’s hanging out, in feed or map view.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-feed.png" alt="Feed feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div></section>
+        <section class="feature-card feature-card--profile feature-card--d-profile" aria-labelledby="feature-profile-d"><h3 id="feature-profile-d">Profile</h3><p>Add what you love. Places, preferences, colors, and more.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-profile.png" alt="Profile feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div></section>
 
-        <section class="feature-card feature-card--save feature-card--d-save" aria-labelledby="feature-save-d">
-          <img class="feature-icon feature-icon--save" src="/figma/assets/feature-save.svg" alt="" />
-          <h3 id="feature-save-d">Save</h3>
-          <p>Save your favorite places. Plan trips together, effortlessly.</p>
-          <img class="feature-phone" data-draggable-phone src="/figma/assets/phone-save.png" alt="Save feature shown on a phone" />
-          <div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div>
-        </section>
-
-        <section class="feature-card feature-card--feed feature-card--d-feed" aria-labelledby="feature-feed-d">
-          <img class="feature-icon feature-icon--feed" src="/figma/assets/feature-feed.svg" alt="" />
-          <h3 id="feature-feed-d">Feed</h3>
-          <p>Find where everyone’s hanging out, in feed or map view.</p>
-          <img class="feature-phone" data-draggable-phone src="/figma/assets/phone-feed.png" alt="Feed feature shown on a phone" />
-          <div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div>
-        </section>
-
-        <section class="feature-card feature-card--profile feature-card--d-profile" aria-labelledby="feature-profile-d">
-          <h3 id="feature-profile-d">Profile</h3>
-          <p>Add what you love. Places, preferences, colors, and more.</p>
-          <img class="feature-phone" data-draggable-phone src="/figma/assets/phone-profile.png" alt="Profile feature shown on a phone" />
-          <div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div>
-        </section>
-
-        <section class="trust-heading trust-heading--desktop" id="safety-d" aria-labelledby="trust-title-d">
-          <img src="/figma/assets/lock.png" alt="" />
-          <h2 id="trust-title-d">Puddle is built on trust and privacy</h2>
-        </section>
-
-        <section class="safety-panel safety-panel--desktop" aria-labelledby="safety-panel-title-d">
-          <img class="safety-heart" src="/figma/assets/heart.png" alt="" />
-          <h2 id="safety-panel-title-d">Meet people who like the same places you do, safely.</h2>
-          <button class="safety-model-button" type="button" data-open-safety>See our safety model</button>
-          <div class="safety-posts" aria-hidden="true"><div></div><div></div><div></div><div></div></div>
-        </section>
-
-        <section class="final-cta final-cta--desktop" aria-labelledby="final-title-d">
-          <img src="/figma/assets/logo-large.svg" alt="" />
-          <h2 id="final-title-d">Find somewhere worth going together.</h2>
-          <a href="/signup">Create account</a>
-        </section>
+        <section class="trust-heading trust-heading--desktop" id="safety-d" aria-labelledby="trust-title-d"><img src="/figma/assets/lock.png" alt="" /><h2 id="trust-title-d">Puddle is built on trust and privacy</h2></section>
+        <section class="safety-panel safety-panel--desktop" aria-labelledby="safety-panel-title-d"><img class="safety-heart" src="/figma/assets/heart.png" alt="" /><h2 id="safety-panel-title-d">Meet people who like the same places you do, safely.</h2><button class="safety-model-button" type="button" data-open-safety>See our safety model</button><div class="safety-posts" aria-hidden="true"><div></div><div></div><div></div><div></div></div></section>
+        <section class="final-cta final-cta--desktop" aria-labelledby="final-title-d"><img src="/figma/assets/logo-large.svg" alt="" /><h2 id="final-title-d">Find somewhere worth going together.</h2><a href="/signup">Create account</a></section>
 
         <footer class="site-footer site-footer--desktop" id="footer-d">
           <nav class="footer-columns" aria-label="Footer navigation">
             <section><h2>Explore</h2><a href="#features-d">Features</a><a href="#safety-d">Safety</a><a href="/signup">Sign up</a></section>
             <section><h2>Company</h2><a href="/privacy">Privacy</a><a href="/terms">Terms</a></section>
-            <section><h2>Connect</h2><span>Instagram</span><span>X (Twitter)</span><span>Tiktok</span><span>Discord</span></section>
+            <section><h2>Connect</h2><span>Instagram</span><span>X (Twitter)</span><span class="footer-extra">Tiktok</span><span class="footer-extra">Discord</span></section>
           </nav>
-          <div class="footer-blue" aria-hidden="true"><strong>puddle</strong><div class="footer-glass"></div></div>
+          <img class="footer-bottom-art footer-bottom-art--desktop" src="/figma/assets/footer-bottom-desktop.png" alt="" aria-hidden="true" />
+          <img class="footer-glass-art footer-glass-art--desktop-left" src="/figma/assets/footer-glass-left-desktop.png" alt="" aria-hidden="true" />
+          <img class="footer-glass-art footer-glass-art--desktop-right" src="/figma/assets/footer-glass-right-desktop.png" alt="" aria-hidden="true" />
         </footer>
       </div>
     </div>
@@ -132,14 +84,11 @@
           <img class="mobile-hero-photo mobile-hero-photo--two" src="/figma/assets/hero-right.png" alt="" aria-hidden="true" />
           <a class="brand brand--mobile" href="/" aria-label="Puddle home"><img src="/figma/assets/logo.svg" alt="" /><span>puddle</span></a>
           <a class="mobile-jump" href="#mobile-auth">Jump In</a>
-          <img class="mobile-arrow" src="/figma/assets/mobile-arrow.svg" alt="" aria-hidden="true" />
+          <span class="mobile-arrow-wrap" aria-hidden="true"><img class="mobile-arrow" src="/figma/assets/mobile-arrow-exact.svg" alt="" /></span>
           <a class="menu-button menu-button--mobile" href="#footer-m" aria-label="Open navigation"><img src="/figma/assets/menu.svg" alt="" /></a>
           <h1 id="mobile-title">Discover places.<br />See who’s there.</h1>
-          <img class="hero-device hero-device--mobile" src="/figma/assets/hero-phone.png" alt="Puddle swipe experience shown on a phone" />
-          <div class="mobile-auth" id="mobile-auth">
-            <a class="auth-choice auth-choice--google" href="/signin"><img src="/figma/assets/google.png" alt="" /><span>Continue with Google</span></a>
-            <a class="auth-choice" href="/signup">Continue with email</a>
-          </div>
+          <div class="hero-phone-composite hero-phone-composite--mobile" aria-label="Puddle swipe experience shown on a phone"><img class="hero-phone-screen" src="/figma/assets/hero-phone-screen.png" alt="" /><img class="hero-phone-frame" src="/figma/assets/iphone-frame.png" alt="" /></div>
+          <div class="mobile-auth" id="mobile-auth"><a class="auth-choice auth-choice--google" href="/signin"><img src="/figma/assets/google.png" alt="" /><span>Continue with Google</span></a><a class="auth-choice" href="/signup">Continue with email</a></div>
           <img class="mobile-divider" src="/figma/assets/mobile-divider.png" alt="" aria-hidden="true" />
         </section>
 
@@ -153,34 +102,25 @@
           <h2 id="discover-heading-m">Discover what’s around you, social media style.</h2>
         </section>
 
-        <section class="feature-card feature-card--swipe feature-card--m-swipe" aria-labelledby="feature-swipe-m">
-          <img class="feature-icon feature-icon--swipe" src="/figma/assets/feature-swipe.svg" alt="" /><h3 id="feature-swipe-m">Swipe</h3><p>Pass, save, inspect details, or share without leaving the swipe page.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-swipe.png" alt="Swipe feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div>
-        </section>
-        <section class="feature-card feature-card--save feature-card--m-save" aria-labelledby="feature-save-m">
-          <img class="feature-icon feature-icon--save" src="/figma/assets/feature-save.svg" alt="" /><h3 id="feature-save-m">Save</h3><p>Save your favorite places. Plan trips together, effortlessly.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-save.png" alt="Save feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div>
-        </section>
-        <section class="feature-card feature-card--feed feature-card--m-feed" aria-labelledby="feature-feed-m">
-          <img class="feature-icon feature-icon--feed" src="/figma/assets/feature-feed.svg" alt="" /><h3 id="feature-feed-m">Feed</h3><p>Find where everyone’s hanging out, in feed or map view.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-feed.png" alt="Feed feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div>
-        </section>
-        <section class="feature-card feature-card--profile feature-card--m-profile" aria-labelledby="feature-profile-m">
-          <h3 id="feature-profile-m">Profile</h3><p>Add what you love. Places, preferences, colors, and more.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-profile.png" alt="Profile feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div>
-        </section>
+        <section class="feature-card feature-card--swipe feature-card--m-swipe" aria-labelledby="feature-swipe-m"><img class="feature-icon feature-icon--swipe" src="/figma/assets/feature-swipe.svg" alt="" /><h3 id="feature-swipe-m">Swipe</h3><p>Pass, save, inspect details, or share without leaving the swipe page.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-swipe.png" alt="Swipe feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div></section>
+        <section class="feature-card feature-card--save feature-card--m-save" aria-labelledby="feature-save-m"><img class="feature-icon feature-icon--save" src="/figma/assets/feature-save.svg" alt="" /><h3 id="feature-save-m">Save</h3><p>Save your favorite places. Plan trips together, effortlessly.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-save.png" alt="Save feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div></section>
+        <section class="feature-card feature-card--feed feature-card--m-feed" aria-labelledby="feature-feed-m"><img class="feature-icon feature-icon--feed" src="/figma/assets/feature-feed.svg" alt="" /><h3 id="feature-feed-m">Feed</h3><p>Find where everyone’s hanging out, in feed or map view.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-feed.png" alt="Feed feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div></section>
+        <section class="feature-card feature-card--profile feature-card--m-profile" aria-labelledby="feature-profile-m"><h3 id="feature-profile-m">Profile</h3><p>Add what you love. Places, preferences, colors, and more.</p><img class="feature-phone" data-draggable-phone src="/figma/assets/phone-profile.png" alt="Profile feature shown on a phone" /><div class="interactive-pill"><img src="/figma/assets/move.png" alt="" /><span><b>Interactive!</b><small>Give it a swipe.</small></span></div></section>
 
         <section class="trust-heading trust-heading--mobile" id="safety-m" aria-labelledby="trust-title-m"><img src="/figma/assets/lock.png" alt="" /><h2 id="trust-title-m">Puddle is built on trust and privacy</h2></section>
         <section class="safety-panel safety-panel--mobile" aria-labelledby="safety-panel-title-m"><img class="safety-heart" src="/figma/assets/heart.png" alt="" /><h2 id="safety-panel-title-m">Meet people who like the same places you do, safely.</h2><button class="safety-model-button" type="button" data-open-safety>See our safety model</button><div class="safety-posts" aria-hidden="true"><div></div><div></div><div></div><div></div></div></section>
         <section class="final-cta final-cta--mobile" aria-labelledby="final-title-m"><img src="/figma/assets/logo-large.svg" alt="" /><h2 id="final-title-m">Find somewhere worth going together.</h2><a href="/signup">Create account</a></section>
-        <footer class="site-footer site-footer--mobile" id="footer-m"><nav class="footer-columns" aria-label="Footer navigation"><section><h2>Explore</h2><a href="#features-m">Features</a><a href="#safety-m">Safety</a><a href="/signup">Sign up</a></section><section><h2>Company</h2><a href="/privacy">Privacy</a><a href="/terms">Terms</a></section><section><h2>Connect</h2><span>Instagram</span><span>X (Twitter)</span><span>Tiktok</span><span>Discord</span></section></nav><div class="footer-blue" aria-hidden="true"><strong>puddle</strong><div class="footer-glass"></div></div></footer>
+        <footer class="site-footer site-footer--mobile" id="footer-m">
+          <nav class="footer-columns" aria-label="Footer navigation"><section><h2>Explore</h2><a href="#features-m">Features</a><a href="#safety-m">Safety</a><a href="/signup">Sign up</a></section><section><h2>Company</h2><a href="/privacy">Privacy</a><a href="/terms">Terms</a></section><section><h2>Connect</h2><span class="mobile-hidden-social">Instagram</span><span class="mobile-hidden-social">X (Twitter)</span><span>Tiktok</span><span>Discord</span></section></nav>
+          <img class="footer-bottom-art footer-bottom-art--mobile" src="/figma/assets/footer-bottom-mobile.png" alt="" aria-hidden="true" />
+          <img class="footer-glass-art footer-glass-art--mobile-left" src="/figma/assets/footer-glass-left-mobile.png" alt="" aria-hidden="true" />
+          <img class="footer-glass-art footer-glass-art--mobile-right" src="/figma/assets/footer-glass-right-mobile.png" alt="" aria-hidden="true" />
+        </footer>
       </div>
     </div>
   </main>
 
-  <div class="safety-dialog-backdrop" id="safety-dialog-backdrop" aria-hidden="true">
-    <section class="safety-dialog" role="dialog" aria-modal="true" aria-labelledby="safety-dialog-title">
-      <button class="safety-dialog__close" type="button" data-close-safety aria-label="Close">×</button>
-      <h2 id="safety-dialog-title">Puddle is built on trust and privacy</h2>
-      <p>Puddle centers social discovery on places and mutual actions. You control what you share, and blocking, reporting, privacy, and account controls remain available in the app.</p>
-    </section>
-  </div>
+  <div class="safety-dialog-backdrop" id="safety-dialog-backdrop" aria-hidden="true"><section class="safety-dialog" role="dialog" aria-modal="true" aria-labelledby="safety-dialog-title"><button class="safety-dialog__close" type="button" data-close-safety aria-label="Close">×</button><h2 id="safety-dialog-title">Puddle is built on trust and privacy</h2><p>Puddle centers social discovery on places and mutual actions. You control what you share, and blocking, reporting, privacy, and account controls remain available in the app.</p></section></div>
 
   <script src="/app.js?v=6" defer></script>
 </body>
