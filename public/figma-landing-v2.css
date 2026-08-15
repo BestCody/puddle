@@ -1,7 +1,7 @@
-/* Revised landing geometry from Puddle Official (Copy), desktop node 83:76 and mobile node 161:116. */
+/* Latest landing geometry from Puddle Official (Copy), desktop node 83:76 and mobile node 161:116. */
 
-/* The revised desktop comp uses the same blue artwork as the existing exact city asset,
-   enlarged across the page and repeated as a decorative background behind the real DOM. */
+/* The desktop comp uses the blue city artwork as a continuous decorative field behind the
+   real DOM. The white regions below are intentional Figma masks, not flattened image mattes. */
 .landing-canvas--desktop{isolation:isolate}
 .landing-canvas--desktop::before{content:"";position:absolute;z-index:0;left:0;top:860px;width:1291px;height:7085px;pointer-events:none;background:url('/figma/assets/city-exact.png') center top/1291px 2449px repeat-y}
 .landing-canvas--desktop::after{content:"";position:absolute;z-index:2;left:5px;top:2730px;width:1276px;height:5215px;pointer-events:none;mix-blend-mode:overlay;background:repeating-linear-gradient(90deg,rgba(255,255,255,.2) 0 72px,rgba(0,0,0,.2) 72px 256px,rgba(255,255,255,.2) 256px 437px,rgba(0,0,0,.2) 437px 617px,rgba(255,255,255,.2) 617px 797px,rgba(0,0,0,.2) 797px 1046px,rgba(255,255,255,.2) 1046px 1276px);opacity:.82}
@@ -25,12 +25,26 @@
 .feature-card--d-feed{left:378px;top:3630px}
 .feature-card--d-profile{left:378px;top:4561px}
 
+/* Figma extends the feature column behind Profile with four deliberate white masks.
+   Recreate those masks exactly while keeping the surrounding city/glass visible. */
+.trust-heading--desktop{z-index:7}
+.trust-heading--desktop::before{content:"";position:absolute;z-index:0;left:298px;top:4526px;width:685px;height:988px;pointer-events:none;background-image:linear-gradient(#fff,#fff),linear-gradient(#fff,#fff),linear-gradient(#fff,#fff),linear-gradient(#fff,#fff);background-repeat:no-repeat;background-position:0 17px,1px 84px,197px 0,179px 933px;background-size:685px 76px,190px 904px,488px 988px,385px 55px}
+.trust-heading--desktop img,.trust-heading--desktop h2{z-index:1}
 .trust-heading--desktop img{left:594px;top:5557px}
 .trust-heading--desktop h2{left:377px;top:5656px;width:527.882px}
 .safety-panel--desktop{left:325px;top:5877px}
 .final-cta--desktop>img{left:587px;top:7459px}
 .final-cta--desktop h2{left:377px;top:7572px;width:527.882px}
 .final-cta--desktop>a{left:459px;top:7836px}
+
+/* These Simple Design System glyphs are transparent in Figma. Do not use the old PNG
+   exports: Figma matted those PNG canvases onto white, which created visible squares. */
+.trust-heading img{content:url('/figma/assets/lock.svg');background:transparent!important}
+.safety-heart{content:url('/figma/assets/heart.svg');background:transparent!important}
+.feature-card--swipe .interactive-pill>img{content:url('/figma/assets/move.svg');background:transparent!important}
+.feature-card--save .interactive-pill>img{content:url('/figma/assets/move-save.svg');background:transparent!important}
+.feature-card--feed .interactive-pill>img{content:url('/figma/assets/move-feed.svg');background:transparent!important}
+.feature-card--profile .interactive-pill>img{content:url('/figma/assets/move-profile.svg');background:transparent!important}
 
 /* Mobile layout stays on the native 704px canvas. The Figma annotation specifies
    that Jump In appears only after the user has started scrolling. */
