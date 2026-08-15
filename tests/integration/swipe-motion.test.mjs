@@ -6,7 +6,7 @@ const cardSource = await readFile(new URL('../../components/minimal-swipe-card.j
 const workspaceSource = await readFile(new URL('../../components/date-swipe-workspace-v2.js', import.meta.url), 'utf8')
 const motionCss = await readFile(new URL('../../app/swipe-motion.css', import.meta.url), 'utf8')
 
-test('save swipe follows the Figma Animation storyboard without changing persistence semantics', () => {
+test('drag, dock, and keyboard save actions follow the Figma Animation storyboard without changing persistence semantics', () => {
   assert.match(cardSource, /action === 'pass' \? -720 : action === 'save' \? 720 : 0/)
   assert.match(cardSource, /action === 'save' \? 560 : action === 'pass' \? 280 : 0/)
   assert.match(cardSource, /prefers-reduced-motion: reduce/)
@@ -18,6 +18,7 @@ test('save swipe follows the Figma Animation storyboard without changing persist
   assert.match(workspaceSource, /<MinimalSwipePreviewCard item=\{next\} \/>/)
   assert.match(workspaceSource, /onSave=\{\(\) => requestChoice\('save'\)\}/)
   assert.match(workspaceSource, /onPass=\{\(\) => requestChoice\('pass'\)\}/)
+  assert.match(workspaceSource, /requestChoice\('save'\)/)
   assert.match(workspaceSource, /actionRequest=\{actionRequest\}/)
   assert.match(motionCss, /puddle-save-card-depth/)
   assert.match(motionCss, /puddle-next-card-rise/)
