@@ -102,8 +102,10 @@ try {
   await page.evaluate(() => window.scrollTo(0, 80))
   await page.waitForFunction(() => document.querySelector('.landing-canvas--mobile')?.classList.contains('is-scrolled'))
   assert(await jump.getAttribute('aria-hidden') === 'false', 'Jump In must fade in after mobile scroll')
+  await page.waitForTimeout(350)
   assert(Number(await jump.evaluate((node) => getComputedStyle(node).opacity)) > .9, 'Jump In did not become visually visible after scroll')
   await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(350)
   await page.screenshot({ path: join(artifacts, 'mobile-real-dom.png'), fullPage: true })
 
   assert(errors.length === 0, `browser errors detected:\n${errors.join('\n')}`)
