@@ -16,5 +16,27 @@ export async function GET(request) {
   if (!response.ok) return Response.json({ error: `figma export ${response.status}` }, { status: 502 })
 
   const bytes = Buffer.from(await response.arrayBuffer())
-  return Response.json({ contentType: response.headers.get('content-type') || 'image/png', base64: bytes.toString('base64') })
+  const base64 = bytes.toString('base64')
+  const start = Math.max(0, Number.parseInt(searchParams.get('start') || '0', 10) || 0)
+  const requestedLength = Number.parseInt(searchParams.get('length') || '0', 10) || 0
+  const length = Math.min(Math.max(requestedLength, 0), 200000)
+
+  if (searchParams.get('meta') === '1') {
+    return Response.json({
+      contentType: response.headers.get('content-type') || 'image/png',
+      byteLength: bytes.length,
+      base64Length: base64.length
+    })
+  }
+
+  if (length > 0) {
+    return Response.json({
+      start,
+      end: Math.min(start + length, base64.length),
+      total: base64.length,
+      data: base64.slice(start, start + length)
+    })
+  }
+
+  return Response.json({ error: 'use meta=1 or provide start and length' }, { status: 400 })
 }
