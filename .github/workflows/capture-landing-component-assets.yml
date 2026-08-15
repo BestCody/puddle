@@ -24,6 +24,7 @@ jobs:
           curl -L --fail --retry 3 -o public/figma/assets/hero-phone-screen.png 'https://www.figma.com/api/mcp/asset/6c2cbeb5-f637-4d0d-adce-458a2e0c768e.png'
           curl -L --fail --retry 3 -o public/figma/assets/iphone-frame.png 'https://www.figma.com/api/mcp/asset/3a2f06b5-e971-4dbd-8fa3-cb59cb0c6577.png'
           curl -L --fail --retry 3 -o public/figma/assets/mobile-arrow-exact.svg 'https://www.figma.com/api/mcp/asset/8e7f3ebc-99e9-4e1c-8ea3-1c93a21b36aa.svg'
+          curl -L --fail --retry 3 -o public/figma/assets/mobile-logo.png 'https://www.figma.com/api/mcp/asset/ad80717c-1d8d-4414-841a-457adfa0a18f.png'
           curl -L --fail --retry 3 -o public/figma/assets/footer-bottom-desktop.png 'https://www.figma.com/api/mcp/asset/61cbe4d8-d547-45f6-a038-703886d88c2e.png'
           curl -L --fail --retry 3 -o public/figma/assets/footer-glass-left-desktop.png 'https://www.figma.com/api/mcp/asset/d84095c7-4571-4782-a76b-1b0157a63c04.png'
           curl -L --fail --retry 3 -o public/figma/assets/footer-glass-right-desktop.png 'https://www.figma.com/api/mcp/asset/f3aaf3fa-64c0-4bae-8302-ca096209fcbe.png'
