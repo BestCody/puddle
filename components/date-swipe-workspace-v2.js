@@ -123,9 +123,11 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [exhausted, setExhausted] = useState(initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
   const [message, setMessage] = useState('')
+  const [actionRequest, setActionRequest] = useState(null)
   const storageKey = useMemo(() => actionStorageKey(profileId), [profileId])
   const actionBuffer = useRef([])
   const actionSequence = useRef(0)
+  const actionRequestSequence = useRef(0)
   const flushTimer = useRef(null)
   const retryTimer = useRef(null)
   const retryAttempt = useRef(0)
@@ -315,14 +317,20 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     function keyboard(event) {
       const target = event.target instanceof HTMLElement ? event.target : null
       if (!current || busy || event.metaKey || event.ctrlKey || event.altKey || target?.closest('input,textarea,select,button')) return
-      if (event.key === 'ArrowLeft') persistChoice('pass', current)
-      if (event.key === 'ArrowRight') persistChoice('save', current)
-      if (event.key.toLowerCase() === 'p') persistChoice('perfect', current)
+      if (event.key === 'ArrowLeft') requestChoice('pass')
+      if (event.key === 'ArrowRight') requestChoice('save')
+      if (event.key.toLowerCase() === 'p') requestChoice('perfect')
       if (event.key.toLowerCase() === 'z' || event.key.toLowerCase() === 'u') undo()
     }
     window.addEventListener('keydown', keyboard)
     return () => window.removeEventListener('keydown', keyboard)
   })
+
+  function requestChoice(action) {
+  if (!current || busy) return
+  actionRequestSequence.current += 1
+  setActionRequest({ action, id: actionRequestSequence.current })
+}
 
   function updateFilter(name, value) {
     setFilters((currentFilters) => ({ ...currentFilters, [name]: value, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }))
@@ -412,13 +420,13 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
       </header>
 
       {current ? <>
-        <div className="minimal-card-stage">{next ? <MinimalSwipePreviewCard item={next} /> : null}<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} /></div>
+        <div className="minimal-card-stage">{next ? <MinimalSwipePreviewCard item={next} /> : null}<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} /></div>
         <DiscoverSocialBar item={current} onMessage={setMessage} />
         <SwipeActionDock
           onUndo={undo}
-          onPass={() => persistChoice('pass', current)}
-          onSave={() => persistChoice('save', current)}
-          onPerfect={() => persistChoice('perfect', current)}
+          onPass={() => requestChoice('pass')}
+          onSave={() => requestChoice('save')}
+          onPerfect={() => requestChoice('perfect')}
           canUndo={index > 0}
           busy={busy}
         />

@@ -195,13 +195,14 @@ export function MinimalSwipePreviewCard({ item }) {
   </article>
 }
 
-export function MinimalSwipeCard({ item, onChoice, busy }) {
+export function MinimalSwipeCard({ item, onChoice, busy, actionRequest }) {
   const pointer = useRef(null)
   const origin = useRef({ x: 0, y: 0 })
   const moved = useRef(false)
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const choiceInFlight = useRef(false)
   const candidates = useMemo(() => photoCandidates(item), [item])
   const mainPhoto = candidates[0] || null
   const placeholderUrl = item.category_placeholder_url || null
@@ -252,14 +253,25 @@ export function MinimalSwipeCard({ item, onChoice, busy }) {
   }, [item.content_id, item.photo_enrichment_status, mainPhoto])
 
   async function choose(action) {
-    if (busy) return
-    setDragging(false)
-    setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
-    const motionMs = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : action === 'save' ? 560 : 280
-    await new Promise((resolve) => window.setTimeout(resolve, motionMs))
+  if (busy || choiceInFlight.current) return
+  choiceInFlight.current = true
+  setDragging(false)
+  setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const motionMs = reducedMotion ? 0 : action === 'save' ? 560 : action === 'pass' ? 280 : 0
+  try {
+    if (motionMs) await new Promise((resolve) => window.setTimeout(resolve, motionMs))
     await onChoice(action, item)
+  } finally {
     setDragX(0)
+    choiceInFlight.current = false
   }
+}
+
+useEffect(() => {
+  if (!actionRequest?.id) return
+  choose(actionRequest.action)
+}, [actionRequest?.id])
 
   async function chooseFromDetails(action) {
     if (busy) return
