@@ -4,7 +4,7 @@
 .hero-phone-composite{position:absolute;z-index:4;width:191px;height:565px;overflow:visible;pointer-events:none}
 .hero-phone-composite--desktop{left:1028px;top:149px}
 .hero-phone-composite--mobile{left:413px;top:723px}
-.hero-phone-screen{position:absolute;z-index:2;left:-219px;top:-2px;width:292px;height:633px;max-width:none;object-fit:fill;border-radius:25px}
+.hero-phone-screen{position:absolute;z-index:2;left:-219px;top:-2px;width:292px;height:633px;max-width:none;object-fit:fill;border-radius:46px}
 .hero-phone-frame{position:absolute;z-index:1;left:-238.365px;top:-19.57px;width:330.595px;height:665.569px;max-width:none;object-fit:fill}
 
 /* Exact Figma headline/card geometry. */
@@ -46,11 +46,11 @@
 .collage-card--m-four{left:202.10px;top:1689.52px}
 .collage-card--m-five{left:432.61px;top:1886.71px}
 
-/* Footer text/navigation stays semantic DOM. Figma's blue bottom effect is reproduced as CSS layers; only the glass strips remain decorative assets. */
+/* Footer text/navigation stays semantic DOM. Blue gradient, huge wordmark and glass are CSS layers matching Figma. */
 .site-footer{background:transparent;isolation:isolate}
-.footer-bottom-art{display:none!important}
-.footer-glass-art{position:absolute;display:block;max-width:none;pointer-events:none;user-select:none;z-index:3}
-.footer-columns{z-index:4}
+.footer-bottom-art,.footer-glass-art{display:none!important}
+.footer-columns{z-index:4;pointer-events:none}
+.footer-columns a{pointer-events:auto}
 .site-footer::before,.site-footer::after{position:absolute;display:flex;pointer-events:none}
 .site-footer::before{content:"";z-index:1;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--blue))}
 .site-footer::after{content:"puddle";z-index:2;align-items:center;justify-content:center;font-family:var(--martian);font-weight:800;line-height:1.4;color:var(--slight-grey);text-align:center;white-space:nowrap}
@@ -58,10 +58,12 @@
 .site-footer--desktop::after{left:93.251px;top:403.412px;width:1150px;height:383px;font-size:273.545px}
 .site-footer--mobile::before{left:-4px;top:491.432px;width:831.167px;height:302.139px}
 .site-footer--mobile::after{left:77.489px;top:571.363px;width:656px;height:218px;font-size:155.941px}
-.footer-glass-art--desktop-left{left:2.413px;top:49.455px;width:669.180px;height:754.615px}
-.footer-glass-art--desktop-right{left:672.151px;top:85.650px;width:667.875px;height:732.307px}
-.footer-glass-art--mobile-left{left:38.504px;top:364.096px;width:381.482px;height:430.186px}
-.footer-glass-art--mobile-right{left:422.133px;top:379.244px;width:380.738px;height:417.469px}
+.footer-columns::before,.footer-columns::after{content:"";position:absolute;z-index:1;pointer-events:none;mix-blend-mode:overlay;background-image:linear-gradient(to left,rgba(255,255,255,.2),rgba(0,0,0,.2) 26.442%,rgba(255,255,255,.2));background-repeat:repeat-x}
+.footer-columns>section{z-index:2}
+.site-footer--desktop .footer-columns::before{left:2.413px;top:49.455px;width:669.18px;height:754.615px;background-size:121.61px 100%}
+.site-footer--desktop .footer-columns::after{left:672.151px;top:85.65px;width:667.875px;height:732.307px;background-size:121.61px 100%}
+.site-footer--mobile .footer-columns::before{left:38.504px;top:364.096px;width:381.482px;height:430.186px;background-size:72.109px 100%}
+.site-footer--mobile .footer-columns::after{left:422.133px;top:379.244px;width:380.738px;height:417.469px;background-size:72.109px 100%}
 .footer-blue{display:none!important}
 
 /* Desktop footer text positions, mapped from Figma centers. */
