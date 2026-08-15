@@ -71,17 +71,22 @@ export async function proxy(request) {
 
   const maxBytes = pathname === '/api/media/upload' ? 20_000_000 : pathname.startsWith('/api/') ? 256_000 : 2_000_000
   const contentLength = Number(request.headers.get('content-length') || 0)
-  if (contentLength > maxBytes) return secured(NextResponse.json({ error: 'Request payload is too large.' }, { status: 413 }), { request, nonce })
+  if (contentLength > maxBytes) return secured(NextResponse.json({ error: 'Request payload is too large.' }, { status: 413 }), pathname, true)
 
   const canonicalTarget = (request.method === 'GET' || request.method === 'HEAD')
     ? canonicalPuddleAuthUrl(request.url, process.env.NEXT_PUBLIC_SITE_URL, authCanonicalPaths)
     : null
   if (canonicalTarget) return secured(NextResponse.redirect(canonicalTarget, 307), { request, nonce })
 
-  const isLandingDemo = pathname === '/landing-demo' || pathname.startsWith('/landing-demo/')
-  if (publicNoSessionPaths.has(pathname) || isLandingDemo) {
+  if (publicNoSessionPaths.has(pathname)) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
     return secured(cachePolicy(response, pathname), { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
+  }
+
+  const isLandingDemo = pathname === '/landing-demo' || pathname.startsWith('/landing-demo/')
+  if (isLandingDemo) {
+    const response = NextResponse.next({ request: { headers: requestHeaders } })
+    return secured(cachePolicy(response, pathname), { request, nonce })
   }
 
   const isProtected = protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
