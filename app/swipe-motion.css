@@ -3,8 +3,8 @@
    right and the Save control grows/pulses. */
 .minimal-card-stage{isolation:isolate}
 .minimal-swipe-card{transition:transform .28s cubic-bezier(.2,.78,.24,1),opacity .22s ease}
-.minimal-swipe-card-preview{position:absolute;z-index:0;pointer-events:none;transform:translateY(8px) scale(.9);opacity:.92;filter:saturate(.96);transition:none}
-.minimal-card-stage>.minimal-swipe-card:not(.minimal-swipe-card-preview){position:relative;z-index:1}
+.minimal-swipe-card-preview{position:absolute;z-index:0;pointer-events:none;width:min(100%,470px);height:min(650px,calc(100vh - 220px));min-height:500px;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 18px 44px rgba(23,17,20,.18);transform:translateY(8px) scale(.9);opacity:.92;filter:saturate(.96);transition:none}
+.minimal-card-stage>.minimal-swipe-card{position:relative;z-index:1}
 .minimal-swipe-card[style*="translateX(720px)"]{z-index:2;transition-duration:.56s,.42s;transition-timing-function:cubic-bezier(.16,.84,.22,1),ease;animation:puddle-save-card-depth .56s cubic-bezier(.16,.84,.22,1) both}
 .minimal-card-stage:has(.minimal-swipe-card[style*="translateX(720px)"]) .minimal-swipe-card-preview{animation:puddle-next-card-rise .56s cubic-bezier(.16,.84,.22,1) both}
 .minimal-swipe-page:has(.minimal-swipe-card[style*="translateX(720px)"]) .minimal-swipe-action.is-save>span{animation:puddle-save-control-pulse .56s cubic-bezier(.16,.84,.22,1) both;position:relative;z-index:2}
