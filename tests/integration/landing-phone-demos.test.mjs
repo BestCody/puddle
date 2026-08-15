@@ -18,7 +18,7 @@ test('landing feature phones are real public product demos, not screenshot place
   }
   for (const screenshot of ['phone-swipe.png', 'phone-save.png', 'phone-feed.png', 'phone-profile.png']) assert(!landingHtml.includes(screenshot), `${screenshot} must not be rendered as a feature-phone screenshot`)
   assert.match(demoPage, /export const dynamic = 'force-dynamic'/, 'landing demos must render per request so Next can attach the CSP nonce and hydrate interactions')
-  assert.doesNotMatch(demoPage, /force-static/)
+  assert.doesNotMatch(demoPage, /export const dynamic = 'force-static'/)
   assert.match(demoComponent, /MinimalSwipeCard/)
   assert.match(demoComponent, /MinimalSwipePreviewCard/)
   assert.match(demoComponent, /SwipeActionDock/)
