@@ -6,9 +6,14 @@ button,input{font:inherit}
 
 .figma-landing{width:100%;min-height:100vh;background:#fff}
 .figma-artboard{position:relative;margin:0 auto;background:#fff;overflow:hidden}
-.figma-artboard--desktop{display:block;width:100%;max-width:none}
-.figma-artboard--mobile{display:none;width:100%;max-width:none}
+/* Keep desktop proportional, never upscale beyond the native Figma frame, and shrink on short viewports so the tallest major Figma sections stay inside the screen. */
+.figma-artboard--desktop{display:block;width:min(100%,1281px,142.5vh);max-width:1281px}
+.figma-artboard--mobile{display:none;width:min(100%,704px);max-width:704px}
 .figma-artboard__image{display:block;width:100%;height:auto;margin:0;padding:0;user-select:none;-webkit-user-drag:none}
+
+@supports(height:100svh){
+  .figma-artboard--desktop{width:min(100%,1281px,142.5svh)}
+}
 
 .hotspot{position:absolute;z-index:3;display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:transparent;text-decoration:none;cursor:pointer;appearance:none;-webkit-appearance:none}
 .hotspot:focus{outline:none}

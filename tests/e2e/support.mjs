@@ -151,7 +151,7 @@ export async function attemptSignInThroughUi(page, email, password, next = '/dis
   await page.goto(`/signin?next=${encodeURIComponent(next)}`)
   await page.getByLabel('Email').first().fill(email)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: /^Sign in/ }).click()
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
 }
 
 export async function signInThroughUi(page, email, password, next = '/discover') {
