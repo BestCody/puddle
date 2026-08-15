@@ -1,8 +1,9 @@
 /* Revised landing geometry from the current Puddle Official (Copy), desktop node 83:76 and mobile node 161:116. */
 
-/* The revised desktop comp uses the blue artwork across the page behind the real DOM. */
+/* The first Figma city artwork is the real image at y=860..3309. Below that, the current
+   comp resolves into the cyan/glass field rather than repeating the same city crop. */
 .landing-canvas--desktop{isolation:isolate}
-.landing-canvas--desktop::before{content:"";position:absolute;z-index:0;left:0;top:860px;width:1291px;height:7085px;pointer-events:none;background:url('/figma/assets/city-exact.png') center top/1291px 2449px repeat-y}
+.landing-canvas--desktop::before{content:"";position:absolute;z-index:0;left:0;top:3309px;width:1281px;height:4636px;pointer-events:none;background:#61c9ee}
 .landing-canvas--desktop::after{content:"";position:absolute;z-index:2;left:5px;top:2730px;width:1276px;height:5215px;pointer-events:none;mix-blend-mode:overlay;background:repeating-linear-gradient(90deg,rgba(255,255,255,.2) 0 72px,rgba(0,0,0,.2) 72px 256px,rgba(255,255,255,.2) 256px 437px,rgba(0,0,0,.2) 437px 617px,rgba(255,255,255,.2) 617px 797px,rgba(0,0,0,.2) 797px 1046px,rgba(255,255,255,.2) 1046px 1276px);opacity:.82}
 .hero--desktop{z-index:6}
 /* In the latest desktop Figma the Phone frame (108:402) is hidden. Mobile keeps its phone. */
