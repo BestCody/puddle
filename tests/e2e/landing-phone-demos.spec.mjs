@@ -1,0 +1,68 @@
+import { test, expect } from '@playwright/test'
+
+test('landing phone demo routes are public, same-origin frameable, and keep other pages protected from framing', async ({ request }) => {
+  const demo = await request.get('/landing-demo/swipe')
+  expect(demo.ok()).toBeTruthy()
+  expect(demo.headers()['x-frame-options'] || '').toContain('SAMEORIGIN')
+  expect(demo.headers()['content-security-policy'] || '').toContain("frame-ancestors 'self'")
+
+  const signin = await request.get('/signin')
+  expect(signin.headers()['x-frame-options'] || '').toContain('DENY')
+  expect(signin.headers()['content-security-policy'] || '').toContain("frame-ancestors 'none'")
+})
+
+test('public Swipe phone reuses the actual draggable swipe-card mechanics', async ({ page }) => {
+  await page.goto('/landing-demo/swipe')
+  const card = page.locator('.minimal-swipe-card')
+  await expect(card).toBeVisible()
+  const before = await card.getAttribute('aria-label')
+  const box = await card.boundingBox()
+  expect(box).toBeTruthy()
+  await page.mouse.move(box.x + box.width * .5, box.y + box.height * .45)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * .86, box.y + box.height * .45, { steps: 8 })
+  await page.mouse.up()
+  await expect(card).not.toHaveAttribute('aria-label', before, { timeout: 3000 })
+  await expect(page.getByRole('button', { name: 'Back' })).toBeEnabled()
+})
+
+test('Saved, Feed, and Profile phone demos expose their corresponding product interactions', async ({ page }) => {
+  await page.goto('/landing-demo/save')
+  await expect(page.locator('.figma-saved-page')).toBeVisible()
+  await page.getByRole('link', { name: 'Plans', exact: true }).click()
+  await expect(page.getByText('Saturday · 7:00 PM')).toBeVisible()
+  await page.getByRole('link', { name: 'Saved', exact: true }).click()
+  await page.getByPlaceholder('Search a saved puddle...').fill('coffee')
+  await expect(page.getByText('Corner Coffee', { exact: true })).toBeVisible()
+  await expect(page.getByText('Harbourfront Park', { exact: true })).toHaveCount(0)
+
+  await page.goto('/landing-demo/feed')
+  await expect(page.locator('.figma-feed-page')).toBeVisible()
+  await page.getByRole('link', { name: 'Map', exact: true }).click()
+  await expect(page.locator('.landing-demo-map')).toBeVisible()
+  await page.getByRole('button', { name: /Open Harbourfront Park/ }).click()
+  await expect(page.getByRole('dialog', { name: /Details for Harbourfront Park/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
+
+  await page.goto('/landing-demo/profile')
+  await expect(page.locator('.minimal-profile-page')).toBeVisible()
+  await expect(page.getByText('Advanced', { exact: true })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Edit', exact: true }).click()
+  const location = page.locator('.minimal-profile-settings input').first()
+  await expect(location).toBeVisible()
+  await location.fill('Montreal, QC')
+  await page.getByRole('link', { name: 'Done', exact: true }).click()
+  await expect(page.getByText('Montreal, QC', { exact: true })).toBeVisible()
+})
+
+test('landing page embeds the real phone demos instead of leaving screenshot placeholders on screen', async ({ page }) => {
+  await page.setViewportSize({ width: 1281, height: 900 })
+  await page.goto('/')
+  const swipePhone = page.locator('[data-phone-demo="swipe"]').first()
+  await expect(swipePhone).toBeAttached()
+  await swipePhone.scrollIntoViewIfNeeded()
+  await expect(swipePhone.locator('iframe')).toHaveAttribute('src', '/landing-demo/swipe')
+  const frame = page.frameLocator('[data-phone-demo="swipe"] iframe')
+  await expect(frame.locator('.minimal-swipe-card')).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('img.feature-phone[data-draggable-phone]')).toHaveCount(0)
+})

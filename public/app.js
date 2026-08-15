@@ -74,6 +74,39 @@ function initSignInHandoff() {
   })
 }
 
+const phoneDemoByAsset = new Map([
+  ['phone-swipe.png', ['swipe', 'Interactive Puddle Swipe demo']],
+  ['phone-save.png', ['save', 'Interactive Puddle Saved demo']],
+  ['phone-feed.png', ['feed', 'Interactive Puddle Feed demo']],
+  ['phone-profile.png', ['profile', 'Interactive Puddle Profile demo']]
+])
+
+function initInteractivePhoneDemos() {
+  $$('.feature-phone[src]').forEach((placeholder) => {
+    const asset = String(placeholder.getAttribute('src') || '').split('/').pop()
+    const demo = phoneDemoByAsset.get(asset)
+    if (!demo) return
+    const [view, title] = demo
+    const shell = document.createElement('div')
+    shell.className = `feature-phone feature-phone-demo feature-phone-demo--${view}`
+    shell.dataset.phoneDemo = view
+    shell.setAttribute('role', 'group')
+    shell.setAttribute('aria-label', title)
+
+    const frame = document.createElement('iframe')
+    frame.className = 'feature-phone-demo__frame'
+    frame.src = `/landing-demo/${view}`
+    frame.title = title
+    frame.loading = 'lazy'
+    frame.referrerPolicy = 'same-origin'
+    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups')
+    frame.setAttribute('allow', 'clipboard-write')
+
+    shell.append(frame)
+    placeholder.replaceWith(shell)
+  })
+}
+
 function initDraggablePhones() {
   $$('[data-draggable-phone]').forEach((phone) => {
     let pointerId = null
@@ -116,6 +149,7 @@ function initLanding() {
   fitLanding()
   protectInteractiveLayers()
   updateMobileJump()
+  initInteractivePhoneDemos()
   window.addEventListener('resize', fitLanding, { passive: true })
   window.addEventListener('orientationchange', fitLanding, { passive: true })
   window.addEventListener('scroll', updateMobileJump, { passive: true })

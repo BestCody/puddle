@@ -7,7 +7,7 @@ import { ProductNav } from './product-nav'
 const STORAGE_KEY = 'puddle:product-sidebar-width'
 const MIN_WIDTH = 88
 const MAX_WIDTH = 288
-const EXPANDED_WIDTH = 180
+const LABEL_MIN_WIDTH = 196
 const DEFAULT_WIDTH = 288
 
 function clampWidth(value) {
@@ -18,7 +18,9 @@ function clampWidth(value) {
 
 function applyWidth(value) {
   if (typeof document === 'undefined') return
-  document.documentElement.style.setProperty('--minimal-sidebar-width', `${clampWidth(value)}px`)
+  const next = `${clampWidth(value)}px`
+  document.documentElement.style.setProperty('--minimal-sidebar-width', next)
+  document.documentElement.style.setProperty('--product-sidebar-live-width', next)
 }
 
 export function ResizableProductSidebar({ className = 'minimal-product-sidebar', avatarUrl = null }) {
@@ -30,7 +32,10 @@ export function ResizableProductSidebar({ className = 'minimal-product-sidebar',
     const stored = rawStored === null || Number(rawStored) <= 76 ? DEFAULT_WIDTH : clampWidth(rawStored)
     setWidth(stored)
     applyWidth(stored)
-    return () => document.documentElement.style.removeProperty('--minimal-sidebar-width')
+    return () => {
+      document.documentElement.style.removeProperty('--minimal-sidebar-width')
+      document.documentElement.style.removeProperty('--product-sidebar-live-width')
+    }
   }, [])
 
   function updateWidth(value, { persist = false } = {}) {
@@ -79,9 +84,9 @@ export function ResizableProductSidebar({ className = 'minimal-product-sidebar',
     updateWidth(next, { persist: true })
   }
 
-  const expanded = width >= EXPANDED_WIDTH
+  const expanded = width >= LABEL_MIN_WIDTH
 
-  return <aside className={`product-sidebar ${className}${expanded ? ' is-expanded' : ''}`}>
+  return <aside className={`product-sidebar ${className}${expanded ? ' is-expanded' : ' is-collapsed'}`} data-sidebar-width={width}>
     <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" /></div>
     <ProductNav avatarUrl={avatarUrl} />
     <div
@@ -92,6 +97,7 @@ export function ResizableProductSidebar({ className = 'minimal-product-sidebar',
       aria-valuemin={MIN_WIDTH}
       aria-valuemax={MAX_WIDTH}
       aria-valuenow={width}
+      aria-valuetext={expanded ? `${width} pixels, labels visible` : `${width} pixels, icons only`}
       tabIndex={0}
       onPointerDown={beginResize}
       onPointerMove={moveResize}

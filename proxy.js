@@ -78,7 +78,8 @@ export async function proxy(request) {
     : null
   if (canonicalTarget) return secured(NextResponse.redirect(canonicalTarget, 307), { request, nonce })
 
-  if (publicNoSessionPaths.has(pathname)) {
+  const isLandingDemo = pathname === '/landing-demo' || pathname.startsWith('/landing-demo/')
+  if (publicNoSessionPaths.has(pathname) || isLandingDemo) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
     return secured(cachePolicy(response, pathname), { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
   }
