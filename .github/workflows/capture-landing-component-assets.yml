@@ -16,21 +16,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: agent/genuine-figma-landing
-      - name: Download exact component and decorative Figma assets
+      - name: Download remaining exact Figma assets
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p public/figma/assets
-          curl -L --fail --retry 3 -o public/figma/assets/hero-phone-screen.png 'https://www.figma.com/api/mcp/asset/6c2cbeb5-f637-4d0d-adce-458a2e0c768e.png'
-          curl -L --fail --retry 3 -o public/figma/assets/iphone-frame.png 'https://www.figma.com/api/mcp/asset/3a2f06b5-e971-4dbd-8fa3-cb59cb0c6577.png'
-          curl -L --fail --retry 3 -o public/figma/assets/mobile-arrow-exact.svg 'https://www.figma.com/api/mcp/asset/8e7f3ebc-99e9-4e1c-8ea3-1c93a21b36aa.svg'
-          curl -L --fail --retry 3 -o public/figma/assets/mobile-logo.png 'https://www.figma.com/api/mcp/asset/ad80717c-1d8d-4414-841a-457adfa0a18f.png'
-          curl -L --fail --retry 3 -o public/figma/assets/footer-bottom-desktop.png 'https://www.figma.com/api/mcp/asset/61cbe4d8-d547-45f6-a038-703886d88c2e.png'
-          curl -L --fail --retry 3 -o public/figma/assets/footer-glass-left-desktop.png 'https://www.figma.com/api/mcp/asset/d84095c7-4571-4782-a76b-1b0157a63c04.png'
-          curl -L --fail --retry 3 -o public/figma/assets/footer-glass-right-desktop.png 'https://www.figma.com/api/mcp/asset/f3aaf3fa-64c0-4bae-8302-ca096209fcbe.png'
-          curl -L --fail --retry 3 -o public/figma/assets/footer-bottom-mobile.png 'https://www.figma.com/api/mcp/asset/3c681b27-60d7-4790-bc4e-0d34ae86f983.png'
-          curl -L --fail --retry 3 -o public/figma/assets/footer-glass-left-mobile.png 'https://www.figma.com/api/mcp/asset/331c9988-1caf-439b-b8c2-e6d9a1969016.png'
-          curl -L --fail --retry 3 -o public/figma/assets/footer-glass-right-mobile.png 'https://www.figma.com/api/mcp/asset/1374e1cb-d3bb-4a5f-b3be-7e52a0756a5c.png'
+          curl -L --fail --retry 3 -o public/figma/assets/hero-phone-exact.png 'https://www.figma.com/api/mcp/asset/dc8a3a2a-026a-4614-b833-7e1bc8cb282b.png'
+          curl -L --fail --retry 3 -o public/figma/assets/phone-swipe-exact.png 'https://www.figma.com/api/mcp/asset/a6a043b2-dccc-45c0-96d4-23cf1aa661d1.png'
+          curl -L --fail --retry 3 -o public/figma/assets/city-exact.png 'https://www.figma.com/api/mcp/asset/7c6d822a-fb9f-4f09-ac20-dff4e0f9b7eb.png'
       - name: Commit captured assets
         shell: bash
         run: |
@@ -39,5 +32,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add public/figma/assets
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Add exact landing component assets'
+          git commit -m 'Add remaining exact Figma component assets'
           git push origin HEAD:agent/genuine-figma-landing
