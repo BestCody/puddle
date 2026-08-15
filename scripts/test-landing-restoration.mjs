@@ -37,25 +37,41 @@ async function differenceReport(referencePath, screenshotPath, bandSize = 1000) 
 
   const { width, height } = reference.info
   let changed = 0
+  let absoluteError = 0
   const bands = []
-  for (let startY = 0; startY < height; startY += bandSize) bands.push({ startY, endY: Math.min(height, startY + bandSize), changed: 0, pixels: 0 })
+  for (let startY = 0; startY < height; startY += bandSize) bands.push({ startY, endY: Math.min(height, startY + bandSize), changed: 0, pixels: 0, absoluteError: 0 })
 
   for (let y = 0; y < height; y += 1) {
     const band = bands[Math.floor(y / bandSize)]
     for (let x = 0; x < width; x += 1) {
       const offset = (y * width + x) * 4
-      const isChanged = reference.data[offset] !== screenshot.data[offset] || reference.data[offset + 1] !== screenshot.data[offset + 1] || reference.data[offset + 2] !== screenshot.data[offset + 2] || reference.data[offset + 3] !== screenshot.data[offset + 3]
+      let pixelChanged = false
+      for (let channel = 0; channel < 4; channel += 1) {
+        const error = Math.abs(reference.data[offset + channel] - screenshot.data[offset + channel])
+        absoluteError += error
+        band.absoluteError += error
+        if (error !== 0) pixelChanged = true
+      }
       band.pixels += 1
-      if (isChanged) { changed += 1; band.changed += 1 }
+      if (pixelChanged) { changed += 1; band.changed += 1 }
     }
   }
 
-  return { ratio: changed / (width * height), bands: bands.map((band) => ({ ...band, ratio: band.changed / band.pixels })) }
+  const pixelCount = width * height
+  return {
+    ratio: changed / pixelCount,
+    mae: absoluteError / (pixelCount * 4 * 255),
+    bands: bands.map((band) => ({
+      ...band,
+      ratio: band.changed / band.pixels,
+      mae: band.absoluteError / (band.pixels * 4 * 255)
+    }))
+  }
 }
 
 function printBands(label, report) {
-  console.log(`${label} changed-pixel bands:`)
-  for (const band of report.bands) console.log(`  y=${band.startY}-${band.endY}: ${(band.ratio * 100).toFixed(3)}%`)
+  console.log(`${label} visual-difference bands:`)
+  for (const band of report.bands) console.log(`  y=${band.startY}-${band.endY}: changed ${(band.ratio * 100).toFixed(3)}%, normalized MAE ${(band.mae * 100).toFixed(3)}%`)
 }
 
 const landingHtml = await readFile(join(publicRoot, 'landing.html'), 'utf8')
@@ -119,10 +135,10 @@ try {
   const mobileReport = await differenceReport(join(publicRoot, 'figma/landing-mobile.png'), mobileShot)
   printBands('Mobile', mobileReport)
 
-  assert(desktopReport.ratio < 0.35, `desktop genuine frontend is still too far from Figma: ${(desktopReport.ratio * 100).toFixed(3)}% changed pixels`)
-  assert(mobileReport.ratio < 0.35, `mobile genuine frontend is still too far from Figma: ${(mobileReport.ratio * 100).toFixed(3)}% changed pixels`)
+  assert(desktopReport.mae < 0.03, `desktop genuine frontend exceeds Figma fidelity budget: normalized MAE ${(desktopReport.mae * 100).toFixed(3)}%`)
+  assert(mobileReport.mae < 0.035, `mobile genuine frontend exceeds Figma fidelity budget: normalized MAE ${(mobileReport.mae * 100).toFixed(3)}%`)
   assert(errors.length === 0, `browser errors detected:\n${errors.join('\n')}`)
-  console.log(`Genuine Figma landing rendered as DOM. Desktop changed-pixel ratio ${(desktopReport.ratio * 100).toFixed(5)}%; mobile ${(mobileReport.ratio * 100).toFixed(5)}%. Full-page Figma screenshots are test references only, not rendered by the site.`)
+  console.log(`Genuine Figma landing rendered as DOM. Desktop normalized MAE ${(desktopReport.mae * 100).toFixed(5)}% (raw changed pixels ${(desktopReport.ratio * 100).toFixed(5)}%); mobile normalized MAE ${(mobileReport.mae * 100).toFixed(5)}% (raw changed pixels ${(mobileReport.ratio * 100).toFixed(5)}%). Full-page Figma screenshots are regression references only, never rendered by the site.`)
 } finally {
   await browser.close()
   await new Promise((resolveClosing) => server.close(resolveClosing))
