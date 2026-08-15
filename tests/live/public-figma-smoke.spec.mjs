@@ -5,16 +5,16 @@ import sharp from 'sharp'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
-async function changedPixelRatio(referencePath, screenshotBuffer) {
+async function normalizedMae(referencePath, screenshotBuffer) {
   const reference = await sharp(referencePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const screenshot = await sharp(screenshotBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   expect([screenshot.info.width, screenshot.info.height]).toEqual([reference.info.width, reference.info.height])
-  let changed = 0
+  let absoluteError = 0
   const pixels = reference.info.width * reference.info.height
   for (let offset = 0; offset < reference.data.length; offset += 4) {
-    if (reference.data[offset] !== screenshot.data[offset] || reference.data[offset + 1] !== screenshot.data[offset + 1] || reference.data[offset + 2] !== screenshot.data[offset + 2] || reference.data[offset + 3] !== screenshot.data[offset + 3]) changed += 1
+    for (let channel = 0; channel < 4; channel += 1) absoluteError += Math.abs(reference.data[offset + channel] - screenshot.data[offset + channel])
   }
-  return changed / pixels
+  return absoluteError / (pixels * 4 * 255)
 }
 
 test('production desktop landing is a genuine implementation of Figma 83:76', async ({ page }) => {
@@ -32,8 +32,7 @@ test('production desktop landing is a genuine implementation of Figma 83:76', as
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
   const screenshot = await page.screenshot({ fullPage: true })
-  const ratio = await changedPixelRatio(join(root, 'public/figma/landing-desktop.png'), screenshot)
-  expect(ratio).toBeLessThan(0.35)
+  expect(await normalizedMae(join(root, 'public/figma/landing-desktop.png'), screenshot)).toBeLessThan(0.03)
 
   await page.locator('.safety-panel--desktop [data-open-safety]').click()
   await expect(page.getByRole('dialog')).toBeVisible()
@@ -59,8 +58,7 @@ test('production mobile landing is a genuine implementation of Figma 161:116', a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
   const screenshot = await page.screenshot({ fullPage: true })
-  const ratio = await changedPixelRatio(join(root, 'public/figma/landing-mobile.png'), screenshot)
-  expect(ratio).toBeLessThan(0.35)
+  expect(await normalizedMae(join(root, 'public/figma/landing-mobile.png'), screenshot)).toBeLessThan(0.035)
 
   await page.locator('.final-cta--mobile a[href="/signup"]').click()
   await expect(page).toHaveURL(/\/signup(?:\?|$)/)
