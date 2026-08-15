@@ -12,6 +12,7 @@ on:
       - public/figma/**
       - app/swipe-motion.css
       - components/minimal-swipe-card.js
+      - tests/integration/swipe-motion.test.mjs
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
       - scripts/test-responsive-landing.mjs
@@ -29,6 +30,7 @@ on:
       - public/figma/**
       - app/swipe-motion.css
       - components/minimal-swipe-card.js
+      - tests/integration/swipe-motion.test.mjs
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
       - scripts/test-responsive-landing.mjs
@@ -57,6 +59,7 @@ jobs:
         run: |
           node scripts/test-landing-restoration.mjs
           node scripts/test-responsive-landing.mjs
+          node --test tests/integration/swipe-motion.test.mjs
       - name: Upload landing comparison renders
         if: always()
         uses: actions/upload-artifact@v4
