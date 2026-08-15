@@ -43,7 +43,7 @@ const server = createServer(async (request, response) => {
 })
 
 function expectedWidth(testCase) {
-  if (testCase.mode === 'desktop') return Math.min(testCase.width, 1281, testCase.height * 1.46)
+  if (testCase.mode === 'desktop') return Math.min(testCase.width, 1281, testCase.height * 1.4)
   return Math.min(testCase.width, 704)
 }
 
@@ -107,7 +107,7 @@ try {
 
     if (testCase.mode === 'desktop') {
       assert(metrics.artboardWidth <= 1281.6, 'desktop artboard upscaled beyond native Figma width')
-      assert(metrics.artboardWidth <= testCase.height * 1.46 + 1.1, 'desktop artboard overfits a short viewport')
+      assert(metrics.artboardWidth <= testCase.height * 1.4 + 1.1, 'desktop artboard overfits a short viewport')
     } else {
       assert(metrics.artboardWidth <= 704.6, 'mobile artboard upscaled beyond native Figma width')
     }
