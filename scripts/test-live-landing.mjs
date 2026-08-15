@@ -33,7 +33,7 @@ async function changedPixelRatio(referencePath, screenshotBuffer) {
 }
 
 function targetResponsiveWidth(width, height, mode) {
-  return mode === 'desktop' ? Math.min(width, 1281, height * 1.46) : Math.min(width, 704)
+  return mode === 'desktop' ? Math.min(width, 1281, height * 1.4) : Math.min(width, 704)
 }
 
 async function assertResponsiveScale(page, width, height, mode, sourceWidth, sourceHeight) {
