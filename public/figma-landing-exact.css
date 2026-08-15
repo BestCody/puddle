@@ -4,8 +4,8 @@
 .hero-phone-composite{position:absolute;z-index:4;width:191px;height:565px;overflow:visible;pointer-events:none}
 .hero-phone-composite--desktop{left:1028px;top:149px}
 .hero-phone-composite--mobile{left:413px;top:723px}
-.hero-phone-screen{position:absolute;left:-219px;top:-2px;width:292px;height:633px;max-width:none;object-fit:fill;border-radius:25px}
-.hero-phone-frame{position:absolute;left:-238.365px;top:-19.57px;width:330.595px;height:665.569px;max-width:none;object-fit:fill}
+.hero-phone-screen{position:absolute;z-index:2;left:-219px;top:-2px;width:292px;height:633px;max-width:none;object-fit:fill;border-radius:25px}
+.hero-phone-frame{position:absolute;z-index:1;left:-238.365px;top:-19.57px;width:330.595px;height:665.569px;max-width:none;object-fit:fill}
 
 /* Exact Figma headline/card geometry. */
 .discovery--desktop h2{left:707.297px;top:1455.761px;width:459.476px}
@@ -19,9 +19,8 @@
 .feature-icon--save{left:170.218px;top:76.428px;width:28.463px;height:45.677px}
 .feature-icon--feed{left:157px;top:68px;width:55.007px;height:55.007px}
 
-/* The exported iPhone card component includes internal export padding. Crop that padding by enlarging/offsetting
-   the individual component image so its visible device frame lands on the Figma effect bounds. */
-.feature-phone{left:51.3px;top:54.4px;width:453.1px;height:982.4px;max-width:none;object-fit:fill}
+/* Individual phone exports include transparent export padding. The visible frame now matches Figma's width and top edge. */
+.feature-phone{left:51.3px;top:90.4px;width:453.1px;height:982.4px;max-width:none;object-fit:fill}
 .feature-card--swipe .interactive-pill{left:309px;top:811px}
 .feature-card--save .interactive-pill{left:300px;top:805.729px}
 .feature-card--feed .interactive-pill,.feature-card--profile .interactive-pill{left:298px;top:797.592px}
@@ -37,7 +36,7 @@
 .menu-button--mobile{left:550px;top:444px}
 .mobile-arrow-wrap{position:absolute;z-index:6;left:416.36px;top:-20.54px;width:141.425px;height:459.223px;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .mobile-arrow-wrap .mobile-arrow{position:static;width:458.42px;height:50.468px;max-width:none;transform:rotate(101.58deg);transform-origin:center;object-fit:fill}
-.brand--mobile img{content:url('/figma/assets/mobile-logo.png');filter:none;width:45.548px;height:46.779px;object-fit:contain}
+.brand--mobile img{filter:brightness(0) invert(1);width:45.548px;height:46.779px;object-fit:contain}
 
 /* Exact rotated collage effect bounds. */
 .collage-card--one{left:643.85px;top:1118.02px}
@@ -47,16 +46,20 @@
 .collage-card--m-four{left:202.10px;top:1689.52px}
 .collage-card--m-five{left:432.61px;top:1886.71px}
 
-/* Footer: text/navigation remains real DOM. Only the noninteractive Figma gradient/glass artwork is exported. */
-.site-footer{background:transparent}
-.footer-bottom-art,.footer-glass-art{position:absolute;display:block;max-width:none;pointer-events:none;user-select:none}
-.footer-bottom-art{z-index:1}
-.footer-glass-art{z-index:2}
+/* Footer text/navigation stays semantic DOM. Figma's blue bottom effect is reproduced as CSS layers; only the glass strips remain decorative assets. */
+.site-footer{background:transparent;isolation:isolate}
+.footer-bottom-art{display:none!important}
+.footer-glass-art{position:absolute;display:block;max-width:none;pointer-events:none;user-select:none;z-index:3}
 .footer-columns{z-index:4}
-.footer-bottom-art--desktop{left:-49.695px;top:263.200px;width:1458px;height:530px}
+.site-footer::before,.site-footer::after{position:absolute;display:flex;pointer-events:none}
+.site-footer::before{content:"";z-index:1;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--blue))}
+.site-footer::after{content:"puddle";z-index:2;align-items:center;justify-content:center;font-family:var(--martian);font-weight:800;line-height:1.4;color:var(--slight-grey);text-align:center;white-space:nowrap}
+.site-footer--desktop::before{left:-49.695px;top:263.2px;width:1458px;height:530px}
+.site-footer--desktop::after{left:93.251px;top:403.412px;width:1150px;height:383px;font-size:273.545px}
+.site-footer--mobile::before{left:-4px;top:491.432px;width:831.167px;height:302.139px}
+.site-footer--mobile::after{left:77.489px;top:571.363px;width:656px;height:218px;font-size:155.941px}
 .footer-glass-art--desktop-left{left:2.413px;top:49.455px;width:669.180px;height:754.615px}
 .footer-glass-art--desktop-right{left:672.151px;top:85.650px;width:667.875px;height:732.307px}
-.footer-bottom-art--mobile{left:-4px;top:491.432px;width:831.167px;height:302.139px}
 .footer-glass-art--mobile-left{left:38.504px;top:364.096px;width:381.482px;height:430.186px}
 .footer-glass-art--mobile-right{left:422.133px;top:379.244px;width:380.738px;height:417.469px}
 .footer-blue{display:none!important}
