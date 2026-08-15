@@ -16,21 +16,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: agent/genuine-figma-landing
-      - name: Download exact feature phone assets
+      - name: Download exact mobile logo asset
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p public/figma/assets
-          curl -L --fail --retry 3 -o public/figma/assets/phone-save-exact.png 'https://www.figma.com/api/mcp/asset/dda59c57-a43c-4e05-acd6-08d0ed39113c.png'
-          curl -L --fail --retry 3 -o public/figma/assets/phone-feed-exact.png 'https://www.figma.com/api/mcp/asset/88b9151f-875b-4b5a-a9b1-5c1fc2491754.png'
-          curl -L --fail --retry 3 -o public/figma/assets/phone-profile-exact.png 'https://www.figma.com/api/mcp/asset/e466d1fd-0ebd-4d15-9d00-b4e6656749f7.png'
-      - name: Commit captured assets
+          curl -L --fail --retry 3 -o public/figma/assets/mobile-logo-exact.svg 'https://www.figma.com/api/mcp/asset/76aa39b2-820b-4ad0-b30a-cd253c56b161.svg'
+      - name: Commit captured asset
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/figma/assets
+          git add public/figma/assets/mobile-logo-exact.svg
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Add exact feature phone assets'
+          git commit -m 'Add exact mobile Figma logo asset'
           git push origin HEAD:agent/genuine-figma-landing
