@@ -1,0 +1,46 @@
+name: Capture exact Figma landing assets
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Download exact Figma landing exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/figma
+          curl --fail --location --retry 3 --retry-delay 2 \
+            'https://www.figma.com/api/mcp/asset/1608b3df-3739-4c70-b8a1-c619299aaf25.png' \
+            --output public/figma/landing-desktop.png
+          curl --fail --location --retry 3 --retry-delay 2 \
+            'https://www.figma.com/api/mcp/asset/3fcc26a5-6531-4401-969f-6155a04ff4e4.png' \
+            --output public/figma/landing-mobile.png
+          file public/figma/landing-desktop.png public/figma/landing-mobile.png
+          test "$(stat -c%s public/figma/landing-desktop.png)" -gt 500000
+          test "$(stat -c%s public/figma/landing-mobile.png)" -gt 400000
+      - name: Remove one-time bridge and workflow
+        shell: bash
+        run: |
+          rm -f app/api/figma-export/route.js
+          rm -f .github/workflows/capture-figma-landing-assets.yml
+      - name: Commit permanent Figma exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A public/figma app/api/figma-export .github/workflows/capture-figma-landing-assets.yml
+          git commit -m 'Store exact Figma landing exports'
+          git push origin HEAD:main
