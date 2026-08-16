@@ -32,15 +32,12 @@ const server = createServer(async (request, response) => {
 async function cssBox(page, selector) {
   return page.locator(selector).evaluate((node) => {
     const style = getComputedStyle(node)
-    return {
-      left: Number.parseFloat(style.left), top: Number.parseFloat(style.top),
-      width: Number.parseFloat(style.width), height: Number.parseFloat(style.height)
-    }
+    return { left: Number.parseFloat(style.left), top: Number.parseFloat(style.top), width: Number.parseFloat(style.width), height: Number.parseFloat(style.height), display: style.display }
   })
 }
 
 function assertBox(box, expected, label) {
-  for (const [key, value] of Object.entries(expected)) assert(near(box[key], value), `${label} ${key} ${box[key]} does not match revised Figma ${value}`)
+  for (const [key, value] of Object.entries(expected)) assert(near(box[key], value), `${label} ${key} ${box[key]} does not match current Figma ${value}`)
 }
 
 const landingHtml = await readFile(join(publicRoot, 'landing.html'), 'utf8')
@@ -48,15 +45,11 @@ const lockSvg = await readFile(join(publicRoot, 'figma/assets/lock.svg'), 'utf8'
 const heartSvg = await readFile(join(publicRoot, 'figma/assets/heart.svg'), 'utf8')
 assert(!landingHtml.includes('/figma/landing-desktop.png'), 'production HTML must not render the full desktop Figma screenshot')
 assert(!landingHtml.includes('/figma/landing-mobile.png'), 'production HTML must not render the full mobile Figma screenshot')
-assert(landingHtml.includes('/figma-landing-v2.css'), 'revised Figma geometry stylesheet is not loaded')
+assert(landingHtml.includes('/figma-landing-v2.css'), 'current Figma geometry stylesheet is not loaded')
 assert(landingHtml.includes('<input'), 'landing must contain real form controls')
-assert(landingHtml.includes('feature-card'), 'landing must contain real feature-card DOM')
-assert(landingHtml.includes('site-footer'), 'landing must contain a real footer')
-assert(landingHtml.includes('data-figma-profile-backdrop'), 'desktop Profile white continuation from Figma is missing')
+assert(landingHtml.includes('feature-phone-demo'), 'landing phones must remain genuine interactive demos')
 assert(!landingHtml.includes('/figma/assets/lock.png'), 'opaque legacy Lock PNG must never be used')
-assert((landingHtml.match(/\/figma\/assets\/lock\.svg/g) || []).length === 2, 'desktop and mobile must use the transparent Figma Lock SVG')
 assert(lockSvg.includes('fill="none"'), 'Figma Lock SVG must remain transparent')
-assert(!/<rect\b[^>]*fill=["'](?:white|#fff|#ffffff)["']/i.test(lockSvg), 'Figma Lock SVG must not acquire a white background rectangle')
 assert(heartSvg.includes('fill="none"'), 'Figma Heart SVG must remain transparent')
 
 await mkdir(artifacts, { recursive: true })
@@ -75,48 +68,63 @@ try {
   assert(await page.title() === 'Puddle — Discover places. See who’s there.', 'landing title does not match Figma copy')
   assert(await page.locator('[data-figma-node="83:76"]').isVisible(), 'desktop real-DOM canvas is not visible')
   assert(!(await page.locator('[data-figma-node="161:116"]').isVisible()), 'mobile canvas should be hidden on desktop')
-  assert(await page.locator('.login-panel input').count() === 2, 'desktop login fields are not real inputs')
-  assert(await page.locator('.feature-card').count() === 8, 'desktop/mobile feature cards are missing from real DOM')
+  assert(await page.locator('.landing-sticky-left').isVisible(), 'desktop pinned left panel is missing')
+  assert(await page.locator('.landing-sticky-left .login-panel input').count() === 2, 'desktop pinned login fields are not real inputs')
+  assert(await page.locator('.landing-sticky-left .brand--desktop').isVisible(), 'Puddle brand did not move into pinned left pane')
 
-  assertBox(await cssBox(page, '.discovery--desktop .city-photo-wrap'), { left: 0, top: 860, width: 1291, height: 2449 }, 'desktop blue artwork')
-  assertBox(await cssBox(page, '.discovery--desktop .discovery-fade'), { left: 298, top: 1291, width: 685, height: 3252 }, 'desktop feature column')
-  assertBox(await cssBox(page, '.feature-card--d-swipe'), { left: 367, top: 1715, width: 550, height: 896 }, 'desktop Swipe card')
-  assertBox(await cssBox(page, '.feature-card--d-save'), { left: 376, top: 2673, width: 550, height: 898 }, 'desktop Save card')
-  assertBox(await cssBox(page, '.feature-card--d-feed'), { left: 378, top: 3630, width: 550, height: 898 }, 'desktop Feed card')
-  const profileBackdrop = await cssBox(page, '.profile-backdrop--desktop')
-  assertBox(profileBackdrop, { left: 298, top: 4526, width: 685, height: 988 }, 'desktop Profile mask field')
-  assertBox(await cssBox(page, '.feature-card--d-profile'), { left: 378, top: 4561, width: 550, height: 898 }, 'desktop Profile card')
-  const lockBox = await cssBox(page, '.trust-heading--desktop img')
-  assertBox(lockBox, { left: 594, top: 5557, width: 92.395, height: 92.395 }, 'desktop Lock')
-  assert(profileBackdrop.top + profileBackdrop.height < lockBox.top, 'Profile white masks must stop before the Lock')
-  const backgroundFidelity = await page.evaluate(() => {
-    const backdrop = document.querySelector('.profile-backdrop--desktop')
+  const canvasNativeHeight = await page.locator('.landing-canvas--desktop').getAttribute('data-native-height')
+  assert(canvasNativeHeight === '7578', `desktop canvas runtime height is ${canvasNativeHeight}, expected current Figma 7578`)
+  assert((await cssBox(page, '.discovery--desktop .city-photo-wrap')).display === 'none', 'obsolete city artwork from the previous Figma is still visible')
+  assertBox(await cssBox(page, '.discovery--desktop h2'), { left: 711.755, top: 1413.622, width: 447.442 }, 'desktop discovery heading')
+  assertBox(await cssBox(page, '.feature-card--d-swipe'), { left: 668.618, top: 1630.039, width: 535.595, height: 872.533 }, 'desktop Swipe card')
+  assertBox(await cssBox(page, '.feature-card--d-save'), { left: 677.382, top: 2562.948, width: 535.595, height: 874.48 }, 'desktop Save card')
+  assertBox(await cssBox(page, '.feature-card--d-feed'), { left: 679.33, top: 3494.883, width: 535.595, height: 874.48 }, 'desktop Feed card')
+  assert(!(await page.locator('.feature-card--d-profile').isVisible()), 'desktop Profile card is not present in the current Figma and should be hidden')
+  assert(await page.locator('.hero-phone-composite--desktop').isVisible(), 'current desktop Figma hero phone should be visible')
+
+  const swipePhone = await page.locator('.feature-card--d-swipe .feature-phone-demo').boundingBox()
+  assert(swipePhone && swipePhone.width > 300 && swipePhone.height > 700, 'interactive Swipe phone lost its real viewport')
+  assert(await page.locator('.feature-card--d-swipe .feature-phone-demo__frame').count() === 1, 'interactive Swipe iframe is missing')
+
+  assertBox(await cssBox(page, '.trust-heading--desktop img'), { left: 889.955, top: 4452, width: 89.976, height: 89.976 }, 'desktop Lock')
+  assertBox(await cssBox(page, '.trust-heading--desktop h2'), { left: 679, top: 4554, width: 514.056 }, 'desktop trust title')
+  assertBox(await cssBox(page, '.safety-panel--desktop'), { left: 628, top: 4763.619, width: 614.473, height: 1489.927 }, 'desktop safety panel')
+  assertBox(await cssBox(page, '.final-cta--desktop>a'), { left: 758, top: 6708, width: 353.493, height: 74.983 }, 'desktop CTA')
+  assertBox(await cssBox(page, '.site-footer--desktop'), { left: -9.305, top: 6792, width: 1291, height: 786 }, 'desktop footer')
+
+  const fidelity = await page.evaluate(() => {
     const trust = document.querySelector('.trust-heading--desktop')
     const lock = trust?.querySelector('img')
     const heart = document.querySelector('.safety-panel--desktop .safety-heart')
-    const heroPhone = document.querySelector('.hero-phone-composite--desktop')
-    const backdropStyle = backdrop ? getComputedStyle(backdrop) : null
     return {
-      profileColor: backdropStyle?.backgroundColor || null,
-      profileImages: backdropStyle?.backgroundImage || null,
       trust: trust ? getComputedStyle(trust).backgroundColor : null,
       lock: lock ? getComputedStyle(lock).backgroundColor : null,
       lockSrc: lock?.getAttribute('src') || null,
-      heartContent: heart ? getComputedStyle(heart).content : null,
-      desktopPhoneDisplay: heroPhone ? getComputedStyle(heroPhone).display : null,
+      heartContent: heart ? getComputedStyle(heart).content : null
     }
   })
-  assert(backgroundFidelity.profileColor === 'rgba(0, 0, 0, 0)', `Profile mask field should be transparent outside intentional masks, got ${backgroundFidelity.profileColor}`)
-  assert((backgroundFidelity.profileImages?.match(/linear-gradient/g) || []).length === 4, 'Profile backdrop must contain all four intentional Figma white masks')
-  assert(backgroundFidelity.trust === 'rgba(0, 0, 0, 0)', `trust section introduced an unintended background: ${backgroundFidelity.trust}`)
-  assert(backgroundFidelity.lock === 'rgba(0, 0, 0, 0)', `Lock introduced an unintended background: ${backgroundFidelity.lock}`)
-  assert(backgroundFidelity.lockSrc === '/figma/assets/lock.svg', `Lock source regressed to ${backgroundFidelity.lockSrc}`)
-  assert(backgroundFidelity.heartContent?.includes('heart.svg'), `Heart is not using the transparent Figma SVG: ${backgroundFidelity.heartContent}`)
-  assert(backgroundFidelity.desktopPhoneDisplay === 'none', 'latest desktop Figma hides the hero Phone frame')
-  assertBox(await cssBox(page, '.safety-panel--desktop'), { left: 325, top: 5877, width: 631, height: 1530 }, 'desktop safety panel')
-  assertBox(await cssBox(page, '.final-cta--desktop>a'), { left: 459, top: 7836, width: 363, height: 77 }, 'desktop CTA')
-  assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'desktop page horizontally overflows')
+  assert(fidelity.trust === 'rgba(0, 0, 0, 0)', `trust section introduced an unintended background: ${fidelity.trust}`)
+  assert(fidelity.lock === 'rgba(0, 0, 0, 0)', `Lock introduced an unintended background: ${fidelity.lock}`)
+  assert(fidelity.lockSrc === '/figma/assets/lock.svg', `Lock source regressed to ${fidelity.lockSrc}`)
+  assert(fidelity.heartContent?.includes('heart.svg'), `Heart is not using the transparent Figma SVG: ${fidelity.heartContent}`)
 
+  const stickyBefore = await page.locator('.landing-sticky-left').boundingBox()
+  const loginBefore = await page.locator('.landing-sticky-left .login-panel').boundingBox()
+  const swipeBefore = await page.locator('.feature-card--d-swipe').boundingBox()
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = 'auto'
+    window.scrollTo(0, 1000)
+  })
+  await page.waitForFunction(() => Math.abs(window.scrollY - 1000) < 2)
+  const stickyAfter = await page.locator('.landing-sticky-left').boundingBox()
+  const loginAfter = await page.locator('.landing-sticky-left .login-panel').boundingBox()
+  const swipeAfter = await page.locator('.feature-card--d-swipe').boundingBox()
+  assert(stickyBefore && stickyAfter && Math.abs(stickyAfter.y - stickyBefore.y) < 1, 'left pane moved while the page scrolled')
+  assert(loginBefore && loginAfter && Math.abs(loginAfter.y - loginBefore.y) < 1, 'left login content moved while the right side scrolled')
+  assert(swipeBefore && swipeAfter && swipeAfter.y < swipeBefore.y - 900, 'right-side Figma content did not scroll independently of the left pane')
+  await page.evaluate(() => window.scrollTo(0, 0))
+
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'desktop page horizontally overflows')
   for (const route of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${route}"]`).count() > 0, `${route} route link is missing`)
   await page.locator('.safety-panel--desktop [data-open-safety]').click()
   await page.waitForSelector('#safety-dialog-backdrop.is-open')
@@ -130,6 +138,7 @@ try {
   await page.waitForFunction(() => document.querySelector('.landing-stage--mobile')?.dataset.ready === 'true')
   assert(await page.locator('[data-figma-node="161:116"]').isVisible(), 'mobile real-DOM canvas is not visible')
   assert(!(await page.locator('[data-figma-node="83:76"]').isVisible()), 'desktop canvas should be hidden on mobile')
+  assert(!(await page.locator('.landing-sticky-left').isVisible()), 'desktop pinned pane leaked into mobile')
   assert(await page.locator('.feature-card--m-swipe').isVisible(), 'mobile Swipe card is not visible')
   assert(await page.locator('.safety-panel--mobile').isVisible(), 'mobile safety panel is not visible')
   assert(await page.locator('.trust-heading--mobile img').getAttribute('src') === '/figma/assets/lock.svg', 'mobile Lock must use transparent Figma SVG')
@@ -144,11 +153,10 @@ try {
   await page.waitForTimeout(350)
   assert(Number(await jump.evaluate((node) => getComputedStyle(node).opacity)) > .9, 'Jump In did not become visually visible after scroll')
   await page.evaluate(() => window.scrollTo(0, 0))
-  await page.waitForTimeout(350)
   await page.screenshot({ path: join(artifacts, 'mobile-real-dom.png'), fullPage: true })
 
   assert(errors.length === 0, `browser errors detected:\n${errors.join('\n')}`)
-  console.log('Latest Figma landing rendered as genuine DOM. Exact Profile masks, transparent design-system glyphs, desktop/mobile Phone visibility, geometry, routes, interactions, responsive overflow, and browser renders passed.')
+  console.log('Current Figma landing passed: pinned left desktop sign-in, independently scrolling right content, current 7578px geometry, genuine interactive phones, transparent glyphs, and unchanged mobile flow.')
 } finally {
   await browser.close()
   await new Promise((resolveClosing) => server.close(resolveClosing))

@@ -16,16 +16,17 @@ async function assertResponsiveScale(page, width, height, mode, sourceWidth, sou
   const separator = landingUrl.includes('?') ? '&' : '?'
   await page.goto(`${landingUrl}${separator}responsive=${mode}-${width}x${height}-${Date.now()}`, { waitUntil: 'networkidle', timeout: 30000 })
   const stageSelector = `.landing-stage--${mode}`
-  const canvasSelector = `.landing-canvas--${mode}`
   const otherStage = mode === 'desktop' ? '.landing-stage--mobile' : '.landing-stage--desktop'
   await page.waitForFunction((selector) => document.querySelector(selector)?.dataset.ready === 'true', stageSelector)
   assert(await page.locator(stageSelector).isVisible(), `${mode} stage is hidden at ${width}x${height}`)
   assert(!(await page.locator(otherStage).isVisible()), `wrong stage is visible at ${width}x${height}`)
   const metrics = await page.locator(stageSelector).evaluate((stage) => {
     const canvas = stage.querySelector('.landing-canvas')
+    const sticky = document.querySelector('.landing-sticky-left')
     const stageRect = stage.getBoundingClientRect()
     const canvasRect = canvas.getBoundingClientRect()
-    return { viewportWidth: document.documentElement.clientWidth, stageWidth: stageRect.width, stageHeight: stageRect.height, canvasWidth: canvasRect.width, canvasHeight: canvasRect.height, left: stageRect.left, right: document.documentElement.clientWidth - stageRect.right, scrollWidth: document.documentElement.scrollWidth }
+    const stickyRect = sticky?.getBoundingClientRect() || null
+    return { viewportWidth: document.documentElement.clientWidth, viewportHeight: window.innerHeight, stageWidth: stageRect.width, stageHeight: stageRect.height, canvasWidth: canvasRect.width, canvasHeight: canvasRect.height, left: stageRect.left, right: document.documentElement.clientWidth - stageRect.right, scrollWidth: document.documentElement.scrollWidth, sticky: stickyRect ? { left: stickyRect.left, top: stickyRect.top, width: stickyRect.width, height: stickyRect.height, display: getComputedStyle(sticky).display } : null }
   })
   const targetWidth = targetResponsiveWidth(width, height, mode)
   const expectedHeight = targetWidth * sourceHeight / sourceWidth
@@ -35,12 +36,19 @@ async function assertResponsiveScale(page, width, height, mode, sourceWidth, sou
   assert(Math.abs(metrics.canvasHeight - expectedHeight) < 1.5, `${mode} canvas aspect ratio changed at ${width}x${height}`)
   assert(Math.abs(metrics.left - metrics.right) < 1.1, `${mode} stage is not centered at ${width}x${height}`)
   assert(metrics.scrollWidth <= metrics.viewportWidth, `${mode} page horizontally overflows at ${width}x${height}`)
+  if (mode === 'desktop') {
+    const scale = targetWidth / 1281
+    assert(metrics.sticky?.display !== 'none', 'production sticky left pane is hidden')
+    assert(Math.abs(metrics.sticky.left - metrics.left) < 1.1, 'production sticky pane is not aligned to the Figma stage')
+    assert(Math.abs(metrics.sticky.top) < 1.1, 'production sticky pane is not pinned to viewport top')
+    assert(Math.abs(metrics.sticky.width - 615 * scale) < 1.1, 'production sticky pane width is wrong')
+  }
 }
 
 async function cssBox(page, selector) {
   return page.locator(selector).evaluate((node) => {
     const style = getComputedStyle(node)
-    return { left: Number.parseFloat(style.left), top: Number.parseFloat(style.top), width: Number.parseFloat(style.width), height: Number.parseFloat(style.height) }
+    return { left: Number.parseFloat(style.left), top: Number.parseFloat(style.top), width: Number.parseFloat(style.width), height: Number.parseFloat(style.height), display: style.display }
   })
 }
 function assertBox(box, expected, label) {
@@ -58,69 +66,64 @@ async function runLiveChecks() {
     assert(await page.locator('[data-figma-node="83:76"]').isVisible(), 'desktop real-DOM Figma canvas is not live')
     assert(!(await page.locator('[data-figma-node="161:116"]').isVisible()), 'mobile canvas is visible on desktop')
     assert(await page.locator('img[src="/figma/landing-desktop.png"]').count() === 0, 'production renders the old full desktop Figma screenshot')
-    assert(await page.locator('img[src="/figma/landing-mobile.png"]').count() === 0, 'production renders the old full mobile Figma screenshot')
-    assert(await page.locator('.login-panel input').count() === 2, 'production desktop login is not real form markup')
-    assertBox(await cssBox(page, '.discovery--desktop .city-photo-wrap'), { left: 0, top: 860, width: 1291, height: 2449 }, 'production blue artwork')
-    assertBox(await cssBox(page, '.feature-card--d-swipe'), { left: 367, top: 1715, width: 550, height: 896 }, 'production Swipe card')
-    const profileBackdrop = await cssBox(page, '.profile-backdrop--desktop')
-    assertBox(profileBackdrop, { left: 298, top: 4526, width: 685, height: 988 }, 'production Profile mask field')
-    assertBox(await cssBox(page, '.feature-card--d-profile'), { left: 378, top: 4561, width: 550, height: 898 }, 'production Profile card')
-    const lockBox = await cssBox(page, '.trust-heading--desktop img')
-    assertBox(lockBox, { left: 594, top: 5557, width: 92.395, height: 92.395 }, 'production Lock')
-    assert(profileBackdrop.top + profileBackdrop.height < lockBox.top, 'production Profile masks leak behind the Lock')
+    assert(await page.locator('.landing-sticky-left').isVisible(), 'production pinned left pane is missing')
+    assert(await page.locator('.landing-sticky-left .login-panel input').count() === 2, 'production pinned login is not real form markup')
+    assert(await page.locator('.hero-phone-composite--desktop').isVisible(), 'current desktop Figma hero phone is hidden')
+    assert((await cssBox(page, '.discovery--desktop .city-photo-wrap')).display === 'none', 'production still renders obsolete city artwork')
+    assertBox(await cssBox(page, '.feature-card--d-swipe'), { left: 668.618, top: 1630.039, width: 535.595, height: 872.533 }, 'production Swipe card')
+    assertBox(await cssBox(page, '.feature-card--d-save'), { left: 677.382, top: 2562.948, width: 535.595, height: 874.48 }, 'production Save card')
+    assertBox(await cssBox(page, '.feature-card--d-feed'), { left: 679.33, top: 3494.883, width: 535.595, height: 874.48 }, 'production Feed card')
+    assert(!(await page.locator('.feature-card--d-profile').isVisible()), 'production desktop Profile card should be hidden for current Figma')
+    assertBox(await cssBox(page, '.trust-heading--desktop img'), { left: 889.955, top: 4452, width: 89.976, height: 89.976 }, 'production Lock')
+    assertBox(await cssBox(page, '.safety-panel--desktop'), { left: 628, top: 4763.619, width: 614.473, height: 1489.927 }, 'production safety panel')
+    assertBox(await cssBox(page, '.site-footer--desktop'), { left: -9.305, top: 6792, width: 1291, height: 786 }, 'production footer')
+
     const fidelity = await page.evaluate(() => {
-      const backdrop = document.querySelector('.profile-backdrop--desktop')
-      const trust = document.querySelector('.trust-heading--desktop')
-      const lock = trust?.querySelector('img')
+      const lock = document.querySelector('.trust-heading--desktop img')
       const heart = document.querySelector('.safety-panel--desktop .safety-heart')
-      const desktopPhone = document.querySelector('.hero-phone-composite--desktop')
-      const backdropStyle = backdrop ? getComputedStyle(backdrop) : null
-      return {
-        profileColor: backdropStyle?.backgroundColor || null,
-        profileImages: backdropStyle?.backgroundImage || null,
-        trust: trust ? getComputedStyle(trust).backgroundColor : null,
-        lock: lock ? getComputedStyle(lock).backgroundColor : null,
-        lockSrc: lock?.getAttribute('src') || null,
-        heartContent: heart ? getComputedStyle(heart).content : null,
-        desktopPhoneDisplay: desktopPhone ? getComputedStyle(desktopPhone).display : null,
-      }
+      return { lockBg: lock ? getComputedStyle(lock).backgroundColor : null, lockSrc: lock?.getAttribute('src') || null, heartContent: heart ? getComputedStyle(heart).content : null }
     })
-    assert(fidelity.profileColor === 'rgba(0, 0, 0, 0)', `production Profile mask field is ${fidelity.profileColor}`)
-    assert((fidelity.profileImages?.match(/linear-gradient/g) || []).length === 4, 'production Profile field is missing intentional Figma white masks')
-    assert(fidelity.trust === 'rgba(0, 0, 0, 0)', `production trust background is ${fidelity.trust}`)
-    assert(fidelity.lock === 'rgba(0, 0, 0, 0)', `production Lock background is ${fidelity.lock}`)
+    assert(fidelity.lockBg === 'rgba(0, 0, 0, 0)', `production Lock background is ${fidelity.lockBg}`)
     assert(fidelity.lockSrc === '/figma/assets/lock.svg', `production Lock is using ${fidelity.lockSrc}`)
-    assert(fidelity.heartContent?.includes('heart.svg'), `production Heart is not using the transparent Figma SVG: ${fidelity.heartContent}`)
-    assert(fidelity.desktopPhoneDisplay === 'none', 'production desktop hero Phone is visible although latest Figma hides it')
-    assertBox(await cssBox(page, '.safety-panel--desktop'), { left: 325, top: 5877, width: 631, height: 1530 }, 'production safety panel')
+    assert(fidelity.heartContent?.includes('heart.svg'), 'production Heart is not the transparent Figma SVG')
+
+    const stickyBefore = await page.locator('.landing-sticky-left').boundingBox()
+    const swipeBefore = await page.locator('.feature-card--d-swipe').boundingBox()
+    await page.evaluate(() => {
+      document.documentElement.style.scrollBehavior = 'auto'
+      window.scrollTo(0, 1000)
+    })
+    await page.waitForFunction(() => Math.abs(window.scrollY - 1000) < 2)
+    const stickyAfter = await page.locator('.landing-sticky-left').boundingBox()
+    const swipeAfter = await page.locator('.feature-card--d-swipe').boundingBox()
+    assert(stickyBefore && stickyAfter && Math.abs(stickyAfter.y - stickyBefore.y) < 1, 'production left pane moves while scrolling')
+    assert(swipeBefore && swipeAfter && swipeAfter.y < swipeBefore.y - 900, 'production right Figma column does not scroll independently')
+    await page.evaluate(() => window.scrollTo(0, 0))
+
+    const phone = await page.locator('.feature-card--d-swipe .feature-phone-demo').boundingBox()
+    assert(phone && phone.width > 300 && phone.height > 700, 'production interactive Swipe phone has no usable viewport')
     for (const path of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} link is missing from landing page`)
 
-    await assertResponsiveScale(page, 1920, 1080, 'desktop', 1281, 8736)
-    await assertResponsiveScale(page, 1440, 900, 'desktop', 1281, 8736)
-    await assertResponsiveScale(page, 1366, 768, 'desktop', 1281, 8736)
-    await assertResponsiveScale(page, 1024, 768, 'desktop', 1281, 8736)
-    await assertResponsiveScale(page, 800, 600, 'desktop', 1281, 8736)
+    await assertResponsiveScale(page, 1920, 1080, 'desktop', 1281, 7578)
+    await assertResponsiveScale(page, 1440, 900, 'desktop', 1281, 7578)
+    await assertResponsiveScale(page, 1366, 768, 'desktop', 1281, 7578)
+    await assertResponsiveScale(page, 1024, 768, 'desktop', 1281, 7578)
+    await assertResponsiveScale(page, 800, 600, 'desktop', 1281, 7578)
 
     await page.setViewportSize({ width: 704, height: 900 })
     await page.goto(`${landingUrl}${separator}figma-mobile=${Date.now()}`, { waitUntil: 'networkidle', timeout: 30000 })
     await page.evaluate(() => document.fonts?.ready)
     await page.waitForFunction(() => document.querySelector('.landing-stage--mobile')?.dataset.ready === 'true')
     assert(await page.locator('[data-figma-node="161:116"]').isVisible(), 'mobile real-DOM Figma canvas is not live')
-    assert(!(await page.locator('[data-figma-node="83:76"]').isVisible()), 'desktop canvas is visible on mobile')
+    assert(!(await page.locator('.landing-sticky-left').isVisible()), 'desktop pinned pane leaked into mobile')
     assert(await page.locator('.feature-card--m-swipe').isVisible(), 'production mobile Swipe card is not real DOM')
-    assert(await page.locator('.trust-heading--mobile img').getAttribute('src') === '/figma/assets/lock.svg', 'production mobile Lock is not the transparent Figma SVG')
     assert(await page.locator('.hero-phone-composite--mobile').evaluate((node) => getComputedStyle(node).display !== 'none'), 'production mobile hero Phone was incorrectly hidden')
-    const jump = page.locator('.mobile-jump')
-    assert(await jump.getAttribute('aria-hidden') === 'true', 'production Jump In must start hidden')
-    await page.evaluate(() => window.scrollTo(0, 80))
-    await page.waitForFunction(() => document.querySelector('.landing-canvas--mobile')?.classList.contains('is-scrolled'))
-    assert(await jump.getAttribute('aria-hidden') === 'false', 'production Jump In must appear after scroll')
 
     await assertResponsiveScale(page, 760, 900, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 430, 932, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 390, 844, 'mobile', 704, 9660)
     await assertResponsiveScale(page, 320, 700, 'mobile', 704, 9660)
-    console.log('Live latest Figma frontend passed: genuine DOM, exact Profile masks, transparent design-system glyphs, desktop/mobile Phone visibility, geometry, mobile Jump In, links, and responsive scaling passed.')
+    console.log('Live current Figma frontend passed: pinned left desktop sign-in, independently scrolling right column, interactive phones, current geometry, links, and responsive scaling.')
   } finally { await page.close() }
 }
 
