@@ -1,7 +1,7 @@
 import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational'
+import { getDiscoveryFeed } from '@/lib/app/discovery'
 import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
@@ -31,7 +31,7 @@ async function authenticatedSession() {
 async function discoveryResponse(session, filters, excludeIds = []) {
   let feed
   try {
-    feed = await getRelationalDiscoveryFeed(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
+    feed = await getDiscoveryFeed(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
   } catch (error) {
     console.error(`Discovery refresh failed: ${error?.message || 'unknown error'}`)
     return NextResponse.json(

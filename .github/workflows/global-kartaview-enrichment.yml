@@ -1,0 +1,52 @@
+name: Backfill global KartaView candidates
+
+on:
+  workflow_dispatch:
+    inputs:
+      countries:
+        description: Comma-separated country codes; empty uses GLOBAL_PHOTO_COUNTRIES/all partitions
+        required: false
+        default: ''
+        type: string
+      request_limit:
+        description: Requests to start this run; authenticated keys are capped at 1000/hour
+        required: false
+        default: '1000'
+        type: string
+  schedule:
+    - cron: '11 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: global-kartaview-photo-enrichment
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    if: github.event_name == 'workflow_dispatch' || vars.GLOBAL_PHOTO_PIPELINE_ENABLED == 'true'
+    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 75
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
+      B2_DATA_PREFIX: data
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --disable-pip-version-check duckdb boto3
+      - id: active
+        run: python scripts/global-data/active_snapshot.py
+      - name: Spend the full authenticated KartaView request entitlement on remaining locations
+        run: python scripts/global-data/build_kartaview_candidates.py --snapshot='${{ steps.active.outputs.snapshot }}' --countries='${{ github.event_name == 'workflow_dispatch' && inputs.countries || vars.GLOBAL_PHOTO_COUNTRIES }}' --limit='${{ github.event_name == 'workflow_dispatch' && inputs.request_limit || '1000' }}'
+        env:
+          KARTAVIEW_ACCESS_TOKEN: ${{ secrets.KARTAVIEW_ACCESS_TOKEN }}
+          # KARTAVIEW_REQUESTS_PER_HOUR: '1000' is the authenticated default; raise the repository variable if a larger documented entitlement applies.
+          KARTAVIEW_REQUESTS_PER_HOUR: ${{ vars.KARTAVIEW_REQUESTS_PER_HOUR || '1000' }}
+          KARTAVIEW_MAX_CONCURRENCY: ${{ vars.KARTAVIEW_MAX_CONCURRENCY || '4' }}

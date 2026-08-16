@@ -18,20 +18,26 @@ const landingAssetCache = [
   { key: 'CDN-Cache-Control', value: 'public, s-maxage=300, stale-while-revalidate=60' }
 ]
 
+function mediaRemotePatterns() {
+  const patterns = [{ protocol: 'https', hostname: 'cegoqtvajwajczbofpep.supabase.co', pathname: '/storage/v1/object/public/**' }]
+  const configured = String(
+    process.env.B2_MEDIA_PUBLIC_BASE_URL ||
+    process.env.B2_DOWNLOAD_BASE_URL ||
+    'https://media.puddle.app'
+  ).trim()
+  try {
+    const url = new URL(configured)
+    if (url.protocol === 'https:' && !url.username && !url.password) {
+      patterns.push({ protocol: 'https', hostname: url.hostname, port: url.port || '', pathname: `${url.pathname.replace(/\/+$/, '') || ''}/**` || '/**' })
+    }
+  } catch {}
+  return patterns
+}
+
 const nextConfig = {
   poweredByHeader: false,
   compress: true,
-  images: {
-    formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 86400,
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'cegoqtvajwajczbofpep.supabase.co',
-        pathname: '/storage/v1/object/public/**'
-      }
-    ]
-  },
+  images: { formats: ['image/avif', 'image/webp'], minimumCacheTTL: 86400, remotePatterns: mediaRemotePatterns() },
   async headers() {
     return [
       { source: '/avatars/:path*', headers: durableAssetCache },
@@ -46,12 +52,8 @@ const nextConfig = {
       { source: '/landing-demo/:path*', headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }] }
     ]
   },
-  async redirects() {
-    return [{ source: '/index.html', destination: '/', permanent: true }]
-  },
-  async rewrites() {
-    return { beforeFiles: [{ source: '/', destination: '/landing.html' }] }
-  }
+  async redirects() { return [{ source: '/index.html', destination: '/', permanent: true }] },
+  async rewrites() { return { beforeFiles: [{ source: '/', destination: '/landing.html' }] } }
 }
 
 export default nextConfig

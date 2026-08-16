@@ -49,7 +49,7 @@ test('discovery retries are filtered by receipt before side effects run', async 
   assert.match(migration, /receipt\.event_id=\(source\.item->>'eventId'\)::uuid/)
 })
 
-test('relational photo delivery no longer depends on private B2 grants', async () => {
+test('relational fallback photo delivery no longer depends on private B2 grants', async () => {
   const card = await read('components/minimal-swipe-card.js')
   const feed = await read('lib/app/discovery-relational.js')
   assert.doesNotMatch(card, /usePrivateB2Asset|private_b2_asset|mainPhotoPending/)
@@ -58,14 +58,21 @@ test('relational photo delivery no longer depends on private B2 grants', async (
   assert.match(card, /GoogleServerPlacePhoto/)
 })
 
-test('photo enrichment aggressively drains approved open providers into Supabase without obsolete B2 writes', async () => {
+test('transition photo enrichment drains approved providers into canonical B2 media at full configured pacing', async () => {
   const workflow = await read('.github/workflows/photo-enrichment.yml')
   assert.match(workflow, /workflow_dispatch:/)
   assert.match(workflow, /\bschedule:/)
-  assert.match(workflow, /cron: '17 \*\/2 \* \* \*'/)
+  assert.match(workflow, /cron: '17 \* \* \* \*'/)
+  assert.match(workflow, /B2_MEDIA_ENABLED/)
+  assert.match(workflow, /B2_MEDIA_APPLICATION_KEY_ID/)
+  assert.match(workflow, /B2_MEDIA_APPLICATION_KEY/)
+  assert.match(workflow, /Drain prioritized open-photo candidates into B2 media/)
   assert.match(workflow, /PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '110'/)
-  assert.match(workflow, /OPEN_PHOTO_LOCATION_CONCURRENCY: '24'/)
+  assert.match(workflow, /OPEN_PHOTO_LOCATION_CONCURRENCY: '100'/)
+  assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '300'/)
+  assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'/)
+  assert.match(workflow, /OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '32'/)
+  assert.match(workflow, /OPEN_PHOTO_KARTAVIEW_MIN_INTERVAL_MS: '3600'/)
   assert.match(workflow, /PHOTO_ENRICH_SYNC_MEDIA: 'false'/)
-  assert.match(workflow, /Supabase public media/)
-  assert.doesNotMatch(workflow, /B2_INFRA_ENABLED|B2_S3_ENDPOINT|B2_BUCKET|B2_APPLICATION_KEY/)
+  assert.doesNotMatch(workflow, /B2_INFRA_ENABLED|R2_CONFIG|R2_PUBLIC_BASE_URL/)
 })

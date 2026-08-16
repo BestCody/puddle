@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { createProviderRequestLimiter } from '../../lib/app/provider-request-limiter.js'
-
-const root = fileURLToPath(new URL('../..', import.meta.url))
 
 async function source(path) {
   return readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
@@ -17,16 +14,16 @@ test('provider limiter spaces request starts and respects a shared pause', async
     sleepFn: async (milliseconds) => { now += milliseconds }
   })
 
-  const first = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 350 })
+  const first = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 300 })
   first()
-  const second = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 350 })
+  const second = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 300 })
   second()
-  assert.equal(now, 350)
+  assert.equal(now, 300)
 
   limiter.defer('wikimedia', 1_000)
-  const third = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 350 })
+  const third = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 300 })
   third()
-  assert.equal(now, 1_350)
+  assert.equal(now, 1_300)
 })
 
 test('provider limiter enforces maximum concurrency', async () => {
@@ -46,23 +43,46 @@ test('provider limiter enforces maximum concurrency', async () => {
   second()
 })
 
-test('open-photo workflow keeps the backlog near-continuous and provider aware', async () => {
+test('transitional photo queue writes to B2 and consumes full configured provider entitlements', async () => {
   const workflow = await source('.github/workflows/photo-enrichment.yml')
   const importer = await source('scripts/import-open-location-photos.mjs')
-  const candidates = await source('lib/app/open-photo-candidates.js')
+  const storage = await source('lib/app/open-photo-supabase.js')
 
-  assert.match(workflow, /cron: '17 \*\/2 \* \* \*'/)
-  assert.match(workflow, /PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '110'/)
-  assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '350'/)
+  assert.match(workflow, /cron: '17 \* \* \* \*'/)
+  assert.match(workflow, /B2_MEDIA_ENABLED/)
+  assert.match(workflow, /B2_MEDIA_APPLICATION_KEY_ID/)
+  assert.match(workflow, /Drain prioritized open-photo candidates into B2 media/)
+  assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '300'/)
   assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'/)
-  assert.match(workflow, /OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '12'/)
-  assert.match(workflow, /KARTAVIEW_ACCESS_TOKEN: \$\{\{ secrets\.KARTAVIEW_ACCESS_TOKEN \}\}/)
+  assert.match(workflow, /OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '32'/)
+  assert.match(workflow, /OPEN_PHOTO_KARTAVIEW_MIN_INTERVAL_MS: '3600'/)
+  assert.match(workflow, /OPEN_PHOTO_LOCATION_CONCURRENCY: '100'/)
 
-  assert.match(importer, /KARTAVIEW_TOKEN \? 4_000 : 40_000/)
   assert.match(importer, /provider: 'wikimedia-api'/)
   assert.match(importer, /provider: 'mapillary-api'/)
   assert.match(importer, /provider: 'kartaview-api'/)
-  assert.match(importer, /OPEN_PHOTO_LOCATION_CONCURRENCY, 24/)
+  assert.match(storage, /production writes are now B2-only/)
+  assert.match(storage, /import\('\.\/open-photo-b2\.js'\)/)
+})
 
-  assert.match(candidates, /return \['mapillary', 'wikimedia-commons', 'kartaview'\]/)
+test('global photo enrichment is coverage-first instead of one request per POI', async () => {
+  const workflow = await source('.github/workflows/global-photo-enrichment.yml')
+  const wikimedia = await source('scripts/global-data/build_wikimedia_candidates.py')
+  const mapillary = await source('scripts/global-data/build_mapillary_candidates.py')
+  const kartaview = await source('scripts/global-data/build_kartaview_candidates.py')
+  const kartaWorkflow = await source('.github/workflows/global-kartaview-enrichment.yml')
+  const materializer = await source('scripts/global-data/materialize_photo_candidates.py')
+
+  assert.match(workflow, /GLOBAL_PHOTO_PIPELINE_ENABLED/)
+  assert.match(workflow, /WIKIMEDIA_REQUESTS_PER_MINUTE/)
+  assert.match(workflow, /MAPILLARY_TILE_CONCURRENCY/)
+  assert.match(workflow, /GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY/)
+  assert.match(wikimedia, /occupied Wikimedia cells/)
+  assert.match(wikimedia, /REQUESTS_PER_MINUTE = max\(1, min\(2000/)
+  assert.match(mapillary, /zoom-14 vector tiles/)
+  assert.match(mapillary, /ThreadPoolExecutor\(max_workers=CONCURRENCY\)/)
+  assert.match(kartaview, /REQUESTS_PER_HOUR = max\(1, min\(1000 if TOKEN else 100/)
+  assert.match(kartaWorkflow, /KARTAVIEW_REQUESTS_PER_HOUR: '1000'/)
+  assert.match(materializer, /existing_photos/)
+  assert.match(materializer, /photos\/by-sha256/)
 })
