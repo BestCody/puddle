@@ -1,20 +1,40 @@
+import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { LocationEditor } from '@/components/location-editor'
 import { MediaUploader } from '@/components/media-uploader'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getCreatorOptions, getEditableLocation } from '@/lib/app/creator-data'
+import { getMembershipSnapshot } from '@/lib/app/membership-data'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Edit location' }
+
+function avatarUrl(session, path) {
+  if (!path) return null
+  const value = String(path)
+  if (value.startsWith('/') || /^https?:\/\//i.test(value)) return value
+  return session.supabase.storage.from('puddle-public-media').getPublicUrl(value).data.publicUrl
+}
+
+function initials(name) {
+  return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
+}
 
 export default async function EditLocationPage({ params, searchParams }) {
   const { id } = await params
   const messages = await searchParams
   return renderProductPage(async (session) => {
-    const [location, options] = await Promise.all([
+    const [location, options, membership] = await Promise.all([
       getEditableLocation(session.supabase, id),
-      getCreatorOptions(session)
+      getCreatorOptions(session),
+      getMembershipSnapshot(session)
     ])
+    let savers = []
+    if (membership.active) {
+      const { data } = await session.supabase.rpc('pass_location_savers_v1', { target_location: location.id })
+      savers = data || []
+    }
+
     return <>
       <div className="page-heading-row">
         <div>
@@ -28,6 +48,19 @@ export default async function EditLocationPage({ params, searchParams }) {
         <MediaUploader purpose="location_cover" targetId={location.id} />
         <MediaUploader purpose="location_gallery" targetId={location.id} multiple />
       </section>
+
+      {membership.active ? <section className="pass-location-savers" aria-label="People who saved this location">
+        <header><span>PASS</span><div><h2>See who saved</h2><p>{savers.length} visible {savers.length === 1 ? 'person has' : 'people have'} saved this location.</p></div></header>
+        {savers.length ? <div className="pass-location-saver-list">{savers.map((person) => {
+          const photo = avatarUrl(session, person.avatar_path)
+          const name = person.display_name || person.username || 'Puddle person'
+          return <article key={person.id}>
+            <span className="pass-location-saver-avatar" style={photo ? { backgroundImage: `url(${photo})` } : undefined}>{photo ? null : initials(name)}</span>
+            <div><strong>{name}</strong>{person.username ? <small>@{person.username}</small> : null}</div>
+          </article>
+        })}</div> : <p className="pass-location-savers-empty">No visible savers yet.</p>}
+      </section> : <section className="pass-location-savers is-locked"><header><span>PASS</span><div><h2>See who saved</h2><p>Upgrade to see visible Puddle profiles that saved a location you manage.</p></div></header><Link href="/membership">View Pass</Link></section>}
+
       <LocationEditor location={location} {...options} />
     </>
   })
