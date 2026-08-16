@@ -1,0 +1,33 @@
+/* Current Feed frame alignment: 14:114 expanded and 40:414 concise. */
+@media (min-width: 761px) {
+  .figma-feed-stream {
+    position: relative;
+    left: -17.5px;
+  }
+
+  .figma-feed-tabs {
+    top: 39px;
+    left: calc(50% + 120.31px);
+  }
+
+  .figma-feed-search {
+    top: 41.5px;
+    right: 26px;
+  }
+
+  .figma-feed-composer {
+    left: calc(50% + 125px);
+  }
+
+  .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-feed-tabs {
+    left: calc(50% + 20.31px);
+  }
+
+  .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-feed-search {
+    right: 43px;
+  }
+
+  .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-feed-composer {
+    left: calc(50% + 25px);
+  }
+}
