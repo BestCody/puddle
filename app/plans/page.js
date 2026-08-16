@@ -47,18 +47,38 @@ function SavedCard({ item, session, active }) {
   const image = photoUrl(session, item.cover_path)
   const detail = item.slug ? `/plans/${item.slug}` : item.href
   const participants = item.participants?.length ? item.participants.join(', ') : null
+  const primaryMeta = active === 'planned' ? participants || item.city || categoryLabel(item.category) : item.city || categoryLabel(item.category)
+  const secondaryMeta = active === 'planned' && item.planned_for ? dateLabel(item.planned_for) : null
+
   return <article className="figma-saved-place-card">
     <Link className="figma-saved-place-photo" href={detail} style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
       {!image ? <span aria-hidden="true">Puddle</span> : null}
       {item.perfect_pick ? <b>★ Perfect Pick</b> : null}
     </Link>
     <div className="figma-saved-place-copy">
-      <small>{active === 'planned' && item.planned_for ? dateLabel(item.planned_for) : categoryLabel(item.category)}</small>
       <h2><Link href={detail}>{item.title}</Link></h2>
-      <span>{participants || item.city || ''}</span>
+      <div className="figma-saved-place-meta"><small>{primaryMeta}</small>{secondaryMeta ? <span>{secondaryMeta}</span> : null}</div>
     </div>
-    <Link className="figma-saved-place-open" href={detail} aria-label={`View details for ${item.title}`}>+</Link>
   </article>
+}
+
+function SavedCategoryRail({ folders, selectedCategory }) {
+  const selectedFolder = selectedCategory === 'all' ? null : folders.find(([category]) => category === selectedCategory)
+  const leading = folders.slice(0, 2)
+  const visibleFolders = selectedFolder && !leading.some(([category]) => category === selectedCategory)
+    ? [selectedFolder, ...leading].slice(0, 2)
+    : leading
+  const visibleKeys = new Set(visibleFolders.map(([category]) => category))
+  const extraFolders = folders.filter(([category]) => !visibleKeys.has(category))
+
+  return <nav className="figma-saved-categories" aria-label="Saved categories">
+    <Link className={selectedCategory === 'all' ? 'is-active' : ''} href="/plans?tab=saved">All</Link>
+    {visibleFolders.map(([category]) => <Link className={selectedCategory === category ? 'is-active' : ''} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}><span aria-hidden="true">{categoryGlyph(category)}</span>{categoryLabel(category)}</Link>)}
+    {extraFolders.length ? <details className="figma-saved-more-categories">
+      <summary aria-label="More saved categories">+</summary>
+      <div>{extraFolders.map(([category]) => <Link className={selectedCategory === category ? 'is-active' : ''} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}>{categoryLabel(category)}</Link>)}</div>
+    </details> : null}
+  </nav>
 }
 
 export default async function PlansPage({ searchParams }) {
@@ -83,10 +103,7 @@ export default async function PlansPage({ searchParams }) {
       </nav>
 
       {active === 'saved' ? <>
-        <nav className="figma-saved-categories" aria-label="Saved categories">
-          <Link className={selectedCategory === 'all' ? 'is-active' : ''} href="/plans?tab=saved">All</Link>
-          {folders.map(([category]) => <Link className={selectedCategory === category ? 'is-active' : ''} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}><span aria-hidden="true">{categoryGlyph(category)}</span>{categoryLabel(category)}</Link>)}
-        </nav>
+        <SavedCategoryRail folders={folders} selectedCategory={selectedCategory} />
         <div className="figma-saved-purple-rule" aria-hidden="true" />
       </> : <h1 className="figma-saved-plan-heading">Plans</h1>}
 
