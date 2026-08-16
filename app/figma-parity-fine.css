@@ -11,6 +11,16 @@
     bottom: 20px !important;
   }
 
+  /* Feed node 14:114. */
+  .figma-feed-page {
+    padding-top: 61px !important;
+  }
+  .figma-feed-list {
+    gap: 26px !important;
+  }
+  .figma-feed-compose {
+    bottom: 38px !important;
+  }
   .figma-feed-segment {
     width: 152px !important;
     height: 46px !important;
@@ -24,10 +34,12 @@
   }
   .figma-feed-search {
     width: 190px !important;
-    min-height: 40px !important;
-    height: 40px !important;
+    min-height: 46px !important;
+    height: 46px !important;
   }
 
+  /* Saved node 25:180. Figma deliberately staggers the three columns by
+     4px/2px/0px while keeping a 25px row gap. */
   .figma-saved-segment {
     width: 147px !important;
     height: 48px !important;
@@ -37,6 +49,21 @@
     flex: 1 1 50%;
     min-height: 36px !important;
     padding-inline: 7px !important;
+  }
+  .figma-saved-grid {
+    row-gap: 25px !important;
+  }
+  .figma-saved-grid > :nth-child(3n + 1) {
+    transform: translateY(4px);
+  }
+  .figma-saved-grid > :nth-child(3n + 2) {
+    transform: translateY(2px);
+  }
+  .figma-saved-grid > :nth-child(3n) {
+    transform: translateY(0);
+  }
+  .figma-saved-search {
+    left: 540px !important;
   }
 
   .social-tabs {
