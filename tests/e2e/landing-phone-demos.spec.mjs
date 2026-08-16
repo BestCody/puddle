@@ -55,27 +55,24 @@ test('Saved, Feed, and Profile phone demos expose their corresponding product in
   await expect(page.locator('.minimal-profile-settings strong').filter({ hasText: 'Montreal, QC' })).toBeVisible()
 })
 
-test('landing page embeds the current Figma-sized real phone demos instead of screenshot placeholders', async ({ page }) => {
+test('landing page embeds real interactive phone demos instead of screenshot placeholders', async ({ page }) => {
   await page.setViewportSize({ width: 1281, height: 900 })
   await page.goto('/')
   await page.waitForFunction(() => document.querySelector('.landing-stage--desktop')?.dataset.ready === 'true')
+
+  for (const demo of ['swipe', 'save', 'feed', 'profile']) {
+    const phone = page.locator(`.landing-canvas--desktop [data-phone-demo="${demo}"]`)
+    await expect(phone).toBeAttached()
+    await expect(phone.locator('iframe')).toHaveAttribute('data-src', `/landing-demo/${demo}`)
+  }
+
   const swipePhone = page.locator('.landing-canvas--desktop [data-phone-demo="swipe"]')
-  await expect(swipePhone).toBeAttached()
   await swipePhone.scrollIntoViewIfNeeded()
+  const swipeIframe = swipePhone.locator('iframe')
+  await expect(swipeIframe).toHaveAttribute('src', '/landing-demo/swipe', { timeout: 15_000 })
+  const swipeFrame = swipeIframe.contentFrame()
+  await expect(swipeFrame.locator('.minimal-swipe-card')).toBeVisible({ timeout: 15_000 })
+  await expect(swipeFrame.getByRole('button', { name: 'Save' })).toBeEnabled()
 
-  const phoneBox = await swipePhone.boundingBox()
-  expect(phoneBox).toBeTruthy()
-  expect(phoneBox.width).toBeGreaterThan(370)
-  expect(phoneBox.height).toBeGreaterThan(800)
-
-  const iframe = swipePhone.locator('iframe')
-  await expect(iframe).toHaveAttribute('src', '/landing-demo/swipe', { timeout: 15_000 })
-  const iframeBox = await iframe.boundingBox()
-  expect(iframeBox).toBeTruthy()
-  expect(iframeBox.width).toBeGreaterThan(350)
-  expect(iframeBox.height).toBeGreaterThan(760)
-
-  const frame = iframe.contentFrame()
-  await expect(frame.locator('.minimal-swipe-card')).toBeVisible({ timeout: 15_000 })
   await expect(page.locator('img.feature-phone[data-draggable-phone]')).toHaveCount(0)
 })

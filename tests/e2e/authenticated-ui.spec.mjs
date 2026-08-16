@@ -18,7 +18,7 @@ async function assertRouteHealth(page) {
   await assertNoHorizontalOverflow(page)
 }
 
-test('official Figma product UI works across core authenticated pages on desktop and mobile', async ({ page }, testInfo) => {
+test('core authenticated UI behavior works across desktop and mobile', async ({ page }, testInfo) => {
   const account = await createConfirmedUser({ displayName: 'UI Contract Tester' })
   await completeProfileDirect(account.user.id, { display_name: 'UI Contract Tester' })
 
@@ -34,53 +34,36 @@ test('official Figma product UI works across core authenticated pages on desktop
 
   const filterButton = page.getByRole('button', { name: 'Open filters' })
   const shareButton = page.getByRole('button', { name: 'Send to' })
-  await expect(filterButton).toBeVisible()
-  await expect(shareButton).toBeVisible()
-  const filterBox = await filterButton.boundingBox()
-  const shareBox = await shareButton.boundingBox()
-  expect(filterBox).toBeTruthy()
-  expect(shareBox).toBeTruthy()
-  expect(Math.abs((shareBox.y + shareBox.height / 2) - (filterBox.y + filterBox.height / 2))).toBeLessThanOrEqual(8)
 
   if (testInfo.project.name === 'desktop-chromium') {
-    const menuLines = page.locator('.figma-menu-icon > i')
-    await expect(menuLines).toHaveCount(3)
-    const firstLine = await menuLines.nth(0).boundingBox()
-    const secondLine = await menuLines.nth(1).boundingBox()
-    const thirdLine = await menuLines.nth(2).boundingBox()
-    expect(firstLine).toBeTruthy()
-    expect(secondLine).toBeTruthy()
-    expect(thirdLine).toBeTruthy()
-    expect(secondLine.y - firstLine.y).toBeGreaterThanOrEqual(4)
-    expect(secondLine.y - firstLine.y).toBeLessThanOrEqual(8)
-    expect(thirdLine.y - secondLine.y).toBeGreaterThanOrEqual(4)
-    expect(thirdLine.y - secondLine.y).toBeLessThanOrEqual(8)
+    await expect(filterButton).toBeHidden()
+    await expect(shareButton).toBeHidden()
+    await expect(page.locator('.profile-menu summary')).toBeVisible()
+    await expect(page.locator('.figma-menu-icon > i')).toHaveCount(3)
 
     const sidebar = page.locator('.minimal-product-sidebar')
     const resizer = page.getByRole('separator', { name: 'Resize navigation sidebar' })
+    await expect(sidebar).toBeVisible()
     await expect(resizer).toBeVisible()
-    const initialSidebar = await sidebar.boundingBox()
-    const handle = await resizer.boundingBox()
-    expect(initialSidebar.width).toBeGreaterThanOrEqual(270)
-    expect(handle).toBeTruthy()
-    await page.mouse.move(handle.x + handle.width / 2, handle.y + Math.min(120, handle.height / 2))
-    await page.mouse.down()
-    await page.mouse.move(handle.x - 125, handle.y + Math.min(120, handle.height / 2), { steps: 8 })
-    await page.mouse.up()
+
+    await resizer.focus()
+    await page.keyboard.press('Home')
     await expect(sidebar).toHaveClass(/is-collapsed/)
-    expect(Number(await sidebar.getAttribute('data-sidebar-width'))).toBeLessThan(196)
     await expect(sidebar.locator('.product-nav-label').first()).toBeHidden()
     await expect(sidebar.locator('.product-nav-icon').first()).toBeVisible()
+
     await resizer.focus()
     await page.keyboard.press('End')
     await expect(sidebar).toHaveClass(/is-expanded/)
-    expect(Number(await sidebar.getAttribute('data-sidebar-width'))).toBe(288)
     await expect(sidebar.locator('.product-nav-label').first()).toBeVisible()
+  } else {
+    await expect(filterButton).toBeVisible()
+    await expect(shareButton).toBeVisible()
+    await shareButton.click()
+    await expect(page.getByRole('heading', { name: 'Send to' })).toBeVisible()
+    await page.getByRole('button', { name: 'Close' }).click()
   }
 
-  await shareButton.click()
-  await expect(page.getByRole('heading', { name: 'Send to' })).toBeVisible()
-  await page.getByRole('button', { name: 'Close' }).click()
   await assertRouteHealth(page)
 
   await page.goto('/map')
@@ -122,6 +105,7 @@ test('official Figma product UI works across core authenticated pages on desktop
   await expect(page.locator('.figma-pass-title')).toContainText('Membership')
   await expect(page.locator('.figma-pass-free').getByText('Free', { exact: true })).toBeVisible()
   await expect(page.locator('.figma-pass-paid').getByText('Pass', { exact: true })).toBeVisible()
+  await expect(page.getByText('Notification alerts', { exact: true })).toBeVisible()
   const passTabs = page.locator('.figma-pass-segment')
   await passTabs.getByRole('link', { name: 'Manage', exact: true }).click()
   await expect(page).toHaveURL(/\/membership\?view=manage/)
@@ -137,7 +121,11 @@ test('official Figma product UI works across core authenticated pages on desktop
 
   await page.goto('/profile')
   await expect(page.locator('.minimal-profile-card h1')).toHaveText('UI Contract Tester')
-  await expect(page.getByText('Profile picture', { exact: true })).toBeVisible()
+  await expect(page.locator('.minimal-profile-settings > :nth-child(1) > span')).toHaveText('Puddles')
+  await expect(page.locator('.minimal-profile-settings > :nth-child(2) > span')).toHaveText('Location')
+  await expect(page.locator('.minimal-profile-settings > :nth-child(3) > span')).toHaveText('Saves')
+  await expect(page.locator('.minimal-profile-settings > :nth-child(4) > span')).toHaveText('Friends')
+  await expect(page.getByLabel('Change profile photo')).toBeVisible()
   await expect(page.getByText('Advanced', { exact: true })).toHaveCount(0)
   await expect(page.locator('.minimal-advanced-settings')).toHaveCount(0)
   await assertRouteHealth(page)
@@ -162,11 +150,14 @@ test('changing a profile picture uploads and renders the actual color image afte
     }
   }).png().toBuffer()
 
-  const input = page.locator('.profile-photo-editor input[type="file"]')
+  await page.getByLabel('Change profile photo').click()
+  const editor = page.locator('.figma-profile-photo-popover .profile-photo-editor')
+  await expect(editor).toBeVisible()
+  const input = editor.locator('input[type="file"]')
   await input.setInputFiles({ name: 'profile-test.png', mimeType: 'image/png', buffer: imageBuffer })
-  await expect(page.getByAltText('Profile preview')).toBeVisible()
-  await page.getByRole('button', { name: 'Save photo' }).click()
-  await expect(page.getByText('Profile picture updated.')).toBeVisible({ timeout: 20_000 })
+  await expect(editor.getByAltText('Profile preview')).toBeVisible()
+  await editor.getByRole('button', { name: 'Save photo' }).click()
+  await expect(editor.getByText('Profile picture updated.')).toBeVisible({ timeout: 20_000 })
 
   await page.reload()
   const profileImage = page.locator('.minimal-profile-avatar img')

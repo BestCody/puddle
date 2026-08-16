@@ -160,10 +160,20 @@ export async function signInThroughUi(page, email, password, next = '/discover')
 }
 
 export async function signOutThroughUi(page) {
-  const menu = page.locator('details.profile-menu')
+  let menu = page.locator('details.profile-menu')
+  let summary = menu.locator('> summary')
+
+  // The current desktop Figma intentionally shows the profile menu only on
+  // Swipe. Functional auth tests may arrive on Settings/Profile first, so use
+  // the real visible menu route instead of requiring a non-Figma header there.
+  if (!await summary.isVisible().catch(() => false)) {
+    await page.goto('/discover')
+    menu = page.locator('details.profile-menu')
+    summary = menu.locator('> summary')
+  }
+
   const button = menu.getByRole('button', { name: 'Sign out', exact: true })
   if (!await button.isVisible().catch(() => false)) {
-    const summary = menu.locator('> summary')
     await expect(summary).toBeVisible()
     await summary.click()
   }
@@ -173,6 +183,27 @@ export async function signOutThroughUi(page) {
 }
 
 export async function assertNoHorizontalOverflow(page) {
-  const dimensions = await page.evaluate(() => ({ width: window.innerWidth, scrollWidth: document.documentElement.scrollWidth }))
-  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.width + 1)
+  const dimensions = await page.evaluate(() => {
+    const width = window.innerWidth
+    const scrollWidth = document.documentElement.scrollWidth
+    const offenders = scrollWidth > width + 1
+      ? [...document.querySelectorAll('body *')].map((element) => {
+          const rect = element.getBoundingClientRect()
+          return {
+            tag: element.tagName.toLowerCase(),
+            className: typeof element.className === 'string' ? element.className.slice(0, 160) : '',
+            right: Math.round(rect.right * 10) / 10,
+            left: Math.round(rect.left * 10) / 10,
+            width: Math.round(rect.width * 10) / 10
+          }
+        }).filter((item) => item.width > 0 && item.right > width + 1)
+          .sort((a, b) => b.right - a.right)
+          .slice(0, 12)
+      : []
+    return { width, scrollWidth, offenders }
+  })
+  expect(
+    dimensions.scrollWidth,
+    `Horizontal overflow offenders: ${JSON.stringify(dimensions.offenders)}`
+  ).toBeLessThanOrEqual(dimensions.width + 1)
 }

@@ -42,19 +42,18 @@ export default async function MembershipPage({ searchParams }) {
         <section className="tier-grid figma-pass-grid" aria-label="Puddle membership tiers">
           <article className={`tier-card figma-pass-card figma-pass-free ${snapshot.active ? '' : 'is-current'}`}>
             <div className="figma-pass-price"><span>Free</span><strong>$0</strong></div>
-            <div className="figma-pass-features">
-              <p>Swipe nearby places, save favorites, plan outings, and coordinate with friends.</p>
+            <div className="figma-pass-features" aria-label="Free features">
+              <ul><li>Swipe</li><li>Feed</li><li>Map</li><li>Message friends only</li></ul>
             </div>
             {snapshot.active ? <span className="figma-plan-state">Available</span> : <span className="figma-plan-state is-current">Current</span>}
           </article>
 
           <article className={`tier-card figma-pass-card figma-pass-paid ${snapshot.active ? 'is-current' : ''}`}>
-            <span className="sr-only">Tinder tier</span>
-            <div className="figma-pass-price"><span>Pass</span><strong>{TINDER_TIER_MONTHLY_PRICE}</strong></div>
-            <div className="figma-pass-features">
-              <p>Meet opt-in adults worldwide through places you both genuinely liked.</p>
-              {!snapshot.adult ? <small>Pass connections are limited to users age 18 or older.</small> : null}
-              {!snapshot.paymentsConfigured ? <small>Payments are not configured yet.</small> : null}
+            <span className="sr-only">Pass tier</span>
+            <div className="figma-pass-price"><span>Pass</span><strong>{TINDER_TIER_MONTHLY_PRICE}</strong><s className="figma-pass-old-price">$15/month</s></div>
+            <div className="figma-pass-features" aria-label="Pass features">
+              <p>Everything in Free plus...</p>
+              <ul><li>Heatmap</li><li>Pass badge</li><li>Create your location</li><li>Message anyone</li><li>See who saved</li><li>Notification alerts</li></ul>
             </div>
             {snapshot.active
               ? <Link className="figma-pass-cta" href="/membership?view=manage">Manage</Link>
@@ -63,7 +62,7 @@ export default async function MembershipPage({ searchParams }) {
                 : <button className="figma-pass-cta" type="button" disabled>Upgrade</button>}
           </article>
         </section>
-        <p className="figma-pass-disclosure">Pass is the $10/month Tinder tier entitlement. Billed monthly. Taxes and renewal terms appear before payment.</p>
+        <p className="figma-pass-disclosure">Billed monthly. Taxes and renewal terms appear before payment.</p>
       </> : <section className="figma-pass-manage">
         <header><span>Pass</span><h1>Manage membership</h1><p>Billing, privacy, and global connection controls.</p></header>
         {snapshot.active ? <>

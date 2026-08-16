@@ -6,9 +6,9 @@ import { ProductNav } from './product-nav'
 
 const STORAGE_KEY = 'puddle:product-sidebar-width'
 const MIN_WIDTH = 88
-const MAX_WIDTH = 288
+const MAX_WIDTH = 280
 const LABEL_MIN_WIDTH = 196
-const DEFAULT_WIDTH = 288
+const DEFAULT_WIDTH = 280
 
 function clampWidth(value) {
   const parsed = Number(value)
@@ -87,7 +87,7 @@ export function ResizableProductSidebar({ className = 'minimal-product-sidebar',
   const expanded = width >= LABEL_MIN_WIDTH
 
   return <aside className={`product-sidebar ${className}${expanded ? ' is-expanded' : ' is-collapsed'}`} data-sidebar-width={width}>
-    <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" /></div>
+    <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" variant="outline" /></div>
     <ProductNav avatarUrl={avatarUrl} />
     <div
       className="minimal-sidebar-resizer"
