@@ -71,6 +71,7 @@ try {
   assert(await page.locator('.landing-sticky-left').isVisible(), 'desktop pinned left panel is missing')
   assert(await page.locator('.landing-sticky-left .login-panel input').count() === 2, 'desktop pinned login fields are not real inputs')
   assert(await page.locator('.landing-sticky-left .brand--desktop').isVisible(), 'Puddle brand did not move into pinned left pane')
+  assert(await page.locator('.interactive-pill').count() === 0, 'Interactive/Give it a swipe pills must be removed while phone demos remain interactive')
 
   const canvasNativeHeight = await page.locator('.landing-canvas--desktop').getAttribute('data-native-height')
   assert(canvasNativeHeight === '7578', `desktop canvas runtime height is ${canvasNativeHeight}, expected current Figma 7578`)
@@ -119,9 +120,20 @@ try {
   const stickyAfter = await page.locator('.landing-sticky-left').boundingBox()
   const loginAfter = await page.locator('.landing-sticky-left .login-panel').boundingBox()
   const swipeAfter = await page.locator('.feature-card--d-swipe').boundingBox()
-  assert(stickyBefore && stickyAfter && Math.abs(stickyAfter.y - stickyBefore.y) < 1, 'left pane moved while the page scrolled')
+  assert(stickyBefore && stickyAfter && Math.abs(stickyAfter.y - stickyBefore.y) < 1, 'left pane moved while the blank-left portion scrolled')
   assert(loginBefore && loginAfter && Math.abs(loginAfter.y - loginBefore.y) < 1, 'left login content moved while the right side scrolled')
   assert(swipeBefore && swipeAfter && swipeAfter.y < swipeBefore.y - 900, 'right-side Figma content did not scroll independently of the left pane')
+  assert(await page.locator('.landing-sticky-left').getAttribute('data-footer-suspended') === 'false', 'left pane should remain pinned while the Figma left side is blank')
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight - window.innerHeight))
+  await page.waitForFunction(() => document.querySelector('.landing-sticky-left')?.dataset.footerSuspended === 'true')
+  assert(!(await page.locator('.landing-sticky-left').isVisible()), 'pinned login pane must stop before the full-width footer')
+  assert(await page.locator('.site-footer--desktop .footer-columns').isVisible(), 'full-width footer navigation is cropped or hidden')
+  for (const label of ['Explore', 'Company', 'Connect']) assert(await page.getByRole('heading', { name: label, exact: true }).isVisible(), `${label} footer column is not visible`)
+
+  await page.evaluate(() => window.scrollTo(0, 1000))
+  await page.waitForFunction(() => document.querySelector('.landing-sticky-left')?.dataset.footerSuspended === 'false')
+  assert(await page.locator('.landing-sticky-left').isVisible(), 'left pane did not restore after leaving the footer')
   await page.evaluate(() => window.scrollTo(0, 0))
 
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'desktop page horizontally overflows')
@@ -139,6 +151,7 @@ try {
   assert(await page.locator('[data-figma-node="161:116"]').isVisible(), 'mobile real-DOM canvas is not visible')
   assert(!(await page.locator('[data-figma-node="83:76"]').isVisible()), 'desktop canvas should be hidden on mobile')
   assert(!(await page.locator('.landing-sticky-left').isVisible()), 'desktop pinned pane leaked into mobile')
+  assert(await page.locator('.interactive-pill').count() === 0, 'mobile Interactive/Give it a swipe pills must also be removed')
   assert(await page.locator('.feature-card--m-swipe').isVisible(), 'mobile Swipe card is not visible')
   assert(await page.locator('.safety-panel--mobile').isVisible(), 'mobile safety panel is not visible')
   assert(await page.locator('.trust-heading--mobile img').getAttribute('src') === '/figma/assets/lock.svg', 'mobile Lock must use transparent Figma SVG')
@@ -156,7 +169,7 @@ try {
   await page.screenshot({ path: join(artifacts, 'mobile-real-dom.png'), fullPage: true })
 
   assert(errors.length === 0, `browser errors detected:\n${errors.join('\n')}`)
-  console.log('Current Figma landing passed: pinned left desktop sign-in, independently scrolling right content, current 7578px geometry, genuine interactive phones, transparent glyphs, and unchanged mobile flow.')
+  console.log('Current Figma landing passed: pinned left only across the blank-left desktop region, full-width footer handoff, no interaction pills, genuine interactive phones, transparent glyphs, and unchanged mobile flow.')
 } finally {
   await browser.close()
   await new Promise((resolveClosing) => server.close(resolveClosing))
