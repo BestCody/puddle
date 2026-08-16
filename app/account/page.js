@@ -17,6 +17,7 @@ export default async function AccountPage({ searchParams }) {
   return <ProductShell user={user} profile={profile}>
     <div className="figma-settings-screen">
       <section className="figma-settings-window" aria-label="Settings">
+        <a className="figma-settings-close" href="/account" aria-label="Close settings details">×</a>
         <aside className="figma-settings-local-nav">
           <strong>Settings</strong>
           <nav>
@@ -58,7 +59,7 @@ export default async function AccountPage({ searchParams }) {
           </section>
 
           <section className="figma-settings-section" id="sessions">
-            <header><small>Sessions</small><h1>Sessions</h1></header>
+            <header><small>Sessions</small><h1>Session</h1></header>
             <div className="figma-settings-row is-tall"><label>Current browser</label><span>{sessionExpiry}<br />Last sign-in: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Unavailable'}</span></div>
             <form action={revokeOtherSessions}><div className="figma-settings-submit"><SubmitButton>Sign out other sessions</SubmitButton></div></form>
           </section>
