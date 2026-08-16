@@ -64,15 +64,15 @@ test('landing page embeds the real phone demos instead of leaving screenshot pla
 
   const phoneBox = await swipePhone.boundingBox()
   expect(phoneBox).toBeTruthy()
-  expect(phoneBox.width).toBeGreaterThan(300)
-  expect(phoneBox.height).toBeGreaterThan(700)
+  expect(phoneBox.width).toBeGreaterThan(400)
+  expect(phoneBox.height).toBeGreaterThan(650)
 
   const iframe = swipePhone.locator('iframe')
   await expect(iframe).toHaveAttribute('src', '/landing-demo/swipe', { timeout: 15_000 })
   const iframeBox = await iframe.boundingBox()
   expect(iframeBox).toBeTruthy()
-  expect(iframeBox.width).toBeGreaterThan(300)
-  expect(iframeBox.height).toBeGreaterThan(700)
+  expect(iframeBox.width).toBeGreaterThan(400)
+  expect(iframeBox.height).toBeGreaterThan(600)
 
   const frame = iframe.contentFrame()
   await expect(frame.locator('.minimal-swipe-card')).toBeVisible({ timeout: 15_000 })
