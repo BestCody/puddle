@@ -71,7 +71,7 @@ alter policy "users log own impressions" on public.discovery_impressions
   with check (profile_id = (select auth.uid()));
 
 alter policy "members read own membership" on public.puddle_memberships
-  using (profile_id = (select auth.uid()));
+  using (user_id = (select auth.uid()));
 
 alter policy "friendship participants read" on public.friendships
   using (((select auth.uid()) = requester_id) or ((select auth.uid()) = addressee_id));
