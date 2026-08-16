@@ -63,13 +63,14 @@ test('landing page embeds real interactive phone demos instead of screenshot pla
   for (const demo of ['swipe', 'save', 'feed', 'profile']) {
     const phone = page.locator(`.landing-canvas--desktop [data-phone-demo="${demo}"]`)
     await expect(phone).toBeAttached()
-    const iframe = phone.locator('iframe')
-    await expect(iframe).toHaveAttribute('src', `/landing-demo/${demo}`, { timeout: 15_000 })
+    await expect(phone.locator('iframe')).toHaveAttribute('data-src', `/landing-demo/${demo}`)
   }
 
   const swipePhone = page.locator('.landing-canvas--desktop [data-phone-demo="swipe"]')
   await swipePhone.scrollIntoViewIfNeeded()
-  const swipeFrame = swipePhone.locator('iframe').contentFrame()
+  const swipeIframe = swipePhone.locator('iframe')
+  await expect(swipeIframe).toHaveAttribute('src', '/landing-demo/swipe', { timeout: 15_000 })
+  const swipeFrame = swipeIframe.contentFrame()
   await expect(swipeFrame.locator('.minimal-swipe-card')).toBeVisible({ timeout: 15_000 })
   await expect(swipeFrame.getByRole('button', { name: 'Save' })).toBeEnabled()
 
