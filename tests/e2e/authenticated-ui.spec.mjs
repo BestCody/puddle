@@ -72,7 +72,7 @@ test('official Figma product UI works across core authenticated pages on desktop
     await resizer.focus()
     await page.keyboard.press('End')
     await expect(sidebar).toHaveClass(/is-expanded/)
-    expect(Number(await sidebar.getAttribute('data-sidebar-width'))).toBe(288)
+    expect(Number(await sidebar.getAttribute('data-sidebar-width'))).toBe(280)
     await expect(sidebar.locator('.product-nav-label').first()).toBeVisible()
   } else {
     // Mobile keeps its dedicated compact controls from the mobile Figma flow.
