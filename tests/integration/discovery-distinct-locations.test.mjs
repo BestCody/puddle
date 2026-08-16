@@ -46,6 +46,12 @@ function location(id, name, group, latitude = 43.65, longitude = -79.38) {
   }
 }
 
+function duplicateKey(row) {
+  if (row.duplicate_group_key) return `duplicate:${row.duplicate_group_key}`
+  if (row.catalogue_group_key) return `catalogue:${row.catalogue_group_key}`
+  return `fallback:${String(row.name || '').toLowerCase()}:${Number(row.latitude).toFixed(4)}:${Number(row.longitude).toFixed(4)}`
+}
+
 function session(locations, seen = []) {
   return {
     user: { id: 'user-1' },
@@ -57,11 +63,19 @@ function session(locations, seen = []) {
       city: 'Toronto'
     },
     supabase: {
-      rpc(name) {
-        if (name === 'r2_discovery_overlay_v1') {
-          return Promise.resolve({ data: { dismissedIds: [], interests: [], locations }, error: null })
+      rpc(name, args = {}) {
+        if (name === 'r2_discovery_overlay_v2') {
+          const excludedIds = new Set((args.exclude_ids || []).map(String))
+          const excludedGroups = new Set(seen.map(duplicateKey))
+          for (const row of locations) if (excludedIds.has(String(row.id))) excludedGroups.add(duplicateKey(row))
+          const filtered = locations.filter((row) =>
+            !excludedIds.has(String(row.id)) &&
+            !excludedGroups.has(duplicateKey(row)) &&
+            (!args.category_filter || row.kind === args.category_filter) &&
+            (args.price_filter == null || Number(row.price_level) === Number(args.price_filter))
+          )
+          return Promise.resolve({ data: { interests: [], locations: filtered }, error: null })
         }
-        if (name === 'discovery_seen_locations_v1') return Promise.resolve({ data: seen, error: null })
         throw new Error(`Unexpected RPC: ${name}`)
       },
       storage: {
@@ -116,14 +130,31 @@ test('installed seen-location runtime tracks relational swipe state only', async
   assert.doesNotMatch(migration, /static_catalogue_actions/)
 })
 
-test('installed overlay removes seen rows before its limit and has no static materialization gate', async () => {
-  const migration = await readFile(new URL('../../supabase/migrations/10050_relational_discovery_runtime.sql', import.meta.url), 'utf8')
-  assert.match(migration, /discovery_seen_locations_v1\(\)/)
-  assert.match(migration, /into seen_ids/)
-  assert.match(migration, /not \(location\.id=any\(coalesce\(seen_ids,'\{\}'::uuid\[\]\)\)\)/)
-  assert.match(migration, /limit safe_limit/)
-  assert.ok(migration.indexOf("not (location.id=any(coalesce(seen_ids,'{}'::uuid[])))") < migration.indexOf('limit safe_limit'))
+test('new overlay has no materialization gate and applies filters before its page limit', async () => {
+  const migration = await readFile(new URL('../../supabase/migrations/10061_discovery_unbounded_pagination.sql', import.meta.url), 'utf8')
+  assert.match(migration, /r2_discovery_overlay_v2/)
+  assert.match(migration, /st_dwithin\(location\.point,center_point,safe_radius\)/)
+  assert.match(migration, /category_filter/)
+  assert.match(migration, /price_filter/)
+  assert.match(migration, /amenity_filter/)
+  assert.match(migration, /accessible_only/)
+  assert.match(migration, /open_now_only/)
+  assert.ok(migration.indexOf('category_filter') < migration.lastIndexOf('limit safe_limit'))
   assert.doesNotMatch(migration, /static_catalogue_materializations/)
-  assert.doesNotMatch(migration, /staticEphemeral/)
-  assert.doesNotMatch(migration, /touch_static_catalogue_materializations_v1/)
+  assert.doesNotMatch(migration, /least\(100000,/)
+})
+
+test('continuation is not capped by a historical session-id ceiling', async () => {
+  const [workspace, route, relational] = await Promise.all([
+    readFile(new URL('../../components/date-swipe-workspace-v2.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../app/api/discovery/route.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../lib/app/discovery-relational.js', import.meta.url), 'utf8')
+  ])
+  assert.doesNotMatch(workspace, /MAX_CONTINUATION_EXCLUDES/)
+  assert.doesNotMatch(workspace, /sessionIds\.current\.size\s*>=/)
+  assert.doesNotMatch(route, /MAX_CONTINUATION_EXCLUDES/)
+  assert.match(workspace, /await drainActions\(\)/)
+  assert.match(workspace, /visibleIds/)
+  assert.match(relational, /r2_discovery_overlay_v2/)
+  assert.doesNotMatch(relational, /PRIMARY_QUERY_LIMIT/)
 })
