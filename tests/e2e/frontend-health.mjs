@@ -42,7 +42,14 @@ export function trackFrontendHealth(page, { baseURL, additionalOrigins = [], str
   if (strictConsole) {
     page.on('console', (message) => {
       if (message.type() !== 'error') return
-      failures.push(`console ${message.text()}`)
+      const text = message.text()
+      const sourceUrl = message.location()?.url || ''
+      // Browser console messages for third-party resource failures do not
+      // expose the HTTP status through our origin-scoped response listener.
+      // Ignore only that narrow external-resource case (for example a
+      // transient fonts.gstatic.com 404); app-origin failures remain fatal.
+      if (/^Failed to load resource:/i.test(text) && sourceUrl && !isMonitored(sourceUrl)) return
+      failures.push(`console ${text}`)
     })
   }
 
