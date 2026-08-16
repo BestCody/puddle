@@ -19,10 +19,10 @@ test('Stripe webhook verification accepts only a current matching signature', ()
   assert.equal(verifyStripeWebhook(raw, header, secret, (timestamp + 301) * 1000), false)
 })
 
-test('membership page displays Tinder tier at $10 per month', async () => {
+test('membership page displays Tinder tier at $10 per month without the removed billing disclosure', async () => {
   const page = await source('app/membership/page.js')
   assert.match(page, /TINDER_TIER_MONTHLY_PRICE = '\$10\/month'/)
-  assert.match(page, /Billed monthly\. Taxes and renewal terms appear before payment\./)
+  assert.doesNotMatch(page, /Billed monthly\. Taxes and renewal terms appear before payment\./)
   assert.doesNotMatch(page, /<h2>Monthly<\/h2>/)
 })
 

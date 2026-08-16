@@ -51,8 +51,12 @@ test('desktop Figma sidebar navigates, switches to concise mode, and preserves t
   await expect(page.locator('.figma-dashboard-nav a[href="/profile"]')).toHaveAttribute('aria-current', 'page')
 
   await page.locator('.figma-dashboard-settings-link').click()
-  await expect(page).toHaveURL(/\/account$/)
+  await expect(page).toHaveURL(/\/account\?returnTo=%2Fprofile$/)
   await expect(page.locator('.figma-settings-screen')).toBeVisible()
+  const close = page.getByRole('link', { name: 'Close settings' })
+  await expect(close).toHaveAttribute('href', '/profile')
+  await close.click()
+  await expect(page).toHaveURL(/\/profile$/)
 })
 
 test('short and zoom-like desktop heights keep the Figma sidebar non-scrollable and separated', async ({ page }, testInfo) => {
@@ -109,5 +113,9 @@ test('short and zoom-like desktop heights keep the Figma sidebar non-scrollable 
   await resizer.press('End')
   await expect(sidebar).toHaveClass(/is-expanded/)
   await settings.click()
-  await expect(page).toHaveURL(/\/account$/)
+  await expect(page).toHaveURL(/\/account\?returnTo=%2Fdiscover$/)
+  const close = page.getByRole('link', { name: 'Close settings' })
+  await expect(close).toHaveAttribute('href', '/discover')
+  await close.click()
+  await expect(page).toHaveURL(/\/discover$/)
 })

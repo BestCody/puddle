@@ -1,0 +1,65 @@
+/*
+ * Shared desktop canvas contract for the authenticated Figma rebuild.
+ * The source desktop frames are 1280px wide with a 280px sidebar, leaving a
+ * 1000px authored product canvas. On wider screens center that complete canvas
+ * in the space remaining to the right of the sidebar instead of stretching or
+ * pinning individual screens to the left edge.
+ */
+@media (min-width: 761px) {
+  .figma-dashboard-main {
+    width: min(100%, 1000px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* This menu is a sibling of the centered canvas, so give it the same right
+     gutter as the 1000px canvas on wider screens. */
+  .figma-dashboard-account-menu {
+    right: max(41px, calc((100% - 1000px) / 2 + 41px));
+  }
+
+  /* Feed/Create Post search is viewport-fixed. Offset it by the extra stage
+     gutter so it remains part of the centered Figma composition. */
+  .figma-feed-search {
+    right: max(26px, calc((100vw - var(--figma-shell-sidebar) - 1000px) / 2 + 26px));
+  }
+
+  .figma-feed-search label {
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  .figma-feed-search input {
+    height: 100%;
+    display: block;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+  }
+
+  .figma-feed-search button {
+    flex: 0 0 auto;
+    align-self: center;
+    padding: 0;
+  }
+
+  /* Saved's floating search is also fixed. Keep it at the same authored
+     canvas-relative position in both expanded and concise sidebar states. */
+  .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-saved-floating-search {
+    left: calc(50% + 21px);
+  }
+
+  /* User override: Settings always exposes a real close control, including the
+     initial unexpanded state. The href returns to the dashboard route that
+     opened Settings. */
+  .figma-settings-close {
+    display: grid !important;
+  }
+
+  /* A centered map canvas should not reveal a different page background in the
+     extra gutters on wide monitors. */
+  .figma-dashboard-stage:has(.figma-feed-screen.is-map) {
+    background: #d0d0d0;
+  }
+}

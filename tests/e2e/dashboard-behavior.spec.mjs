@@ -13,6 +13,26 @@ async function openDesktop(page, path) {
   await assertNoHorizontalOverflow(page)
 }
 
+async function expectCenteredDashboardCanvas(page) {
+  const geometry = await page.evaluate(() => {
+    const stage = document.querySelector('.figma-dashboard-stage')?.getBoundingClientRect()
+    const main = document.querySelector('.figma-dashboard-main')?.getBoundingClientRect()
+    if (!stage || !main) return null
+    return {
+      stageLeft: stage.left,
+      stageRight: stage.right,
+      mainLeft: main.left,
+      mainRight: main.right,
+      mainWidth: main.width
+    }
+  })
+  expect(geometry).not.toBeNull()
+  const leftGutter = geometry.mainLeft - geometry.stageLeft
+  const rightGutter = geometry.stageRight - geometry.mainRight
+  expect(Math.abs(leftGutter - rightGutter)).toBeLessThanOrEqual(2)
+  expect(geometry.mainWidth).toBeLessThanOrEqual(1001)
+}
+
 test('authenticated desktop dashboard keeps navigation and core product behavior usable', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Desktop dashboard contract only')
 
@@ -36,7 +56,8 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   for (const href of ['/discover', '/map', '/plans', '/matches', '/membership', '/profile']) {
     await expect(nav.locator(`a[href="${href}"]`)).toBeVisible()
   }
-  await expect(sidebar.locator('a[href="/account"]')).toHaveText('Settings')
+  await expect(sidebar.locator('.figma-dashboard-settings-link')).toHaveText('Settings')
+  await expect(sidebar.locator('.figma-dashboard-settings-link')).toHaveAttribute('href', /\/account\?returnTo=/)
 
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
   for (const name of ['Back', 'Pass', 'Save', 'Star']) {
@@ -52,8 +73,25 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const feedTabs = page.locator('.figma-feed-tabs')
   await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
-  await expect(page.locator('.figma-feed-search')).toBeVisible()
-  await feedTabs.getByRole('link', { name: 'Map', exact: true }).click()
+  const feedSearch = page.locator('.figma-feed-search')
+  await expect(feedSearch).toBeVisible()
+  await expect(feedSearch.getByRole('searchbox', { name: 'Search puddle' })).toHaveAttribute('placeholder', 'Search puddle')
+  await expect(page.getByText('Search Puddle', { exact: true })).toHaveCount(0)
+
+  await openDesktop(page, '/create/post')
+  await expect(page.locator('.figma-create-post-blur')).toBeVisible()
+  await expect(page.locator('.figma-create-post-card')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveAttribute('placeholder', 'Title')
+  await expect(page.getByRole('textbox', { name: 'Description' })).toHaveAttribute('placeholder', 'Description')
+  await expect(page.getByText('Who can see this post?', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Post publishing is not connected to a backend yet.', { exact: false })).toHaveCount(0)
+  await expect(page.locator('.figma-create-post-visibility').getByText('Public', { exact: true })).toBeVisible()
+  await expect(page.locator('.figma-create-post-visibility').getByText('Friends Only', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Open add menu')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Choose a place from the map' })).toBeVisible()
+
+  await openDesktop(page, '/map')
+  await page.locator('.figma-feed-tabs').getByRole('link', { name: 'Map', exact: true }).click()
   await expect(page).toHaveURL(/\/map\?view=map/)
   await expect(page.locator('.figma-feed-map-screen')).toBeVisible()
 
@@ -83,6 +121,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(page.locator('.figma-pass-plan-free').getByText('Free', { exact: true })).toBeVisible()
   await expect(page.locator('.figma-pass-plan-paid').getByText('Pass', { exact: true })).toBeVisible()
   await expect(page.getByText('Notification alerts', { exact: true })).toBeVisible()
+  await expect(page.getByText('Billed monthly. Taxes and renewal terms appear before payment.', { exact: true })).toHaveCount(0)
   await page.locator('.figma-pass-tabs').getByRole('link', { name: 'Manage', exact: true }).click()
   await expect(page).toHaveURL(/\/membership\?view=manage/)
   await expect(page.locator('.figma-pass-current-plan')).toBeVisible()
@@ -107,11 +146,27 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(page.locator('.figma-settings-window')).toBeVisible()
   await expect(page.locator('.figma-settings-local-nav')).toBeVisible()
   await expect(page.locator('.figma-settings-detail')).toBeVisible()
+  const settingsClose = page.getByRole('link', { name: 'Close settings' })
+  await expect(settingsClose).toBeVisible()
+  await expect(settingsClose).toHaveAttribute('href', '/profile')
   await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
   await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
   await expect(page.locator('#profile')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Close settings' })).toBeVisible()
   await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Billing', exact: true }).click()
   await expect(page.locator('#billing')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Manage billing' })).toHaveAttribute('href', '/membership?view=manage')
+  await page.getByRole('link', { name: 'Close settings' }).click()
+  await expect(page).toHaveURL(/\/profile$/)
+
+  /* Wide monitors should add balanced whitespace around the authored 1000px
+     Figma canvas instead of pinning the dashboard composition to the sidebar. */
+  await page.setViewportSize({ width: 1600, height: 900 })
+  for (const route of ['/discover', '/map', '/plans', '/matches', '/membership', '/profile', '/account', '/create/post']) {
+    await page.goto(route)
+    await page.waitForLoadState('networkidle')
+    await expectCenteredDashboardCanvas(page)
+    await assertNoHorizontalOverflow(page)
+  }
 })
