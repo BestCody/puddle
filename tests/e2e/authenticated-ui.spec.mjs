@@ -146,11 +146,11 @@ test('official Figma product UI works across core authenticated pages on desktop
 
   await page.goto('/profile')
   await expect(page.locator('.minimal-profile-card h1')).toHaveText('UI Contract Tester')
-  await expect(page.getByText('Puddles', { exact: true })).toBeVisible()
-  await expect(page.getByText('Location', { exact: true })).toBeVisible()
-  await expect(page.getByText('Saves', { exact: true })).toBeVisible()
-  await expect(page.getByText('Friends', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Change profile photo' })).toBeVisible()
+  await expect(page.locator('.minimal-profile-settings > :nth-child(1) > span')).toHaveText('Puddles')
+  await expect(page.locator('.minimal-profile-settings > :nth-child(2) > span')).toHaveText('Location')
+  await expect(page.locator('.minimal-profile-settings > :nth-child(3) > span')).toHaveText('Saves')
+  await expect(page.locator('.minimal-profile-settings > :nth-child(4) > span')).toHaveText('Friends')
+  await expect(page.getByLabel('Change profile photo')).toBeVisible()
   await expect(page.getByText('Advanced', { exact: true })).toHaveCount(0)
   await expect(page.locator('.minimal-advanced-settings')).toHaveCount(0)
   await assertRouteHealth(page)
@@ -177,7 +177,7 @@ test('changing a profile picture uploads and renders the actual color image afte
 
   // Profile photo management remains functional, but the current Figma puts
   // it behind the large + card instead of rendering an always-open settings UI.
-  await page.getByRole('button', { name: 'Change profile photo' }).click()
+  await page.getByLabel('Change profile photo').click()
   const editor = page.locator('.figma-profile-photo-popover .profile-photo-editor')
   await expect(editor).toBeVisible()
   const input = editor.locator('input[type="file"]')
