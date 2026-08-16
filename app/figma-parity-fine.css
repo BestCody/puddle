@@ -1,0 +1,52 @@
+/* Pixel-level control sizing from the current desktop Figma frames. */
+@media (min-width:761px) {
+  .figma-feed-segment {
+    width: 152px !important;
+    height: 46px !important;
+  }
+  .figma-feed-segment > a,
+  .figma-feed-segment > button {
+    min-width: 0 !important;
+    flex: 1 1 50%;
+    min-height: 34px !important;
+    padding-inline: 8px !important;
+  }
+  .figma-feed-search {
+    width: 190px !important;
+    min-height: 40px !important;
+    height: 40px !important;
+  }
+
+  .figma-saved-segment {
+    width: 147px !important;
+    height: 48px !important;
+  }
+  .figma-saved-segment > a {
+    min-width: 0 !important;
+    flex: 1 1 50%;
+    min-height: 36px !important;
+    padding-inline: 7px !important;
+  }
+
+  .social-tabs {
+    width: 238px !important;
+    height: 48px !important;
+  }
+  .social-tabs button {
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
+    height: 36px !important;
+    padding-inline: 8px !important;
+  }
+
+  .figma-pass-segment {
+    width: 167px !important;
+    height: 48px !important;
+  }
+  .figma-pass-segment > a {
+    min-width: 0 !important;
+    flex: 1 1 50%;
+    min-height: 36px !important;
+    padding-inline: 8px !important;
+  }
+}
