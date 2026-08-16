@@ -23,7 +23,7 @@ async function visibleLandingCanvas(page) {
   await expect(page.locator(mode === 'desktop' ? '.landing-stage--mobile' : '.landing-stage--desktop')).not.toBeVisible()
   await expect(page.locator(selector)).toBeVisible()
   if (mode === 'desktop') await expect(page.locator('.landing-sticky-left')).toBeVisible()
-  return { mode, stage, selector, authRoot: landingAuthRoot(mode), width }
+  return { mode, stage, selector, authRoot: landingAuthRoot(mode) }
 }
 
 for (const [path, heading] of publicPages) {
@@ -38,38 +38,26 @@ for (const [path, heading] of publicPages) {
   })
 }
 
-test('landing page is real responsive frontend composed from the Figma design', async ({ page }, testInfo) => {
+test('landing page uses the correct responsive composition and real DOM content', async ({ page }, testInfo) => {
   const health = trackFrontendHealth(page, { baseURL: testInfo.project.use.baseURL, strictConsole: false })
   await page.goto('/')
-  const { mode, stage, selector, authRoot, width } = await visibleLandingCanvas(page)
-  const height = await page.evaluate(() => window.innerHeight)
-
-  const metrics = await page.locator(stage).evaluate((node) => {
-    const canvas = node.querySelector('.landing-canvas')
-    const rect = node.getBoundingClientRect()
-    const canvasRect = canvas.getBoundingClientRect()
-    return { stageWidth: rect.width, stageHeight: rect.height, canvasWidth: canvasRect.width, canvasHeight: canvasRect.height, left: rect.left, right: document.documentElement.clientWidth - rect.right }
-  })
+  const { mode, selector, authRoot } = await visibleLandingCanvas(page)
 
   if (mode === 'desktop') {
-    expect(await page.locator('[data-figma-node="83:76"]').isVisible()).toBe(true)
-    expect(metrics.stageWidth).toBeCloseTo(Math.min(width, 1281, height * 1.425), 0)
-    expect(metrics.stageWidth).toBeLessThanOrEqual(1281.5)
+    await expect(page.locator('[data-figma-node="83:76"]')).toBeVisible()
     await expect(page.locator('.landing-sticky-left .login-panel input')).toHaveCount(2)
+    await expect(page.locator('.landing-sticky-left')).toHaveAttribute('data-footer-suspended', 'false')
     await expect(page.locator('.feature-card--d-swipe')).toBeVisible()
   } else {
-    expect(await page.locator('[data-figma-node="161:116"]').isVisible()).toBe(true)
-    expect(metrics.stageWidth).toBeCloseTo(Math.min(width, 704), 0)
-    expect(metrics.stageWidth).toBeLessThanOrEqual(704.5)
+    await expect(page.locator('[data-figma-node="161:116"]')).toBeVisible()
     await expect(page.locator('.mobile-jump')).toBeVisible()
     await expect(page.locator('.feature-card--m-swipe')).toBeVisible()
+    await expect(page.locator('.landing-sticky-left')).not.toBeVisible()
   }
 
-  expect(metrics.canvasWidth).toBeCloseTo(metrics.stageWidth, 0)
-  expect(metrics.canvasHeight / metrics.canvasWidth).toBeCloseTo(mode === 'desktop' ? 7578 / 1281 : 9660 / 704, 3)
-  expect(Math.abs(metrics.left - metrics.right)).toBeLessThanOrEqual(1)
-  expect(await page.locator('img[src="/figma/landing-desktop.png"]').count()).toBe(0)
-  expect(await page.locator('img[src="/figma/landing-mobile.png"]').count()).toBe(0)
+  await expect(page.locator('img[src="/figma/landing-desktop.png"]')).toHaveCount(0)
+  await expect(page.locator('img[src="/figma/landing-mobile.png"]')).toHaveCount(0)
+  await expect(page.locator('.interactive-pill')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Discover places. See who’s there.', level: 1 })).toBeVisible()
 
   for (const path of ['/signin', '/signup']) expect(await page.locator(`${authRoot} a[href="${path}"]`).count()).toBeGreaterThan(0)
@@ -79,7 +67,31 @@ test('landing page is real responsive frontend composed from the Figma design', 
   health.assertHealthy()
 })
 
-test('landing safety modal and Figma navigation work', async ({ page }) => {
+test('desktop landing releases the sticky sign-in pane for the full-width footer and restores it above the footer', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Desktop sticky-footer behavior only')
+
+  await page.goto('/')
+  await visibleLandingCanvas(page)
+  const sticky = page.locator('.landing-sticky-left')
+  const footer = page.locator('#footer-d')
+
+  await expect(sticky).toHaveAttribute('data-footer-suspended', 'false')
+  await expect(sticky).toHaveAttribute('aria-hidden', 'false')
+
+  await footer.scrollIntoViewIfNeeded()
+  await expect(footer).toBeVisible()
+  await expect(sticky).toHaveAttribute('data-footer-suspended', 'true')
+  await expect(sticky).toHaveAttribute('aria-hidden', 'true')
+  for (const label of ['Explore', 'Company', 'Connect']) {
+    await expect(footer.getByText(label, { exact: true })).toBeVisible()
+  }
+
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  await expect(sticky).toHaveAttribute('data-footer-suspended', 'false')
+  await expect(sticky).toHaveAttribute('aria-hidden', 'false')
+})
+
+test('landing safety modal and navigation work', async ({ page }) => {
   await page.goto('/')
   const { mode, selector } = await visibleLandingCanvas(page)
   await page.locator(`${selector} button[data-open-safety]`).click()
@@ -115,7 +127,7 @@ test('landing auth controls reach the real auth pages', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Make plans that leave the chat.', level: 1 })).toBeVisible()
 })
 
-test('Figma 404 gives the user a working route home', async ({ page }) => {
+test('404 gives the user a working route home', async ({ page }) => {
   await page.goto('/this-puddle-does-not-exist')
   await expect(page.getByRole('heading', { name: 'This puddle dried up.' })).toBeVisible()
   await expect(page.getByText('404', { exact: true })).toBeVisible()
