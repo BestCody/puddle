@@ -35,7 +35,11 @@ export default async function CreatePostPage() {
         <button className="figma-create-post-submit" type="button" disabled aria-label="Post publishing is not enabled yet">↑</button>
         <label className="figma-create-post-title"><span className="sr-only">Title</span><input name="title" maxLength="80" placeholder="Title" /></label>
         <label className="figma-create-post-description"><span className="sr-only">Description</span><textarea name="description" maxLength="1000" placeholder="Description" /></label>
-        <label className="figma-create-post-photo"><input type="file" accept="image/jpeg,image/png,image/webp" multiple /><span>＋</span></label>
+        <details className="figma-create-post-add">
+          <summary aria-label="Open add menu">＋</summary>
+          <div className="figma-create-post-add-menu" aria-hidden="true" />
+          <div className="figma-create-post-add-footer" aria-hidden="true" />
+        </details>
         <Link className="figma-create-post-map" href="/map?view=map" aria-label="Choose a place from the map">⌑</Link>
         <small className="figma-create-post-note">Post publishing is not connected to a backend yet. The composer UI is ready without pretending a post was saved.</small>
       </form>
