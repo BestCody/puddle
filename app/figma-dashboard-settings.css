@@ -52,9 +52,7 @@
   box-sizing: border-box;
   color: #858585;
 }
-.figma-settings-section:target { display: block; }
-.figma-settings-window:has(.figma-settings-section:target) { min-height: 900px; }
-.figma-settings-local-nav:has(+ .figma-settings-detail .figma-settings-section:target) { min-height: 900px; }
+.figma-settings-window.is-expanded .figma-settings-section { display: block; }
 .figma-settings-section header { margin-bottom: 42px; }
 .figma-settings-section header small { font: 800 12px/1 var(--figma-mono); }
 .figma-settings-section header h1 { margin: 8px 0 0; color: #000; font: 800 34px/1.1 Manrope, sans-serif; letter-spacing: -1px; }
@@ -106,5 +104,6 @@
   .figma-settings-local-nav nav { margin-top: 28px; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
   .figma-settings-detail { margin-left: 0; }
   .figma-settings-section { padding: 28px 20px 130px; min-height: 700px; }
+  .figma-settings-window.is-expanded .figma-settings-section { position: relative; }
   .figma-settings-row { grid-template-columns: 1fr; gap: 8px; padding: 16px 0; }
 }
