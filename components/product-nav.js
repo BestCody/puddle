@@ -27,7 +27,7 @@ function isActive(pathname, href) {
   if (href === '/plans') return pathname === '/plans' || pathname.startsWith('/plans/')
   if (href === '/matches') return pathname === '/matches' || pathname.startsWith('/matches/')
   if (href === '/membership') return pathname === '/membership' || pathname.startsWith('/global-matches')
-  if (href === '/map') return pathname === '/map'
+  if (href === '/map') return pathname === '/map' || pathname.startsWith('/create/post')
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
@@ -50,6 +50,6 @@ function NavItems({ mobile = false, avatarUrl = null }) {
 
 export function ProductNav({ mobile = false, avatarUrl = null }) {
   return mobile
-    ? <nav className="figma-dashboard-mobile-nav minimal-mobile-nav" aria-label="Puddle mobile navigation"><NavItems mobile avatarUrl={avatarUrl} /></nav>
-    : <nav className="figma-dashboard-nav minimal-product-nav" aria-label="Puddle navigation"><NavItems avatarUrl={avatarUrl} /></nav>
+    ? <nav className="figma-dashboard-mobile-nav" aria-label="Puddle mobile navigation"><NavItems mobile avatarUrl={avatarUrl} /></nav>
+    : <nav className="figma-dashboard-nav" aria-label="Puddle navigation"><NavItems avatarUrl={avatarUrl} /></nav>
 }
