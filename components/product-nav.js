@@ -7,7 +7,7 @@ function NavIcon({ type, avatarUrl }) {
   if (type === 'swipe') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3.5" width="12" height="17" rx="3"/><path d="M9 7h6M4 9l-2 3 2 3M20 9l2 3-2 3"/></svg>
   if (type === 'feed') return <svg className="figma-feed-icon" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="9.5"/><path d="m17.6 10.4-2.25 5-4.95 2.2 2.2-4.95 5-2.25Z"/></svg>
   if (type === 'saved') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V21l-6-3.8L6 21V4.5Z"/></svg>
-  if (type === 'friends') return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.2" r="2.4"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0M14.2 15.2A4.4 4.4 0 0 1 21 19"/></svg>
+  if (type === 'friends') return <svg className="figma-friends-icon" viewBox="0 0 25 25" aria-hidden="true"><path d="M12.5 4.1c5.25 0 9.4 3.42 9.4 7.78s-4.15 7.79-9.4 7.79c-1.32 0-2.58-.22-3.72-.62L4.1 21l1.55-4.13c-1.61-1.38-2.55-3.12-2.55-4.99 0-4.36 4.15-7.78 9.4-7.78Z"/></svg>
   if (type === 'billing') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 9.5h19M6.5 15h4"/></svg>
   if (type === 'settings') return <span className="figma-nav-glyph figma-settings-glyph" aria-hidden="true">⚙</span>
   if (type === 'profile' && avatarUrl) return <img className="product-nav-profile-photo" src={avatarUrl} alt="" aria-hidden="true" />
