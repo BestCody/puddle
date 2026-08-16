@@ -41,6 +41,25 @@ function ensureDesktopStickyPane() {
   return pane
 }
 
+function desktopFooterHasReachedViewport() {
+  if (window.matchMedia('(max-width: 760px)').matches) return false
+  const footer = $('.site-footer--desktop')
+  if (!footer) return false
+  const footerRect = footer.getBoundingClientRect()
+  return footerRect.top < window.innerHeight && footerRect.bottom > 0
+}
+
+function updateDesktopStickyState() {
+  const pane = $('.landing-sticky-left')
+  if (!pane) return
+  const suspended = desktopFooterHasReachedViewport()
+  pane.classList.toggle('is-footer-suspended', suspended)
+  pane.style.visibility = suspended ? 'hidden' : 'visible'
+  pane.style.pointerEvents = suspended ? 'none' : 'auto'
+  pane.setAttribute('aria-hidden', suspended ? 'true' : 'false')
+  pane.dataset.footerSuspended = suspended ? 'true' : 'false'
+}
+
 function syncDesktopStickyPane(stage, scale, hidden) {
   const pane = ensureDesktopStickyPane()
   if (!pane) return
@@ -59,6 +78,7 @@ function syncDesktopStickyPane(stage, scale, hidden) {
     surface.style.transform = `scale(${scale})`
     surface.dataset.scale = String(scale)
   }
+  updateDesktopStickyState()
 }
 
 function fitLanding() {
@@ -96,6 +116,10 @@ function protectInteractiveLayers() {
   $$('.final-cta > a').forEach((link) => {
     link.style.pointerEvents = 'auto'
   })
+}
+
+function removeInteractivePills() {
+  $$('.interactive-pill').forEach((pill) => pill.remove())
 }
 
 function updateMobileJump() {
@@ -241,16 +265,22 @@ function initDraggablePhones() {
   })
 }
 
+function updateLandingScrollState() {
+  updateMobileJump()
+  updateDesktopStickyState()
+}
+
 function initLanding() {
   ensureDesktopStickyPane()
+  removeInteractivePills()
   fitLanding()
   protectInteractiveLayers()
-  updateMobileJump()
+  updateLandingScrollState()
   initInteractivePhoneDemos()
   initPhoneDemoLoading()
   window.addEventListener('resize', fitLanding, { passive: true })
   window.addEventListener('orientationchange', fitLanding, { passive: true })
-  window.addEventListener('scroll', updateMobileJump, { passive: true })
+  window.addEventListener('scroll', updateLandingScrollState, { passive: true })
 
   $$('[data-open-safety]').forEach((button) => button.addEventListener('click', openSafetyDialog))
   $$('[data-close-safety]').forEach((button) => button.addEventListener('click', closeSafetyDialog))
