@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { ProfilePhotoEditor } from '@/components/profile-photo-editor'
 import { renderProductPage } from '@/lib/app/render-product-page'
 
 export const dynamic = 'force-dynamic'
@@ -16,27 +15,56 @@ function profilePhotoUrl(session, path) {
   return session.supabase.storage.from('puddle-public-media').getPublicUrl(value).data.publicUrl
 }
 
+function preferenceLabel(value) {
+  const label = String(value || '').replaceAll('_', ' ').trim()
+  return label ? label.replace(/\b\w/g, (letter) => letter.toUpperCase()) : null
+}
+
 export default async function ProfilePage() {
   return renderProductPage(async (session) => {
     const avatarUrl = profilePhotoUrl(session, session.profile.avatar_path)
-    const preferences = session.profile.interests || []
+    const preferences = (session.profile.interests || []).map(preferenceLabel).filter(Boolean).slice(0, 3)
     const locationLabel = session.profile.location_label || [session.profile.city, session.profile.region, session.profile.country].filter(Boolean).join(', ') || 'Add your location'
+    const displayName = session.profile.display_name || 'Puddle person'
+    const username = session.profile.username || 'puddle'
 
     return <div className="minimal-profile-page">
-      <section className="minimal-profile-card">
+      <section className="minimal-profile-card" aria-label="Profile overview">
         <div className="minimal-profile-avatar" style={{ overflow: 'hidden' }}>
-          {avatarUrl ? <img src={avatarUrl} alt={`${session.profile.display_name || 'Puddle person'} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(session.profile.display_name)}
+          {avatarUrl ? <img src={avatarUrl} alt={`${displayName} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
         </div>
-        <div><h1>{session.profile.display_name || 'Puddle person'}</h1>{session.profile.username ? <small>@{session.profile.username}</small> : null}<p>{locationLabel}</p></div>
+        <div>
+          <h1>{displayName}</h1>
+          <small>@{username}</small>
+          <div className="figma-profile-stats" aria-label="Profile social counts"><span>0 Followers</span><span>0 Following</span></div>
+          <div className="figma-profile-pills" aria-label="Favorite categories">
+            {(preferences.length ? preferences : ['Bar', 'Nightlife', 'Shop']).map((value) => <span key={value}>{value}</span>)}
+            <span aria-hidden="true">+</span>
+          </div>
+          <div className="figma-profile-actions">
+            <Link className="is-primary" href="/matches?tab=add">Follow</Link>
+            <Link href="/matches">◯ Message</Link>
+          </div>
+        </div>
         <Link href="/account">Edit</Link>
       </section>
 
-      <section className="minimal-profile-settings">
-        <div className="minimal-profile-photo-setting"><span>Profile picture</span><ProfilePhotoEditor userId={session.user.id} currentPath={session.profile.avatar_path || null} displayName={session.profile.display_name} /></div>
+      <section className="minimal-profile-settings figma-profile-panels" aria-label="Profile details">
+        <div className="figma-profile-puddles">
+          <span>Puddles</span>
+          <article className="figma-profile-mini-puddle" aria-label="Recent puddle preview">
+            <div className="figma-profile-mini-author">
+              <span className="figma-profile-mini-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? '' : initials(displayName)}</span>
+              <span><strong>{displayName}</strong><small>2 hours ago</small></span>
+            </div>
+            <div className="figma-profile-mini-photos"><i /><i /><i>+30</i></div>
+            <div className="figma-profile-mini-place"><small>Park</small><strong>Maple Grove Park</strong><b>+</b></div>
+          </article>
+        </div>
         <div><span>Location</span><strong>{locationLabel}</strong></div>
-        <div><span>Search radius</span><strong>{session.profile.search_radius_km || 10} km</strong></div>
-        <div className="minimal-profile-preferences"><span>Preferences</span><div>{preferences.length ? preferences.map((value) => <small key={value}>{String(value).replaceAll('_', ' ')}</small>) : <small>Not set</small>}</div></div>
-        <Link href="/account">Account settings</Link>
+        <div><span>Saves</span></div>
+        <div><span>Friends</span></div>
+        <Link href="/account" aria-label="Edit profile details">+</Link>
       </section>
     </div>
   })
