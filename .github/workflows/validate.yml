@@ -26,6 +26,8 @@ jobs:
           python-version: '3.13'
       - name: Compile global data Python scripts
         run: python -m py_compile scripts/b2-preflight.py scripts/global-data/*.py
+      - name: Run no-key global data fixture smoke test
+        run: python scripts/global-data/fixture_smoke.py
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Audit production dependencies
