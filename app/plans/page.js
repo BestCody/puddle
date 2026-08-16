@@ -114,7 +114,7 @@ export default async function PlansPage({ searchParams }) {
       {active === 'saved' ? <form className="figma-saved-floating-search" action="/plans" method="get">
         <input type="hidden" name="tab" value="saved" />
         {selectedCategory !== 'all' ? <input type="hidden" name="category" value={selectedCategory} /> : null}
-        <label><span className="sr-only">Search saved puddles</span><input type="search" name="q" defaultValue={params?.q || ''} placeholder="Search a saved puddle..." /></label>
+        <label><input aria-label="Search saved puddles" type="search" name="q" defaultValue={params?.q || ''} placeholder="Search a saved puddle..." /></label>
         <button type="submit" aria-label="Search saved puddles">↑</button>
       </form> : null}
 
