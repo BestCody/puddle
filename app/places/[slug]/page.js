@@ -1,13 +1,12 @@
 import { notFound } from 'next/navigation'
 import { PublicLocationView } from '@/components/public-listing'
-import { getPublicLocation, placeStructuredData } from '@/lib/app/public-content'
+import { placeStructuredData } from '@/lib/app/public-content'
+import { getCachedPublicLocation } from '@/lib/app/public-location-cache'
 import { serializeStructuredData } from '@/lib/app/structured-data'
-
-export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
-  const result = await getPublicLocation(slug)
+  const result = await getCachedPublicLocation(slug)
   if (!result) return { title: 'Place not found' }
   const { location } = result
   return {
@@ -26,7 +25,7 @@ export async function generateMetadata({ params }) {
 
 export default async function PlacePage({ params }) {
   const { slug } = await params
-  const result = await getPublicLocation(slug)
+  const result = await getCachedPublicLocation(slug)
   if (!result) notFound()
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'
   const structured = placeStructuredData(result.location, `${site}/places/${result.location.slug}`)
