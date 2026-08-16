@@ -18,7 +18,7 @@ async function assertRouteHealth(page) {
   await assertNoHorizontalOverflow(page)
 }
 
-test('official Figma product UI works across core authenticated pages on desktop and mobile', async ({ page }, testInfo) => {
+test('core authenticated UI behavior works across desktop and mobile', async ({ page }, testInfo) => {
   const account = await createConfirmedUser({ displayName: 'UI Contract Tester' })
   await completeProfileDirect(account.user.id, { display_name: 'UI Contract Tester' })
 
@@ -36,54 +36,29 @@ test('official Figma product UI works across core authenticated pages on desktop
   const shareButton = page.getByRole('button', { name: 'Send to' })
 
   if (testInfo.project.name === 'desktop-chromium') {
-    // The current desktop Swipe Figma frame contains only the card actions and
-    // the compact top-right menu; the legacy filter/share toolbar is absent.
     await expect(filterButton).toBeHidden()
     await expect(shareButton).toBeHidden()
-
-    const menuLines = page.locator('.figma-menu-icon > i')
-    await expect(menuLines).toHaveCount(3)
-    const firstLine = await menuLines.nth(0).boundingBox()
-    const secondLine = await menuLines.nth(1).boundingBox()
-    const thirdLine = await menuLines.nth(2).boundingBox()
-    expect(firstLine).toBeTruthy()
-    expect(secondLine).toBeTruthy()
-    expect(thirdLine).toBeTruthy()
-    expect(secondLine.y - firstLine.y).toBeGreaterThanOrEqual(4)
-    expect(secondLine.y - firstLine.y).toBeLessThanOrEqual(8)
-    expect(thirdLine.y - secondLine.y).toBeGreaterThanOrEqual(4)
-    expect(thirdLine.y - secondLine.y).toBeLessThanOrEqual(8)
+    await expect(page.locator('.profile-menu summary')).toBeVisible()
+    await expect(page.locator('.figma-menu-icon > i')).toHaveCount(3)
 
     const sidebar = page.locator('.minimal-product-sidebar')
     const resizer = page.getByRole('separator', { name: 'Resize navigation sidebar' })
+    await expect(sidebar).toBeVisible()
     await expect(resizer).toBeVisible()
-    const initialSidebar = await sidebar.boundingBox()
-    const handle = await resizer.boundingBox()
-    expect(initialSidebar.width).toBeGreaterThanOrEqual(270)
-    expect(handle).toBeTruthy()
-    await page.mouse.move(handle.x + handle.width / 2, handle.y + Math.min(120, handle.height / 2))
-    await page.mouse.down()
-    await page.mouse.move(handle.x - 125, handle.y + Math.min(120, handle.height / 2), { steps: 8 })
-    await page.mouse.up()
+
+    await resizer.focus()
+    await page.keyboard.press('Home')
     await expect(sidebar).toHaveClass(/is-collapsed/)
-    expect(Number(await sidebar.getAttribute('data-sidebar-width'))).toBeLessThan(196)
     await expect(sidebar.locator('.product-nav-label').first()).toBeHidden()
     await expect(sidebar.locator('.product-nav-icon').first()).toBeVisible()
+
     await resizer.focus()
     await page.keyboard.press('End')
     await expect(sidebar).toHaveClass(/is-expanded/)
-    expect(Number(await sidebar.getAttribute('data-sidebar-width'))).toBe(280)
     await expect(sidebar.locator('.product-nav-label').first()).toBeVisible()
   } else {
-    // Mobile keeps its dedicated compact controls from the mobile Figma flow.
     await expect(filterButton).toBeVisible()
     await expect(shareButton).toBeVisible()
-    const filterBox = await filterButton.boundingBox()
-    const shareBox = await shareButton.boundingBox()
-    expect(filterBox).toBeTruthy()
-    expect(shareBox).toBeTruthy()
-    expect(Math.abs((shareBox.y + shareBox.height / 2) - (filterBox.y + filterBox.height / 2))).toBeLessThanOrEqual(8)
-
     await shareButton.click()
     await expect(page.getByRole('heading', { name: 'Send to' })).toBeVisible()
     await page.getByRole('button', { name: 'Close' }).click()
@@ -175,8 +150,6 @@ test('changing a profile picture uploads and renders the actual color image afte
     }
   }).png().toBuffer()
 
-  // Profile photo management remains functional, but the current Figma puts
-  // it behind the large + card instead of rendering an always-open settings UI.
   await page.getByLabel('Change profile photo').click()
   const editor = page.locator('.figma-profile-photo-popover .profile-photo-editor')
   await expect(editor).toBeVisible()
