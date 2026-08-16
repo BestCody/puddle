@@ -8,12 +8,26 @@ import os
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-import duckdb
 import boto3
+import duckdb
 from botocore.client import Config
+
+
+def first_env(*names, default=''):
+    for name in names:
+        value = str(os.getenv(name, '')).strip()
+        if value:
+            return value
+    return default
+
+
+def clean_prefix(value):
+    return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
@@ -21,17 +35,21 @@ parser.add_argument('--alias', default=os.getenv('GLOBAL_LOCATION_SEARCH_INDEX',
 parser.add_argument('--batch-size', type=int, default=int(os.getenv('OPENSEARCH_BULK_BATCH_SIZE', '2000')))
 args = parser.parse_args()
 
-ENDPOINT = (os.getenv('GLOBAL_LOCATION_SEARCH_URL') or os.getenv('OPENSEARCH_URL') or '').rstrip('/')
+ENDPOINT = (first_env('GLOBAL_LOCATION_SEARCH_URL', 'OPENSEARCH_URL')).rstrip('/')
 if not ENDPOINT:
     raise RuntimeError('GLOBAL_LOCATION_SEARCH_URL or OPENSEARCH_URL is required.')
 if not (ENDPOINT.startswith('https://') or ENDPOINT.startswith('http://localhost') or ENDPOINT.startswith('http://127.0.0.1')):
     raise RuntimeError('OpenSearch endpoint must use HTTPS outside local development.')
 
-BUCKET = os.environ['B2_DATA_BUCKET_NAME']
-B2_ENDPOINT = os.environ['B2_DATA_S3_ENDPOINT'].replace('https://', '').replace('http://', '').rstrip('/')
-B2_KEY_ID = os.getenv('B2_DATA_KEY_ID') or os.environ['B2_DATA_APPLICATION_KEY_ID']
-B2_KEY = os.environ['B2_DATA_APPLICATION_KEY']
-B2_REGION = os.getenv('B2_DATA_S3_REGION', 'us-west-004')
+BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
+B2_ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
+B2_ENDPOINT = B2_ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
+B2_KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
+B2_KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
+B2_REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
+DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+if not B2_ENDPOINT or not B2_KEY_ID or not B2_KEY:
+    raise RuntimeError('B2 endpoint and credentials are required.')
 INDEX = re.sub(r'[^a-z0-9_.-]+', '-', f'locations-v1-{args.snapshot.lower()}-{int(time.time())}')[:200]
 BATCH = max(100, min(10_000, args.batch_size))
 
@@ -48,6 +66,7 @@ def json_object(value):
         except Exception:
             return {}
     return {}
+
 
 def headers(content_type='application/json'):
     result = {'Accept': 'application/json', 'Content-Type': content_type}
@@ -67,10 +86,7 @@ def request(method, path, payload=None, content_type='application/json', retries
     body = None
     extra_headers = headers(content_type)
     if payload is not None:
-        if isinstance(payload, bytes):
-            body = payload
-        else:
-            body = json.dumps(payload).encode()
+        body = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
     for attempt in range(retries):
         req = urllib.request.Request(f'{ENDPOINT}{path}', data=body, method=method, headers=extra_headers)
         try:
@@ -84,6 +100,7 @@ def request(method, path, payload=None, content_type='application/json', retries
             delay = min(30, int(error.headers.get('Retry-After', '0') or 0) or (2 ** attempt))
             time.sleep(delay)
     raise RuntimeError('OpenSearch request exhausted retries.')
+
 
 mapping = {
     'settings': {
@@ -142,10 +159,10 @@ CREATE OR REPLACE SECRET b2_data_secret (
 );
 """)
 
-locations_glob = f's3://{BUCKET}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet'
-photo_glob = f's3://{BUCKET}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/photo_metadata.parquet'
-enriched_photo_glob = f's3://{BUCKET}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code=*/*.parquet'
-google_glob = f's3://{BUCKET}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/google_places.parquet'
+locations_glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet'
+photo_glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/photo_metadata.parquet'
+enriched_photo_glob = f's3://{BUCKET}/{DATA_PREFIX}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code=*/*.parquet'
+google_glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/google_places.parquet'
 
 con.execute(f"CREATE OR REPLACE TEMP VIEW loc AS SELECT * FROM read_parquet('{locations_glob}', union_by_name=true, hive_partitioning=true)")
 photo_sources = []
@@ -197,13 +214,13 @@ ORDER BY l.id
 columns = [item[0] for item in query.description]
 indexed = 0
 failed = 0
+sample_document = None
 
 while True:
     rows = query.fetchmany(BATCH)
     if not rows:
         break
     lines = []
-    ids = []
     for values in rows:
         row = dict(zip(columns, values))
         document = {
@@ -228,9 +245,10 @@ while True:
                 'attribution_url': row['photo_attribution_url'], 'license': row['photo_license'],
                 'width': row['photo_width'], 'height': row['photo_height']
             }
+        if sample_document is None:
+            sample_document = document
         lines.append(json.dumps({'index': {'_index': INDEX, '_id': row['id']}}, separators=(',', ':')))
         lines.append(json.dumps(document, separators=(',', ':'), default=str))
-        ids.append(row['id'])
     raw = ('\n'.join(lines) + '\n').encode()
     compressed = gzip.compress(raw, compresslevel=1)
     hdr = headers('application/x-ndjson')
@@ -244,7 +262,7 @@ while True:
             break
         except urllib.error.HTTPError as error:
             body = error.read().decode(errors='replace')[:1000]
-            if error.code not in {408,425,429,500,502,503,504} or attempt == 4:
+            if error.code not in {408, 425, 429, 500, 502, 503, 504} or attempt == 4:
                 raise RuntimeError(f'OpenSearch bulk failed {error.code}: {body}') from error
             time.sleep(min(30, 2 ** attempt))
     items = response.get('items', [])
@@ -260,20 +278,66 @@ request('POST', f'/{INDEX}/_refresh')
 count = request('GET', f'/{INDEX}/_count').get('count', 0)
 if int(count) != indexed or failed:
     raise RuntimeError(f'Index validation failed: OpenSearch count={count}, locally indexed={indexed}, failed={failed}.')
+if indexed <= 0 or sample_document is None:
+    raise RuntimeError('Index validation failed: canonical snapshot produced no searchable documents.')
+
+# Exercise the same classes of query the runtime depends on before the alias can move.
+sample_id = urllib.parse.quote(str(sample_document['id']), safe='')
+lookup = request('GET', f'/{INDEX}/_doc/{sample_id}')
+if not lookup.get('found'):
+    raise RuntimeError('Index validation failed: sample ID lookup was not found.')
+name_check = request('POST', f'/{INDEX}/_search', {'size': 1, 'query': {'match': {'name': sample_document['name']}}})
+if int(name_check.get('hits', {}).get('total', {}).get('value', 0)) < 1:
+    raise RuntimeError('Index validation failed: sample text query returned no results.')
+category = sample_document.get('category')
+if category:
+    category_check = request('POST', f'/{INDEX}/_search', {'size': 1, 'query': {'term': {'category': category}}})
+    if int(category_check.get('hits', {}).get('total', {}).get('value', 0)) < 1:
+        raise RuntimeError('Index validation failed: sample category query returned no results.')
+location = sample_document.get('location') or {}
+if location.get('lat') is not None and location.get('lon') is not None:
+    geo_check = request('POST', f'/{INDEX}/_search', {
+        'size': 1,
+        'query': {'bool': {'filter': {'geo_distance': {'distance': '1km', 'location': location}}}},
+    })
+    if int(geo_check.get('hits', {}).get('total', {}).get('value', 0)) < 1:
+        raise RuntimeError('Index validation failed: sample geo-radius query returned no results.')
 
 request('PUT', f'/{INDEX}/_settings', {'index': {'refresh_interval': os.getenv('OPENSEARCH_REFRESH_INTERVAL', '30s')}})
 
-alias_state = request('GET', f'/_alias/{args.alias}') if False else None
 try:
     current = request('GET', f'/_alias/{args.alias}')
     old_indices = list(current.keys())
 except RuntimeError as error:
-    if '404' in str(error): old_indices = []
-    else: raise
+    if '404' in str(error):
+        old_indices = []
+    else:
+        raise
 actions = [{'remove': {'index': old, 'alias': args.alias}} for old in old_indices if old != INDEX]
 actions.append({'add': {'index': INDEX, 'alias': args.alias}})
 request('POST', '/_aliases', {'actions': actions})
-active = {'index': INDEX, 'alias': args.alias, 'documents': indexed, 'snapshot': args.snapshot, 'activatedAt': datetime.now(timezone.utc).isoformat()}
-b2 = boto3.client('s3', endpoint_url=os.environ['B2_DATA_S3_ENDPOINT'], aws_access_key_id=B2_KEY_ID, aws_secret_access_key=B2_KEY, config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}))
-b2.put_object(Bucket=BUCKET, Key='manifests/active-location-snapshot.json', Body=(json.dumps(active, indent=2)+'\n').encode(), ContentType='application/json')
+
+# Verify the alias actually resolves to the validated index before publishing the active pointer.
+alias_after = request('GET', f'/_alias/{args.alias}')
+if INDEX not in alias_after:
+    raise RuntimeError(f'OpenSearch alias validation failed: {args.alias} does not point at {INDEX}.')
+
+active = {
+    'index': INDEX,
+    'alias': args.alias,
+    'documents': indexed,
+    'snapshot': args.snapshot,
+    'activatedAt': datetime.now(timezone.utc).isoformat(),
+    'validation': {'count': True, 'idLookup': True, 'text': True, 'category': bool(category), 'geo': True},
+}
+b2 = boto3.client(
+    's3', endpoint_url=B2_ENDPOINT_URL, aws_access_key_id=B2_KEY_ID, aws_secret_access_key=B2_KEY,
+    config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
+)
+b2.put_object(
+    Bucket=BUCKET,
+    Key=f'{DATA_PREFIX}/manifests/active-location-snapshot.json',
+    Body=(json.dumps(active, indent=2) + '\n').encode(),
+    ContentType='application/json',
+)
 print(json.dumps(active, indent=2))
