@@ -12,7 +12,12 @@
   .minimal-product-sidebar:not(.is-expanded){align-items:center;padding-left:12px;padding-right:12px}
   .minimal-product-sidebar:not(.is-expanded) .minimal-sidebar-logo{width:100%;justify-content:center;padding-left:0}
   .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav{align-items:center}
-  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav>a{width:58px!important;height:58px!important;min-height:58px;padding:0!important;display:grid!important;place-items:center!important;gap:0!important;margin-inline:auto}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav>a{position:relative!important;width:58px!important;height:58px!important;min-height:58px;padding:0!important;display:block!important;gap:0!important;margin-inline:auto}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-icon{position:absolute!important;left:50%!important;top:50%!important;width:30px!important;height:30px!important;display:grid!important;place-items:center!important;margin:0!important;padding:0!important;transform:translate(-50%,-50%)!important;line-height:0!important}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-icon>svg,
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-icon>img,
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-icon>.figma-nav-glyph{display:block!important;margin:0!important;place-self:center!important}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .figma-settings-glyph{transform:none!important}
   .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-label{display:none!important}
   .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .nav-tooltip{display:block!important;left:66px}
   .minimal-product-sidebar.is-expanded .minimal-product-nav .product-nav-label{display:flex!important;white-space:nowrap!important}
