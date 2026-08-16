@@ -29,24 +29,42 @@ function detailHref(point) {
 function timeLabel(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`
+  return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }
 
 function FeedPhotos({ post, href }) {
   const photos = post.photo_urls || []
-
-  if (!photos.length) {
-    return <Link href={href} className={`${styles.photos} ${styles.photo} ${styles.photoEmpty}`} aria-label={`Open ${post.location.name}`}>
-      <span>Puddle</span>
-    </Link>
-  }
+  const count = photos.length
 
   return <div className={styles.photos} aria-label={`${post.location.name} photos`}>
-    <Link href={href} className={`${styles.photo} ${styles.photoMain}`} style={{ backgroundImage: `url(${photos[0]})` }} aria-label={`Open ${post.location.name}`} />
-    {photos[1] ? <Link href={href} className={styles.photo} style={{ backgroundImage: `url(${photos[1]})` }} aria-label={`Open ${post.location.name} photo 2`} /> : null}
-    {photos[2] ? <Link href={href} className={styles.photo} style={{ backgroundImage: `url(${photos[2]})` }} aria-label={`Open ${post.location.name} photo 3`}>
-      {photos.length > 3 ? `+${photos.length - 2}` : null}
-    </Link> : null}
+    <Link
+      href={href}
+      className={`${styles.photo} ${styles.photoMain}`}
+      style={photos[0] ? { backgroundImage: `url(${photos[0]})` } : undefined}
+      aria-label={`Open ${post.location.name}`}
+    />
+    <Link
+      href={href}
+      className={styles.photo}
+      style={photos[1] ? { backgroundImage: `url(${photos[1]})` } : undefined}
+      aria-label={`Open ${post.location.name} photo 2`}
+    />
+    <Link
+      href={href}
+      className={styles.photo}
+      style={photos[2] ? { backgroundImage: `url(${photos[2]})` } : undefined}
+      aria-label={`Open ${post.location.name} photo 3`}
+    >
+      {count > 3 ? `+${count - 2}` : null}
+    </Link>
   </div>
 }
 
@@ -63,7 +81,7 @@ function FeedPost({ post, friends }) {
       </span>
       <span className={styles.authorMeta}>
         <strong>{authorName}</strong>
-        <small>{timeLabel(post.created_at)} · {post.visibility === 'friends' ? 'Friends' : 'Public'}</small>
+        <small>{timeLabel(post.created_at)}</small>
       </span>
     </header>
 
