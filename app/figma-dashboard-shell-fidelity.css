@@ -1,0 +1,10 @@
+/* Expanded desktop sidebar alignment shared by the rebuilt Figma screens. */
+@media (min-width: 761px) {
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-nav {
+    left: 27px;
+  }
+
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-nav-item {
+    padding-left: 16px;
+  }
+}
