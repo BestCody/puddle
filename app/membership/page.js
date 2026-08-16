@@ -29,7 +29,7 @@ function PlansView({ snapshot }) {
     <section className="figma-pass-plan-grid" aria-label="Puddle membership tiers">
       <article className="figma-pass-plan figma-pass-plan-free">
         <div className="figma-pass-plan-price"><span>Free</span><strong>$0</strong></div>
-        <ul><li>Swipe</li><li>Feed and Map</li><li>Saved places and Plans</li><li>Message accepted friends</li></ul>
+        <ul><li>Swipe</li><li>Feed</li><li>Map</li><li>Message friends only</li></ul>
         {snapshot.active ? <span className="figma-pass-plan-state">Available</span> : <span className="figma-pass-plan-state">Current</span>}
       </article>
 
@@ -37,16 +37,10 @@ function PlansView({ snapshot }) {
         <div className="figma-pass-plan-price"><span>Pass</span><strong>{PASS_MONTHLY_PRICE}</strong><s>$15/month</s></div>
         <div className="figma-pass-plan-features">
           <p>Everything in Free plus...</p>
-          <ul>
-            <li>Global same-place likes</li>
-            <li>Message accepted global connections</li>
-            <li>Pass badge on your profile</li>
-            <li>In-app notification center</li>
-            <li>Global connection safety controls</li>
-          </ul>
+          <ul><li>Heatmap</li><li>Pass badge</li><li>Create your location</li><li>Message anyone</li><li>See who saved</li><li>Notification alerts</li></ul>
         </div>
         {snapshot.active
-          ? <div className="figma-pass-member-actions"><Link className="figma-pass-upgrade" href="/global-matches">Open Global Likes</Link><Link href="/membership?view=manage">Manage</Link></div>
+          ? <Link className="figma-pass-upgrade" href="/membership?view=manage">Manage</Link>
           : snapshot.adult && snapshot.paymentsConfigured
             ? <form action={startTinderCheckout}><button className="figma-pass-upgrade" type="submit">Upgrade</button></form>
             : <button className="figma-pass-upgrade" type="button" disabled>Upgrade</button>}
@@ -63,8 +57,6 @@ function ManageView({ snapshot }) {
       <strong>{snapshot.active ? 'Pass / $10' : 'Free'}</strong>
       {snapshot.active && periodEnd ? <span>{snapshot.membership.cancel_at_period_end ? 'Ends' : 'Renews'} {periodEnd}</span> : null}
     </article>
-
-    {snapshot.active ? <Link className="figma-pass-global-link" href="/global-matches">Open Global Likes</Link> : null}
 
     <div className="figma-pass-manage-actions">
       {snapshot.active ? <>
