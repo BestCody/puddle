@@ -42,12 +42,7 @@ function FeedPhotos({ post, href }) {
   }
 
   return <div className={styles.photos} aria-label={`${post.location.name} photos`}>
-    <Link
-      href={href}
-      className={`${styles.photo} ${styles.photoMain}`}
-      style={{ backgroundImage: `url(${photos[0]})` }}
-      aria-label={`Open ${post.location.name}`}
-    />
+    <Link href={href} className={`${styles.photo} ${styles.photoMain}`} style={{ backgroundImage: `url(${photos[0]})` }} aria-label={`Open ${post.location.name}`} />
     {photos[1] ? <Link href={href} className={styles.photo} style={{ backgroundImage: `url(${photos[1]})` }} aria-label={`Open ${post.location.name} photo 2`} /> : null}
     {photos[2] ? <Link href={href} className={styles.photo} style={{ backgroundImage: `url(${photos[2]})` }} aria-label={`Open ${post.location.name} photo 3`}>
       {photos.length > 3 ? `+${photos.length - 2}` : null}
@@ -73,7 +68,6 @@ function FeedPost({ post, friends }) {
     </header>
 
     {post.body ? <p className={styles.copy}>{post.body}</p> : null}
-
     <FeedPhotos post={post} href={href} />
 
     <Link className={styles.place} href={href}>
@@ -137,7 +131,15 @@ function FeedTop({ view, query }) {
   </header>
 }
 
-function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false }) {
+function MapSearch({ query }) {
+  return <form className={styles.mapSearch} action="/map" method="get" data-testid="map-search">
+    <input type="hidden" name="view" value="map" />
+    <label><input aria-label="Search puddle map" type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
+    <button type="submit" aria-label="Search map">⌕</button>
+  </form>
+}
+
+function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false, query = '' }) {
   const first = points[0]
   const hasMapContent = points.length || (passActive && heatmap.length)
 
@@ -160,6 +162,8 @@ function MapScreen({ points, center, heatmap = [], passActive = false, selecting
         <b className={styles.mapCardAdd}>+</b>
       </Link>
     </> : null}
+
+    <MapSearch query={query} />
   </section>
 }
 
@@ -172,30 +176,36 @@ export default async function LocationMapPage({ searchParams }) {
   return renderProductPage(async (session) => {
     const mapSnapshot = await getLocationMapSnapshot(session)
     const feed = view === 'feed' ? await getSocialFeedSnapshot(session, query) : null
-    const mapPoints = selectingForPost
-      ? mapSnapshot.points.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
+    const normalizedMapQuery = query.toLowerCase()
+    const filteredMapPoints = normalizedMapQuery
+      ? mapSnapshot.points.filter((point) => `${point.title || ''} ${point.category || ''} ${point.neighborhood || ''} ${point.city || ''}`.toLowerCase().includes(normalizedMapQuery))
       : mapSnapshot.points
+    const mapPoints = selectingForPost
+      ? filteredMapPoints.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
+      : filteredMapPoints
 
-    return <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-view={view}>
+    return <>
       <AuthMessage searchParams={params} />
-      <FeedTop view={view} query={params?.q} />
+      <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-view={view}>
+        <FeedTop view={view} query={params?.q} />
 
-      {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} /> : <>
-        <section className={styles.stream} aria-label="Puddle feed" data-testid="feed-stream">
-          {feed.items.length ? feed.items.map((post) => <FeedPost post={post} friends={feed.friends} key={post.id} />) : <div className={styles.empty}>
-            <strong>{query ? 'No puddles match that search.' : 'No one has posted a puddle yet.'}</strong>
-            <Link href="/create/post">Create the first one</Link>
-          </div>}
-        </section>
+        {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} query={query} /> : <>
+          <section className={styles.stream} aria-label="Puddle feed" data-testid="feed-stream">
+            {feed.items.length ? feed.items.map((post) => <FeedPost post={post} friends={feed.friends} key={post.id} />) : <div className={styles.empty}>
+              <strong>{query ? 'No puddles match that search.' : 'No one has posted a puddle yet.'}</strong>
+              <Link href="/create/post">Create the first one</Link>
+            </div>}
+          </section>
 
-        <Link className={styles.composer} href="/create/post" data-testid="feed-composer">
-          <span className={styles.avatar} style={feed.self.avatar_url ? { backgroundImage: `url(${feed.self.avatar_url})` } : undefined}>
-            {feed.self.avatar_url ? null : initials(feed.self.display_name)}
-          </span>
-          <span className={styles.composerText}>Create a puddle...</span>
-          <b className={styles.composerSubmit}>↑</b>
-        </Link>
-      </>}
-    </div>
+          <Link className={styles.composer} href="/create/post" data-testid="feed-composer">
+            <span className={styles.avatar} style={feed.self.avatar_url ? { backgroundImage: `url(${feed.self.avatar_url})` } : undefined}>
+              {feed.self.avatar_url ? null : initials(feed.self.display_name)}
+            </span>
+            <span className={styles.composerText}>Create a puddle...</span>
+            <b className={styles.composerSubmit}>↑</b>
+          </Link>
+        </>}
+      </div>
+    </>
   })
 }
