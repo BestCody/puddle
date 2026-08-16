@@ -29,54 +29,57 @@ export default async function ProfilePage() {
   return renderProductPage(async (session) => {
     const avatarUrl = profilePhotoUrl(session, session.profile.avatar_path)
     const preferences = (session.profile.interests || []).map(preferenceLabel).filter(Boolean).slice(0, 3)
+    const chips = preferences.length ? preferences : ['🍻Bar', '🌙Nightlife', '🛍️Shop']
     const locationLabel = session.profile.location_label || [session.profile.city, session.profile.region, session.profile.country].filter(Boolean).join(', ') || 'Add your location'
     const displayName = session.profile.display_name || 'Puddle person'
     const username = session.profile.username || 'puddle'
 
-    return <div className="minimal-profile-page">
-      <section className="minimal-profile-card" aria-label="Profile overview">
-        <div className="minimal-profile-avatar" style={{ overflow: 'hidden' }}>
-          {avatarUrl ? <img src={avatarUrl} alt={`${displayName} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
+    return <div className="figma-profile-screen">
+      <section className="figma-profile-hero" aria-label="Profile overview">
+        <Link className="figma-profile-edit" href="/account">Edit</Link>
+        <div className="figma-profile-avatar">
+          {avatarUrl ? <img src={avatarUrl} alt={`${displayName} profile`} /> : <span>{initials(displayName)}</span>}
         </div>
-        <div>
+        <div className="figma-profile-identity">
           <h1>{displayName}</h1>
           <small>@{username}</small>
-          <div className="figma-profile-stats" aria-label="Profile social counts"><span>0 Followers</span><span>0 Following</span></div>
-          <div className="figma-profile-pills" aria-label="Favorite categories">
-            {(preferences.length ? preferences : ['🍻Bar', '🌙Nightlife', '🛍️Shop']).map((value) => <span key={value}>{value}</span>)}
+          <div className="figma-profile-counts" aria-label="Profile social counts"><span>0 Followers</span><span>0 Following</span></div>
+          <div className="figma-profile-chips" aria-label="Favorite categories">
+            {chips.map((value) => <span key={value}>{value}</span>)}
             <span aria-hidden="true">+</span>
           </div>
           <div className="figma-profile-actions">
-            <Link className="is-primary" href="/matches?tab=add">Follow</Link>
+            <Link className="is-follow" href="/matches?tab=friends">Follow</Link>
             <Link href="/matches">◯ Message</Link>
           </div>
         </div>
-        <Link href="/account">Edit</Link>
       </section>
 
-      <section className="minimal-profile-settings figma-profile-panels" aria-label="Profile details">
-        <div className="figma-profile-puddles">
-          <span>Puddles</span>
-          <article className="figma-profile-mini-puddle" aria-label="Recent puddle preview">
-            <div className="figma-profile-mini-author">
-              <span className="figma-profile-mini-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? '' : initials(displayName)}</span>
+      <section className="figma-profile-cards" aria-label="Profile details">
+        <article className="figma-profile-card figma-profile-puddles-card">
+          <h2>Puddles</h2>
+          <div className="figma-profile-post-preview" aria-label="Recent puddle preview">
+            <header>
+              <span className="figma-profile-post-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? '' : initials(displayName)}</span>
               <span><strong>{displayName}</strong><small>2 hours ago</small></span>
-            </div>
-            <div className="figma-profile-mini-photos"><i /><i /><i>+30</i></div>
-            <div className="figma-profile-mini-place"><small>Park</small><strong>Maple Grove Park</strong><b>+</b></div>
-          </article>
-        </div>
-        <div><span>Location</span><strong>{locationLabel}</strong></div>
-        <div><span>Saves</span></div>
-        <div><span>Friends</span></div>
-        <div className="figma-profile-add-card">
+            </header>
+            <p>This place is amazing! The atmosphere is beautiful and there’s so much to see and do.</p>
+            <div className="figma-profile-post-collage"><i /><i /><i>+30</i></div>
+            <div className="figma-profile-post-place"><small>Park</small><strong>Maple Grove Park</strong><b>+</b></div>
+          </div>
+        </article>
+
+        <article className="figma-profile-card figma-profile-location-card"><h2>Location</h2><strong>{locationLabel}</strong></article>
+        <article className="figma-profile-card figma-profile-saves-card"><h2>Saves</h2></article>
+        <article className="figma-profile-card figma-profile-friends-card"><h2>Friends</h2></article>
+        <article className="figma-profile-card figma-profile-add-card">
           <details>
             <summary aria-label="Change profile photo">+</summary>
-            <div className="figma-profile-photo-popover">
+            <div className="figma-profile-photo-editor">
               <ProfilePhotoEditor userId={session.user.id} currentPath={session.profile.avatar_path || null} displayName={displayName} />
             </div>
           </details>
-        </div>
+        </article>
       </section>
     </div>
   })
