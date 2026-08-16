@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 function NavIcon({ type, avatarUrl }) {
   if (type === 'swipe') return <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="6" width="12" height="20" rx="3"/><path d="M13 10h6M6 11l-4 5 4 5M26 11l4 5-4 5"/></svg>
@@ -23,6 +23,8 @@ const items = [
   { href: '/profile', label: 'Profile', icon: 'profile', tone: 'profile' }
 ]
 
+const prefetchedRoutes = new Set()
+
 function isActive(pathname, href) {
   if (href === '/plans') return pathname === '/plans' || pathname.startsWith('/plans/')
   if (href === '/matches') return pathname === '/matches' || pathname.startsWith('/matches/')
@@ -33,12 +35,26 @@ function isActive(pathname, href) {
 
 function NavItems({ mobile = false, avatarUrl = null }) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  function warmRoute(href) {
+    if (isActive(pathname, href) || prefetchedRoutes.has(href)) return
+    prefetchedRoutes.add(href)
+    router.prefetch(href, {
+      onInvalidate: () => prefetchedRoutes.delete(href)
+    })
+  }
+
   return items.map((item) => {
     const active = isActive(pathname, item.href)
     const visibleLabel = active && item.activeLabel ? item.activeLabel : item.label
     return <Link
       className={`figma-dashboard-nav-item tone-${item.tone}${active ? ' is-active' : ''}`}
       href={item.href}
+      prefetch={false}
+      onMouseEnter={() => warmRoute(item.href)}
+      onFocus={() => warmRoute(item.href)}
+      onPointerDown={() => warmRoute(item.href)}
       aria-current={active ? 'page' : undefined}
       aria-label={item.label}
       key={item.href}
