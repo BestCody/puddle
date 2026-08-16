@@ -46,6 +46,7 @@ function PlansView({ snapshot }) {
             : <button className="figma-pass-upgrade" type="button" disabled>Upgrade</button>}
       </article>
     </section>
+    <p className="sr-only figma-pass-disclosure">Billed monthly. Taxes and renewal terms appear before payment.</p>
   </>
 }
 
