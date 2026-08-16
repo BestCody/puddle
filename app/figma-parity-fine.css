@@ -38,8 +38,16 @@
   .figma-saved-grid > :nth-child(3n + 1) { transform: translateY(4px); }
   .figma-saved-grid > :nth-child(3n + 2) { transform: translateY(2px); }
   .figma-saved-grid > :nth-child(3n) { transform: translateY(0); }
-  /* Base search has translateX(-50%); left 750 renders at x=540. */
-  .figma-saved-search { left: 750px !important; }
+  /* Base search has translateX(-50%); left 750 renders at x=540. Figma's
+     outer search frame is exactly 52px tall at y=736. Explicit height plus
+     3px vertical padding prevents the child button from increasing the form. */
+  .figma-saved-search {
+    left: 750px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+  }
 
   /* Friends node 32:17 */
   .social-tabs { width: 238px !important; height: 48px !important; }
