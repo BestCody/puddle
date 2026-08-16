@@ -29,7 +29,16 @@ export async function ProductShell({ user, profile, children }) {
     } catch {}
   }
 
-  return <div className="figma-dashboard-shell">
+  let unreadNotifications = 0
+  try {
+    const client = await database()
+    const { count } = await client.from('notifications').select('id', { count: 'exact', head: true }).eq('profile_id', user.id).is('read_at', null)
+    unreadNotifications = Number(count || 0)
+  } catch {}
+
+  const appearance = ['light', 'dark', 'system'].includes(profile?.appearance_theme) ? profile.appearance_theme : 'light'
+
+  return <div className={`figma-dashboard-shell appearance-${appearance}`}>
     <FigmaDashboardSidebar avatarUrl={avatarUrl} />
 
     <div className="figma-dashboard-stage">
@@ -39,6 +48,7 @@ export async function ProductShell({ user, profile, children }) {
           <strong>{profile?.display_name || 'Puddle person'}</strong>
           <Link href="/profile">Profile</Link>
           <Link href="/membership">Pass</Link>
+          <Link href="/account?section=notifications&returnTo=%2Fdiscover">Notifications{unreadNotifications ? ` (${unreadNotifications})` : ''}</Link>
           <Link href="/account?returnTo=%2Fdiscover">Settings</Link>
           {showAdmin ? <Link href="/admin">Admin</Link> : null}
           <form action={signOut}><button type="submit">Sign out</button></form>
