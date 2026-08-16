@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { PuddleLogo } from './puddle-logo'
 import { ProductNav } from './product-nav'
 
@@ -24,7 +25,9 @@ function applyWidth(value) {
 export function FigmaDashboardSidebar({ avatarUrl = null }) {
   const [width, setWidth] = useState(EXPANDED_WIDTH)
   const drag = useRef(null)
+  const pathname = usePathname()
   const concise = width === CONCISE_WIDTH
+  const returnTo = pathname && pathname !== '/account' ? pathname : '/profile'
 
   useEffect(() => {
     const saved = snapWidth(window.localStorage.getItem(STORAGE_KEY))
@@ -72,7 +75,7 @@ export function FigmaDashboardSidebar({ avatarUrl = null }) {
   return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`} aria-label="Puddle sidebar" data-sidebar-width={width}>
     <div className="figma-dashboard-sidebar-logo"><PuddleLogo compact href="/discover" variant="outline" /></div>
     <ProductNav avatarUrl={avatarUrl} />
-    <Link className="figma-dashboard-settings-link" href="/account">Settings</Link>
+    <Link className="figma-dashboard-settings-link" href={`/account?returnTo=${encodeURIComponent(returnTo)}`}>Settings</Link>
     <div
       className="figma-dashboard-sidebar-resizer"
       role="separator"
