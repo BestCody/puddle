@@ -20,7 +20,11 @@ const landingAssetCache = [
 
 function mediaRemotePatterns() {
   const patterns = [{ protocol: 'https', hostname: 'cegoqtvajwajczbofpep.supabase.co', pathname: '/storage/v1/object/public/**' }]
-  const configured = String(process.env.B2_MEDIA_PUBLIC_BASE_URL || 'https://media.puddle.app').trim()
+  const configured = String(
+    process.env.B2_MEDIA_PUBLIC_BASE_URL ||
+    process.env.B2_DOWNLOAD_BASE_URL ||
+    'https://media.puddle.app'
+  ).trim()
   try {
     const url = new URL(configured)
     if (url.protocol === 'https:' && !url.username && !url.password) {
