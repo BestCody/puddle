@@ -102,14 +102,14 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(page.getByTestId('feed-map-canvas')).toBeVisible()
 
   await openDesktop(page, '/plans')
-  const savedTabs = page.locator('.figma-saved-tabs')
+  const savedTabs = page.getByTestId('saved-tabs')
   await expect(savedTabs.getByRole('link', { name: 'Saved', exact: true })).toBeVisible()
   await expect(savedTabs.getByRole('link', { name: 'Plans', exact: true })).toBeVisible()
-  await expect(page.locator('.figma-saved-categories')).toBeVisible()
-  await expect(page.locator('.figma-saved-floating-search')).toBeVisible()
+  await expect(page.getByTestId('saved-categories')).toBeVisible()
+  await expect(page.getByTestId('saved-search')).toBeVisible()
   await savedTabs.getByRole('link', { name: 'Plans', exact: true }).click()
   await expect(page).toHaveURL(/\/plans\?tab=planned/)
-  await page.locator('.figma-saved-tabs').getByRole('link', { name: 'Saved', exact: true }).click()
+  await page.getByTestId('saved-tabs').getByRole('link', { name: 'Saved', exact: true }).click()
   await expect(page).toHaveURL(/\/plans\?tab=saved/)
 
   await openDesktop(page, '/matches')
