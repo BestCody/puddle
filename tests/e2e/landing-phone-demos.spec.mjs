@@ -61,8 +61,19 @@ test('landing page embeds the real phone demos instead of leaving screenshot pla
   const swipePhone = page.locator('.landing-canvas--desktop [data-phone-demo="swipe"]')
   await expect(swipePhone).toBeAttached()
   await swipePhone.scrollIntoViewIfNeeded()
+
+  const phoneBox = await swipePhone.boundingBox()
+  expect(phoneBox).toBeTruthy()
+  expect(phoneBox.width).toBeGreaterThan(300)
+  expect(phoneBox.height).toBeGreaterThan(700)
+
   const iframe = swipePhone.locator('iframe')
   await expect(iframe).toHaveAttribute('src', '/landing-demo/swipe', { timeout: 15_000 })
+  const iframeBox = await iframe.boundingBox()
+  expect(iframeBox).toBeTruthy()
+  expect(iframeBox.width).toBeGreaterThan(300)
+  expect(iframeBox.height).toBeGreaterThan(700)
+
   const frame = iframe.contentFrame()
   await expect(frame.locator('.minimal-swipe-card')).toBeVisible({ timeout: 15_000 })
   await expect(page.locator('img.feature-phone[data-draggable-phone]')).toHaveCount(0)
