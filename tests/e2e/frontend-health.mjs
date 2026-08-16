@@ -96,12 +96,11 @@ export async function assertLandingVisualContract(page) {
 }
 
 export async function assertProductVisualContract(page) {
-  const shell = page.locator('.minimal-product-shell')
-  const main = page.locator('.minimal-product-main')
-  const sidebar = page.locator('.minimal-product-sidebar')
-  const desktopNav = page.locator('.minimal-product-nav')
-  const mobileNav = page.locator('.minimal-mobile-nav')
-  const header = page.locator('.minimal-product-header')
+  const shell = page.locator('.figma-dashboard-shell')
+  const main = page.locator('.figma-dashboard-main')
+  const sidebar = page.locator('.figma-dashboard-sidebar')
+  const desktopNav = page.locator('.figma-dashboard-nav')
+  const mobileNav = page.locator('.figma-dashboard-mobile-nav')
 
   await expect(shell).toBeVisible()
   await expect(main).toBeVisible()
@@ -111,17 +110,10 @@ export async function assertProductVisualContract(page) {
     await expect(sidebar).toBeVisible()
     await expect(desktopNav).toBeVisible()
     await expect(mobileNav).toBeHidden()
-
-    if (await header.isVisible()) {
-      await expect(page.getByLabel('Open profile menu')).toBeVisible()
-    } else {
-      await expect(header).toBeHidden()
-    }
+    await expect(sidebar.locator('.figma-dashboard-settings-link')).toBeVisible()
   } else {
-    await expect(header).toBeVisible()
-    await expect(page.locator('.minimal-header-logo')).toBeVisible()
-    await expect(page.locator('.profile-menu')).toBeHidden()
     await expect(sidebar).toBeHidden()
+    await expect(desktopNav).toBeHidden()
     await expect(mobileNav).toBeVisible()
   }
 }
