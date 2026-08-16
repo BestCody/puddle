@@ -11,6 +11,7 @@ const CONCISE_WIDTH = 102
 const EXPANDED_THRESHOLD = 190
 
 function snapWidth(value) {
+  if (value === null || value === undefined || value === '') return EXPANDED_WIDTH
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return EXPANDED_WIDTH
   return numeric < EXPANDED_THRESHOLD ? CONCISE_WIDTH : EXPANDED_WIDTH
