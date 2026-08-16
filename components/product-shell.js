@@ -33,7 +33,7 @@ export async function ProductShell({ user, profile, children }) {
 
   try {
     const client = await database()
-    const { data, error } = await client.rpc('dashboard_bootstrap_v1', { known_privileged: knownPrivileged })
+    const { data, error } = await client.rpc('dashboard_bootstrap_v1')
     if (error) throw error
     showAdmin = Boolean(data?.show_admin)
     unreadNotifications = Number(data?.unread_notifications || 0)
