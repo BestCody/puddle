@@ -9,7 +9,7 @@ test('an authenticated user clicking the Figma login control from home is redire
 
   await signInThroughUi(page, account.email, account.password)
   await expect(page).toHaveURL(/\/discover$/)
-  await expect(page.locator('.minimal-swipe-card')).toBeVisible()
+  await expect(page.locator('.figma-swipe-card')).toBeVisible()
 
   await page.goto('/')
   await page.waitForFunction(() => document.querySelector('.landing-stage--desktop')?.dataset.ready === 'true')
@@ -19,7 +19,7 @@ test('an authenticated user clicking the Figma login control from home is redire
 
   await expect(page).toHaveURL(/\/discover$/)
   await expect(page.getByRole('heading', { name: 'Tiny wipeout.' })).toHaveCount(0)
-  await expect(page.locator('.minimal-product-shell')).toBeVisible()
-  await expect(page.locator('.minimal-swipe-card')).toBeVisible()
+  await expect(page.locator('.figma-dashboard-shell')).toBeVisible()
+  await expect(page.locator('.figma-swipe-card')).toBeVisible()
   health.assertHealthy()
 })
