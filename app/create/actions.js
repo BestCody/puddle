@@ -35,6 +35,13 @@ async function persistLocation(formData) {
   const id = String(input.id || '').trim()
   let existing = null
 
+  if (!id) {
+    const { data: passActive, error: passError } = await session.supabase.rpc('puddle_tinder_active_v1')
+    if (passError || !passActive) {
+      redirect(pathWithMessage('/membership', 'error', 'Puddle Pass is required to create a location.'))
+    }
+  }
+
   if (id) {
     const { data } = await session.supabase.from('locations').select('*').eq('id', id).maybeSingle()
     existing = data

@@ -1,0 +1,36 @@
+/* Persisted appearance keyed from ProductShell's data attribute so the authored
+   Figma shell class remains byte-for-byte stable for layout parity. */
+.figma-dashboard-shell[data-appearance="dark"],
+.figma-dashboard-shell[data-appearance="dark"] .figma-dashboard-stage,
+.figma-dashboard-shell[data-appearance="dark"] .figma-dashboard-main {
+  background: #131313;
+  color: #f4f4f4;
+  color-scheme: dark;
+}
+.figma-dashboard-shell[data-appearance="dark"] :is(.figma-feed-post,.figma-create-post-card,.figma-saved-detail-card,.figma-profile-card,.figma-pass-plan,.figma-settings-window,.figma-friends-chat,.figma-friends-conversations) {
+  background-color: #202020 !important;
+  color: #f4f4f4 !important;
+  border-color: #3d3d3d !important;
+}
+.figma-dashboard-shell[data-appearance="dark"] :is(h1,h2,h3,strong,.figma-feed-post-title,.figma-profile-mini-list a,.figma-profile-card-link) { color: #f4f4f4; }
+.figma-dashboard-shell[data-appearance="dark"] :is(input,textarea,select) { background: #2a2a2a !important; color: #f4f4f4 !important; border-color: #4a4a4a !important; }
+.figma-dashboard-shell[data-appearance="dark"] :is(.figma-feed-action-menu>div,.figma-create-post-add-menu,.figma-saved-detail-share>div,.figma-friends-composer-menu>div) { background: #252525; color: #f4f4f4; border-color: #4a4a4a; }
+.figma-dashboard-shell[data-appearance="dark"] .figma-notification-list article { background: #202020; border-color: #414141; }
+.figma-dashboard-shell[data-appearance="dark"] .figma-notification-list article.is-unread { background: #18293a; border-color: #4ca5f7; }
+
+@media (prefers-color-scheme: dark) {
+  .figma-dashboard-shell[data-appearance="system"],
+  .figma-dashboard-shell[data-appearance="system"] .figma-dashboard-stage,
+  .figma-dashboard-shell[data-appearance="system"] .figma-dashboard-main {
+    background: #131313;
+    color: #f4f4f4;
+    color-scheme: dark;
+  }
+  .figma-dashboard-shell[data-appearance="system"] :is(.figma-feed-post,.figma-create-post-card,.figma-saved-detail-card,.figma-profile-card,.figma-pass-plan,.figma-settings-window,.figma-friends-chat,.figma-friends-conversations) {
+    background-color: #202020 !important;
+    color: #f4f4f4 !important;
+    border-color: #3d3d3d !important;
+  }
+  .figma-dashboard-shell[data-appearance="system"] :is(h1,h2,h3,strong,.figma-feed-post-title,.figma-profile-mini-list a,.figma-profile-card-link) { color: #f4f4f4; }
+  .figma-dashboard-shell[data-appearance="system"] :is(input,textarea,select) { background: #2a2a2a !important; color: #f4f4f4 !important; border-color: #4a4a4a !important; }
+}

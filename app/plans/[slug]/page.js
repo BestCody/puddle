@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { AuthMessage } from '@/components/auth-message'
 import { LocationMap } from '@/components/location-map'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getPublicLocation } from '@/lib/app/public-content'
+import { planPlaceVisit, shareSavedPlace, togglePinnedPlace, toggleSavedPlace } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,13 +23,32 @@ export async function generateMetadata({ params }) {
   return { title: result?.location?.name || 'Saved place' }
 }
 
-export default async function SavedPlacePage({ params }) {
+function HiddenLocation({ location, slug }) {
+  return <><input type="hidden" name="location_id" value={location.id} /><input type="hidden" name="slug" value={slug} /></>
+}
+
+export default async function SavedPlacePage({ params, searchParams }) {
   const { slug } = await params
+  const query = await searchParams
   const result = await getPublicLocation(slug)
   if (!result) notFound()
 
-  return renderProductPage(async () => {
+  return renderProductPage(async (session) => {
     const { location, similar } = result
+    const [{ data: savedState }, { data: friends }] = await Promise.all([
+      session.supabase
+        .from('user_content_states')
+        .select('pinned_at')
+        .eq('profile_id', session.user.id)
+        .eq('location_id', location.id)
+        .eq('state', 'saved')
+        .maybeSingle(),
+      session.supabase.rpc('social_friends_v1')
+    ])
+    const isSaved = Boolean(savedState)
+    const isPinned = Boolean(savedState?.pinned_at)
+    const friendList = friends || []
+
     const mapPoint = Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude)) ? [{
       id: location.id,
       location_id: location.id,
@@ -40,7 +61,7 @@ export default async function SavedPlacePage({ params }) {
       longitude: Number(location.longitude),
       href: `/plans/${location.slug}`,
       photo_url: location.cover_url || location.gallery?.[0]?.url || null,
-      states: ['saved'],
+      states: [isSaved ? 'saved' : 'planned'],
       match: null,
       plan: null
     }] : []
@@ -48,6 +69,7 @@ export default async function SavedPlacePage({ params }) {
     const gallery = [location.cover_url, ...(location.gallery || []).map((item) => item.url)].filter(Boolean)
 
     return <div className="figma-saved-detail-screen">
+      <AuthMessage searchParams={query} />
       <Link className="figma-saved-detail-back" href="/plans" aria-label="Back to Saved">‹</Link>
       <nav className="figma-dashboard-segment figma-saved-tabs" aria-label="Saved and plans"><Link className="is-active" href="/plans">Saved</Link><Link href="/plans?tab=planned">Plans</Link></nav>
       <div className="figma-saved-detail-rule" aria-hidden="true" />
@@ -65,8 +87,20 @@ export default async function SavedPlacePage({ params }) {
           <h1>{location.name}</h1>
           <p>{location.address_public || [location.neighborhood, location.city].filter(Boolean).join(', ')}</p>
           {location.summary || location.description ? <div className="figma-saved-detail-description">{location.summary || location.description}</div> : null}
-          <div className="figma-saved-detail-actions"><button type="button" disabled>Pin</button><button type="button" disabled>Share</button><span>Saved</span></div>
-          <Link className="figma-saved-plan-visit" href="/plans?tab=planned">Plan a visit</Link>
+          <div className="figma-saved-detail-actions">
+            <form action={togglePinnedPlace}><HiddenLocation location={location} slug={slug} /><button type="submit">{isPinned ? 'Unpin' : 'Pin'}</button></form>
+            <details className="figma-saved-detail-share"><summary>Share</summary><div>{friendList.length ? friendList.map((friend) => <form action={shareSavedPlace} key={friend.id}><HiddenLocation location={location} slug={slug} /><input type="hidden" name="friend_id" value={friend.id} /><button type="submit">{friend.display_name || friend.username || 'Friend'}</button></form>) : <p>Add a friend before sharing.</p>}</div></details>
+            <form action={toggleSavedPlace}><HiddenLocation location={location} slug={slug} /><button className={isSaved ? 'is-saved' : ''} type="submit">{isSaved ? 'Unsave' : 'Save'}</button></form>
+          </div>
+          <details className="figma-saved-plan-visit">
+            <summary>Plan a visit</summary>
+            <form action={planPlaceVisit}>
+              <HiddenLocation location={location} slug={slug} />
+              <label>Date and time<input type="datetime-local" name="planned_for" required /></label>
+              <label>Note<input name="note" maxLength="500" placeholder="Optional note" /></label>
+              <button type="submit">Add to Plans</button>
+            </form>
+          </details>
           <div className="figma-saved-detail-tags">{(location.amenities || []).slice(0,6).map((value) => <span key={value}>{String(value).replaceAll('_',' ')}</span>)}</div>
         </section>
 

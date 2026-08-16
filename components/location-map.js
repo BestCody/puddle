@@ -57,7 +57,7 @@ function PointCard({ point }) {
   </article>
 }
 
-export function LocationMap({ initialPoints, initialCenter }) {
+export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false }) {
   const mapRef = useRef(null)
   const dragRef = useRef(null)
   const [viewport, setViewport] = useState({ width: 900, height: 620 })
@@ -65,6 +65,7 @@ export function LocationMap({ initialPoints, initialCenter }) {
   const [zoom, setZoom] = useState(initialPoints.length <= 1 ? 14 : 12)
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(initialPoints[0]?.id || null)
+  const [heatmapEnabled, setHeatmapEnabled] = useState(Boolean(passActive))
 
   useEffect(() => {
     const node = mapRef.current
@@ -77,6 +78,7 @@ export function LocationMap({ initialPoints, initialCenter }) {
   const points = useMemo(() => filter === 'all' ? initialPoints : initialPoints.filter((point) => point.states.includes(filter)), [initialPoints, filter])
   const selected = initialPoints.find((point) => point.id === selectedId) || points[0] || null
   const projectedCenter = project(center.latitude, center.longitude, zoom)
+  const maxHeat = Math.max(1, ...heatmapPoints.map((point) => Number(point.save_count) || 0))
 
   function changeFilter(next) {
     setFilter(next)
@@ -108,11 +110,22 @@ export function LocationMap({ initialPoints, initialCenter }) {
   return <div className="location-map-workspace">
     <section className="location-map-toolbar">
       <div className="location-map-filters" aria-label="Map filters">{['all', 'saved', 'matched', 'planned'].map((state) => <button type="button" className={filter === state ? 'is-active' : ''} onClick={() => changeFilter(state)} key={state}>{state === 'all' ? 'All places' : stateLabel(state)}<strong>{state === 'all' ? initialPoints.length : initialPoints.filter((point) => point.states.includes(state)).length}</strong></button>)}</div>
-      <button className="location-map-locate" type="button" onClick={locate}>◎ Near me</button>
+      <div className="location-map-toolbar-actions">
+        {passActive ? <button className={`location-map-heatmap-toggle${heatmapEnabled ? ' is-active' : ''}`} type="button" onClick={() => setHeatmapEnabled((value) => !value)} aria-pressed={heatmapEnabled}><span>PASS</span> Heatmap</button> : null}
+        <button className="location-map-locate" type="button" onClick={locate}>◎ Near me</button>
+      </div>
     </section>
     <div className="location-map-layout">
       <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onWheel={wheel} aria-label="Interactive map of saved, matched, and planned locations">
         <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
+        {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{heatmapPoints.map((point) => {
+          const projected = project(point.latitude, point.longitude, zoom)
+          const x = projected.x - projectedCenter.x + viewport.width / 2
+          const y = projected.y - projectedCenter.y + viewport.height / 2
+          const ratio = Math.max(.12, (Number(point.save_count) || 1) / maxHeat)
+          const size = Math.round(34 + ratio * 74)
+          return <span className="location-map-heat" title={`${point.name}: ${point.save_count} saves`} style={{ width: `${size}px`, height: `${size}px`, opacity: .2 + ratio * .5, transform: `translate3d(${x}px,${y}px,0) translate(-50%,-50%)` }} key={point.id}><b>{point.save_count}</b></span>
+        })}</div> : null}
         <div className="location-map-markers">{points.map((point) => {
           const projected = project(point.latitude, point.longitude, zoom)
           const x = projected.x - projectedCenter.x + viewport.width / 2
