@@ -1,6 +1,9 @@
 /* Swipe card internals from desktop 12:11 and mobile 40:641. Rebuilt card only. */
 /* Keep live Google/open photos when they resolve, but Figma's empty photo
-   surface has no loading crosshair or "coming soon" badge. */
+   surface is plain white with no loading crosshair or "coming soon" badge. */
+.figma-swipe-card-photo .date-google-photo {
+  background-color: #fff;
+}
 .figma-swipe-card-photo .date-google-photo-status,
 .figma-swipe-card-photo .date-card-placeholder {
   display: none !important;
