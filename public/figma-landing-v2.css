@@ -47,11 +47,13 @@
 .feature-card--feed .interactive-pill>img{content:url('/figma/assets/move-feed.svg');background:transparent!important}
 .feature-card--profile .interactive-pill>img{content:url('/figma/assets/move-profile.svg');background:transparent!important}
 
-/* The old feature-phone PNGs are bootstrap fallbacks only. JavaScript replaces each one
-   with a same-origin interactive product demo while preserving the exact Figma phone box. */
-.feature-phone-demo{padding:10px;border:4px solid #111;border-radius:58px;background:#111;overflow:hidden;cursor:default!important;touch-action:auto!important;box-shadow:0 2px 0 rgba(255,255,255,.45) inset;transition:none!important}
+/* The original Figma feature phone is exactly 393x852. With the 4px device border and
+   10px screen inset, the actual interactive screen viewport is exactly 365x824. Pin those
+   dimensions explicitly: percentage-sized iframes can otherwise collapse inside the scaled,
+   absolutely positioned Figma canvas even while their surrounding phone box is visible. */
+.feature-phone-demo{width:393px!important;height:852px!important;padding:10px;border:4px solid #111;border-radius:58px;background:#111;overflow:hidden;cursor:default!important;touch-action:auto!important;box-shadow:0 2px 0 rgba(255,255,255,.45) inset;transition:none!important}
 .feature-phone-demo::before{content:"";position:absolute;z-index:4;left:50%;top:17px;width:112px;height:28px;transform:translateX(-50%);border-radius:999px;background:#050505;pointer-events:none}
-.feature-phone-demo__frame{position:relative;z-index:2;width:100%;height:100%;display:block;border:0;border-radius:45px;background:#fff;overflow:hidden}
+.feature-phone-demo__frame{position:relative;z-index:2;display:block;width:365px!important;height:824px!important;min-width:365px;min-height:824px;max-width:none;border:0;border-radius:45px;background:#fff;overflow:hidden}
 .feature-phone-demo:focus-within{outline:4px solid rgba(255,255,255,.8);outline-offset:2px}
 
 /* Mobile layout stays on the native 704px canvas. The Figma annotation specifies
