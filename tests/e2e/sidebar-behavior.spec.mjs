@@ -65,6 +65,7 @@ test('short and zoom-like desktop heights keep the Figma sidebar non-scrollable 
   const sidebar = page.locator('.figma-dashboard-sidebar')
   const profile = sidebar.locator('.figma-dashboard-nav a[href="/profile"]')
   const settings = sidebar.locator('.figma-dashboard-settings-link')
+  const resizer = page.getByRole('separator', { name: 'Resize navigation sidebar' })
 
   for (const height of [600, 460]) {
     await page.setViewportSize({ width: 1280, height })
@@ -90,6 +91,23 @@ test('short and zoom-like desktop heights keep the Figma sidebar non-scrollable 
     expect(structure.settingsInsideViewport).toBeTruthy()
   }
 
+  await resizer.focus()
+  await resizer.press('Home')
+  await expect(sidebar).toHaveClass(/is-concise/)
+
+  const conciseStructure = await sidebar.evaluate((element) => {
+    const logoRect = element.querySelector('.figma-dashboard-sidebar-logo').getBoundingClientRect()
+    const navRect = element.querySelector('.figma-dashboard-nav').getBoundingClientRect()
+    return {
+      canScrollVertically: element.scrollHeight > element.clientHeight + 1,
+      logoClearsNav: logoRect.bottom < navRect.top
+    }
+  })
+  expect(conciseStructure.canScrollVertically).toBeFalsy()
+  expect(conciseStructure.logoClearsNav).toBeTruthy()
+
+  await resizer.press('End')
+  await expect(sidebar).toHaveClass(/is-expanded/)
   await settings.click()
   await expect(page).toHaveURL(/\/account$/)
 })
