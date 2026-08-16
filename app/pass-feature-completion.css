@@ -1,0 +1,188 @@
+/* Puddle Pass functional layer. Loaded after the authored dashboard fidelity CSS. */
+
+.figma-friends-pass-wrapper { position: relative; }
+.pass-message-anyone {
+  position: absolute;
+  z-index: 45;
+  top: 108px;
+  right: 32px;
+  width: min(430px, calc(100% - 64px));
+  padding: 14px;
+  border: 2px solid #dfe9dc;
+  border-radius: 20px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 8px 24px rgba(0,0,0,.10);
+  box-sizing: border-box;
+}
+.pass-message-anyone-heading { display: flex; align-items: center; gap: 10px; }
+.pass-message-anyone-heading > span,
+.pass-location-create-lock > span,
+.pass-location-savers header > span,
+.pass-notification-alert-control > span {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 9px;
+  background: #e73668;
+  color: #fff;
+  font: 900 10px/1 Manrope,sans-serif;
+  letter-spacing: .6px;
+}
+.pass-message-anyone-heading > div { display: grid; gap: 3px; }
+.pass-message-anyone-heading strong { font: 800 14px/1.1 Manrope,sans-serif; }
+.pass-message-anyone-heading small { color: #777; font: 600 10px/1.2 Manrope,sans-serif; }
+.pass-message-anyone > form { display: flex; gap: 7px; margin-top: 10px; }
+.pass-message-anyone input { flex: 1; min-width: 0; height: 36px; padding: 0 11px; border: 1.5px solid #ddd; border-radius: 12px; font: 600 12px/1 Manrope,sans-serif; }
+.pass-message-anyone button { min-height: 34px; padding: 0 12px; border: 0; border-radius: 12px; background: #78e152; color: #fff; cursor: pointer; font: 800 11px/1 Manrope,sans-serif; }
+.pass-message-anyone button:disabled { opacity: .5; cursor: default; }
+.pass-message-anyone > p { margin: 8px 0 0; color: #e73668; font: 700 11px/1.25 Manrope,sans-serif; }
+.pass-message-anyone-results { max-height: 180px; overflow: auto; margin-top: 8px; display: grid; gap: 5px; }
+.pass-message-anyone-results > div { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 11px; background: #f5f5f5; }
+.pass-message-anyone-results > div > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.pass-message-anyone-results strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 12px/1.1 Manrope,sans-serif; }
+.pass-message-anyone-results small { color: #888; font: 600 9px/1 Manrope,sans-serif; }
+
+.location-map-toolbar-actions { display: flex; align-items: center; gap: 8px; }
+.location-map-heatmap-toggle { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1.5px solid #dedede; border-radius: 18px; background: #fff; color: #555; cursor: pointer; font: 800 11px/1 Manrope,sans-serif; }
+.location-map-heatmap-toggle > span { padding: 4px 6px; border-radius: 8px; background: #e73668; color: #fff; font-size: 8px; letter-spacing: .4px; }
+.location-map-heatmap-toggle.is-active { border-color: #e73668; color: #111; box-shadow: 0 0 0 2px rgba(231,54,104,.12); }
+.location-map-heatmap { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.location-map-heat {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(231,54,104,.92) 0 18%, rgba(242,192,53,.72) 42%, rgba(101,231,54,.28) 68%, rgba(101,231,54,0) 100%);
+  filter: blur(.2px);
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,.45);
+  font: 900 10px/1 Manrope,sans-serif;
+}
+.location-map-heat b { pointer-events: none; }
+.location-map-markers { position: relative; z-index: 5; }
+
+.pass-location-create-lock,
+.pass-location-savers {
+  width: min(780px, calc(100% - 36px));
+  margin: 24px auto;
+  padding: 22px;
+  border: 2px solid #e4e4e4;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 4px 0 rgba(0,0,0,.08);
+  box-sizing: border-box;
+}
+.pass-location-create-lock { display: grid; justify-items: start; gap: 10px; }
+.pass-location-create-lock h2 { margin: 0; font: 800 26px/1.1 Manrope,sans-serif; }
+.pass-location-create-lock p { margin: 0; color: #666; font: 600 14px/1.4 Manrope,sans-serif; }
+.pass-location-create-lock a,
+.pass-location-savers.is-locked > a { display: inline-grid; place-items: center; min-height: 40px; padding: 0 16px; border-radius: 20px; background: #111; color: #fff; text-decoration: none; font: 800 12px/1 Manrope,sans-serif; }
+.pass-location-savers > header { display: flex; align-items: flex-start; gap: 12px; }
+.pass-location-savers header > div { display: grid; gap: 4px; }
+.pass-location-savers h2 { margin: 0; font: 800 21px/1.1 Manrope,sans-serif; }
+.pass-location-savers header p,
+.pass-location-savers-empty { margin: 0; color: #777; font: 600 12px/1.35 Manrope,sans-serif; }
+.pass-location-saver-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 8px; margin-top: 15px; }
+.pass-location-saver-list article { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 9px; border-radius: 13px; background: #f5f5f5; }
+.pass-location-saver-avatar { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border-radius: 50%; background: #ddd center/cover no-repeat; color: #555; font: 800 10px/1 Manrope,sans-serif; }
+.pass-location-saver-list article > div { min-width: 0; display: grid; gap: 3px; }
+.pass-location-saver-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 12px/1 Manrope,sans-serif; }
+.pass-location-saver-list small { color: #888; font: 600 9px/1 Manrope,sans-serif; }
+.pass-location-savers.is-locked { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+
+.pass-notification-alert-control { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 12px; margin: 0 0 18px; padding: 13px 14px; border: 1.5px solid #dedede; border-radius: 15px; background: #fafafa; }
+.pass-notification-alert-control > div { display: grid; gap: 3px; }
+.pass-notification-alert-control strong { color: #111; font: 800 13px/1.1 Manrope,sans-serif; }
+.pass-notification-alert-control p { margin: 0; color: #777; font: 600 10px/1.3 Manrope,sans-serif; }
+.pass-notification-alert-control button,
+.pass-notification-alert-control a { min-height: 34px; display: inline-grid; place-items: center; padding: 0 12px; border: 0; border-radius: 17px; background: #111; color: #fff; text-decoration: none; cursor: pointer; font: 800 10px/1 Manrope,sans-serif; }
+.pass-notification-alert-control b { color: #58c92e; font: 800 11px/1 Manrope,sans-serif; }
+.pass-notification-alert-control.is-locked b { color: #888; }
+
+/* Settings: center the window inside the dashboard area, horizontally and vertically.
+   Expanded settings show only the selected section and scroll internally when needed. */
+@media (min-width: 761px) {
+  .figma-settings-screen {
+    min-height: 100vh !important;
+    height: 100vh;
+    display: grid !important;
+    place-items: center !important;
+    padding: 24px 35px !important;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .figma-settings-window,
+  .figma-settings-window.is-expanded {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    width: min(1068px, 100%) !important;
+    height: min(760px, calc(100vh - 48px)) !important;
+    min-height: min(603px, calc(100vh - 48px)) !important;
+    max-height: calc(100vh - 48px) !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+  }
+  .figma-settings-window.section-index { height: 603px !important; }
+  .figma-settings-window .figma-settings-local-nav,
+  .figma-settings-window.is-expanded .figma-settings-local-nav,
+  .figma-settings-window .figma-settings-detail,
+  .figma-settings-window.is-expanded .figma-settings-detail {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  .figma-settings-window .figma-settings-detail { overflow: auto; }
+  .figma-settings-window.is-expanded .figma-settings-section { display: none !important; }
+  .figma-settings-window.section-profile #profile,
+  .figma-settings-window.section-security #security,
+  .figma-settings-window.section-appearance #appearance,
+  .figma-settings-window.section-notifications #notifications,
+  .figma-settings-window.section-sessions #sessions,
+  .figma-settings-window.section-billing #billing,
+  .figma-settings-window.section-account #account {
+    display: block !important;
+    position: relative !important;
+    inset: auto !important;
+    min-height: 100% !important;
+    padding: 40px 46px 56px !important;
+    box-sizing: border-box;
+  }
+  .figma-settings-window.is-expanded .figma-settings-section header { margin: 0 0 28px !important; }
+  .figma-settings-window.is-expanded .figma-settings-section header small { display: block !important; }
+  .figma-settings-window.is-expanded .figma-settings-section header h1 { margin-top: 8px !important; }
+  .figma-settings-window.is-expanded .figma-settings-row {
+    min-height: 58px !important;
+    grid-template-columns: 180px minmax(0,1fr) auto !important;
+    gap: 16px !important;
+    border-top: 1px solid #e7e7e7 !important;
+  }
+  .figma-settings-window.is-expanded .figma-settings-row:last-of-type { border-bottom: 1px solid #e7e7e7 !important; }
+  .figma-settings-window.is-expanded .figma-settings-row input,
+  .figma-settings-window.is-expanded .figma-settings-row textarea,
+  .figma-settings-window.is-expanded .figma-settings-row select {
+    min-height: 38px !important;
+    padding: 7px 10px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    text-align: left !important;
+  }
+  .figma-settings-window.is-expanded #sessions .figma-settings-row.is-tall { width: auto !important; min-height: 90px !important; display: grid !important; padding: 16px 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+  .figma-settings-window.is-expanded #billing { min-height: 100% !important; }
+  .figma-settings-window.is-expanded #billing::after { display: none !important; }
+  .figma-settings-close { display: grid !important; }
+}
+
+@media (max-width: 760px) {
+  .figma-friends-pass-wrapper { position: static; }
+  .pass-message-anyone { position: relative; top: auto; right: auto; width: calc(100% - 24px); margin: 90px auto 12px; transform: none; }
+  .pass-location-savers.is-locked { display: grid; }
+  .pass-notification-alert-control { grid-template-columns: auto 1fr; }
+  .pass-notification-alert-control > :last-child { grid-column: 1 / -1; justify-self: start; }
+  .location-map-toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .figma-settings-screen { display: block !important; height: auto !important; min-height: 100vh !important; padding: 24px 12px !important; overflow: visible !important; }
+  .figma-settings-window { position: relative !important; top: auto !important; left: auto !important; transform: none !important; width: 100% !important; }
+}
