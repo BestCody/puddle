@@ -1,5 +1,6 @@
 "use client"
 
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { GoogleServerPlacePhoto } from '@/components/google-server-place-photo'
@@ -9,6 +10,8 @@ const labels = {
   gallery: 'Gallery', attraction: 'Attraction', activity_venue: 'Activity', study_spot: 'Study',
   scenic_spot: 'Scenic', nightlife: 'Nightlife', shop: 'Shop', community_space: 'Community'
 }
+
+const OPTIMIZED_IMAGE_HOSTS = new Set(['cegoqtvajwajczbofpep.supabase.co'])
 
 function categoryLabel(value) {
   return labels[value] || String(value || 'Place').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
@@ -21,6 +24,21 @@ function addressLabel(item) {
 function photos(item) {
   const values = [...(item.photo_urls || []), item.photo_url, item.cover_url].filter(Boolean)
   return [...new Set(values)].slice(0, 5)
+}
+
+function canOptimizeImage(url) {
+  if (!url) return false
+  const value = String(url)
+  if (value.startsWith('/')) return true
+  try { return OPTIMIZED_IMAGE_HOSTS.has(new URL(value).hostname) } catch { return false }
+}
+
+function DetailsPhoto({ url, title, index }) {
+  const alt = index ? `${title} photo ${index + 1}` : title
+  if (canOptimizeImage(url)) {
+    return <Image src={url} alt={alt} width={420} height={260} sizes="(max-width: 760px) 50vw, 310px" />
+  }
+  return <img src={url} alt={alt} loading="lazy" decoding="async" />
 }
 
 function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
@@ -36,7 +54,7 @@ function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
   return <div className="figma-swipe-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section className="figma-swipe-details" role="dialog" aria-modal="true" aria-label={`Full details for ${item.title}`}>
       <button ref={close} type="button" className="figma-swipe-details-close" onClick={onClose} aria-label="Close details">×</button>
-      {photoUrls.length ? <div className="figma-swipe-details-gallery">{photoUrls.slice(0, 3).map((url, index) => <img src={url} alt={index ? `${item.title} photo ${index + 1}` : item.title} key={url} />)}</div> : null}
+      {photoUrls.length ? <div className="figma-swipe-details-gallery">{photoUrls.slice(0, 3).map((url, index) => <DetailsPhoto url={url} title={item.title} index={index} key={url} />)}</div> : null}
       <span className="figma-swipe-details-kicker">{categoryLabel(item.category)}</span>
       <h2>{item.title}</h2>
       <p>{addressLabel(item)}</p>
@@ -60,6 +78,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const photoUrls = useMemo(() => photos(item), [item])
   const mainPhoto = photoUrls[0] || null
+  const optimizedMainPhoto = mainPhoto && canOptimizeImage(mainPhoto) ? mainPhoto : null
   const placeholder = item.category_placeholder_url || null
   const googleServerUrl = !mainPhoto ? item.google_photo_proxy_url : null
   const googleLookup = useMemo(() => !mainPhoto && !googleServerUrl && item.google_client_lookup ? {
@@ -116,7 +135,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
     else setDragX(0)
   }
 
-  const photoStyle = mainPhoto || placeholder ? { backgroundImage: `url(${mainPhoto || placeholder})` } : undefined
+  const photoStyle = !optimizedMainPhoto && (mainPhoto || placeholder) ? { backgroundImage: `url(${mainPhoto || placeholder})` } : undefined
 
   return <>
     <article
@@ -135,6 +154,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
       <div className="figma-swipe-card-photo" style={photoStyle}>
+        {optimizedMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes="(max-width: 760px) 320px, 400px" preload /> : null}
         {!mainPhoto && googleServerUrl ? <GoogleServerPlacePhoto title={item.title} url={googleServerUrl} placeholderUrl={placeholder} /> : null}
         {!mainPhoto && !googleServerUrl && googleLookup ? <GooglePlacePhotoFallback title={item.title} placeId={null} lookup={googleLookup} placeholderUrl={placeholder} /> : null}
       </div>
