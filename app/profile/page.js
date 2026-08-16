@@ -17,7 +17,11 @@ function profilePhotoUrl(session, path) {
 }
 
 function preferenceLabel(value) {
-  const label = String(value || '').replaceAll('_', ' ').trim()
+  const key = String(value || '').trim().toLowerCase()
+  if (key === 'bar' || key === 'bars') return '🍻Bar'
+  if (key === 'nightlife' || key === 'night_life') return '🌙Nightlife'
+  if (key === 'shop' || key === 'shopping') return '🛍️Shop'
+  const label = key.replaceAll('_', ' ').trim()
   return label ? label.replace(/\b\w/g, (letter) => letter.toUpperCase()) : null
 }
 
@@ -39,7 +43,7 @@ export default async function ProfilePage() {
           <small>@{username}</small>
           <div className="figma-profile-stats" aria-label="Profile social counts"><span>0 Followers</span><span>0 Following</span></div>
           <div className="figma-profile-pills" aria-label="Favorite categories">
-            {(preferences.length ? preferences : ['Bar', 'Nightlife', 'Shop']).map((value) => <span key={value}>{value}</span>)}
+            {(preferences.length ? preferences : ['🍻Bar', '🌙Nightlife', '🛍️Shop']).map((value) => <span key={value}>{value}</span>)}
             <span aria-hidden="true">+</span>
           </div>
           <div className="figma-profile-actions">
