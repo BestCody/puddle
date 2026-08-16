@@ -4,13 +4,13 @@ import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
 import { UsernameInput } from '@/components/username-input'
 import { deleteAccount, revokeOtherSessions, updatePassword } from '@/app/auth/actions'
-import { updateDateProfile } from './actions'
+import { markAllNotificationsRead, markNotificationRead, updateAppearance, updateDateProfile, updateNotificationPreferences } from './actions'
 import { requireUser } from '@/lib/auth/user'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Settings' }
 
-const settingsSections = new Set(['profile', 'security', 'appearance', 'sessions', 'billing', 'account'])
+const settingsSections = new Set(['profile', 'security', 'appearance', 'notifications', 'sessions', 'billing', 'account'])
 const dashboardReturnPaths = new Set(['/discover', '/map', '/plans', '/matches', '/membership', '/profile'])
 
 function safeReturnTo(value) {
@@ -23,12 +23,40 @@ function settingsHref(section, returnTo) {
   return `/account?section=${encodeURIComponent(section)}&returnTo=${encodeURIComponent(returnTo)}`
 }
 
+function notificationHref(value) {
+  const href = String(value || '')
+  return href.startsWith('/') && !href.startsWith('//') ? href : null
+}
+
+function notificationTime(value) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
 export default async function AccountPage({ searchParams }) {
   const params = await searchParams
   const selectedSection = settingsSections.has(params?.section) ? params.section : null
   const returnTo = safeReturnTo(params?.returnTo)
-  const { user, profile } = await requireUser({ onboarding: true })
+  const { user, profile, supabase } = await requireUser({ onboarding: true })
   const sessionExpiry = user.aud ? 'Managed securely by Supabase Auth' : 'Active'
+  const [{ data: notificationRows }, { data: preferenceRow }] = await Promise.all([
+    supabase.from('notifications').select('id,kind,title,body,href,read_at,created_at').eq('profile_id', user.id).order('created_at', { ascending: false }).limit(50),
+    supabase.from('notification_preferences').select('in_app_enabled,friend_requests,shares,messages,comments,event_reminders,event_changes,host_announcements,marketing,timezone').eq('profile_id', user.id).maybeSingle()
+  ])
+  const notifications = notificationRows || []
+  const preferences = preferenceRow || {
+    in_app_enabled: true,
+    friend_requests: true,
+    shares: true,
+    messages: true,
+    comments: true,
+    event_reminders: true,
+    event_changes: true,
+    host_announcements: true,
+    marketing: false,
+    timezone: profile?.timezone || 'America/Toronto'
+  }
+  const unread = notifications.filter((item) => !item.read_at).length
 
   return <ProductShell user={user} profile={profile}>
     <div className="figma-settings-screen">
@@ -40,6 +68,7 @@ export default async function AccountPage({ searchParams }) {
             <Link href={settingsHref('profile', returnTo)}>Profile</Link>
             <Link href={settingsHref('security', returnTo)}>Email / Password</Link>
             <Link href={settingsHref('appearance', returnTo)}>Appearance</Link>
+            <Link href={settingsHref('notifications', returnTo)}>Notifications{unread ? ` (${unread})` : ''}</Link>
             <Link href={settingsHref('sessions', returnTo)}>Sessions</Link>
             <Link href={settingsHref('billing', returnTo)}>Billing</Link>
             <Link href={settingsHref('account', returnTo)}>Account</Link>
@@ -68,10 +97,36 @@ export default async function AccountPage({ searchParams }) {
             </form>
           </section>
 
-          <section className="figma-settings-section" id="appearance">
+          <form className="figma-settings-section" id="appearance" action={updateAppearance}>
             <header><small>Appearance</small><h1>Appearance</h1></header>
-            <div className="figma-settings-row"><label>Theme</label><span>Light</span></div>
-            <div className="figma-settings-row"><label>Interface</label><span>Puddle default</span></div>
+            <div className="figma-settings-row"><label>Theme</label><select name="appearance_theme" defaultValue={profile?.appearance_theme || 'light'}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></div>
+            <div className="figma-settings-row"><label>Profile color</label><select name="profile_theme" defaultValue={profile?.profile_theme || 'blue'}><option value="blue">Blue</option><option value="green">Green</option><option value="yellow">Yellow</option><option value="purple">Purple</option><option value="red">Red</option><option value="grey">Grey</option></select></div>
+            <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save appearance</SubmitButton></div>
+          </form>
+
+          <section className="figma-settings-section" id="notifications">
+            <header><small>Notifications</small><h1>Notifications</h1></header>
+            <form action={updateNotificationPreferences} className="figma-notification-preferences">
+              <input type="hidden" name="timezone" value={preferences.timezone || profile?.timezone || 'America/Toronto'} />
+              <label><input type="checkbox" name="in_app_enabled" defaultChecked={preferences.in_app_enabled} /> In-app notifications</label>
+              <label><input type="checkbox" name="friend_requests" defaultChecked={preferences.friend_requests} /> Friend requests</label>
+              <label><input type="checkbox" name="shares" defaultChecked={preferences.shares} /> Shares</label>
+              <label><input type="checkbox" name="messages" defaultChecked={preferences.messages} /> Messages</label>
+              <label><input type="checkbox" name="comments" defaultChecked={preferences.comments} /> Comments</label>
+              <label><input type="checkbox" name="event_reminders" defaultChecked={preferences.event_reminders} /> Event reminders</label>
+              <label><input type="checkbox" name="event_changes" defaultChecked={preferences.event_changes} /> Event changes</label>
+              <label><input type="checkbox" name="host_announcements" defaultChecked={preferences.host_announcements} /> Host announcements</label>
+              <label><input type="checkbox" name="marketing" defaultChecked={preferences.marketing} /> Product updates</label>
+              <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save notifications</SubmitButton></div>
+            </form>
+            <div className="figma-notification-list-heading"><strong>Recent</strong>{unread ? <form action={markAllNotificationsRead}><button type="submit">Mark all read</button></form> : null}</div>
+            <div className="figma-notification-list">{notifications.length ? notifications.map((item) => {
+              const href = notificationHref(item.href)
+              return <article className={item.read_at ? '' : 'is-unread'} key={item.id}>
+                <div><small>{notificationTime(item.created_at)} · {item.kind.replaceAll('_', ' ')}</small><strong>{item.title}</strong><p>{item.body}</p></div>
+                <div>{href ? <Link href={href}>Open</Link> : null}{!item.read_at ? <form action={markNotificationRead}><input type="hidden" name="notification_id" value={item.id} /><button type="submit">Mark read</button></form> : null}</div>
+              </article>
+            }) : <p>No notifications yet.</p>}</div>
           </section>
 
           <section className="figma-settings-section" id="sessions">
