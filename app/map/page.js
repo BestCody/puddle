@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { EmptyState } from '@/components/empty-state'
 import { LocationMap } from '@/components/location-map'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
@@ -21,30 +20,74 @@ function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0,2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
 }
 
-function FeedCard({ point, session, avatar }) {
-  const category = String(point.category || 'place').replaceAll('_',' ')
+function categoryLabel(value) {
+  return String(value || 'Place').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function detailHref(point) {
+  const slug = String(point.href || '').match(/^\/places\/(.+)$/)?.[1]
+  return slug ? `/plans/${slug}` : point.href
+}
+
+function FeedPost({ point, session, avatar }) {
+  const name = session.profile?.display_name || 'You'
   const stateLabel = point.states.includes('planned') ? 'Planned' : point.states.includes('matched') ? 'Matched' : 'Saved'
-  return <article className="figma-feed-card">
-    <header className="figma-feed-author">
-      <span className="figma-feed-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(session.profile?.display_name)}</span>
-      <div><strong>{session.profile?.display_name || 'You'}</strong><small>{stateLabel} in Puddle</small></div>
+  const href = detailHref(point)
+  return <article className="figma-feed-post">
+    <header className="figma-feed-post-author">
+      <span className="figma-feed-post-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(name)}</span>
+      <span><strong>{name}</strong><small>{stateLabel} in Puddle</small></span>
     </header>
-    <p className="figma-feed-note">{point.summary}</p>
-    <Link className="figma-feed-photo" href={point.href} style={point.photo_url ? { backgroundImage: `url(${point.photo_url})` } : undefined} aria-label={`Open ${point.title}`}>
-      {!point.photo_url ? <span className="figma-photo-placeholder">Puddle</span> : null}
-    </Link>
-    <Link className="figma-feed-place" href={point.href}>
-      <span>{category}</span>
-      <h2>{point.title}</h2>
+
+    <p className="figma-feed-post-copy">{point.summary}</p>
+
+    <div className="figma-feed-post-photos" aria-label={`${point.title} photos`}>
+      <Link href={href} className="is-main" style={point.photo_url ? { backgroundImage: `url(${point.photo_url})` } : undefined} aria-label={`Open ${point.title}`} />
+      <Link href={href} style={point.photo_url ? { backgroundImage: `url(${point.photo_url})` } : undefined} aria-label={`Open ${point.title} photo`} />
+      <Link href={href} className="is-more" aria-label={`Open ${point.title}`}>+30</Link>
+    </div>
+
+    <Link className="figma-feed-post-place" href={href}>
+      <span>{categoryLabel(point.category)}</span>
       <small>{point.neighborhood || point.city || stateLabel}</small>
+      <h2>{point.title}</h2>
       <b aria-hidden="true">+</b>
     </Link>
-    <footer className="figma-feed-actions">
-      <Link href={point.href}>Details</Link>
-      <Link href={`/plans?tab=${point.states.includes('planned') ? 'planned' : 'saved'}`}>{stateLabel}</Link>
-      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${point.title}, ${point.city || ''}`)}`} target="_blank" rel="noreferrer">Map</a>
+
+    <footer className="figma-feed-post-interactions" aria-label="Post actions">
+      <Link href="/matches" aria-label="Comment">◯</Link>
+      <Link href={href} aria-label="Open puddle">◒</Link>
+      <Link href="/plans" aria-label="Saved">♡</Link>
+      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${point.title}, ${point.city || ''}`)}`} target="_blank" rel="noreferrer" aria-label="Share or open map">↗</a>
     </footer>
   </article>
+}
+
+function FeedTop({ view, query }) {
+  return <>
+    <Link className="figma-feed-back" href="/discover" aria-label="Back to Swipe">‹</Link>
+    <nav className="figma-dashboard-segment figma-feed-tabs" aria-label="Feed or map">
+      <Link className={view === 'feed' ? 'is-active' : ''} href="/map">Feed</Link>
+      <Link className={view === 'map' ? 'is-active' : ''} href="/map?view=map">Map</Link>
+    </nav>
+    {view === 'feed' ? <form className="figma-feed-search" action="/map" method="get">
+      <label><span className="sr-only">Search Puddle</span><input type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
+      <button type="submit" aria-label="Search">⌕</button>
+    </form> : null}
+  </>
+}
+
+function MapScreen({ points, center }) {
+  const first = points[0]
+  return <section className="figma-feed-map-screen">
+    <div className="figma-feed-map-canvas">{points.length ? <LocationMap initialPoints={points} initialCenter={center} /> : <div className="figma-feed-map-empty">Save a place to see it on your map.</div>}</div>
+    {first ? <>
+      <div className="figma-feed-map-puddle" aria-hidden="true" />
+      <Link className="figma-feed-map-card" href={detailHref(first)}>
+        <span>{categoryLabel(first.category)}</span><small>{first.city || first.neighborhood || ''}</small><strong>{first.title}</strong><b>+</b>
+      </Link>
+    </> : null}
+  </section>
 }
 
 export default async function LocationMapPage({ searchParams }) {
@@ -57,26 +100,16 @@ export default async function LocationMapPage({ searchParams }) {
     const avatar = avatarUrl(session)
     const points = query ? snapshot.points.filter((point) => `${point.title} ${point.city || ''} ${point.category || ''}`.toLowerCase().includes(query)) : snapshot.points
 
-    return <div className="figma-feed-page">
-      <nav className="figma-segmented-tabs figma-feed-segment" aria-label="Feed or map">
-        <a className={view === 'feed' ? 'is-active' : ''} href="/map">Feed</a>
-        <a className={view === 'map' ? 'is-active' : ''} href="/map?view=map">Map</a>
-      </nav>
-
-      <form className="figma-feed-search" action="/map" method="get">
-        {view === 'map' ? <input type="hidden" name="view" value="map" /> : null}
-        <label><span className="sr-only">Search Puddle</span><input type="search" name="q" defaultValue={params?.q || ''} placeholder="Search puddle" /></label>
-        <button type="submit" aria-label="Search">⌕</button>
-      </form>
-
-      {view === 'map' ? <section className="figma-map-view">
-        <div className="figma-map-stats"><span>{snapshot.counts.saved} saved</span><span>{snapshot.counts.matched} matched</span><span>{snapshot.counts.planned} planned</span></div>
-        {points.length ? <LocationMap initialPoints={points} initialCenter={snapshot.center} /> : <EmptyState icon="⌖" title="Nothing to map yet." description="Save a location or create a shared match and it will appear here." actionHref="/discover" actionLabel="Start swiping" />}
-      </section> : <>
-        <section className="figma-feed-list" aria-label="Puddle feed">
-          {points.length ? points.map((point) => <FeedCard point={point} session={session} avatar={avatar} key={point.id} />) : <EmptyState icon="○" title={query ? 'No puddles match that search.' : 'Your feed is ready for its first puddle.'} description={query ? 'Try a different place or city.' : 'Save a place while swiping and it will show up here.'} actionHref="/discover" actionLabel="Start swiping" />}
+    return <div className={`figma-feed-screen is-${view}`}>
+      <FeedTop view={view} query={params?.q} />
+      {view === 'map' ? <MapScreen points={points} center={snapshot.center} /> : <>
+        <section className="figma-feed-stream" aria-label="Puddle feed">
+          {points.length ? points.map((point) => <FeedPost point={point} session={session} avatar={avatar} key={point.id} />) : <div className="figma-feed-empty"><strong>{query ? 'No puddles match that search.' : 'Your feed is ready for its first puddle.'}</strong><Link href="/discover">Start swiping</Link></div>}
         </section>
-        <Link className="figma-feed-compose" href="/create/place"><span className="figma-feed-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(session.profile?.display_name)}</span><span>Create a puddle...</span><b>↑</b></Link>
+        <Link className="figma-feed-composer" href="/create/post">
+          <span className="figma-feed-post-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(session.profile?.display_name)}</span>
+          <span>Create a puddle...</span><b>↑</b>
+        </Link>
       </>}
     </div>
   })
