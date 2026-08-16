@@ -36,16 +36,16 @@ jobs:
       - name: Convert bootstrap to Parquet
         run: npm run global:bootstrap:parquet -- --input=.global-data/bootstrap-jsonl --output=.global-data/bootstrap-parquet
       - name: Upload immutable bootstrap snapshot
-        run: npm run b2:upload-tree -- --dir=.global-data/bootstrap-parquet --prefix=bootstrap/snapshot=${{ steps.stamp.outputs.snapshot }} --env-prefix=B2_DATA --concurrency=32
+        run: npm run b2:upload-tree -- --dir=.global-data/bootstrap-parquet --prefix=data/snapshots/bootstrap/snapshot=${{ steps.stamp.outputs.snapshot }} --env-prefix=B2_DATA --concurrency=32
         env:
-          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
-          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
           B2_DATA_BUCKET_ID: ${{ secrets.B2_DATA_BUCKET_ID }}
-          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
-      - name: Update bootstrap/current only after immutable upload succeeds
-        run: npm run b2:upload-tree -- --dir=.global-data/bootstrap-parquet --prefix=bootstrap/current --env-prefix=B2_DATA --concurrency=32
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      - name: Update bootstrap current pointer only after immutable upload succeeds
+        run: npm run b2:upload-tree -- --dir=.global-data/bootstrap-parquet --prefix=data/snapshots/bootstrap/current --env-prefix=B2_DATA --concurrency=32
         env:
-          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
-          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
           B2_DATA_BUCKET_ID: ${{ secrets.B2_DATA_BUCKET_ID }}
-          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
