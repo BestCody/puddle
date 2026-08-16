@@ -2,7 +2,7 @@
 @media (min-width: 761px) {
   .figma-feed-stream {
     position: relative;
-    left: -17.5px;
+    left: -18.5px;
   }
 
   .figma-feed-tabs {
@@ -19,6 +19,16 @@
     left: calc(50% + 125px);
   }
 
+  .figma-feed-post-copy {
+    top: 60.59px;
+    left: 65.12px;
+  }
+
+  .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-feed-stream {
+    left: -17.5px;
+    gap: 24px;
+  }
+
   .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-feed-tabs {
     left: calc(50% + 20.31px);
   }
@@ -29,5 +39,10 @@
 
   .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-feed-composer {
     left: calc(50% + 25px);
+  }
+
+  .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-feed-post-copy {
+    top: 62.67px;
+    left: 59.92px;
   }
 }
