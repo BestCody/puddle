@@ -61,7 +61,7 @@ function FeedPost({ post, friends }) {
   const href = `/plans/${location.slug}`
   const authorName = author.display_name || author.username || 'Puddle person'
 
-  return <article className={styles.post} id={`post-${post.id}`} data-testid="feed-post">
+  return <article className={styles.post} id={`post-${post.id}`} data-testid="feed-post" aria-label={post.title || `Puddle at ${location.name}`}>
     <header className={styles.author}>
       <span className={styles.avatar} style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>
         {post.author_avatar_url ? null : initials(authorName)}
@@ -72,7 +72,6 @@ function FeedPost({ post, friends }) {
       </span>
     </header>
 
-    <h1 className={styles.title}>{post.title}</h1>
     {post.body ? <p className={styles.copy}>{post.body}</p> : null}
 
     <FeedPhotos post={post} href={href} />
