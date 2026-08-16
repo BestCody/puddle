@@ -1,33 +1,9 @@
 /* Expanded desktop sidebar alignment shared by the rebuilt Figma screens. */
 @media (min-width: 761px) {
-  /* Preserve the authored 832px Figma composition even when browser zoom or
-     a short desktop viewport reduces the available CSS height. The viewport
-     scrolls the exact canvas instead of moving Settings upward into Profile. */
   .figma-dashboard-sidebar {
     height: 100vh;
     min-height: 0;
     overflow: hidden;
-  }
-
-  .figma-dashboard-sidebar-scroll {
-    width: 100%;
-    height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: none;
-  }
-
-  .figma-dashboard-sidebar-scroll::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-  }
-
-  .figma-dashboard-sidebar-canvas {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    min-height: 832px;
   }
 
   .figma-dashboard-settings-link {
@@ -41,5 +17,47 @@
 
   .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-nav-item {
     padding-left: 16px;
+  }
+}
+
+/*
+ * The source Figma frame is 832px tall. At that height and above we keep the
+ * authored positions unchanged. On shorter desktop viewports/browser zoom,
+ * adapt the vertical placement instead of making the sidebar scroll.
+ */
+@media (min-width: 761px) and (max-height: 831px) {
+  .figma-dashboard-sidebar-logo {
+    top: clamp(72px, calc(48.28vh - 217.7px), 184px);
+  }
+
+  .figma-dashboard-nav {
+    top: clamp(148px, calc(48.28vh - 141.7px), 260px);
+  }
+
+  .figma-dashboard-settings-link {
+    top: auto;
+    bottom: clamp(20px, 4.3vh, 36px);
+  }
+}
+
+/* Extremely short effective heights can happen at heavy browser zoom. Keep
+   every control visible and separated without introducing an inner scrollbar. */
+@media (min-width: 761px) and (max-height: 579px) {
+  .figma-dashboard-sidebar-logo {
+    top: 30px;
+  }
+
+  .figma-dashboard-nav {
+    top: 96px;
+    gap: 0;
+  }
+
+  .figma-dashboard-nav-item {
+    height: 44px;
+  }
+
+  .figma-dashboard-settings-link {
+    top: auto;
+    bottom: 16px;
   }
 }
