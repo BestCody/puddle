@@ -32,11 +32,15 @@ test('new approved open-photo writes are B2-only while the legacy Supabase write
   assert.match(compatibility, /production writes are now B2-only/)
   assert.match(compatibility, /storeOpenPhotoInB2/)
   assert.match(b2, /storageBackend: 'b2'/)
-  assert.match(b2, /photos\/by-sha256/)
+  assert.match(b2, /media\/photos\/by-sha256/)
   assert.match(migrator, /--delete-source/)
+  assert.match(migrator, /verifyUpdatedRow/)
   assert.match(migrator, /content_hash/)
   assert.match(workflow, /delete_source:/)
   assert.match(workflow, /default: false/)
+  assert.match(workflow, /B2_MEDIA_SOURCE_DELETION_ENABLED/)
+  assert.match(workflow, /secrets\.B2_KEY_ID/)
+  assert.match(workflow, /'puddle-assets'/)
 })
 
 test('storage-neutral open-photo transform produces immutable JPEG identity metadata', async () => {
@@ -54,15 +58,17 @@ test('storage-neutral open-photo transform produces immutable JPEG identity meta
   assert.ok(transformed.height > 0)
 })
 
-test('global media delivery allows the configured B2/CDN origin and keeps Google photo bytes transient', async () => {
+test('global media delivery accepts transition B2 origin and keeps Google photo bytes transient', async () => {
   const nextConfig = await read('next.config.mjs')
   const photoHelper = await read('lib/app/google-place-photo-proxy.js')
   const googleRoute = await read('app/api/location-google-photo/[id]/route.js')
   const globalDoc = await read('scripts/global-data/index_opensearch.py')
 
   assert.match(nextConfig, /B2_MEDIA_PUBLIC_BASE_URL/)
+  assert.match(nextConfig, /B2_DOWNLOAD_BASE_URL/)
   assert.match(nextConfig, /media\.puddle\.app/)
   assert.match(globalDoc, /primary_photo/)
+  assert.match(globalDoc, /DATA_PREFIX/)
   assert.match(googleRoute, /Cache-Control': 'private, no-store/)
   assert.match(photoHelper, /fetchGooglePlacePhotoById/)
   assert.doesNotMatch(globalDoc, /Google Place Photos|\/photos\/.*media/)
