@@ -21,9 +21,14 @@ test('Proxy verifies claims and only loads moderation profile state when require
   assert.match(session, /if \(!loadProfileState\)/)
 })
 
-test('Dashboard shell uses one bootstrap RPC with parallel fallback', async () => {
-  const shell = await read('components/product-shell.js')
-  assert.match(shell, /rpc\('dashboard_bootstrap_v1'/)
+test('Dashboard shell uses one trusted bootstrap RPC with parallel fallback', async () => {
+  const [shell, migration] = await Promise.all([
+    read('components/product-shell.js'),
+    read('supabase/migrations/10060_latency_optimization.sql')
+  ])
+  assert.match(shell, /rpc\('dashboard_bootstrap_v1'\)/)
+  assert.doesNotMatch(shell, /known_privileged:/)
+  assert.doesNotMatch(migration, /known_privileged/)
   assert.match(shell, /Promise\.all\(/)
   assert.match(shell, /parallel_fallback/)
   assert.match(shell, /dashboard_bootstrap/)
@@ -59,9 +64,10 @@ test('Partial caching is limited to cookie-free published public location data',
 })
 
 test('Swipe uses Next Image for optimized first-party media while Google fallback remains isolated', async () => {
-  const [card, config] = await Promise.all([
+  const [card, config, preloader] = await Promise.all([
     read('components/figma-swipe-card.js'),
-    read('next.config.mjs')
+    read('next.config.mjs'),
+    read('components/discovery-photo-preloader.js')
   ])
   assert.match(card, /import Image from 'next\/image'/)
   assert.match(card, /<Image src=\{optimizedMainPhoto\}/)
@@ -69,6 +75,8 @@ test('Swipe uses Next Image for optimized first-party media while Google fallbac
   assert.match(card, /GoogleServerPlacePhoto/)
   assert.match(card, /GooglePlacePhotoFallback/)
   assert.match(config, /cegoqtvajwajczbofpep\.supabase\.co/)
+  assert.match(preloader, /getImageProps/)
+  assert.match(preloader, /image\.srcset = source\.srcSet/)
 })
 
 test('Server latency budgets emit structured metrics without user identifiers', async () => {
