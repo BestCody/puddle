@@ -25,6 +25,26 @@ async function attachRender(page, testInfo, name) {
   })
 }
 
+async function assertFeedStructure(page) {
+  const screen = page.getByTestId('feed-screen')
+  const header = page.getByTestId('feed-header')
+  const tabs = page.getByTestId('feed-tabs')
+  const stream = page.getByTestId('feed-stream')
+  const composer = page.getByTestId('feed-composer')
+
+  await expect(screen).toBeVisible()
+  await expect(header).toBeVisible()
+  await expect(tabs).toBeVisible()
+  await expect(stream).toBeVisible()
+  await expect(composer).toBeVisible()
+
+  const headerBox = await header.boundingBox()
+  const streamBox = await stream.boundingBox()
+  expect(headerBox).toBeTruthy()
+  expect(streamBox).toBeTruthy()
+  expect(streamBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height - 1)
+}
+
 test('core authenticated UI behavior works across desktop and mobile', async ({ page }, testInfo) => {
   const account = await createConfirmedUser({ displayName: 'UI Contract Tester' })
   await completeProfileDirect(account.user.id, { display_name: 'UI Contract Tester' })
@@ -58,14 +78,15 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await attachRender(page, testInfo, 'swipe')
 
   await page.goto('/map')
-  const feedTabs = page.locator('.figma-feed-tabs')
+  const feedTabs = page.getByTestId('feed-tabs')
   await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
+  await assertFeedStructure(page)
   await assertRouteHealth(page)
   await attachRender(page, testInfo, 'feed')
   await feedTabs.getByRole('link', { name: 'Map', exact: true }).click()
   await expect(page).toHaveURL(/\/map\?view=map/)
-  await expect(page.locator('.figma-feed-map-screen')).toBeVisible()
+  await expect(page.getByTestId('feed-map-canvas')).toBeVisible()
   await assertRouteHealth(page)
   await attachRender(page, testInfo, 'map')
 

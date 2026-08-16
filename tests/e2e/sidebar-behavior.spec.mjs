@@ -32,7 +32,7 @@ test('desktop Figma sidebar navigates, switches to concise mode, and preserves t
 
   await nav.locator('a[href="/map"]').click()
   await expect(page).toHaveURL(/\/map(?:\?|$)/)
-  await expect(page.locator('.figma-feed-screen')).toBeVisible()
+  await expect(page.getByTestId('feed-screen')).toBeVisible()
   await expect(page.locator('.figma-dashboard-nav a[href="/map"]')).toHaveAttribute('aria-current', 'page')
   await expect(page.locator('.figma-dashboard-sidebar')).toHaveClass(/is-concise/)
 

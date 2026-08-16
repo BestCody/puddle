@@ -70,13 +70,19 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await assertNoHorizontalOverflow(page)
 
   await openDesktop(page, '/map')
-  const feedTabs = page.locator('.figma-feed-tabs')
+  const feedTabs = page.getByTestId('feed-tabs')
   await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
-  const feedSearch = page.locator('.figma-feed-search')
+  const feedSearch = page.getByTestId('feed-search')
   await expect(feedSearch).toBeVisible()
   await expect(feedSearch.getByRole('searchbox', { name: 'Search puddle' })).toHaveAttribute('placeholder', 'Search puddle')
   await expect(page.getByText('Search Puddle', { exact: true })).toHaveCount(0)
+
+  const feedHeader = await page.getByTestId('feed-header').boundingBox()
+  const feedStream = await page.getByTestId('feed-stream').boundingBox()
+  expect(feedHeader).toBeTruthy()
+  expect(feedStream).toBeTruthy()
+  expect(feedStream.y).toBeGreaterThanOrEqual(feedHeader.y + feedHeader.height - 1)
 
   await openDesktop(page, '/create/post')
   await expect(page.locator('.figma-create-post-blur')).toBeVisible()
@@ -91,9 +97,9 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(page.getByRole('link', { name: 'Choose a place from the map' })).toBeVisible()
 
   await openDesktop(page, '/map')
-  await page.locator('.figma-feed-tabs').getByRole('link', { name: 'Map', exact: true }).click()
+  await page.getByTestId('feed-tabs').getByRole('link', { name: 'Map', exact: true }).click()
   await expect(page).toHaveURL(/\/map\?view=map/)
-  await expect(page.locator('.figma-feed-map-screen')).toBeVisible()
+  await expect(page.getByTestId('feed-map-canvas')).toBeVisible()
 
   await openDesktop(page, '/plans')
   const savedTabs = page.locator('.figma-saved-tabs')

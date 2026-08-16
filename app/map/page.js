@@ -5,6 +5,7 @@ import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
 import { getSocialFeedSnapshot } from '@/lib/app/social-feed-data'
 import { createFeedComment, shareFeedPost, toggleFeedSave } from './actions'
+import styles from './MapFeed.module.css'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -13,7 +14,7 @@ export const metadata = {
 }
 
 function initials(name) {
-  return String(name || 'P').split(/\s+/).filter(Boolean).slice(0,2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
+  return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
 }
 
 function categoryLabel(value) {
@@ -28,16 +29,42 @@ function detailHref(point) {
 function timeLabel(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`
+  return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }
 
 function FeedPhotos({ post, href }) {
   const photos = post.photo_urls || []
-  if (!photos.length) return <Link href={href} className="figma-feed-post-photos figma-feed-post-photo-empty" aria-label={`Open ${post.location.name}`}><span>Puddle</span></Link>
-  return <div className={`figma-feed-post-photos has-${Math.min(3, photos.length)}`} aria-label={`${post.location.name} photos`}>
-    <Link href={href} className="is-main" style={{ backgroundImage: `url(${photos[0]})` }} aria-label={`Open ${post.location.name}`} />
-    {photos[1] ? <Link href={href} style={{ backgroundImage: `url(${photos[1]})` }} aria-label={`Open ${post.location.name} photo 2`} /> : null}
-    {photos[2] ? <Link href={href} className={photos.length > 3 ? 'is-more' : ''} style={{ backgroundImage: `url(${photos[2]})` }} aria-label={`Open ${post.location.name} photo 3`}>{photos.length > 3 ? `+${photos.length - 2}` : null}</Link> : null}
+  const count = photos.length
+
+  return <div className={styles.photos} aria-label={`${post.location.name} photos`}>
+    <Link
+      href={href}
+      className={`${styles.photo} ${styles.photoMain}`}
+      style={photos[0] ? { backgroundImage: `url(${photos[0]})` } : undefined}
+      aria-label={`Open ${post.location.name}`}
+    />
+    <Link
+      href={href}
+      className={styles.photo}
+      style={photos[1] ? { backgroundImage: `url(${photos[1]})` } : undefined}
+      aria-label={`Open ${post.location.name} photo 2`}
+    />
+    <Link
+      href={href}
+      className={styles.photo}
+      style={photos[2] ? { backgroundImage: `url(${photos[2]})` } : undefined}
+      aria-label={`Open ${post.location.name} photo 3`}
+    >
+      {count > 3 ? `+${count - 2}` : null}
+    </Link>
   </div>
 }
 
@@ -46,29 +73,36 @@ function FeedPost({ post, friends }) {
   const location = post.location
   const href = `/plans/${location.slug}`
   const authorName = author.display_name || author.username || 'Puddle person'
-  return <article className="figma-feed-post" id={`post-${post.id}`}>
-    <header className="figma-feed-post-author">
-      <span className="figma-feed-post-avatar" style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>{post.author_avatar_url ? null : initials(authorName)}</span>
-      <span><strong>{authorName}</strong><small>{timeLabel(post.created_at)} · {post.visibility === 'friends' ? 'Friends' : 'Public'}</small></span>
+
+  return <article className={styles.post} id={`post-${post.id}`} data-testid="feed-post" aria-label={post.title || `Puddle at ${location.name}`}>
+    <header className={styles.author}>
+      <span className={styles.avatar} style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>
+        {post.author_avatar_url ? null : initials(authorName)}
+      </span>
+      <span className={styles.authorMeta}>
+        <strong>{authorName}</strong>
+        <small>{timeLabel(post.created_at)}</small>
+      </span>
     </header>
 
-    <h1 className="figma-feed-post-title">{post.title}</h1>
-    {post.body ? <p className="figma-feed-post-copy">{post.body}</p> : null}
-
+    {post.body ? <p className={styles.copy}>{post.body}</p> : null}
     <FeedPhotos post={post} href={href} />
 
-    <Link className="figma-feed-post-place" href={href}>
-      <span>{categoryLabel(location.kind)}</span>
-      <small>{location.neighborhood || location.city || ''}</small>
+    <Link className={styles.place} href={href}>
+      <span className={styles.placeMeta}>{categoryLabel(location.kind)}</span>
+      <small className={styles.placeArea}>{location.neighborhood || location.city || ''}</small>
       <h2>{location.name}</h2>
-      <b aria-hidden="true">+</b>
+      <b className={styles.placeAdd} aria-hidden="true">+</b>
     </Link>
 
-    <footer className="figma-feed-post-interactions" aria-label="Post actions">
-      <details className="figma-feed-action-menu figma-feed-comments">
+    <footer className={styles.interactions} aria-label="Post actions">
+      <details className={styles.actionMenu}>
         <summary aria-label={`Comment on ${post.title}`}>◯<span>{post.comments.length || ''}</span></summary>
-        <div>
-          {post.comments.length ? <div className="figma-feed-comment-list">{post.comments.map((comment) => <p key={comment.id}><strong>{comment.author?.display_name || comment.author?.username || 'Puddle person'}</strong><span>{comment.body}</span></p>)}</div> : <p>No comments yet.</p>}
+        <div className={styles.actionPanel}>
+          {post.comments.length ? <div className={styles.commentList}>{post.comments.map((comment) => <p key={comment.id}>
+            <strong>{comment.author?.display_name || comment.author?.username || 'Puddle person'}</strong>
+            <span>{comment.body}</span>
+          </p>)}</div> : <p>No comments yet.</p>}
           <form action={createFeedComment}>
             <input type="hidden" name="post_id" value={post.id} />
             <input name="comment_body" required maxLength="2000" placeholder="Add a comment" aria-label="Add a comment" />
@@ -76,14 +110,19 @@ function FeedPost({ post, friends }) {
           </form>
         </div>
       </details>
+
       <Link href={href} aria-label="Open puddle">◒</Link>
+
       <form action={toggleFeedSave}>
         <input type="hidden" name="location_id" value={post.location_id} />
-        <button className={post.saved ? 'is-saved' : ''} type="submit" aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}>{post.saved ? '♥' : '♡'}</button>
+        <button className={post.saved ? styles.saved : ''} type="submit" aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}>
+          {post.saved ? '♥' : '♡'}
+        </button>
       </form>
-      <details className="figma-feed-action-menu figma-feed-share">
+
+      <details className={styles.actionMenu}>
         <summary aria-label={`Share ${post.title}`}>↗</summary>
-        <div>
+        <div className={`${styles.actionPanel} ${styles.sharePanel}`}>
           <strong>Share with a friend</strong>
           {friends.length ? friends.map((friend) => <form action={shareFeedPost} key={friend.id}>
             <input type="hidden" name="post_id" value={post.id} />
@@ -97,31 +136,52 @@ function FeedPost({ post, friends }) {
 }
 
 function FeedTop({ view, query }) {
-  return <>
-    <Link className="figma-feed-back" href="/discover" aria-label="Back to Swipe">‹</Link>
-    <nav className="figma-dashboard-segment figma-feed-tabs" aria-label="Feed or map">
-      <Link className={view === 'feed' ? 'is-active' : ''} href="/map">Feed</Link>
-      <Link className={view === 'map' ? 'is-active' : ''} href="/map?view=map">Map</Link>
+  return <header className={styles.header} data-testid="feed-header">
+    <Link className={styles.back} href="/discover" aria-label="Back to Swipe">‹</Link>
+    <nav className={styles.tabs} aria-label="Feed or map" data-testid="feed-tabs">
+      <Link className={`${styles.tab} ${view === 'feed' ? styles.tabActive : ''}`} href="/map">Feed</Link>
+      <Link className={`${styles.tab} ${view === 'map' ? styles.tabActive : ''}`} href="/map?view=map">Map</Link>
     </nav>
-    {view === 'feed' ? <form className="figma-feed-search" action="/map" method="get">
+    {view === 'feed' ? <form className={styles.search} action="/map" method="get" data-testid="feed-search">
       <label><input aria-label="Search puddle" type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
       <button type="submit" aria-label="Search">⌕</button>
-    </form> : null}
-  </>
+    </form> : <span aria-hidden="true" />}
+  </header>
 }
 
-function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false }) {
+function MapSearch({ query }) {
+  return <form className={styles.mapSearch} action="/map" method="get" data-testid="map-search">
+    <input type="hidden" name="view" value="map" />
+    <label><input aria-label="Search puddle map" type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
+    <button type="submit" aria-label="Search map">⌕</button>
+  </form>
+}
+
+function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false, query = '' }) {
   const first = points[0]
   const hasMapContent = points.length || (passActive && heatmap.length)
-  return <section className="figma-feed-map-screen">
-    {selectingForPost ? <div className="figma-map-selection-notice"><strong>Choose a place for your post.</strong><Link href="/create/post">Cancel</Link></div> : null}
-    <div className="figma-feed-map-canvas">{hasMapContent ? <LocationMap initialPoints={points} initialCenter={center} heatmapPoints={heatmap} passActive={passActive && !selectingForPost} /> : <div className="figma-feed-map-empty">Save a place to see it on your map.</div>}</div>
+
+  return <section className={styles.mapScreen} data-testid="feed-map-canvas">
+    {selectingForPost ? <div className={styles.mapSelectionNotice}>
+      <strong>Choose a place for your post.</strong>
+      <Link href="/create/post">Cancel</Link>
+    </div> : null}
+
+    <div className={styles.mapCanvas}>
+      {hasMapContent ? <LocationMap initialPoints={points} initialCenter={center} heatmapPoints={heatmap} passActive={passActive && !selectingForPost} /> : <div className={styles.mapEmpty}>Save a place to see it on your map.</div>}
+    </div>
+
     {first ? <>
-      <div className="figma-feed-map-puddle" aria-hidden="true" />
-      <Link className="figma-feed-map-card" href={detailHref(first)}>
-        <span>{categoryLabel(first.category)}</span><small>{first.city || first.neighborhood || ''}</small><strong>{first.title}</strong><b>+</b>
+      <div className={styles.mapPuddle} aria-hidden="true" />
+      <Link className={styles.mapCard} href={detailHref(first)}>
+        <span className={styles.mapCardMeta}>{categoryLabel(first.category)}</span>
+        <small className={styles.mapCardArea}>{first.city || first.neighborhood || ''}</small>
+        <strong>{first.title}</strong>
+        <b className={styles.mapCardAdd}>+</b>
       </Link>
     </> : null}
+
+    <MapSearch query={query} />
   </section>
 }
 
@@ -134,22 +194,36 @@ export default async function LocationMapPage({ searchParams }) {
   return renderProductPage(async (session) => {
     const mapSnapshot = await getLocationMapSnapshot(session)
     const feed = view === 'feed' ? await getSocialFeedSnapshot(session, query) : null
-    const mapPoints = selectingForPost
-      ? mapSnapshot.points.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
+    const normalizedMapQuery = query.toLowerCase()
+    const filteredMapPoints = normalizedMapQuery
+      ? mapSnapshot.points.filter((point) => `${point.title || ''} ${point.category || ''} ${point.neighborhood || ''} ${point.city || ''}`.toLowerCase().includes(normalizedMapQuery))
       : mapSnapshot.points
+    const mapPoints = selectingForPost
+      ? filteredMapPoints.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
+      : filteredMapPoints
 
-    return <div className={`figma-feed-screen is-${view}`}>
+    return <>
       <AuthMessage searchParams={params} />
-      <FeedTop view={view} query={params?.q} />
-      {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} /> : <>
-        <section className="figma-feed-stream" aria-label="Puddle feed">
-          {feed.items.length ? feed.items.map((post) => <FeedPost post={post} friends={feed.friends} key={post.id} />) : <div className="figma-feed-empty"><strong>{query ? 'No puddles match that search.' : 'No one has posted a puddle yet.'}</strong><Link href="/create/post">Create the first one</Link></div>}
-        </section>
-        <Link className="figma-feed-composer" href="/create/post">
-          <span className="figma-feed-post-avatar" style={feed.self.avatar_url ? { backgroundImage: `url(${feed.self.avatar_url})` } : undefined}>{feed.self.avatar_url ? null : initials(feed.self.display_name)}</span>
-          <span>Create a puddle...</span><b>↑</b>
-        </Link>
-      </>}
-    </div>
+      <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-view={view}>
+        <FeedTop view={view} query={params?.q} />
+
+        {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} query={query} /> : <>
+          <section className={styles.stream} aria-label="Puddle feed" data-testid="feed-stream">
+            {feed.items.length ? feed.items.map((post) => <FeedPost post={post} friends={feed.friends} key={post.id} />) : <div className={styles.empty}>
+              <strong>{query ? 'No puddles match that search.' : 'No one has posted a puddle yet.'}</strong>
+              <Link href="/create/post">Create the first one</Link>
+            </div>}
+          </section>
+
+          <Link className={styles.composer} href="/create/post" data-testid="feed-composer">
+            <span className={styles.avatar} style={feed.self.avatar_url ? { backgroundImage: `url(${feed.self.avatar_url})` } : undefined}>
+              {feed.self.avatar_url ? null : initials(feed.self.display_name)}
+            </span>
+            <span className={styles.composerText}>Create a puddle...</span>
+            <b className={styles.composerSubmit}>↑</b>
+          </Link>
+        </>}
+      </div>
+    </>
   })
 }
