@@ -38,8 +38,6 @@ export default async function ProfilePage() {
         <div className="minimal-profile-preferences"><span>Preferences</span><div>{preferences.length ? preferences.map((value) => <small key={value}>{String(value).replaceAll('_', ' ')}</small>) : <small>Not set</small>}</div></div>
         <Link href="/account">Account settings</Link>
       </section>
-
-      <details className="minimal-advanced-settings"><summary>Advanced</summary><div><Link href="/profile/media">Photos and verification</Link></div></details>
     </div>
   })
 }

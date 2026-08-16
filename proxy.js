@@ -83,6 +83,12 @@ export async function proxy(request) {
     return secured(cachePolicy(response, pathname), { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
   }
 
+  const isLandingDemo = pathname === '/landing-demo' || pathname.startsWith('/landing-demo/')
+  if (isLandingDemo) {
+    const response = NextResponse.next({ request: { headers: requestHeaders } })
+    return secured(cachePolicy(response, pathname), { request, nonce })
+  }
+
   const isProtected = protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
   const isAuthOnly = authOnlyPaths.includes(pathname)
   const hasAuthFailure = request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('auth_error')

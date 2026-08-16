@@ -10,10 +10,18 @@ on:
       - public/figma-landing-exact.css
       - public/figma-landing-v2.css
       - public/figma/**
+      - app/landing-demo/**
+      - app/landing-phone-demo.css
+      - app/product-polish.css
       - app/swipe-motion.css
+      - app/profile/page.js
+      - components/landing-phone-demo.js
       - components/minimal-swipe-card.js
+      - components/resizable-product-sidebar.js
+      - lib/security/headers.js
+      - proxy.js
+      - tests/integration/landing-phone-demos.test.mjs
       - tests/integration/swipe-motion.test.mjs
-      - tests/integration/landing-figma-transparency.test.mjs
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
       - scripts/test-responsive-landing.mjs
@@ -29,10 +37,18 @@ on:
       - public/figma-landing-exact.css
       - public/figma-landing-v2.css
       - public/figma/**
+      - app/landing-demo/**
+      - app/landing-phone-demo.css
+      - app/product-polish.css
       - app/swipe-motion.css
+      - app/profile/page.js
+      - components/landing-phone-demo.js
       - components/minimal-swipe-card.js
+      - components/resizable-product-sidebar.js
+      - lib/security/headers.js
+      - proxy.js
+      - tests/integration/landing-phone-demos.test.mjs
       - tests/integration/swipe-motion.test.mjs
-      - tests/integration/landing-figma-transparency.test.mjs
       - next.config.mjs
       - scripts/test-landing-restoration.mjs
       - scripts/test-responsive-landing.mjs
@@ -62,7 +78,7 @@ jobs:
           node scripts/test-landing-restoration.mjs
           node scripts/test-responsive-landing.mjs
           node --test tests/integration/swipe-motion.test.mjs
-          node --test tests/integration/landing-figma-transparency.test.mjs
+          node --test tests/integration/landing-phone-demos.test.mjs
       - name: Upload landing comparison renders
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,0 +1,74 @@
+/* Public, backend-free versions of the real product screens used inside landing-page phones. */
+html:has(.landing-phone-demo),body:has(.landing-phone-demo){margin:0;width:100%;min-height:100%;background:#fff;overscroll-behavior:none}
+body:has(.landing-phone-demo){overflow:hidden}
+.landing-phone-demo{width:100%;height:100svh;overflow:auto;scrollbar-width:none;background:#fff;color:#111;padding:12px 9px 28px}
+.landing-phone-demo::-webkit-scrollbar{display:none}
+.landing-phone-demo *{box-sizing:border-box}
+
+.landing-phone-demo--swipe{padding:10px 8px 18px;background:#f6f6f6}
+.landing-demo-swipe-toolbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 4px 4px 10px}
+.landing-demo-swipe-toolbar>strong{font:800 18px/1 Manrope,Inter,sans-serif;letter-spacing:-.04em}
+.landing-demo-swipe-toolbar>button{width:42px;height:42px;display:grid;place-items:center;border:2px solid #d1d1d1;border-radius:999px;background:#fff;color:#111}
+.landing-demo-swipe-toolbar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.landing-phone-demo .minimal-swipe-workspace{width:100%;max-width:none;margin:0;gap:10px}
+.landing-phone-demo .minimal-card-stage{min-height:520px;height:520px}
+.landing-phone-demo .minimal-swipe-card,.landing-phone-demo .minimal-swipe-card-preview{width:100%;max-width:365px;height:520px;min-height:520px;border-radius:23px}
+.landing-phone-demo .minimal-swipe-actions{max-width:365px;gap:7px}
+.landing-phone-demo .minimal-swipe-action>span{width:50px;height:50px}
+.landing-phone-demo .minimal-progress{max-width:365px}
+
+.landing-phone-demo .figma-saved-page,.landing-phone-demo .figma-feed-page{width:100%;min-height:100%;margin:0;padding:8px 0 78px}
+.landing-phone-demo .figma-saved-segment,.landing-phone-demo .figma-feed-segment{position:relative!important;top:auto!important;left:auto!important;transform:none!important;margin:2px auto 14px;width:max-content;z-index:2}
+.landing-phone-demo .figma-category-tabs{overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.landing-phone-demo .figma-category-tabs::-webkit-scrollbar{display:none}
+.landing-phone-demo .figma-saved-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.landing-phone-demo .figma-saved-card{grid-template-rows:124px auto;min-width:0}
+.landing-phone-demo .figma-saved-copy{padding:9px!important}
+.landing-phone-demo .figma-saved-copy h2{font-size:14px;line-height:1.05}
+.landing-phone-demo .figma-card-open{width:30px;height:30px;font-size:21px}
+.landing-phone-demo .figma-saved-search{position:sticky;left:auto;bottom:6px;transform:none;width:calc(100% - 10px);margin:14px auto 0}
+.landing-demo-plans{display:grid;gap:10px;padding:10px 4px}
+.landing-demo-plans article{padding:14px;border:2px solid #e6e6e6;border-radius:18px;background:#fff;box-shadow:0 3px 0 rgba(0,0,0,.08)}
+.landing-demo-plans h2{margin:5px 0;font-size:20px}
+.landing-demo-plans strong,.landing-demo-plans small{font-family:monospace;font-size:11px;color:#858585}
+
+.landing-phone-demo .figma-feed-search{position:relative!important;top:auto!important;right:auto!important;width:calc(100% - 10px);margin:0 auto 12px}
+.landing-phone-demo .figma-feed-list{width:100%;margin:0;gap:14px}
+.landing-phone-demo .figma-feed-card{padding:9px;border-radius:20px}
+.landing-phone-demo .figma-feed-photo{min-height:175px}
+.landing-phone-demo .figma-feed-place{min-height:122px}
+.landing-phone-demo .figma-feed-actions button{min-height:34px;border:0;border-radius:999px;background:transparent;color:#858585;font:800 11px monospace;cursor:pointer}
+.landing-phone-demo .figma-feed-actions button:hover{background:#f4f4f4;color:#111}
+.landing-phone-demo .figma-feed-compose{position:sticky!important;left:auto!important;bottom:4px!important;transform:none!important;width:calc(100% - 10px)!important;margin:14px auto 0;border:2px solid #e6e6e6;cursor:pointer}
+.landing-demo-map-view{padding:0 3px}
+.landing-demo-map{position:relative;height:510px;overflow:hidden;border:2px solid #d8d8d8;border-radius:24px;background:linear-gradient(35deg,transparent 48%,rgba(255,255,255,.9) 49% 53%,transparent 54%),linear-gradient(-22deg,transparent 44%,rgba(255,255,255,.8) 45% 49%,transparent 50%),#dcefd7}
+.landing-demo-map::before,.landing-demo-map::after{content:"";position:absolute;background:#b9def5;border-radius:999px;transform:rotate(-18deg)}
+.landing-demo-map::before{width:78px;height:560px;left:38px;top:-28px}.landing-demo-map::after{width:42px;height:470px;right:30px;top:70px}
+.landing-demo-map>small{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:2;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.9);font:800 11px monospace}
+.landing-demo-map-pin{position:absolute;z-index:3;width:36px;height:36px;border:3px solid #fff;border-radius:999px;background:#4ca5f7;color:#fff;box-shadow:0 3px 9px rgba(0,0,0,.2);cursor:pointer}
+.landing-demo-map-pin.pin-1{left:48%;top:25%}.landing-demo-map-pin.pin-2{left:21%;top:53%}.landing-demo-map-pin.pin-3{right:18%;top:62%}
+
+.landing-phone-demo--profile{padding:0;background:#e8f4ff}
+.landing-phone-demo .minimal-profile-page{width:100%;min-height:100%;margin:0 auto!important;padding-bottom:28px;background:linear-gradient(180deg,#e8f4ff 0%,#f0f8ff 36%,#fff 100%)}
+.landing-phone-demo .minimal-profile-card{min-height:430px;padding-bottom:32px!important}
+.landing-phone-demo .minimal-profile-card::before{top:22px;height:245px}
+.landing-phone-demo .minimal-profile-card>a{top:38px}
+.landing-phone-demo .minimal-profile-settings{width:calc(100% - 20px);gap:10px!important}
+.landing-phone-demo .minimal-profile-settings>div,.landing-phone-demo .minimal-profile-settings>a{min-height:130px;padding:14px!important;border-radius:18px!important}
+.landing-phone-demo .minimal-profile-photo-setting{min-height:250px!important}
+.landing-demo-photo-editor{display:grid;justify-items:center;gap:10px}
+.landing-demo-photo-preview{width:92px;height:92px;display:grid;place-items:center;border-radius:999px;background:#4ca5f7 center/cover;color:#fff;font-weight:900}
+.landing-demo-photo-editor label{padding:8px 11px;border-radius:999px;background:#111;color:#fff;font:800 11px monospace;cursor:pointer}
+.landing-demo-photo-editor input{position:absolute;opacity:0;pointer-events:none}
+.landing-phone-demo .minimal-profile-settings input:not([type="range"]){width:100%;padding:9px;border:1.5px solid #d9d9d9;border-radius:10px;background:#fafafa;font:700 12px Manrope,sans-serif}
+.landing-demo-radius{display:grid;gap:8px}.landing-demo-radius input{width:100%}
+.landing-phone-demo .minimal-profile-preferences button{padding:7px 9px;border:0;border-radius:999px;background:#f2f2f2;color:#111;font:700 11px monospace;text-transform:capitalize;cursor:pointer}
+.landing-phone-demo .minimal-profile-preferences button.is-selected{background:#78e152}
+
+.landing-demo-details{position:fixed;inset:0;z-index:120;display:grid;place-items:end center;background:rgba(0,0,0,.42);padding:8px}
+.landing-demo-details>section{position:relative;width:100%;max-height:86vh;overflow:auto;padding:12px 14px 22px;border-radius:24px 24px 18px 18px;background:#fff;box-shadow:0 -12px 35px rgba(0,0,0,.18)}
+.landing-demo-details>section>button{position:absolute;right:18px;top:18px;z-index:2;width:38px;height:38px;border:0;border-radius:999px;background:#fff;font-size:24px}
+.landing-demo-details-photo{height:230px;border-radius:18px;background:#eee center/cover no-repeat}
+.landing-demo-details small{display:block;margin-top:14px;color:#4ca5f7;font:800 11px monospace;text-transform:uppercase}.landing-demo-details h2{margin:5px 0;font-size:28px;letter-spacing:-.05em}.landing-demo-details p{font-size:13px;line-height:1.45;color:#666}.landing-demo-details strong{font-size:12px}
+
+@media(max-width:360px){.landing-phone-demo .figma-saved-grid{grid-template-columns:1fr}.landing-phone-demo .minimal-swipe-card,.landing-phone-demo .minimal-swipe-card-preview{max-width:335px}}
