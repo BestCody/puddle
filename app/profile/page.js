@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { ProfilePhotoEditor } from '@/components/profile-photo-editor'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getMembershipSnapshot } from '@/lib/app/membership-data'
 import { updateProfileTheme } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -51,7 +50,7 @@ export default async function ProfilePage({ searchParams }) {
   const customizing = params?.customize === '1'
 
   return renderProductPage(async (session) => {
-    const [posts, saves, friends, membership] = await Promise.all([
+    const [posts, saves, friends] = await Promise.all([
       queryOr(session.supabase
         .from('social_posts')
         .select('id,title,body,created_at,location_id,locations!social_posts_location_id_fkey(name,slug,kind,city,cover_path,status)')
@@ -66,8 +65,7 @@ export default async function ProfilePage({ searchParams }) {
         .order('pinned_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(12)),
-      queryOr(session.supabase.rpc('social_friends_v1')),
-      getMembershipSnapshot(session)
+      queryOr(session.supabase.rpc('social_friends_v1'))
     ])
     const visiblePosts = posts.filter((post) => post.locations?.status === 'published')
     const visibleSaves = saves.filter((item) => item.locations?.status === 'published')
@@ -83,7 +81,7 @@ export default async function ProfilePage({ searchParams }) {
     const themeName = Object.hasOwn(themes, session.profile.profile_theme) ? session.profile.profile_theme : 'blue'
     const theme = themes[themeName]
 
-    return <div className={`figma-profile-screen${customizing ? ' is-customizing' : ''}`} style={{ '--profile-theme': theme }}>
+    return <div className={`figma-profile-screen${customizing ? ' is-customizing' : ''}`} style={{ '--profile-theme': theme }} data-figma-node="40:347">
       <section className="figma-profile-hero" aria-label="Profile overview">
         {customizing ? <div className="figma-profile-theme-picker" aria-label="Profile banner color">
           {Object.entries(themes).map(([name, color]) => <form action={updateProfileTheme} key={name}><input type="hidden" name="profile_theme" value={name} /><button className={name === themeName ? 'is-selected' : ''} type="submit" style={{ background: color }} aria-label={`${name} banner`}>{name === themeName ? '✓' : ''}</button></form>)}
@@ -98,7 +96,7 @@ export default async function ProfilePage({ searchParams }) {
         </details>
 
         <div className="figma-profile-identity">
-          <div className="figma-profile-name-row"><h1>{displayName}</h1>{membership.active ? <Link className="figma-profile-pass-badge" href="/membership?view=manage">PASS</Link> : null}</div>
+          <h1>{displayName}</h1>
           <small>@{username}</small>
           <div className="figma-profile-counts" aria-label="Profile counts"><span>{friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}</span><span>{visibleSaves.length} {visibleSaves.length === 1 ? 'Save' : 'Saves'}</span></div>
           <div className="figma-profile-chips" aria-label="Favorite categories">

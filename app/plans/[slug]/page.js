@@ -17,6 +17,14 @@ function dashboardSimilarHref(item) {
   return `/plans/${item.slug}`
 }
 
+function similarTitle(item) {
+  return item.title || item.name || 'Puddle'
+}
+
+function similarLocation(item) {
+  return item.city || item.location?.city || categoryLabel(item.category || item.kind)
+}
+
 export async function generateMetadata({ params }) {
   const { slug } = await params
   const result = await getPublicLocation(slug)
@@ -67,60 +75,68 @@ export default async function SavedPlacePage({ params, searchParams }) {
     }] : []
     const mapCenter = mapPoint.length ? { latitude: mapPoint[0].latitude, longitude: mapPoint[0].longitude } : null
     const gallery = [location.cover_url, ...(location.gallery || []).map((item) => item.url)].filter(Boolean)
+    const placeLabel = location.city || location.neighborhood || categoryLabel(location.kind)
 
-    return <div className="figma-saved-detail-screen">
+    return <div className="figma-saved-detail-screen" data-figma-node="38:223">
       <AuthMessage searchParams={query} />
       <Link className="figma-saved-detail-back" href="/plans" aria-label="Back to Saved">‹</Link>
       <nav className="figma-dashboard-segment figma-saved-tabs" aria-label="Saved and plans"><Link className="is-active" href="/plans">Saved</Link><Link href="/plans?tab=planned">Plans</Link></nav>
+      <nav className="figma-saved-detail-categories" aria-label="Saved categories">
+        <Link className="is-active" href="/plans?tab=saved">All</Link>
+        <Link href="/plans?tab=saved&category=court"><span aria-hidden="true">◉</span>Courts</Link>
+        <Link href="/plans?tab=saved&category=theatre"><span aria-hidden="true">▦</span>Theatres</Link>
+        <Link className="figma-saved-detail-more" href="/plans?tab=saved" aria-label="More saved categories">+</Link>
+      </nav>
       <div className="figma-saved-detail-rule" aria-hidden="true" />
 
       <article className="figma-saved-detail-card">
-        <section className="figma-saved-detail-media">
-          <div className="figma-saved-detail-hero" style={gallery[0] ? { backgroundImage: `url(${gallery[0]})` } : undefined}>
-            {!gallery[0] ? <span>Puddle</span> : null}
-          </div>
-          <div className="figma-saved-detail-thumbs">{gallery.slice(1,4).map((url) => <img src={url} alt="" key={url} />)}</div>
+        <section className="figma-saved-detail-media" aria-label={`${location.name} photo`}>
+          <div className="figma-saved-detail-hero" style={gallery[0] ? { backgroundImage: `url(${gallery[0]})` } : undefined} />
         </section>
 
-        <section className="figma-saved-detail-copy">
-          <div className="figma-saved-detail-kicker"><span>{categoryLabel(location.kind)}</span>{location.city ? <span>{location.city}</span> : null}</div>
-          <h1>{location.name}</h1>
-          <p>{location.address_public || [location.neighborhood, location.city].filter(Boolean).join(', ')}</p>
-          {location.summary || location.description ? <div className="figma-saved-detail-description">{location.summary || location.description}</div> : null}
-          <div className="figma-saved-detail-actions">
-            <form action={togglePinnedPlace}><HiddenLocation location={location} slug={slug} /><button type="submit">{isPinned ? 'Unpin' : 'Pin'}</button></form>
-            <details className="figma-saved-detail-share"><summary>Share</summary><div>{friendList.length ? friendList.map((friend) => <form action={shareSavedPlace} key={friend.id}><HiddenLocation location={location} slug={slug} /><input type="hidden" name="friend_id" value={friend.id} /><button type="submit">{friend.display_name || friend.username || 'Friend'}</button></form>) : <p>Add a friend before sharing.</p>}</div></details>
-            <form action={toggleSavedPlace}><HiddenLocation location={location} slug={slug} /><button className={isSaved ? 'is-saved' : ''} type="submit">{isSaved ? 'Unsave' : 'Save'}</button></form>
-          </div>
-          <details className="figma-saved-plan-visit">
-            <summary>Plan a visit</summary>
-            <form action={planPlaceVisit}>
-              <HiddenLocation location={location} slug={slug} />
-              <label>Date and time<input type="datetime-local" name="planned_for" required /></label>
-              <label>Note<input name="note" maxLength="500" placeholder="Optional note" /></label>
-              <button type="submit">Add to Plans</button>
-            </form>
+        <div className="figma-saved-detail-actions" aria-label="Saved place actions">
+          <form action={togglePinnedPlace}><HiddenLocation location={location} slug={slug} /><button className="figma-saved-pin" type="submit">{isPinned ? 'Unpin' : 'Pin'}</button></form>
+          <details className="figma-saved-detail-share">
+            <summary aria-label="Share saved place"><img src="/figma/saved-place-share.svg" alt="" aria-hidden="true" /></summary>
+            <div>{friendList.length ? friendList.map((friend) => <form action={shareSavedPlace} key={friend.id}><HiddenLocation location={location} slug={slug} /><input type="hidden" name="friend_id" value={friend.id} /><button type="submit">{friend.display_name || friend.username || 'Friend'}</button></form>) : <p>Add a friend before sharing.</p>}</div>
           </details>
-          <div className="figma-saved-detail-tags">{(location.amenities || []).slice(0,6).map((value) => <span key={value}>{String(value).replaceAll('_',' ')}</span>)}</div>
-        </section>
+          <form action={toggleSavedPlace}><HiddenLocation location={location} slug={slug} /><button className="figma-saved-unsave" type="submit">{isSaved ? 'Unsave' : 'Save'}</button></form>
+        </div>
+
+        <h1 className="figma-saved-detail-title">{location.name}</h1>
+        <div className="figma-saved-detail-meta" aria-label="Place details">
+          <span className="is-city">{placeLabel}</span>
+          <span className="is-price">Price varies</span>
+          <span className="is-local">Local spot</span>
+        </div>
+
+        <details className="figma-saved-plan-visit">
+          <summary>Plan a visit</summary>
+          <form action={planPlaceVisit}>
+            <HiddenLocation location={location} slug={slug} />
+            <label>Date and time<input type="datetime-local" name="planned_for" required /></label>
+            <label>Note<input name="note" maxLength="500" placeholder="Optional note" /></label>
+            <button type="submit">Add to Plans</button>
+          </form>
+        </details>
+
+        <section className="figma-saved-detail-reviews"><h2>Reviews</h2><p>No reviews yet.</p></section>
 
         <section className="figma-saved-detail-map">
           {mapPoint.length ? <LocationMap initialPoints={mapPoint} initialCenter={mapCenter} /> : <div className="figma-saved-detail-map-empty">Map unavailable</div>}
         </section>
-
-        <section className="figma-saved-detail-reviews"><h2>Reviews</h2><p>No reviews yet.</p></section>
       </article>
 
       <section className="figma-saved-similar">
         <h2>Similar splashes</h2>
-        <div>{similar.slice(0,3).map((item) => <Link className="figma-saved-similar-card" href={dashboardSimilarHref(item)} key={`${item.content_kind || 'place'}:${item.id}`}>
-          <span style={item.cover_url ? { backgroundImage: `url(${item.cover_url})` } : undefined} />
-          <small>{categoryLabel(item.category || item.kind)}</small>
-          <strong>{item.title || item.name}</strong>
+        <div>{similar.slice(0, 3).map((item) => <Link className="figma-saved-similar-card" href={dashboardSimilarHref(item)} key={`${item.content_kind || 'place'}:${item.id}`}>
+          <span className="figma-saved-similar-photo" style={item.cover_url ? { backgroundImage: `url(${item.cover_url})` } : undefined} />
+          <strong>{similarTitle(item)}</strong>
+          <small><span>{similarLocation(item)}</span>{Number.isFinite(Number(item.distance_km)) ? <b>{Number(item.distance_km).toFixed(1)} km</b> : null}</small>
         </Link>)}</div>
       </section>
 
-      <form className="figma-saved-floating-search figma-saved-detail-search" action="/plans" method="get"><label><span className="sr-only">Search saved puddles</span><input type="search" name="q" placeholder="Search a saved puddle..." /></label><button type="submit" aria-label="Search saved puddles">↑</button></form>
+      <form className="figma-saved-floating-search figma-saved-detail-search" action="/plans" method="get"><input type="hidden" name="tab" value="saved" /><label><input aria-label="Search saved puddles" type="search" name="q" placeholder="Search a saved puddle..." /></label><button type="submit" aria-label="Search saved puddles">↑</button></form>
     </div>
   })
 }
