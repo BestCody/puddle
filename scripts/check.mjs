@@ -15,7 +15,7 @@ const required = [
   'components/product-nav.js','components/product-shell.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/swipe-action-dock.js','components/figma-social-hub.js','components/profile-photo-editor.js',
   'lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/social-hub-data.js','lib/app/open-photo-supabase.js','lib/media/pipeline.js',
   'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
-  'supabase/migrations/10046_friends_messages_social_hub.sql','supabase/migrations/10050_relational_discovery_runtime.sql','supabase/seed.sql'
+  'supabase/migrations/10046_friends_messages_social_hub.sql','supabase/migrations/10050_relational_discovery_runtime.sql','supabase/migrations/10061_discovery_unbounded_pagination.sql','supabase/migrations/10062_discovery_pagination_performance.sql','supabase/seed.sql'
 ]
 for (const path of required) await access(join(root, path))
 
@@ -96,12 +96,12 @@ const actions = await read('app/api/discovery/actions/route.js')
 const swipe = await read('components/date-swipe-workspace-v2.js')
 const card = await read('components/figma-swipe-card.js')
 for (const source of [discoverPage, discoveryRoute]) if (!source.includes("@/lib/app/discovery-relational")) throw new Error('Discover does not use the canonical relational feed')
-for (const marker of ['r2_discovery_overlay_v1','discovery_seen_locations_v1','duplicateKey','supabase-relational-v2']) if (!discovery.includes(marker)) throw new Error(`Relational discovery is missing ${marker}`)
-for (const forbidden of ['static-catalogue','STATIC_CATALOGUE','r2-primary','R2_CATALOGUE_NOT_CONFIGURED']) if (discovery.includes(forbidden)) throw new Error(`Legacy discovery runtime remains: ${forbidden}`)
+for (const marker of ['r2_discovery_overlay_v2','duplicateKey','supabase-relational-v3']) if (!discovery.includes(marker)) throw new Error(`Relational discovery is missing ${marker}`)
+for (const forbidden of ['r2_discovery_overlay_v1','discovery_seen_locations_v1','static-catalogue','STATIC_CATALOGUE','r2-primary','R2_CATALOGUE_NOT_CONFIGURED','PRIMARY_QUERY_LIMIT']) if (discovery.includes(forbidden)) throw new Error(`Legacy discovery runtime remains: ${forbidden}`)
 for (const marker of ['record_discovery_actions_v4','MAX_ACTIONS = 20']) if (!actions.includes(marker)) throw new Error(`Discovery actions are missing ${marker}`)
 for (const forbidden of ['materializeStaticCatalogueReferences','verifiedStaticReference','staticRef','staticEphemeral']) if (actions.includes(forbidden)) throw new Error(`Legacy static action support remains: ${forbidden}`)
-for (const marker of ['FigmaSwipeCard','SwipeActionDock',"'/api/discovery/actions'",'excludeIds']) if (!swipe.includes(marker)) throw new Error(`Swipe workspace is missing ${marker}`)
-for (const forbidden of ['MinimalSwipeCard','DiscoverSocialBar','InviteSheet','createSharedDeck','/api/date-match/start','staticCatalogueEphemeral','prefetchStaticMedia']) if (swipe.includes(forbidden)) throw new Error(`Retired swipe dependency remains: ${forbidden}`)
+for (const marker of ['FigmaSwipeCard','SwipeActionDock',"'/api/discovery/actions'",'excludeIds','await drainActions()','visibleIds']) if (!swipe.includes(marker)) throw new Error(`Swipe workspace is missing ${marker}`)
+for (const forbidden of ['MAX_CONTINUATION_EXCLUDES','ACTION_STORAGE_LIMIT','sessionIds.current.size >=','MinimalSwipeCard','DiscoverSocialBar','InviteSheet','createSharedDeck','/api/date-match/start','staticCatalogueEphemeral','prefetchStaticMedia']) if (swipe.includes(forbidden)) throw new Error(`Retired swipe dependency remains: ${forbidden}`)
 for (const marker of ['figma-swipe-card','GooglePlacePhotoFallback','Open details']) if (!card.includes(marker)) throw new Error(`Figma swipe card is missing ${marker}`)
 for (const forbidden of ['usePrivateB2Asset','useStaticCatalogueDetails','useStaticMediaResolution','/api/static-catalogue/']) if (card.includes(forbidden)) throw new Error(`Legacy card dependency remains: ${forbidden}`)
 
@@ -112,6 +112,14 @@ for (const marker of ['discovery_seen_locations_v1','r2_discovery_overlay_v1','r
 for (const forbidden of ['static_catalogue_actions','static_catalogue_materializations','staticEphemeral','touch_static_catalogue_materializations_v1']) {
   if (relationalRuntime.includes(forbidden)) throw new Error(`Legacy database runtime remains in final cutover migration: ${forbidden}`)
 }
+
+const unboundedDiscovery = await read('supabase/migrations/10061_discovery_unbounded_pagination.sql')
+for (const marker of ['r2_discovery_overlay_v2','st_dwithin','category_filter','price_filter','open_now_only']) {
+  if (!unboundedDiscovery.includes(marker)) throw new Error(`Unbounded discovery migration is missing ${marker}`)
+}
+if (unboundedDiscovery.includes('static_catalogue_materializations')) throw new Error('Unbounded discovery migration restored the materialization gate')
+const discoveryPerformance = await read('supabase/migrations/10062_discovery_pagination_performance.sql')
+if (!discoveryPerformance.includes('location.point <-> center_point')) throw new Error('Discovery pagination is missing indexed nearest-neighbor ordering')
 
 const openPhotoImporter = await read('scripts/import-open-location-photos.mjs')
 if (!openPhotoImporter.includes("storeOpenPhotoInSupabase")) throw new Error('Open-photo importer does not use Supabase storage directly')
