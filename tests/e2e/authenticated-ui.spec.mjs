@@ -34,15 +34,13 @@ test('official Figma product UI works across core authenticated pages on desktop
 
   const filterButton = page.getByRole('button', { name: 'Open filters' })
   const shareButton = page.getByRole('button', { name: 'Send to' })
-  await expect(filterButton).toBeVisible()
-  await expect(shareButton).toBeVisible()
-  const filterBox = await filterButton.boundingBox()
-  const shareBox = await shareButton.boundingBox()
-  expect(filterBox).toBeTruthy()
-  expect(shareBox).toBeTruthy()
-  expect(Math.abs((shareBox.y + shareBox.height / 2) - (filterBox.y + filterBox.height / 2))).toBeLessThanOrEqual(8)
 
   if (testInfo.project.name === 'desktop-chromium') {
+    // The current desktop Swipe Figma frame contains only the card actions and
+    // the compact top-right menu; the legacy filter/share toolbar is absent.
+    await expect(filterButton).toBeHidden()
+    await expect(shareButton).toBeHidden()
+
     const menuLines = page.locator('.figma-menu-icon > i')
     await expect(menuLines).toHaveCount(3)
     const firstLine = await menuLines.nth(0).boundingBox()
@@ -76,11 +74,21 @@ test('official Figma product UI works across core authenticated pages on desktop
     await expect(sidebar).toHaveClass(/is-expanded/)
     expect(Number(await sidebar.getAttribute('data-sidebar-width'))).toBe(288)
     await expect(sidebar.locator('.product-nav-label').first()).toBeVisible()
+  } else {
+    // Mobile keeps its dedicated compact controls from the mobile Figma flow.
+    await expect(filterButton).toBeVisible()
+    await expect(shareButton).toBeVisible()
+    const filterBox = await filterButton.boundingBox()
+    const shareBox = await shareButton.boundingBox()
+    expect(filterBox).toBeTruthy()
+    expect(shareBox).toBeTruthy()
+    expect(Math.abs((shareBox.y + shareBox.height / 2) - (filterBox.y + filterBox.height / 2))).toBeLessThanOrEqual(8)
+
+    await shareButton.click()
+    await expect(page.getByRole('heading', { name: 'Send to' })).toBeVisible()
+    await page.getByRole('button', { name: 'Close' }).click()
   }
 
-  await shareButton.click()
-  await expect(page.getByRole('heading', { name: 'Send to' })).toBeVisible()
-  await page.getByRole('button', { name: 'Close' }).click()
   await assertRouteHealth(page)
 
   await page.goto('/map')
@@ -122,6 +130,7 @@ test('official Figma product UI works across core authenticated pages on desktop
   await expect(page.locator('.figma-pass-title')).toContainText('Membership')
   await expect(page.locator('.figma-pass-free').getByText('Free', { exact: true })).toBeVisible()
   await expect(page.locator('.figma-pass-paid').getByText('Pass', { exact: true })).toBeVisible()
+  await expect(page.getByText('Notification alerts', { exact: true })).toBeVisible()
   const passTabs = page.locator('.figma-pass-segment')
   await passTabs.getByRole('link', { name: 'Manage', exact: true }).click()
   await expect(page).toHaveURL(/\/membership\?view=manage/)
@@ -137,7 +146,11 @@ test('official Figma product UI works across core authenticated pages on desktop
 
   await page.goto('/profile')
   await expect(page.locator('.minimal-profile-card h1')).toHaveText('UI Contract Tester')
-  await expect(page.getByText('Profile picture', { exact: true })).toBeVisible()
+  await expect(page.getByText('Puddles', { exact: true })).toBeVisible()
+  await expect(page.getByText('Location', { exact: true })).toBeVisible()
+  await expect(page.getByText('Saves', { exact: true })).toBeVisible()
+  await expect(page.getByText('Friends', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Change profile photo' })).toBeVisible()
   await expect(page.getByText('Advanced', { exact: true })).toHaveCount(0)
   await expect(page.locator('.minimal-advanced-settings')).toHaveCount(0)
   await assertRouteHealth(page)
@@ -162,11 +175,16 @@ test('changing a profile picture uploads and renders the actual color image afte
     }
   }).png().toBuffer()
 
-  const input = page.locator('.profile-photo-editor input[type="file"]')
+  // Profile photo management remains functional, but the current Figma puts
+  // it behind the large + card instead of rendering an always-open settings UI.
+  await page.getByRole('button', { name: 'Change profile photo' }).click()
+  const editor = page.locator('.figma-profile-photo-popover .profile-photo-editor')
+  await expect(editor).toBeVisible()
+  const input = editor.locator('input[type="file"]')
   await input.setInputFiles({ name: 'profile-test.png', mimeType: 'image/png', buffer: imageBuffer })
-  await expect(page.getByAltText('Profile preview')).toBeVisible()
-  await page.getByRole('button', { name: 'Save photo' }).click()
-  await expect(page.getByText('Profile picture updated.')).toBeVisible({ timeout: 20_000 })
+  await expect(editor.getByAltText('Profile preview')).toBeVisible()
+  await editor.getByRole('button', { name: 'Save photo' }).click()
+  await expect(editor.getByText('Profile picture updated.')).toBeVisible({ timeout: 20_000 })
 
   await page.reload()
   const profileImage = page.locator('.minimal-profile-avatar img')
