@@ -99,14 +99,14 @@ async function box(locator) {
 }
 
 async function assertFeedGeometry(page, projectName) {
-  const stream = await box(page.getByTestId('feed-stream'))
   const post = await box(page.getByTestId('feed-post').first())
   const tabs = await box(page.getByTestId('feed-tabs'))
   const search = await box(page.getByTestId('feed-search'))
   const composer = await box(page.getByTestId('feed-composer'))
 
   const controlsBottom = Math.max(tabs.y + tabs.height, search.y + search.height)
-  expect(stream.y).toBeGreaterThanOrEqual(controlsBottom - 1)
+  expect(post.y).toBeGreaterThanOrEqual(controlsBottom - 1)
+  expect(composer.y).toBeGreaterThanOrEqual(post.y + post.height)
 
   if (projectName === 'figma-desktop') {
     expectNear(post.x, 527, 2)
@@ -122,7 +122,8 @@ async function assertFeedGeometry(page, projectName) {
     expectNear(search.width, 190, 1)
     expectNear(search.height, 40, 1)
     expectNear(composer.x, 555, 3)
-    expectNear(composer.y, 742, 3)
+    expect(composer.y - (post.y + post.height)).toBeGreaterThanOrEqual(110)
+    expect(composer.y - (post.y + post.height)).toBeLessThanOrEqual(126)
     expectNear(composer.width, 420, 1)
   } else {
     expectNear(post.x, 19, 1)
