@@ -1,0 +1,200 @@
+/* Settings fidelity for Figma 40:381 and expanded 47:960. Rebuilt settings DOM only. */
+@media (min-width: 761px) {
+  .figma-settings-screen {
+    min-height: 2050px;
+  }
+
+  /* The authored window crosses over the product sidebar: global x=107, y=97. */
+  .figma-settings-window {
+    top: 97px;
+    left: -173px;
+    width: 1068px;
+    min-height: 603px;
+    transform: none;
+    z-index: 60;
+    overflow: hidden;
+  }
+
+  .figma-settings-local-nav {
+    width: 210.5px;
+    min-height: 603px;
+    padding: 20px 25px;
+  }
+
+  .figma-settings-local-nav nav {
+    position: absolute;
+    top: 200px;
+    left: 27px;
+    margin: 0;
+    gap: 23px;
+  }
+
+  .figma-settings-detail {
+    min-height: 603px;
+    margin-left: 210.5px;
+  }
+
+  .figma-settings-close {
+    display: none;
+    position: absolute;
+    z-index: 5;
+    top: 21.5px;
+    right: 29.5px;
+    width: 55px;
+    height: 41px;
+    place-items: center;
+    border: 2.5px solid #e2e2e2;
+    border-radius: 999px;
+    background: #fff;
+    color: #777;
+    text-decoration: none;
+    font: 400 24px/1 Manrope, sans-serif;
+    box-sizing: border-box;
+  }
+
+  /* Any local-nav target opens the authored tall settings composition. */
+  .figma-settings-window:has(.figma-settings-section:target) {
+    height: 1863px;
+    min-height: 1863px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-local-nav,
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-detail {
+    height: 1863px;
+    min-height: 1863px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-close {
+    display: grid;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-section {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    min-height: 0;
+    padding: 0 44px 0 61px;
+    color: #858585;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) #profile { top: 112px; }
+  .figma-settings-window:has(.figma-settings-section:target) #security { top: 415px; }
+  .figma-settings-window:has(.figma-settings-section:target) #appearance { top: 633px; }
+  .figma-settings-window:has(.figma-settings-section:target) #sessions { top: 812px; }
+  .figma-settings-window:has(.figma-settings-section:target) #billing { top: 1152px; }
+  .figma-settings-window:has(.figma-settings-section:target) #account { top: 1655px; }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-section header {
+    margin: 0 0 10px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-section header small {
+    display: none;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-section header h1 {
+    margin: 0;
+    color: #565656;
+    font: 800 30.239px/1.08 var(--figma-mono);
+    letter-spacing: -1px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row {
+    min-height: 41px;
+    grid-template-columns: 220px minmax(0, 1fr) auto;
+    gap: 12px;
+    border: 0;
+    font-size: 14.689px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row:last-of-type {
+    border: 0;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row.is-tall {
+    min-height: 41px;
+    padding: 0;
+    align-items: center;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row input,
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row textarea,
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row select {
+    min-height: 32px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    text-align: right;
+    font-size: 14.689px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row textarea {
+    height: 34px;
+    min-height: 34px;
+    resize: none;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-submit {
+    margin-top: 9px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-submit button,
+  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row a {
+    min-width: 82px;
+    min-height: 33px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: #4a4a4a;
+    color: #fff;
+    font: 700 10.919px/1 Manrope, sans-serif;
+    text-decoration: none;
+    box-sizing: border-box;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) #sessions .figma-settings-row.is-tall {
+    width: 222px;
+    min-height: 177px;
+    display: block;
+    padding: 18px 16px;
+    border: 2.5px solid #e5e5e5;
+    border-radius: 25px;
+    background: #fff;
+    box-shadow: 0 4px 0 rgba(0,0,0,.10);
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) #sessions .figma-settings-row.is-tall label {
+    display: block;
+    margin-bottom: 22px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) #billing {
+    min-height: 440px;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) #billing::after {
+    content: "Transaction History";
+    position: absolute;
+    left: 61px;
+    right: 44px;
+    top: 169px;
+    height: 202px;
+    padding: 20px 18px;
+    border: 2.5px solid #e5e5e5;
+    border-radius: 25px;
+    background: #fff;
+    color: #858585;
+    box-shadow: 0 4px 0 rgba(0,0,0,.10);
+    box-sizing: border-box;
+    font: 800 14.689px/1.2 Manrope, sans-serif;
+  }
+
+  .figma-settings-window:has(.figma-settings-section:target) #account .figma-settings-warning {
+    margin-top: 22px;
+    font-size: 14.689px;
+  }
+}
