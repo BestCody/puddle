@@ -73,7 +73,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await page.getByRole('button', { name: /Build my date deck/i }).click()
   await expect(page).toHaveURL(/\/discover\?success=/)
   await expect(page.getByText(/Your deck is ready/i)).toBeVisible()
-  await expect(page.locator('.minimal-swipe-card')).toBeVisible()
+  await expect(page.locator('.figma-swipe-card')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
 

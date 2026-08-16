@@ -1,0 +1,184 @@
+/* Exact structural states from Mobile Feed Post 65:433 and Mobile Feed Post Add Menu 65:522. */
+.figma-create-post-add {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  width: 60px;
+  height: 42px;
+  z-index: 12;
+}
+.figma-create-post-add > summary {
+  width: 60px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  list-style: none;
+  border: 2px solid #e6e6e6;
+  border-radius: 25px;
+  background: #fff;
+  color: #b7b7b7;
+  box-shadow: 0 4px 0 rgba(0,0,0,.10);
+  font: 400 28px/1 Manrope, sans-serif;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.figma-create-post-add > summary::-webkit-details-marker { display: none; }
+.figma-create-post-add-menu,
+.figma-create-post-add-footer { display: none; }
+
+@media (max-width: 760px) {
+  .figma-create-post-screen::before {
+    top: 40px;
+    left: 27px;
+    width: 37px;
+    height: 38px;
+  }
+  .figma-create-post-screen .figma-feed-tabs {
+    top: 40.56px;
+    left: 50%;
+    width: 127.12px;
+    height: 38.27px;
+  }
+  .figma-create-post-screen .figma-feed-tabs > a {
+    height: 28.53px;
+    font-size: 13.38px;
+  }
+  .figma-create-post-screen .figma-feed-tabs > a:first-child { width: 53.52px; }
+  .figma-create-post-screen .figma-feed-tabs > a:last-child { width: 65px; }
+
+  .figma-create-post-search {
+    position: absolute;
+    z-index: 30;
+    top: 40px;
+    right: 29px;
+    width: 55px;
+    height: 41px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1.67px solid #e2e2e2;
+    border-radius: 999px;
+    background: #fff;
+    box-sizing: border-box;
+  }
+  .figma-create-post-search label { display: none; }
+  .figma-create-post-search button {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #111;
+    font: 700 22px/1 Manrope, sans-serif;
+  }
+
+  .figma-create-post-blur {
+    top: 104px;
+    left: 15px;
+    width: calc(100% - 34px);
+    max-width: 368.23px;
+    height: 401.21px;
+    transform: none;
+    border-width: 1.96px;
+    border-radius: 19.63px;
+    filter: blur(7.85px);
+  }
+
+  .figma-create-post-card {
+    top: 370px;
+    left: 9px;
+    width: calc(100% - 20px);
+    max-width: 382px;
+    height: 400px;
+    transform: none;
+    border-radius: 25px;
+  }
+  .figma-create-post-card > .figma-feed-post-avatar {
+    top: 15.5px;
+    left: 18.5px;
+    width: 31.22px;
+    height: 31.22px;
+    flex-basis: 31.22px;
+  }
+  .figma-create-post-visibility {
+    top: 15.59px;
+    left: 197.7px;
+    right: auto;
+    width: 132px;
+    height: 33px;
+  }
+  .figma-create-post-visibility label { height: 25px; }
+  .figma-create-post-visibility span { height: 25px; font-size: 10.92px; }
+  .figma-create-post-visibility label:first-of-type { flex: 0 0 48px; }
+  .figma-create-post-visibility label:last-of-type { flex: 1; }
+
+  .figma-create-post-submit {
+    top: 13px;
+    left: 335px;
+    right: auto;
+    width: 37px;
+    height: 37px;
+  }
+  .figma-create-post-title { top: 60.62px; left: 20.22px; right: 20px; }
+  .figma-create-post-description { top: 117.67px; left: 23.34px; right: 20px; }
+  .figma-create-post-title input { height: 45px; font-size: 47.38px; line-height: .95; }
+  .figma-create-post-description textarea { height: 180px; font-size: 20px; line-height: .95; }
+
+  .figma-create-post-add {
+    left: 8.5px;
+    bottom: 18.5px;
+  }
+  .figma-create-post-map {
+    left: 306.5px;
+    right: auto;
+    bottom: 16.5px;
+    width: 60px;
+    height: 42px;
+  }
+
+  .figma-create-post-add[open] { z-index: 25; }
+  .figma-create-post-add[open] > summary {
+    position: absolute;
+    z-index: 6;
+    left: 2.5px;
+    top: -27.5px;
+    width: 257px;
+    height: 72px;
+    opacity: 0;
+    pointer-events: auto;
+  }
+  .figma-create-post-add[open] .figma-create-post-add-menu {
+    position: absolute;
+    display: block;
+    z-index: 3;
+    left: 2.5px;
+    top: -265.5px;
+    width: 257px;
+    height: 310px;
+    border: 2px solid #e6e6e6;
+    border-radius: 25px;
+    background: #fff;
+    box-shadow: 0 4px 0 rgba(0,0,0,.10);
+    box-sizing: border-box;
+  }
+  .figma-create-post-add[open] .figma-create-post-add-footer {
+    position: absolute;
+    display: block;
+    z-index: 4;
+    left: 2.5px;
+    top: -27.5px;
+    width: 257px;
+    height: 72px;
+    border: 2px solid #e6e6e6;
+    border-radius: 25px;
+    background: #fff;
+    box-shadow: 0 4px 0 rgba(0,0,0,.10);
+    box-sizing: border-box;
+  }
+  .figma-create-post-card:has(.figma-create-post-add[open]) .figma-create-post-map {
+    left: 73.5px;
+    bottom: 17.5px;
+  }
+}

@@ -1,0 +1,58 @@
+/* Feed Concise View — Figma 40:414. This is a real state of the rebuilt shell. */
+.figma-dashboard-sidebar-resizer {
+  position: absolute;
+  z-index: 80;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  width: 9px;
+  cursor: ew-resize;
+  touch-action: none;
+  outline: none;
+}
+.figma-dashboard-sidebar-resizer:focus-visible::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: #4ca5f7;
+}
+
+.figma-dashboard-sidebar.is-concise {
+  width: 102px;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+  top: 201px;
+  left: 37px;
+  width: 43px;
+  height: 43px;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+  width: 43px !important;
+  height: 43px !important;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
+  left: 29px;
+  width: 60px;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
+  width: 60px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-nav-label {
+  display: none;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .figma-dashboard-sidebar-resizer { display: none; }
+}

@@ -1,0 +1,298 @@
+/* Feed / Map — Figma 14:114, 27:294, 40:519, 40:731 */
+.figma-feed-screen {
+  min-height: 832px;
+  position: relative;
+  background: #f6f6f6;
+}
+.figma-feed-back {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  z-index: 25;
+  width: 43px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #dedede;
+  border-radius: 999px;
+  background: #fff;
+  color: #858585;
+  font: 300 30px/1 Manrope, sans-serif;
+  text-decoration: none;
+  box-shadow: 0 2px 0 rgba(0,0,0,.08);
+}
+.figma-feed-tabs {
+  position: fixed;
+  z-index: 30;
+  top: 36px;
+  left: calc(50% + 140px);
+  width: 152px;
+  transform: translateX(-50%);
+}
+.figma-feed-tabs > a:first-child { width: 64px; }
+.figma-feed-tabs > a:last-child { width: 76px; }
+.figma-feed-tabs > .is-active { background: #f2c035; }
+.figma-feed-search {
+  position: fixed;
+  z-index: 30;
+  top: 42px;
+  right: 26px;
+  width: 190px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 15px;
+  border: 2.5px solid #d9d9d9;
+  border-radius: 999px;
+  background: #fff;
+  box-sizing: border-box;
+}
+.figma-feed-search label { flex: 1; min-width: 0; }
+.figma-feed-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #333;
+  font: 600 16px/1 Manrope, sans-serif;
+}
+.figma-feed-search input::placeholder { color: #b3b3b3; }
+.figma-feed-search button { border: 0; background: transparent; color: #111; font-size: 18px; }
+
+.figma-feed-stream {
+  width: 469px;
+  margin: 0 auto;
+  padding: 108px 0 170px;
+  display: grid;
+  gap: 26px;
+}
+.figma-feed-post {
+  width: 469px;
+  height: 511px;
+  position: relative;
+  overflow: hidden;
+  border: 2.5px solid #e5e5e5;
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 4px 0 rgba(0,0,0,.10);
+  box-sizing: border-box;
+}
+.figma-feed-post-author {
+  position: absolute;
+  top: 15px;
+  left: 17px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.figma-feed-post-avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #ececec center/cover no-repeat;
+  color: #555;
+  font: 800 13px/1 Manrope, sans-serif;
+}
+.figma-feed-post-author > span:last-child { display: grid; gap: 5px; }
+.figma-feed-post-author strong { font: 700 20px/1 Manrope, sans-serif; }
+.figma-feed-post-author small { color: #858585; font: 700 11px/1 var(--figma-mono); }
+.figma-feed-post-copy {
+  position: absolute;
+  top: 63px;
+  left: 69px;
+  right: 20px;
+  max-height: 68px;
+  overflow: hidden;
+  margin: 0;
+  color: #000;
+  font: 500 17px/.95 Manrope, sans-serif;
+  letter-spacing: .34px;
+}
+.figma-feed-post-photos {
+  position: absolute;
+  top: 145px;
+  left: 59px;
+  width: 381px;
+  height: 133px;
+  display: grid;
+  grid-template-columns: 225px 148px;
+  grid-template-rows: 63px 63px;
+  gap: 7px;
+}
+.figma-feed-post-photos a {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid #dedede;
+  border-radius: 25px;
+  background: #f0f0f0 center/cover no-repeat;
+  color: #858585;
+  font: 700 29px/1 Manrope, sans-serif;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.figma-feed-post-photos a.is-main { grid-row: span 2; }
+.figma-feed-post-place {
+  position: absolute;
+  top: 287px;
+  left: 52px;
+  width: 391px;
+  height: 163px;
+  padding: 14px 58px 15px 17px;
+  overflow: hidden;
+  border: 2px solid #f0f0f0;
+  border-radius: 25px;
+  background: #fff;
+  color: #000;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.figma-feed-post-place > span,
+.figma-feed-post-place > small {
+  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 30px;
+  background: #d9d9d9;
+  color: #858585;
+  font: 600 13.6px/1 var(--figma-mono);
+}
+.figma-feed-post-place > small { position: absolute; top: 9px; right: 8px; }
+.figma-feed-post-place h2 { position: absolute; left: 17px; right: 56px; bottom: 16px; margin: 0; font: 800 24px/1.05 Manrope, sans-serif; letter-spacing: -2px; }
+.figma-feed-post-place b { position: absolute; right: 10px; bottom: 10px; width: 41px; height: 39px; display: grid; place-items: center; border-radius: 50%; background: #d9d9d9; color: #777; font: 300 30px/1 Manrope, sans-serif; }
+.figma-feed-post-interactions {
+  position: absolute;
+  left: 45px;
+  right: 44px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.figma-feed-post-interactions a { color: #858585; font: 500 26px/1 Manrope, sans-serif; text-decoration: none; }
+.figma-feed-composer {
+  position: fixed;
+  z-index: 35;
+  left: calc(50% + 140px);
+  bottom: 38px;
+  width: 420px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateX(-50%);
+  padding: 4px 5px 4px 5px;
+  border: 2.5px solid #e5e5e5;
+  border-radius: 999px;
+  background: rgba(255,255,255,.97);
+  color: #b3b3b3;
+  font: 700 16px/1 Manrope, sans-serif;
+  text-decoration: none;
+  box-shadow: 0 4px 0 rgba(0,0,0,.10);
+  box-sizing: border-box;
+}
+.figma-feed-composer .figma-feed-post-avatar { width: 38px; height: 38px; flex-basis: 38px; }
+.figma-feed-composer > span:nth-child(2) { flex: 1; }
+.figma-feed-composer b { width: 38px; height: 38px; display: grid; place-items: center; border: 2px solid #f2c035; border-radius: 50%; color: #f2c035; font: 700 20px/1 Manrope, sans-serif; }
+.figma-feed-empty { width: 469px; min-height: 320px; display: grid; place-items: center; align-content: center; gap: 16px; border: 2.5px solid #e5e5e5; border-radius: 25px; background: #fff; color: #858585; text-align: center; }
+.figma-feed-empty a { color: #000; font-weight: 800; }
+
+/* real map under the Figma map composition */
+.figma-feed-screen.is-map { overflow: hidden; background: #d0d0d0; }
+.figma-feed-screen.is-map .figma-feed-back { position: fixed; }
+.figma-feed-map-screen,
+.figma-feed-map-canvas { position: absolute; inset: 0; overflow: hidden; }
+.figma-feed-map-canvas .location-map-workspace,
+.figma-feed-map-canvas .location-map-layout,
+.figma-feed-map-canvas .location-map-canvas { width: 100%; height: 100%; min-height: 832px; border: 0; border-radius: 0; margin: 0; }
+.figma-feed-map-canvas .location-map-toolbar,
+.figma-feed-map-canvas .location-map-side { display: none !important; }
+.figma-feed-map-canvas .location-map-layout { display: block; }
+.figma-feed-map-canvas .location-map-canvas { touch-action: none; }
+.figma-feed-map-puddle {
+  position: absolute;
+  top: 135px;
+  left: 7%;
+  width: 47%;
+  height: 430px;
+  pointer-events: none;
+  border-radius: 45% 55% 48% 52% / 36% 44% 56% 64%;
+  background: rgba(76,165,247,.25);
+  filter: blur(.2px);
+}
+.figma-feed-map-card {
+  position: absolute;
+  top: 348px;
+  left: 15%;
+  width: 304px;
+  height: 114px;
+  padding: 11px 48px 12px 13px;
+  overflow: hidden;
+  border-radius: 17px;
+  background: #4ca5f7;
+  color: #fff;
+  text-decoration: none;
+  box-sizing: border-box;
+  box-shadow: 0 4px 0 rgba(0,0,0,.12);
+}
+.figma-feed-map-card span,
+.figma-feed-map-card small { min-height: 18px; display: inline-flex; align-items: center; padding: 0 6px; border-radius: 20px; background: #25639d; font: 600 9.5px/1 var(--figma-mono); }
+.figma-feed-map-card small { position: absolute; top: 8px; right: 10px; }
+.figma-feed-map-card strong { position: absolute; left: 13px; bottom: 12px; max-width: 245px; font: 800 21.8px/1 Manrope, sans-serif; letter-spacing: -1.8px; }
+.figma-feed-map-card b { position: absolute; right: 9px; bottom: 8px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #25639d; font: 500 23px/1 Manrope, sans-serif; }
+.figma-feed-map-empty { position: absolute; inset: 0; display: grid; place-items: center; background: #eee; color: #858585; font: 800 18px/1.3 Manrope, sans-serif; }
+
+@media (max-width: 760px) {
+  .figma-feed-screen { min-height: 874px; background: #fff; padding-bottom: 110px; }
+  .figma-feed-back { display: none; }
+  .figma-feed-screen::before {
+    content: "";
+    position: fixed;
+    z-index: 25;
+    top: 40px;
+    left: 27px;
+    width: 38px;
+    height: 38px;
+    background: url('/puddle-mark-outline.svg') center/contain no-repeat;
+  }
+  .figma-feed-tabs { position: fixed; top: 31px; left: 50%; width: 150px; }
+  .figma-feed-search {
+    top: 39px;
+    right: 22px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+  }
+  .figma-feed-search label { display: none; }
+  .figma-feed-search button { font-size: 21px; }
+  .figma-feed-stream { width: calc(100% - 38px); padding: 100px 0 210px; gap: 20px; }
+  .figma-feed-post { width: 100%; height: 396px; border-radius: 21px; }
+  .figma-feed-post-author { top: 12px; left: 13px; gap: 10px; }
+  .figma-feed-post-avatar { width: 34px; height: 34px; flex-basis: 34px; }
+  .figma-feed-post-author strong { font-size: 15px; }
+  .figma-feed-post-author small { font-size: 8px; }
+  .figma-feed-post-copy { top: 51px; left: 51px; right: 16px; font-size: 12.2px; max-height: 48px; }
+  .figma-feed-post-photos { top: 112px; left: 44px; width: calc(100% - 58px); height: 105px; grid-template-columns: 1.55fr 1fr; grid-template-rows: 50px 50px; gap: 5px; }
+  .figma-feed-post-place { top: 226px; left: 39px; width: calc(100% - 53px); height: 126px; border-radius: 20px; }
+  .figma-feed-post-place h2 { font-size: 20px; }
+  .figma-feed-post-interactions { left: 34px; right: 31px; bottom: 10px; }
+  .figma-feed-post-interactions a { font-size: 20px; }
+  .figma-feed-composer { left: 50%; bottom: 112px; width: calc(100% - 58px); height: 42px; }
+  .figma-feed-composer .figma-feed-post-avatar { width: 32px; height: 32px; flex-basis: 32px; }
+  .figma-feed-composer b { width: 32px; height: 32px; }
+
+  .figma-feed-screen.is-map { min-height: 874px; padding-bottom: 0; }
+  .figma-feed-screen.is-map::before { background-color: rgba(255,255,255,.9); border-radius: 50%; }
+  .figma-feed-map-canvas .location-map-workspace,
+  .figma-feed-map-canvas .location-map-layout,
+  .figma-feed-map-canvas .location-map-canvas { min-height: 874px; }
+  .figma-feed-map-puddle { top: 150px; left: 8%; width: 67%; height: 360px; }
+  .figma-feed-map-card { top: 388px; left: 17%; width: 260px; }
+}

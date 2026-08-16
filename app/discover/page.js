@@ -53,9 +53,7 @@ export default async function DiscoverPage({ searchParams }) {
     const feedFilters = {
       kind: 'place',
       date: 'any',
-      distance: Number.isFinite(requestedDistance) && requestedDistance > 0
-        ? Math.min(100, requestedDistance)
-        : 10,
+      distance: Number.isFinite(requestedDistance) && requestedDistance > 0 ? Math.min(100, requestedDistance) : 10,
       limit: 12,
       q: '',
       category: textParam(params?.category, 40),
@@ -76,9 +74,9 @@ export default async function DiscoverPage({ searchParams }) {
     after(() => recordSampledDiscoveryAnalytics(session, feed)
       .catch((error) => console.warn(`Sampled discovery analytics failed: ${error.message}`)))
 
-    return <div className="minimal-swipe-page">
+    return <>
       <AuthMessage searchParams={params} />
       <DateSwipeWorkspaceV2 initialFeed={feed} profileId={session.user.id} />
-    </div>
+    </>
   })
 }

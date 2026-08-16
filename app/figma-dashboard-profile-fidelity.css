@@ -1,0 +1,44 @@
+/* Profile header fidelity for desktop Figma 40:347. Targets only the rebuilt Profile DOM. */
+@media (min-width: 761px) {
+  .figma-profile-hero {
+    left: 42px;
+    width: 897px;
+    height: 318px;
+  }
+
+  .figma-profile-edit {
+    top: 13px;
+    right: 17px;
+    width: 143px;
+    height: 50px;
+    border: 0;
+    background: #fff;
+    color: #000;
+    font: 600 20px/1 var(--figma-mono);
+  }
+
+  /* Avatar/identity are nested in the 30px-down hero in our DOM, while the
+     Figma measurements are global. Subtract the hero offset here. */
+  .figma-profile-avatar {
+    top: 211px;
+    left: calc(50% - 16.5px);
+    width: 133px;
+    height: 133px;
+    box-shadow: none;
+  }
+
+  .figma-profile-identity {
+    top: 353px;
+    left: calc(50% - 16.5px);
+  }
+
+  .figma-profile-avatar-editor > summary {
+    top: 211px;
+    left: calc(50% - 16.5px);
+  }
+
+  .figma-profile-avatar-editor > summary .figma-profile-avatar {
+    top: auto;
+    left: auto;
+  }
+}

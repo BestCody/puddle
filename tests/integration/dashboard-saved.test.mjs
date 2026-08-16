@@ -4,48 +4,65 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('dashboard sidebar is resizable, persistent, keyboard accessible, and aligned when expanded', async () => {
+test('rebuilt Figma dashboard shell keeps the authored expanded and concise sidebar states accessible', async () => {
   const [shell, sidebar, nav, styles] = await Promise.all([
     read('components/product-shell.js'),
-    read('components/resizable-product-sidebar.js'),
+    read('components/figma-dashboard-sidebar.js'),
     read('components/product-nav.js'),
-    read('app/dashboard-saved.css')
+    read('app/figma-dashboard-rebuild.css')
   ])
 
-  assert.match(shell, /ResizableProductSidebar/)
-  assert.match(sidebar, /puddle:product-sidebar-width/)
+  assert.match(shell, /FigmaDashboardSidebar/)
+  assert.match(shell, /className="figma-dashboard-shell"/)
+  assert.match(shell, /className="figma-dashboard-stage"/)
+  assert.match(shell, /<ProductNav mobile avatarUrl=\{avatarUrl\} \/>/)
+  assert.doesNotMatch(shell, /ResizableProductSidebar/)
+
+  assert.match(sidebar, /puddle:figma-dashboard-sidebar-width/)
+  assert.match(sidebar, /const EXPANDED_WIDTH = 280/)
+  assert.match(sidebar, /const CONCISE_WIDTH = 102/)
+  assert.match(sidebar, /--figma-shell-sidebar/)
   assert.match(sidebar, /role="separator"/)
   assert.match(sidebar, /ArrowLeft/)
   assert.match(sidebar, /ArrowRight/)
-  assert.match(nav, /product-nav-label/)
-  assert.match(nav, /nav-tooltip/)
-  assert.match(styles, /--minimal-sidebar-width/)
-  assert.match(styles, /cursor:col-resize/)
-  assert.match(styles, /\.minimal-product-sidebar\.is-expanded/)
-  assert.match(styles, /grid-template-columns:44px minmax\(0,1fr\)/)
-  assert.match(styles, /\.minimal-product-sidebar \.minimal-product-nav>a>\.product-nav-icon\{[^}]*border:0;[^}]*background:transparent;[^}]*box-shadow:none/)
-  assert.match(styles, /\.minimal-product-sidebar \.minimal-product-nav>a>\.product-nav-label\{[^}]*width:auto;[^}]*height:auto;[^}]*border:0;[^}]*background:transparent;[^}]*box-shadow:none/)
-  assert.match(styles, /\.minimal-product-sidebar \.minimal-product-nav>a\.is-active\{[^}]*border:0;[^}]*box-shadow:none;[^}]*transform:none/)
-  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav>a\{[^}]*height:72px;[^}]*align-items:center;[^}]*align-content:center;[^}]*padding:0 12px/)
-  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.product-nav-icon\{[^}]*height:44px;[^}]*align-self:center/)
-  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.product-nav-label\{[^}]*display:flex;[^}]*align-items:center;[^}]*align-self:center;[^}]*height:44px/)
-  assert.match(styles, /\.minimal-product-sidebar\.is-expanded \.minimal-product-nav \.nav-tooltip\{display:none\}/)
+  assert.match(sidebar, /aria-valuetext=\{concise \? 'Concise navigation' : 'Expanded navigation'\}/)
+  assert.match(sidebar, /figma-dashboard-sidebar\$\{concise \? ' is-concise' : ' is-expanded'\}/)
+
+  assert.match(nav, /figma-dashboard-nav-item/)
+  assert.match(nav, /figma-dashboard-nav-label/)
+  assert.match(nav, /figma-dashboard-mobile-nav/)
+
+  assert.match(styles, /--figma-shell-sidebar: 280px/)
+  assert.match(styles, /\.figma-dashboard-sidebar\s*\{/)
+  assert.match(styles, /width: var\(--figma-shell-sidebar\)/)
+  assert.match(styles, /\.figma-dashboard-nav-item\s*\{/)
+  assert.match(styles, /width: 241px/)
+  assert.match(styles, /height: 56px/)
 })
 
 test('saved places are grouped by location category and perfect picks use persisted discovery events', async () => {
   const [plans, data, styles] = await Promise.all([
     read('app/plans/page.js'),
     read('lib/app/location-plans-data.js'),
-    read('app/dashboard-saved.css')
+    read('app/figma-dashboard-saved.css')
   ])
 
   assert.match(data, /locations\(id,name,slug,summary,kind,city,cover_path,status\)/)
   assert.match(data, /category: location\.kind \|\| 'other'/)
   assert.match(data, /from\('discovery_context_outbox'\)/)
   assert.match(data, /eq\('event_name', 'perfect'\)/)
-  assert.match(plans, /function savedFolders/)
-  assert.match(plans, /minimal-saved-folder/)
-  assert.match(plans, /★ Perfect Pick/)
-  assert.match(plans, /is-perfect-pick/)
-  assert.match(styles, /\.minimal-place-card\.is-perfect-pick/)
+
+  assert.match(plans, /function foldersFor\(items\)/)
+  assert.match(plans, /const folders = new Map\(\)/)
+  assert.match(plans, /SavedCategoryRail/)
+  assert.match(plans, /figma-saved-categories/)
+  assert.match(plans, /figma-saved-place-grid/)
+  assert.match(plans, /item\.perfect_pick \? <b>★ Perfect Pick<\/b>/)
+  assert.match(plans, /getLocationPlansSnapshot\(session\)/)
+  assert.doesNotMatch(plans, /minimal-saved-folder/)
+
+  assert.match(styles, /\.figma-saved-place-grid\s*\{/)
+  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 297px\)\)/)
+  assert.match(styles, /\.figma-saved-place-photo > b/)
+  assert.match(styles, /\.figma-saved-categories > a\.is-active/)
 })

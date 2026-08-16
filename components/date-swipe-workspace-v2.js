@@ -1,9 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MinimalSwipeCard, MinimalSwipePreviewCard } from '@/components/minimal-swipe-card'
+import { FigmaSwipeCard } from '@/components/figma-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
-import { DiscoverSocialBar } from '@/components/discover-social-bar'
 import { DiscoveryFilterSheet } from '@/components/discovery-filter-sheet'
 import { csrfFetch } from '@/lib/security/csrf-client'
 
@@ -60,7 +59,7 @@ function persistDiscoveryActions(entries, storageKey) {
     if (payloads.length) window.localStorage.setItem(storageKey, JSON.stringify(payloads))
     else window.localStorage.removeItem(storageKey)
   } catch {
-    // Persistence is a resilience layer; the in-memory acknowledgement queue remains authoritative.
+    // Local persistence is only the retry layer. The server acknowledgement queue remains authoritative.
   }
 }
 
@@ -71,35 +70,31 @@ function retryDelay(attempt, retryAfterSeconds = 0) {
 }
 
 function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) {
-  if (feed.emptyReason === 'location_required') return <div className="minimal-deck-complete">
-    <h1>Choose your location</h1>
-    <p>Puddle needs a city or your current location before it can find nearby places.</p>
-    <div><button className="minimal-primary-button" type="button" onClick={onFilters}>Choose location</button></div>
-  </div>
+  let title = 'No places found'
+  let description = ''
+  if (feed.emptyReason === 'location_required') {
+    title = 'Choose your location'
+    description = 'Puddle needs a city or your current location before it can find nearby places.'
+  } else if (feed.emptyReason === 'catalogue_sync_pending') {
+    title = 'Places are being added nearby'
+    description = 'No places are available around the selected location yet.'
+  } else if (!exhausted && feed.emptyReason === 'filters') {
+    title = 'No places match these filters'
+  } else if (exhausted) {
+    title = "You've seen all nearby places"
+    description = Number(feed.filters?.distance) < 100
+      ? `That's everything in the current ${feed.filters?.distance || 10} km search.`
+      : 'That is everything available for the current filters.'
+  }
 
-  if (feed.emptyReason === 'catalogue_sync_pending') return <div className="minimal-deck-complete">
-    <h1>Places are being added nearby</h1>
-    <p>No places are available around the selected location yet.</p>
-    <div><button className="minimal-primary-button" type="button" onClick={onRefresh}>Try again</button><button type="button" onClick={onFilters}>Change location</button></div>
-  </div>
-
-  if (!exhausted && feed.emptyReason === 'filters') return <div className="minimal-deck-complete">
-    <h1>No places match these filters</h1>
-    <div><button className="minimal-primary-button" type="button" onClick={onFilters}>Change filters</button><button type="button" onClick={onRefresh}>Try again</button></div>
-  </div>
-
-  if (exhausted) return <div className="minimal-deck-complete">
-    <h1>You've seen all nearby places</h1>
-    <p>{Number(feed.filters?.distance) < 100 ? `That's everything in the current ${feed.filters?.distance || 10} km search.` : 'That is everything available for the current filters.'}</p>
+  return <div className="figma-swipe-empty" aria-live="polite">
+    <h1>{title}</h1>
+    {description ? <p>{description}</p> : null}
     <div>
-      {Number(feed.filters?.distance) < 100 ? <button className="minimal-primary-button" type="button" onClick={onExpand}>Expand distance</button> : null}
-      <button type="button" onClick={onFilters}>Change filters</button>
+      {exhausted && Number(feed.filters?.distance) < 100 ? <button type="button" onClick={onExpand}>Expand distance</button> : null}
+      <button type="button" onClick={onFilters}>{feed.emptyReason === 'location_required' ? 'Choose location' : 'Change filters'}</button>
+      {feed.emptyReason !== 'location_required' && !exhausted ? <button type="button" onClick={onRefresh}>Try again</button> : null}
     </div>
-  </div>
-
-  return <div className="minimal-deck-complete">
-    <h1>No places found</h1>
-    <div><button className="minimal-primary-button" type="button" onClick={onFilters}>Change filters</button><button type="button" onClick={onRefresh}>Try again</button></div>
   </div>
 }
 
@@ -124,6 +119,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const [exhausted, setExhausted] = useState(initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
   const [message, setMessage] = useState('')
   const [actionRequest, setActionRequest] = useState(null)
+
   const storageKey = useMemo(() => actionStorageKey(profileId), [profileId])
   const actionBuffer = useRef([])
   const actionSequence = useRef(0)
@@ -136,13 +132,13 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const continuationInFlight = useRef(null)
   const deckGeneration = useRef(0)
   const sessionIds = useRef(new Set(initialItems.map((item) => item.content_id)))
+
   const current = feed.items[index] || null
-  const next = feed.items[index + 1] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
   const busy = false
 
   useEffect(() => {
-    if (!message) return
+    if (!message) return undefined
     const timer = window.setTimeout(() => setMessage(''), 2400)
     return () => window.clearTimeout(timer)
   }, [message])
@@ -157,6 +153,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
       retryTimer.current = null
     }
     if (!actionBuffer.current.length) return inFlight.current
+
     const entries = actionBuffer.current.slice(0, ACTION_BATCH_SIZE)
     const task = async () => {
       const response = await csrfFetch('/api/discovery/actions', {
@@ -213,15 +210,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const queueDiscoveryAction = useCallback((payload, itemKey) => {
     const sequence = actionSequence.current++
     return new Promise((resolve) => {
-      actionBuffer.current.push({
-        itemKey,
-        resolve,
-        payload: {
-          ...payload,
-          eventId: crypto.randomUUID(),
-          sequence
-        }
-      })
+      actionBuffer.current.push({ itemKey, resolve, payload: { ...payload, eventId: crypto.randomUUID(), sequence } })
       persistDiscoveryActions(actionBuffer.current, storageKey)
       if (actionBuffer.current.length >= ACTION_BATCH_SIZE) flushActions()
       else if (!flushTimer.current) flushTimer.current = window.setTimeout(() => flushActions(), ACTION_BATCH_DELAY_MS)
@@ -252,6 +241,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     const normalized = { ...filters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
     const excludeIds = [...sessionIds.current].slice(0, MAX_CONTINUATION_EXCLUDES)
     setLoadingMore(true)
+
     const task = (async () => {
       const response = await csrfFetch('/api/discovery', {
         method: 'POST',
@@ -264,23 +254,19 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
         setMessage(result.error || 'Could not load more places.')
         return null
       }
-      const next = (result.items || [])
-        .filter((item) => item?.content_id && !sessionIds.current.has(item.content_id))
-        .slice(0, DECK_BATCH_SIZE)
-      for (const item of next) sessionIds.current.add(item.content_id)
-      if (next.length) {
-        const annotated = withRequestId(next, result.requestId)
-        setFeed((currentFeed) => ({
-          ...currentFeed,
-          items: [...currentFeed.items, ...annotated],
-          categories: [...new Set([...(currentFeed.categories || []), ...(result.categories || [])])].sort(),
-          infrastructure: result.infrastructure || currentFeed.infrastructure,
-          continuation: result.continuation || currentFeed.continuation
+      const nextItems = (result.items || []).filter((item) => item?.content_id && !sessionIds.current.has(item.content_id)).slice(0, DECK_BATCH_SIZE)
+      for (const item of nextItems) sessionIds.current.add(item.content_id)
+      if (nextItems.length) {
+        const annotated = withRequestId(nextItems, result.requestId)
+        setFeed((value) => ({
+          ...value,
+          items: [...value.items, ...annotated],
+          categories: [...new Set([...(value.categories || []), ...(result.categories || [])])].sort(),
+          infrastructure: result.infrastructure || value.infrastructure,
+          continuation: result.continuation || value.continuation
         }))
       }
-      if (!next.length || result.continuation?.hasMore === false || sessionIds.current.size >= MAX_CONTINUATION_EXCLUDES) {
-        setExhausted(true)
-      }
+      if (!nextItems.length || result.continuation?.hasMore === false || sessionIds.current.size >= MAX_CONTINUATION_EXCLUDES) setExhausted(true)
       return result
     })().finally(() => {
       if (generation === deckGeneration.current) setLoadingMore(false)
@@ -292,8 +278,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
 
   useEffect(() => {
     if (exhausted || loadingMore) return
-    const remaining = Math.max(0, feed.items.length - index)
-    if (remaining <= REFILL_THRESHOLD) loadMore().catch(() => {})
+    if (Math.max(0, feed.items.length - index) <= REFILL_THRESHOLD) loadMore().catch(() => {})
   }, [feed.items.length, index, exhausted, loadingMore, loadMore])
 
   useEffect(() => {
@@ -313,27 +298,14 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     }
   }, [flushActions, storageKey])
 
-  useEffect(() => {
-    function keyboard(event) {
-      const target = event.target instanceof HTMLElement ? event.target : null
-      if (!current || busy || event.metaKey || event.ctrlKey || event.altKey || target?.closest('input,textarea,select,button')) return
-      if (event.key === 'ArrowLeft') requestChoice('pass')
-      if (event.key === 'ArrowRight') requestChoice('save')
-      if (event.key.toLowerCase() === 'p') requestChoice('perfect')
-      if (event.key.toLowerCase() === 'z' || event.key.toLowerCase() === 'u') undo()
-    }
-    window.addEventListener('keydown', keyboard)
-    return () => window.removeEventListener('keydown', keyboard)
-  })
-
   function requestChoice(action) {
-  if (!current || busy) return
-  actionRequestSequence.current += 1
-  setActionRequest({ action, id: actionRequestSequence.current })
-}
+    if (!current || busy) return
+    actionRequestSequence.current += 1
+    setActionRequest({ action, id: actionRequestSequence.current })
+  }
 
   function updateFilter(name, value) {
-    setFilters((currentFilters) => ({ ...currentFilters, [name]: value, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }))
+    setFilters((valueBefore) => ({ ...valueBefore, [name]: value, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }))
   }
 
   function context(item) {
@@ -364,8 +336,8 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     if (!item || busy || pendingItems.current.has(item.content_id)) return
     pendingItems.current.add(item.content_id)
     const persistedAction = action === 'pass' ? 'dismissed' : action === 'perfect' ? 'perfect' : 'saved'
-    setChoices((currentChoices) => ({ ...currentChoices, [item.content_id]: { choice: action, note: '' } }))
-    setIndex((currentIndex) => currentIndex + 1)
+    setChoices((value) => ({ ...value, [item.content_id]: { choice: action, note: '' } }))
+    setIndex((value) => value + 1)
     queueDiscoveryAction({
       action: persistedAction,
       contentKind: 'place',
@@ -374,8 +346,8 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
       context: context(item)
     }, item.content_id).then((result) => {
       if (result) return
-      setChoices((currentChoices) => {
-        const next = { ...currentChoices }
+      setChoices((value) => {
+        const next = { ...value }
         delete next[item.content_id]
         return next
       })
@@ -389,7 +361,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     const previousChoice = choices[item.content_id]
     pendingItems.current.add(`undo:${item.content_id}`)
     setIndex(previousIndex)
-    setChoices((currentChoices) => { const next = { ...currentChoices }; delete next[item.content_id]; return next })
+    setChoices((value) => { const next = { ...value }; delete next[item.content_id]; return next })
     queueDiscoveryAction({
       action: 'undo',
       contentKind: 'place',
@@ -397,8 +369,8 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
       requestId: item.__discovery_request_id || feed.requestId
     }, `undo:${item.content_id}`).then((result) => {
       if (result) return
-      setIndex((currentIndex) => Math.max(currentIndex, previousIndex + 1))
-      if (previousChoice) setChoices((currentChoices) => ({ ...currentChoices, [item.content_id]: previousChoice }))
+      setIndex((value) => Math.max(value, previousIndex + 1))
+      if (previousChoice) setChoices((value) => ({ ...value, [item.content_id]: previousChoice }))
     })
   }
 
@@ -407,21 +379,28 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     refresh({ ...filters, distance })
   }
 
+  useEffect(() => {
+    function keyboard(event) {
+      const target = event.target instanceof HTMLElement ? event.target : null
+      if (!current || busy || event.metaKey || event.ctrlKey || event.altKey || target?.closest('input,textarea,select,button')) return
+      if (event.key === 'ArrowLeft') requestChoice('pass')
+      if (event.key === 'ArrowRight') requestChoice('save')
+      if (event.key.toLowerCase() === 'p') requestChoice('perfect')
+      if (event.key.toLowerCase() === 'z' || event.key.toLowerCase() === 'u') undo()
+    }
+    window.addEventListener('keydown', keyboard)
+    return () => window.removeEventListener('keydown', keyboard)
+  })
+
   const deckComplete = feed.items.length > 0 && !current && exhausted
   const waitingForMore = feed.items.length > 0 && !current && !exhausted
 
-  return (
-    <section className="minimal-swipe-workspace">
-      <header className="minimal-swipe-toolbar">
-        <span aria-live="polite">{message}</span>
-        <button type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-        </button>
-      </header>
+  return <section className="figma-swipe-screen">
+    <div className="figma-swipe-workspace">
+      <button className="figma-swipe-filter-trigger" type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">Filters</button>
 
       {current ? <>
-        <div className="minimal-card-stage">{next ? <MinimalSwipePreviewCard item={next} /> : null}<MinimalSwipeCard item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} /></div>
-        <DiscoverSocialBar item={current} onMessage={setMessage} />
+        <div className="figma-swipe-card-stage"><FigmaSwipeCard item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} /></div>
         <SwipeActionDock
           onUndo={undo}
           onPass={() => requestChoice('pass')}
@@ -430,18 +409,12 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
           canUndo={index > 0}
           busy={busy}
         />
-        <div className="minimal-progress" aria-label={`Place ${index + 1}`}><span style={{ width: '35%' }} /></div>
-      </> : waitingForMore ? <div className="minimal-deck-complete" aria-live="polite">
-        <h1>Loading more places…</h1>
-      </div> : deckComplete ? <EmptyDeck
-        feed={feed}
-        exhausted
-        onRefresh={() => refresh()}
-        onFilters={() => setShowFilters(true)}
-        onExpand={expandDistance}
-      /> : <EmptyDeck feed={feed} onRefresh={() => refresh()} onFilters={() => setShowFilters(true)} onExpand={expandDistance} />}
+        <span className="figma-swipe-status" aria-live="polite">{message}</span>
+      </> : waitingForMore ? <div className="figma-swipe-empty" aria-live="polite"><h1>Loading more places…</h1></div>
+        : deckComplete ? <EmptyDeck feed={feed} exhausted onRefresh={() => refresh()} onFilters={() => setShowFilters(true)} onExpand={expandDistance} />
+          : <EmptyDeck feed={feed} onRefresh={() => refresh()} onFilters={() => setShowFilters(true)} onExpand={expandDistance} />}
 
       {showFilters ? <DiscoveryFilterSheet filters={filters} categories={categories} onChange={updateFilter} onApply={() => refresh(filters)} onClose={() => setShowFilters(false)} loading={loading} /> : null}
-    </section>
-  )
+    </div>
+  </section>
 }

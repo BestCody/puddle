@@ -1,0 +1,46 @@
+/* Profile customization — Figma 65:198 */
+.figma-profile-hero { background: var(--profile-theme, #4ca5f7); }
+.figma-profile-avatar-editor { position:absolute; inset:0; pointer-events:none; }
+.figma-profile-avatar-editor > summary { position:absolute; top:211px; left:50%; width:133px; height:133px; transform:translateX(-50%); list-style:none; cursor:pointer; pointer-events:auto; }
+.figma-profile-avatar-editor > summary::-webkit-details-marker { display:none; }
+.figma-profile-avatar-editor > summary .figma-profile-avatar { position:relative; inset:auto; transform:none; width:133px; height:133px; display:grid; }
+.figma-profile-avatar-editor[open] { z-index:125; }
+.figma-profile-avatar-editor[open] > summary { z-index:126; }
+.figma-profile-avatar-editor .figma-profile-photo-editor { pointer-events:auto; }
+.figma-profile-theme-picker {
+  position:absolute;
+  z-index:5;
+  top:13px;
+  right:19px;
+  width:372px;
+  height:50px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 8px 8px 11px;
+  border-radius:25px;
+  background:#fff;
+  box-sizing:border-box;
+}
+.figma-profile-theme-picker > a:not(.figma-profile-customize-done) {
+  width:47px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:25px;
+  color:#fff;
+  font:800 15px/1 Manrope,sans-serif;
+  text-decoration:none;
+  box-sizing:border-box;
+}
+.figma-profile-theme-picker > a.is-selected { border:3px solid rgba(0,0,0,.28); }
+.figma-profile-customize-done { width:24px; height:32px; display:grid; place-items:center; color:#111; font:800 17px/1 Manrope,sans-serif; text-decoration:none; }
+.figma-profile-add-card > a { position:absolute; inset:0; display:grid; place-items:center; color:#285075; font:300 78px/1 Manrope,sans-serif; text-decoration:none; }
+
+@media(max-width:760px) {
+  .figma-profile-avatar-editor > summary { top:205px; width:112px; height:112px; }
+  .figma-profile-avatar-editor > summary .figma-profile-avatar { width:112px; height:112px; }
+  .figma-profile-theme-picker { top:12px; right:12px; width:calc(100% - 24px); max-width:372px; gap:4px; }
+  .figma-profile-theme-picker > a:not(.figma-profile-customize-done) { width:42px; }
+}

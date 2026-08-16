@@ -42,7 +42,14 @@ export function trackFrontendHealth(page, { baseURL, additionalOrigins = [], str
   if (strictConsole) {
     page.on('console', (message) => {
       if (message.type() !== 'error') return
-      failures.push(`console ${message.text()}`)
+      const text = message.text()
+      const sourceUrl = message.location()?.url || ''
+      // Browser console messages for third-party resource failures do not
+      // expose the HTTP status through our origin-scoped response listener.
+      // Ignore only that narrow external-resource case (for example a
+      // transient fonts.gstatic.com 404); app-origin failures remain fatal.
+      if (/^Failed to load resource:/i.test(text) && sourceUrl && !isMonitored(sourceUrl)) return
+      failures.push(`console ${text}`)
     })
   }
 
@@ -96,12 +103,11 @@ export async function assertLandingVisualContract(page) {
 }
 
 export async function assertProductVisualContract(page) {
-  const shell = page.locator('.minimal-product-shell')
-  const main = page.locator('.minimal-product-main')
-  const sidebar = page.locator('.minimal-product-sidebar')
-  const desktopNav = page.locator('.minimal-product-nav')
-  const mobileNav = page.locator('.minimal-mobile-nav')
-  const header = page.locator('.minimal-product-header')
+  const shell = page.locator('.figma-dashboard-shell')
+  const main = page.locator('.figma-dashboard-main')
+  const sidebar = page.locator('.figma-dashboard-sidebar')
+  const desktopNav = page.locator('.figma-dashboard-nav')
+  const mobileNav = page.locator('.figma-dashboard-mobile-nav')
 
   await expect(shell).toBeVisible()
   await expect(main).toBeVisible()
@@ -111,17 +117,10 @@ export async function assertProductVisualContract(page) {
     await expect(sidebar).toBeVisible()
     await expect(desktopNav).toBeVisible()
     await expect(mobileNav).toBeHidden()
-
-    if (await header.isVisible()) {
-      await expect(page.getByLabel('Open profile menu')).toBeVisible()
-    } else {
-      await expect(header).toBeHidden()
-    }
+    await expect(sidebar.locator('.figma-dashboard-settings-link')).toBeVisible()
   } else {
-    await expect(header).toBeVisible()
-    await expect(page.locator('.minimal-header-logo')).toBeVisible()
-    await expect(page.locator('.profile-menu')).toBeHidden()
     await expect(sidebar).toBeHidden()
+    await expect(desktopNav).toBeHidden()
     await expect(mobileNav).toBeVisible()
   }
 }
