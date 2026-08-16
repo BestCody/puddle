@@ -20,7 +20,7 @@ async function openFilteredDeck(page, account, category = 'gallery') {
   await signInThroughUi(page, account.email, account.password, '/discover')
   await expect(page).toHaveURL(/\/discover$/)
   await page.goto(`/discover?category=${encodeURIComponent(category)}`)
-  await expect(page.locator('.minimal-swipe-card')).toBeVisible()
+  await expect(page.locator('.figma-swipe-card')).toBeVisible()
 }
 
 test('initial Discover renders relational Supabase places without a static catalogue request', async ({ page }) => {
@@ -35,7 +35,7 @@ test('initial Discover renders relational Supabase places without a static catal
 
   await openFilteredDeck(page, account)
 
-  const title = await page.locator('.minimal-swipe-card h1').innerText()
+  const title = await page.locator('.figma-swipe-card h1').innerText()
   expect(places.map((place) => place.name)).toContain(title)
   await page.waitForTimeout(300)
   expect(staticRequests).toEqual([])
@@ -47,7 +47,7 @@ test('passing and going back works on the relational Supabase deck', async ({ pa
   const account = await createSwiper('Relational Pass Swiper')
   await openFilteredDeck(page, account)
 
-  const heading = page.locator('.minimal-swipe-card h1')
+  const heading = page.locator('.figma-swipe-card h1')
   const firstTitle = await heading.innerText()
   const second = places.find((place) => place.name !== firstTitle)
   expect(second).toBeTruthy()
@@ -65,7 +65,8 @@ test('Discover filters own location, distance, and place categories', async ({ p
   const account = await createSwiper('Filter Preference Swiper')
 
   await signInThroughUi(page, account.email, account.password, '/account')
-  await expect(page.getByRole('heading', { name: /Profile settings/i })).toBeVisible()
+  await expect(page.locator('.figma-settings-window')).toBeVisible()
+  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
   await expect(page.getByLabel('Search radius')).toHaveCount(0)
   await expect(page.getByLabel('City or town')).toHaveCount(0)
   await expect(page.getByText('What kinds of places do you like?')).toHaveCount(0)
@@ -100,13 +101,13 @@ test('Discover filters own location, distance, and place categories', async ({ p
     await page.getByLabel('Distance').selectOption('25')
     await page.getByRole('button', { name: 'Apply' }).click()
   } else {
-    // Desktop node 12:11 intentionally omits the legacy filter toolbar. The
-    // same real discovery filters remain addressable through the route state.
+    // Desktop node 12:11 intentionally omits the filter control. The real
+    // discovery filters remain addressable through route state.
     await page.goto('/discover?category=gallery&distance=25')
     await expect(page).toHaveURL(/category=gallery.*distance=25|distance=25.*category=gallery/)
   }
 
-  await expect(page.locator('.minimal-swipe-card')).toBeVisible()
-  const title = await page.locator('.minimal-swipe-card h1').innerText()
+  await expect(page.locator('.figma-swipe-card')).toBeVisible()
+  const title = await page.locator('.figma-swipe-card h1').innerText()
   expect(places.map((place) => place.name)).toContain(title)
 })
