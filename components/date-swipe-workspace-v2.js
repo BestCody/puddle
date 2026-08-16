@@ -12,11 +12,10 @@ const ACTION_BATCH_SIZE = 20
 const ACTION_RETRY_BASE_MS = 1_000
 const ACTION_RETRY_MAX_MS = 30_000
 const ACTION_STORAGE_PREFIX = 'puddle:pending-discovery-actions:v1'
-const ACTION_STORAGE_LIMIT = 500
 const DECK_BATCH_SIZE = 12
 const REFILL_THRESHOLD = 5
 const PHOTO_PRELOAD_AHEAD = 2
-const MAX_CONTINUATION_EXCLUDES = 500
+const MAX_SEARCH_DISTANCE_KM = 20_040
 
 function queryString(filters) {
   const params = new URLSearchParams({ kind: 'place', date: 'any' })
@@ -48,7 +47,7 @@ function storedDiscoveryActions(storageKey) {
   try {
     const value = JSON.parse(window.localStorage.getItem(storageKey) || '[]')
     if (!Array.isArray(value)) return []
-    return value.filter((item) => item && typeof item === 'object' && item.eventId && item.contentId && item.action).slice(0, ACTION_STORAGE_LIMIT)
+    return value.filter((item) => item && typeof item === 'object' && item.eventId && item.contentId && item.action)
   } catch {
     return []
   }
@@ -57,7 +56,7 @@ function storedDiscoveryActions(storageKey) {
 function persistDiscoveryActions(entries, storageKey) {
   if (typeof window === 'undefined' || !storageKey) return
   try {
-    const payloads = entries.map((entry) => entry.payload).filter(Boolean).slice(0, ACTION_STORAGE_LIMIT)
+    const payloads = entries.map((entry) => entry.payload).filter(Boolean)
     if (payloads.length) window.localStorage.setItem(storageKey, JSON.stringify(payloads))
     else window.localStorage.removeItem(storageKey)
   } catch {
@@ -84,7 +83,7 @@ function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) 
     title = 'No places match these filters'
   } else if (exhausted) {
     title = "You've seen all nearby places"
-    description = Number(feed.filters?.distance) < 100
+    description = Number(feed.filters?.distance) < MAX_SEARCH_DISTANCE_KM
       ? `That's everything in the current ${feed.filters?.distance || 10} km search.`
       : 'That is everything available for the current filters.'
   }
@@ -93,7 +92,7 @@ function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) 
     <h1>{title}</h1>
     {description ? <p>{description}</p> : null}
     <div>
-      {exhausted && Number(feed.filters?.distance) < 100 ? <button type="button" onClick={onExpand}>Expand distance</button> : null}
+      {exhausted && Number(feed.filters?.distance) < MAX_SEARCH_DISTANCE_KM ? <button type="button" onClick={onExpand}>Expand distance</button> : null}
       <button type="button" onClick={onFilters}>{feed.emptyReason === 'location_required' ? 'Choose location' : 'Change filters'}</button>
       {feed.emptyReason !== 'location_required' && !exhausted ? <button type="button" onClick={onRefresh}>Try again</button> : null}
     </div>
@@ -118,7 +117,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const [showFilters, setShowFilters] = useState(false)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [exhausted, setExhausted] = useState(initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
+  const [exhausted, setExhausted] = useState(initialFeed.continuation?.hasMore === false && initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
   const [message, setMessage] = useState('')
   const [actionRequest, setActionRequest] = useState(null)
 
@@ -241,10 +240,14 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     if (continuationInFlight.current || exhausted) return continuationInFlight.current
     const generation = deckGeneration.current
     const normalized = { ...filters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
-    const excludeIds = [...sessionIds.current].slice(0, MAX_CONTINUATION_EXCLUDES)
     setLoadingMore(true)
 
     const task = (async () => {
+      await drainActions()
+      if (generation !== deckGeneration.current) return null
+      const visibleIds = feed.items.slice(index).map((item) => item?.content_id).filter(Boolean)
+      const pendingActionIds = actionBuffer.current.map((entry) => entry.payload?.contentId).filter(Boolean)
+      const excludeIds = [...new Set([...visibleIds, ...pendingActionIds])]
       const response = await csrfFetch('/api/discovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -268,7 +271,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
           continuation: result.continuation || value.continuation
         }))
       }
-      if (!nextItems.length || result.continuation?.hasMore === false || sessionIds.current.size >= MAX_CONTINUATION_EXCLUDES) setExhausted(true)
+      if (result.continuation?.hasMore === false || (!nextItems.length && !(result.items || []).length)) setExhausted(true)
       return result
     })().finally(() => {
       if (generation === deckGeneration.current) setLoadingMore(false)
@@ -276,7 +279,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     })
     continuationInFlight.current = task
     return task
-  }, [filters, exhausted])
+  }, [filters, exhausted, drainActions, feed.items, index])
 
   useEffect(() => {
     if (exhausted || loadingMore) return
@@ -330,7 +333,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     setIndex(0)
     setChoices({})
     setShowFilters(false)
-    setExhausted(nextItems.length < DECK_BATCH_SIZE && nextItems.length > 0)
+    setExhausted(result.continuation?.hasMore === false && nextItems.length < DECK_BATCH_SIZE && nextItems.length > 0)
     setMessage('')
   }
 
@@ -377,7 +380,8 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   }
 
   function expandDistance() {
-    const distance = Math.min(100, Math.max(Number(filters.distance || 10) + 5, Number(filters.distance || 10) * 2))
+    const currentDistance = Number(filters.distance || 10)
+    const distance = Math.min(MAX_SEARCH_DISTANCE_KM, Math.max(currentDistance + 5, currentDistance * 2))
     refresh({ ...filters, distance })
   }
 
