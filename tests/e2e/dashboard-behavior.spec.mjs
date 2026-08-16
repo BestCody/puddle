@@ -19,7 +19,7 @@ test('authenticated desktop dashboard keeps the current product structure and co
   const account = await createConfirmedUser({ displayName: 'Dashboard Behavior Tester' })
   await completeProfileDirect(account.user.id, {
     display_name: 'Dashboard Behavior Tester',
-    username: `dashboardbehavior${Date.now()}`,
+    username: `dash${String(Date.now()).slice(-8)}`,
     location_label: 'Oakville',
     interests: ['bar', 'nightlife', 'shop']
   })
