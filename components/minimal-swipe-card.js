@@ -253,25 +253,25 @@ export function MinimalSwipeCard({ item, onChoice, busy, actionRequest }) {
   }, [item.content_id, item.photo_enrichment_status, mainPhoto])
 
   async function choose(action) {
-  if (busy || choiceInFlight.current) return
-  choiceInFlight.current = true
-  setDragging(false)
-  setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const motionMs = reducedMotion ? 0 : action === 'save' ? 560 : action === 'pass' ? 280 : 0
-  try {
-    if (motionMs) await new Promise((resolve) => window.setTimeout(resolve, motionMs))
-    await onChoice(action, item)
-  } finally {
-    setDragX(0)
-    choiceInFlight.current = false
+    if (busy || choiceInFlight.current) return
+    choiceInFlight.current = true
+    setDragging(false)
+    setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const motionMs = reducedMotion ? 0 : action === 'save' ? 560 : action === 'pass' ? 280 : 0
+    try {
+      if (motionMs) await new Promise((resolve) => window.setTimeout(resolve, motionMs))
+      await onChoice(action, item)
+    } finally {
+      setDragX(0)
+      choiceInFlight.current = false
+    }
   }
-}
 
-useEffect(() => {
-  if (!actionRequest?.id) return
-  choose(actionRequest.action)
-}, [actionRequest?.id])
+  useEffect(() => {
+    if (!actionRequest?.id) return
+    choose(actionRequest.action)
+  }, [actionRequest?.id])
 
   async function chooseFromDetails(action) {
     if (busy) return
@@ -350,6 +350,13 @@ useEffect(() => {
         </div>
         <strong className="minimal-swipe-pass" style={{ opacity: Math.max(0, -dragX / 90) }}>PASS</strong>
         <strong className="minimal-swipe-save" style={{ opacity: Math.max(0, dragX / 90) }}>SAVE</strong>
+        <button
+          className="minimal-swipe-details-button"
+          type="button"
+          aria-label="Open details"
+          onClick={() => setDetailsOpen(true)}
+          disabled={busy}
+        >+</button>
       </div>
     </article>
     {detailsOpen ? <DetailsSheet item={item} photos={photos} busy={busy} onChoice={chooseFromDetails} onClose={() => setDetailsOpen(false)} /> : null}
