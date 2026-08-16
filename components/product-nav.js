@@ -16,7 +16,7 @@ function NavIcon({ type, avatarUrl }) {
 
 const items = [
   { href: '/discover', label: 'Swipe', icon: 'swipe', tone: 'blue' },
-  { href: '/map', label: 'Feed', icon: 'feed', tone: 'yellow' },
+  { href: '/map', label: 'Feed', activeLabel: 'Explore', icon: 'feed', tone: 'yellow' },
   { href: '/plans', label: 'Saved', icon: 'saved', tone: 'purple' },
   { href: '/matches', label: 'Friends', icon: 'friends', tone: 'green' },
   { href: '/membership', label: 'Pass', icon: 'pass', tone: 'pink' },
@@ -35,6 +35,7 @@ function NavItems({ mobile = false, avatarUrl = null }) {
   const pathname = usePathname()
   return items.map((item) => {
     const active = isActive(pathname, item.href)
+    const visibleLabel = active && item.activeLabel ? item.activeLabel : item.label
     return <Link
       className={`figma-dashboard-nav-item tone-${item.tone}${active ? ' is-active' : ''}`}
       href={item.href}
@@ -43,7 +44,7 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       key={item.href}
     >
       <span className="figma-dashboard-nav-icon"><NavIcon type={item.icon} avatarUrl={avatarUrl} /></span>
-      {mobile ? null : <span className="figma-dashboard-nav-label">{item.label}</span>}
+      {mobile ? null : <span className="figma-dashboard-nav-label">{visibleLabel}</span>}
     </Link>
   })
 }
