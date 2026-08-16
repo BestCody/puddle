@@ -1,0 +1,77 @@
+/* Friends Message fidelity for Figma 32:17. These selectors only target the rebuilt Friends DOM. */
+@media (min-width: 761px) {
+  .figma-friends-tabs {
+    left: calc(50% + 5px);
+  }
+
+  .figma-friends-chat {
+    height: 699px;
+    transform: translateY(1px);
+  }
+
+  .figma-friends-composer {
+    left: 9.5px;
+    right: 13.5px;
+    bottom: 19.5px;
+    height: 42px;
+    display: grid;
+    grid-template-columns: 60px 60px minmax(0, 1fr);
+    gap: 7px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .figma-friends-composer > button:nth-of-type(1),
+  .figma-friends-composer > button:nth-of-type(2) {
+    width: 60px;
+    height: 42px;
+    border: 2px solid #e6e6e6;
+    border-radius: 25px;
+    background: #fff;
+    color: #b7b7b7;
+    box-shadow: 0 4px 0 rgba(0,0,0,.10);
+    font: 400 25px/1 Manrope, sans-serif;
+  }
+
+  .figma-friends-composer > button:nth-of-type(2) {
+    color: transparent;
+  }
+
+  .figma-friends-composer input {
+    grid-column: 3;
+    grid-row: 1;
+    width: 100%;
+    height: 42px;
+    padding: 0 48px 0 15px;
+    border: 1.615px solid #e6e6e6;
+    border-radius: 20.193px;
+    background: #fff;
+    box-shadow: 0 3.231px 0 rgba(0,0,0,.10);
+    box-sizing: border-box;
+    font: 600 12.923px/1 Manrope, sans-serif;
+  }
+
+  .figma-friends-composer input::placeholder {
+    color: #b0b0b0;
+  }
+
+  .figma-friends-composer > button.is-send {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    justify-self: end;
+    z-index: 2;
+    width: 28px;
+    height: 28px;
+    margin-right: 5px;
+    border: 2px solid #78e152;
+    border-radius: 50%;
+    background: #fff;
+    color: #58c92e;
+    box-shadow: none;
+    font: 800 18px/1 Manrope, sans-serif;
+  }
+}
