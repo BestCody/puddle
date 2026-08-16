@@ -21,6 +21,10 @@
   .figma-feed-search { width: 190px !important; min-height: 46px !important; height: 46px !important; }
 
   /* Saved node 25:180 */
+  /* minimal-list-page adds a generic 22px grid gap. The current Saved Figma
+     authors its vertical spacing explicitly with margins, so that inherited
+     product gap would double-space every Saved row. */
+  .figma-saved-page { gap: 0 !important; }
   .figma-saved-segment { width: 147px !important; height: 48px !important; }
   .figma-saved-segment > a {
     min-width: 0 !important;
