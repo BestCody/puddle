@@ -1,59 +1,27 @@
-import { randomUUID } from 'node:crypto'
-import { createClient } from '@supabase/supabase-js'
 import { expect } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-const mailpitUrl = process.env.MAILPIT_URL || 'http://127.0.0.1:54324'
 
 if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('E2E tests require NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
+  throw new Error('E2E requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
 }
 
 export const admin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 })
 
-export function uniqueSuffix(length = 12) {
-  return randomUUID().replaceAll('-', '').slice(0, length)
+export function uniqueSuffix(length = 8) {
+  return `${Date.now()}${Math.random().toString(36).slice(2)}`.replace(/\D/g, '').slice(-length).padStart(length, '7')
 }
 
-export function uniqueEmail(label = 'user') {
-  return `${label}-${Date.now()}-${uniqueSuffix()}@example.com`
+export function uniqueEmail(prefix = 'puddle-e2e') {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`
 }
 
-export async function poll(fn, { timeout = 15_000, interval = 250, message = 'Condition was not met.' } = {}) {
-  const started = Date.now()
-  let lastError
-  while (Date.now() - started < timeout) {
-    try {
-      const result = await fn()
-      if (result) return result
-    } catch (error) {
-      lastError = error
-    }
-    await new Promise((resolve) => setTimeout(resolve, interval))
-  }
-  throw lastError || new Error(message)
-}
-
-export async function findUserByEmail(email) {
-  return poll(async () => {
-    const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-    if (error) throw error
-    return data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase()) || null
-  }, { message: `Auth user ${email} was not created.` })
-}
-
-export async function waitForProfile(userId) {
-  return poll(async () => {
-    const { data, error } = await admin.from('profiles').select('*').eq('id', userId).maybeSingle()
-    if (error) throw error
-    return data || null
-  }, { message: `Profile ${userId} was not created.` })
-}
-
-export async function createConfirmedUser({ email = uniqueEmail(), password = 'PuddlePass123!', displayName = 'E2E Puddle Person' } = {}) {
+export async function createConfirmedUser({ displayName = 'E2E Person', password = `Puddle-${uniqueSuffix(18)}-Aa1!` } = {}) {
+  const email = uniqueEmail('puddle-e2e')
   const { data, error } = await admin.auth.admin.createUser({
     email,
     password,
@@ -61,37 +29,53 @@ export async function createConfirmedUser({ email = uniqueEmail(), password = 'P
     user_metadata: { display_name: displayName }
   })
   if (error) throw error
-  await waitForProfile(data.user.id)
-  return { user: data.user, email, password, displayName }
+  return { email, password, user: data.user }
+}
+
+export async function findUserByEmail(email) {
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  if (error) throw error
+  const user = data.users.find((candidate) => candidate.email === email)
+  if (!user) throw new Error(`Could not find auth user for ${email}`)
+  return user
+}
+
+export async function waitForProfile(userId) {
+  return expect.poll(async () => {
+    const { data } = await admin.from('profiles').select('*').eq('id', userId).maybeSingle()
+    return data
+  }, { timeout: 12_000 }).not.toBeNull().then(async () => {
+    const { data, error } = await admin.from('profiles').select('*').eq('id', userId).single()
+    if (error) throw error
+    return data
+  })
 }
 
 export async function completeProfileDirect(userId, overrides = {}) {
+  const username = overrides.username || `e2e_${uniqueSuffix(10)}`
+  const now = new Date().toISOString()
   const payload = {
     id: userId,
-    display_name: 'Ready Tester',
-    username: `ready_${uniqueSuffix(10)}`,
-    birth_date: '1995-05-15',
-    city: 'Toronto',
-    region: 'Ontario',
-    country: 'Canada',
-    country_code: 'CA',
-    latitude: 43.6532,
-    longitude: -79.3832,
-    timezone: 'America/Toronto',
-    location_label: 'Toronto, Ontario, Canada',
-    location_source: 'admin',
-    location_updated_at: new Date().toISOString(),
-    search_radius_km: 10,
-    bio: 'Prepared for browser tests.',
-    profile_visibility: 'friends',
-    interests: ['cafe', 'restaurant', 'gallery'],
-    onboarding_completed_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    ...overrides
+    display_name: overrides.display_name || overrides.displayName || 'E2E Person',
+    username,
+    bio: overrides.bio || 'E2E profile',
+    birth_date: overrides.birth_date || '1994-06-15',
+    city: overrides.city || 'Toronto',
+    region: overrides.region || 'Ontario',
+    country: overrides.country || 'Canada',
+    country_code: overrides.country_code || 'CA',
+    latitude: overrides.latitude ?? 43.6532,
+    longitude: overrides.longitude ?? -79.3832,
+    timezone: overrides.timezone || 'America/Toronto',
+    search_radius_km: overrides.search_radius_km ?? 25,
+    interests: overrides.interests || ['cafe', 'restaurant', 'gallery'],
+    profile_visibility: overrides.profile_visibility || 'public',
+    onboarding_completed_at: overrides.onboarding_completed_at || now,
+    updated_at: now
   }
-  const { data, error } = await admin.from('profiles').upsert(payload, { onConflict: 'id' }).select('*').single()
+  const { error } = await admin.from('profiles').upsert(payload)
   if (error) throw error
-  return data
+  return payload
 }
 
 export async function deleteProfile(userId) {
@@ -99,42 +83,26 @@ export async function deleteProfile(userId) {
   if (error) throw error
 }
 
-const htmlEntities = new Map([
-  ['&amp;', '&'],
-  ['&#x2f;', '/'],
-  ['&#47;', '/'],
-  ['&quot;', '"']
-])
-
-function decodeHtml(value) {
-  return String(value || '').replace(/&(?:amp|#x2f|#47|quot);/gi, (entity) => htmlEntities.get(entity.toLowerCase()) || entity)
-}
-
-function linksFromMessage(html) {
-  const links = []
-  for (const match of html.matchAll(/href\s*=\s*(?:"([^"]+)"|'([^']+)')/gi)) {
-    links.push(decodeHtml(match[1] || match[2]))
-  }
-  for (const match of html.matchAll(/https?:\/\/[^\s"'<>]+/gi)) links.push(decodeHtml(match[0]))
-  return [...new Set(links)]
-}
-
 export async function waitForAuthEmailLink(email, expectedType) {
-  const query = encodeURIComponent(`to:${email}`)
-  return poll(async () => {
-    const response = await fetch(`${mailpitUrl}/view/latest.html?query=${query}`)
-    if (response.status === 404) return null
-    if (!response.ok) throw new Error(`Mailpit returned ${response.status}.`)
-    const links = linksFromMessage(await response.text())
-    return links.find((link) => {
+  const { data, error } = await admin.from('auth_email_test_outbox').select('link,email_type,created_at').eq('email', email).order('created_at', { ascending: false })
+  if (error) throw error
+  const direct = data?.find((entry) => entry.email_type === expectedType)?.link
+  if (direct) return direct
+
+  return expect.poll(async () => {
+    const { data: latest, error: latestError } = await admin.from('auth_email_test_outbox').select('link,email_type').eq('email', email).order('created_at', { ascending: false })
+    if (latestError) throw latestError
+    return latest?.find((entry) => {
+      if (!entry?.link) return false
+      if (entry.email_type === expectedType) return true
       try {
-        const url = new URL(link)
+        const url = new URL(entry.link)
         const type = url.searchParams.get('type')
         return url.pathname.includes('/auth/v1/verify') && (type === expectedType || (expectedType === 'signup' && type === 'email'))
       } catch {
         return false
       }
-    }) || null
+    })?.link || null
   }, { timeout: 20_000, message: `No ${expectedType} email link arrived for ${email}.` })
 }
 
@@ -160,15 +128,15 @@ export async function signInThroughUi(page, email, password, next = '/discover')
 }
 
 export async function signOutThroughUi(page) {
-  let menu = page.locator('details.profile-menu')
+  let menu = page.locator('details.figma-dashboard-account-menu')
   let summary = menu.locator('> summary')
 
-  // The current desktop Figma intentionally shows the profile menu only on
-  // Swipe. Functional auth tests may arrive on Settings/Profile first, so use
-  // the real visible menu route instead of requiring a non-Figma header there.
+  // Functional auth tests can arrive on any product route. Use the real
+  // rebuilt Figma account menu, falling back to Discover if the mobile shell
+  // does not expose it at the current viewport.
   if (!await summary.isVisible().catch(() => false)) {
     await page.goto('/discover')
-    menu = page.locator('details.profile-menu')
+    menu = page.locator('details.figma-dashboard-account-menu')
     summary = menu.locator('> summary')
   }
 
