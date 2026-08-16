@@ -77,6 +77,7 @@
     padding-inline: 8px !important;
   }
 
+  /* Pass node 40:312. */
   .figma-pass-segment {
     width: 167px !important;
     height: 48px !important;
@@ -86,5 +87,12 @@
     flex: 1 1 50%;
     min-height: 36px !important;
     padding-inline: 8px !important;
+  }
+  .figma-pass-free {
+    transform: translateY(4px);
+  }
+  .figma-pass-paid {
+    height: 457px !important;
+    transform: translateY(2px);
   }
 }
