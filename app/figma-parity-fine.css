@@ -1,5 +1,9 @@
 /* Pixel-level control sizing from the current desktop Figma frames. */
 @media (min-width:761px) {
+  /* Shared sidebar glyph dimensions from the current Figma assets. */
+  .minimal-product-nav .figma-feed-icon { width: 28px !important; height: 28px !important; }
+  .minimal-product-nav .figma-friends-icon { width: 25px !important; height: 25px !important; }
+
   /* Swipe node 12:11 */
   .minimal-swipe-workspace { gap: 0 !important; }
   .minimal-swipe-details-button { right: 19px !important; bottom: 20px !important; }
