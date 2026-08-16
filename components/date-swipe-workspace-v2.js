@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DiscoveryPhotoPreloader } from '@/components/discovery-photo-preloader'
 import { FigmaSwipeCard } from '@/components/figma-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { DiscoveryFilterSheet } from '@/components/discovery-filter-sheet'
@@ -14,6 +15,7 @@ const ACTION_STORAGE_PREFIX = 'puddle:pending-discovery-actions:v1'
 const ACTION_STORAGE_LIMIT = 500
 const DECK_BATCH_SIZE = 12
 const REFILL_THRESHOLD = 5
+const PHOTO_PRELOAD_AHEAD = 2
 const MAX_CONTINUATION_EXCLUDES = 500
 
 function queryString(filters) {
@@ -396,6 +398,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const waitingForMore = feed.items.length > 0 && !current && !exhausted
 
   return <section className="figma-swipe-screen">
+    <DiscoveryPhotoPreloader items={feed.items} index={index} ahead={PHOTO_PRELOAD_AHEAD} />
     <div className="figma-swipe-workspace">
       <button className="figma-swipe-filter-trigger" type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">Filters</button>
 
