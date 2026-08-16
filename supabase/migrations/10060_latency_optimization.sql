@@ -2,7 +2,7 @@
 -- Keep authorization semantics unchanged while avoiding repeated auth.uid()
 -- evaluation and collapsing shell bootstrap data into one round trip.
 
-create or replace function public.dashboard_bootstrap_v1(known_privileged boolean default false)
+create or replace function public.dashboard_bootstrap_v1()
 returns jsonb
 language plpgsql
 security invoker
@@ -18,11 +18,7 @@ begin
     raise exception 'Authentication required.' using errcode = '42501';
   end if;
 
-  if known_privileged then
-    v_access := jsonb_build_object('allowed', true);
-  else
-    v_access := public.privileged_access_v1(array[]::text[]);
-  end if;
+  v_access := public.privileged_access_v1(array[]::text[]);
 
   select count(*)
     into v_unread
@@ -40,9 +36,9 @@ begin
 end;
 $$;
 
-revoke all on function public.dashboard_bootstrap_v1(boolean) from public;
-revoke all on function public.dashboard_bootstrap_v1(boolean) from anon;
-grant execute on function public.dashboard_bootstrap_v1(boolean) to authenticated;
+revoke all on function public.dashboard_bootstrap_v1() from public;
+revoke all on function public.dashboard_bootstrap_v1() from anon;
+grant execute on function public.dashboard_bootstrap_v1() to authenticated;
 
 -- Hot relationship lookups are symmetric, so cover both sides explicitly.
 create index if not exists friendships_requester_idx
