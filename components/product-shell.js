@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ProductNav } from './product-nav'
 import { FigmaDashboardSidebar } from './figma-dashboard-sidebar'
+import { PassNotificationAlerts } from './pass-notification-alerts'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
 
@@ -36,9 +37,17 @@ export async function ProductShell({ user, profile, children }) {
     unreadNotifications = Number(count || 0)
   } catch {}
 
+  let passActive = false
+  try {
+    const client = await database()
+    const { data } = await client.rpc('puddle_tinder_active_v1')
+    passActive = Boolean(data)
+  } catch {}
+
   const appearance = ['light', 'dark', 'system'].includes(profile?.appearance_theme) ? profile.appearance_theme : 'light'
 
   return <div className={`figma-dashboard-shell appearance-${appearance}`}>
+    <PassNotificationAlerts enabled={passActive} profileId={user.id} />
     <FigmaDashboardSidebar avatarUrl={avatarUrl} />
 
     <div className="figma-dashboard-stage">
