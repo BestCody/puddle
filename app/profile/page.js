@@ -65,8 +65,13 @@ export default async function ProfilePage() {
         <div><span>Location</span><strong>{locationLabel}</strong></div>
         <div><span>Saves</span></div>
         <div><span>Friends</span></div>
-        <div className="figma-profile-add-card" aria-label="Profile photo">
-          <ProfilePhotoEditor userId={session.user.id} currentPath={session.profile.avatar_path || null} displayName={displayName} />
+        <div className="figma-profile-add-card">
+          <details>
+            <summary aria-label="Change profile photo">+</summary>
+            <div className="figma-profile-photo-popover">
+              <ProfilePhotoEditor userId={session.user.id} currentPath={session.profile.avatar_path || null} displayName={displayName} />
+            </div>
+          </details>
         </div>
       </section>
     </div>
