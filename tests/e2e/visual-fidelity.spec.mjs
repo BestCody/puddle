@@ -9,10 +9,20 @@ import {
 async function seedFigmaFeedFixture(userId) {
   const { data: location, error: locationError } = await admin
     .from('locations')
-    .select('id,slug')
+    .select('id,slug,name,kind,summary,city,neighborhood,cover_path,status')
     .eq('slug', 'moonlight-cafe')
     .single()
   if (locationError) throw locationError
+
+  const originalLocation = {
+    name: location.name,
+    kind: location.kind,
+    summary: location.summary,
+    city: location.city,
+    neighborhood: location.neighborhood,
+    cover_path: location.cover_path,
+    status: location.status
+  }
 
   const { error: locationUpdateError } = await admin
     .from('locations')
@@ -30,11 +40,11 @@ async function seedFigmaFeedFixture(userId) {
 
   const { error: stateError } = await admin
     .from('user_content_states')
-    .upsert({
+    .insert({
       profile_id: userId,
       location_id: location.id,
       state: 'saved'
-    }, { onConflict: 'profile_id,location_id,state' })
+    })
   if (stateError) throw stateError
 
   const createdAt = new Date(Date.now() - (2 * 60 + 5) * 60 * 1000).toISOString()
@@ -53,10 +63,10 @@ async function seedFigmaFeedFixture(userId) {
     .single()
   if (postError) throw postError
 
-  return { locationId: location.id, postId: post.id }
+  return { locationId: location.id, postId: post.id, originalLocation }
 }
 
-async function cleanupFixture({ userId, postId, locationId }) {
+async function cleanupFixture({ userId, postId, locationId, originalLocation }) {
   if (postId) await admin.from('social_posts').delete().eq('id', postId)
   if (locationId) {
     await admin
@@ -65,6 +75,9 @@ async function cleanupFixture({ userId, postId, locationId }) {
       .eq('profile_id', userId)
       .eq('location_id', locationId)
       .eq('state', 'saved')
+  }
+  if (locationId && originalLocation) {
+    await admin.from('locations').update(originalLocation).eq('id', locationId)
   }
 }
 
@@ -108,6 +121,7 @@ async function assertFeedGeometry(page, projectName) {
     expectNear(search.width, 190, 1)
     expectNear(search.height, 40, 1)
     expectNear(composer.x, 555, 3)
+    expectNear(composer.y, 742, 3)
     expectNear(composer.width, 420, 1)
   } else {
     expectNear(post.x, 19, 1)
