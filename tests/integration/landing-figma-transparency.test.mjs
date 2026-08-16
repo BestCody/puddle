@@ -31,13 +31,27 @@ test('latest Figma glyph assets keep transparent canvases', async () => {
   assert.match(css, /move-profile\.svg/)
 })
 
-test('latest desktop Figma uses exact Profile masks, correct hero visibility, and no repeated city crop', async () => {
-  const css = await read('public/figma-landing-v2.css')
-  assert.match(css, /\.hero-phone-composite--desktop\{display:none!important\}/)
+test('current desktop Figma uses the sticky split, visible hero phone, and right-column feature stack', async () => {
+  const [css, app] = await Promise.all([
+    read('public/figma-landing-v2.css'),
+    read('public/app.js'),
+  ])
+
+  assert.match(css, /\.landing-canvas--desktop\{height:7578px!important;/)
+  assert.match(css, /\.landing-sticky-left\{position:fixed;top:0;/)
+  assert.match(css, /\.hero-phone-composite--desktop\{display:block!important;/)
   assert.doesNotMatch(css, /\.hero-phone-composite--mobile\{display:none/)
-  assert.match(css, /\.profile-backdrop--desktop\{[^}]*left:298px;top:4526px;width:685px;height:988px;/)
-  assert.match(css, /background-position:0 17px,1px 84px,197px 0,179px 933px/)
-  assert.match(css, /background-size:685px 76px,190px 904px,488px 988px,385px 55px/)
-  assert.match(css, /\.landing-canvas--desktop::before\{[^}]*top:3309px;[^}]*background:#61c9ee/)
-  assert.doesNotMatch(css, /city-exact\.png[^}]*repeat-y/, 'lower desktop must not repeat the first city crop')
+  assert.match(css, /\.feature-card--d-swipe\{left:668\.618px!important;top:1630\.039px!important;/)
+  assert.match(css, /\.feature-card--d-save\{left:677\.382px!important;top:2562\.948px!important;/)
+  assert.match(css, /\.feature-card--d-feed\{left:679\.33px!important;top:3494\.883px!important;/)
+  assert.match(css, /\.feature-card--d-profile,\.profile-backdrop--desktop\{display:none!important\}/)
+  assert.match(css, /\.discovery--desktop \.city-photo-wrap,\.discovery--desktop \.glass-strips--desktop,\.discovery--desktop \.discovery-fade\{display:none!important\}/)
+  assert.doesNotMatch(css, /city-exact\.png[^}]*repeat-y/, 'desktop must not repeat an obsolete city crop')
+
+  assert.match(app, /const DESKTOP_HEIGHT = 7578/)
+  assert.match(app, /const DESKTOP_LEFT_WIDTH = 615/)
+  assert.match(app, /function ensureDesktopStickyPane\(\)/)
+  assert.match(app, /for \(const selector of \['\.hero-photo--left', '\.brand--desktop', '\.login-panel'\]\)/)
+  assert.match(app, /pane\.style\.left = `\$\{stageRect\.left\}px`/)
+  assert.match(app, /pane\.style\.width = `\$\{DESKTOP_LEFT_WIDTH \* scale\}px`/)
 })
