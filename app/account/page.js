@@ -10,28 +10,32 @@ import { requireUser } from '@/lib/auth/user'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Settings' }
 
+const settingsSections = new Set(['profile', 'security', 'appearance', 'sessions', 'billing', 'account'])
+
 export default async function AccountPage({ searchParams }) {
+  const params = await searchParams
+  const selectedSection = settingsSections.has(params?.section) ? params.section : null
   const { user, profile } = await requireUser({ onboarding: true })
   const sessionExpiry = user.aud ? 'Managed securely by Supabase Auth' : 'Active'
 
   return <ProductShell user={user} profile={profile}>
     <div className="figma-settings-screen">
-      <section className="figma-settings-window" aria-label="Settings">
-        <a className="figma-settings-close" href="/account" aria-label="Close settings details">×</a>
+      <section className={`figma-settings-window${selectedSection ? ' is-expanded' : ''}`} aria-label="Settings">
+        <Link className="figma-settings-close" href="/account" aria-label="Close settings details">×</Link>
         <aside className="figma-settings-local-nav">
           <strong>Settings</strong>
           <nav>
-            <a href="#profile">Profile</a>
-            <a href="#security">Email / Password</a>
-            <a href="#appearance">Appearance</a>
-            <a href="#sessions">Sessions</a>
-            <a href="#billing">Billing</a>
-            <a href="#account">Account</a>
+            <Link href="/account?section=profile">Profile</Link>
+            <Link href="/account?section=security">Email / Password</Link>
+            <Link href="/account?section=appearance">Appearance</Link>
+            <Link href="/account?section=sessions">Sessions</Link>
+            <Link href="/account?section=billing">Billing</Link>
+            <Link href="/account?section=account">Account</Link>
           </nav>
         </aside>
 
         <div className="figma-settings-detail">
-          <AuthMessage searchParams={searchParams} />
+          <AuthMessage searchParams={params} />
 
           <form className="figma-settings-section" id="profile" action={updateDateProfile}>
             <header><small>Profile</small><h1>Profile</h1></header>
