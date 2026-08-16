@@ -9,7 +9,7 @@ on:
         default: '100000'
         type: string
       delete_source:
-        description: Delete each Supabase object only after B2 upload and DB update verify successfully
+        description: Dangerous cleanup opt-in; leave false during initial migration and validation
         required: false
         default: false
         type: boolean
@@ -37,14 +37,21 @@ jobs:
         run: |
           set -euo pipefail
           args=(--apply "--limit=${{ inputs.limit }}")
-          if [[ "${{ inputs.delete_source }}" == "true" ]]; then args+=(--delete-source); fi
+          if [[ "${{ inputs.delete_source }}" == "true" ]]; then
+            if [[ "${{ vars.B2_MEDIA_SOURCE_DELETION_ENABLED }}" != "true" ]]; then
+              echo "Refusing source deletion: set repository variable B2_MEDIA_SOURCE_DELETION_ENABLED=true only after count/hash/delivery validation." >&2
+              exit 1
+            fi
+            args+=(--delete-source)
+          fi
           npm run locations:photos:migrate-b2 -- "${args[@]}"
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-          B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_MEDIA_APPLICATION_KEY_ID }}
-          B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_MEDIA_APPLICATION_KEY }}
+          B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_MEDIA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+          B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_MEDIA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
           B2_MEDIA_BUCKET_ID: ${{ secrets.B2_MEDIA_BUCKET_ID }}
-          B2_MEDIA_BUCKET_NAME: ${{ vars.B2_MEDIA_BUCKET_NAME || 'puddle-media' }}
-          B2_MEDIA_PUBLIC_BASE_URL: ${{ vars.B2_MEDIA_PUBLIC_BASE_URL || 'https://media.puddle.app' }}
-          B2_MEDIA_MIGRATION_CONCURRENCY: '32'
+          B2_MEDIA_BUCKET_NAME: ${{ vars.B2_MEDIA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+          B2_MEDIA_PUBLIC_BASE_URL: ${{ vars.B2_MEDIA_PUBLIC_BASE_URL || secrets.B2_DOWNLOAD_BASE_URL }}
+          B2_MEDIA_OPEN_PHOTO_PREFIX: ${{ vars.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256' }}
+          B2_MEDIA_MIGRATION_CONCURRENCY: ${{ vars.B2_MEDIA_MIGRATION_CONCURRENCY || '32' }}
