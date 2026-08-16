@@ -11,26 +11,38 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Settings' }
 
 const settingsSections = new Set(['profile', 'security', 'appearance', 'sessions', 'billing', 'account'])
+const dashboardReturnPaths = new Set(['/discover', '/map', '/plans', '/matches', '/membership', '/profile'])
+
+function safeReturnTo(value) {
+  if (typeof value !== 'string') return '/profile'
+  const path = value.split('?')[0]
+  return dashboardReturnPaths.has(path) ? value : '/profile'
+}
+
+function settingsHref(section, returnTo) {
+  return `/account?section=${encodeURIComponent(section)}&returnTo=${encodeURIComponent(returnTo)}`
+}
 
 export default async function AccountPage({ searchParams }) {
   const params = await searchParams
   const selectedSection = settingsSections.has(params?.section) ? params.section : null
+  const returnTo = safeReturnTo(params?.returnTo)
   const { user, profile } = await requireUser({ onboarding: true })
   const sessionExpiry = user.aud ? 'Managed securely by Supabase Auth' : 'Active'
 
   return <ProductShell user={user} profile={profile}>
     <div className="figma-settings-screen">
       <section className={`figma-settings-window${selectedSection ? ' is-expanded' : ''}`} aria-label="Settings">
-        <Link className="figma-settings-close" href="/account" aria-label="Close settings details">×</Link>
+        <Link className="figma-settings-close" href={returnTo} aria-label="Close settings">×</Link>
         <aside className="figma-settings-local-nav">
           <strong>Settings</strong>
           <nav>
-            <Link href="/account?section=profile">Profile</Link>
-            <Link href="/account?section=security">Email / Password</Link>
-            <Link href="/account?section=appearance">Appearance</Link>
-            <Link href="/account?section=sessions">Sessions</Link>
-            <Link href="/account?section=billing">Billing</Link>
-            <Link href="/account?section=account">Account</Link>
+            <Link href={settingsHref('profile', returnTo)}>Profile</Link>
+            <Link href={settingsHref('security', returnTo)}>Email / Password</Link>
+            <Link href={settingsHref('appearance', returnTo)}>Appearance</Link>
+            <Link href={settingsHref('sessions', returnTo)}>Sessions</Link>
+            <Link href={settingsHref('billing', returnTo)}>Billing</Link>
+            <Link href={settingsHref('account', returnTo)}>Account</Link>
           </nav>
         </aside>
 
