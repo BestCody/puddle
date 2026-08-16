@@ -21,7 +21,6 @@ const landingAssetCache = [
 const nextConfig = {
   poweredByHeader: false,
   compress: true,
-  cacheComponents: true,
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
