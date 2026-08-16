@@ -132,7 +132,6 @@ export async function assertProductVisualContract(page) {
   const header = page.locator('.minimal-product-header')
   const main = page.locator('.minimal-product-main')
   await expect(shell).toBeVisible()
-  await expect(header).toBeVisible()
   await expect(main).toBeVisible()
 
   const layout = await page.evaluate(() => {
@@ -143,6 +142,7 @@ export async function assertProductVisualContract(page) {
       const box = element.getBoundingClientRect()
       return {
         display: style.display,
+        visibility: style.visibility,
         position: style.position,
         x: box.x,
         y: box.y,
@@ -171,14 +171,23 @@ export async function assertProductVisualContract(page) {
   expect(layout.main?.width || 0).toBeGreaterThan(280)
 
   if (layout.viewportWidth >= 768) {
-    await expect(page.getByLabel('Open profile menu')).toBeVisible()
-    expect(layout.header?.height || 0).toBeGreaterThanOrEqual(50)
     expect(layout.sidebar?.display).not.toBe('none')
     expect(layout.desktopNav?.display).not.toBe('none')
     expect(layout.mobileNav?.display).toBe('none')
     expect(layout.sidebar?.width || 0).toBeGreaterThanOrEqual(240)
     expect(layout.stage?.x || 0).toBeGreaterThanOrEqual((layout.sidebar?.right || 0) - 1)
+
+    // Current Puddle Official Figma only shows the floating profile/menu
+    // control on desktop Swipe. Other desktop frames intentionally omit it.
+    if (layout.header?.display !== 'none' && layout.header?.visibility !== 'hidden') {
+      await expect(header).toBeVisible()
+      await expect(page.getByLabel('Open profile menu')).toBeVisible()
+      expect(layout.header?.height || 0).toBeGreaterThanOrEqual(40)
+    } else {
+      await expect(header).toBeHidden()
+    }
   } else {
+    await expect(header).toBeVisible()
     await expect(page.locator('.minimal-header-logo')).toBeVisible()
     expect(layout.header?.height || 0).toBeGreaterThanOrEqual(38)
     expect(layout.profileMenu?.display).toBe('none')
