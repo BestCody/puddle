@@ -37,6 +37,11 @@
     transform: none;
   }
 
+  /* Keep the authored avatar position while the open editor owns pointer input. */
+  .figma-profile-avatar-editor[open] > summary {
+    pointer-events: none;
+  }
+
   .figma-profile-avatar-editor > summary .figma-profile-avatar,
   .figma-profile-avatar {
     width: 133px;
