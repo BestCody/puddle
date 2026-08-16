@@ -138,10 +138,15 @@
     height: 42px;
   }
 
-  .figma-create-post-add[open] { z-index: 25; }
+  .figma-create-post-add[open] {
+    left: 8.5px !important;
+    right: auto !important;
+    bottom: 18.5px !important;
+    z-index: 80;
+  }
   .figma-create-post-add[open] > summary {
     position: absolute;
-    z-index: 6;
+    z-index: 100 !important;
     left: 2.5px;
     top: -27.5px;
     width: 257px;
@@ -153,12 +158,15 @@
     position: absolute;
     display: block;
     z-index: 3;
-    left: 2.5px;
-    top: -265.5px;
-    width: 257px;
-    height: 310px;
+    left: 2.5px !important;
+    top: -265.5px !important;
+    bottom: auto !important;
+    width: 257px !important;
+    height: 310px !important;
+    max-height: 310px !important;
+    transform: none !important;
     border: 2px solid #e6e6e6;
-    border-radius: 25px;
+    border-radius: 25px !important;
     background: #fff;
     box-shadow: 0 4px 0 rgba(0,0,0,.10);
     box-sizing: border-box;
