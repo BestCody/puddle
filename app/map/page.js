@@ -110,11 +110,12 @@ function FeedTop({ view, query }) {
   </>
 }
 
-function MapScreen({ points, center, selectingForPost = false }) {
+function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false }) {
   const first = points[0]
+  const hasMapContent = points.length || (passActive && heatmap.length)
   return <section className="figma-feed-map-screen">
     {selectingForPost ? <div className="figma-map-selection-notice"><strong>Choose a place for your post.</strong><Link href="/create/post">Cancel</Link></div> : null}
-    <div className="figma-feed-map-canvas">{points.length ? <LocationMap initialPoints={points} initialCenter={center} /> : <div className="figma-feed-map-empty">Save a place to see it on your map.</div>}</div>
+    <div className="figma-feed-map-canvas">{hasMapContent ? <LocationMap initialPoints={points} initialCenter={center} heatmapPoints={heatmap} passActive={passActive && !selectingForPost} /> : <div className="figma-feed-map-empty">Save a place to see it on your map.</div>}</div>
     {first ? <>
       <div className="figma-feed-map-puddle" aria-hidden="true" />
       <Link className="figma-feed-map-card" href={detailHref(first)}>
@@ -140,7 +141,7 @@ export default async function LocationMapPage({ searchParams }) {
     return <div className={`figma-feed-screen is-${view}`}>
       <AuthMessage searchParams={params} />
       <FeedTop view={view} query={params?.q} />
-      {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} selectingForPost={selectingForPost} /> : <>
+      {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} /> : <>
         <section className="figma-feed-stream" aria-label="Puddle feed">
           {feed.items.length ? feed.items.map((post) => <FeedPost post={post} friends={feed.friends} key={post.id} />) : <div className="figma-feed-empty"><strong>{query ? 'No puddles match that search.' : 'No one has posted a puddle yet.'}</strong><Link href="/create/post">Create the first one</Link></div>}
         </section>
