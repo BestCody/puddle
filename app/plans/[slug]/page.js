@@ -136,7 +136,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
         </Link>)}</div>
       </section>
 
-      <form className="figma-saved-floating-search figma-saved-detail-search" action="/plans" method="get"><input type="hidden" name="tab" value="saved" /><label><span className="sr-only">Search saved puddles</span><input type="search" name="q" placeholder="Search a saved puddle..." /></label><button type="submit" aria-label="Search saved puddles">↑</button></form>
+      <form className="figma-saved-floating-search figma-saved-detail-search" action="/plans" method="get"><input type="hidden" name="tab" value="saved" /><label><input aria-label="Search saved puddles" type="search" name="q" placeholder="Search a saved puddle..." /></label><button type="submit" aria-label="Search saved puddles">↑</button></form>
     </div>
   })
 }
