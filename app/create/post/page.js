@@ -86,7 +86,7 @@ export default async function CreatePostPage({ searchParams }) {
         <label className="figma-create-post-title"><input aria-label="Title" name="title" maxLength="80" required placeholder="Title" /></label>
         <label className="figma-create-post-description"><textarea aria-label="Description" name="description" maxLength="1000" placeholder="Description" /></label>
         <details className="figma-create-post-add">
-          <summary aria-label="Choose a saved place">＋</summary>
+          <summary aria-label="Open add menu">＋</summary>
           <div className="figma-create-post-add-menu">
             <strong>Attach a saved place</strong>
             {snapshot.points.length ? <div className="figma-create-post-location-options">
