@@ -1,6 +1,6 @@
 /* Exact structural states from Mobile Feed Post 65:433 and Mobile Feed Post Add Menu 65:522. */
 .figma-create-post-add {
-  position: absolute;
+  position: absolute !important;
   left: 20px;
   bottom: 20px;
   width: 60px;
