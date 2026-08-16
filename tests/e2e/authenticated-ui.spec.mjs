@@ -88,7 +88,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await attachRender(page, testInfo, 'saved')
   await savedTabs.getByRole('link', { name: 'Plans', exact: true }).click()
   await expect(page).toHaveURL(/\/plans\?tab=planned/)
-  await page.getByRole('link', { name: 'Saved', exact: true }).first().click()
+  await page.locator('.figma-saved-tabs').getByRole('link', { name: 'Saved', exact: true }).click()
   await expect(page).toHaveURL(/\/plans\?tab=saved/)
 
   await page.goto('/matches')
