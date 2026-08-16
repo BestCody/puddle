@@ -36,21 +36,42 @@ function MessagesView({ client, snapshot }) {
   const [messages, setMessages] = useState(snapshot.messages || [])
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
   const selected = snapshot.selectedConversation
 
   useEffect(() => setMessages(snapshot.messages || []), [snapshot.messages, selected?.conversation_id])
+  useEffect(() => {
+    if (!selected?.conversation_id) return
+    client.rpc('social_mark_conversation_read_v1', { target: selected.conversation_id, last_message: null }).catch(() => {})
+  }, [client, selected?.conversation_id])
+
+  async function reloadMessages() {
+    if (!selected) return
+    const { data } = await client.rpc('social_messages_v1', { target: selected.conversation_id })
+    if (data) setMessages(data)
+  }
 
   async function send(event) {
     event.preventDefault()
     const body = draft.trim()
     if (!body || !selected || busy) return
     setBusy(true)
+    setMessage('')
     const { error } = await client.rpc('social_send_message_v1', { target: selected.conversation_id, message_body: body })
     if (!error) {
       setDraft('')
-      const { data } = await client.rpc('social_messages_v1', { target: selected.conversation_id })
-      if (data) setMessages(data)
-    }
+      await reloadMessages()
+    } else setMessage('Could not send that message.')
+    setBusy(false)
+  }
+
+  async function sendLocation(locationId) {
+    if (!selected || busy) return
+    setBusy(true)
+    setMessage('')
+    const { error } = await client.rpc('social_send_location_message_v1', { target: selected.conversation_id, target_location: locationId })
+    if (!error) await reloadMessages()
+    else setMessage('Could not attach that place.')
     setBusy(false)
   }
 
@@ -72,17 +93,24 @@ function MessagesView({ client, snapshot }) {
       {selected ? <>
         <header><Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} /><span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span></header>
         <div className="figma-friends-messages" aria-live="polite">
-          {messages.length ? messages.map((message) => {
-            const mine = message.sender_id === snapshot.self.id
-            return <div className={`figma-friends-message${mine ? ' is-mine' : ''}`} key={message.id}>
-              {!mine ? <Avatar client={client} person={message} /> : null}
-              <div>{message.message_type === 'location' && message.location_slug ? <Link href={`/plans/${message.location_slug}`}>{message.location_name || 'Shared place'}</Link> : <p>{message.body}</p>}</div>
+          {messages.length ? messages.map((item) => {
+            const mine = item.sender_id === snapshot.self.id
+            return <div className={`figma-friends-message${mine ? ' is-mine' : ''}`} key={item.id}>
+              {!mine ? <Avatar client={client} person={item} /> : null}
+              <div>{item.message_type === 'location' && item.location_slug ? <Link className="figma-friends-location-message" href={`/plans/${item.location_slug}`}><strong>{item.location_name || 'Shared place'}</strong><small>{item.location_city || 'Open place'}</small></Link> : <p>{item.body}</p>}</div>
             </div>
           }) : <div className="figma-friends-chat-empty">Say hello</div>}
         </div>
+        {message ? <p className="figma-friends-chat-notice" role="status">{message}</p> : null}
         <form className="figma-friends-composer" onSubmit={send}>
-          <button type="button" aria-label="Add attachment">+</button>
-          <button type="button" aria-label="More message options">○</button>
+          <details className="figma-friends-composer-menu is-attachment">
+            <summary aria-label="Add attachment">+</summary>
+            <div><strong>Share a saved place</strong>{snapshot.shareableLocations?.length ? snapshot.shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
+          </details>
+          <details className="figma-friends-composer-menu is-more">
+            <summary aria-label="More message options">○</summary>
+            <div><Link href="/matches?tab=shared">View shared puddles</Link><Link href="/plans">Open Saved</Link></div>
+          </details>
           <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Text Message" maxLength={5000} />
           <button className="is-send" type="submit" disabled={!draft.trim() || busy} aria-label="Send message">↑</button>
         </form>
@@ -96,18 +124,22 @@ function SharedView({ client, snapshot }) {
   return <section className="figma-friends-shared-view">
     <h1>Shared puddles</h1>
     <div className="figma-friends-shared-grid">
-      {snapshot.shared.length ? snapshot.shared.slice(0,2).flatMap((item) => [
-        <article className="figma-friends-shared-place" key={`place:${item.share_id}`}>
-          <Link className="figma-friends-shared-photo" href={item.location_slug ? `/plans/${item.location_slug}` : '/plans'} style={mediaUrl(client, item.location_cover_path) ? { backgroundImage: `url(${mediaUrl(client, item.location_cover_path)})` } : undefined} />
-          <h2>{item.location_name || 'Shared puddle'}</h2>
-          <small>{item.location_city || ''}</small>
-          <span>{item.distance_label || ''}</span>
-          <b>{item.direction === 'received' ? `Shared by ${item.friend_name || 'friend'}` : `Shared with ${item.friend_name || 'friend'}`}</b>
-        </article>,
-        <article className="figma-friends-shared-chat" key={`chat:${item.share_id}`}>
-          <button type="button" onClick={() => router.push('/matches?tab=messages')}>Jump to chat</button>
-        </article>
-      ]) : <div className="figma-friends-shared-empty">No shared puddles yet.</div>}
+      {snapshot.shared.length ? snapshot.shared.flatMap((item) => {
+        const conversation = snapshot.conversations.find((candidate) => candidate.friend_id === item.friend_id)
+        const chatHref = conversation ? `/matches?tab=messages&conversation=${encodeURIComponent(conversation.conversation_id)}` : '/matches?tab=messages'
+        return [
+          <article className="figma-friends-shared-place" key={`place:${item.share_id}`}>
+            <Link className="figma-friends-shared-photo" href={item.location_slug ? `/plans/${item.location_slug}` : '/plans'} style={mediaUrl(client, item.location_cover_path) ? { backgroundImage: `url(${mediaUrl(client, item.location_cover_path)})` } : undefined} />
+            <h2>{item.location_name || 'Shared puddle'}</h2>
+            <small>{item.location_city || ''}</small>
+            <span>{item.distance_label || ''}</span>
+            <b>{item.direction === 'received' ? `Shared by ${item.friend_name || 'friend'}` : `Shared with ${item.friend_name || 'friend'}`}</b>
+          </article>,
+          <article className="figma-friends-shared-chat" key={`chat:${item.share_id}`}>
+            <button type="button" onClick={() => router.push(chatHref)}>Jump to chat</button>
+          </article>
+        ]
+      }) : <div className="figma-friends-shared-empty">No shared puddles yet.</div>}
     </div>
   </section>
 }
