@@ -61,7 +61,7 @@ test('authenticated desktop pages follow the Puddle Official Figma geometry', as
 
   await openDesktop(page, '/map')
   await expectBox(page.locator('.figma-feed-segment'), { x: 684, y: 39, width: 152, height: 46 }, 'Feed/Map switch', 3)
-  await expectBox(page.locator('.figma-feed-search'), { x: 1064, y: 42, width: 190, height: 40 }, 'Feed search', 3)
+  await expectBox(page.locator('.figma-feed-search'), { x: 1064, y: 42, width: 190, height: 46 }, 'Feed search', 3)
   await expect(page.locator('.minimal-product-header')).toBeHidden()
   const feedLabelContent = await page.locator('.minimal-product-nav > a[href="/map"] .product-nav-label').evaluate((node) => getComputedStyle(node, '::after').content)
   expect(feedLabelContent).toContain('Explore')
@@ -70,6 +70,7 @@ test('authenticated desktop pages follow the Puddle Official Figma geometry', as
   await openDesktop(page, '/plans')
   await expectBox(page.locator('.figma-saved-segment'), { x: 690, y: 40, width: 147, height: 48 }, 'Saved/Plans switch', 3)
   await expectBox(page.locator('.figma-category-tabs'), { x: 280, y: 111 }, 'Saved categories', 4)
+  await expectBox(page.locator('.figma-saved-search'), { x: 540, y: 736, width: 420, height: 52 }, 'Saved search', 3)
   await expect(page.locator('.minimal-product-header')).toBeHidden()
   await attachRender(page, testInfo, 'saved')
 
