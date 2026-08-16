@@ -198,7 +198,7 @@ async function assertDesktopSavedDetailGeometry(page) {
   expectNear(similar.x, 289, 3)
   expectNear(similar.y, 1166.65, 4)
   expectNear(search.x, 553, 3)
-  expectNear(search.y, 1478, 5)
+  expectNear(search.y - (similar.y + similar.height), 22, 5)
   expectNear(search.width, 420, 2)
 }
 
