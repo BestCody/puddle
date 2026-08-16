@@ -7,6 +7,8 @@ import { openMembershipPortal, startTinderCheckout } from './actions'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pass' }
 
+const TINDER_TIER_MONTHLY_PRICE = '$10/month'
+
 function periodLabel(value) {
   if (!value) return null
   const date = new Date(value)
@@ -32,7 +34,7 @@ function PlansView({ snapshot }) {
       </article>
 
       <article className="figma-pass-plan figma-pass-plan-paid">
-        <div className="figma-pass-plan-price"><span>Pass</span><strong>$10/month</strong><s>$15/month</s></div>
+        <div className="figma-pass-plan-price"><span>Pass</span><strong>{TINDER_TIER_MONTHLY_PRICE}</strong><s>$15/month</s></div>
         <div className="figma-pass-plan-features">
           <p>Everything in Free plus...</p>
           <ul><li>Heatmap</li><li>Pass badge</li><li>Create your location</li><li>Message anyone</li><li>See who saved</li><li>Notification alerts</li></ul>
