@@ -17,8 +17,10 @@
     font: 600 20px/1 var(--figma-mono);
   }
 
+  /* Avatar/identity are nested in the 30px-down hero in our DOM, while the
+     Figma measurements are global. Subtract the hero offset here. */
   .figma-profile-avatar {
-    top: 241px;
+    top: 211px;
     left: calc(50% - 16.5px);
     width: 133px;
     height: 133px;
@@ -26,12 +28,12 @@
   }
 
   .figma-profile-identity {
-    top: 383px;
+    top: 353px;
     left: calc(50% - 16.5px);
   }
 
   .figma-profile-avatar-editor > summary {
-    top: 241px;
+    top: 211px;
     left: calc(50% - 16.5px);
   }
 
