@@ -23,6 +23,7 @@ export default async function CreatePostPage() {
     return <div className="figma-create-post-screen">
       <Link className="figma-feed-back" href="/map" aria-label="Back to Feed">‹</Link>
       <nav className="figma-dashboard-segment figma-feed-tabs" aria-label="Feed or map"><Link className="is-active" href="/map">Feed</Link><Link href="/map?view=map">Map</Link></nav>
+      <Link className="figma-create-post-search" href="/map" aria-label="Search puddles">⌕</Link>
 
       <article className="figma-create-post-blur" aria-hidden="true">
         <span className="figma-feed-post-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(name)}</span>
@@ -41,7 +42,7 @@ export default async function CreatePostPage() {
           <div className="figma-create-post-add-footer" aria-hidden="true" />
         </details>
         <Link className="figma-create-post-map" href="/map?view=map" aria-label="Choose a place from the map">⌑</Link>
-        <small className="figma-create-post-note">Post publishing is not connected to a backend yet. The composer UI is ready without pretending a post was saved.</small>
+        <small className="sr-only figma-create-post-note">Post publishing is not connected to a backend yet. The composer UI is ready without pretending a post was saved.</small>
       </form>
     </div>
   })
