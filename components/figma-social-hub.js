@@ -83,7 +83,7 @@ function MessagesView({ client, snapshot }) {
         <form className="figma-friends-composer" onSubmit={send}>
           <button type="button" aria-label="Add attachment">+</button>
           <button type="button" aria-label="More message options">○</button>
-          <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Message..." maxLength={5000} />
+          <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Text Message" maxLength={5000} />
           <button className="is-send" type="submit" disabled={!draft.trim() || busy} aria-label="Send message">↑</button>
         </form>
       </> : <div className="figma-friends-chat-empty">Select a conversation</div>}
@@ -162,7 +162,7 @@ function AddView({ client, snapshot }) {
 export function FigmaSocialHub({ initialSnapshot, initialTab = 'messages' }) {
   const client = createClient()
   const tab = initialTab === 'friends' ? 'add' : initialTab
-  return <div className="figma-friends-screen">
+  return <div className={`figma-friends-screen is-${tab}`}>
     <FriendsTabs tab={tab} />
     {tab === 'shared' ? <SharedView client={client} snapshot={initialSnapshot} /> : tab === 'add' ? <AddView client={client} snapshot={initialSnapshot} /> : <MessagesView client={client} snapshot={initialSnapshot} />}
   </div>
