@@ -9,8 +9,8 @@ const read = (path) => readFile(join(root, path), 'utf8')
 const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
   'public/landing.html','public/styles.css','public/landing-responsive.css','public/landing-hardening.css','public/app.js','public/puddle-mark.svg',
-  'app/layout.js','app/discover/page.js','app/map/page.js','app/map/MapFeed.module.css','app/matches/page.js','app/profile/page.js','app/plans/page.js','app/plans/[slug]/page.js','app/membership/page.js','app/account/page.js','app/create/post/page.js',
-  'app/figma-dashboard-rebuild.css','app/figma-dashboard-create-post.css','app/figma-dashboard-saved.css','app/figma-dashboard-friends.css','app/figma-dashboard-pass.css','app/figma-dashboard-profile.css','app/figma-dashboard-profile-customize.css','app/figma-dashboard-settings.css',
+  'app/layout.js','app/discover/page.js','app/map/page.js','app/map/MapFeed.module.css','app/matches/page.js','app/profile/page.js','app/plans/page.js','app/plans/Plans.module.css','app/plans/[slug]/page.js','app/membership/page.js','app/account/page.js','app/create/post/page.js',
+  'app/figma-dashboard-rebuild.css','app/figma-dashboard-create-post.css','app/figma-dashboard-friends.css','app/figma-dashboard-pass.css','app/figma-dashboard-profile.css','app/figma-dashboard-profile-customize.css','app/figma-dashboard-settings.css',
   'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js',
   'components/product-nav.js','components/product-shell.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/swipe-action-dock.js','components/figma-social-hub.js','components/profile-photo-editor.js',
   'lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/social-hub-data.js','lib/app/open-photo-supabase.js','lib/media/pipeline.js',
@@ -22,7 +22,7 @@ for (const path of required) await access(join(root, path))
 const removed = [
   '.vercel-redeploy','action-schema-audit.txt','dependency-audit.txt','legacy-audit.txt','cutover-output.txt','landing-demo.js','requirements.txt',
   'app/date-match','app/hangout','app/api/date-match','app/api/static-catalogue','app/api/storage/b2-access','app/date-match.css',
-  'app/figma-dashboard-feed.css','app/figma-dashboard-feed-fidelity.css',
+  'app/figma-dashboard-feed.css','app/figma-dashboard-feed-fidelity.css','app/figma-dashboard-saved.css','app/figma-dashboard-saved-detail-fidelity.css',
   'components/date-match-workspace.js','components/date-match-workspace-realtime.js',
   'lib/app/date-match.js','lib/app/date-match-rules.js','lib/app/date-match-snapshot.js',
   'lib/app/discovery-infrastructure.js','lib/app/discovery-infrastructure-v2.js','lib/app/discovery-relational-fallback.js',
@@ -72,15 +72,19 @@ for (const retired of ['/date-match','/hangout']) if (proxy.includes(`'${retired
 
 const layout = await read('app/layout.js')
 if (layout.includes("import './date-match.css'")) throw new Error('Retired shared swipe stylesheet is still imported')
-for (const dashboardStyle of ['figma-dashboard-rebuild.css','figma-dashboard-saved.css','figma-dashboard-friends.css','figma-dashboard-pass.css','figma-dashboard-profile.css','figma-dashboard-settings.css']) {
+for (const dashboardStyle of ['figma-dashboard-rebuild.css','figma-dashboard-friends.css','figma-dashboard-pass.css','figma-dashboard-profile.css','figma-dashboard-settings.css']) {
   if (!layout.includes(`import './${dashboardStyle}'`)) throw new Error(`Dashboard rebuild stylesheet is not loaded: ${dashboardStyle}`)
 }
-for (const retiredFeedStyle of ['figma-dashboard-feed.css','figma-dashboard-feed-fidelity.css']) {
-  if (layout.includes(retiredFeedStyle)) throw new Error(`Feed route must not load retired global stylesheet: ${retiredFeedStyle}`)
+for (const retiredRouteStyle of ['figma-dashboard-feed.css','figma-dashboard-feed-fidelity.css','figma-dashboard-saved.css','figma-dashboard-saved-detail-fidelity.css']) {
+  if (layout.includes(retiredRouteStyle)) throw new Error(`Migrated route must not load retired global stylesheet: ${retiredRouteStyle}`)
 }
 const feedPage = await read('app/map/page.js')
 if (!feedPage.includes("import styles from './MapFeed.module.css'")) throw new Error('Feed route is not using its scoped CSS Module')
 if (!feedPage.includes('data-testid="feed-screen"')) throw new Error('Feed route is missing rendered visual-regression hooks')
+const savedPage = await read('app/plans/page.js')
+const savedDetailPage = await read('app/plans/[slug]/page.js')
+for (const source of [savedPage, savedDetailPage]) if (!source.includes('Plans.module.css')) throw new Error('Saved routes are not using their scoped CSS Module')
+if (!savedPage.includes('data-testid="saved-screen"') || !savedDetailPage.includes('data-testid="saved-detail-screen"')) throw new Error('Saved routes are missing rendered regression hooks')
 
 const productNav = await read('components/product-nav.js')
 for (const label of ['Swipe','Feed','Saved','Friends','Pass','Profile']) if (!productNav.includes(`label: '${label}'`)) throw new Error(`Navigation is missing ${label}`)
