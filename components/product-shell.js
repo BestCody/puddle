@@ -29,11 +29,11 @@ export async function ProductShell({ user, profile, children }) {
     } catch {}
   }
 
-  return <div className="figma-dashboard-shell product-shell minimal-product-shell">
+  return <div className="figma-dashboard-shell">
     <FigmaDashboardSidebar avatarUrl={avatarUrl} />
 
-    <div className="figma-dashboard-stage product-stage minimal-product-stage">
-      <details className="figma-dashboard-account-menu profile-menu">
+    <div className="figma-dashboard-stage">
+      <details className="figma-dashboard-account-menu">
         <summary aria-label="Open profile menu"><span aria-hidden="true"><i /><i /><i /></span></summary>
         <div className="profile-menu-panel">
           <strong>{profile?.display_name || 'Puddle person'}</strong>
@@ -44,7 +44,7 @@ export async function ProductShell({ user, profile, children }) {
           <form action={signOut}><button type="submit">Sign out</button></form>
         </div>
       </details>
-      <main className="figma-dashboard-main product-main minimal-product-main">{children}</main>
+      <main className="figma-dashboard-main">{children}</main>
     </div>
 
     <ProductNav mobile avatarUrl={avatarUrl} />
