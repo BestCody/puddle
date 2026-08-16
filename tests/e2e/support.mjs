@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 
@@ -12,12 +13,12 @@ export const admin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 })
 
-export function uniqueSuffix(length = 8) {
-  return `${Date.now()}${Math.random().toString(36).slice(2)}`.replace(/\D/g, '').slice(-length).padStart(length, '7')
+export function uniqueSuffix(length = 12) {
+  return randomUUID().replaceAll('-', '').slice(0, length)
 }
 
 export function uniqueEmail(prefix = 'puddle-e2e') {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`
+  return `${prefix}-${Date.now()}-${uniqueSuffix(12)}@example.com`
 }
 
 export async function createConfirmedUser({ displayName = 'E2E Person', password = `Puddle-${uniqueSuffix(18)}-Aa1!` } = {}) {
