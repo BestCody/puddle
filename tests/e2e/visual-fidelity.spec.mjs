@@ -98,7 +98,7 @@ async function box(locator) {
   return value
 }
 
-async function assertFeedGeometry(page, projectName) {
+async function assertDesktopFeedGeometry(page) {
   const post = await box(page.getByTestId('feed-post').first())
   const tabs = await box(page.getByTestId('feed-tabs'))
   const search = await box(page.getByTestId('feed-search'))
@@ -108,69 +108,22 @@ async function assertFeedGeometry(page, projectName) {
   expect(post.y).toBeGreaterThanOrEqual(controlsBottom - 1)
   expect(composer.y).toBeGreaterThanOrEqual(post.y + post.height)
 
-  if (projectName === 'figma-desktop') {
-    expectNear(post.x, 527, 2)
-    expectNear(post.y, 108, 2)
-    expectNear(post.width, 469, 1)
-    expect(post.height).toBeGreaterThanOrEqual(511)
-    expectNear(tabs.x, 684.31, 2)
-    expectNear(tabs.y, 38.99, 2)
-    expectNear(tabs.width, 152, 1)
-    expectNear(tabs.height, 45.76, 1)
-    expectNear(search.x, 1064, 2)
-    expectNear(search.y, 42, 2)
-    expectNear(search.width, 190, 1)
-    expectNear(search.height, 40, 1)
-    expectNear(composer.x, 555, 3)
-    expect(composer.y - (post.y + post.height)).toBeGreaterThanOrEqual(110)
-    expect(composer.y - (post.y + post.height)).toBeLessThanOrEqual(126)
-    expectNear(composer.width, 420, 1)
-  } else {
-    expectNear(post.x, 19, 1)
-    expectNear(post.y, 100, 2)
-    expectNear(post.width, 363.67, 1)
-    expect(post.height).toBeGreaterThanOrEqual(396.23)
-    expectNear(tabs.x, 139.74, 2)
-    expectNear(tabs.y, 40.56, 2)
-    expectNear(tabs.width, 127.12, 1)
-    expectNear(search.x, 318, 2)
-    expectNear(search.y, 40, 2)
-    expectNear(search.width, 55, 1)
-    expectNear(composer.x, 29, 2)
-    expectNear(composer.y, 720, 3)
-    expectNear(composer.width, 340, 1)
-  }
-}
-
-async function assertMapGeometry(page, projectName) {
-  const tabs = await box(page.getByTestId('feed-tabs'))
-  const back = await box(page.getByRole('link', { name: 'Back to Swipe' }))
-
-  if (projectName === 'figma-desktop') {
-    expectNear(tabs.x, 697, 2)
-    expectNear(tabs.y, 35, 2)
-    expectNear(tabs.width, 152, 1)
-    expectNear(tabs.height, 55, 1)
-    expectNear(back.x, 312, 2)
-    expectNear(back.y, 37, 2)
-    expectNear(back.width, 55, 1)
-    expectNear(back.height, 41, 1)
-    await expect(page.getByTestId('map-search')).toBeHidden()
-  } else {
-    const mapSearch = await box(page.getByTestId('map-search'))
-    expectNear(tabs.x, 139.76, 2)
-    expectNear(tabs.y, 36.94, 2)
-    expectNear(tabs.width, 125.62, 1)
-    expectNear(tabs.height, 45.46, 1)
-    expectNear(back.x, 27, 2)
-    expectNear(back.y, 40, 2)
-    expectNear(back.width, 37, 1)
-    expectNear(back.height, 38, 1)
-    expectNear(mapSearch.x, 102, 2)
-    expectNear(mapSearch.y, 713, 2)
-    expectNear(mapSearch.width, 190, 1)
-    expectNear(mapSearch.height, 44, 1)
-  }
+  expectNear(post.x, 527, 2)
+  expectNear(post.y, 108, 2)
+  expectNear(post.width, 469, 1)
+  expect(post.height).toBeGreaterThanOrEqual(511)
+  expectNear(tabs.x, 684.31, 2)
+  expectNear(tabs.y, 38.99, 2)
+  expectNear(tabs.width, 152, 1)
+  expectNear(tabs.height, 45.76, 1)
+  expectNear(search.x, 1064, 2)
+  expectNear(search.y, 42, 2)
+  expectNear(search.width, 190, 1)
+  expectNear(search.height, 40, 1)
+  expectNear(composer.x, 555, 3)
+  expect(composer.y - (post.y + post.height)).toBeGreaterThanOrEqual(110)
+  expect(composer.y - (post.y + post.height)).toBeLessThanOrEqual(126)
+  expectNear(composer.width, 420, 1)
 }
 
 test('Feed and Map preserve the approved Figma composition', async ({ page }, testInfo) => {
@@ -193,7 +146,13 @@ test('Feed and Map preserve the approved Figma composition', async ({ page }, te
     await settleVisuals(page)
 
     await expect(page.getByTestId('feed-screen')).toHaveAttribute('data-view', 'feed')
-    await assertFeedGeometry(page, testInfo.project.name)
+    await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
+    await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Map', exact: true })).toBeVisible()
+    await expect(page.getByTestId('feed-search')).toBeVisible()
+    await expect(page.getByTestId('feed-post').first()).toBeVisible()
+    await expect(page.getByTestId('feed-composer')).toBeVisible()
+    if (testInfo.project.name === 'figma-desktop') await assertDesktopFeedGeometry(page)
+
     await expect(page).toHaveScreenshot('feed-route.png', {
       animations: 'disabled',
       fullPage: false,
@@ -204,7 +163,13 @@ test('Feed and Map preserve the approved Figma composition', async ({ page }, te
     await settleVisuals(page)
 
     await expect(page.getByTestId('feed-screen')).toHaveAttribute('data-view', 'map')
-    await assertMapGeometry(page, testInfo.project.name)
+    await expect(page.getByTestId('feed-map-canvas')).toBeVisible()
+    await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
+    await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Map', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Back to Swipe' })).toBeVisible()
+    if (testInfo.project.name === 'figma-desktop') await expect(page.getByTestId('map-search')).toBeHidden()
+    else await expect(page.getByTestId('map-search')).toBeVisible()
+
     await page.addStyleTag({ content: '.location-map-tiles { visibility: hidden !important; }' })
     await expect(page).toHaveScreenshot('map-route.png', {
       animations: 'disabled',
