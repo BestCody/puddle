@@ -21,6 +21,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Compile global data Python scripts
+        run: python -m py_compile scripts/b2-preflight.py scripts/global-data/*.py
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Audit production dependencies
