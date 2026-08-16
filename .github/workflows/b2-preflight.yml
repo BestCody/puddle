@@ -1,0 +1,32 @@
+name: Preflight existing Backblaze B2 infrastructure
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b2-infrastructure-preflight
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install B2 preflight dependency
+        run: python -m pip install --disable-pip-version-check boto3
+      - name: Validate authorization, bucket access, list/read/write and canary hash
+        run: python scripts/b2-preflight.py --prefix=data/preflight --max-list-pages=100
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
+          B2_DATA_PREFIX: data
