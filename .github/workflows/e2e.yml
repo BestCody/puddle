@@ -10,10 +10,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Temporary write permission is used only to bootstrap the reviewed visual
-# baselines onto this PR branch. It is removed once the PNGs are committed.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   browser-tests:
@@ -76,20 +74,6 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> "$GITHUB_ENV"
           echo "MAILPIT_URL=$INBUCKET_URL" >> "$GITHUB_ENV"
-      - name: Bootstrap reviewed Figma visual baselines
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          SNAPSHOT_DIR='tests/e2e/visual-fidelity.spec.mjs-snapshots'
-          if [ ! -f "$SNAPSHOT_DIR/feed-route-figma-desktop-linux.png" ]; then
-            npx playwright test tests/e2e/visual-fidelity.spec.mjs --project=figma-desktop --project=figma-mobile --update-snapshots
-            git fetch origin "$GITHUB_HEAD_REF"
-            git checkout -B "$GITHUB_HEAD_REF" "origin/$GITHUB_HEAD_REF"
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add "$SNAPSHOT_DIR"
-            git commit -m 'test(visual): commit approved Feed/Map baselines'
-            git push origin "HEAD:$GITHUB_HEAD_REF"
-          fi
       - name: Run current product browser tests
         run: npm run e2e:test
       - name: Upload browser diagnostics
