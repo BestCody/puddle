@@ -5,7 +5,6 @@ import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational'
 import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { renderProductPage } from '@/lib/app/render-product-page'
 
-export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Swipe',
   description: 'Swipe through nearby places.'
