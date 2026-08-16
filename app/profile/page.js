@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ProfilePhotoEditor } from '@/components/profile-photo-editor'
 import { renderProductPage } from '@/lib/app/render-product-page'
 
 export const dynamic = 'force-dynamic'
@@ -64,7 +65,9 @@ export default async function ProfilePage() {
         <div><span>Location</span><strong>{locationLabel}</strong></div>
         <div><span>Saves</span></div>
         <div><span>Friends</span></div>
-        <Link href="/account" aria-label="Edit profile details">+</Link>
+        <div className="figma-profile-add-card" aria-label="Profile photo">
+          <ProfilePhotoEditor userId={session.user.id} currentPath={session.profile.avatar_path || null} displayName={displayName} />
+        </div>
       </section>
     </div>
   })
