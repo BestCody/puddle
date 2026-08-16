@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { PuddleLogo } from './puddle-logo'
 import { ProductNav } from './product-nav'
+import { FigmaDashboardSidebar } from './figma-dashboard-sidebar'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
 
@@ -30,13 +30,7 @@ export async function ProductShell({ user, profile, children }) {
   }
 
   return <div className="figma-dashboard-shell product-shell minimal-product-shell">
-    <aside className="figma-dashboard-sidebar minimal-product-sidebar" aria-label="Puddle sidebar">
-      <div className="figma-dashboard-sidebar-logo minimal-sidebar-logo">
-        <PuddleLogo compact href="/discover" variant="outline" />
-      </div>
-      <ProductNav avatarUrl={avatarUrl} />
-      <Link className="figma-dashboard-settings-link" href="/account">Settings</Link>
-    </aside>
+    <FigmaDashboardSidebar avatarUrl={avatarUrl} />
 
     <div className="figma-dashboard-stage product-stage minimal-product-stage">
       <details className="figma-dashboard-account-menu profile-menu">
