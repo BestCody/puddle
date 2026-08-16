@@ -47,5 +47,6 @@ jobs:
         run: python scripts/global-data/build_kartaview_candidates.py --snapshot='${{ steps.active.outputs.snapshot }}' --countries='${{ github.event_name == 'workflow_dispatch' && inputs.countries || vars.GLOBAL_PHOTO_COUNTRIES }}' --limit='${{ github.event_name == 'workflow_dispatch' && inputs.request_limit || '1000' }}'
         env:
           KARTAVIEW_ACCESS_TOKEN: ${{ secrets.KARTAVIEW_ACCESS_TOKEN }}
+          # KARTAVIEW_REQUESTS_PER_HOUR: '1000' is the authenticated default; raise the repository variable if a larger documented entitlement applies.
           KARTAVIEW_REQUESTS_PER_HOUR: ${{ vars.KARTAVIEW_REQUESTS_PER_HOUR || '1000' }}
           KARTAVIEW_MAX_CONCURRENCY: ${{ vars.KARTAVIEW_MAX_CONCURRENCY || '4' }}
