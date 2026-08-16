@@ -1,5 +1,16 @@
 /* Pixel-level control sizing from the current desktop Figma frames. */
 @media (min-width:761px) {
+  /* Swipe node 12:11: the card ends at y=660 and the control-center node
+     begins at y=665.82. Remove the old 16px workspace gap so the real
+     controls sit on the Figma axis instead of drifting downward. */
+  .minimal-swipe-workspace {
+    gap: 0 !important;
+  }
+  .minimal-swipe-details-button {
+    right: 19px !important;
+    bottom: 20px !important;
+  }
+
   .figma-feed-segment {
     width: 152px !important;
     height: 46px !important;
