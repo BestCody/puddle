@@ -401,13 +401,14 @@
   font-weight: 800;
 }
 
-/* Structural UI: no viewport/sidebar arithmetic. */
+/* Structural UI: Figma spacing is represented as flow spacing, never viewport/sidebar arithmetic. */
 .composer {
   grid-column: 2;
-  justify-self: center;
+  justify-self: start;
   width: min(100%, 420px);
   min-height: 52px;
-  margin-top: 24px;
+  margin-top: 123px;
+  margin-left: 28px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -789,7 +790,7 @@
   .photos {
     width: min(100%, 294.711px);
     min-height: 103.344px;
-    margin: 15px 9px 0 auto;
+    margin: 1px 9px 0 auto;
     grid-template-columns: minmax(0, 174.491px) minmax(0, 114.724px);
     grid-template-rows: 48.592px 48.592px;
     gap: 5px;
@@ -857,9 +858,11 @@
 
   .composer {
     grid-column: 1;
+    justify-self: start;
     width: min(100%, 340px);
     min-height: 42.095px;
-    margin-top: 24px;
+    margin-top: 223.766px;
+    margin-left: 10px;
     border-width: 1.619px;
     border-radius: 20.238px;
     font-size: 12.952px;
@@ -940,7 +943,7 @@
   .mapSearch {
     position: absolute;
     z-index: 35;
-    left: 50%;
+    left: calc(50% - 4px);
     bottom: 117px;
     width: 190px;
     height: 44px;
