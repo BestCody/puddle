@@ -62,7 +62,7 @@ export default async function MembershipPage({ searchParams }) {
                 : <button className="figma-pass-cta" type="button" disabled>Upgrade</button>}
           </article>
         </section>
-        <p className="figma-pass-disclosure">Pass is billed monthly. Taxes and renewal terms appear before payment.</p>
+        <p className="figma-pass-disclosure">Billed monthly. Taxes and renewal terms appear before payment.</p>
       </> : <section className="figma-pass-manage">
         <header><span>Pass</span><h1>Manage membership</h1><p>Billing, privacy, and global connection controls.</p></header>
         {snapshot.active ? <>
