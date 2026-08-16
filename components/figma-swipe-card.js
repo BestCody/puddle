@@ -4,14 +4,13 @@ import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { GoogleServerPlacePhoto } from '@/components/google-server-place-photo'
+import { DISCOVERY_IMAGE_SIZES, canOptimizeDiscoveryImage } from '@/lib/media/discovery-image'
 
 const labels = {
   cafe: 'Coffee', restaurant: 'Restaurant', bar: 'Bar', park: 'Park', museum: 'Museum',
   gallery: 'Gallery', attraction: 'Attraction', activity_venue: 'Activity', study_spot: 'Study',
   scenic_spot: 'Scenic', nightlife: 'Nightlife', shop: 'Shop', community_space: 'Community'
 }
-
-const OPTIMIZED_IMAGE_HOSTS = new Set(['cegoqtvajwajczbofpep.supabase.co'])
 
 function categoryLabel(value) {
   return labels[value] || String(value || 'Place').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
@@ -26,16 +25,9 @@ function photos(item) {
   return [...new Set(values)].slice(0, 5)
 }
 
-function canOptimizeImage(url) {
-  if (!url) return false
-  const value = String(url)
-  if (value.startsWith('/')) return true
-  try { return OPTIMIZED_IMAGE_HOSTS.has(new URL(value).hostname) } catch { return false }
-}
-
 function DetailsPhoto({ url, title, index }) {
   const alt = index ? `${title} photo ${index + 1}` : title
-  if (canOptimizeImage(url)) {
+  if (canOptimizeDiscoveryImage(url)) {
     return <Image src={url} alt={alt} width={420} height={260} sizes="(max-width: 760px) 50vw, 310px" />
   }
   return <img src={url} alt={alt} loading="lazy" decoding="async" />
@@ -78,7 +70,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const photoUrls = useMemo(() => photos(item), [item])
   const mainPhoto = photoUrls[0] || null
-  const optimizedMainPhoto = mainPhoto && canOptimizeImage(mainPhoto) ? mainPhoto : null
+  const optimizedMainPhoto = mainPhoto && canOptimizeDiscoveryImage(mainPhoto) ? mainPhoto : null
   const placeholder = item.category_placeholder_url || null
   const googleServerUrl = !mainPhoto ? item.google_photo_proxy_url : null
   const googleLookup = useMemo(() => !mainPhoto && !googleServerUrl && item.google_client_lookup ? {
@@ -154,7 +146,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
       <div className="figma-swipe-card-photo" style={photoStyle}>
-        {optimizedMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes="(max-width: 760px) 320px, 400px" preload /> : null}
+        {optimizedMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload /> : null}
         {!mainPhoto && googleServerUrl ? <GoogleServerPlacePhoto title={item.title} url={googleServerUrl} placeholderUrl={placeholder} /> : null}
         {!mainPhoto && !googleServerUrl && googleLookup ? <GooglePlacePhotoFallback title={item.title} placeId={null} lookup={googleLookup} placeholderUrl={placeholder} /> : null}
       </div>
