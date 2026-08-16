@@ -54,6 +54,7 @@ test('saved places are grouped by location category and perfect picks use persis
 
   assert.match(plans, /function foldersFor\(items\)/)
   assert.match(plans, /const folders = new Map\(\)/)
+  assert.match(plans, /SavedCategoryRail/)
   assert.match(plans, /figma-saved-categories/)
   assert.match(plans, /figma-saved-place-grid/)
   assert.match(plans, /item\.perfect_pick \? <b>★ Perfect Pick<\/b>/)
@@ -61,6 +62,7 @@ test('saved places are grouped by location category and perfect picks use persis
   assert.doesNotMatch(plans, /minimal-saved-folder/)
 
   assert.match(styles, /\.figma-saved-place-grid\s*\{/)
-  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0,1fr\)\)/)
+  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 297px\)\)/)
   assert.match(styles, /\.figma-saved-place-photo > b/)
+  assert.match(styles, /\.figma-saved-categories > a\.is-active/)
 })
