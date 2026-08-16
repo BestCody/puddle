@@ -16,7 +16,14 @@ const secretPatterns = [
   ['Supabase secret key', /\bsb_secret_[A-Za-z0-9_-]{20,}\b/],
   ['Slack token', /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/]
 ]
-const serverOnlyNames = ['SUPABASE_SECRET_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','CRON_SECRET','TURNSTILE_SECRET_KEY','SECURITY_HASH_SECRET','GEOCODING_API_KEY','EMAIL_DELIVERY_TOKEN','MALWARE_SCANNER_TOKEN','MALWARE_SCANNER_SIGNING_SECRET','TICKET_SIGNING_PRIVATE_KEY_BASE64','GOOGLE_PLACES_API_KEY','B2_KEY_ID','B2_APPLICATION_KEY','B2_DOWNLOAD_KEY_ID','B2_DOWNLOAD_APPLICATION_KEY']
+const serverOnlyNames = [
+  'SUPABASE_SECRET_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','CRON_SECRET','TURNSTILE_SECRET_KEY','SECURITY_HASH_SECRET','GEOCODING_API_KEY','EMAIL_DELIVERY_TOKEN','MALWARE_SCANNER_TOKEN','MALWARE_SCANNER_SIGNING_SECRET','TICKET_SIGNING_PRIVATE_KEY_BASE64','GOOGLE_PLACES_API_KEY',
+  'B2_KEY_ID','B2_APPLICATION_KEY','B2_DOWNLOAD_KEY_ID','B2_DOWNLOAD_APPLICATION_KEY',
+  'B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_DATA_BUCKET_ID','B2_DATA_S3_ENDPOINT',
+  'B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','B2_MEDIA_BUCKET_ID','B2_MEDIA_S3_ENDPOINT',
+  'FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN','KARTAVIEW_ACCESS_TOKEN','WIKIMEDIA_ACCESS_TOKEN',
+  'OPENSEARCH_USERNAME','OPENSEARCH_PASSWORD','OPENSEARCH_BEARER_TOKEN'
+]
 const allowedPublicCredentialNames = new Set([
   'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
   // Google Maps JavaScript keys are intentionally delivered to browsers. The deployed
@@ -59,7 +66,7 @@ for (const path of tracked) {
   const clientFile = /^\s*["']use client["']/m.test(source.slice(0, 300))
   if (clientFile) {
     for (const name of serverOnlyNames) if (source.includes(name)) findings.push(`${path}: client bundle references ${name}`)
-    if (/from\s+["'](?:node:|@\/lib\/supabase\/(?:admin|server)|@\/lib\/security\/(?:worker-auth|malware-scanner))/.test(source)) findings.push(`${path}: client bundle imports a server-only module`)
+    if (/from\s+["'](?:node:|@\/lib\/supabase\/(?:admin|server)|@\/lib\/storage\/b2-native|@\/lib\/app\/global-location-search|@\/lib\/security\/(?:worker-auth|malware-scanner))/.test(source)) findings.push(`${path}: client bundle imports a server-only module`)
     for (const match of source.matchAll(/process\.env\.([A-Z0-9_]+)/g)) if (!match[1].startsWith('NEXT_PUBLIC_')) findings.push(`${path}: client bundle reads non-public environment variable ${match[1]}`)
   }
 
