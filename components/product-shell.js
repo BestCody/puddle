@@ -46,7 +46,7 @@ export async function ProductShell({ user, profile, children }) {
 
   const appearance = ['light', 'dark', 'system'].includes(profile?.appearance_theme) ? profile.appearance_theme : 'light'
 
-  return <div className={`figma-dashboard-shell appearance-${appearance}`}>
+  return <div className="figma-dashboard-shell" data-appearance={appearance}>
     <PassNotificationAlerts enabled={passActive} profileId={user.id} />
     <FigmaDashboardSidebar avatarUrl={avatarUrl} />
 
