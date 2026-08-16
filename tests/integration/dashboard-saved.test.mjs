@@ -40,11 +40,12 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
   assert.match(styles, /height: 56px/)
 })
 
-test('saved places are grouped by location category and perfect picks use persisted discovery events', async () => {
-  const [plans, data, styles] = await Promise.all([
+test('saved places are grouped by location category and the route owns one scoped structural stylesheet', async () => {
+  const [plans, data, styles, layout] = await Promise.all([
     read('app/plans/page.js'),
     read('lib/app/location-plans-data.js'),
-    read('app/figma-dashboard-saved.css')
+    read('app/plans/Plans.module.css'),
+    read('app/layout.js')
   ])
 
   assert.match(data, /locations\(id,name,slug,summary,kind,city,cover_path,status\)/)
@@ -52,17 +53,25 @@ test('saved places are grouped by location category and perfect picks use persis
   assert.match(data, /from\('discovery_context_outbox'\)/)
   assert.match(data, /eq\('event_name', 'perfect'\)/)
 
+  assert.match(plans, /import styles from '\.\/Plans\.module\.css'/)
   assert.match(plans, /function foldersFor\(items\)/)
   assert.match(plans, /const folders = new Map\(\)/)
   assert.match(plans, /SavedCategoryRail/)
-  assert.match(plans, /figma-saved-categories/)
-  assert.match(plans, /figma-saved-place-grid/)
-  assert.match(plans, /item\.perfect_pick \? <b>★ Perfect Pick<\/b>/)
+  assert.match(plans, /className=\{styles\.categories\}/)
+  assert.match(plans, /className=\{styles\.placeCard\} data-testid="saved-card"/)
+  assert.match(plans, /className=\{styles\.placeGrid\}/)
+  assert.match(plans, /className=\{styles\.perfectPick\}>★ Perfect Pick<\/b>/)
   assert.match(plans, /getLocationPlansSnapshot\(session\)/)
+  assert.match(plans, /data-testid="saved-screen"/)
+  assert.doesNotMatch(plans, /figma-saved-/)
   assert.doesNotMatch(plans, /minimal-saved-folder/)
 
-  assert.match(styles, /\.figma-saved-place-grid\s*\{/)
-  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 297px\)\)/)
-  assert.match(styles, /\.figma-saved-place-photo > b/)
-  assert.match(styles, /\.figma-saved-categories > a\.is-active/)
+  assert.match(styles, /\.placeGrid\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 297px\)\)/s)
+  assert.match(styles, /\.placeCard\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*156px minmax\(0, 1fr\)/s)
+  assert.match(styles, /\.placePhoto\s*\{[^}]*position:\s*relative;/s)
+  assert.match(styles, /\.perfectPick\s*\{[^}]*position:\s*absolute;/s)
+  assert.match(styles, /\.categories > a\.categoryActive\s*\{/)
+
+  assert.doesNotMatch(layout, /figma-dashboard-saved\.css/)
+  assert.doesNotMatch(layout, /figma-dashboard-saved-detail-fidelity\.css/)
 })
