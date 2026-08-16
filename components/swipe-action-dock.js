@@ -22,9 +22,9 @@ const actions = [
 
 export function SwipeActionDock({ onUndo, onPass, onSave, onPerfect, canUndo, busy }) {
   const handlers = { undo: onUndo, pass: onPass, save: onSave, perfect: onPerfect }
-  return <div className="figma-swipe-actions minimal-swipe-actions" aria-label="Swipe controls">
+  return <div className="figma-swipe-actions" aria-label="Swipe controls">
     {actions.map(({ key, label, Icon }) => <button
-      className={`minimal-swipe-action is-${key}`}
+      className={`figma-swipe-action is-${key}`}
       type="button"
       onClick={handlers[key]}
       disabled={busy || (key === 'undo' && !canUndo)}
