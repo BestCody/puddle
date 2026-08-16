@@ -18,6 +18,8 @@ const PREFERENCE_CATEGORIES = [
   { value: 'community_space', label: 'Community spaces' }
 ]
 
+const DISTANCE_OPTIONS = [2, 5, 10, 25, 50, 100, 250, 500, 1_000, 5_000, 10_000, 20_040]
+
 function categoryLabel(value) {
   return PREFERENCE_CATEGORIES.find((option) => option.value === value)?.label || String(value).replaceAll('_', ' ')
 }
@@ -125,7 +127,7 @@ export function DiscoveryFilterSheet({ filters, categories = [], onChange, onApp
           <option value="">Any category</option>
           {categoryOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
         </select></label>
-        <label>Distance<select value={String(filters.distance || 10)} onChange={(event) => onChange('distance', Number(event.target.value))}>{[2, 5, 10, 25, 50, 100].map((value) => <option value={value} key={value}>{value} km</option>)}</select></label>
+        <label>Distance<select value={String(filters.distance || 10)} onChange={(event) => onChange('distance', Number(event.target.value))}>{DISTANCE_OPTIONS.map((value) => <option value={value} key={value}>{value === 20_040 ? 'Anywhere' : `${value.toLocaleString()} km`}</option>)}</select></label>
         <label>Price<select value={filters.price || 'any'} onChange={(event) => onChange('price', event.target.value)}><option value="any">Any price</option><option value="1">$</option><option value="2">$$</option><option value="3">$$$</option><option value="4">$$$$</option></select></label>
         <label className="minimal-filter-check"><input type="checkbox" checked={Boolean(filters.openNow)} onChange={(event) => onChange('openNow', event.target.checked)} /> Open now</label>
         <label className="minimal-filter-check"><input type="checkbox" checked={Boolean(filters.accessible)} onChange={(event) => onChange('accessible', event.target.checked)} /> Accessible</label>
