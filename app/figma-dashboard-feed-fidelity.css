@@ -1,4 +1,4 @@
-/* Current Feed frame alignment: 14:114 expanded and 40:414 concise. */
+/* Current Feed frame alignment: 14:114 expanded, 40:414 concise, 40:519 mobile Feed, 40:731 mobile Map. */
 @media (min-width: 761px) {
   .figma-feed-stream {
     position: relative;
@@ -44,5 +44,121 @@
   .figma-dashboard-shell:has(.figma-dashboard-sidebar.is-concise) .figma-feed-post-copy {
     top: 62.67px;
     left: 59.92px;
+  }
+}
+
+@media (max-width: 760px) {
+  .figma-feed-screen:not(.is-map) .figma-feed-tabs {
+    top: 40.56px;
+    left: calc(50% + 4.8px);
+    width: 127.119px;
+    height: 38.269px;
+    padding: 3.9px;
+    border-width: 1.673px;
+  }
+
+  .figma-feed-screen:not(.is-map) .figma-feed-tabs > a {
+    height: 28.528px;
+    font-size: 13.381px;
+  }
+
+  .figma-feed-screen:not(.is-map) .figma-feed-tabs > a:first-child { width: 53.524px; }
+  .figma-feed-screen:not(.is-map) .figma-feed-tabs > a:last-child { width: 61px; }
+
+  .figma-feed-screen:not(.is-map) .figma-feed-search {
+    top: 40px;
+    right: 24px;
+    width: 55px;
+    height: 41px;
+    border-width: 1.67px;
+  }
+
+  .figma-feed-screen:not(.is-map) .figma-feed-stream {
+    width: calc(100% - 33.33px);
+    margin-left: 19px;
+    margin-right: 14.33px;
+  }
+
+  .figma-feed-screen:not(.is-map) .figma-feed-post-copy {
+    top: 48.6px;
+    left: 46.46px;
+    right: 18px;
+    font-size: 13.182px;
+    line-height: .95;
+  }
+
+  .figma-feed-screen:not(.is-map) .figma-feed-post-photos {
+    top: 111.85px;
+    left: 44.93px;
+    width: calc(100% - 66.9px);
+    height: 105.3px;
+  }
+
+  .figma-feed-screen:not(.is-map) .figma-feed-post-place {
+    top: 222.93px;
+    left: 40.71px;
+    width: calc(100% - 60.19px);
+    height: 126.392px;
+  }
+
+  .figma-feed-screen:not(.is-map) .figma-feed-composer {
+    width: calc(100% - 57px);
+  }
+
+  .figma-feed-screen.is-map .figma-feed-tabs {
+    top: 36.94px;
+    left: calc(50% + 4.1px);
+    width: 125.623px;
+    height: 45.456px;
+    padding: 4.9px;
+    border-width: 2.066px;
+  }
+
+  .figma-feed-screen.is-map .figma-feed-tabs > a {
+    height: 33.885px;
+    font-size: 13.223px;
+  }
+
+  .figma-feed-screen.is-map .figma-feed-tabs > a:first-child { width: 57px; }
+  .figma-feed-screen.is-map .figma-feed-tabs > a:last-child { width: 52.894px; }
+
+  .figma-feed-screen.is-map .figma-feed-search {
+    top: auto;
+    right: auto;
+    bottom: 117px;
+    left: 50%;
+    width: 190px;
+    height: 44px;
+    display: flex;
+    padding: 0 14px 0 16px;
+    transform: translateX(-50%);
+    border-width: 2.5px;
+  }
+
+  .figma-feed-screen.is-map .figma-feed-search label {
+    display: block;
+  }
+
+  .figma-feed-screen.is-map .figma-feed-search button {
+    font-size: 18px;
+  }
+
+  /* Keep the actual map live; only the Figma puddle overlay/card composition is recreated. */
+  .figma-feed-screen.is-map .figma-feed-map-puddle {
+    top: 58.74px;
+    left: -164.92px;
+    width: 440.361px;
+    height: 545.555px;
+    border-radius: 52% 48% 57% 43% / 38% 43% 57% 62%;
+    background: rgba(76,165,247,.28);
+    transform: rotate(-6deg);
+  }
+
+  .figma-feed-screen.is-map .figma-feed-map-card {
+    top: 319px;
+    left: -125px;
+    width: 303.574px;
+    height: 114.015px;
+    border-radius: 17.487px;
   }
 }
