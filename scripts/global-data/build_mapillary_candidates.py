@@ -11,12 +11,25 @@ import math
 import os
 import time
 import urllib.error
-import urllib.request
 import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 
 import duckdb
 from mapbox_vector_tile import decode
+
+
+def first_env(*names, default=''):
+    for name in names:
+        value = str(os.getenv(name, '')).strip()
+        if value:
+            return value
+    return default
+
+
+def clean_prefix(value):
+    return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
@@ -25,11 +38,15 @@ parser.add_argument('--zoom', type=int, default=int(os.getenv('MAPILLARY_TILE_ZO
 args = parser.parse_args()
 
 TOKEN = os.environ['MAPILLARY_ACCESS_TOKEN']
-BUCKET = os.environ['B2_DATA_BUCKET_NAME']
-ENDPOINT = os.environ['B2_DATA_S3_ENDPOINT'].replace('https://', '').replace('http://', '').rstrip('/')
-KEY_ID = os.getenv('B2_DATA_KEY_ID') or os.environ['B2_DATA_APPLICATION_KEY_ID']
-KEY = os.environ['B2_DATA_APPLICATION_KEY']
-REGION = os.getenv('B2_DATA_S3_REGION', 'us-west-004')
+BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
+ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
+ENDPOINT = ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
+KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
+KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
+REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
+DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+if not ENDPOINT or not KEY_ID or not KEY:
+    raise RuntimeError('B2 endpoint and credentials are required.')
 ZOOM = max(14, min(14, args.zoom))
 CONCURRENCY = max(1, min(256, int(os.getenv('MAPILLARY_TILE_CONCURRENCY', '96'))))
 MAX_DISTANCE_M = float(os.getenv('MAPILLARY_MAX_DISTANCE_M', '45'))
@@ -107,8 +124,10 @@ def image_rows(tile, payload):
 def countries(con):
     if args.countries.strip():
         return sorted({value.strip().upper() for value in args.countries.split(',') if value.strip()})
-    rows = con.execute(f"SELECT DISTINCT country_code FROM read_parquet('s3://{BUCKET}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet', hive_partitioning=true) ORDER BY country_code").fetchall()
+    glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet'
+    rows = con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}', hive_partitioning=true) ORDER BY country_code").fetchall()
     return [str(row[0]) for row in rows if row[0]]
+
 
 con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
@@ -124,7 +143,7 @@ con.create_function('map_tile_x', lambda lat, lon: tile_xy(lat, lon)[0], ['DOUBL
 con.create_function('map_tile_y', lambda lat, lon: tile_xy(lat, lon)[1], ['DOUBLE', 'DOUBLE'], 'BIGINT')
 
 for country in countries(con):
-    path = f's3://{BUCKET}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/locations.parquet'
+    path = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/locations.parquet'
     con.execute(f"CREATE OR REPLACE TEMP TABLE pois AS SELECT id,name,category,latitude,longitude,map_tile_x(latitude,longitude) tx,map_tile_y(latitude,longitude) ty FROM read_parquet('{path}') WHERE latitude IS NOT NULL AND longitude IS NOT NULL")
     tile_rows = con.execute('SELECT DISTINCT tx+dx x, ty+dy y FROM pois, range(-1,2) a(dx), range(-1,2) b(dy)').fetchall()
     tiles = [(int(x), int(y)) for x, y in tile_rows if x >= 0 and y >= 0 and x < 2**ZOOM and y < 2**ZOOM]
@@ -168,7 +187,7 @@ for country in countries(con):
     SELECT *, row_number() OVER (PARTITION BY location_id ORDER BY local_score DESC, distance_m ASC, external_photo_id) rank
     FROM scored WHERE heading IS NULL OR heading_error <= {MAX_HEADING_ERROR};
     """)
-    output = f's3://{BUCKET}/enrichment/photo_candidates/provider=mapillary/snapshot={args.snapshot}/country_code={country}/candidates.parquet'
+    output = f's3://{BUCKET}/{DATA_PREFIX}/enrichment/photo_candidates/provider=mapillary/snapshot={args.snapshot}/country_code={country}/candidates.parquet'
     con.execute(f"COPY (SELECT location_id,'mapillary'::VARCHAR provider,external_photo_id,distance_m,heading_error,quality_score,local_score rank_score,captured_at FROM ranked_candidates WHERE rank<={MAX_CANDIDATES}) TO '{output}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000, OVERWRITE_OR_IGNORE true)")
     candidate_count = con.execute(f'SELECT count(*) FROM ranked_candidates WHERE rank<={MAX_CANDIDATES}').fetchone()[0]
     print(f'{country}: wrote {candidate_count} Mapillary candidates')
