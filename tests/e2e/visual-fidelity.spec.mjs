@@ -55,7 +55,6 @@ async function seedFigmaFeedFixture(userId) {
       location_id: location.id,
       title: 'Maple Grove Park',
       body: 'This place is amazing! The atmosphere is beautiful, the location feels welcoming, and there’s so much to see and do. Definitely a spot I’d come back to.',
-      photo_urls: [],
       visibility: 'public',
       created_at: createdAt
     })
