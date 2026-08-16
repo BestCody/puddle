@@ -39,21 +39,23 @@ test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-pla
   assert.doesNotMatch(migration, /security definer/i)
 })
 
-test('Cache Components cache only cookie-free published public location data', async () => {
-  const [config, cache, publicClient, place] = await Promise.all([
+test('Partial caching is limited to cookie-free published public location data', async () => {
+  const [config, cache, publicClient, place, discover] = await Promise.all([
     read('next.config.mjs'),
     read('lib/app/public-location-cache.js'),
     read('lib/supabase/public.js'),
-    read('app/places/[slug]/page.js')
+    read('app/places/[slug]/page.js'),
+    read('app/discover/page.js')
   ])
-  assert.match(config, /cacheComponents: true/)
-  assert.match(cache, /'use cache'/)
-  assert.match(cache, /cacheLife\(/)
-  assert.match(cache, /cacheTag\('public-locations'/)
+  assert.doesNotMatch(config, /cacheComponents:\s*true/)
+  assert.match(cache, /unstable_cache/)
+  assert.match(cache, /revalidate:\s*300/)
+  assert.match(cache, /tags:\s*\['public-locations'\]/)
   assert.doesNotMatch(cache, /cookies\(|headers\(/)
   assert.match(publicClient, /persistSession: false/)
   assert.match(place, /getCachedPublicLocation/)
   assert.doesNotMatch(place, /force-dynamic/)
+  assert.match(discover, /dynamic = 'force-dynamic'/)
 })
 
 test('Swipe uses Next Image for optimized first-party media while Google fallback remains isolated', async () => {
