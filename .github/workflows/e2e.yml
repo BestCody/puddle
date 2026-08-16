@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   browser-tests:
@@ -22,8 +22,6 @@ jobs:
       E2E_BASE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.head_ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -76,19 +74,6 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> "$GITHUB_ENV"
           echo "MAILPIT_URL=$INBUCKET_URL" >> "$GITHUB_ENV"
-      - name: Bootstrap Saved visual baselines once
-        run: |
-          npx playwright test tests/e2e/visual-fidelity.spec.mjs --project=figma-desktop --grep "Saved list and detail" --update-snapshots
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/e2e/visual-fidelity.spec.mjs-snapshots/saved-route-figma-desktop-linux.png
-          git add tests/e2e/visual-fidelity.spec.mjs-snapshots/saved-detail-route-figma-desktop-linux.png
-          if git diff --cached --quiet; then
-            echo "Saved baselines already versioned."
-          else
-            git commit -m "Add Saved visual baselines"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
       - name: Run current product browser tests
         run: npm run e2e:test
       - name: Upload browser diagnostics
