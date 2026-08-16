@@ -62,8 +62,9 @@
   .figma-saved-grid > :nth-child(3n) {
     transform: translateY(0);
   }
+  /* Base search has translateX(-50%); left 750 produces rendered x=540. */
   .figma-saved-search {
-    left: 540px !important;
+    left: 750px !important;
   }
 
   .social-tabs {
