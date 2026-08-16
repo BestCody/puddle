@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const mailpitUrl = process.env.MAILPIT_URL?.replace(/\/$/, '') || null
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error('E2E requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
@@ -84,27 +85,50 @@ export async function deleteProfile(userId) {
   if (error) throw error
 }
 
-export async function waitForAuthEmailLink(email, expectedType) {
-  const { data, error } = await admin.from('auth_email_test_outbox').select('link,email_type,created_at').eq('email', email).order('created_at', { ascending: false })
-  if (error) throw error
-  const direct = data?.find((entry) => entry.email_type === expectedType)?.link
-  if (direct) return direct
+function authVerificationLink(message, expectedType) {
+  const source = `${message?.Text || ''}\n${message?.HTML || ''}`.replaceAll('&amp;', '&')
+  const links = source.match(/https?:\/\/[^\s"'<>]+/g) || []
+  for (const raw of links) {
+    try {
+      const url = new URL(raw.replace(/[),.;]+$/, ''))
+      if (!url.pathname.includes('/auth/v1/verify')) continue
+      const type = url.searchParams.get('type')
+      if (type === expectedType || (expectedType === 'signup' && type === 'email')) return url.toString()
+    } catch {
+      // Ignore non-URL fragments in rendered email bodies.
+    }
+  }
+  return null
+}
 
-  return expect.poll(async () => {
-    const { data: latest, error: latestError } = await admin.from('auth_email_test_outbox').select('link,email_type').eq('email', email).order('created_at', { ascending: false })
-    if (latestError) throw latestError
-    return latest?.find((entry) => {
-      if (!entry?.link) return false
-      if (entry.email_type === expectedType) return true
-      try {
-        const url = new URL(entry.link)
-        const type = url.searchParams.get('type')
-        return url.pathname.includes('/auth/v1/verify') && (type === expectedType || (expectedType === 'signup' && type === 'email'))
-      } catch {
-        return false
-      }
-    })?.link || null
-  }, { timeout: 20_000, message: `No ${expectedType} email link arrived for ${email}.` })
+async function findAuthEmailLink(email, expectedType) {
+  if (!mailpitUrl) throw new Error('E2E requires MAILPIT_URL to inspect Supabase auth emails.')
+  const response = await fetch(`${mailpitUrl}/api/v1/messages?limit=100`)
+  if (!response.ok) throw new Error(`Mailpit message list failed with ${response.status}.`)
+  const mailbox = await response.json()
+  const target = email.toLowerCase()
+  const summaries = (mailbox.messages || []).filter((message) => (message.To || []).some((recipient) => String(recipient.Address || '').toLowerCase() === target))
+
+  for (const summary of summaries) {
+    if (!summary.ID) continue
+    const detailResponse = await fetch(`${mailpitUrl}/api/v1/message/${encodeURIComponent(summary.ID)}`)
+    if (!detailResponse.ok) continue
+    const link = authVerificationLink(await detailResponse.json(), expectedType)
+    if (link) return link
+  }
+  return null
+}
+
+export async function waitForAuthEmailLink(email, expectedType) {
+  let found = await findAuthEmailLink(email, expectedType)
+  if (found) return found
+
+  await expect.poll(async () => {
+    found = await findAuthEmailLink(email, expectedType)
+    return found
+  }, { timeout: 20_000, message: `No ${expectedType} email link arrived for ${email}.` }).not.toBeNull()
+
+  return found
 }
 
 export function directConfirmationPath(verificationLink, next = '/onboarding') {
