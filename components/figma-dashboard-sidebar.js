@@ -70,9 +70,13 @@ export function FigmaDashboardSidebar({ avatarUrl = null }) {
   }
 
   return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`} aria-label="Puddle sidebar" data-sidebar-width={width}>
-    <div className="figma-dashboard-sidebar-logo"><PuddleLogo compact href="/discover" variant="outline" /></div>
-    <ProductNav avatarUrl={avatarUrl} />
-    <Link className="figma-dashboard-settings-link" href="/account">Settings</Link>
+    <div className="figma-dashboard-sidebar-scroll">
+      <div className="figma-dashboard-sidebar-canvas">
+        <div className="figma-dashboard-sidebar-logo"><PuddleLogo compact href="/discover" variant="outline" /></div>
+        <ProductNav avatarUrl={avatarUrl} />
+        <Link className="figma-dashboard-settings-link" href="/account">Settings</Link>
+      </div>
+    </div>
     <div
       className="figma-dashboard-sidebar-resizer"
       role="separator"
