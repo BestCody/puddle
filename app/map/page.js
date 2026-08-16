@@ -71,7 +71,7 @@ function FeedTop({ view, query }) {
       <Link className={view === 'map' ? 'is-active' : ''} href="/map?view=map">Map</Link>
     </nav>
     {view === 'feed' ? <form className="figma-feed-search" action="/map" method="get">
-      <label><span className="sr-only">Search Puddle</span><input type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
+      <label><input aria-label="Search puddle" type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
       <button type="submit" aria-label="Search">⌕</button>
     </form> : null}
   </>
