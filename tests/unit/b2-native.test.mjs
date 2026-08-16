@@ -20,3 +20,33 @@ test('B2 config requires credentials and a bucket', () => {
   })
   assert.equal(isB2Configured('B2_DATA', env), false)
 })
+
+test('B2 data and media configs fall back to historical bucket credentials', () => {
+  const env = {
+    B2_KEY_ID: 'legacy-id',
+    B2_APPLICATION_KEY: 'legacy-secret',
+    B2_BUCKET: 'puddle-assets',
+    B2_DOWNLOAD_BASE_URL: 'https://f005.backblazeb2.com/file/puddle-assets'
+  }
+
+  assert.deepEqual(b2ConfigFromEnv('B2_DATA', env), {
+    keyId: 'legacy-id', applicationKey: 'legacy-secret', bucketId: '', bucketName: 'puddle-assets', publicBaseUrl: ''
+  })
+  assert.deepEqual(b2ConfigFromEnv('B2_MEDIA', env), {
+    keyId: 'legacy-id', applicationKey: 'legacy-secret', bucketId: '', bucketName: 'puddle-assets',
+    publicBaseUrl: 'https://f005.backblazeb2.com/file/puddle-assets'
+  })
+  assert.equal(isB2Configured('B2_DATA', env), true)
+  assert.equal(isB2Configured('B2_MEDIA', env), true)
+})
+
+test('scoped B2 variables take precedence over legacy fallbacks', () => {
+  const env = {
+    B2_KEY_ID: 'legacy-id', B2_APPLICATION_KEY: 'legacy-secret', B2_BUCKET: 'puddle-assets',
+    B2_DATA_APPLICATION_KEY_ID: 'data-id', B2_DATA_APPLICATION_KEY: 'data-secret', B2_DATA_BUCKET_NAME: 'puddle-data'
+  }
+  const config = b2ConfigFromEnv('B2_DATA', env)
+  assert.equal(config.keyId, 'data-id')
+  assert.equal(config.applicationKey, 'data-secret')
+  assert.equal(config.bucketName, 'puddle-data')
+})
