@@ -23,7 +23,14 @@ const nextConfig = {
   compress: true,
   images: {
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 86400
+    minimumCacheTTL: 86400,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'cegoqtvajwajczbofpep.supabase.co',
+        pathname: '/storage/v1/object/public/**'
+      }
+    ]
   },
   async headers() {
     return [

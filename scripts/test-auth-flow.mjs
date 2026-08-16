@@ -53,7 +53,7 @@ assert.equal(canonicalPuddleAuthUrl('https://www.puddle.you/privacy', 'https://p
 const proxy = await readFile(join(root, 'proxy.js'), 'utf8')
 const canonicalCheck = proxy.indexOf('const canonicalTarget = (request.method')
 const publicBypass = proxy.indexOf('if (publicNoSessionPaths.has(pathname))')
-const sessionLookup = proxy.indexOf('await updateSession(request, requestHeaders)')
+const sessionLookup = proxy.indexOf('await updateSession(request, requestHeaders')
 assert(canonicalCheck >= 0, 'Proxy must canonicalize auth routes')
 assert(proxy.includes('canonicalPuddleAuthUrl(request.url'), 'Proxy must use the tested canonical URL helper')
 assert(publicBypass > canonicalCheck, 'Canonical redirect must run before the public callback bypass')

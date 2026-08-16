@@ -19,11 +19,14 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   assert.match(preloader, /item\.photo_urls/)
   assert.match(preloader, /item\.photo_url/)
   assert.match(preloader, /item\.cover_url/)
-  assert.match(preloader, /item\.category_placeholder_url/)
+  assert.match(preloader, /item\?\.category_placeholder_url/)
   assert.doesNotMatch(preloader, /google_photo_proxy_url|google_client_lookup/)
   assert.match(preloader, /connection\?\.saveData/)
   assert.match(preloader, /effectiveType === 'slow-2g' \|\| effectiveType === '2g'/)
   assert.match(preloader, /image\.fetchPriority = 'low'/)
+  assert.match(preloader, /getImageProps/)
+  assert.match(preloader, /DISCOVERY_IMAGE_SIZES/)
+  assert.match(preloader, /image\.srcset = source\.srcSet/)
 })
 
 test('dashboard navigation prefetches only after user intent', async () => {

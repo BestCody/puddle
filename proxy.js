@@ -3,6 +3,7 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue } from '@/lib/security/headers'
 import { isUnsafeMethod } from '@/lib/security/request'
 import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
+import { SERVER_LATENCY_BUDGET_MS, appendServerTiming, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
 
 const protectedPrefixes = ['/dashboard','/discover','/matches','/global-matches','/membership','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals','/admin']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
@@ -41,8 +42,14 @@ function cachePolicy(response, pathname, privateResponse = false) {
   } else response.headers.set('Cache-Control', 'no-store')
   return response
 }
+function timed(response, startedAt, timings = []) {
+  const totalMs = elapsedMs(startedAt)
+  recordServerLatency('proxy_session', totalMs, SERVER_LATENCY_BUDGET_MS.proxySession)
+  return appendServerTiming(response, [...timings, { name: 'proxy', durationMs: totalMs }])
+}
 
 export async function proxy(request) {
+  const proxyStartedAt = latencyStart()
   const nonce = nonceValue()
   const pathname = request.nextUrl.pathname
   const requestHeaders = new Headers(request.headers)
@@ -101,27 +108,27 @@ export async function proxy(request) {
     return secured(cachePolicy(response, pathname, isAuthOnly), { request, nonce })
   }
 
-  const { response, user, profileState, profileError, configured } = await updateSession(request, requestHeaders)
+  const { response, user, profileState, profileError, configured, timings } = await updateSession(request, requestHeaders, { loadProfileState: moderationGate })
   if (moderationGate && user && profileError) {
-    return secured(cachePolicy(NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }), pathname, true), { request, nonce })
+    return timed(secured(cachePolicy(NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (moderationGate && user && (profileState?.suspended_at || profileState?.banned_at)) {
-    return secured(cachePolicy(NextResponse.json({ error: profileState?.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }), pathname, true), { request, nonce })
+    return timed(secured(cachePolicy(NextResponse.json({ error: profileState?.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (isProtected && !configured) {
     const url = new URL('/signin', request.url)
     url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
-    return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
+    return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (isProtected && !user) {
     const url = new URL('/signin', request.url)
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
-    return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce })
+    return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (isAuthOnly && user && !hasAuthFailure) {
-    return secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce })
+    return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
-  return secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly), { request, nonce })
+  return timed(secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly), { request, nonce }), proxyStartedAt, timings)
 }
 
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)'] }

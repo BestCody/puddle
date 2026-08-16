@@ -4,6 +4,9 @@ import { FigmaDashboardSidebar } from './figma-dashboard-sidebar'
 import { PassNotificationAlerts } from './pass-notification-alerts'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
+import { SERVER_LATENCY_BUDGET_MS, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
+
+const BUILTIN_PRIVILEGED_ROLES = new Set(['admin', 'moderator', 'support', 'finance'])
 
 export async function ProductShell({ user, profile, children }) {
   let supabase = null
@@ -21,28 +24,46 @@ export async function ProductShell({ user, profile, children }) {
     }
   }
 
-  let showAdmin = ['admin', 'moderator', 'support', 'finance'].includes(profile?.role)
-  if (!showAdmin) {
+  const knownPrivileged = BUILTIN_PRIVILEGED_ROLES.has(profile?.role)
+  let showAdmin = knownPrivileged
+  let unreadNotifications = 0
+  let passActive = false
+  const bootstrapStartedAt = latencyStart()
+  let bootstrapMode = 'rpc'
+
+  try {
+    const client = await database()
+    const { data, error } = await client.rpc('dashboard_bootstrap_v1')
+    if (error) throw error
+    showAdmin = Boolean(data?.show_admin)
+    unreadNotifications = Number(data?.unread_notifications || 0)
+    passActive = Boolean(data?.pass_active)
+  } catch {
+    bootstrapMode = 'parallel_fallback'
     try {
       const client = await database()
-      const { data } = await client.rpc('privileged_access_v1', { required_roles: [] })
-      showAdmin = Boolean(data?.allowed)
+      const adminPromise = knownPrivileged
+        ? Promise.resolve({ data: { allowed: true }, error: null })
+        : client.rpc('privileged_access_v1', { required_roles: [] })
+      const notificationPromise = client
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('profile_id', user.id)
+        .is('read_at', null)
+      const passPromise = client.rpc('puddle_tinder_active_v1')
+      const [adminResult, notificationResult, passResult] = await Promise.all([
+        adminPromise,
+        notificationPromise,
+        passPromise
+      ])
+      showAdmin = knownPrivileged || Boolean(adminResult?.data?.allowed)
+      unreadNotifications = Number(notificationResult?.count || 0)
+      passActive = Boolean(passResult?.data)
     } catch {}
   }
 
-  let unreadNotifications = 0
-  try {
-    const client = await database()
-    const { count } = await client.from('notifications').select('id', { count: 'exact', head: true }).eq('profile_id', user.id).is('read_at', null)
-    unreadNotifications = Number(count || 0)
-  } catch {}
-
-  let passActive = false
-  try {
-    const client = await database()
-    const { data } = await client.rpc('puddle_tinder_active_v1')
-    passActive = Boolean(data)
-  } catch {}
+  const bootstrapMs = elapsedMs(bootstrapStartedAt)
+  recordServerLatency('dashboard_bootstrap', bootstrapMs, SERVER_LATENCY_BUDGET_MS.dashboardBootstrap, { mode: bootstrapMode })
 
   const appearance = ['light', 'dark', 'system'].includes(profile?.appearance_theme) ? profile.appearance_theme : 'light'
 
