@@ -55,40 +55,41 @@ test('desktop Figma sidebar navigates, switches to concise mode, and preserves t
   await expect(page.locator('.figma-settings-screen')).toBeVisible()
 })
 
-test('short desktop viewports preserve the Figma sidebar composition without Profile and Settings colliding', async ({ page }, testInfo) => {
+test('short and zoom-like desktop heights keep the Figma sidebar non-scrollable and separated', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Desktop sidebar only')
 
   const account = await createConfirmedUser({ displayName: 'Short Sidebar Tester' })
   await completeProfileDirect(account.user.id, { display_name: 'Short Sidebar Tester' })
   await signInThroughUi(page, account.email, account.password)
-  await page.setViewportSize({ width: 1280, height: 600 })
 
   const sidebar = page.locator('.figma-dashboard-sidebar')
-  const scroll = sidebar.locator('.figma-dashboard-sidebar-scroll')
   const profile = sidebar.locator('.figma-dashboard-nav a[href="/profile"]')
   const settings = sidebar.locator('.figma-dashboard-settings-link')
 
-  await expect(sidebar).toBeVisible()
-  await expect(profile).toBeVisible()
-  await expect(settings).toBeVisible()
+  for (const height of [600, 460]) {
+    await page.setViewportSize({ width: 1280, height })
+    await expect(sidebar).toBeVisible()
+    await expect(profile).toBeVisible()
+    await expect(settings).toBeVisible()
+    await expect(settings).toBeInViewport()
 
-  const structure = await sidebar.evaluate((element) => {
-    const scroller = element.querySelector('.figma-dashboard-sidebar-scroll')
-    const profileLink = element.querySelector('.figma-dashboard-nav a[href="/profile"]')
-    const settingsLink = element.querySelector('.figma-dashboard-settings-link')
-    const profileRect = profileLink.getBoundingClientRect()
-    const settingsRect = settingsLink.getBoundingClientRect()
-    return {
-      canScroll: scroller.scrollHeight > scroller.clientHeight,
-      separated: settingsRect.top > profileRect.bottom
-    }
-  })
+    const structure = await sidebar.evaluate((element) => {
+      const profileLink = element.querySelector('.figma-dashboard-nav a[href="/profile"]')
+      const settingsLink = element.querySelector('.figma-dashboard-settings-link')
+      const profileRect = profileLink.getBoundingClientRect()
+      const settingsRect = settingsLink.getBoundingClientRect()
+      return {
+        canScrollVertically: element.scrollHeight > element.clientHeight + 1,
+        separated: settingsRect.top > profileRect.bottom,
+        settingsInsideViewport: settingsRect.bottom <= window.innerHeight + 1
+      }
+    })
 
-  expect(structure.canScroll).toBeTruthy()
-  expect(structure.separated).toBeTruthy()
+    expect(structure.canScrollVertically).toBeFalsy()
+    expect(structure.separated).toBeTruthy()
+    expect(structure.settingsInsideViewport).toBeTruthy()
+  }
 
-  await scroll.evaluate((element) => element.scrollTo({ top: element.scrollHeight }))
-  await expect(settings).toBeInViewport()
   await settings.click()
   await expect(page).toHaveURL(/\/account$/)
 })
