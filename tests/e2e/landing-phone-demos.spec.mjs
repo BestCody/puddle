@@ -55,24 +55,25 @@ test('Saved, Feed, and Profile phone demos expose their corresponding product in
   await expect(page.locator('.minimal-profile-settings strong').filter({ hasText: 'Montreal, QC' })).toBeVisible()
 })
 
-test('landing page embeds the real phone demos instead of leaving screenshot placeholders on screen', async ({ page }) => {
+test('landing page embeds the current Figma-sized real phone demos instead of screenshot placeholders', async ({ page }) => {
   await page.setViewportSize({ width: 1281, height: 900 })
   await page.goto('/')
+  await page.waitForFunction(() => document.querySelector('.landing-stage--desktop')?.dataset.ready === 'true')
   const swipePhone = page.locator('.landing-canvas--desktop [data-phone-demo="swipe"]')
   await expect(swipePhone).toBeAttached()
   await swipePhone.scrollIntoViewIfNeeded()
 
   const phoneBox = await swipePhone.boundingBox()
   expect(phoneBox).toBeTruthy()
-  expect(phoneBox.width).toBeGreaterThan(400)
-  expect(phoneBox.height).toBeGreaterThan(650)
+  expect(phoneBox.width).toBeGreaterThan(370)
+  expect(phoneBox.height).toBeGreaterThan(800)
 
   const iframe = swipePhone.locator('iframe')
   await expect(iframe).toHaveAttribute('src', '/landing-demo/swipe', { timeout: 15_000 })
   const iframeBox = await iframe.boundingBox()
   expect(iframeBox).toBeTruthy()
-  expect(iframeBox.width).toBeGreaterThan(400)
-  expect(iframeBox.height).toBeGreaterThan(600)
+  expect(iframeBox.width).toBeGreaterThan(350)
+  expect(iframeBox.height).toBeGreaterThan(760)
 
   const frame = iframe.contentFrame()
   await expect(frame.locator('.minimal-swipe-card')).toBeVisible({ timeout: 15_000 })

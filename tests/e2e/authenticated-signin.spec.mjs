@@ -12,7 +12,8 @@ test('an authenticated user clicking the Figma login control from home is redire
   await expect(page.locator('.minimal-swipe-card')).toBeVisible()
 
   await page.goto('/')
-  const loginControl = page.locator('.landing-canvas--desktop a[href="/signin"]').first()
+  await page.waitForFunction(() => document.querySelector('.landing-stage--desktop')?.dataset.ready === 'true')
+  const loginControl = page.locator('.landing-sticky-left a[href="/signin"]').first()
   await expect(loginControl).toBeVisible()
   await loginControl.click()
 
