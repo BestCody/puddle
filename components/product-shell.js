@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { PuddleLogo } from './puddle-logo'
-import { ResizableProductSidebar } from './resizable-product-sidebar'
 import { ProductNav } from './product-nav'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
@@ -30,31 +29,30 @@ export async function ProductShell({ user, profile, children }) {
     } catch {}
   }
 
-  return (
-    <div className="product-shell minimal-product-shell">
-      <ResizableProductSidebar className="minimal-product-sidebar" avatarUrl={avatarUrl} />
-
-      <div className="product-stage minimal-product-stage">
-        <header className="product-header minimal-product-header">
-          <div className="minimal-header-logo"><PuddleLogo compact href="/discover" /></div>
-          <details className="profile-menu">
-            <summary aria-label="Open profile menu">
-              <span className="figma-menu-icon" aria-hidden="true"><i /><i /><i /></span>
-            </summary>
-            <div className="profile-menu-panel">
-              <div className="profile-menu-person"><strong>{profile?.display_name || 'Puddle person'}</strong></div>
-              <Link href="/profile">Profile</Link>
-              <Link href="/membership">Pass</Link>
-              <Link href="/account">Settings</Link>
-              {showAdmin ? <Link href="/admin">Admin</Link> : null}
-              <form action={signOut}><button type="submit">Sign out</button></form>
-            </div>
-          </details>
-        </header>
-        <main className="product-main minimal-product-main">{children}</main>
+  return <div className="figma-dashboard-shell product-shell minimal-product-shell">
+    <aside className="figma-dashboard-sidebar minimal-product-sidebar" aria-label="Puddle sidebar">
+      <div className="figma-dashboard-sidebar-logo minimal-sidebar-logo">
+        <PuddleLogo compact href="/discover" variant="outline" />
       </div>
+      <ProductNav avatarUrl={avatarUrl} />
+      <Link className="figma-dashboard-settings-link" href="/account">Settings</Link>
+    </aside>
 
-      <ProductNav mobile avatarUrl={avatarUrl} />
+    <div className="figma-dashboard-stage product-stage minimal-product-stage">
+      <details className="figma-dashboard-account-menu profile-menu">
+        <summary aria-label="Open profile menu"><span aria-hidden="true"><i /><i /><i /></span></summary>
+        <div className="profile-menu-panel">
+          <strong>{profile?.display_name || 'Puddle person'}</strong>
+          <Link href="/profile">Profile</Link>
+          <Link href="/membership">Pass</Link>
+          <Link href="/account">Settings</Link>
+          {showAdmin ? <Link href="/admin">Admin</Link> : null}
+          <form action={signOut}><button type="submit">Sign out</button></form>
+        </div>
+      </details>
+      <main className="figma-dashboard-main product-main minimal-product-main">{children}</main>
     </div>
-  )
+
+    <ProductNav mobile avatarUrl={avatarUrl} />
+  </div>
 }
