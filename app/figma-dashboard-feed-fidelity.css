@@ -6,13 +6,26 @@
   }
 
   .figma-feed-tabs {
-    top: 39px;
-    left: calc(50% + 120.31px);
+    top: 38.986px;
+    left: calc(50% + 120.306px);
+    width: 152px;
+    height: 45.76px;
+    padding: 2.85px 2.66px;
   }
 
+  .figma-feed-tabs > a {
+    height: 34.112px;
+  }
+
+  .figma-feed-tabs > a:first-child { width: 64px; }
+  .figma-feed-tabs > a:last-child { width: 82.68px; }
+
   .figma-feed-search {
-    top: 41.5px;
+    top: 42px;
     right: 26px;
+    width: 190px;
+    height: 40px;
+    padding: 0 10px 0 13.5px;
   }
 
   .figma-feed-composer {
