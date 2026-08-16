@@ -3,6 +3,7 @@ import { ProductShell } from '@/components/product-shell'
 import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
 import { UsernameInput } from '@/components/username-input'
+import { PassNotificationAlertControl } from '@/components/pass-notification-alerts'
 import { deleteAccount, revokeOtherSessions, updatePassword } from '@/app/auth/actions'
 import { markAllNotificationsRead, markNotificationRead, updateAppearance, updateDateProfile, updateNotificationPreferences } from './actions'
 import { requireUser } from '@/lib/auth/user'
@@ -39,9 +40,10 @@ export default async function AccountPage({ searchParams }) {
   const returnTo = safeReturnTo(params?.returnTo)
   const { user, profile, supabase } = await requireUser({ onboarding: true })
   const sessionExpiry = user.aud ? 'Managed securely by Supabase Auth' : 'Active'
-  const [{ data: notificationRows }, { data: preferenceRow }] = await Promise.all([
+  const [{ data: notificationRows }, { data: preferenceRow }, { data: passActive }] = await Promise.all([
     supabase.from('notifications').select('id,kind,title,body,href,read_at,created_at').eq('profile_id', user.id).order('created_at', { ascending: false }).limit(50),
-    supabase.from('notification_preferences').select('in_app_enabled,friend_requests,shares,messages,comments,event_reminders,event_changes,host_announcements,marketing,timezone').eq('profile_id', user.id).maybeSingle()
+    supabase.from('notification_preferences').select('in_app_enabled,friend_requests,shares,messages,comments,event_reminders,event_changes,host_announcements,marketing,timezone').eq('profile_id', user.id).maybeSingle(),
+    supabase.rpc('puddle_tinder_active_v1')
   ])
   const notifications = notificationRows || []
   const preferences = preferenceRow || {
@@ -57,10 +59,11 @@ export default async function AccountPage({ searchParams }) {
     timezone: profile?.timezone || 'America/Toronto'
   }
   const unread = notifications.filter((item) => !item.read_at).length
+  const windowClass = `figma-settings-window${selectedSection ? ` is-expanded section-${selectedSection}` : ' section-index'}`
 
   return <ProductShell user={user} profile={profile}>
     <div className="figma-settings-screen">
-      <section className={`figma-settings-window${selectedSection ? ' is-expanded' : ''}`} aria-label="Settings">
+      <section className={windowClass} aria-label="Settings">
         <Link className="figma-settings-close" href={returnTo} aria-label="Close settings">×</Link>
         <aside className="figma-settings-local-nav">
           <strong>Settings</strong>
@@ -106,6 +109,7 @@ export default async function AccountPage({ searchParams }) {
 
           <section className="figma-settings-section" id="notifications">
             <header><small>Notifications</small><h1>Notifications</h1></header>
+            <PassNotificationAlertControl enabled={Boolean(passActive)} />
             <form action={updateNotificationPreferences} className="figma-notification-preferences">
               <input type="hidden" name="timezone" value={preferences.timezone || profile?.timezone || 'America/Toronto'} />
               <label><input type="checkbox" name="in_app_enabled" defaultChecked={preferences.in_app_enabled} /> In-app notifications</label>
