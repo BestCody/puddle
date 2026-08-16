@@ -1,0 +1,853 @@
+/*
+ * Feed / Map presentation owner.
+ * Figma references: 14:114, 27:294, 40:519, 40:731.
+ *
+ * Exact component dimensions come from the authored Figma implementation, while
+ * page relationships use Grid/Flex/intrinsic flow instead of viewport X/Y math.
+ */
+
+.screen {
+  --feed-column: 469px;
+  --feed-card-radius: 25px;
+  --feed-border: 2.5px solid #e5e5e5;
+  --feed-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
+  position: relative;
+  min-height: 832px;
+  padding: 30px 26px 170px;
+  background: #f6f6f6;
+  box-sizing: border-box;
+}
+
+.header {
+  position: relative;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 46px;
+  gap: 20px;
+}
+
+.back {
+  justify-self: start;
+  width: 43px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #dedede;
+  border-radius: 999px;
+  background: #fff;
+  color: #858585;
+  font: 300 30px/1 Manrope, sans-serif;
+  text-decoration: none;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+.tabs {
+  grid-column: 2;
+  justify-self: center;
+  width: 152px;
+  min-height: 45.76px;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 0;
+  padding: 2.85px 2.66px;
+  border: 2px solid #dedede;
+  border-radius: 999px;
+  background: #fff;
+  box-sizing: border-box;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+.tab {
+  min-width: 0;
+  height: 34.112px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #858585;
+  font: 700 14px/1 Manrope, sans-serif;
+  text-decoration: none;
+}
+
+.tabActive {
+  background: #f2c035;
+  color: #111;
+}
+
+.search {
+  grid-column: 3;
+  justify-self: end;
+  width: 190px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px 0 13.5px;
+  border: 2.5px solid #d9d9d9;
+  border-radius: 999px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.search label {
+  flex: 1;
+  min-width: 0;
+}
+
+.search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #333;
+  font: 600 16px/1 Manrope, sans-serif;
+}
+
+.search input::placeholder {
+  color: #b3b3b3;
+}
+
+.search button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: #111;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.stream {
+  width: min(100%, var(--feed-column));
+  margin: 28px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.post {
+  width: 100%;
+  min-height: 511px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 15px 17px 14px;
+  overflow: visible;
+  border: var(--feed-border);
+  border-radius: var(--feed-card-radius);
+  background: #fff;
+  color: #111;
+  box-shadow: var(--feed-shadow);
+  box-sizing: border-box;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #ececec center/cover no-repeat;
+  color: #555;
+  font: 800 13px/1 Manrope, sans-serif;
+}
+
+.authorMeta {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.author strong {
+  overflow-wrap: anywhere;
+  font: 700 20px/1 Manrope, sans-serif;
+}
+
+.author small {
+  color: #858585;
+  font: 700 11px/1 var(--figma-mono);
+}
+
+.title {
+  margin: 0 0 0 52px;
+  color: #111;
+  overflow-wrap: anywhere;
+  font: 800 21px/1.15 Manrope, sans-serif;
+}
+
+.copy {
+  margin: -5px 3px 0 52px;
+  color: #000;
+  overflow-wrap: anywhere;
+  font: 500 17px/1.15 Manrope, sans-serif;
+  letter-spacing: 0.34px;
+}
+
+.photos {
+  width: min(100%, 381px);
+  min-height: 133px;
+  margin: 2px auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 225px) minmax(0, 148px);
+  grid-template-rows: 63px 63px;
+  gap: 7px;
+}
+
+.photo {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid #dedede;
+  border-radius: 25px;
+  background: #f0f0f0 center/cover no-repeat;
+  color: #858585;
+  font: 700 29px/1 Manrope, sans-serif;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.photoMain {
+  grid-row: span 2;
+}
+
+.photoEmpty {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  min-height: 133px;
+}
+
+.place {
+  position: relative;
+  width: min(100%, 391px);
+  min-height: 163px;
+  margin: 0 auto;
+  padding: 14px 58px 15px 17px;
+  overflow: hidden;
+  border: 2px solid #f0f0f0;
+  border-radius: 25px;
+  background: #fff;
+  color: #000;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.placeMeta,
+.placeArea {
+  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 30px;
+  background: #d9d9d9;
+  color: #858585;
+  font: 600 13.6px/1 var(--figma-mono);
+}
+
+.placeArea {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+}
+
+.place h2 {
+  margin: 48px 0 0;
+  overflow-wrap: anywhere;
+  font: 800 24px/1.05 Manrope, sans-serif;
+  letter-spacing: -2px;
+}
+
+.placeAdd {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 41px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d9d9d9;
+  color: #777;
+  font: 300 30px/1 Manrope, sans-serif;
+}
+
+.interactions {
+  width: min(100%, 380px);
+  margin: auto auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #858585;
+}
+
+.interactions > a {
+  color: #858585;
+  font: 500 26px/1 Manrope, sans-serif;
+  text-decoration: none;
+}
+
+.interactions form {
+  margin: 0;
+}
+
+.interactions > form > button,
+.actionMenu > summary {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.interactions > form > button {
+  font-size: 25px;
+}
+
+.saved {
+  color: #e73668 !important;
+}
+
+.actionMenu {
+  position: relative;
+}
+
+.actionMenu > summary {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  font-size: 23px;
+}
+
+.actionMenu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.actionPanel {
+  position: absolute;
+  z-index: 40;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: min(340px, 76vw);
+  max-height: 360px;
+  overflow: auto;
+  padding: 14px;
+  border: 1.5px solid #d7d7d7;
+  border-radius: 17px;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.14);
+  box-sizing: border-box;
+}
+
+.sharePanel {
+  right: 0;
+  left: auto;
+}
+
+.actionPanel form {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.actionPanel input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+.actionPanel button {
+  padding: 8px 11px;
+  border: 0;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.commentList {
+  display: grid;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.commentList p {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+  font: 600 12px/1.35 Manrope, sans-serif;
+}
+
+.commentList strong {
+  font-weight: 800;
+}
+
+.empty {
+  width: 100%;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  padding: 24px;
+  border: var(--feed-border);
+  border-radius: var(--feed-card-radius);
+  background: #fff;
+  color: #858585;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.empty a {
+  color: #000;
+  font-weight: 800;
+}
+
+.composer {
+  position: fixed;
+  z-index: 35;
+  right: max(18px, calc((100vw - 280px - var(--feed-column)) / 2));
+  bottom: 38px;
+  width: min(420px, calc(100vw - 320px));
+  min-width: 300px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 5px;
+  border: var(--feed-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.97);
+  color: #b3b3b3;
+  font: 700 16px/1 Manrope, sans-serif;
+  text-decoration: none;
+  box-shadow: var(--feed-shadow);
+  box-sizing: border-box;
+}
+
+.composer .avatar {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
+}
+
+.composerText {
+  flex: 1;
+}
+
+.composerSubmit {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #f2c035;
+  border-radius: 50%;
+  color: #f2c035;
+  font: 700 20px/1 Manrope, sans-serif;
+}
+
+/* Map fills the route container. Absolute positioning is intentional here: it is a map canvas/overlay. */
+.mapScreen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.mapCanvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.mapCanvas :global(.location-map-workspace),
+.mapCanvas :global(.location-map-layout),
+.mapCanvas :global(.location-map-canvas) {
+  width: 100%;
+  height: 100%;
+  min-height: 832px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.mapCanvas :global(.location-map-toolbar),
+.mapCanvas :global(.location-map-side) {
+  display: none !important;
+}
+
+.mapCanvas :global(.location-map-layout) {
+  display: block;
+}
+
+.mapCanvas :global(.location-map-canvas) {
+  touch-action: none;
+}
+
+.mapEmpty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #eee;
+  color: #858585;
+  font: 800 18px/1.3 Manrope, sans-serif;
+}
+
+.mapPuddle {
+  position: absolute;
+  top: 135px;
+  left: 7%;
+  width: 47%;
+  height: 430px;
+  pointer-events: none;
+  border-radius: 45% 55% 48% 52% / 36% 44% 56% 64%;
+  background: rgba(76, 165, 247, 0.25);
+  filter: blur(0.2px);
+}
+
+.mapCard {
+  position: absolute;
+  top: 348px;
+  left: 15%;
+  width: 304px;
+  min-height: 114px;
+  padding: 11px 48px 12px 13px;
+  overflow: hidden;
+  border-radius: 17px;
+  background: #4ca5f7;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+}
+
+.mapCardMeta,
+.mapCardArea {
+  min-height: 18px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 20px;
+  background: #25639d;
+  font: 600 9.5px/1 var(--figma-mono);
+}
+
+.mapCardArea {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+}
+
+.mapCard strong {
+  display: block;
+  max-width: 245px;
+  margin-top: 42px;
+  overflow-wrap: anywhere;
+  font: 800 21.8px/1 Manrope, sans-serif;
+  letter-spacing: -1.8px;
+}
+
+.mapCardAdd {
+  position: absolute;
+  right: 9px;
+  bottom: 8px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #25639d;
+  font: 500 23px/1 Manrope, sans-serif;
+}
+
+.mapSelectionNotice {
+  position: absolute;
+  z-index: 40;
+  top: 16px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 15px;
+  transform: translateX(-50%);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  font: 700 13px/1 Manrope, sans-serif;
+}
+
+.mapSelectionNotice a {
+  color: #111;
+}
+
+.mapMode {
+  overflow: hidden;
+  padding-bottom: 0;
+  background: #d0d0d0;
+}
+
+.mapMode .header {
+  pointer-events: none;
+}
+
+.mapMode .back,
+.mapMode .tabs {
+  pointer-events: auto;
+}
+
+/* Persisted appearance stays route-owned instead of depending on global Feed selectors. */
+:global(.figma-dashboard-shell[data-appearance='dark']) .screen,
+:global(.figma-dashboard-shell[data-appearance='dark']) .post,
+:global(.figma-dashboard-shell[data-appearance='dark']) .place,
+:global(.figma-dashboard-shell[data-appearance='dark']) .empty,
+:global(.figma-dashboard-shell[data-appearance='dark']) .actionPanel {
+  background-color: #202020;
+  color: #f4f4f4;
+  border-color: #3d3d3d;
+}
+
+:global(.figma-dashboard-shell[data-appearance='dark']) .title,
+:global(.figma-dashboard-shell[data-appearance='dark']) .copy,
+:global(.figma-dashboard-shell[data-appearance='dark']) .place,
+:global(.figma-dashboard-shell[data-appearance='dark']) .place h2,
+:global(.figma-dashboard-shell[data-appearance='dark']) .actionPanel strong {
+  color: #f4f4f4;
+}
+
+:global(.figma-dashboard-shell[data-appearance='dark']) .search input,
+:global(.figma-dashboard-shell[data-appearance='dark']) .actionPanel input {
+  background: #2a2a2a;
+  color: #f4f4f4;
+  border-color: #4a4a4a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(.figma-dashboard-shell[data-appearance='system']) .screen,
+  :global(.figma-dashboard-shell[data-appearance='system']) .post,
+  :global(.figma-dashboard-shell[data-appearance='system']) .place,
+  :global(.figma-dashboard-shell[data-appearance='system']) .empty,
+  :global(.figma-dashboard-shell[data-appearance='system']) .actionPanel {
+    background-color: #202020;
+    color: #f4f4f4;
+    border-color: #3d3d3d;
+  }
+
+  :global(.figma-dashboard-shell[data-appearance='system']) .title,
+  :global(.figma-dashboard-shell[data-appearance='system']) .copy,
+  :global(.figma-dashboard-shell[data-appearance='system']) .place,
+  :global(.figma-dashboard-shell[data-appearance='system']) .place h2 {
+    color: #f4f4f4;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 761px) {
+  .screen {
+    padding-inline: 20px;
+  }
+
+  .header {
+    grid-template-columns: auto minmax(152px, 1fr) minmax(150px, 190px);
+  }
+
+  .search {
+    width: min(190px, 100%);
+  }
+
+  .composer {
+    right: 20px;
+    width: min(380px, calc(100vw - 140px));
+  }
+}
+
+@media (max-width: 760px) {
+  .screen {
+    --feed-card-radius: 21px;
+    min-height: 874px;
+    padding: 31px 14px 210px 19px;
+    background: #fff;
+  }
+
+  .header {
+    grid-template-columns: 55px 1fr 55px;
+    min-height: 42px;
+    gap: 8px;
+  }
+
+  .back {
+    width: 38px;
+    height: 38px;
+    border: 0;
+    background: url('/puddle-mark-outline.svg') center/contain no-repeat;
+    box-shadow: none;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .tabs {
+    width: 127.119px;
+    min-height: 38.269px;
+    grid-template-columns: 53.524px minmax(0, 1fr);
+    padding: 3.9px;
+    border-width: 1.673px;
+  }
+
+  .tab {
+    height: 28.528px;
+    font-size: 13.381px;
+  }
+
+  .search {
+    width: 55px;
+    height: 41px;
+    justify-content: center;
+    padding: 0;
+    border-width: 1.67px;
+  }
+
+  .search label {
+    display: none;
+  }
+
+  .search button {
+    font-size: 21px;
+  }
+
+  .stream {
+    width: 100%;
+    margin-top: 27px;
+    gap: 20px;
+  }
+
+  .post {
+    min-height: 396px;
+    gap: 9px;
+    padding: 12px 13px 10px;
+  }
+
+  .author {
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .author strong {
+    font-size: 15px;
+  }
+
+  .author small {
+    font-size: 8px;
+  }
+
+  .title {
+    margin-left: 38px;
+    font-size: 17px;
+  }
+
+  .copy {
+    margin-left: 38px;
+    font-size: 13.182px;
+  }
+
+  .photos {
+    width: calc(100% - 32px);
+    min-height: 105.3px;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    grid-template-rows: 50px 50px;
+    gap: 5px;
+  }
+
+  .photo {
+    border-radius: 20px;
+  }
+
+  .photoEmpty {
+    min-height: 105.3px;
+  }
+
+  .place {
+    width: calc(100% - 27px);
+    min-height: 126.392px;
+    border-radius: 20px;
+  }
+
+  .place h2 {
+    margin-top: 30px;
+    font-size: 20px;
+  }
+
+  .interactions {
+    width: calc(100% - 40px);
+  }
+
+  .interactions > a {
+    font-size: 20px;
+  }
+
+  .composer {
+    right: auto;
+    left: 50%;
+    bottom: 112px;
+    width: calc(100% - 57px);
+    min-width: 0;
+    height: 42px;
+    transform: translateX(-50%);
+  }
+
+  .composer .avatar {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .composerSubmit {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mapMode {
+    min-height: 874px;
+    padding: 31px 14px 0 19px;
+  }
+
+  .mapCanvas :global(.location-map-workspace),
+  .mapCanvas :global(.location-map-layout),
+  .mapCanvas :global(.location-map-canvas) {
+    min-height: 874px;
+  }
+
+  .mapPuddle {
+    top: 58.74px;
+    left: -164.92px;
+    width: 440.361px;
+    height: 545.555px;
+    border-radius: 52% 48% 57% 43% / 38% 43% 57% 62%;
+    background: rgba(76, 165, 247, 0.28);
+    transform: rotate(-6deg);
+  }
+
+  .mapCard {
+    top: 319px;
+    left: -125px;
+    width: 303.574px;
+    min-height: 114.015px;
+    border-radius: 17.487px;
+  }
+}
