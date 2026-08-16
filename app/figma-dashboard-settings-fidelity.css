@@ -52,23 +52,22 @@
     box-sizing: border-box;
   }
 
-  /* Any local-nav target opens the authored tall settings composition. */
-  .figma-settings-window:has(.figma-settings-section:target) {
+  .figma-settings-window.is-expanded {
     height: 1863px;
     min-height: 1863px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-local-nav,
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-detail {
+  .figma-settings-window.is-expanded .figma-settings-local-nav,
+  .figma-settings-window.is-expanded .figma-settings-detail {
     height: 1863px;
     min-height: 1863px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-close {
+  .figma-settings-window.is-expanded .figma-settings-close {
     display: grid;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-section {
+  .figma-settings-window.is-expanded .figma-settings-section {
     display: block;
     position: absolute;
     left: 0;
@@ -78,29 +77,29 @@
     color: #858585;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) #profile { top: 112px; }
-  .figma-settings-window:has(.figma-settings-section:target) #security { top: 415px; }
-  .figma-settings-window:has(.figma-settings-section:target) #appearance { top: 633px; }
-  .figma-settings-window:has(.figma-settings-section:target) #sessions { top: 812px; }
-  .figma-settings-window:has(.figma-settings-section:target) #billing { top: 1152px; }
-  .figma-settings-window:has(.figma-settings-section:target) #account { top: 1655px; }
+  .figma-settings-window.is-expanded #profile { top: 112px; }
+  .figma-settings-window.is-expanded #security { top: 415px; }
+  .figma-settings-window.is-expanded #appearance { top: 633px; }
+  .figma-settings-window.is-expanded #sessions { top: 812px; }
+  .figma-settings-window.is-expanded #billing { top: 1152px; }
+  .figma-settings-window.is-expanded #account { top: 1655px; }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-section header {
+  .figma-settings-window.is-expanded .figma-settings-section header {
     margin: 0 0 10px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-section header small {
+  .figma-settings-window.is-expanded .figma-settings-section header small {
     display: none;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-section header h1 {
+  .figma-settings-window.is-expanded .figma-settings-section header h1 {
     margin: 0;
     color: #565656;
     font: 800 30.239px/1.08 var(--figma-mono);
     letter-spacing: -1px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row {
+  .figma-settings-window.is-expanded .figma-settings-row {
     min-height: 41px;
     grid-template-columns: 220px minmax(0, 1fr) auto;
     gap: 12px;
@@ -108,19 +107,19 @@
     font-size: 14.689px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row:last-of-type {
+  .figma-settings-window.is-expanded .figma-settings-row:last-of-type {
     border: 0;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row.is-tall {
+  .figma-settings-window.is-expanded .figma-settings-row.is-tall {
     min-height: 41px;
     padding: 0;
     align-items: center;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row input,
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row textarea,
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row select {
+  .figma-settings-window.is-expanded .figma-settings-row input,
+  .figma-settings-window.is-expanded .figma-settings-row textarea,
+  .figma-settings-window.is-expanded .figma-settings-row select {
     min-height: 32px;
     padding: 5px 8px;
     border: 0;
@@ -130,18 +129,18 @@
     font-size: 14.689px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row textarea {
+  .figma-settings-window.is-expanded .figma-settings-row textarea {
     height: 34px;
     min-height: 34px;
     resize: none;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-submit {
+  .figma-settings-window.is-expanded .figma-settings-submit {
     margin-top: 9px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-submit button,
-  .figma-settings-window:has(.figma-settings-section:target) .figma-settings-row a {
+  .figma-settings-window.is-expanded .figma-settings-submit button,
+  .figma-settings-window.is-expanded .figma-settings-row a {
     min-width: 82px;
     min-height: 33px;
     display: inline-grid;
@@ -156,7 +155,7 @@
     box-sizing: border-box;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) #sessions .figma-settings-row.is-tall {
+  .figma-settings-window.is-expanded #sessions .figma-settings-row.is-tall {
     width: 222px;
     min-height: 177px;
     display: block;
@@ -167,16 +166,16 @@
     box-shadow: 0 4px 0 rgba(0,0,0,.10);
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) #sessions .figma-settings-row.is-tall label {
+  .figma-settings-window.is-expanded #sessions .figma-settings-row.is-tall label {
     display: block;
     margin-bottom: 22px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) #billing {
+  .figma-settings-window.is-expanded #billing {
     min-height: 440px;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) #billing::after {
+  .figma-settings-window.is-expanded #billing::after {
     content: "Transaction History";
     position: absolute;
     left: 61px;
@@ -193,7 +192,7 @@
     font: 800 14.689px/1.2 Manrope, sans-serif;
   }
 
-  .figma-settings-window:has(.figma-settings-section:target) #account .figma-settings-warning {
+  .figma-settings-window.is-expanded #account .figma-settings-warning {
     margin-top: 22px;
     font-size: 14.689px;
   }
