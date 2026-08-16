@@ -2,6 +2,7 @@ import { after, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
@@ -58,6 +59,9 @@ export async function POST(request) {
       return NextResponse.json({ error: `Send between 1 and ${MAX_ACTIONS} actions.` }, { status: 400 })
     }
     const actions = rawActions.map(parseAction).sort((a, b) => a.sequence - b.sequence)
+    const admin = createAdminClient()
+    await ensureGlobalLocationReferences(admin, actions.map((item) => item.contentId))
+
     const rpcActions = actions.map((item) => ({
       eventId: item.eventId,
       sequence: item.sequence,
@@ -79,7 +83,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Those choices could not be saved.' }, { status: 400 })
     }
     after(async () => {
-      const admin = createAdminClient()
       const processed = await admin.rpc('process_discovery_context_outbox_v1', { batch_limit: 100 })
       if (processed.error) console.warn('Discovery context outbox processing failed.', { code: processed.error.code || null, message: String(processed.error.message || '').slice(0, 240) })
     })

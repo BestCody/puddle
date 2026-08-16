@@ -1,0 +1,93 @@
+name: Build global location dataset
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 5 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: global-location-dataset
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || vars.GLOBAL_DATA_PIPELINE_ENABLED == 'true'
+    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install bulk data dependencies
+        run: python -m pip install --disable-pip-version-check duckdb boto3
+      - id: snapshot
+        shell: bash
+        run: echo "snapshot=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      - id: overture
+        name: Mirror latest Overture Places release to canonical B2 raw lake
+        run: python scripts/global-data/mirror_overture.py --release=latest
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+      - id: fsq
+        name: Mirror FSQ OS Iceberg release to canonical B2 raw lake
+        run: python scripts/global-data/mirror_fsq_iceberg.py
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+          FSQ_ICEBERG_TOKEN: ${{ secrets.FSQ_ICEBERG_TOKEN }}
+          FSQ_ICEBERG_ENDPOINT: ${{ vars.FSQ_ICEBERG_ENDPOINT || 'https://h3-hub-foursquare.acryl.io/gms/iceberg/' }}
+          FSQ_ICEBERG_CATALOG: ${{ vars.FSQ_ICEBERG_CATALOG || 'open_h3' }}
+          FSQ_ICEBERG_TABLE: ${{ vars.FSQ_ICEBERG_TABLE }}
+          FSQ_ICEBERG_DELTA_TABLE: ${{ vars.FSQ_ICEBERG_DELTA_TABLE }}
+      - name: Vector-normalize both source datasets into country partitions
+        run: python scripts/global-data/stage_global_sources.py --overture-release='${{ steps.overture.outputs.overture_release }}' --fsq-release='${{ steps.fsq.outputs.fsq_release }}' --snapshot='${{ steps.snapshot.outputs.snapshot }}'
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+      - name: Resolve cross-source entities and preserve existing Puddle UUIDs
+        run: python scripts/global-data/resolve_global_entities.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --bootstrap-prefix=bootstrap/current
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+          GLOBAL_LOCATION_COUNTRIES: ${{ vars.GLOBAL_LOCATION_COUNTRIES }}
+      - name: Carry current photo and Google-ID overlays into the snapshot
+        run: python scripts/global-data/build_bootstrap_overlays.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --bootstrap-prefix=bootstrap/current
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+      - name: Build and atomically activate blue/green OpenSearch index
+        run: python scripts/global-data/index_opensearch.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --alias=locations-active
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+          GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
+          OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
+          OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+          OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
+          OPENSEARCH_LOCATION_SHARDS: ${{ vars.OPENSEARCH_LOCATION_SHARDS || '6' }}
+          OPENSEARCH_LOCATION_REPLICAS: ${{ vars.OPENSEARCH_LOCATION_REPLICAS || '1' }}

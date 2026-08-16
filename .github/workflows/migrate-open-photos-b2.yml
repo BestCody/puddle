@@ -1,0 +1,50 @@
+name: Migrate open photos to B2
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Maximum Supabase-backed approved photos to migrate
+        required: false
+        default: '100000'
+        type: string
+      delete_source:
+        description: Delete each Supabase object only after B2 upload and DB update verify successfully
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-open-photos-b2
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Copy and verify approved media
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--apply "--limit=${{ inputs.limit }}")
+          if [[ "${{ inputs.delete_source }}" == "true" ]]; then args+=(--delete-source); fi
+          npm run locations:photos:migrate-b2 -- "${args[@]}"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_MEDIA_APPLICATION_KEY_ID }}
+          B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_MEDIA_APPLICATION_KEY }}
+          B2_MEDIA_BUCKET_ID: ${{ secrets.B2_MEDIA_BUCKET_ID }}
+          B2_MEDIA_BUCKET_NAME: ${{ vars.B2_MEDIA_BUCKET_NAME || 'puddle-media' }}
+          B2_MEDIA_PUBLIC_BASE_URL: ${{ vars.B2_MEDIA_PUBLIC_BASE_URL || 'https://media.puddle.app' }}
+          B2_MEDIA_MIGRATION_CONCURRENCY: '32'

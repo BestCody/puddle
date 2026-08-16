@@ -1,0 +1,79 @@
+name: Build global photo candidate lake
+
+on:
+  workflow_dispatch:
+    inputs:
+      countries:
+        description: Comma-separated country codes; empty uses repository GLOBAL_PHOTO_COUNTRIES or all active partitions
+        required: false
+        default: ''
+        type: string
+      materialize_limit:
+        description: Maximum selected photos to download into B2 media in this run
+        required: false
+        default: '100000'
+        type: string
+  schedule:
+    - cron: '41 */6 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: global-photo-enrichment
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    if: github.event_name == 'workflow_dispatch' || vars.GLOBAL_PHOTO_PIPELINE_ENABLED == 'true'
+    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --disable-pip-version-check duckdb boto3 pillow mapbox-vector-tile
+      - id: active
+        run: python scripts/global-data/active_snapshot.py
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+      - name: Build Wikimedia candidates by occupied geographic cells
+        run: python scripts/global-data/build_wikimedia_candidates.py --snapshot='${{ steps.active.outputs.snapshot }}' --countries='${{ github.event_name == 'workflow_dispatch' && inputs.countries || vars.GLOBAL_PHOTO_COUNTRIES }}'
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+          WIKIMEDIA_ACCESS_TOKEN: ${{ secrets.WIKIMEDIA_ACCESS_TOKEN }}
+          WIKIMEDIA_REQUESTS_PER_MINUTE: ${{ vars.WIKIMEDIA_REQUESTS_PER_MINUTE || '200' }}
+          WIKIMEDIA_MAX_CONCURRENCY: '3'
+      - name: Build Mapillary candidates from coverage tiles
+        run: python scripts/global-data/build_mapillary_candidates.py --snapshot='${{ steps.active.outputs.snapshot }}' --countries='${{ github.event_name == 'workflow_dispatch' && inputs.countries || vars.GLOBAL_PHOTO_COUNTRIES }}'
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+          MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+          MAPILLARY_TILE_CONCURRENCY: ${{ vars.MAPILLARY_TILE_CONCURRENCY || '96' }}
+      - name: Download selected licensed photos into immutable B2 media
+        run: python scripts/global-data/materialize_photo_candidates.py --snapshot='${{ steps.active.outputs.snapshot }}' --countries='${{ github.event_name == 'workflow_dispatch' && inputs.countries || vars.GLOBAL_PHOTO_COUNTRIES }}' --limit='${{ github.event_name == 'workflow_dispatch' && inputs.materialize_limit || '100000' }}'
+        env:
+          B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+          B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
+          B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || 'puddle-data' }}
+          B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
+          B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+          MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+          B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_MEDIA_APPLICATION_KEY_ID }}
+          B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_MEDIA_APPLICATION_KEY }}
+          B2_MEDIA_BUCKET_NAME: ${{ vars.B2_MEDIA_BUCKET_NAME || 'puddle-media' }}
+          B2_MEDIA_S3_ENDPOINT: ${{ secrets.B2_MEDIA_S3_ENDPOINT }}
+          B2_MEDIA_PUBLIC_BASE_URL: ${{ vars.B2_MEDIA_PUBLIC_BASE_URL || 'https://media.puddle.app' }}
+          GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY: ${{ vars.GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY || '96' }}

@@ -1,7 +1,7 @@
 import { after } from 'next/server'
 import { AuthMessage } from '@/components/auth-message'
 import { DateSwipeWorkspaceV2 } from '@/components/date-swipe-workspace-v2'
-import { getRelationalDiscoveryFeed } from '@/lib/app/discovery-relational'
+import { getDiscoveryFeed } from '@/lib/app/discovery'
 import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { renderProductPage } from '@/lib/app/render-product-page'
 
@@ -37,10 +37,10 @@ function unavailableFeed(session, filters) {
     rejections: [],
     personalization: { behavioral: false, friendActivity: false, vector: false, explicitInterestsOnly: true },
     infrastructure: {
-      source: 'supabase-relational',
+      source: 'location-serving-unavailable',
       relationalServed: 0,
       googleUiKitEligible: 0,
-      overlayRpc: 'r2_discovery_overlay_v2',
+      overlayRpc: null,
       timings: { queryMs: 0, totalMs: 0 }
     }
   }
@@ -65,7 +65,7 @@ export default async function DiscoverPage({ searchParams }) {
 
     let feed
     try {
-      feed = await getRelationalDiscoveryFeed(session, feedFilters)
+      feed = await getDiscoveryFeed(session, feedFilters)
     } catch (error) {
       console.error(`Initial discovery feed failed: ${error?.message || 'unknown error'}`)
       feed = unavailableFeed(session, feedFilters)
