@@ -10,18 +10,35 @@ from datetime import datetime, timezone
 
 import duckdb
 
+
+def first_env(*names, default=''):
+    for name in names:
+        value = str(os.getenv(name, '')).strip()
+        if value:
+            return value
+    return default
+
+
+def clean_prefix(value):
+    return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
-parser.add_argument('--bootstrap-prefix', default=os.getenv('GLOBAL_BOOTSTRAP_B2_PREFIX', 'bootstrap/current'))
+parser.add_argument('--bootstrap-prefix', default=os.getenv('GLOBAL_BOOTSTRAP_B2_PREFIX', 'data/snapshots/bootstrap/current'))
 args = parser.parse_args()
 
-BUCKET = os.environ['B2_DATA_BUCKET_NAME']
-ENDPOINT = os.environ['B2_DATA_S3_ENDPOINT'].replace('https://', '').replace('http://', '').rstrip('/')
-KEY_ID = os.getenv('B2_DATA_KEY_ID') or os.environ['B2_DATA_APPLICATION_KEY_ID']
-KEY = os.environ['B2_DATA_APPLICATION_KEY']
-REGION = os.getenv('B2_DATA_S3_REGION', 'us-west-004')
-BOOT = f"s3://{BUCKET}/{args.bootstrap_prefix.strip('/')}"
-OUT = f"s3://{BUCKET}/normalized/schema=v1/snapshot={args.snapshot}"
+BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
+ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
+ENDPOINT = ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
+KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
+KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
+REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
+DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+if not ENDPOINT or not KEY_ID or not KEY:
+    raise RuntimeError('B2 endpoint and credentials are required.')
+BOOT = f"s3://{BUCKET}/{clean_prefix(args.bootstrap_prefix)}"
+OUT = f"s3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}"
 
 con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
@@ -70,7 +87,6 @@ FROM google_rows g JOIN bootstrap_locations l ON l.id=cast(g.location_id as varc
 WHERE g.status='verified' AND g.google_place_id IS NOT NULL;
 """)
 
-# Write deterministic per-country overlays so the indexer can stream them without database joins.
 for country, in con.execute('SELECT DISTINCT country_code FROM bootstrap_locations ORDER BY country_code').fetchall():
     safe = str(country or 'ZZ').upper()
     con.execute(f"COPY (SELECT location_id,url,provider,attribution,attribution_url,license,width,height FROM primary_photos WHERE country_code='{safe}') TO '{OUT}/country_code={safe}/photo_metadata.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, OVERWRITE_OR_IGNORE true)")
