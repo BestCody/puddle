@@ -1,15 +1,17 @@
-/* Friends Message fidelity for Figma 32:17. These selectors only target the rebuilt Friends DOM. */
+/* Friends fidelity for Message 32:17, Shared 52:351, and Add 52:386. Rebuilt Friends DOM only. */
 @media (min-width: 761px) {
-  .figma-friends-tabs {
-    left: calc(50% + 5px);
+  /* Message */
+  .figma-friends-screen.is-messages .figma-friends-tabs {
+    left: calc(50% + 5.18px);
+    width: 238px;
   }
 
-  .figma-friends-chat {
+  .figma-friends-screen.is-messages .figma-friends-chat {
     height: 699px;
     transform: translateY(1px);
   }
 
-  .figma-friends-composer {
+  .figma-friends-screen.is-messages .figma-friends-composer {
     left: 9.5px;
     right: 13.5px;
     bottom: 19.5px;
@@ -24,8 +26,8 @@
     box-shadow: none;
   }
 
-  .figma-friends-composer > button:nth-of-type(1),
-  .figma-friends-composer > button:nth-of-type(2) {
+  .figma-friends-screen.is-messages .figma-friends-composer > button:nth-of-type(1),
+  .figma-friends-screen.is-messages .figma-friends-composer > button:nth-of-type(2) {
     width: 60px;
     height: 42px;
     border: 2px solid #e6e6e6;
@@ -36,11 +38,11 @@
     font: 400 25px/1 Manrope, sans-serif;
   }
 
-  .figma-friends-composer > button:nth-of-type(2) {
+  .figma-friends-screen.is-messages .figma-friends-composer > button:nth-of-type(2) {
     color: transparent;
   }
 
-  .figma-friends-composer input {
+  .figma-friends-screen.is-messages .figma-friends-composer input {
     grid-column: 3;
     grid-row: 1;
     width: 100%;
@@ -54,11 +56,11 @@
     font: 600 12.923px/1 Manrope, sans-serif;
   }
 
-  .figma-friends-composer input::placeholder {
+  .figma-friends-screen.is-messages .figma-friends-composer input::placeholder {
     color: #b0b0b0;
   }
 
-  .figma-friends-composer > button.is-send {
+  .figma-friends-screen.is-messages .figma-friends-composer > button.is-send {
     grid-column: 3;
     grid-row: 1;
     align-self: center;
@@ -73,5 +75,103 @@
     color: #58c92e;
     box-shadow: none;
     font: 800 18px/1 Manrope, sans-serif;
+  }
+
+  /* Shared */
+  .figma-friends-screen.is-shared .figma-friends-tabs,
+  .figma-friends-screen.is-add .figma-friends-tabs {
+    left: calc(50% + 6.5px);
+    width: 235px;
+  }
+
+  .figma-friends-screen.is-shared .figma-friends-tabs > a:nth-child(1) { width: 91px; }
+  .figma-friends-screen.is-shared .figma-friends-tabs > a:nth-child(2) { width: 81px; }
+  .figma-friends-screen.is-shared .figma-friends-tabs > a:nth-child(3) { width: 51px; }
+
+  .figma-friends-screen.is-shared .figma-friends-shared-view > h1 {
+    top: 116.41px;
+    left: 36.85px;
+    font-size: 30px;
+  }
+
+  .figma-friends-screen.is-shared .figma-friends-shared-grid {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  .figma-friends-screen.is-shared .figma-friends-shared-grid > article {
+    position: absolute;
+  }
+
+  .figma-friends-screen.is-shared .figma-friends-shared-grid > article:nth-of-type(1) {
+    top: 165px;
+    left: 27px;
+    width: 351px;
+    height: 212px;
+  }
+
+  .figma-friends-screen.is-shared .figma-friends-shared-grid > article:nth-of-type(2) {
+    top: 165px;
+    left: 389px;
+    width: 581px;
+    height: 214px;
+  }
+
+  .figma-friends-screen.is-shared .figma-friends-shared-grid > article:nth-of-type(3) {
+    top: 397px;
+    left: 24px;
+    width: 354px;
+    height: 254px;
+  }
+
+  .figma-friends-screen.is-shared .figma-friends-shared-grid > article:nth-of-type(4) {
+    top: 397px;
+    left: 389px;
+    width: 576px;
+    height: 254px;
+  }
+
+  .figma-friends-screen.is-shared .figma-friends-shared-empty {
+    position: absolute;
+    top: 165px;
+    left: 27px;
+    width: 943px;
+    height: 486px;
+  }
+
+  /* Add */
+  .figma-friends-screen.is-add .figma-friends-tabs > a:nth-child(1) { width: 91px; }
+  .figma-friends-screen.is-add .figma-friends-tabs > a:nth-child(2) { width: 74px; }
+  .figma-friends-screen.is-add .figma-friends-tabs > a:nth-child(3) { width: 58px; }
+
+  .figma-friends-screen.is-add .figma-friends-add-view > h1 {
+    top: 228.3px;
+    left: 31.91px;
+    font-size: 72.429px;
+    letter-spacing: -4px;
+  }
+
+  .figma-friends-screen.is-add .figma-friends-search {
+    top: 312px;
+    left: 22px;
+    right: auto;
+    width: 946px;
+    height: 52px;
+  }
+
+  .figma-friends-screen.is-add .figma-friends-request-card {
+    top: 386px;
+    left: calc(50% + 3.5px);
+    width: 661px;
+    min-height: 231px;
+  }
+
+  .figma-friends-screen.is-add .figma-friends-search-results {
+    top: 372px;
+    left: 22px;
+    right: auto;
+    width: 946px;
+    box-sizing: border-box;
   }
 }
