@@ -396,7 +396,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const waitingForMore = feed.items.length > 0 && !current && !exhausted
 
   return <section className="figma-swipe-screen">
-    <div className="figma-swipe-workspace minimal-swipe-workspace">
+    <div className="figma-swipe-workspace">
       <button className="figma-swipe-filter-trigger" type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">Filters</button>
 
       {current ? <>
