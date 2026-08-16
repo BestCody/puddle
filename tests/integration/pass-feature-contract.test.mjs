@@ -66,10 +66,11 @@ test('Pass notification alerts are realtime, permission-gated, and activate imme
   assert.match(migration, /alter publication supabase_realtime add table public\.notifications/)
 })
 
-test('active Pass renders a profile badge', async () => {
+test('Profile identity stays faithful to Figma instead of injecting a Pass badge beside the name', async () => {
   const profile = await read('app/profile/page.js')
-  assert.match(profile, /membership\.active \? <Link className="figma-profile-pass-badge"/)
-  assert.match(profile, />PASS<\/Link>/)
+  assert.match(profile, /data-figma-node="40:347"/)
+  assert.doesNotMatch(profile, /figma-profile-pass-badge/)
+  assert.doesNotMatch(profile, /figma-profile-name-row/)
 })
 
 test('Settings is centered in both axes inside the dashboard viewport', async () => {
