@@ -18,6 +18,13 @@ async function assertRouteHealth(page) {
   await assertNoHorizontalOverflow(page)
 }
 
+async function attachRender(page, testInfo, name) {
+  await testInfo.attach(`${testInfo.project.name}-${name}.png`, {
+    body: await page.screenshot({ fullPage: false }),
+    contentType: 'image/png'
+  })
+}
+
 test('core authenticated UI behavior works across desktop and mobile', async ({ page }, testInfo) => {
   const account = await createConfirmedUser({ displayName: 'UI Contract Tester' })
   await completeProfileDirect(account.user.id, { display_name: 'UI Contract Tester' })
@@ -47,55 +54,81 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.getByRole('button', { name: 'Close details' }).click()
   await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'swipe')
 
   await page.goto('/map')
   const feedTabs = page.locator('.figma-feed-tabs')
   await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
+  await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'feed')
   await feedTabs.getByRole('link', { name: 'Map', exact: true }).click()
   await expect(page).toHaveURL(/\/map\?view=map/)
   await expect(page.locator('.figma-feed-map-screen')).toBeVisible()
   await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'map')
+
+  await page.goto('/create/post')
+  await expect(page.locator('.figma-create-post-card')).toBeVisible()
+  await expect(page.getByLabel('Open add menu')).toBeVisible()
+  if (testInfo.project.name === 'mobile-chromium') {
+    await page.getByLabel('Open add menu').click()
+    await expect(page.locator('.figma-create-post-add-menu')).toBeVisible()
+    await attachRender(page, testInfo, 'feed-post-add-menu')
+    await page.getByLabel('Open add menu').click()
+  }
+  await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'feed-post')
 
   await page.goto('/plans')
   const savedTabs = page.locator('.figma-saved-tabs')
   await expect(savedTabs.getByRole('link', { name: 'Saved', exact: true })).toBeVisible()
   await expect(savedTabs.getByRole('link', { name: 'Plans', exact: true })).toBeVisible()
+  await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'saved')
   await savedTabs.getByRole('link', { name: 'Plans', exact: true }).click()
   await expect(page).toHaveURL(/\/plans\?tab=planned/)
   await page.getByRole('link', { name: 'Saved', exact: true }).first().click()
   await expect(page).toHaveURL(/\/plans\?tab=saved/)
-  await assertRouteHealth(page)
 
   await page.goto('/matches')
   await expect(page.locator('.figma-friends-message-layout')).toBeVisible()
+  await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'friends-message')
   const friendsTabs = page.locator('.figma-friends-tabs')
   await friendsTabs.getByRole('link', { name: 'Shared', exact: true }).click()
   await expect(page).toHaveURL(/\/matches\?tab=shared/)
   await expect(page.locator('.figma-friends-shared-view')).toBeVisible()
+  await attachRender(page, testInfo, 'friends-shared')
   await page.locator('.figma-friends-tabs').getByRole('link', { name: 'Add', exact: true }).click()
   await expect(page).toHaveURL(/\/matches\?tab=add/)
   await expect(page.locator('.figma-friends-add-view')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Friends' })).toHaveAttribute('aria-current', 'page')
   await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'friends-add')
 
   await page.goto('/membership')
   await expect(page.locator('.figma-pass-heading')).toContainText('Membership')
   await expect(page.locator('.figma-pass-plan-free').getByText('Free', { exact: true })).toBeVisible()
   await expect(page.locator('.figma-pass-plan-paid').getByText('Pass', { exact: true })).toBeVisible()
   await expect(page.getByText('Notification alerts', { exact: true })).toBeVisible()
+  await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'pass-plans')
   await page.locator('.figma-pass-tabs').getByRole('link', { name: 'Manage', exact: true }).click()
   await expect(page).toHaveURL(/\/membership\?view=manage/)
   await expect(page.locator('.figma-pass-current-plan')).toBeVisible()
   await expect(page.locator('.figma-pass-history')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Pass' })).toHaveAttribute('aria-current', 'page')
   await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'pass-manage-free')
 
   await page.goto('/account')
   await expect(page.locator('.figma-settings-window')).toBeVisible()
   await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
+  await attachRender(page, testInfo, 'settings-default')
   await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
   await expect(page.locator('#profile')).toBeVisible()
+  await attachRender(page, testInfo, 'settings-profile')
   await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Billing', exact: true }).click()
   await expect(page.locator('#billing')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Manage billing' })).toHaveAttribute('href', '/membership?view=manage')
@@ -109,6 +142,11 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await expect(page.getByLabel('Change profile photo')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveAttribute('href', '/profile?customize=1')
   await assertRouteHealth(page)
+  await attachRender(page, testInfo, 'profile')
+  await page.getByRole('link', { name: 'Edit', exact: true }).click()
+  await expect(page).toHaveURL(/\/profile\?customize=1/)
+  await expect(page.locator('.figma-profile-theme-picker')).toBeVisible()
+  await attachRender(page, testInfo, 'profile-customize')
 
   const activeLabels = await page.locator('[aria-current="page"]').allTextContents()
   expect(activeLabels.join(' ')).toContain('Profile')
