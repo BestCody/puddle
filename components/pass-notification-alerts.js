@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+const PERMISSION_EVENT = 'puddle:notification-permission'
+
 function permissionState() {
   if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported'
   return window.Notification.permission
@@ -11,9 +13,17 @@ function permissionState() {
 
 export function PassNotificationAlerts({ enabled, profileId }) {
   const client = useMemo(() => createClient(), [])
+  const [permission, setPermission] = useState('default')
 
   useEffect(() => {
-    if (!enabled || !profileId || permissionState() !== 'granted') return undefined
+    function syncPermission() { setPermission(permissionState()) }
+    syncPermission()
+    window.addEventListener(PERMISSION_EVENT, syncPermission)
+    return () => window.removeEventListener(PERMISSION_EVENT, syncPermission)
+  }, [])
+
+  useEffect(() => {
+    if (!enabled || !profileId || permission !== 'granted') return undefined
 
     const channel = client
       .channel(`pass-notification-alerts:${profileId}`)
@@ -40,7 +50,7 @@ export function PassNotificationAlerts({ enabled, profileId }) {
       .subscribe()
 
     return () => { client.removeChannel(channel) }
-  }, [client, enabled, profileId])
+  }, [client, enabled, permission, profileId])
 
   return null
 }
@@ -54,6 +64,7 @@ export function PassNotificationAlertControl({ enabled }) {
     if (!enabled || permissionState() === 'unsupported') return
     const next = await window.Notification.requestPermission()
     setPermission(next)
+    window.dispatchEvent(new Event(PERMISSION_EVENT))
   }
 
   if (!enabled) return <section className="pass-notification-alert-control is-locked">
