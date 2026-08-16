@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { ProfilePhotoEditor } from '@/components/profile-photo-editor'
 import { renderProductPage } from '@/lib/app/render-product-page'
+import { getMembershipSnapshot } from '@/lib/app/membership-data'
+import { updateProfileTheme } from './actions'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Profile' }
@@ -29,24 +31,62 @@ function preferenceLabel(value) {
   return label ? label.replace(/\b\w/g, (letter) => letter.toUpperCase()) : null
 }
 
+function timeLabel(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
+async function queryOr(query, fallback = []) {
+  try {
+    const { data, error } = await query
+    return error ? fallback : data || fallback
+  } catch {
+    return fallback
+  }
+}
+
 export default async function ProfilePage({ searchParams }) {
   const params = await searchParams
   const customizing = params?.customize === '1'
-  const themeName = Object.hasOwn(themes, params?.theme) ? params.theme : 'blue'
-  const theme = themes[themeName]
 
   return renderProductPage(async (session) => {
+    const [posts, saves, friends, membership] = await Promise.all([
+      queryOr(session.supabase
+        .from('social_posts')
+        .select('id,title,body,created_at,location_id,locations!social_posts_location_id_fkey(name,slug,kind,city,cover_path,status)')
+        .eq('author_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(6)),
+      queryOr(session.supabase
+        .from('user_content_states')
+        .select('location_id,pinned_at,created_at,locations(id,name,slug,kind,city,cover_path,status)')
+        .eq('profile_id', session.user.id)
+        .eq('state', 'saved')
+        .order('pinned_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(12)),
+      queryOr(session.supabase.rpc('social_friends_v1')),
+      getMembershipSnapshot(session)
+    ])
+    const visiblePosts = posts.filter((post) => post.locations?.status === 'published')
+    const visibleSaves = saves.filter((item) => item.locations?.status === 'published')
+    const recentPost = visiblePosts[0] || null
+    const recentLocation = recentPost?.locations || null
+    const recentCover = profilePhotoUrl(session, recentLocation?.cover_path)
     const avatarUrl = profilePhotoUrl(session, session.profile.avatar_path)
     const preferences = (session.profile.interests || []).map(preferenceLabel).filter(Boolean).slice(0, 3)
-    const chips = preferences.length ? preferences : ['🍻Bar', '🌙Nightlife', '🛍️Shop']
+    const chips = preferences.length ? preferences : ['Add interests']
     const locationLabel = session.profile.location_label || [session.profile.city, session.profile.region, session.profile.country].filter(Boolean).join(', ') || 'Add your location'
     const displayName = session.profile.display_name || 'Puddle person'
     const username = session.profile.username || 'puddle'
+    const themeName = Object.hasOwn(themes, session.profile.profile_theme) ? session.profile.profile_theme : 'blue'
+    const theme = themes[themeName]
 
     return <div className={`figma-profile-screen${customizing ? ' is-customizing' : ''}`} style={{ '--profile-theme': theme }}>
       <section className="figma-profile-hero" aria-label="Profile overview">
         {customizing ? <div className="figma-profile-theme-picker" aria-label="Profile banner color">
-          {Object.entries(themes).map(([name, value]) => <Link className={name === themeName ? 'is-selected' : ''} href={`/profile?customize=1&theme=${name}`} style={{ background: value }} aria-label={`${name} banner`} key={name}>{name === themeName ? '✓' : ''}</Link>)}
+          {Object.entries(themes).map(([name, color]) => <form action={updateProfileTheme} key={name}><input type="hidden" name="profile_theme" value={name} /><button className={name === themeName ? 'is-selected' : ''} type="submit" style={{ background: color }} aria-label={`${name} banner`}>{name === themeName ? '✓' : ''}</button></form>)}
           <Link className="figma-profile-customize-done" href="/profile" aria-label="Done customizing">✓</Link>
         </div> : <Link className="figma-profile-edit" href="/profile?customize=1">Edit</Link>}
 
@@ -58,16 +98,16 @@ export default async function ProfilePage({ searchParams }) {
         </details>
 
         <div className="figma-profile-identity">
-          <h1>{displayName}</h1>
+          <div className="figma-profile-name-row"><h1>{displayName}</h1>{membership.active ? <Link className="figma-profile-pass-badge" href="/membership?view=manage">PASS</Link> : null}</div>
           <small>@{username}</small>
-          <div className="figma-profile-counts" aria-label="Profile social counts"><span>0 Followers</span><span>0 Following</span></div>
+          <div className="figma-profile-counts" aria-label="Profile counts"><span>{friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}</span><span>{visibleSaves.length} {visibleSaves.length === 1 ? 'Save' : 'Saves'}</span></div>
           <div className="figma-profile-chips" aria-label="Favorite categories">
             {chips.map((value) => <span key={value}>{value}</span>)}
-            <span aria-hidden="true">+</span>
+            <Link href="/account?section=profile&returnTo=%2Fprofile" aria-label="Edit favorite categories">+</Link>
           </div>
           <div className="figma-profile-actions">
-            <Link className="is-follow" href="/matches?tab=add">Follow</Link>
-            <Link href="/matches">◯ Message</Link>
+            <Link className="is-follow" href="/create/post">Create puddle</Link>
+            <Link href="/matches?tab=add">＋ Add friends</Link>
           </div>
         </div>
       </section>
@@ -75,16 +115,16 @@ export default async function ProfilePage({ searchParams }) {
       <section className="figma-profile-cards" aria-label="Profile details">
         <article className="figma-profile-card figma-profile-puddles-card">
           <h2>Puddles</h2>
-          <div className="figma-profile-post-preview" aria-label="Recent puddle preview">
-            <header><span className="figma-profile-post-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? '' : initials(displayName)}</span><span><strong>{displayName}</strong><small>2 hours ago</small></span></header>
-            <p>This place is amazing! The atmosphere is beautiful and there’s so much to see and do.</p>
-            <div className="figma-profile-post-collage"><i /><i /><i>+30</i></div>
-            <div className="figma-profile-post-place"><small>Park</small><strong>Maple Grove Park</strong><b>+</b></div>
-          </div>
+          {recentPost ? <Link className="figma-profile-post-preview figma-profile-real-post" href="/map">
+            <header><span className="figma-profile-post-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? '' : initials(displayName)}</span><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
+            <p>{recentPost.body || recentPost.title}</p>
+            <div className="figma-profile-post-collage" style={recentCover ? { backgroundImage: `url(${recentCover})` } : undefined}><i /><i /><i>{visiblePosts.length > 1 ? `+${visiblePosts.length - 1}` : ''}</i></div>
+            <div className="figma-profile-post-place"><small>{String(recentLocation?.kind || 'Place').replaceAll('_', ' ')}</small><strong>{recentLocation?.name || recentPost.title}</strong><b>+</b></div>
+          </Link> : <div className="figma-profile-card-empty"><p>No puddles posted yet.</p><Link href="/create/post">Create one</Link></div>}
         </article>
         <article className="figma-profile-card figma-profile-location-card"><h2>Location</h2><strong>{locationLabel}</strong></article>
-        <article className="figma-profile-card figma-profile-saves-card"><h2>Saves</h2></article>
-        <article className="figma-profile-card figma-profile-friends-card"><h2>Friends</h2></article>
+        <article className="figma-profile-card figma-profile-saves-card"><h2>Saves</h2>{visibleSaves.length ? <div className="figma-profile-mini-list">{visibleSaves.slice(0, 4).map((item) => <Link href={`/plans/${item.locations.slug}`} key={item.location_id}><span>{item.locations.name}</span>{item.pinned_at ? <b>PINNED</b> : null}</Link>)}</div> : <p>Nothing saved yet.</p>}<Link className="figma-profile-card-link" href="/plans">View Saved</Link></article>
+        <article className="figma-profile-card figma-profile-friends-card"><h2>Friends</h2>{friends.length ? <div className="figma-profile-mini-list">{friends.slice(0, 4).map((friend) => <Link href="/matches?tab=messages" key={friend.id}><span>{friend.display_name || friend.username || 'Friend'}</span></Link>)}</div> : <p>No friends yet.</p>}<Link className="figma-profile-card-link" href="/matches?tab=add">Manage Friends</Link></article>
         <article className="figma-profile-card figma-profile-add-card"><Link href="/create/post" aria-label="Create a puddle">+</Link></article>
       </section>
     </div>
