@@ -8,12 +8,11 @@ import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 
 export const dynamic = 'force-dynamic'
 
-const MAX_CONTINUATION_EXCLUDES = 500
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function continuationExcludes(value) {
   if (!Array.isArray(value)) return []
-  return [...new Set(value.map((item) => String(item || '').trim()).filter((item) => UUID_PATTERN.test(item)))].slice(0, MAX_CONTINUATION_EXCLUDES)
+  return [...new Set(value.map((item) => String(item || '').trim()).filter((item) => UUID_PATTERN.test(item)))]
 }
 
 async function authenticatedSession() {
