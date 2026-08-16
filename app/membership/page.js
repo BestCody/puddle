@@ -2,18 +2,77 @@ import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getMembershipSnapshot } from '@/lib/app/membership-data'
-import { openMembershipPortal, saveGlobalPreference, startTinderCheckout } from './actions'
+import { openMembershipPortal, startTinderCheckout } from './actions'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pass' }
-
-const TINDER_TIER_MONTHLY_PRICE = '$10/month'
 
 function periodLabel(value) {
   if (!value) return null
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return null
-  return new Intl.DateTimeFormat('en-CA', { dateStyle: 'medium' }).format(date)
+  return new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' }).format(date)
+}
+
+function PassTabs({ view }) {
+  return <nav className="figma-dashboard-segment figma-pass-tabs" aria-label="Pass sections">
+    <Link className={view === 'plans' ? 'is-active' : ''} href="/membership">Plans</Link>
+    <Link className={view === 'manage' ? 'is-active' : ''} href="/membership?view=manage">Manage</Link>
+  </nav>
+}
+
+function PlansView({ snapshot }) {
+  return <>
+    <h1 className="figma-pass-heading"><span>puddle</span> Membership</h1>
+    <section className="figma-pass-plan-grid" aria-label="Puddle membership tiers">
+      <article className="figma-pass-plan figma-pass-plan-free">
+        <div className="figma-pass-plan-price"><span>Free</span><strong>$0</strong></div>
+        <ul><li>Swipe</li><li>Feed</li><li>Map</li><li>Message friends only</li></ul>
+        {snapshot.active ? <span className="figma-pass-plan-state">Available</span> : <span className="figma-pass-plan-state">Current</span>}
+      </article>
+
+      <article className="figma-pass-plan figma-pass-plan-paid">
+        <div className="figma-pass-plan-price"><span>Pass</span><strong>$10/month</strong><s>$15/month</s></div>
+        <div className="figma-pass-plan-features">
+          <p>Everything in Free plus...</p>
+          <ul><li>Heatmap</li><li>Pass badge</li><li>Create your location</li><li>Message anyone</li><li>See who saved</li><li>Notification alerts</li></ul>
+        </div>
+        {snapshot.active
+          ? <Link className="figma-pass-upgrade" href="/membership?view=manage">Manage</Link>
+          : snapshot.adult && snapshot.paymentsConfigured
+            ? <form action={startTinderCheckout}><button className="figma-pass-upgrade" type="submit">Upgrade</button></form>
+            : <button className="figma-pass-upgrade" type="button" disabled>Upgrade</button>}
+      </article>
+    </section>
+  </>
+}
+
+function ManageView({ snapshot }) {
+  const periodEnd = periodLabel(snapshot.membership?.current_period_end)
+  return <section className={`figma-pass-manage-screen ${snapshot.active ? 'is-paid' : 'is-free'}`}>
+    <article className="figma-pass-current-plan">
+      <small>Current{snapshot.active ? ' Plan' : ''}</small>
+      <strong>{snapshot.active ? 'Pass / $10' : 'Free'}</strong>
+      {snapshot.active && periodEnd ? <span>{snapshot.membership.cancel_at_period_end ? 'Ends' : 'Renews'} {periodEnd}</span> : null}
+    </article>
+
+    <div className="figma-pass-manage-actions">
+      {snapshot.active ? <>
+        <form action={openMembershipPortal}><button className="is-dark" type="submit">AutoPay</button></form>
+        <form action={openMembershipPortal}><button type="submit">Cancel</button></form>
+      </> : snapshot.adult && snapshot.paymentsConfigured
+        ? <form action={startTinderCheckout}><button className="is-upgrade" type="submit">Upgrade</button></form>
+        : <button className="is-upgrade" type="button" disabled>Upgrade</button>}
+    </div>
+
+    <article className="figma-pass-history">
+      {snapshot.active ? <>
+        <strong>Transaction History</strong>
+        <div className="figma-pass-history-row"><span>{periodEnd || 'Current period'}</span><span><b>Active</b> Puddle Pass</span></div>
+        <form action={openMembershipPortal}><button type="submit">See All</button></form>
+      </> : <p>No transaction history</p>}
+    </article>
+  </section>
 }
 
 export default async function MembershipPage({ searchParams }) {
@@ -23,64 +82,13 @@ export default async function MembershipPage({ searchParams }) {
     const view = params?.view === 'manage' ? 'manage' : 'plans'
     const checkoutNotice = params?.checkout === 'success'
       ? 'Payment received. Your Pass will unlock as soon as Stripe confirms the subscription.'
-      : params?.checkout === 'canceled'
-        ? 'Checkout was canceled. Your Free plan is unchanged.'
-        : null
-    const periodEnd = periodLabel(snapshot.membership?.current_period_end)
+      : params?.checkout === 'canceled' ? 'Checkout was canceled. Your Free plan is unchanged.' : null
 
-    return <div className="membership-page figma-pass-page">
-      <nav className="figma-segmented-tabs figma-pass-segment" aria-label="Pass sections">
-        <Link className={view === 'plans' ? 'is-active' : ''} href="/membership">Plans</Link>
-        <Link className={view === 'manage' ? 'is-active' : ''} href="/membership?view=manage">Manage</Link>
-      </nav>
-
+    return <div className="figma-pass-screen">
+      <PassTabs view={view} />
       <AuthMessage searchParams={params} />
-      {checkoutNotice ? <p className="membership-notice">{checkoutNotice}</p> : null}
-
-      {view === 'plans' ? <>
-        <h1 className="figma-pass-title"><span>puddle</span> Membership</h1>
-        <section className="tier-grid figma-pass-grid" aria-label="Puddle membership tiers">
-          <article className={`tier-card figma-pass-card figma-pass-free ${snapshot.active ? '' : 'is-current'}`}>
-            <div className="figma-pass-price"><span>Free</span><strong>$0</strong></div>
-            <div className="figma-pass-features" aria-label="Free features">
-              <ul><li>Swipe</li><li>Feed</li><li>Map</li><li>Message friends only</li></ul>
-            </div>
-            {snapshot.active ? <span className="figma-plan-state">Available</span> : <span className="figma-plan-state is-current">Current</span>}
-          </article>
-
-          <article className={`tier-card figma-pass-card figma-pass-paid ${snapshot.active ? 'is-current' : ''}`}>
-            <span className="sr-only">Pass tier</span>
-            <div className="figma-pass-price"><span>Pass</span><strong>{TINDER_TIER_MONTHLY_PRICE}</strong><s className="figma-pass-old-price">$15/month</s></div>
-            <div className="figma-pass-features" aria-label="Pass features">
-              <p>Everything in Free plus...</p>
-              <ul><li>Heatmap</li><li>Pass badge</li><li>Create your location</li><li>Message anyone</li><li>See who saved</li><li>Notification alerts</li></ul>
-            </div>
-            {snapshot.active
-              ? <Link className="figma-pass-cta" href="/membership?view=manage">Manage</Link>
-              : snapshot.adult && snapshot.paymentsConfigured
-                ? <form action={startTinderCheckout}><button className="figma-pass-cta" type="submit">Upgrade</button></form>
-                : <button className="figma-pass-cta" type="button" disabled>Upgrade</button>}
-          </article>
-        </section>
-        <p className="figma-pass-disclosure">Billed monthly. Taxes and renewal terms appear before payment.</p>
-      </> : <section className="figma-pass-manage">
-        <header><span>Pass</span><h1>Manage membership</h1><p>Billing, privacy, and global connection controls.</p></header>
-        {snapshot.active ? <>
-          <div className="figma-manage-card">
-            <div><small>Subscription</small><strong>{snapshot.membership.status}</strong>{periodEnd ? <span>{snapshot.membership.cancel_at_period_end ? 'Ends' : 'Renews'} {periodEnd}</span> : null}</div>
-            <form action={openMembershipPortal}><button className="membership-primary" type="submit">Manage billing</button></form>
-          </div>
-          {snapshot.adult ? <div className="figma-manage-card global-visibility-card">
-            <div><small>Privacy</small><h2>Global connections</h2><p>Off by default. Appear only to paid adults who liked the same location. Private passes and exact location stay private.</p></div>
-            <form action={saveGlobalPreference}>
-              <label className="membership-toggle"><input type="checkbox" name="discoverable" defaultChecked={snapshot.preference.discoverable} /><span>Let matching people find me</span></label>
-              <label>What are you open to?<select name="intent" defaultValue={snapshot.preference.intent}><option value="either">Date or hangout</option><option value="date">Date</option><option value="hangout">Hangout</option></select></label>
-              <button className="membership-primary" type="submit">Save privacy setting</button>
-            </form>
-            {snapshot.preference.discoverable ? <Link className="membership-secondary" href="/global-matches">Open global likes →</Link> : null}
-          </div> : null}
-        </> : <div className="figma-manage-card is-empty"><h2>You are on Free.</h2><p>Upgrade to Pass to unlock global connections and billing management.</p><Link className="membership-primary" href="/membership">See plans</Link></div>}
-      </section>}
+      {checkoutNotice ? <p className="figma-pass-notice">{checkoutNotice}</p> : null}
+      {view === 'plans' ? <PlansView snapshot={snapshot} /> : <ManageView snapshot={snapshot} />}
     </div>
   })
 }
