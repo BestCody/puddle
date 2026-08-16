@@ -129,13 +129,19 @@ export async function signInThroughUi(page, email, password, next = '/discover')
 }
 
 export async function signOutThroughUi(page) {
+  const originalViewport = page.viewportSize()
+  let restoredViewport = false
   let menu = page.locator('details.figma-dashboard-account-menu')
   let summary = menu.locator('> summary')
 
-  // Functional auth tests can arrive on any product route. Use the real
-  // rebuilt Figma account menu, falling back to Discover if the mobile shell
-  // does not expose it at the current viewport.
   if (!await summary.isVisible().catch(() => false)) {
+    // Mobile Figma intentionally has no account menu. Functional auth tests
+    // temporarily use the real desktop Swipe menu instead of adding a fake
+    // mobile sign-out control that is absent from the source composition.
+    if (originalViewport && originalViewport.width <= 760) {
+      await page.setViewportSize({ width: 1280, height: 832 })
+      restoredViewport = true
+    }
     await page.goto('/discover')
     menu = page.locator('details.figma-dashboard-account-menu')
     summary = menu.locator('> summary')
@@ -149,6 +155,7 @@ export async function signOutThroughUi(page) {
   await expect(button).toBeVisible()
   await button.click()
   await expect(page).toHaveURL(/\/$/)
+  if (restoredViewport && originalViewport) await page.setViewportSize(originalViewport)
 }
 
 export async function assertNoHorizontalOverflow(page) {
