@@ -111,8 +111,11 @@ try {
   const stickyBefore = await page.locator('.landing-sticky-left').boundingBox()
   const loginBefore = await page.locator('.landing-sticky-left .login-panel').boundingBox()
   const swipeBefore = await page.locator('.feature-card--d-swipe').boundingBox()
-  await page.evaluate(() => window.scrollTo(0, 1000))
-  await page.waitForTimeout(80)
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = 'auto'
+    window.scrollTo(0, 1000)
+  })
+  await page.waitForFunction(() => Math.abs(window.scrollY - 1000) < 2)
   const stickyAfter = await page.locator('.landing-sticky-left').boundingBox()
   const loginAfter = await page.locator('.landing-sticky-left .login-panel').boundingBox()
   const swipeAfter = await page.locator('.feature-card--d-swipe').boundingBox()
