@@ -4,24 +4,23 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 function NavIcon({ type, avatarUrl }) {
-  if (type === 'swipe') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3.5" width="12" height="17" rx="3"/><path d="M9 7h6M4 9l-2 3 2 3M20 9l2 3-2 3"/></svg>
-  if (type === 'feed') return <svg className="figma-feed-icon" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="9.5"/><path d="m17.6 10.4-2.25 5-4.95 2.2 2.2-4.95 5-2.25Z"/></svg>
-  if (type === 'saved') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V21l-6-3.8L6 21V4.5Z"/></svg>
-  if (type === 'friends') return <svg className="figma-friends-icon" viewBox="0 0 25 25" aria-hidden="true"><path d="M12.5 4.1c5.25 0 9.4 3.42 9.4 7.78s-4.15 7.79-9.4 7.79c-1.32 0-2.58-.22-3.72-.62L4.1 21l1.55-4.13c-1.61-1.38-2.55-3.12-2.55-4.99 0-4.36 4.15-7.78 9.4-7.78Z"/></svg>
-  if (type === 'billing') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 9.5h19M6.5 15h4"/></svg>
-  if (type === 'settings') return <span className="figma-nav-glyph figma-settings-glyph" aria-hidden="true">⚙</span>
-  if (type === 'profile' && avatarUrl) return <img className="product-nav-profile-photo" src={avatarUrl} alt="" aria-hidden="true" />
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
+  if (type === 'swipe') return <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="6" width="12" height="20" rx="3"/><path d="M13 10h6M6 11l-4 5 4 5M26 11l4 5-4 5"/></svg>
+  if (type === 'feed') return <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="10.5"/><path d="m20 11-2.7 6.1-6.1 2.7 2.7-6.1L20 11Z"/></svg>
+  if (type === 'saved') return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 5.5h12v21l-6-4-6 4v-21Z"/></svg>
+  if (type === 'friends') return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 6c7 0 12 4.3 12 9.7S23 25.4 16 25.4c-1.7 0-3.3-.25-4.8-.75L5 27l2-5.2c-1.9-1.7-3-3.8-3-6.1C4 10.3 9 6 16 6Z"/></svg>
+  if (type === 'pass') return <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="8" width="22" height="16" rx="2"/><path d="M5 13h22"/></svg>
+  if (type === 'profile' && avatarUrl) return <img className="figma-dashboard-avatar" src={avatarUrl} alt="" aria-hidden="true" />
+  if (type === 'profile') return <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="11" r="5"/><path d="M7 27c.8-6 4.3-9 9-9s8.2 3 9 9"/></svg>
+  return null
 }
 
 const items = [
-  { href: '/discover', label: 'Swipe', icon: 'swipe' },
-  { href: '/map', label: 'Feed', icon: 'feed' },
-  { href: '/plans', label: 'Saved', icon: 'saved' },
-  { href: '/matches', label: 'Friends', icon: 'friends' },
-  { href: '/membership', label: 'Pass', icon: 'billing' },
-  { href: '/profile', label: 'Profile', icon: 'profile' },
-  { href: '/account', label: 'Settings', icon: 'settings', desktopOnly: true }
+  { href: '/discover', label: 'Swipe', icon: 'swipe', tone: 'blue' },
+  { href: '/map', label: 'Feed', icon: 'feed', tone: 'yellow' },
+  { href: '/plans', label: 'Saved', icon: 'saved', tone: 'purple' },
+  { href: '/matches', label: 'Friends', icon: 'friends', tone: 'green' },
+  { href: '/membership', label: 'Pass', icon: 'pass', tone: 'pink' },
+  { href: '/profile', label: 'Profile', icon: 'profile', tone: 'profile' }
 ]
 
 function isActive(pathname, href) {
@@ -29,35 +28,28 @@ function isActive(pathname, href) {
   if (href === '/matches') return pathname === '/matches' || pathname.startsWith('/matches/')
   if (href === '/membership') return pathname === '/membership' || pathname.startsWith('/global-matches')
   if (href === '/map') return pathname === '/map'
-  if (href === '/account') return pathname === '/account' || pathname.startsWith('/account/')
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
 function NavItems({ mobile = false, avatarUrl = null }) {
   const pathname = usePathname()
-  return items.filter((item) => !mobile || !item.desktopOnly).map((item) => {
+  return items.map((item) => {
     const active = isActive(pathname, item.href)
-    return (
-      <Link
-        className={active ? 'is-active' : ''}
-        href={item.href}
-        aria-current={active ? 'page' : undefined}
-        aria-label={item.label}
-        data-tooltip={item.label}
-        key={item.href}
-      >
-        <span className={mobile ? 'mobile-product-nav-icon' : 'product-nav-icon'}><NavIcon type={item.icon} avatarUrl={avatarUrl} /></span>
-        {mobile ? <small>{item.label}</small> : <>
-          <span className="product-nav-label" aria-hidden="true">{item.label}</span>
-          <span className="nav-tooltip" role="presentation">{item.label}</span>
-        </>}
-      </Link>
-    )
+    return <Link
+      className={`figma-dashboard-nav-item tone-${item.tone}${active ? ' is-active' : ''}`}
+      href={item.href}
+      aria-current={active ? 'page' : undefined}
+      aria-label={item.label}
+      key={item.href}
+    >
+      <span className="figma-dashboard-nav-icon"><NavIcon type={item.icon} avatarUrl={avatarUrl} /></span>
+      {mobile ? null : <span className="figma-dashboard-nav-label">{item.label}</span>}
+    </Link>
   })
 }
 
 export function ProductNav({ mobile = false, avatarUrl = null }) {
   return mobile
-    ? <nav className="mobile-product-nav minimal-mobile-nav" aria-label="Puddle mobile navigation"><NavItems mobile avatarUrl={avatarUrl} /></nav>
-    : <nav className="product-nav minimal-product-nav" aria-label="Puddle navigation"><NavItems avatarUrl={avatarUrl} /></nav>
+    ? <nav className="figma-dashboard-mobile-nav minimal-mobile-nav" aria-label="Puddle mobile navigation"><NavItems mobile avatarUrl={avatarUrl} /></nav>
+    : <nav className="figma-dashboard-nav minimal-product-nav" aria-label="Puddle navigation"><NavItems avatarUrl={avatarUrl} /></nav>
 }
