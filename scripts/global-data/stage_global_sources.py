@@ -10,17 +10,34 @@ from datetime import datetime, timezone
 
 import duckdb
 
+
+def first_env(*names, default=''):
+    for name in names:
+        value = str(os.getenv(name, '')).strip()
+        if value:
+            return value
+    return default
+
+
+def clean_prefix(value):
+    return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--overture-release', default=os.getenv('OVERTURE_RELEASE', ''))
 parser.add_argument('--fsq-release', default=os.getenv('FSQ_RELEASE_LABEL', ''))
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 args = parser.parse_args()
 
-BUCKET = os.environ['B2_DATA_BUCKET_NAME']
-ENDPOINT = os.environ['B2_DATA_S3_ENDPOINT'].replace('https://', '').replace('http://', '').rstrip('/')
-KEY_ID = os.getenv('B2_DATA_KEY_ID') or os.environ['B2_DATA_APPLICATION_KEY_ID']
-KEY = os.environ['B2_DATA_APPLICATION_KEY']
-REGION = os.getenv('B2_DATA_S3_REGION', 'us-west-004')
+BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
+ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
+ENDPOINT = ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
+KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
+KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
+REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
+DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+if not ENDPOINT or not KEY_ID or not KEY:
+    raise RuntimeError('B2 endpoint and credentials are required.')
 if not args.overture_release or not args.fsq_release:
     raise RuntimeError('Set --overture-release and --fsq-release to mirrored B2 release labels.')
 
@@ -41,11 +58,14 @@ CREATE OR REPLACE SECRET b2_data_secret (
 );
 """)
 
+
 def columns(path):
     return {row[0] for row in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{path}', union_by_name=true, hive_partitioning=true) LIMIT 0").fetchall()}
 
+
 def expr(cols, name, expression, fallback='NULL'):
     return expression if name in cols else fallback
+
 
 def category_case(raw_expr):
     value = f"lower(coalesce(cast({raw_expr} as varchar), ''))"
@@ -69,18 +89,22 @@ def category_case(raw_expr):
     END
     """
 
+
 def clean_name(expression):
     return f"nullif(trim(regexp_replace(cast({expression} as varchar), '\\s+', ' ', 'g')), '')"
+
 
 def name_key(expression):
     return f"regexp_replace(lower(coalesce({expression}, '')), '[^a-z0-9]+', '', 'g')"
 
+
 def safe_country(expression):
     return f"CASE WHEN regexp_matches(upper(coalesce(cast({expression} as varchar), '')), '^[A-Z]{{2}}$') THEN upper(cast({expression} as varchar)) ELSE 'ZZ' END"
 
-out_root = f"s3://{BUCKET}/staged/places/schema=v1/snapshot={args.snapshot}"
 
-overture_path = f"s3://{BUCKET}/raw/overture/release={args.overture_release}/theme=places/type=place/**/*.parquet"
+out_root = f"s3://{BUCKET}/{DATA_PREFIX}/staged/places/schema=v1/snapshot={args.snapshot}"
+
+overture_path = f"s3://{BUCKET}/{DATA_PREFIX}/raw/overture/release={args.overture_release}/theme=places/type=place/**/*.parquet"
 o_cols = columns(overture_path)
 for required in ('id', 'names', 'geometry'):
     if required not in o_cols:
@@ -140,7 +164,7 @@ TO '{out_root}'
 """)
 print('staged Overture')
 
-fsq_path = f"s3://{BUCKET}/raw/fsq/release={args.fsq_release}/places/**/*.parquet"
+fsq_path = f"s3://{BUCKET}/{DATA_PREFIX}/raw/fsq/release={args.fsq_release}/places/**/*.parquet"
 f_cols = columns(fsq_path)
 fsq_id_col = 'fsq_place_id' if 'fsq_place_id' in f_cols else 'id' if 'id' in f_cols else None
 if not fsq_id_col or 'name' not in f_cols or 'latitude' not in f_cols or 'longitude' not in f_cols:
