@@ -99,20 +99,22 @@ async function box(locator) {
 }
 
 async function assertFeedGeometry(page, projectName) {
-  const header = await box(page.getByTestId('feed-header'))
   const stream = await box(page.getByTestId('feed-stream'))
   const post = await box(page.getByTestId('feed-post').first())
   const tabs = await box(page.getByTestId('feed-tabs'))
   const search = await box(page.getByTestId('feed-search'))
   const composer = await box(page.getByTestId('feed-composer'))
 
-  expect(stream.y).toBeGreaterThanOrEqual(header.y + header.height - 1)
+  const controlsBottom = Math.max(tabs.y + tabs.height, search.y + search.height)
+  expect(stream.y).toBeGreaterThanOrEqual(controlsBottom - 1)
 
   if (projectName === 'figma-desktop') {
     expectNear(post.x, 527, 2)
     expectNear(post.y, 108, 2)
     expectNear(post.width, 469, 1)
     expect(post.height).toBeGreaterThanOrEqual(511)
+    expectNear(tabs.x, 684.31, 2)
+    expectNear(tabs.y, 38.99, 2)
     expectNear(tabs.width, 152, 1)
     expectNear(tabs.height, 45.76, 1)
     expectNear(search.x, 1064, 2)
@@ -202,10 +204,10 @@ test('Feed and Map preserve the approved Figma composition', async ({ page }, te
 
     await expect(page.getByTestId('feed-screen')).toHaveAttribute('data-view', 'map')
     await assertMapGeometry(page, testInfo.project.name)
+    await page.addStyleTag({ content: '.location-map-tiles { visibility: hidden !important; }' })
     await expect(page).toHaveScreenshot('map-route.png', {
       animations: 'disabled',
       fullPage: false,
-      mask: [page.locator('.location-map-canvas')],
       maxDiffPixelRatio: 0.012
     })
   } finally {
