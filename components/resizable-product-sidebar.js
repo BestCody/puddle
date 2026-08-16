@@ -87,7 +87,7 @@ export function ResizableProductSidebar({ className = 'minimal-product-sidebar',
   const expanded = width >= LABEL_MIN_WIDTH
 
   return <aside className={`product-sidebar ${className}${expanded ? ' is-expanded' : ' is-collapsed'}`} data-sidebar-width={width}>
-    <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" /></div>
+    <div className="minimal-sidebar-logo"><PuddleLogo compact href="/discover" variant="outline" /></div>
     <ProductNav avatarUrl={avatarUrl} />
     <div
       className="minimal-sidebar-resizer"
