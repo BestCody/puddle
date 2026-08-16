@@ -40,7 +40,7 @@ function unavailableFeed(session, filters) {
       source: 'supabase-relational',
       relationalServed: 0,
       googleUiKitEligible: 0,
-      overlayRpc: 'r2_discovery_overlay_v1',
+      overlayRpc: 'r2_discovery_overlay_v2',
       timings: { queryMs: 0, totalMs: 0 }
     }
   }
@@ -53,7 +53,7 @@ export default async function DiscoverPage({ searchParams }) {
     const feedFilters = {
       kind: 'place',
       date: 'any',
-      distance: Number.isFinite(requestedDistance) && requestedDistance > 0 ? Math.min(100, requestedDistance) : 10,
+      distance: Number.isFinite(requestedDistance) && requestedDistance > 0 ? requestedDistance : 10,
       limit: 12,
       q: '',
       category: textParam(params?.category, 40),
