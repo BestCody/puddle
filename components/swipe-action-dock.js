@@ -1,7 +1,7 @@
 "use client"
 
 function UndoIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 7.2H4.2V3M4.5 7.1A8.1 8.1 0 1 1 4 16"/><path d="m4.2 7.2 4-4"/></svg>
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 7-5 5 5 5"/><path d="M5 12h12"/></svg>
 }
 function PassIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -22,21 +22,17 @@ const actions = [
 
 export function SwipeActionDock({ onUndo, onPass, onSave, onPerfect, canUndo, busy }) {
   const handlers = { undo: onUndo, pass: onPass, save: onSave, perfect: onPerfect }
-  return (
-    <div className="minimal-swipe-actions" aria-label="Swipe controls">
-      {actions.map(({ key, label, Icon }) => (
-        <button
-          className={`minimal-swipe-action is-${key}`}
-          type="button"
-          onClick={handlers[key]}
-          disabled={busy || (key === 'undo' && !canUndo)}
-          aria-label={label}
-          key={key}
-        >
-          <span><Icon /></span>
-          <small>{label}</small>
-        </button>
-      ))}
-    </div>
-  )
+  return <div className="figma-swipe-actions minimal-swipe-actions" aria-label="Swipe controls">
+    {actions.map(({ key, label, Icon }) => <button
+      className={`minimal-swipe-action is-${key}`}
+      type="button"
+      onClick={handlers[key]}
+      disabled={busy || (key === 'undo' && !canUndo)}
+      aria-label={label}
+      key={key}
+    >
+      <span><Icon /></span>
+      <small>{label}</small>
+    </button>)}
+  </div>
 }
