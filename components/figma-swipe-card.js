@@ -33,7 +33,7 @@ function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
     return () => { window.removeEventListener('keydown', keydown); previous?.focus?.() }
   }, [onClose])
 
-  return <div className="minimal-details-backdrop figma-swipe-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+  return <div className="figma-swipe-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section className="figma-swipe-details" role="dialog" aria-modal="true" aria-label={`Full details for ${item.title}`}>
       <button ref={close} type="button" className="figma-swipe-details-close" onClick={onClose} aria-label="Close details">×</button>
       {photoUrls.length ? <div className="figma-swipe-details-gallery">{photoUrls.slice(0, 3).map((url, index) => <img src={url} alt={index ? `${item.title} photo ${index + 1}` : item.title} key={url} />)}</div> : null}
@@ -120,7 +120,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
 
   return <>
     <article
-      className={`figma-swipe-card minimal-swipe-card${dragging ? ' is-dragging' : ''}`}
+      className={`figma-swipe-card${dragging ? ' is-dragging' : ''}`}
       style={{ transform: `translateX(${dragX}px) rotate(${dragX / 30}deg)` }}
       onPointerDown={pointerDown}
       onPointerMove={pointerMove}
@@ -142,7 +142,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       <div className="figma-swipe-card-copy"><h1>{item.title}</h1><p>{addressLabel(item)}</p></div>
       <strong className="figma-swipe-drag-label is-pass" style={{ opacity: Math.max(0, -dragX / 90) }}>PASS</strong>
       <strong className="figma-swipe-drag-label is-save" style={{ opacity: Math.max(0, dragX / 90) }}>SAVE</strong>
-      <button className="figma-swipe-details-button minimal-swipe-details-button" type="button" aria-label="Open details" onClick={() => setDetailsOpen(true)} disabled={busy}>+</button>
+      <button className="figma-swipe-details-button" type="button" aria-label="Open details" onClick={() => setDetailsOpen(true)} disabled={busy}>+</button>
     </article>
     {detailsOpen ? <DetailsDialog item={item} photoUrls={photoUrls} busy={busy} onChoice={async (action) => { setDetailsOpen(false); await choose(action) }} onClose={() => setDetailsOpen(false)} /> : null}
   </>
