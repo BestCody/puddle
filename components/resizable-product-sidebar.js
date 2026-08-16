@@ -8,7 +8,7 @@ const STORAGE_KEY = 'puddle:product-sidebar-width'
 const MIN_WIDTH = 88
 const MAX_WIDTH = 288
 const LABEL_MIN_WIDTH = 196
-const DEFAULT_WIDTH = 288
+const DEFAULT_WIDTH = 280
 
 function clampWidth(value) {
   const parsed = Number(value)
