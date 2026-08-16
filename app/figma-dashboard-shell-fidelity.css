@@ -1,5 +1,13 @@
 /* Expanded desktop sidebar alignment shared by the rebuilt Figma screens. */
 @media (min-width: 761px) {
+  /* At the authored 832px Figma viewport this is unchanged. On shorter
+     desktop viewports the fixed sidebar must still end at the viewport so
+     Settings remains reachable instead of sitting below the fold. */
+  .figma-dashboard-sidebar {
+    height: 100vh;
+    min-height: 0;
+  }
+
   .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-nav {
     left: 27px;
   }
