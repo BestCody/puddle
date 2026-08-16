@@ -17,21 +17,37 @@ import boto3
 import duckdb
 from botocore.client import Config
 
+
+def first_env(*names, default=''):
+    for name in names:
+        value = str(os.getenv(name, '')).strip()
+        if value:
+            return value
+    return default
+
+
+def clean_prefix(value):
+    return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
-parser.add_argument('--bootstrap-prefix', default=os.getenv('GLOBAL_BOOTSTRAP_B2_PREFIX', 'bootstrap/current'))
+parser.add_argument('--bootstrap-prefix', default=os.getenv('GLOBAL_BOOTSTRAP_B2_PREFIX', 'data/snapshots/bootstrap/current'))
 parser.add_argument('--countries', default=os.getenv('GLOBAL_LOCATION_COUNTRIES', ''))
 args = parser.parse_args()
 
-BUCKET = os.environ['B2_DATA_BUCKET_NAME']
-ENDPOINT_URL = os.environ['B2_DATA_S3_ENDPOINT'].rstrip('/')
+BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
+ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
 ENDPOINT = ENDPOINT_URL.replace('https://', '').replace('http://', '')
-KEY_ID = os.getenv('B2_DATA_KEY_ID') or os.environ['B2_DATA_APPLICATION_KEY_ID']
-KEY = os.environ['B2_DATA_APPLICATION_KEY']
-REGION = os.getenv('B2_DATA_S3_REGION', 'us-west-004')
-STAGED_PREFIX = f'staged/places/schema=v1/snapshot={args.snapshot}'
-OUTPUT_PREFIX = f'normalized/schema=v1/snapshot={args.snapshot}'
+KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
+KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
+REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
+DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+STAGED_PREFIX = f'{DATA_PREFIX}/staged/places/schema=v1/snapshot={args.snapshot}'
+OUTPUT_PREFIX = f'{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}'
 NAMESPACE = uuid.UUID(os.getenv('PUDDLE_LOCATION_UUID_NAMESPACE', '4cc1f63b-1a05-5ca2-9f15-5c860930f7d7'))
+if not ENDPOINT_URL or not KEY_ID or not KEY:
+    raise RuntimeError('B2 endpoint and credentials are required.')
 
 s3 = boto3.client('s3', endpoint_url=ENDPOINT_URL, aws_access_key_id=KEY_ID, aws_secret_access_key=KEY, config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}))
 
@@ -61,7 +77,8 @@ def country_codes():
             for country_page in nested.paginate(Bucket=BUCKET, Prefix=source_prefix, Delimiter='/'):
                 for row in country_page.get('CommonPrefixes', []):
                     match = re.search(r'country_code=([^/]+)/$', row['Prefix'])
-                    if match: values.add(match.group(1).upper())
+                    if match:
+                        values.add(match.group(1).upper())
     return sorted(values)
 
 
@@ -77,6 +94,7 @@ def slug_base(value):
 
 def stable_slug(name, location_id):
     return f'{slug_base(name)}-{str(location_id).replace("-", "")[:8]}'
+
 
 countries = country_codes()
 if not countries:
@@ -102,9 +120,10 @@ CREATE OR REPLACE SECRET b2_data_secret (
 );
 """)
 
-bootstrap_locations = f"s3://{BUCKET}/{args.bootstrap_prefix.strip('/')}/locations.parquet"
-bootstrap_links = f"s3://{BUCKET}/{args.bootstrap_prefix.strip('/')}/location_source_links.parquet"
-bootstrap_available = object_exists(f"{args.bootstrap_prefix.strip('/')}/locations.parquet") and object_exists(f"{args.bootstrap_prefix.strip('/')}/location_source_links.parquet")
+bootstrap_prefix = clean_prefix(args.bootstrap_prefix)
+bootstrap_locations = f"s3://{BUCKET}/{bootstrap_prefix}/locations.parquet"
+bootstrap_links = f"s3://{BUCKET}/{bootstrap_prefix}/location_source_links.parquet"
+bootstrap_available = object_exists(f"{bootstrap_prefix}/locations.parquet") and object_exists(f"{bootstrap_prefix}/location_source_links.parquet")
 if bootstrap_available:
     con.execute(f"CREATE OR REPLACE TEMP VIEW bootstrap_locations AS SELECT * FROM read_parquet('{bootstrap_locations}')")
     con.execute(f"CREATE OR REPLACE TEMP VIEW bootstrap_links AS SELECT source, cast(source_place_id AS varchar) source_id, cast(location_id AS varchar) location_id FROM read_parquet('{bootstrap_links}')")
