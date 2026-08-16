@@ -97,7 +97,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
         <div className="figma-saved-detail-actions" aria-label="Saved place actions">
           <form action={togglePinnedPlace}><HiddenLocation location={location} slug={slug} /><button className="figma-saved-pin" type="submit">{isPinned ? 'Unpin' : 'Pin'}</button></form>
           <details className="figma-saved-detail-share">
-            <summary aria-label="Share saved place"><span aria-hidden="true">↥</span></summary>
+            <summary aria-label="Share saved place"><img src="/figma/saved-place-share.svg" alt="" aria-hidden="true" /></summary>
             <div>{friendList.length ? friendList.map((friend) => <form action={shareSavedPlace} key={friend.id}><HiddenLocation location={location} slug={slug} /><input type="hidden" name="friend_id" value={friend.id} /><button type="submit">{friend.display_name || friend.username || 'Friend'}</button></form>) : <p>Add a friend before sharing.</p>}</div>
           </details>
           <form action={toggleSavedPlace}><HiddenLocation location={location} slug={slug} /><button className="figma-saved-unsave" type="submit">{isSaved ? 'Unsave' : 'Save'}</button></form>
