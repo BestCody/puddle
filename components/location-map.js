@@ -98,6 +98,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(initialPoints[0]?.id || null)
   const [heatmapEnabled, setHeatmapEnabled] = useState(Boolean(passActive))
+  const [visibleHeatmap, setVisibleHeatmap] = useState(heatmapPoints)
   const [cataloguePoints, setCataloguePoints] = useState([])
 
   useEffect(() => {
@@ -114,11 +115,8 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     const timer = window.setTimeout(async () => {
       const bounds = viewportBounds(center, zoom, viewport)
       const params = new URLSearchParams({
-        north: bounds.north.toFixed(6),
-        south: bounds.south.toFixed(6),
-        west: bounds.west.toFixed(6),
-        east: bounds.east.toFixed(6),
-        zoom: String(zoom)
+        north: bounds.north.toFixed(6), south: bounds.south.toFixed(6),
+        west: bounds.west.toFixed(6), east: bounds.east.toFixed(6), zoom: String(zoom)
       })
       try {
         const response = await fetch(`/api/map/viewport?${params}`, { cache: 'no-store', signal: controller.signal })
@@ -130,11 +128,29 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         if (error?.name !== 'AbortError') console.warn('Could not refresh visible Puddle locations.', { message: error?.message || 'unknown error' })
       }
     }, 280)
-    return () => {
-      window.clearTimeout(timer)
-      controller.abort()
-    }
+    return () => { window.clearTimeout(timer); controller.abort() }
   }, [center.latitude, center.longitude, filter, loadCatalogue, selectingForPost, viewport.height, viewport.width, zoom])
+
+  useEffect(() => {
+    if (!passActive || !heatmapEnabled) return undefined
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      const bounds = viewportBounds(center, zoom, viewport)
+      const params = new URLSearchParams({
+        north: bounds.north.toFixed(6), south: bounds.south.toFixed(6),
+        west: bounds.west.toFixed(6), east: bounds.east.toFixed(6), zoom: String(zoom)
+      })
+      try {
+        const response = await fetch(`/api/map/heatmap?${params}`, { signal: controller.signal })
+        if (!response.ok) throw new Error(`Map heatmap returned ${response.status}`)
+        const payload = await response.json()
+        setVisibleHeatmap(Array.isArray(payload?.cells) ? payload.cells : [])
+      } catch (error) {
+        if (error?.name !== 'AbortError') console.warn('Could not refresh visible Pass heatmap.', { message: error?.message || 'unknown error' })
+      }
+    }, 320)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [center.latitude, center.longitude, heatmapEnabled, passActive, viewport.height, viewport.width, zoom])
 
   const allPoints = useMemo(() => {
     const merged = new Map()
@@ -142,8 +158,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     for (const point of initialPoints) {
       const existing = merged.get(point.id)
       merged.set(point.id, existing ? {
-        ...existing,
-        ...point,
+        ...existing, ...point,
         photo_url: point.photo_url || existing.photo_url,
         states: [...new Set([...(existing.states || []), ...(point.states || [])])]
       } : point)
@@ -154,7 +169,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const points = useMemo(() => filter === 'all' ? allPoints : allPoints.filter((point) => point.states.includes(filter)), [allPoints, filter])
   const selected = allPoints.find((point) => point.id === selectedId) || points[0] || null
   const projectedCenter = project(center.latitude, center.longitude, zoom)
-  const maxHeat = Math.max(1, ...heatmapPoints.map((point) => Number(point.save_count) || 0))
+  const maxHeat = Math.max(1, ...visibleHeatmap.map((point) => Number(point.save_count) || 0))
 
   function changeFilter(next) {
     setFilter(next)
@@ -174,10 +189,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     setCenter(next)
   }
   function pointerUp(event) { dragRef.current = null; try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {} }
-  function wheel(event) {
-    event.preventDefault()
-    setZoom((value) => clamp(value + (event.deltaY < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM))
-  }
+  function wheel(event) { event.preventDefault(); setZoom((value) => clamp(value + (event.deltaY < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM)) }
   function locate() {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition((position) => { setCenter({ latitude: position.coords.latitude, longitude: normalizeLongitude(position.coords.longitude) }); setZoom(14) }, () => {}, { maximumAge: 300000, timeout: 8000 })
@@ -194,7 +206,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     <div className="location-map-layout">
       <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onWheel={wheel} aria-label="Interactive map of Puddle locations">
         <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
-        {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{heatmapPoints.map((point) => {
+        {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{visibleHeatmap.map((point) => {
           const projected = project(point.latitude, point.longitude, zoom)
           const x = projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2
           const y = projected.y - projectedCenter.y + viewport.height / 2
