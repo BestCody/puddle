@@ -3,6 +3,10 @@ import { admin, completeProfileDirect, createConfirmedUser, signInThroughUi } fr
 
 const seedSlugs = ['moonlight-cafe', 'sunset-steps', 'laneway-gallery', 'harbour-activity-deck']
 
+async function bestEffort(operation) {
+  try { await operation } catch {}
+}
+
 test('reviews, request cancellation, category overflow, and catalogue map search work end to end', async ({ page }) => {
   test.setTimeout(90_000)
   const owner = await createConfirmedUser({ displayName: 'Completed UI Owner' })
@@ -89,11 +93,11 @@ test('reviews, request cancellation, category overflow, and catalogue map search
     await expect(page.getByTestId('feed-map-canvas').getByText('Moonlight Café', { exact: true }).first()).toBeVisible()
     await expect(page.getByTestId('feed-map-canvas').getByText('Puddle', { exact: true }).first()).toBeVisible()
   } finally {
-    await admin.from('location_reviews').delete().eq('author_id', owner.user.id).catch(() => {})
-    await admin.from('friendships').delete().or(`requester_id.eq.${owner.user.id},addressee_id.eq.${owner.user.id}`).catch(() => {})
-    await admin.from('friendships').delete().or(`requester_id.eq.${friend.user.id},addressee_id.eq.${friend.user.id}`).catch(() => {})
-    await admin.from('user_content_states').delete().eq('profile_id', owner.user.id).catch(() => {})
-    await admin.auth.admin.deleteUser(owner.user.id).catch(() => {})
-    await admin.auth.admin.deleteUser(friend.user.id).catch(() => {})
+    await bestEffort(admin.from('location_reviews').delete().eq('author_id', owner.user.id))
+    await bestEffort(admin.from('friendships').delete().or(`requester_id.eq.${owner.user.id},addressee_id.eq.${owner.user.id}`))
+    await bestEffort(admin.from('friendships').delete().or(`requester_id.eq.${friend.user.id},addressee_id.eq.${friend.user.id}`))
+    await bestEffort(admin.from('user_content_states').delete().eq('profile_id', owner.user.id))
+    await bestEffort(admin.auth.admin.deleteUser(owner.user.id))
+    await bestEffort(admin.auth.admin.deleteUser(friend.user.id))
   }
 })
