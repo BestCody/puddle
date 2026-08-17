@@ -1,0 +1,55 @@
+name: Resume global location activation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/trigger-global-location-resume'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: global-location-resume
+  cancel-in-progress: true
+
+jobs:
+  resume:
+    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
+      B2_DATA_PREFIX: data
+      GLOBAL_BOOTSTRAP_B2_PREFIX: data/snapshots/bootstrap/current
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install bulk data dependencies
+        run: python -m pip install --disable-pip-version-check duckdb boto3 numpy
+      - id: snapshot
+        shell: bash
+        run: echo "snapshot=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      - name: Resolve cross-source entities and preserve existing Puddle UUIDs
+        run: python scripts/global-data/resolve_global_entities.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --bootstrap-prefix='data/snapshots/bootstrap/current'
+        env:
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+          GLOBAL_LOCATION_COUNTRIES: ${{ vars.GLOBAL_LOCATION_COUNTRIES }}
+      - name: Carry current photo and Google-ID overlays into the snapshot
+        run: python scripts/global-data/build_bootstrap_overlays.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --bootstrap-prefix='data/snapshots/bootstrap/current'
+      - name: Build, validate and atomically activate blue/green OpenSearch index
+        run: python scripts/global-data/index_opensearch.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --alias=locations-active
+        env:
+          GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
+          OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
+          OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+          OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
+          OPENSEARCH_LOCATION_SHARDS: ${{ vars.OPENSEARCH_LOCATION_SHARDS || '6' }}
+          OPENSEARCH_LOCATION_REPLICAS: ${{ vars.OPENSEARCH_LOCATION_REPLICAS || '2' }}
