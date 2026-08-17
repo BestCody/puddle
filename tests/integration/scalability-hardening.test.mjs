@@ -9,6 +9,7 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   const ui = await read('components/figma-social-hub.js')
   const migration = await read('supabase/migrations/10065_scalability_hardening.sql')
   const edges = await read('supabase/migrations/10068_scalability_edge_hardening.sql')
+  const bounds = await read('supabase/migrations/10069_scalability_work_bounds.sql')
 
   assert.match(data, /social_conversations_v2/)
   assert.match(data, /social_messages_v2/)
@@ -20,6 +21,7 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   assert.match(migration, /unread_count bigint not null default 0/)
   assert.match(migration, /order by m\.id desc limit page_limit/)
   assert.match(edges, /next_unread/)
+  assert.match(bounds, /latest_id bigint/)
 })
 
 test('friend/profile search is trigram-backed and mutual friends are set-based', async () => {
@@ -53,22 +55,28 @@ test('Pass heatmap is viewport-scoped and incrementally maintained', async () =>
   assert.match(edges, /profiles_density_delete_v1/)
 })
 
-test('Pass saver listing is keyset-paged with a separate count', async () => {
+test('Pass saver listing is keyset-paged and its headline count is incrementally maintained', async () => {
   const studio = await read('app/studio/places/[id]/page.js')
   const migration = await read('supabase/migrations/10065_scalability_hardening.sql')
+  const bounds = await read('supabase/migrations/10069_scalability_work_bounds.sql')
 
   assert.match(studio, /pass_location_savers_v2/)
   assert.match(studio, /pass_location_saver_count_v2/)
+  assert.match(studio, /total .*save/)
   assert.match(migration, /\(s\.created_at,s\.profile_id\)<\(before_saved_at,before_profile_id\)/)
   assert.match(migration, /limit page_limit/)
+  assert.match(bounds, /create table if not exists public\.location_save_counts/)
+  assert.match(bounds, /adjust_location_save_count_v1/)
+  assert.match(bounds, /from public\.location_save_counts c/)
 })
 
-test('social feed uses exact keyset pages, bounded comments, and lazy friend hydration', async () => {
+test('social feed uses exact keyset pages, indexed top-N comments, and lazy friend hydration', async () => {
   const feed = await read('lib/app/social-feed-data.js')
   const page = await read('app/map/page.js')
   const share = await read('app/map/feed-share-menu.js')
   const cursor = await read('supabase/migrations/10067_feed_keyset_pagination.sql')
   const edges = await read('supabase/migrations/10068_scalability_edge_hardening.sql')
+  const bounds = await read('supabase/migrations/10069_scalability_work_bounds.sql')
 
   assert.match(feed, /DEFAULT_PAGE_SIZE = 25/)
   assert.match(feed, /social_feed_post_ids_v2/)
@@ -82,6 +90,9 @@ test('social feed uses exact keyset pages, bounded comments, and lazy friend hyd
   assert.match(share, /More friends/)
   assert.match(cursor, /\(p\.created_at, p\.id\) < \(before_created_at, before_post_id\)/)
   assert.match(edges, /create or replace function public\.social_friend_picker_v2/)
+  assert.match(bounds, /cross join lateral/)
+  assert.match(bounds, /order by comment\.created_at desc, comment\.id desc/)
+  assert.doesNotMatch(bounds, /row_number\(\) over/)
 })
 
 test('global discovery failures cannot stampede the relational database', async () => {
