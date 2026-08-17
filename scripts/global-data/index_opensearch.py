@@ -105,7 +105,7 @@ def request(method, path, payload=None, content_type='application/json', retries
 mapping = {
     'settings': {
         'number_of_shards': int(os.getenv('OPENSEARCH_LOCATION_SHARDS', '6')),
-        'number_of_replicas': int(os.getenv('OPENSEARCH_LOCATION_REPLICAS', '1')),
+        'number_of_replicas': int(os.getenv('OPENSEARCH_LOCATION_REPLICAS', '2')),
         'refresh_interval': '-1',
         'index.mapping.total_fields.limit': 1000,
     },
@@ -121,8 +121,8 @@ mapping = {
             'region': {'type': 'keyword'}, 'region_code': {'type': 'keyword'}, 'city': {'type': 'keyword'},
             'neighborhood': {'type': 'keyword'}, 'postal_code': {'type': 'keyword'}, 'address': {'type': 'text'},
             'timezone': {'type': 'keyword'}, 'timezone_verified': {'type': 'boolean'},
-            'opening_hours': {'type': 'flattened'}, 'price_level': {'type': 'byte'}, 'amenities': {'type': 'keyword'},
-            'accessibility': {'type': 'flattened'}, 'accessible': {'type': 'boolean'},
+            'opening_hours': {'type': 'object', 'enabled': False}, 'price_level': {'type': 'byte'}, 'amenities': {'type': 'keyword'},
+            'accessibility': {'type': 'object', 'enabled': False}, 'accessible': {'type': 'boolean'},
             'website_url': {'type': 'keyword', 'index': False}, 'phone_public': {'type': 'keyword', 'index': False},
             'brand_id': {'type': 'keyword'}, 'brand_name': {'type': 'keyword'},
             'source_parent_place_id': {'type': 'keyword'}, 'duplicate_group_key': {'type': 'keyword'},
@@ -141,7 +141,7 @@ mapping = {
 }
 
 request('PUT', f'/{INDEX}', mapping)
-print(f'created {INDEX}')
+print(f'created {INDEX}', flush=True)
 
 con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
@@ -269,7 +269,7 @@ while True:
     batch_failed = sum(1 for item in items if item.get('index', {}).get('status', 500) >= 300)
     indexed += len(rows) - batch_failed
     failed += batch_failed
-    print(f'indexed={indexed} failed={failed}')
+    print(f'indexed={indexed} failed={failed}', flush=True)
     if batch_failed:
         sample = [item for item in items if item.get('index', {}).get('status', 500) >= 300][:5]
         raise RuntimeError(f'OpenSearch bulk batch contained {batch_failed} failures: {json.dumps(sample)[:2000]}')
@@ -295,6 +295,7 @@ if category:
     if int(category_check.get('hits', {}).get('total', {}).get('value', 0)) < 1:
         raise RuntimeError('Index validation failed: sample category query returned no results.')
 location = sample_document.get('location') or {}
+geo_validated = False
 if location.get('lat') is not None and location.get('lon') is not None:
     geo_check = request('POST', f'/{INDEX}/_search', {
         'size': 1,
@@ -302,25 +303,43 @@ if location.get('lat') is not None and location.get('lon') is not None:
     })
     if int(geo_check.get('hits', {}).get('total', {}).get('value', 0)) < 1:
         raise RuntimeError('Index validation failed: sample geo-radius query returned no results.')
+    geo_validated = True
 
 request('PUT', f'/{INDEX}/_settings', {'index': {'refresh_interval': os.getenv('OPENSEARCH_REFRESH_INTERVAL', '30s')}})
 
-try:
-    current = request('GET', f'/_alias/{args.alias}')
-    old_indices = list(current.keys())
-except RuntimeError as error:
-    if '404' in str(error):
-        old_indices = []
-    else:
-        raise
-actions = [{'remove': {'index': old, 'alias': args.alias}} for old in old_indices if old != INDEX]
-actions.append({'add': {'index': INDEX, 'alias': args.alias}})
+settings = request('GET', f'/{INDEX}/_settings')
+index_settings = settings.get(INDEX, {}).get('settings', {}).get('index', {})
+shards = int(index_settings.get('number_of_shards', 0))
+replicas = int(index_settings.get('number_of_replicas', -1))
+expected_shards = int(os.getenv('OPENSEARCH_LOCATION_SHARDS', '6'))
+expected_replicas = int(os.getenv('OPENSEARCH_LOCATION_REPLICAS', '2'))
+if shards != expected_shards:
+    raise RuntimeError(f'Index validation failed: expected {expected_shards} primary shards, got {shards}.')
+if replicas != expected_replicas:
+    raise RuntimeError(f'Index validation failed: expected {expected_replicas} replicas, got {replicas}.')
+health = request('GET', f'/_cluster/health/{INDEX}')
+health_status = str(health.get('status', '')).lower()
+if health_status == 'red' or not health_status:
+    raise RuntimeError(f'Index validation failed: unacceptable cluster health: {json.dumps(health)[:2000]}')
+
+# Atomically remove the production alias from any previous blue/green index and
+# add it to the newly validated index. Avoid GET /_alias/<name>: the production
+# indexer role can manage aliases, but that introspection endpoint is not granted.
+actions = [
+    {'remove': {'index': 'locations-v1-*', 'alias': args.alias, 'must_exist': False}},
+    {'add': {'index': INDEX, 'alias': args.alias}},
+]
 request('POST', '/_aliases', {'actions': actions})
 
-# Verify the alias actually resolves to the validated index before publishing the active pointer.
-alias_after = request('GET', f'/_alias/{args.alias}')
-if INDEX not in alias_after:
-    raise RuntimeError(f'OpenSearch alias validation failed: {args.alias} does not point at {INDEX}.')
+# Validate production through the serving alias itself before publishing B2's
+# active pointer. This tests the same path the application will use.
+alias_name = urllib.parse.quote(args.alias, safe='-_.')
+alias_count = int(request('GET', f'/{alias_name}/_count').get('count', -1))
+if alias_count != indexed:
+    raise RuntimeError(f'OpenSearch alias validation failed: alias count={alias_count}, indexed={indexed}.')
+alias_search = request('POST', f'/{alias_name}/_search', {'size': 1, 'query': {'match_all': {}}})
+if not alias_search.get('hits', {}).get('hits'):
+    raise RuntimeError('OpenSearch alias validation failed: production search returned no documents.')
 
 active = {
     'index': INDEX,
@@ -328,7 +347,18 @@ active = {
     'documents': indexed,
     'snapshot': args.snapshot,
     'activatedAt': datetime.now(timezone.utc).isoformat(),
-    'validation': {'count': True, 'idLookup': True, 'text': True, 'category': bool(category), 'geo': True},
+    'validation': {
+        'count': True,
+        'idLookup': True,
+        'text': True,
+        'category': bool(category),
+        'geo': geo_validated,
+        'aliasCount': True,
+        'aliasSearch': True,
+        'shards': shards,
+        'replicas': replicas,
+        'health': health_status,
+    },
 }
 b2 = boto3.client(
     's3', endpoint_url=B2_ENDPOINT_URL, aws_access_key_id=B2_KEY_ID, aws_secret_access_key=B2_KEY,
@@ -340,4 +370,4 @@ b2.put_object(
     Body=(json.dumps(active, indent=2) + '\n').encode(),
     ContentType='application/json',
 )
-print(json.dumps(active, indent=2))
+print(json.dumps(active, indent=2), flush=True)
