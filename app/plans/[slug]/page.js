@@ -23,7 +23,7 @@ function categoryIcon(value) {
 }
 
 function folderKey(item) {
-  return item?.folder || item?.kind || 'Saved'
+  return item?.folder || item?.category || item?.kind || 'Saved'
 }
 
 function dashboardSimilarHref(item) {
