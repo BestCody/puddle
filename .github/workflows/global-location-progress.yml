@@ -29,21 +29,26 @@ jobs:
           import os, re, boto3
           s3=boto3.client('s3', endpoint_url=os.environ['B2_DATA_S3_ENDPOINT'], aws_access_key_id=os.environ['B2_DATA_APPLICATION_KEY_ID'], aws_secret_access_key=os.environ['B2_DATA_APPLICATION_KEY'])
           bucket=os.environ['B2_DATA_BUCKET_NAME']
-          prefix='data/normalized/schema=v1/snapshot=2026-08-17/'
+          normalized='data/normalized/schema=v1/snapshot=2026-08-17/'
+          staged='data/staged/places/schema=v1/snapshot=2026-08-17/'
           paginator=s3.get_paginator('list_objects_v2')
-          locations=[]; crosswalk=[]; aliases=[]
-          for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+          expected=set()
+          for page in paginator.paginate(Bucket=bucket, Prefix=staged):
             for row in page.get('Contents',[]):
-              key=row['Key']
-              m=re.search(r'/country_code=([^/]+)/([^/]+)$', key)
+              m=re.search(r'/country_code=([^/]+)/',row['Key'])
+              if m: expected.add(m.group(1).upper())
+          locations=set(); crosswalk=set(); aliases=set()
+          for page in paginator.paginate(Bucket=bucket, Prefix=normalized):
+            for row in page.get('Contents',[]):
+              m=re.search(r'/country_code=([^/]+)/([^/]+)$',row['Key'])
               if not m: continue
-              country,name=m.groups()
-              if name=='locations.parquet': locations.append(country)
-              elif name=='source_crosswalk.parquet': crosswalk.append(country)
-              elif name=='location_aliases.parquet': aliases.append(country)
-          complete=sorted(set(locations)&set(crosswalk)&set(aliases))
-          print(f'locations_files={len(set(locations))}')
-          print(f'crosswalk_files={len(set(crosswalk))}')
-          print(f'alias_files={len(set(aliases))}')
+              country,name=m.groups(); country=country.upper()
+              if name=='locations.parquet': locations.add(country)
+              elif name=='source_crosswalk.parquet': crosswalk.add(country)
+              elif name=='location_aliases.parquet': aliases.add(country)
+          complete=locations&crosswalk&aliases
+          missing=sorted(expected-complete)
+          print(f'expected_country_partitions={len(expected)}')
           print(f'complete_country_partitions={len(complete)}')
-          print('last_complete=' + ','.join(complete[-20:]))
+          print(f'missing_country_partitions={len(missing)}')
+          print('missing=' + ','.join(missing))
