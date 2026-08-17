@@ -152,11 +152,12 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     await cancel.click()
     await expect(cancel).toHaveCount(0)
 
-    await page.goto('/map?view=map&q=restaurant')
-    await expect(page.getByLabel('Search all Puddle locations')).toHaveValue('restaurant')
+    await page.goto('/map?view=map')
     const map = page.getByTestId('feed-map-canvas')
-    await expect(map.locator('.location-map-marker.is-catalogue').first()).toBeVisible({ timeout: 30_000 })
-    await expect(map.locator('a').filter({ hasText: /./ }).first()).toBeVisible()
+    const catalogueMarker = map.locator('.location-map-marker.is-catalogue').first()
+    await expect(catalogueMarker).toBeVisible({ timeout: 30_000 })
+    await catalogueMarker.click()
+    await expect(map.getByRole('link', { name: 'Open details' })).toBeVisible()
   } finally {
     if (ownerCreated) await deleteDisposableAccount(page)
     if (friendCreated && friendPage) await deleteDisposableAccount(friendPage)
