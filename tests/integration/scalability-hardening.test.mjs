@@ -91,11 +91,14 @@ test('global discovery failures cannot stampede the relational database', async 
   assert.match(discovery, /FAILURE_THRESHOLD = 3/)
   assert.match(discovery, /CIRCUIT_COOLDOWN_MS = 60_000/)
   assert.match(discovery, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE \|\| 'false'/)
+  assert.match(discovery, /GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK \|\| 'false'/)
+  assert.match(discovery, /!legacyEnabled \|\| !emergencyEnabled/)
   assert.match(discovery, /nextRelationalFallbackAt/)
   assert.match(discovery, /global-location-stale-cache/)
   assert.match(discovery, /global-location-degraded/)
   assert.match(discovery, /markCached/)
   assert.match(env, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE=false/)
+  assert.match(env, /GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK=false/)
 })
 
 test('legacy social readers delegate to bounded v2 contracts', async () => {
