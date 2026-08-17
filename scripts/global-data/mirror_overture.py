@@ -3,7 +3,9 @@ import argparse
 import concurrent.futures
 import json
 import os
+import re
 import tempfile
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
@@ -13,8 +15,12 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 
-STAC_URL = 'https://stac.overturemaps.org/catalog.json'
+STAC_URLS = (
+    'https://stac.overturemaps.org/',
+    'https://stac.overturemaps.org/catalog.json',
+)
 SOURCE_BUCKET = 'overturemaps-us-west-2'
+RELEASE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}\.\d+$')
 
 
 def first_env(*names, default=''):
@@ -44,20 +50,49 @@ if not B2_ENDPOINT or not B2_KEY_ID or not B2_KEY:
     raise RuntimeError('B2 endpoint and credentials are required to mirror Overture.')
 
 
+def unsigned_source():
+    return boto3.client(
+        's3',
+        region_name='us-west-2',
+        config=Config(signature_version=UNSIGNED, retries={'max_attempts': 10, 'mode': 'adaptive'}),
+    )
+
+
 def latest_release():
-    with urllib.request.urlopen(STAC_URL, timeout=20) as response:
-        payload = json.load(response)
-    value = payload.get('latest')
-    if not value:
-        raise RuntimeError('Overture STAC catalog did not expose latest release.')
-    return str(value).rstrip('/').split('/')[-1]
+    errors = []
+    for url in STAC_URLS:
+        try:
+            request = urllib.request.Request(url, headers={'User-Agent': 'PuddleGlobalData/1.0'})
+            with urllib.request.urlopen(request, timeout=20) as response:
+                payload = json.load(response)
+            value = str(payload.get('latest') or '').strip().rstrip('/').split('/')[-1]
+            if RELEASE_RE.fullmatch(value):
+                return value
+            errors.append(f'{url}: missing/invalid latest value')
+        except Exception as error:
+            errors.append(f'{url}: {type(error).__name__}: {error}')
+
+    # STAC availability must not block production ingestion. The public Overture
+    # S3 bucket exposes release prefixes, so discover the newest valid release
+    # directly from the authoritative distribution bucket as a fallback.
+    source = unsigned_source()
+    releases = []
+    paginator = source.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=SOURCE_BUCKET, Prefix='release/', Delimiter='/'):
+        for row in page.get('CommonPrefixes', []):
+            value = row.get('Prefix', '').rstrip('/').split('/')[-1]
+            if RELEASE_RE.fullmatch(value):
+                releases.append(value)
+    if releases:
+        return max(releases)
+    raise RuntimeError('Unable to discover latest Overture release. ' + ' | '.join(errors))
 
 
 release = latest_release() if args.release == 'latest' else args.release.strip().rstrip('/')
 if not release:
     raise RuntimeError('Overture release is empty.')
 
-source = boto3.client('s3', region_name='us-west-2', config=Config(signature_version=UNSIGNED, retries={'max_attempts': 10, 'mode': 'adaptive'}))
+source = unsigned_source()
 destination = boto3.client(
     's3', endpoint_url=B2_ENDPOINT, aws_access_key_id=B2_KEY_ID, aws_secret_access_key=B2_KEY,
     config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}, max_pool_connections=max(16, args.workers * 2)),
