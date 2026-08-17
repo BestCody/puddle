@@ -39,6 +39,7 @@ CATALOG = first_env('FSQ_ICEBERG_CATALOG', default='open_h3')
 TABLE = first_env('FSQ_OS_TABLE', 'FSQ_ICEBERG_TABLE')
 DELTA_TABLE = first_env('FSQ_ICEBERG_DELTA_TABLE')
 RELEASE = first_env('FSQ_RELEASE_LABEL')
+RELEASE_LABEL_SOURCE = 'configured' if RELEASE else 'mirror_date'
 DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
 B2_ENDPOINT_URL = required(first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT'), 'B2 S3 endpoint')
 B2_ENDPOINT = B2_ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
@@ -134,12 +135,11 @@ id_candidates = {'fsq_place_id', 'id'}
 if not columns.intersection(id_candidates) or 'name' not in columns:
     raise RuntimeError(f'Resolved FSQ table {qualified} does not contain a recognizable place ID and name.')
 
+# date_refreshed is a per-place freshness field, not a dataset release identifier.
+# If the operator has not provided an FSQ release label, use the mirror date so the
+# B2 raw prefix describes when Puddle captured this bulk snapshot.
 if not RELEASE:
-    if 'date_refreshed' in columns:
-        value = con.execute(f"SELECT strftime(max(try_cast(date_refreshed AS TIMESTAMP)), '%Y-%m-%d') FROM {qualified}").fetchone()[0]
-        RELEASE = value or datetime.now(timezone.utc).date().isoformat()
-    else:
-        RELEASE = datetime.now(timezone.utc).date().isoformat()
+    RELEASE = datetime.now(timezone.utc).date().isoformat()
 
 raw_prefix = f's3://{B2_BUCKET}/{DATA_PREFIX}/raw/fsq/release={RELEASE}/places'
 con.execute(f"""
@@ -160,6 +160,7 @@ if DELTA_TABLE and connection_mode == 'iceberg_token':
 manifest = {
     'source': 'fsq_os',
     'release': RELEASE,
+    'releaseLabelSource': RELEASE_LABEL_SOURCE,
     'mirroredAt': datetime.now(timezone.utc).isoformat(),
     'connectionMode': connection_mode,
     'table': TABLE,
