@@ -13,6 +13,9 @@ on:
         required: false
         default: false
         type: boolean
+  push:
+    paths:
+      - '.github/trigger-migrate-open-photos-b2'
 
 permissions:
   contents: read
@@ -36,8 +39,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          args=(--apply "--limit=${{ inputs.limit }}")
-          if [[ "${{ inputs.delete_source }}" == "true" ]]; then
+          args=(--apply "--limit=${{ inputs.limit || '100000' }}")
+          if [[ "${{ inputs.delete_source || 'false' }}" == "true" ]]; then
             if [[ "${{ vars.B2_MEDIA_SOURCE_DELETION_ENABLED }}" != "true" ]]; then
               echo "Refusing source deletion: set repository variable B2_MEDIA_SOURCE_DELETION_ENABLED=true only after count/hash/delivery validation." >&2
               exit 1
