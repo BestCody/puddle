@@ -65,7 +65,7 @@ export default async function EditLocationPage({ params, searchParams }) {
       </section>
 
       {membership.active ? <section className="pass-location-savers" aria-label="People who saved this location">
-        <header><span>PASS</span><div><h2>See who saved</h2><p>{saverCount} visible {saverCount === 1 ? 'person has' : 'people have'} saved this location.</p></div></header>
+        <header><span>PASS</span><div><h2>See who saved</h2><p>{saverCount} total {saverCount === 1 ? 'save' : 'saves'}. Showing visible Puddle profiles below.</p></div></header>
         {savers.length ? <div className="pass-location-saver-list">{savers.map((person) => {
           const photo = avatarUrl(session, person.avatar_path)
           const name = person.display_name || person.username || 'Puddle person'
