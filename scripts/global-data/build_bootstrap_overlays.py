@@ -49,7 +49,18 @@ CREATE OR REPLACE SECRET b2_data_secret (
  REGION '{REGION.replace("'", "''")}', ENDPOINT '{ENDPOINT.replace("'", "''")}', URL_STYLE 'path', USE_SSL true
 );
 """)
-con.execute(f"CREATE OR REPLACE TEMP VIEW bootstrap_locations AS SELECT cast(id as varchar) id, coalesce(country_code,'ZZ') country_code FROM read_parquet('{BOOT}/locations.parquet')")
+
+# Resolve overlay rows against the canonical snapshot itself rather than assuming
+# the historical Supabase locations table exposes the same country partition key.
+# This also ensures metadata is only carried forward for canonical location IDs
+# that actually exist in the snapshot being activated.
+con.execute(f"""
+CREATE OR REPLACE TEMP VIEW canonical_locations AS
+SELECT
+  cast(id AS VARCHAR) id,
+  upper(regexp_extract(filename, 'country_code=([^/]+)', 1)) AS country_code
+FROM read_parquet('{OUT}/country_code=*/locations.parquet', union_by_name=true, filename=true);
+""")
 con.execute(f"CREATE OR REPLACE TEMP VIEW photo_rows AS SELECT * FROM read_parquet('{BOOT}/location_photo_sources.parquet')")
 con.execute(f"CREATE OR REPLACE TEMP VIEW google_rows AS SELECT * FROM read_parquet('{BOOT}/location_google_places.parquet')")
 
@@ -57,39 +68,72 @@ con.execute("""
 CREATE OR REPLACE TEMP VIEW primary_photos AS
 SELECT * EXCLUDE(rn) FROM (
   SELECT
-    cast(p.location_id as varchar) location_id,
+    cast(p.location_id AS VARCHAR) location_id,
     l.country_code,
-    p.remote_url url,
-    p.provider,
-    p.attribution_text attribution,
-    p.attribution_url,
-    p.license_code license,
-    p.width,
-    p.height,
+    cast(p.remote_url AS VARCHAR) url,
+    cast(p.provider AS VARCHAR) provider,
+    cast(p.attribution_text AS VARCHAR) attribution,
+    cast(p.attribution_url AS VARCHAR) attribution_url,
+    cast(p.license_code AS VARCHAR) license,
+    try_cast(p.width AS INTEGER) width,
+    try_cast(p.height AS INTEGER) height,
     row_number() OVER (
-      PARTITION BY p.location_id
-      ORDER BY coalesce(p.is_primary,false) DESC,
-               CASE p.source WHEN 'venue' THEN 0 WHEN 'puddle_user' THEN 1 WHEN 'provider' THEN 2 WHEN 'licensed_public' THEN 3 ELSE 9 END,
-               coalesce(p.sort_order,0), coalesce(p.verified_at, TIMESTAMP '1970-01-01') DESC
+      PARTITION BY cast(p.location_id AS VARCHAR)
+      ORDER BY
+        coalesce(try_cast(p.is_primary AS BOOLEAN), false) DESC,
+        CASE cast(p.source AS VARCHAR)
+          WHEN 'venue' THEN 0
+          WHEN 'puddle_user' THEN 1
+          WHEN 'provider' THEN 2
+          WHEN 'licensed_public' THEN 3
+          ELSE 9
+        END,
+        coalesce(try_cast(p.sort_order AS INTEGER), 0),
+        coalesce(try_cast(p.verified_at AS TIMESTAMP), TIMESTAMP '1970-01-01') DESC
     ) rn
   FROM photo_rows p
-  JOIN bootstrap_locations l ON l.id=cast(p.location_id as varchar)
-  WHERE p.status='approved' AND coalesce(p.is_ai_generated,false)=false
+  JOIN canonical_locations l ON l.id=cast(p.location_id AS VARCHAR)
+  WHERE cast(p.status AS VARCHAR)='approved'
+    AND coalesce(try_cast(p.is_ai_generated AS BOOLEAN), false)=false
     AND p.remote_url IS NOT NULL
-    AND (p.expires_at IS NULL OR p.expires_at > now())
+    AND (
+      try_cast(p.expires_at AS TIMESTAMP) IS NULL
+      OR try_cast(p.expires_at AS TIMESTAMP) > now()
+    )
 ) WHERE rn=1;
 """)
 con.execute("""
 CREATE OR REPLACE TEMP VIEW verified_google AS
-SELECT cast(g.location_id as varchar) location_id, l.country_code,
-       cast(g.google_place_id as varchar) google_place_id, try_cast(g.match_score as double) google_place_match_score
-FROM google_rows g JOIN bootstrap_locations l ON l.id=cast(g.location_id as varchar)
-WHERE g.status='verified' AND g.google_place_id IS NOT NULL;
+SELECT
+  cast(g.location_id AS VARCHAR) location_id,
+  l.country_code,
+  cast(g.google_place_id AS VARCHAR) google_place_id,
+  try_cast(g.match_score AS DOUBLE) google_place_match_score
+FROM google_rows g
+JOIN canonical_locations l ON l.id=cast(g.location_id AS VARCHAR)
+WHERE cast(g.status AS VARCHAR)='verified'
+  AND g.google_place_id IS NOT NULL;
 """)
 
-for country, in con.execute('SELECT DISTINCT country_code FROM bootstrap_locations ORDER BY country_code').fetchall():
+photo_count = con.execute('SELECT count(*) FROM primary_photos').fetchone()[0]
+google_count = con.execute('SELECT count(*) FROM verified_google').fetchone()[0]
+print(f'overlay candidates: primary_photos={photo_count} verified_google={google_count}')
+
+for country, in con.execute('SELECT DISTINCT country_code FROM canonical_locations ORDER BY country_code').fetchall():
     safe = str(country or 'ZZ').upper()
-    con.execute(f"COPY (SELECT location_id,url,provider,attribution,attribution_url,license,width,height FROM primary_photos WHERE country_code='{safe}') TO '{OUT}/country_code={safe}/photo_metadata.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, OVERWRITE_OR_IGNORE true)")
-    con.execute(f"COPY (SELECT location_id,google_place_id,google_place_match_score FROM verified_google WHERE country_code='{safe}') TO '{OUT}/country_code={safe}/google_places.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, OVERWRITE_OR_IGNORE true)")
+    if not safe:
+        safe = 'ZZ'
+    con.execute(
+        f"COPY (SELECT location_id,url,provider,attribution,attribution_url,license,width,height "
+        f"FROM primary_photos WHERE country_code='{safe}') "
+        f"TO '{OUT}/country_code={safe}/photo_metadata.parquet' "
+        "(FORMAT PARQUET, COMPRESSION ZSTD, OVERWRITE_OR_IGNORE true)"
+    )
+    con.execute(
+        f"COPY (SELECT location_id,google_place_id,google_place_match_score "
+        f"FROM verified_google WHERE country_code='{safe}') "
+        f"TO '{OUT}/country_code={safe}/google_places.parquet' "
+        "(FORMAT PARQUET, COMPRESSION ZSTD, OVERWRITE_OR_IGNORE true)"
+    )
 
 print('bootstrap photo and Google overlays projected into canonical snapshot')
