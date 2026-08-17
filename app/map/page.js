@@ -10,7 +10,7 @@ import styles from './MapFeed.module.css'
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Feed and map',
-  description: 'Browse Puddle posts or search Puddle locations on the map.'
+  description: 'Browse Puddle posts and explore Puddle locations on the map.'
 }
 
 function initials(name) {
@@ -19,11 +19,6 @@ function initials(name) {
 
 function categoryLabel(value) {
   return String(value || 'Place').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
-function detailHref(point) {
-  const slug = String(point.href || '').match(/^\/places\/(.+)$/)?.[1]
-  return slug ? `/plans/${slug}` : point.href
 }
 
 function timeLabel(value) {
@@ -149,18 +144,7 @@ function FeedTop({ view, query }) {
   </header>
 }
 
-function MapSearch({ query }) {
-  return <form className={styles.mapSearch} action="/map" method="get" data-testid="map-search">
-    <input type="hidden" name="view" value="map" />
-    <label><input aria-label="Search all Puddle locations" type="search" name="q" defaultValue={query || ''} placeholder="Search all Puddle locations" /></label>
-    <button type="submit" aria-label="Search map">⌕</button>
-  </form>
-}
-
-function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false, query = '' }) {
-  const first = points[0]
-  const hasMapContent = points.length || (!query && passActive && heatmap.length)
-
+function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false }) {
   return <section className={styles.mapScreen} data-testid="feed-map-canvas">
     {selectingForPost ? <div className={styles.mapSelectionNotice}>
       <strong>Choose a place for your post.</strong>
@@ -168,20 +152,15 @@ function MapScreen({ points, center, heatmap = [], passActive = false, selecting
     </div> : null}
 
     <div className={styles.mapCanvas}>
-      {hasMapContent ? <LocationMap initialPoints={points} initialCenter={center} heatmapPoints={query ? [] : heatmap} passActive={passActive && !selectingForPost && !query} /> : <div className={styles.mapEmpty}>{query ? 'No Puddle locations match that search.' : 'Save a place to see it on your map, or search the full Puddle catalogue.'}</div>}
+      <LocationMap
+        initialPoints={points}
+        initialCenter={center}
+        heatmapPoints={heatmap}
+        passActive={passActive && !selectingForPost}
+        loadCatalogue
+        selectingForPost={selectingForPost}
+      />
     </div>
-
-    {first ? <>
-      <div className={styles.mapPuddle} aria-hidden="true" />
-      <Link className={styles.mapCard} href={detailHref(first)}>
-        <span className={styles.mapCardMeta}>{categoryLabel(first.category)}</span>
-        <small className={styles.mapCardArea}>{first.city || first.neighborhood || ''}</small>
-        <strong>{first.title}</strong>
-        <b className={styles.mapCardAdd}>+</b>
-      </Link>
-    </> : null}
-
-    <MapSearch query={query} />
   </section>
 }
 
@@ -192,7 +171,7 @@ export default async function LocationMapPage({ searchParams }) {
   const selectingForPost = view === 'map' && params?.selectForPost === '1'
 
   return renderProductPage(async (session) => {
-    const mapSnapshot = await getLocationMapSnapshot(session, view === 'map' ? query : '')
+    const mapSnapshot = await getLocationMapSnapshot(session)
     const feed = view === 'feed' ? await getSocialFeedSnapshot(session, query) : null
     const mapPoints = selectingForPost
       ? mapSnapshot.points.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
@@ -203,7 +182,7 @@ export default async function LocationMapPage({ searchParams }) {
       <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-view={view}>
         <FeedTop view={view} query={params?.q} />
 
-        {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} query={query} /> : <>
+        {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} /> : <>
           <section className={styles.stream} aria-label="Puddle feed" data-testid="feed-stream">
             {feed.items.length ? feed.items.map((post) => <FeedPost post={post} friends={feed.friends} key={post.id} />) : <div className={styles.empty}>
               <strong>{query ? 'No puddles match that search.' : 'No one has posted a puddle yet.'}</strong>
