@@ -3,8 +3,8 @@
 
 Existing Puddle UUIDs and slugs from the Supabase bootstrap snapshot win. New
 IDs are deterministic UUIDv5 values. Cross-source matches use exact normalized
-name/category plus a <=~170m neighborhood candidate search. Ambiguous source
-records remain distinct rather than being aggressively merged.
+name/category plus a <=~170m neighborhood candidate search. Staged source rows
+are deduplicated by source ID before matching so workflow retries are idempotent.
 """
 import argparse
 import json
@@ -49,7 +49,13 @@ NAMESPACE = uuid.UUID(os.getenv('PUDDLE_LOCATION_UUID_NAMESPACE', '4cc1f63b-1a05
 if not ENDPOINT_URL or not KEY_ID or not KEY:
     raise RuntimeError('B2 endpoint and credentials are required.')
 
-s3 = boto3.client('s3', endpoint_url=ENDPOINT_URL, aws_access_key_id=KEY_ID, aws_secret_access_key=KEY, config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}))
+s3 = boto3.client(
+    's3',
+    endpoint_url=ENDPOINT_URL,
+    aws_access_key_id=KEY_ID,
+    aws_secret_access_key=KEY,
+    config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
+)
 
 
 def object_exists(key):
@@ -66,7 +72,11 @@ def prefix_exists(prefix):
 
 def country_codes():
     if args.countries.strip():
-        return sorted({part.strip().upper() for part in args.countries.split(',') if re.fullmatch(r'[A-Z]{2}|ZZ', part.strip().upper())})
+        return sorted({
+            part.strip().upper()
+            for part in args.countries.split(',')
+            if re.fullmatch(r'[A-Z]{2}|ZZ', part.strip().upper())
+        })
     values = set()
     paginator = s3.get_paginator('list_objects_v2')
     prefix = STAGED_PREFIX.rstrip('/') + '/'
@@ -96,6 +106,27 @@ def stable_slug(name, location_id):
     return f'{slug_base(name)}-{str(location_id).replace("-", "")[:8]}'
 
 
+def staged_view_sql(path):
+    escaped = path.replace("'", "''")
+    return f"""
+    SELECT * EXCLUDE (_source_rn)
+    FROM (
+      SELECT *,
+        row_number() OVER (
+          PARTITION BY cast(source_id AS VARCHAR)
+          ORDER BY
+            coalesce(source_updated_at, TIMESTAMP '1970-01-01') DESC,
+            coalesce(source_confidence, 0) DESC,
+            coalesce(name, '') ASC,
+            coalesce(latitude, 0) ASC,
+            coalesce(longitude, 0) ASC
+        ) AS _source_rn
+      FROM read_parquet('{escaped}', union_by_name=true)
+    )
+    WHERE _source_rn=1
+    """
+
+
 countries = country_codes()
 if not countries:
     raise RuntimeError(f'No staged country partitions found under s3://{BUCKET}/{STAGED_PREFIX}/')
@@ -107,7 +138,9 @@ con.create_function('puddle_slug', stable_slug, ['VARCHAR', 'VARCHAR'], 'VARCHAR
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
 con.execute(f"SET threads TO {max(1, min(32, int(os.getenv('GLOBAL_RESOLVE_THREADS', '8'))))}")
-con.execute(f"SET temp_directory='{os.getenv('DUCKDB_TEMP_DIRECTORY', '.duckdb-tmp').replace("'", "''")}'")
+temp_dir = os.getenv('DUCKDB_TEMP_DIRECTORY', '.duckdb-tmp')
+os.makedirs(temp_dir, exist_ok=True)
+con.execute(f"SET temp_directory='{temp_dir.replace("'", "''")}'")
 con.execute(f"""
 CREATE OR REPLACE SECRET b2_data_secret (
   TYPE S3,
@@ -123,16 +156,41 @@ CREATE OR REPLACE SECRET b2_data_secret (
 bootstrap_prefix = clean_prefix(args.bootstrap_prefix)
 bootstrap_locations = f"s3://{BUCKET}/{bootstrap_prefix}/locations.parquet"
 bootstrap_links = f"s3://{BUCKET}/{bootstrap_prefix}/location_source_links.parquet"
-bootstrap_available = object_exists(f"{bootstrap_prefix}/locations.parquet") and object_exists(f"{bootstrap_prefix}/location_source_links.parquet")
+bootstrap_available = (
+    object_exists(f"{bootstrap_prefix}/locations.parquet")
+    and object_exists(f"{bootstrap_prefix}/location_source_links.parquet")
+)
 if bootstrap_available:
     con.execute(f"CREATE OR REPLACE TEMP VIEW bootstrap_locations AS SELECT * FROM read_parquet('{bootstrap_locations}')")
-    con.execute(f"CREATE OR REPLACE TEMP VIEW bootstrap_links AS SELECT source, cast(source_place_id AS varchar) source_id, cast(location_id AS varchar) location_id FROM read_parquet('{bootstrap_links}')")
+    con.execute(f"""
+    CREATE OR REPLACE TEMP VIEW bootstrap_links AS
+    SELECT source, cast(source_place_id AS VARCHAR) source_id, min(cast(location_id AS VARCHAR)) location_id
+    FROM read_parquet('{bootstrap_links}')
+    WHERE source IS NOT NULL AND source_place_id IS NOT NULL AND location_id IS NOT NULL
+    GROUP BY 1, 2
+    """)
 else:
     print('warning: bootstrap snapshot not found; all source IDs will receive deterministic new UUIDs')
-    con.execute("CREATE OR REPLACE TEMP VIEW bootstrap_locations AS SELECT NULL::VARCHAR id, NULL::VARCHAR slug, NULL::VARCHAR name, NULL::VARCHAR summary, NULL::VARCHAR description, NULL::VARCHAR timezone, NULL::BOOLEAN timezone_verified, NULL::VARCHAR opening_hours, NULL::VARCHAR amenities, NULL::VARCHAR accessibility, NULL::INTEGER price_level, NULL::VARCHAR country, NULL::VARCHAR region_code WHERE false")
-    con.execute("CREATE OR REPLACE TEMP VIEW bootstrap_links AS SELECT NULL::VARCHAR source, NULL::VARCHAR source_id, NULL::VARCHAR location_id WHERE false")
+    con.execute(
+        "CREATE OR REPLACE TEMP VIEW bootstrap_locations AS "
+        "SELECT NULL::VARCHAR id, NULL::VARCHAR slug, NULL::VARCHAR name, NULL::VARCHAR summary, "
+        "NULL::VARCHAR description, NULL::VARCHAR timezone, NULL::BOOLEAN timezone_verified, "
+        "NULL::VARCHAR opening_hours, NULL::VARCHAR amenities, NULL::VARCHAR accessibility, "
+        "NULL::INTEGER price_level, NULL::VARCHAR country, NULL::VARCHAR region_code WHERE false"
+    )
+    con.execute(
+        "CREATE OR REPLACE TEMP VIEW bootstrap_links AS "
+        "SELECT NULL::VARCHAR source, NULL::VARCHAR source_id, NULL::VARCHAR location_id WHERE false"
+    )
 
-summary = {'snapshot': args.snapshot, 'resolvedAt': datetime.now(timezone.utc).isoformat(), 'countries': [], 'locationRows': 0, 'sourceLinks': 0, 'aliases': 0}
+summary = {
+    'snapshot': args.snapshot,
+    'resolvedAt': datetime.now(timezone.utc).isoformat(),
+    'countries': [],
+    'locationRows': 0,
+    'sourceLinks': 0,
+    'aliases': 0,
+}
 
 for country in countries:
     overture_prefix = f'{STAGED_PREFIX}/source=overture/country_code={country}'
@@ -143,13 +201,28 @@ for country in countries:
         continue
 
     if has_overture:
-        con.execute(f"CREATE OR REPLACE TEMP VIEW o AS SELECT * FROM read_parquet('s3://{BUCKET}/{overture_prefix}/*.parquet', union_by_name=true)")
+        path = f's3://{BUCKET}/{overture_prefix}/*.parquet'
+        con.execute("CREATE OR REPLACE TEMP VIEW o AS " + staged_view_sql(path))
     else:
-        con.execute("CREATE OR REPLACE TEMP VIEW o AS SELECT * FROM (VALUES (NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::DOUBLE,NULL::DOUBLE,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::DOUBLE,NULL::TIMESTAMP,NULL::VARCHAR)) t(source,source_id,name,name_key,category,latitude,longitude,country_code,region,city,postal_code,address,website_url,phone_public,brand_id,brand_name,source_parent_place_id,source_confidence,source_updated_at,source_category) WHERE false")
+        con.execute(
+            "CREATE OR REPLACE TEMP VIEW o AS SELECT * FROM "
+            "(VALUES (NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,"
+            "NULL::DOUBLE,NULL::DOUBLE,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,"
+            "NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,NULL::VARCHAR,"
+            "NULL::DOUBLE,NULL::TIMESTAMP,NULL::VARCHAR)) "
+            "t(source,source_id,name,name_key,category,latitude,longitude,country_code,region,city,"
+            "postal_code,address,website_url,phone_public,brand_id,brand_name,source_parent_place_id,"
+            "source_confidence,source_updated_at,source_category) WHERE false"
+        )
     if has_fsq:
-        con.execute(f"CREATE OR REPLACE TEMP VIEW f AS SELECT * FROM read_parquet('s3://{BUCKET}/{fsq_prefix}/*.parquet', union_by_name=true)")
+        path = f's3://{BUCKET}/{fsq_prefix}/*.parquet'
+        con.execute("CREATE OR REPLACE TEMP VIEW f AS " + staged_view_sql(path))
     else:
         con.execute("CREATE OR REPLACE TEMP VIEW f AS SELECT * FROM o WHERE false")
+
+    o_count = con.execute("SELECT count(*) FROM o").fetchone()[0]
+    f_count = con.execute("SELECT count(*) FROM f").fetchone()[0]
+    print(f'{country}: deduped staged source rows overture={o_count} fsq={f_count}')
 
     con.execute("""
     CREATE OR REPLACE TEMP TABLE fsq_match AS
@@ -167,7 +240,8 @@ for country in countries:
         e.source_id fsq_source_id,
         og.source_id overture_source_id,
         ((e.latitude-og.latitude)*(e.latitude-og.latitude) +
-         (e.longitude-og.longitude)*(e.longitude-og.longitude)*cos(radians(e.latitude))*cos(radians(e.latitude))) AS d2,
+         (e.longitude-og.longitude)*(e.longitude-og.longitude)*
+         cos(radians(e.latitude))*cos(radians(e.latitude))) AS d2,
         row_number() OVER (PARTITION BY e.source_id ORDER BY d2, og.source_id) rn
       FROM expanded e
       JOIN og USING (gy, gx)
@@ -182,9 +256,11 @@ for country in countries:
     con.execute("""
     CREATE OR REPLACE TEMP TABLE canonical_o AS
     WITH known_o AS (
-      SELECT source_id, min(location_id) location_id FROM bootstrap_links WHERE source='overture' GROUP BY source_id
+      SELECT source_id, min(location_id) location_id
+      FROM bootstrap_links WHERE source='overture' GROUP BY source_id
     ), known_f AS (
-      SELECT source_id, min(location_id) location_id FROM bootstrap_links WHERE source='fsq_os' GROUP BY source_id
+      SELECT source_id, min(location_id) location_id
+      FROM bootstrap_links WHERE source='fsq_os' GROUP BY source_id
     ), matched_known AS (
       SELECT m.overture_source_id, min(k.location_id) location_id
       FROM fsq_match m JOIN known_f k ON k.source_id=m.fsq_source_id
@@ -196,10 +272,12 @@ for country in countries:
     LEFT JOIN known_o ko USING (source_id)
     LEFT JOIN matched_known mk ON mk.overture_source_id=o.source_id;
     """)
+
     con.execute("""
     CREATE OR REPLACE TEMP TABLE canonical_f AS
     WITH known_f AS (
-      SELECT source_id, min(location_id) location_id FROM bootstrap_links WHERE source='fsq_os' GROUP BY source_id
+      SELECT source_id, min(location_id) location_id
+      FROM bootstrap_links WHERE source='fsq_os' GROUP BY source_id
     )
     SELECT f.*,
       coalesce(co.canonical_id, k.location_id, puddle_uuid('fsq_os', f.source_id)) AS canonical_id,
@@ -215,7 +293,9 @@ for country in countries:
     SELECT * EXCLUDE(rn) FROM (
       SELECT f.*, row_number() OVER (
         PARTITION BY overture_source_id
-        ORDER BY coalesce(source_confidence,0) DESC, coalesce(source_updated_at, TIMESTAMP '1970-01-01') DESC, source_id
+        ORDER BY coalesce(source_confidence,0) DESC,
+                 coalesce(source_updated_at, TIMESTAMP '1970-01-01') DESC,
+                 source_id
       ) rn
       FROM canonical_f f WHERE overture_source_id IS NOT NULL
     ) WHERE rn=1;
@@ -228,18 +308,23 @@ for country in countries:
         co.canonical_id AS id,
         coalesce(bl.slug, puddle_slug(co.name, co.canonical_id)) AS slug,
         coalesce(bl.name, co.name, bf.name) AS name,
-        coalesce(cast(bl.summary AS VARCHAR), cast(bl.description AS VARCHAR), 'A ' || replace(co.category, '_', ' ') || CASE WHEN co.city IS NOT NULL THEN ' in ' || co.city ELSE '' END || '.') AS summary,
+        coalesce(
+          cast(bl.summary AS VARCHAR),
+          cast(bl.description AS VARCHAR),
+          'A ' || replace(co.category, '_', ' ') ||
+          CASE WHEN co.city IS NOT NULL THEN ' in ' || co.city ELSE '' END || '.'
+        ) AS summary,
         co.category,
         co.latitude, co.longitude,
         co.country_code,
-        coalesce(bl.country, NULL) AS country,
-        coalesce(bl.region_code, NULL) AS region_code,
+        bl.country AS country,
+        bl.region_code AS region_code,
         coalesce(co.region, bf.region) AS region,
         coalesce(co.city, bf.city) AS city,
         NULL::VARCHAR AS neighborhood,
         coalesce(co.postal_code, bf.postal_code) AS postal_code,
         coalesce(co.address, bf.address) AS address,
-        coalesce(bl.timezone, NULL) AS timezone,
+        bl.timezone AS timezone,
         coalesce(bl.timezone_verified, false) AS timezone_verified,
         try_cast(bl.opening_hours AS JSON) AS opening_hours,
         try_cast(bl.amenities AS VARCHAR[]) AS amenities,
@@ -253,7 +338,10 @@ for country in countries:
         coalesce(co.source_confidence, bf.source_confidence, 0.5)::DOUBLE AS quality_score,
         0.0::DOUBLE AS popularity_score,
         'published'::VARCHAR AS status,
-        greatest(coalesce(co.source_updated_at, TIMESTAMP '1970-01-01'), coalesce(bf.source_updated_at, TIMESTAMP '1970-01-01')) AS updated_at
+        greatest(
+          coalesce(co.source_updated_at, TIMESTAMP '1970-01-01'),
+          coalesce(bf.source_updated_at, TIMESTAMP '1970-01-01')
+        ) AS updated_at
       FROM canonical_o co
       LEFT JOIN best_f_for_o bf ON bf.overture_source_id=co.source_id
       LEFT JOIN bootstrap_locations bl ON cast(bl.id AS VARCHAR)=co.canonical_id
@@ -262,12 +350,17 @@ for country in countries:
         cf.canonical_id AS id,
         coalesce(bl.slug, puddle_slug(cf.name, cf.canonical_id)) AS slug,
         coalesce(bl.name, cf.name) AS name,
-        coalesce(cast(bl.summary AS VARCHAR), cast(bl.description AS VARCHAR), 'A ' || replace(cf.category, '_', ' ') || CASE WHEN cf.city IS NOT NULL THEN ' in ' || cf.city ELSE '' END || '.') AS summary,
+        coalesce(
+          cast(bl.summary AS VARCHAR),
+          cast(bl.description AS VARCHAR),
+          'A ' || replace(cf.category, '_', ' ') ||
+          CASE WHEN cf.city IS NOT NULL THEN ' in ' || cf.city ELSE '' END || '.'
+        ) AS summary,
         cf.category, cf.latitude, cf.longitude, cf.country_code,
-        coalesce(bl.country, NULL) AS country,
-        coalesce(bl.region_code, NULL) AS region_code,
+        bl.country AS country,
+        bl.region_code AS region_code,
         cf.region, cf.city, NULL::VARCHAR AS neighborhood, cf.postal_code, cf.address,
-        coalesce(bl.timezone, NULL) AS timezone,
+        bl.timezone AS timezone,
         coalesce(bl.timezone_verified, false) AS timezone_verified,
         try_cast(bl.opening_hours AS JSON) AS opening_hours,
         try_cast(bl.amenities AS VARCHAR[]) AS amenities,
@@ -281,40 +374,110 @@ for country in countries:
       FROM canonical_f cf
       LEFT JOIN bootstrap_locations bl ON cast(bl.id AS VARCHAR)=cf.canonical_id
       WHERE cf.overture_source_id IS NULL
+    ), combined AS (
+      SELECT * FROM from_o
+      UNION ALL
+      SELECT * FROM unmatched_f
     )
-    SELECT * FROM from_o
-    UNION ALL
-    SELECT * FROM unmatched_f;
+    SELECT * EXCLUDE(_location_rn)
+    FROM (
+      SELECT *,
+        row_number() OVER (
+          PARTITION BY cast(id AS VARCHAR)
+          ORDER BY
+            coalesce(quality_score, 0) DESC,
+            coalesce(updated_at, TIMESTAMP '1970-01-01') DESC,
+            coalesce(slug, '') ASC
+        ) AS _location_rn
+      FROM combined
+    )
+    WHERE _location_rn=1;
     """)
 
     con.execute("""
     CREATE OR REPLACE TEMP VIEW source_crosswalk AS
-    SELECT 'overture'::VARCHAR AS source, source_id, canonical_id AS location_id, source_confidence, source_updated_at FROM canonical_o
-    UNION ALL
-    SELECT 'fsq_os'::VARCHAR AS source, source_id, canonical_id AS location_id, source_confidence, source_updated_at FROM canonical_f;
+    WITH combined AS (
+      SELECT 'overture'::VARCHAR AS source, source_id, canonical_id AS location_id,
+             source_confidence, source_updated_at
+      FROM canonical_o
+      UNION ALL
+      SELECT 'fsq_os'::VARCHAR AS source, source_id, canonical_id AS location_id,
+             source_confidence, source_updated_at
+      FROM canonical_f
+    )
+    SELECT source, source_id, location_id, source_confidence, source_updated_at
+    FROM (
+      SELECT *,
+        row_number() OVER (
+          PARTITION BY source, cast(source_id AS VARCHAR)
+          ORDER BY
+            coalesce(source_updated_at, TIMESTAMP '1970-01-01') DESC,
+            coalesce(source_confidence, 0) DESC,
+            cast(location_id AS VARCHAR)
+        ) AS _crosswalk_rn
+      FROM combined
+    )
+    WHERE _crosswalk_rn=1;
     """)
+
     con.execute("""
     CREATE OR REPLACE TEMP VIEW location_aliases AS
-    SELECT DISTINCT b.location_id AS alias_location_id, c.location_id AS canonical_location_id, b.source, b.source_id
+    SELECT DISTINCT
+      b.location_id AS alias_location_id,
+      c.location_id AS canonical_location_id,
+      b.source,
+      b.source_id
     FROM bootstrap_links b
     JOIN source_crosswalk c USING (source, source_id)
     WHERE b.location_id <> c.location_id;
     """)
 
-    country_out = f's3://{BUCKET}/{OUTPUT_PREFIX}/country_code={country}'
-    con.execute(f"COPY (SELECT * FROM canonical_locations) TO '{country_out}/locations.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 250000, OVERWRITE_OR_IGNORE true)")
-    con.execute(f"COPY (SELECT * FROM source_crosswalk) TO '{country_out}/source_crosswalk.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 250000, OVERWRITE_OR_IGNORE true)")
-    con.execute(f"COPY (SELECT * FROM location_aliases) TO '{country_out}/location_aliases.parquet' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000, OVERWRITE_OR_IGNORE true)")
+    locations, unique_locations = con.execute(
+        "SELECT count(*), count(DISTINCT cast(id AS VARCHAR)) FROM canonical_locations"
+    ).fetchone()
+    links, unique_links = con.execute(
+        "SELECT count(*), count(DISTINCT source || ':' || cast(source_id AS VARCHAR)) FROM source_crosswalk"
+    ).fetchone()
+    if locations != unique_locations:
+        raise RuntimeError(
+            f'{country}: resolver produced duplicate canonical IDs: rows={locations}, unique={unique_locations}'
+        )
+    if links != unique_links:
+        raise RuntimeError(
+            f'{country}: resolver produced duplicate source keys: rows={links}, unique={unique_links}'
+        )
 
-    locations = con.execute('SELECT count(*) FROM canonical_locations').fetchone()[0]
-    links = con.execute('SELECT count(*) FROM source_crosswalk').fetchone()[0]
+    country_out = f's3://{BUCKET}/{OUTPUT_PREFIX}/country_code={country}'
+    con.execute(
+        f"COPY (SELECT * FROM canonical_locations) TO '{country_out}/locations.parquet' "
+        "(FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 250000, OVERWRITE_OR_IGNORE true)"
+    )
+    con.execute(
+        f"COPY (SELECT * FROM source_crosswalk) TO '{country_out}/source_crosswalk.parquet' "
+        "(FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 250000, OVERWRITE_OR_IGNORE true)"
+    )
+    con.execute(
+        f"COPY (SELECT * FROM location_aliases) TO '{country_out}/location_aliases.parquet' "
+        "(FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000, OVERWRITE_OR_IGNORE true)"
+    )
+
     aliases = con.execute('SELECT count(*) FROM location_aliases').fetchone()[0]
-    summary['countries'].append({'countryCode': country, 'locations': locations, 'sourceLinks': links, 'aliases': aliases})
-    summary['locationRows'] += locations
-    summary['sourceLinks'] += links
-    summary['aliases'] += aliases
+    summary['countries'].append({
+        'countryCode': country,
+        'locations': int(locations),
+        'sourceLinks': int(links),
+        'aliases': int(aliases),
+    })
+    summary['locationRows'] += int(locations)
+    summary['sourceLinks'] += int(links)
+    summary['aliases'] += int(aliases)
     print(f'{country}: {locations} canonical locations, {links} source links, {aliases} aliases')
 
 manifest_key = f'{OUTPUT_PREFIX}/manifest.json'
-s3.put_object(Bucket=BUCKET, Key=manifest_key, Body=(json.dumps(summary, indent=2) + '\n').encode(), ContentType='application/json')
+s3.put_object(
+    Bucket=BUCKET,
+    Key=manifest_key,
+    Body=(json.dumps(summary, indent=2) + '\n').encode(),
+    ContentType='application/json',
+)
 print(json.dumps(summary, indent=2))
