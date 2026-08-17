@@ -151,6 +151,7 @@ function AddView({ client, snapshot }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
+  const [pendingTarget, setPendingTarget] = useState(null)
 
   async function search(event) {
     event.preventDefault()
@@ -163,12 +164,23 @@ function AddView({ client, snapshot }) {
   }
 
   async function request(person) {
+    setPendingTarget(person.id)
     await client.rpc('social_send_friend_request_v1', { target: person.id })
+    setPendingTarget(null)
     router.refresh()
   }
   async function respond(person, response) {
+    setPendingTarget(person.id)
     await client.rpc('social_respond_friend_request_v1', { target: person.id, response })
+    setPendingTarget(null)
     router.refresh()
+  }
+  async function cancel(person) {
+    if (pendingTarget) return
+    setPendingTarget(person.id)
+    const { error } = await client.rpc('social_cancel_friend_request_v1', { target: person.id })
+    setPendingTarget(null)
+    if (!error) router.refresh()
   }
 
   return <section className="figma-friends-add-view">
@@ -179,14 +191,14 @@ function AddView({ client, snapshot }) {
       <button type="submit" disabled={searching} aria-label="Search for friends">↑</button>
     </form>
 
-    {results.length ? <div className="figma-friends-search-results">{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}</span>{person.is_friend ? <button type="button" onClick={() => router.push('/matches?tab=messages')}>Message</button> : <button type="button" onClick={() => request(person)}>＋</button>}</div>)}</div> : null}
+    {results.length ? <div className="figma-friends-search-results">{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}</span>{person.is_friend ? <button type="button" onClick={() => router.push('/matches?tab=messages')}>Message</button> : <button type="button" onClick={() => request(person)} disabled={pendingTarget === person.id}>＋</button>}</div>)}</div> : null}
 
     <article className="figma-friends-request-card">
       <small>Request</small>
-      {incoming.length ? incoming.map((person) => <div className="figma-friends-request-row" key={`in:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button className="is-accept" type="button" onClick={() => respond(person, 'accept')}>✓</button><button className="is-decline" type="button" onClick={() => respond(person, 'decline')}>×</button></div></div>) : <p>No requests</p>}
+      {incoming.length ? incoming.map((person) => <div className="figma-friends-request-row" key={`in:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button className="is-accept" type="button" onClick={() => respond(person, 'accept')} disabled={pendingTarget === person.id}>✓</button><button className="is-decline" type="button" onClick={() => respond(person, 'decline')} disabled={pendingTarget === person.id}>×</button></div></div>) : <p>No requests</p>}
       <hr />
       <small>Sent</small>
-      {outgoing.length ? outgoing.map((person) => <div className="figma-friends-request-row" key={`out:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button type="button" disabled>−</button></div></div>) : <p>No sent requests</p>}
+      {outgoing.length ? outgoing.map((person) => <div className="figma-friends-request-row" key={`out:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button type="button" onClick={() => cancel(person)} disabled={pendingTarget === person.id} aria-label={`Cancel friend request to ${person.display_name || person.username || 'Puddle person'}`}>−</button></div></div>) : <p>No sent requests</p>}
     </article>
   </section>
 }
