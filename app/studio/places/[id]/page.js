@@ -29,11 +29,26 @@ export default async function EditLocationPage({ params, searchParams }) {
       getCreatorOptions(session),
       getMembershipSnapshot(session)
     ])
+
     let savers = []
+    let saverCount = 0
     if (membership.active) {
-      const { data } = await session.supabase.rpc('pass_location_savers_v1', { target_location: location.id })
-      savers = data || []
+      const cursorAt = String(messages?.savers_before || '').trim() || null
+      const cursorProfile = String(messages?.savers_profile || '').trim() || null
+      const [{ data: saverRows }, { data: count }] = await Promise.all([
+        session.supabase.rpc('pass_location_savers_v2', {
+          target_location: location.id,
+          before_saved_at: cursorAt,
+          before_profile_id: cursorProfile,
+          result_limit: 50
+        }),
+        session.supabase.rpc('pass_location_saver_count_v2', { target_location: location.id })
+      ])
+      savers = saverRows || []
+      saverCount = Number(count || 0)
     }
+    const hasMoreSavers = savers.length === 50
+    const saverCursor = savers[savers.length - 1] || null
 
     return <>
       <div className="page-heading-row">
@@ -50,7 +65,7 @@ export default async function EditLocationPage({ params, searchParams }) {
       </section>
 
       {membership.active ? <section className="pass-location-savers" aria-label="People who saved this location">
-        <header><span>PASS</span><div><h2>See who saved</h2><p>{savers.length} visible {savers.length === 1 ? 'person has' : 'people have'} saved this location.</p></div></header>
+        <header><span>PASS</span><div><h2>See who saved</h2><p>{saverCount} visible {saverCount === 1 ? 'person has' : 'people have'} saved this location.</p></div></header>
         {savers.length ? <div className="pass-location-saver-list">{savers.map((person) => {
           const photo = avatarUrl(session, person.avatar_path)
           const name = person.display_name || person.username || 'Puddle person'
@@ -58,7 +73,8 @@ export default async function EditLocationPage({ params, searchParams }) {
             <span className="pass-location-saver-avatar" style={photo ? { backgroundImage: `url(${photo})` } : undefined}>{photo ? null : initials(name)}</span>
             <div><strong>{name}</strong>{person.username ? <small>@{person.username}</small> : null}</div>
           </article>
-        })}</div> : <p className="pass-location-savers-empty">No visible savers yet.</p>}
+        })}</div> : <p className="pass-location-savers-empty">No visible savers on this page.</p>}
+        {hasMoreSavers && saverCursor ? <Link href={`/studio/places/${encodeURIComponent(location.id)}?savers_before=${encodeURIComponent(saverCursor.saved_at)}&savers_profile=${encodeURIComponent(saverCursor.id)}`}>Next savers</Link> : null}
       </section> : <section className="pass-location-savers is-locked"><header><span>PASS</span><div><h2>See who saved</h2><p>Upgrade to see visible Puddle profiles that saved a location you manage.</p></div></header><Link href="/membership">View Pass</Link></section>}
 
       <LocationEditor location={location} {...options} />
