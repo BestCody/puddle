@@ -24,7 +24,7 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   assert.match(bounds, /latest_id bigint/)
 })
 
-test('friend/profile search is trigram-backed and mutual friends are set-based', async () => {
+test('friend/profile search is trigram-backed, mutual friends are set-based, and the add screen avoids eager friend hydration', async () => {
   const migration = await read('supabase/migrations/10065_scalability_hardening.sql')
   const ui = await read('components/figma-social-hub.js')
 
@@ -33,9 +33,10 @@ test('friend/profile search is trigram-backed and mutual friends are set-based',
   assert.match(migration, /candidate_friends as/)
   assert.match(migration, /join actor_friends af on af\.id=cf\.friend_id/)
   assert.doesNotMatch(migration, /from public\.profiles m where public\.profiles_are_friends/)
+  assert.match(migration, /create or replace function public\.social_friends_v2/)
   assert.match(ui, /social_friend_search_v2/)
-  assert.match(ui, /social_friends_v2/)
-  assert.match(ui, /Load more friends/)
+  assert.doesNotMatch(ui, /social_friends_v2/)
+  assert.doesNotMatch(ui, /Load more friends/)
 })
 
 test('Pass heatmap is viewport-scoped and incrementally maintained', async () => {
