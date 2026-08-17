@@ -104,3 +104,34 @@ export async function shareSavedPlace(formData) {
   revalidatePath('/matches')
   finish(formData, 'Place shared.')
 }
+
+export async function upsertPlaceReview(formData) {
+  const session = await requireUser({ onboarding: true })
+  const locationId = value(formData, 'location_id', 80)
+  const rating = Number(value(formData, 'rating', 1))
+  const body = value(formData, 'body', 2000)
+  if (!locationId) finish(formData, 'That place is unavailable.', 'error')
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) finish(formData, 'Choose a rating from 1 to 5.', 'error')
+
+  const { error } = await session.supabase.rpc('upsert_location_review_v1', {
+    target_location: locationId,
+    review_rating: rating,
+    review_body: body
+  })
+  if (error) finish(formData, 'We could not save your review.', 'error')
+
+  revalidatePath(destination(formData))
+  finish(formData, 'Your review was saved.')
+}
+
+export async function deletePlaceReview(formData) {
+  const session = await requireUser({ onboarding: true })
+  const locationId = value(formData, 'location_id', 80)
+  if (!locationId) finish(formData, 'That place is unavailable.', 'error')
+
+  const { data, error } = await session.supabase.rpc('delete_location_review_v1', { target_location: locationId })
+  if (error || !data) finish(formData, 'We could not remove your review.', 'error')
+
+  revalidatePath(destination(formData))
+  finish(formData, 'Your review was removed.')
+}
