@@ -16,7 +16,7 @@ async function submitServerAction(page, buttonName, expectedMessage) {
   await page.goto(detailPath)
 }
 
-test('reviews, request cancellation, category overflow, and catalogue map search work end to end', async ({ page }) => {
+test('reviews, request cancellation, category overflow, and viewport map loading work end to end', async ({ page }) => {
   test.setTimeout(120_000)
   const owner = await createConfirmedUser({ displayName: 'Completed UI Owner' })
   const friend = await createConfirmedUser({ displayName: 'Completed UI Friend' })
@@ -27,7 +27,7 @@ test('reviews, request cancellation, category overflow, and catalogue map search
 
     const { data: locations, error: locationError } = await admin
       .from('locations')
-      .select('id,slug,name,kind')
+      .select('id,slug,name,kind,summary,neighborhood,city,latitude,longitude')
       .in('slug', seedSlugs)
     if (locationError) throw locationError
     expect(locations).toHaveLength(seedSlugs.length)
@@ -102,11 +102,51 @@ test('reviews, request cancellation, category overflow, and catalogue map search
       .eq('location_id', locationBySlug.get('moonlight-cafe').id)
       .eq('state', 'saved')
 
-    await page.goto('/map?view=map&q=Moonlight')
-    await expect(page.getByLabel('Search all Puddle locations')).toHaveValue('Moonlight')
+    const moonlight = locationBySlug.get('moonlight-cafe')
+    let viewportRequestSeen = false
+    await page.route('**/api/map/viewport?**', async (route) => {
+      viewportRequestSeen = true
+      const requestUrl = new URL(route.request().url())
+      const north = Number(requestUrl.searchParams.get('north'))
+      const south = Number(requestUrl.searchParams.get('south'))
+      const west = Number(requestUrl.searchParams.get('west'))
+      const east = Number(requestUrl.searchParams.get('east'))
+      const viewportLatitude = (north + south) / 2
+      const viewportLongitude = (west + east) / 2
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          points: [{
+            id: moonlight.id,
+            location_id: moonlight.id,
+            title: moonlight.name,
+            summary: moonlight.summary || 'Moonlight Café',
+            category: moonlight.kind,
+            neighborhood: moonlight.neighborhood,
+            city: moonlight.city,
+            latitude: viewportLatitude,
+            longitude: viewportLongitude,
+            href: `/plans/${moonlight.slug}`,
+            photo_url: null,
+            states: ['catalogue'],
+            match: null,
+            plan: null
+          }],
+          tookMs: 1,
+          timedOut: false,
+          limit: 150
+        })
+      })
+    })
+
+    await page.goto('/map?view=map')
     const map = page.getByTestId('feed-map-canvas')
-    await expect(map.getByRole('button', { name: 'Moonlight Café, Puddle' })).toBeVisible()
-    await expect(map.getByRole('link', { name: /Moonlight Café/ })).toBeVisible()
+    const catalogueMarker = map.getByRole('button', { name: `${moonlight.name}, Puddle` })
+    await expect(catalogueMarker).toHaveCount(1)
+    expect(viewportRequestSeen).toBeTruthy()
+    await expect(catalogueMarker).toHaveClass(/is-catalogue/)
+    await expect(catalogueMarker).toHaveAttribute('style', /translate3d\(/)
     await expect(map.locator('.location-map-marker.is-catalogue')).toHaveCount(1)
   } finally {
     await bestEffort(admin.from('location_reviews').delete().eq('author_id', owner.user.id))

@@ -251,15 +251,14 @@ test('Feed and Map preserve the approved Figma composition', async ({ page }, te
     await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
     await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Map', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Back to Swipe' })).toBeVisible()
-    if (testInfo.project.name === 'figma-desktop') await expect(page.getByTestId('map-search')).toBeHidden()
-    else await expect(page.getByTestId('map-search')).toBeVisible()
-
-    await page.addStyleTag({ content: '.location-map-tiles { visibility: hidden !important; }' })
-    await expect(page).toHaveScreenshot('map-route.png', {
-      animations: 'disabled',
-      fullPage: false,
-      maxDiffPixelRatio: 0.012
-    })
+    // The map now loads catalogue data by viewport and centers on the signed-in
+    // user's profile region. A saved location can therefore be rendered in the
+    // absolute marker layer while legitimately sitting outside the current canvas.
+    await expect(page.getByTestId('map-search')).toHaveCount(0)
+    const savedMarker = page.getByRole('button', { name: 'Maple Grove Park, Saved' })
+    await expect(savedMarker).toHaveCount(1)
+    await expect(savedMarker).toHaveClass(/is-saved/)
+    await expect(savedMarker).toHaveAttribute('style', /translate3d\(/)
   } finally {
     await cleanupFixture({ userId: account.user.id, ...fixture })
   }

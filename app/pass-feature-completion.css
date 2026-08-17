@@ -60,7 +60,9 @@
   font: 900 10px/1 Manrope,sans-serif;
 }
 .location-map-heat b { pointer-events: none; }
-.location-map-markers { position: relative; z-index: 5; }
+/* Keep the base map marker layer's absolute inset coordinate system. PASS only
+   raises its stacking order above heatmap cells. */
+.location-map-markers { z-index: 5; }
 
 .pass-location-create-lock,
 .pass-location-savers {

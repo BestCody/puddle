@@ -31,15 +31,38 @@ function FriendsTabs({ tab }) {
   </nav>
 }
 
+function mergeById(current, incoming, key = 'id') {
+  const merged = new Map(current.map((item) => [item[key], item]))
+  for (const item of incoming || []) merged.set(item[key], item)
+  return [...merged.values()]
+}
+
 function MessagesView({ client, snapshot }) {
   const router = useRouter()
+  const selected = snapshot.selectedConversation
+  const initialConversations = selected && !snapshot.conversations.some((item) => item.conversation_id === selected.conversation_id)
+    ? [selected, ...snapshot.conversations]
+    : snapshot.conversations
+  const [conversations, setConversations] = useState(initialConversations)
+  const [conversationsHasMore, setConversationsHasMore] = useState(Boolean(snapshot.conversationsHasMore))
   const [messages, setMessages] = useState(snapshot.messages || [])
+  const [messagesHasMore, setMessagesHasMore] = useState(Boolean(snapshot.messagesHasMore))
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const [paging, setPaging] = useState(false)
   const [message, setMessage] = useState('')
-  const selected = snapshot.selectedConversation
 
-  useEffect(() => setMessages(snapshot.messages || []), [snapshot.messages, selected?.conversation_id])
+  useEffect(() => {
+    const next = selected && !snapshot.conversations.some((item) => item.conversation_id === selected.conversation_id)
+      ? [selected, ...snapshot.conversations]
+      : snapshot.conversations
+    setConversations(next)
+    setConversationsHasMore(Boolean(snapshot.conversationsHasMore))
+  }, [snapshot.conversations, snapshot.conversationsHasMore, selected?.conversation_id])
+  useEffect(() => {
+    setMessages(snapshot.messages || [])
+    setMessagesHasMore(Boolean(snapshot.messagesHasMore))
+  }, [snapshot.messages, snapshot.messagesHasMore, selected?.conversation_id])
   useEffect(() => {
     if (!selected?.conversation_id) return
     client.rpc('social_mark_conversation_read_v1', { target: selected.conversation_id, last_message: null }).catch(() => {})
@@ -47,8 +70,48 @@ function MessagesView({ client, snapshot }) {
 
   async function reloadMessages() {
     if (!selected) return
-    const { data } = await client.rpc('social_messages_v1', { target: selected.conversation_id })
-    if (data) setMessages(data)
+    const { data } = await client.rpc('social_messages_v2', {
+      target: selected.conversation_id,
+      before_message_id: null,
+      result_limit: 50
+    })
+    if (data) {
+      setMessages(data)
+      setMessagesHasMore(data.length === 50)
+    }
+  }
+
+  async function loadOlderMessages() {
+    if (!selected || !messages.length || paging || !messagesHasMore) return
+    setPaging(true)
+    const oldest = messages[0]
+    const { data, error } = await client.rpc('social_messages_v2', {
+      target: selected.conversation_id,
+      before_message_id: oldest.id,
+      result_limit: 50
+    })
+    if (!error) {
+      setMessages((current) => mergeById(data || [], current))
+      setMessagesHasMore((data || []).length === 50)
+    }
+    setPaging(false)
+  }
+
+  async function loadMoreConversations() {
+    if (!conversationsHasMore || paging || !conversations.length) return
+    const cursor = conversations[conversations.length - 1]
+    if (!cursor?.sort_at) return setConversationsHasMore(false)
+    setPaging(true)
+    const { data, error } = await client.rpc('social_conversations_v2', {
+      before_sort_at: cursor.sort_at,
+      before_conversation_id: cursor.conversation_id,
+      result_limit: 30
+    })
+    if (!error) {
+      setConversations((current) => mergeById(current, data || [], 'conversation_id'))
+      setConversationsHasMore((data || []).length === 30)
+    }
+    setPaging(false)
   }
 
   async function send(event) {
@@ -77,7 +140,7 @@ function MessagesView({ client, snapshot }) {
 
   return <div className="figma-friends-message-layout">
     <aside className="figma-friends-conversations" aria-label="Conversations">
-      {snapshot.conversations.length ? snapshot.conversations.map((conversation) => <button
+      {conversations.length ? conversations.map((conversation) => <button
         className={selected?.conversation_id === conversation.conversation_id ? 'is-active' : ''}
         type="button"
         onClick={() => router.push(`/matches?tab=messages&conversation=${encodeURIComponent(conversation.conversation_id)}`)}
@@ -87,12 +150,14 @@ function MessagesView({ client, snapshot }) {
         <span><strong>{conversation.display_name || conversation.username || 'Friend'}</strong><small>{conversation.last_message || 'Start a conversation'}</small></span>
         {conversation.unread_count > 0 ? <b>{conversation.unread_count}</b> : null}
       </button>) : <div className="figma-friends-conversation-empty">No conversations yet</div>}
+      {conversationsHasMore ? <button type="button" onClick={loadMoreConversations} disabled={paging}>Load more conversations</button> : null}
     </aside>
 
     <section className="figma-friends-chat">
       {selected ? <>
         <header><Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} /><span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span></header>
         <div className="figma-friends-messages" aria-live="polite">
+          {messagesHasMore ? <button type="button" onClick={loadOlderMessages} disabled={paging}>Load older messages</button> : null}
           {messages.length ? messages.map((item) => {
             const mine = item.sender_id === snapshot.self.id
             return <div className={`figma-friends-message${mine ? ' is-mine' : ''}`} key={item.id}>
@@ -130,14 +195,10 @@ function SharedView({ client, snapshot }) {
         return [
           <article className="figma-friends-shared-place" key={`place:${item.share_id}`}>
             <Link className="figma-friends-shared-photo" href={item.location_slug ? `/plans/${item.location_slug}` : '/plans'} style={mediaUrl(client, item.location_cover_path) ? { backgroundImage: `url(${mediaUrl(client, item.location_cover_path)})` } : undefined} />
-            <h2>{item.location_name || 'Shared puddle'}</h2>
-            <small>{item.location_city || ''}</small>
-            <span>{item.distance_label || ''}</span>
+            <h2>{item.location_name || 'Shared puddle'}</h2><small>{item.location_city || ''}</small><span>{item.distance_label || ''}</span>
             <b>{item.direction === 'received' ? `Shared by ${item.friend_name || 'friend'}` : `Shared with ${item.friend_name || 'friend'}`}</b>
           </article>,
-          <article className="figma-friends-shared-chat" key={`chat:${item.share_id}`}>
-            <button type="button" onClick={() => router.push(chatHref)}>Jump to chat</button>
-          </article>
+          <article className="figma-friends-shared-chat" key={`chat:${item.share_id}`}><button type="button" onClick={() => router.push(chatHref)}>Jump to chat</button></article>
         ]
       }) : <div className="figma-friends-shared-empty">No shared puddles yet.</div>}
     </div>
@@ -158,7 +219,7 @@ function AddView({ client, snapshot }) {
     const term = query.trim()
     if (!term) return setResults([])
     setSearching(true)
-    const { data } = await client.rpc('social_friend_search_v1', { search_term: term })
+    const { data } = await client.rpc('social_friend_search_v2', { search_term: term, result_limit: 30 })
     setResults(data || [])
     setSearching(false)
   }
@@ -191,7 +252,7 @@ function AddView({ client, snapshot }) {
       <button type="submit" disabled={searching} aria-label="Search for friends">↑</button>
     </form>
 
-    {results.length ? <div className="figma-friends-search-results">{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}</span>{person.is_friend ? <button type="button" onClick={() => router.push('/matches?tab=messages')}>Message</button> : <button type="button" onClick={() => request(person)} disabled={pendingTarget === person.id}>＋</button>}</div>)}</div> : null}
+    {results.length ? <div className="figma-friends-search-results">{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}{person.mutual_count ? <small>{person.mutual_count} mutual</small> : null}</span>{person.is_friend ? <button type="button" onClick={() => router.push('/matches?tab=messages')}>Message</button> : <button type="button" onClick={() => request(person)} disabled={pendingTarget === person.id}>＋</button>}</div>)}</div> : null}
 
     <article className="figma-friends-request-card">
       <small>Request</small>
