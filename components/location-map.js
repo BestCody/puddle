@@ -8,21 +8,42 @@ const MIN_ZOOM = 3
 const MAX_ZOOM = 18
 
 function clamp(value, min, max) { return Math.min(max, Math.max(min, value)) }
+function normalizeLongitude(value) { return ((((Number(value) + 180) % 360) + 360) % 360) - 180 }
 function worldSize(zoom) { return TILE_SIZE * (2 ** zoom) }
 function project(latitude, longitude, zoom) {
   const size = worldSize(zoom)
   const lat = clamp(Number(latitude), -85.0511, 85.0511) * Math.PI / 180
   return {
-    x: (Number(longitude) + 180) / 360 * size,
+    x: (normalizeLongitude(longitude) + 180) / 360 * size,
     y: (1 - Math.log(Math.tan(lat) + 1 / Math.cos(lat)) / Math.PI) / 2 * size
   }
 }
 function unproject(x, y, zoom) {
   const size = worldSize(zoom)
-  const longitude = x / size * 360 - 180
+  const longitude = normalizeLongitude(x / size * 360 - 180)
   const n = Math.PI - 2 * Math.PI * y / size
-  const latitude = 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))
+  const latitude = clamp(180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))), -85.0511, 85.0511)
   return { latitude, longitude }
+}
+function projectedXOffset(x, centerX, zoom) {
+  const size = worldSize(zoom)
+  let offset = x - centerX
+  if (offset > size / 2) offset -= size
+  if (offset < -size / 2) offset += size
+  return offset
+}
+function viewportBounds(center, zoom, viewport) {
+  const projectedCenter = project(center.latitude, center.longitude, zoom)
+  const horizontalPadding = viewport.width * .18
+  const verticalPadding = viewport.height * .18
+  const topLeft = unproject(projectedCenter.x - viewport.width / 2 - horizontalPadding, projectedCenter.y - viewport.height / 2 - verticalPadding, zoom)
+  const bottomRight = unproject(projectedCenter.x + viewport.width / 2 + horizontalPadding, projectedCenter.y + viewport.height / 2 + verticalPadding, zoom)
+  return {
+    north: Math.max(topLeft.latitude, bottomRight.latitude),
+    south: Math.min(topLeft.latitude, bottomRight.latitude),
+    west: topLeft.longitude,
+    east: bottomRight.longitude
+  }
 }
 function stateLabel(state) {
   if (state === 'matched') return 'Match'
@@ -61,14 +82,14 @@ function MapTileLayer({ center, zoom, viewport }) {
 }
 
 function PointCard({ point }) {
-  if (!point) return <div className="location-map-empty-selection"><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, upcoming plans, and catalogue search results.</p></div>
+  if (!point) return <div className="location-map-empty-selection"><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, upcoming plans, and Puddle locations in this map area.</p></div>
   return <article className="location-map-card">
     <div className="location-map-card-photo" style={point.photo_url ? { backgroundImage: `linear-gradient(180deg,transparent,rgba(23,17,20,.68)),url(${point.photo_url})` } : undefined}><span>{point.states.map(stateLabel).join(' · ')}</span></div>
     <div><small>{point.neighborhood || point.city || String(point.category || 'location').replaceAll('_', ' ')}</small><h2>{point.title}</h2><p>{point.summary}</p><div className="location-map-card-tags">{point.states.map((state) => <span className={`is-${state}`} key={state}>{stateLabel(state)}</span>)}</div>{point.plan?.planned_for ? <strong className="location-map-plan-time">{new Date(point.plan.planned_for).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong> : null}<div className="location-map-card-actions"><Link href={point.href}>Open details</Link><a href={directionsUrl(point)} target="_blank" rel="noreferrer">Directions ↗</a></div></div>
   </article>
 }
 
-export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false }) {
+export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, selectingForPost = false }) {
   const mapRef = useRef(null)
   const dragRef = useRef(null)
   const [viewport, setViewport] = useState({ width: 900, height: 620 })
@@ -77,6 +98,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(initialPoints[0]?.id || null)
   const [heatmapEnabled, setHeatmapEnabled] = useState(Boolean(passActive))
+  const [cataloguePoints, setCataloguePoints] = useState([])
 
   useEffect(() => {
     const node = mapRef.current
@@ -86,14 +108,57 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     return () => observer.disconnect()
   }, [])
 
-  const points = useMemo(() => filter === 'all' ? initialPoints : initialPoints.filter((point) => point.states.includes(filter)), [initialPoints, filter])
-  const selected = initialPoints.find((point) => point.id === selectedId) || points[0] || null
+  useEffect(() => {
+    if (!loadCatalogue || filter !== 'all') return undefined
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      const bounds = viewportBounds(center, zoom, viewport)
+      const params = new URLSearchParams({
+        north: bounds.north.toFixed(6),
+        south: bounds.south.toFixed(6),
+        west: bounds.west.toFixed(6),
+        east: bounds.east.toFixed(6),
+        zoom: String(zoom)
+      })
+      try {
+        const response = await fetch(`/api/map/viewport?${params}`, { cache: 'no-store', signal: controller.signal })
+        if (!response.ok) throw new Error(`Map viewport returned ${response.status}`)
+        const payload = await response.json()
+        const next = Array.isArray(payload?.points) ? payload.points : []
+        setCataloguePoints(next.map((point) => selectingForPost ? { ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` } : point))
+      } catch (error) {
+        if (error?.name !== 'AbortError') console.warn('Could not refresh visible Puddle locations.', { message: error?.message || 'unknown error' })
+      }
+    }, 280)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [center.latitude, center.longitude, filter, loadCatalogue, selectingForPost, viewport.height, viewport.width, zoom])
+
+  const allPoints = useMemo(() => {
+    const merged = new Map()
+    for (const point of cataloguePoints) merged.set(point.id, point)
+    for (const point of initialPoints) {
+      const existing = merged.get(point.id)
+      merged.set(point.id, existing ? {
+        ...existing,
+        ...point,
+        photo_url: point.photo_url || existing.photo_url,
+        states: [...new Set([...(existing.states || []), ...(point.states || [])])]
+      } : point)
+    }
+    return [...merged.values()]
+  }, [cataloguePoints, initialPoints])
+
+  const points = useMemo(() => filter === 'all' ? allPoints : allPoints.filter((point) => point.states.includes(filter)), [allPoints, filter])
+  const selected = allPoints.find((point) => point.id === selectedId) || points[0] || null
   const projectedCenter = project(center.latitude, center.longitude, zoom)
   const maxHeat = Math.max(1, ...heatmapPoints.map((point) => Number(point.save_count) || 0))
 
   function changeFilter(next) {
     setFilter(next)
-    const first = next === 'all' ? initialPoints[0] : initialPoints.find((point) => point.states.includes(next))
+    const first = next === 'all' ? allPoints[0] : allPoints.find((point) => point.states.includes(next))
     if (first) { setSelectedId(first.id); setCenter({ latitude: first.latitude, longitude: first.longitude }) }
   }
   function selectPoint(point) { setSelectedId(point.id); setCenter({ latitude: point.latitude, longitude: point.longitude }) }
@@ -115,12 +180,12 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   }
   function locate() {
     if (!navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition((position) => { setCenter({ latitude: position.coords.latitude, longitude: position.coords.longitude }); setZoom(14) }, () => {}, { maximumAge: 300000, timeout: 8000 })
+    navigator.geolocation.getCurrentPosition((position) => { setCenter({ latitude: position.coords.latitude, longitude: normalizeLongitude(position.coords.longitude) }); setZoom(14) }, () => {}, { maximumAge: 300000, timeout: 8000 })
   }
 
   return <div className="location-map-workspace">
     <section className="location-map-toolbar">
-      <div className="location-map-filters" aria-label="Map filters">{['all', 'saved', 'matched', 'planned'].map((state) => <button type="button" className={filter === state ? 'is-active' : ''} onClick={() => changeFilter(state)} key={state}>{state === 'all' ? 'All places' : stateLabel(state)}<strong>{state === 'all' ? initialPoints.length : initialPoints.filter((point) => point.states.includes(state)).length}</strong></button>)}</div>
+      <div className="location-map-filters" aria-label="Map filters">{['all', 'saved', 'matched', 'planned'].map((state) => <button type="button" className={filter === state ? 'is-active' : ''} onClick={() => changeFilter(state)} key={state}>{state === 'all' ? 'All places' : stateLabel(state)}<strong>{state === 'all' ? allPoints.length : allPoints.filter((point) => point.states.includes(state)).length}</strong></button>)}</div>
       <div className="location-map-toolbar-actions">
         {passActive ? <button className={`location-map-heatmap-toggle${heatmapEnabled ? ' is-active' : ''}`} type="button" onClick={() => setHeatmapEnabled((value) => !value)} aria-pressed={heatmapEnabled}><span>PASS</span> Heatmap</button> : null}
         <button className="location-map-locate" type="button" onClick={locate}>◎ Near me</button>
@@ -131,7 +196,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
         {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{heatmapPoints.map((point) => {
           const projected = project(point.latitude, point.longitude, zoom)
-          const x = projected.x - projectedCenter.x + viewport.width / 2
+          const x = projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2
           const y = projected.y - projectedCenter.y + viewport.height / 2
           const ratio = Math.max(.12, (Number(point.save_count) || 1) / maxHeat)
           const size = Math.round(34 + ratio * 74)
@@ -139,7 +204,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         })}</div> : null}
         <div className="location-map-markers">{points.map((point) => {
           const projected = project(point.latitude, point.longitude, zoom)
-          const x = projected.x - projectedCenter.x + viewport.width / 2
+          const x = projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2
           const y = projected.y - projectedCenter.y + viewport.height / 2
           const primary = primaryState(point)
           return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${x}px,${y}px,0)` }} onClick={(event) => { event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span>{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? '•' : '♥'}</span></button>
