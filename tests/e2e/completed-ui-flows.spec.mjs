@@ -37,10 +37,9 @@ test('reviews, request cancellation, category overflow, and catalogue map search
     }, { onConflict: 'requester_id,addressee_id' })
     if (requestError) throw requestError
 
-    await signInThroughUi(page, owner.email, owner.password, '/plans')
+    await signInThroughUi(page, owner.email, owner.password, '/plans/moonlight-cafe')
 
-    // More-saved-categories must expose real overflow categories instead of a no-op link.
-    await page.goto('/plans')
+    // The detail-page + must expose real overflow categories instead of navigating back to All.
     const moreCategories = page.getByLabel('More saved categories')
     await expect(moreCategories).toBeVisible()
     await moreCategories.click()
@@ -48,7 +47,6 @@ test('reviews, request cancellation, category overflow, and catalogue map search
     await expect(overflow.getByRole('link')).toHaveCount(2)
 
     // Review CRUD must persist through the real server actions and RPCs.
-    await page.goto('/plans/moonlight-cafe')
     await page.getByLabel('Your rating').selectOption('5')
     await page.getByLabel('Review').fill('Excellent espresso and a useful E2E review.')
     await page.getByRole('button', { name: 'Post review' }).click()
