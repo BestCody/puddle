@@ -52,14 +52,11 @@ test('reviews, request cancellation, category overflow, and catalogue map search
 
     await signInThroughUi(page, owner.email, owner.password, detailPath)
 
-    // The detail-page + must expose real overflow categories instead of navigating back to All.
     const moreCategories = page.getByLabel('More saved categories')
     await expect(moreCategories).toBeVisible()
     await moreCategories.click()
-    const overflow = moreCategories.locator('..')
-    await expect(overflow.getByRole('link')).toHaveCount(2)
+    await expect(moreCategories.locator('..').getByRole('link')).toHaveCount(2)
 
-    // Review CRUD must persist through the real server actions and RPCs.
     await page.getByLabel('Your rating').selectOption('5')
     await page.getByLabel('Review').fill('Excellent espresso and a useful E2E review.')
     await submitServerAction(page, 'Post review', 'Your review was saved.')
@@ -84,7 +81,6 @@ test('reviews, request cancellation, category overflow, and catalogue map search
     await expect(ownReviewCard).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Post review' })).toBeVisible()
 
-    // An outgoing pending friend request must be cancellable from the Add tab.
     await page.goto('/matches?tab=add')
     const cancelRequest = page.getByRole('button', { name: 'Cancel friend request to Completed UI Friend' })
     await expect(cancelRequest).toBeVisible()
@@ -100,7 +96,6 @@ test('reviews, request cancellation, category overflow, and catalogue map search
       .single()
     expect(friendship.state).toBe('removed')
 
-    // Map search must return catalogue locations even when they are not personal map state.
     await admin.from('user_content_states')
       .delete()
       .eq('profile_id', owner.user.id)
@@ -110,9 +105,9 @@ test('reviews, request cancellation, category overflow, and catalogue map search
     await page.goto('/map?view=map&q=Moonlight')
     await expect(page.getByLabel('Search all Puddle locations')).toHaveValue('Moonlight')
     const map = page.getByTestId('feed-map-canvas')
-    const visibleCard = map.locator('.location-map-card')
-    await expect(visibleCard.getByRole('heading', { name: 'Moonlight Café' })).toBeVisible()
-    await expect(visibleCard.locator('.location-map-card-tags .is-catalogue')).toBeVisible()
+    await expect(map.getByRole('button', { name: 'Moonlight Café, Puddle' })).toBeVisible()
+    await expect(map.getByRole('link', { name: /Moonlight Café/ })).toBeVisible()
+    await expect(map.locator('.location-map-marker.is-catalogue')).toHaveCount(1)
   } finally {
     await bestEffort(admin.from('location_reviews').delete().eq('author_id', owner.user.id))
     await bestEffort(admin.from('friendships').delete().or(`requester_id.eq.${owner.user.id},addressee_id.eq.${owner.user.id}`))
