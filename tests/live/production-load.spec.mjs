@@ -89,12 +89,14 @@ async function timedGet(request, path) {
       timeout: 15_000
     })
     const body = await response.body()
+    const bodyText = body.toString('utf8')
     return {
       ok: response.ok(),
       status: response.status(),
       durationMs: performance.now() - started,
       traceId: response.headers()['x-puddle-trace-id'] || null,
-      bodyPreview: body.toString('utf8').slice(0, 240)
+      bodyText,
+      bodyPreview: bodyText.slice(0, 240)
     }
   } catch (error) {
     return {
@@ -165,7 +167,7 @@ test('bounded production load gate covers all critical read paths', async ({ pag
 
     const mapPreflight = await timedGet(page.request, '/api/map/viewport?north=43.78&south=43.55&east=-79.20&west=-79.62&zoom=11')
     if (mapPreflight.ok) {
-      const mapPayload = JSON.parse(mapPreflight.bodyPreview || '{}')
+      const mapPayload = JSON.parse(mapPreflight.bodyText || '{}')
       if (!detailPath) detailPath = mapPayload?.points?.find((point) => point?.href)?.href || null
     } else {
       console.warn(JSON.stringify({
