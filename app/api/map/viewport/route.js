@@ -90,7 +90,7 @@ export async function GET(request) {
       zoom: Number(params.get('zoom') || 11)
     }
     const searchStarted = latencyStart()
-    const result = await searchGlobalLocationsInViewport(viewport)
+    const result = await searchGlobalLocationsInViewport(viewport, { traceId })
     const searchDuration = elapsedMs(searchStarted)
     recordSloObservation('openSearch', searchDuration, !result.timedOut, {
       trace_id: traceId,
