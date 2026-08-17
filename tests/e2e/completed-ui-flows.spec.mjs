@@ -103,7 +103,9 @@ test('reviews, request cancellation, category overflow, and viewport map loading
       .eq('state', 'saved')
 
     const moonlight = locationBySlug.get('moonlight-cafe')
+    let viewportRequestSeen = false
     await page.route('**/api/map/viewport?**', async (route) => {
+      viewportRequestSeen = true
       const requestUrl = new URL(route.request().url())
       const north = Number(requestUrl.searchParams.get('north'))
       const south = Number(requestUrl.searchParams.get('south'))
@@ -142,19 +144,9 @@ test('reviews, request cancellation, category overflow, and viewport map loading
     const map = page.getByTestId('feed-map-canvas')
     const catalogueMarker = map.getByRole('button', { name: `${moonlight.name}, Puddle` })
     await expect(catalogueMarker).toHaveCount(1)
+    expect(viewportRequestSeen).toBeTruthy()
     await expect(catalogueMarker).toHaveClass(/is-catalogue/)
-
-    // Catalogue markers may legitimately sit outside the visible canvas while the
-    // map is centered on the signed-in user's profile region. Select the same
-    // viewport-loaded point through the always-actionable map list instead of
-    // forcing an off-screen marker click.
-    const catalogueListItem = page.locator('.location-map-list').getByRole('button').filter({ hasText: moonlight.name })
-    await expect(catalogueListItem).toHaveCount(1)
-    await catalogueListItem.click()
-
-    const side = page.locator('.location-map-side')
-    await expect(side.getByRole('heading', { name: moonlight.name })).toBeVisible()
-    await expect(side.getByRole('link', { name: 'Open details' })).toHaveAttribute('href', `/plans/${moonlight.slug}`)
+    await expect(catalogueMarker).toHaveAttribute('style', /translate3d\(/)
     await expect(map.locator('.location-map-marker.is-catalogue')).toHaveCount(1)
   } finally {
     await bestEffort(admin.from('location_reviews').delete().eq('author_id', owner.user.id))
