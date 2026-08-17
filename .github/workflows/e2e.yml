@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - agent/scalable-map-viewport-search
   pull_request:
 
 concurrency:
