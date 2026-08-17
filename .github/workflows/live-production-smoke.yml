@@ -37,7 +37,7 @@ jobs:
           set +e
           for attempt in 1 2 3 4; do
             echo "Live smoke attempt ${attempt}/4"
-            npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs
+            npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/completed-ui-production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs
             status=$?
             if [ "$status" -eq 0 ]; then
               exit 0

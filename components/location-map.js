@@ -24,7 +24,18 @@ function unproject(x, y, zoom) {
   const latitude = 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))
   return { latitude, longitude }
 }
-function stateLabel(state) { return state === 'matched' ? 'Match' : state === 'planned' ? 'Planned' : 'Saved' }
+function stateLabel(state) {
+  if (state === 'matched') return 'Match'
+  if (state === 'planned') return 'Planned'
+  if (state === 'catalogue') return 'Puddle'
+  return 'Saved'
+}
+function primaryState(point) {
+  if (point.states.includes('planned')) return 'planned'
+  if (point.states.includes('matched')) return 'matched'
+  if (point.states.includes('saved')) return 'saved'
+  return 'catalogue'
+}
 function directionsUrl(point) { return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${point.latitude},${point.longitude}`)}` }
 
 function MapTileLayer({ center, zoom, viewport }) {
@@ -50,7 +61,7 @@ function MapTileLayer({ center, zoom, viewport }) {
 }
 
 function PointCard({ point }) {
-  if (!point) return <div className="location-map-empty-selection"><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, and upcoming plans without reopening the full discovery map.</p></div>
+  if (!point) return <div className="location-map-empty-selection"><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, upcoming plans, and catalogue search results.</p></div>
   return <article className="location-map-card">
     <div className="location-map-card-photo" style={point.photo_url ? { backgroundImage: `linear-gradient(180deg,transparent,rgba(23,17,20,.68)),url(${point.photo_url})` } : undefined}><span>{point.states.map(stateLabel).join(' · ')}</span></div>
     <div><small>{point.neighborhood || point.city || String(point.category || 'location').replaceAll('_', ' ')}</small><h2>{point.title}</h2><p>{point.summary}</p><div className="location-map-card-tags">{point.states.map((state) => <span className={`is-${state}`} key={state}>{stateLabel(state)}</span>)}</div>{point.plan?.planned_for ? <strong className="location-map-plan-time">{new Date(point.plan.planned_for).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong> : null}<div className="location-map-card-actions"><Link href={point.href}>Open details</Link><a href={directionsUrl(point)} target="_blank" rel="noreferrer">Directions ↗</a></div></div>
@@ -116,7 +127,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       </div>
     </section>
     <div className="location-map-layout">
-      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onWheel={wheel} aria-label="Interactive map of saved, matched, and planned locations">
+      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onWheel={wheel} aria-label="Interactive map of Puddle locations">
         <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
         {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{heatmapPoints.map((point) => {
           const projected = project(point.latitude, point.longitude, zoom)
@@ -130,13 +141,16 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
           const projected = project(point.latitude, point.longitude, zoom)
           const x = projected.x - projectedCenter.x + viewport.width / 2
           const y = projected.y - projectedCenter.y + viewport.height / 2
-          const primary = point.states.includes('planned') ? 'planned' : point.states.includes('matched') ? 'matched' : 'saved'
-          return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${x}px,${y}px,0)` }} onClick={(event) => { event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span>{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : '♥'}</span></button>
+          const primary = primaryState(point)
+          return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${x}px,${y}px,0)` }} onClick={(event) => { event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span>{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? '•' : '♥'}</span></button>
         })}</div>
         <div className="location-map-zoom"><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
         <a className="location-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onPointerDown={(event) => event.stopPropagation()}>© OpenStreetMap contributors</a>
       </section>
-      <aside className="location-map-side"><PointCard point={selected} /><div className="location-map-list">{points.map((point) => <button type="button" className={selectedId === point.id ? 'is-active' : ''} onClick={() => selectPoint(point)} key={point.id}><span className={`is-${point.states.includes('planned') ? 'planned' : point.states.includes('matched') ? 'matched' : 'saved'}`} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>)}</div></aside>
+      <aside className="location-map-side"><PointCard point={selected} /><div className="location-map-list">{points.map((point) => {
+        const primary = primaryState(point)
+        return <button type="button" className={selectedId === point.id ? 'is-active' : ''} onClick={() => selectPoint(point)} key={point.id}><span className={`is-${primary}`} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>
+      })}</div></aside>
     </div>
   </div>
 }

@@ -10,7 +10,7 @@ import styles from './MapFeed.module.css'
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Feed and map',
-  description: 'Browse Puddle posts or your saved places on the map.'
+  description: 'Browse Puddle posts or search Puddle locations on the map.'
 }
 
 function initials(name) {
@@ -152,14 +152,14 @@ function FeedTop({ view, query }) {
 function MapSearch({ query }) {
   return <form className={styles.mapSearch} action="/map" method="get" data-testid="map-search">
     <input type="hidden" name="view" value="map" />
-    <label><input aria-label="Search puddle map" type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
+    <label><input aria-label="Search all Puddle locations" type="search" name="q" defaultValue={query || ''} placeholder="Search all Puddle locations" /></label>
     <button type="submit" aria-label="Search map">⌕</button>
   </form>
 }
 
 function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false, query = '' }) {
   const first = points[0]
-  const hasMapContent = points.length || (passActive && heatmap.length)
+  const hasMapContent = points.length || (!query && passActive && heatmap.length)
 
   return <section className={styles.mapScreen} data-testid="feed-map-canvas">
     {selectingForPost ? <div className={styles.mapSelectionNotice}>
@@ -168,7 +168,7 @@ function MapScreen({ points, center, heatmap = [], passActive = false, selecting
     </div> : null}
 
     <div className={styles.mapCanvas}>
-      {hasMapContent ? <LocationMap initialPoints={points} initialCenter={center} heatmapPoints={heatmap} passActive={passActive && !selectingForPost} /> : <div className={styles.mapEmpty}>Save a place to see it on your map.</div>}
+      {hasMapContent ? <LocationMap initialPoints={points} initialCenter={center} heatmapPoints={query ? [] : heatmap} passActive={passActive && !selectingForPost && !query} /> : <div className={styles.mapEmpty}>{query ? 'No Puddle locations match that search.' : 'Save a place to see it on your map, or search the full Puddle catalogue.'}</div>}
     </div>
 
     {first ? <>
@@ -192,15 +192,11 @@ export default async function LocationMapPage({ searchParams }) {
   const selectingForPost = view === 'map' && params?.selectForPost === '1'
 
   return renderProductPage(async (session) => {
-    const mapSnapshot = await getLocationMapSnapshot(session)
+    const mapSnapshot = await getLocationMapSnapshot(session, view === 'map' ? query : '')
     const feed = view === 'feed' ? await getSocialFeedSnapshot(session, query) : null
-    const normalizedMapQuery = query.toLowerCase()
-    const filteredMapPoints = normalizedMapQuery
-      ? mapSnapshot.points.filter((point) => `${point.title || ''} ${point.category || ''} ${point.neighborhood || ''} ${point.city || ''}`.toLowerCase().includes(normalizedMapQuery))
-      : mapSnapshot.points
     const mapPoints = selectingForPost
-      ? filteredMapPoints.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
-      : filteredMapPoints
+      ? mapSnapshot.points.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
+      : mapSnapshot.points
 
     return <>
       <AuthMessage searchParams={params} />
