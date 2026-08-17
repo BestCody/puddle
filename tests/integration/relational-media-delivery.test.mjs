@@ -6,7 +6,7 @@ import { transformOpenPhoto } from '../../lib/app/open-photo-transform.js'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('discovery has a global-serving seam and retains Supabase only as rollout fallback', async () => {
+test('discovery has a global-serving seam and uses Supabase only when global serving is deliberately disabled', async () => {
   const selector = await read('lib/app/discovery.js')
   const global = await read('lib/app/discovery-global.js')
   const relational = await read('lib/app/discovery-relational.js')
@@ -14,7 +14,10 @@ test('discovery has a global-serving seam and retains Supabase only as rollout f
 
   assert.match(selector, /getGlobalDiscoveryFeed/)
   assert.match(selector, /GLOBAL_LOCATION_SEARCH_ENABLED/)
-  assert.match(selector, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE/)
+  assert.match(selector, /if \(!useGlobalLocationServing\(\)\) return getRelationalDiscoveryFeed\(session, filters, options\)/)
+  assert.equal(selector.match(/getRelationalDiscoveryFeed\(session, filters, options\)/g)?.length, 1)
+  assert.doesNotMatch(selector, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE/)
+  assert.doesNotMatch(selector, /relational-discovery-fallback/)
   assert.match(global, /global-location-serving/)
   assert.match(global, /searchGlobalLocations/)
   assert.match(route, /getDiscoveryFeed/)
