@@ -251,16 +251,14 @@ test('Feed and Map preserve the approved Figma composition', async ({ page }, te
     await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
     await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Map', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Back to Swipe' })).toBeVisible()
-    // The map now loads catalogue data by viewport; legacy map text search and its
-    // Figma snapshot are intentionally gone. Keep the visual contract focused on
-    // the authored shell while verifying the saved marker is actually on-screen.
+    // The map now loads catalogue data by viewport and centers on the signed-in
+    // user's profile region. A saved location can therefore be rendered in the
+    // absolute marker layer while legitimately sitting outside the current canvas.
     await expect(page.getByTestId('map-search')).toHaveCount(0)
-    const mapBounds = await box(page.getByTestId('feed-map-canvas'))
-    const savedMarker = await box(page.getByRole('button', { name: 'Maple Grove Park, Saved' }))
-    expect(savedMarker.x).toBeGreaterThanOrEqual(mapBounds.x)
-    expect(savedMarker.y).toBeGreaterThanOrEqual(mapBounds.y)
-    expect(savedMarker.x + savedMarker.width).toBeLessThanOrEqual(mapBounds.x + mapBounds.width)
-    expect(savedMarker.y + savedMarker.height).toBeLessThanOrEqual(mapBounds.y + mapBounds.height)
+    const savedMarker = page.getByRole('button', { name: 'Maple Grove Park, Saved' })
+    await expect(savedMarker).toHaveCount(1)
+    await expect(savedMarker).toHaveClass(/is-saved/)
+    await expect(savedMarker).toHaveAttribute('style', /translate3d\(/)
   } finally {
     await cleanupFixture({ userId: account.user.id, ...fixture })
   }
