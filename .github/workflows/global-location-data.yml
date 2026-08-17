@@ -21,7 +21,7 @@ permissions:
 
 concurrency:
   group: global-location-dataset
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
