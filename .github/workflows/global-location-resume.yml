@@ -59,6 +59,7 @@ jobs:
       B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
       B2_DATA_PREFIX: data
       GLOBAL_BOOTSTRAP_B2_PREFIX: data/snapshots/bootstrap/current
+      DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -76,6 +77,5 @@ jobs:
           GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
           OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
           OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
-          OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
           OPENSEARCH_LOCATION_SHARDS: ${{ vars.OPENSEARCH_LOCATION_SHARDS || '6' }}
           OPENSEARCH_LOCATION_REPLICAS: ${{ vars.OPENSEARCH_LOCATION_REPLICAS || '2' }}
