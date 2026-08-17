@@ -105,7 +105,6 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     await createDisposableAccount(friendPage, friend)
     friendCreated = true
 
-    // Save three distinct location categories so the detail-page + has real overflow content.
     for (const slug of ['moonlight-cafe', 'sunset-steps', 'laneway-gallery']) await ensureSaved(page, slug)
 
     const detailPath = '/plans/moonlight-cafe'
@@ -115,7 +114,6 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     await moreCategories.click()
     await expect(moreCategories.locator('..').getByRole('link').first()).toBeVisible()
 
-    // Create, update, and delete a real review, reopening the clean route after each server action.
     const originalReview = `Live review ${suffix}`
     const updatedReview = `Updated live review ${suffix}`
     await page.getByLabel('Your rating').selectOption('5')
@@ -142,7 +140,6 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     await expect(ownReviewCard).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Post review' })).toBeVisible()
 
-    // Send an outgoing friend request, then cancel it from the actual Sent list.
     await page.goto('/matches?tab=add')
     await page.getByPlaceholder('Search name or @username').fill(friend.username)
     await page.getByRole('button', { name: 'Search for friends' }).click()
@@ -155,12 +152,11 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     await cancel.click()
     await expect(cancel).toHaveCount(0)
 
-    // Query the deployed global catalogue. These results are not among this account's three saved places.
     await page.goto('/map?view=map&q=restaurant')
     await expect(page.getByLabel('Search all Puddle locations')).toHaveValue('restaurant')
-    const visibleCard = page.locator('.location-map-card')
-    await expect(visibleCard).toBeVisible({ timeout: 30_000 })
-    await expect(visibleCard.locator('.location-map-card-tags .is-catalogue')).toBeVisible()
+    const map = page.getByTestId('feed-map-canvas')
+    await expect(map.locator('.location-map-marker.is-catalogue').first()).toBeVisible({ timeout: 30_000 })
+    await expect(map.locator('a').filter({ hasText: /./ }).first()).toBeVisible()
   } finally {
     if (ownerCreated) await deleteDisposableAccount(page)
     if (friendCreated && friendPage) await deleteDisposableAccount(friendPage)
