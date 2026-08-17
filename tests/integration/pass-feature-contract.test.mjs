@@ -11,16 +11,19 @@ test('Pass page keeps the six advertised feature promises', async () => {
   }
 })
 
-test('Pass heatmap is backed by an entitlement RPC and rendered on the map', async () => {
+test('Pass heatmap uses incremental density tiles and viewport requests', async () => {
   const data = await read('lib/app/location-map-data.js')
   const map = await read('components/location-map.js')
-  const migration = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
+  const route = await read('app/api/map/heatmap/route.js')
+  const migration = await read('supabase/migrations/10065_scalability_hardening.sql')
 
-  assert.match(data, /pass_location_heatmap_v1/)
-  assert.match(map, /heatmapPoints/)
+  assert.doesNotMatch(data, /rpcOr\(session, 'pass_location_heatmap_v1'/)
+  assert.match(map, /\/api\/map\/heatmap/)
+  assert.match(map, /viewportBounds\(center, zoom, viewport\)/)
   assert.match(map, /location-map-heatmap-toggle/)
-  assert.match(migration, /create or replace function public\.pass_location_heatmap_v1/)
-  assert.match(migration, /public\.puddle_tinder_active_v1\(auth\.uid\(\)\)/)
+  assert.match(route, /pass_location_heatmap_viewport_v2/)
+  assert.match(migration, /create table if not exists public\.location_save_density_tiles/)
+  assert.match(migration, /sync_location_save_density_state_v1/)
 })
 
 test('creating a location is Pass-gated in the page, action, and database policy', async () => {
@@ -33,25 +36,28 @@ test('creating a location is Pass-gated in the page, action, and database policy
   assert.match(migration, /create policy "pass users create locations"/)
 })
 
-test('Message anyone uses Pass-only search and guarded direct-conversation RPCs', async () => {
+test('Message anyone uses trigram-backed Pass search and guarded direct conversations', async () => {
   const search = await read('components/pass-message-search.js')
-  const migration = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
+  const pass = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
+  const scale = await read('supabase/migrations/10065_scalability_hardening.sql')
 
-  assert.match(search, /pass_message_search_v1/)
+  assert.match(search, /pass_message_search_v2/)
   assert.match(search, /pass_open_direct_conversation_v1/)
-  assert.match(migration, /public\.puddle_adult_v1\(target\)/)
-  assert.match(migration, /profile_visibility, 'public'\) <> 'hidden'/)
-  assert.match(migration, /public\.blocks/)
+  assert.match(scale, /profiles_username_trgm_idx/)
+  assert.match(scale, /create or replace function public\.pass_message_search_v2/)
+  assert.match(pass, /public\.puddle_adult_v1\(target\)/)
+  assert.match(pass, /public\.blocks/)
 })
 
-test('Pass owners can see visible profiles who saved locations they manage', async () => {
+test('Pass owners get a bounded saver page and a separate total count', async () => {
   const studio = await read('app/studio/places/[id]/page.js')
-  const migration = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
+  const migration = await read('supabase/migrations/10065_scalability_hardening.sql')
 
-  assert.match(studio, /pass_location_savers_v1/)
-  assert.match(studio, /See who saved/)
-  assert.match(migration, /location\.created_by = actor/)
-  assert.match(migration, /profile_visibility, 'public'\) <> 'hidden'/)
+  assert.match(studio, /pass_location_savers_v2/)
+  assert.match(studio, /pass_location_saver_count_v2/)
+  assert.match(studio, /result_limit: 50/)
+  assert.match(studio, /Next savers/)
+  assert.match(migration, /limit page_limit/)
 })
 
 test('Pass notification alerts are realtime, permission-gated, and activate immediately', async () => {
@@ -89,8 +95,10 @@ test('feature migrations have a unique dependency-safe order', async () => {
   const functional = await read('supabase/migrations/10057_functional_feature_completion.sql')
   const notifications = await read('supabase/migrations/10058_notification_preference_enforcement.sql')
   const pass = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
+  const scale = await read('supabase/migrations/10065_scalability_hardening.sql')
 
   assert.match(functional, /create table if not exists public\.social_posts/)
   assert.match(notifications, /category_enabled/)
   assert.match(pass, /social_conversation_peer_v2/)
+  assert.match(scale, /social_messages_v2/)
 })
