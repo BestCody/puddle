@@ -66,6 +66,10 @@ if missing:
     raise RuntimeError(f'Canonical snapshot is incomplete: {len(missing)} country partitions missing: {",".join(missing[:40])}')
 
 con = duckdb.connect()
+temp_directory = os.getenv('DUCKDB_TEMP_DIRECTORY', '').strip()
+if temp_directory:
+    os.makedirs(temp_directory, exist_ok=True)
+    con.execute(f"SET temp_directory='{temp_directory.replace("'", "''")}'")
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
 con.execute(f"SET threads TO {max(1, min(32, int(os.getenv('GLOBAL_FINALIZE_THREADS', '8'))))}")
