@@ -21,7 +21,7 @@ export function FeedShareMenu({ postId, title }) {
   async function loadPage(cursor = null) {
     if (loading) return
     setLoading(true)
-    const { data, error } = await client.rpc('social_friends_v2', {
+    const { data, error } = await client.rpc('social_friend_picker_v2', {
       before_name: cursor?.sort_name || null,
       before_id: cursor?.id || null,
       result_limit: 30
