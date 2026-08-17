@@ -2,13 +2,22 @@ import { test, expect } from '@playwright/test'
 import { admin, completeProfileDirect, createConfirmedUser, signInThroughUi } from './support.mjs'
 
 const seedSlugs = ['moonlight-cafe', 'sunset-steps', 'laneway-gallery', 'harbour-activity-deck']
+const detailPath = '/plans/moonlight-cafe'
 
 async function bestEffort(operation) {
   try { await operation } catch {}
 }
 
+async function submitServerAction(page, buttonName, expectedMessage) {
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get('success') === expectedMessage, { timeout: 30_000 }),
+    page.getByRole('button', { name: buttonName }).click()
+  ])
+  await page.goto(detailPath)
+}
+
 test('reviews, request cancellation, category overflow, and catalogue map search work end to end', async ({ page }) => {
-  test.setTimeout(90_000)
+  test.setTimeout(120_000)
   const owner = await createConfirmedUser({ displayName: 'Completed UI Owner' })
   const friend = await createConfirmedUser({ displayName: 'Completed UI Friend' })
 
@@ -41,7 +50,7 @@ test('reviews, request cancellation, category overflow, and catalogue map search
     }, { onConflict: 'requester_id,addressee_id' })
     if (requestError) throw requestError
 
-    await signInThroughUi(page, owner.email, owner.password, '/plans/moonlight-cafe')
+    await signInThroughUi(page, owner.email, owner.password, detailPath)
 
     // The detail-page + must expose real overflow categories instead of navigating back to All.
     const moreCategories = page.getByLabel('More saved categories')
@@ -51,20 +60,27 @@ test('reviews, request cancellation, category overflow, and catalogue map search
     await expect(overflow.getByRole('link')).toHaveCount(2)
 
     // Review CRUD must persist through the real server actions and RPCs.
-    const reviewSection = page.getByTestId('saved-place-reviews')
-    const ownReviewCard = reviewSection.locator('article').filter({ hasText: 'Completed UI Owner' })
     await page.getByLabel('Your rating').selectOption('5')
     await page.getByLabel('Review').fill('Excellent espresso and a useful E2E review.')
-    await page.getByRole('button', { name: 'Post review' }).click()
+    await submitServerAction(page, 'Post review', 'Your review was saved.')
+
+    let reviewSection = page.getByTestId('saved-place-reviews')
+    let ownReviewCard = reviewSection.locator('article').filter({ hasText: 'Completed UI Owner' })
     await expect(ownReviewCard.getByText('Excellent espresso and a useful E2E review.', { exact: true })).toBeVisible()
 
     await page.getByLabel('Your rating').selectOption('4')
     await page.getByLabel('Review').fill('Updated E2E review body.')
-    await page.getByRole('button', { name: 'Update review' }).click()
+    await submitServerAction(page, 'Update review', 'Your review was saved.')
+
+    reviewSection = page.getByTestId('saved-place-reviews')
+    ownReviewCard = reviewSection.locator('article').filter({ hasText: 'Completed UI Owner' })
     await expect(ownReviewCard.getByText('Updated E2E review body.', { exact: true })).toBeVisible()
     await expect(ownReviewCard.getByText('Excellent espresso and a useful E2E review.', { exact: true })).toHaveCount(0)
+    await expect(ownReviewCard.getByLabel('4 out of 5 stars')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Delete my review' }).click()
+    await submitServerAction(page, 'Delete my review', 'Your review was removed.')
+    reviewSection = page.getByTestId('saved-place-reviews')
+    ownReviewCard = reviewSection.locator('article').filter({ hasText: 'Completed UI Owner' })
     await expect(ownReviewCard).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Post review' })).toBeVisible()
 
@@ -93,8 +109,10 @@ test('reviews, request cancellation, category overflow, and catalogue map search
 
     await page.goto('/map?view=map&q=Moonlight')
     await expect(page.getByLabel('Search all Puddle locations')).toHaveValue('Moonlight')
-    await expect(page.getByTestId('feed-map-canvas').getByText('Moonlight Café', { exact: true }).first()).toBeVisible()
-    await expect(page.getByTestId('feed-map-canvas').getByText('Puddle', { exact: true }).first()).toBeVisible()
+    const map = page.getByTestId('feed-map-canvas')
+    const visibleCard = map.locator('.location-map-card')
+    await expect(visibleCard.getByRole('heading', { name: 'Moonlight Café' })).toBeVisible()
+    await expect(visibleCard.locator('.location-map-card-tags .is-catalogue')).toBeVisible()
   } finally {
     await bestEffort(admin.from('location_reviews').delete().eq('author_id', owner.user.id))
     await bestEffort(admin.from('friendships').delete().or(`requester_id.eq.${owner.user.id},addressee_id.eq.${owner.user.id}`))
