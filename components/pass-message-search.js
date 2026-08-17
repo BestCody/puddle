@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export function PassMessageSearch({ enabled }) {
   const router = useRouter()
-  const client = createClient()
+  const client = useMemo(() => createClient(), [])
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [busy, setBusy] = useState(false)
@@ -20,7 +20,7 @@ export function PassMessageSearch({ enabled }) {
     if (!term) return setResults([])
     setBusy(true)
     setNotice('')
-    const { data, error } = await client.rpc('pass_message_search_v1', { search_term: term })
+    const { data, error } = await client.rpc('pass_message_search_v2', { search_term: term, result_limit: 30 })
     setResults(error ? [] : data || [])
     if (error) setNotice('Could not search profiles right now.')
     setBusy(false)
