@@ -2,6 +2,9 @@ name: Snapshot current Puddle catalogue to B2
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
