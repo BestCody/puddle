@@ -5,6 +5,14 @@ import { getDiscoveryFeed } from '@/lib/app/discovery'
 import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
+import {
+  SERVER_LATENCY_BUDGET_MS,
+  createTraceId,
+  elapsedMs,
+  latencyStart,
+  recordServerLatency,
+  recordSloObservation
+} from '@/lib/performance/server-latency'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,65 +23,108 @@ function continuationExcludes(value) {
   return [...new Set(value.map((item) => String(item || '').trim()).filter((item) => UUID_PATTERN.test(item)))]
 }
 
-async function authenticatedSession() {
+async function authenticatedSession(traceId) {
   if (!isSupabaseConfigured()) return { error: NextResponse.json({ error: 'Discovery is unavailable.' }, { status: 503 }) }
+  const supabaseStarted = latencyStart()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
+  if (!user) {
+    recordServerLatency('supabase.discoveryAuth', elapsedMs(supabaseStarted), SERVER_LATENCY_BUDGET_MS.pageAuthUser, {
+      trace_id: traceId,
+      service: 'supabase',
+      operation: 'discoveryAuth',
+      failed: true
+    })
+    return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
+  }
   const { data: profile } = await supabase
     .from('profiles')
     .select('id,birth_date,interests,latitude,longitude,city,region,country,country_code,timezone,location_label,search_radius_km')
     .eq('id', user.id)
     .maybeSingle()
-  return { session: { supabase, user, profile: profile || {} } }
+  recordServerLatency('supabase.discoverySession', elapsedMs(supabaseStarted), SERVER_LATENCY_BUDGET_MS.pageSession, {
+    trace_id: traceId,
+    service: 'supabase',
+    operation: 'discoverySession'
+  })
+  return { session: { supabase, user, profile: profile || {}, traceId } }
 }
 
-async function discoveryResponse(session, filters, excludeIds = []) {
+function withTrace(response, traceId) {
+  response.headers.set('x-puddle-trace-id', traceId)
+  return response
+}
+
+async function discoveryResponse(session, filters, excludeIds = [], traceId) {
+  const started = latencyStart()
   let feed
   try {
     feed = await getDiscoveryFeed(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
   } catch (error) {
-    console.error(`Discovery refresh failed: ${error?.message || 'unknown error'}`)
-    return NextResponse.json(
+    console.error(`Discovery refresh failed trace=${traceId}: ${error?.message || 'unknown error'}`)
+    recordSloObservation('discovery', elapsedMs(started), false, { trace_id: traceId, service: 'vercel' })
+    return withTrace(NextResponse.json(
       { error: 'Could not load nearby places. Please try again.' },
       { status: 503, headers: { 'Cache-Control': 'private, no-store' } }
-    )
+    ), traceId)
   }
 
   after(async () => {
     try {
       await recordSampledDiscoveryAnalytics({ supabase: session.supabase, user: session.user }, feed)
     } catch (error) {
-      console.warn(`Sampled discovery analytics failed: ${error.message}`)
+      console.warn(`Sampled discovery analytics failed trace=${traceId}: ${error.message}`)
     }
   })
-  return NextResponse.json(feed, {
+
+  const queryMs = Number(feed.infrastructure?.timings?.queryMs || 0)
+  const totalMs = elapsedMs(started)
+  const degraded = feed.emptyReason === 'temporarily_unavailable'
+  if (String(feed.infrastructure?.requestedSource || feed.infrastructure?.source || '').startsWith('global-location')) {
+    recordSloObservation('openSearch', queryMs, !degraded && !feed.infrastructure?.searchTimedOut, {
+      trace_id: traceId,
+      service: 'opensearch',
+      search_took_ms: Number(feed.infrastructure?.searchTookMs || 0),
+      candidate_count: Number(feed.infrastructure?.candidates || 0),
+      circuit_open: Boolean(feed.infrastructure?.circuitOpen)
+    })
+  }
+  recordSloObservation('discovery', totalMs, !degraded, {
+    trace_id: traceId,
+    service: 'vercel',
+    item_count: Array.isArray(feed.items) ? feed.items.length : 0,
+    degraded
+  })
+
+  return withTrace(NextResponse.json(feed, {
     headers: {
       'Cache-Control': 'private, no-store',
-      'server-timing': `query;dur=${feed.infrastructure?.timings?.queryMs || 0}, total;dur=${feed.infrastructure?.timings?.totalMs || 0}`
+      'server-timing': `query;dur=${queryMs}, total;dur=${totalMs}`
     }
-  })
+  }), traceId)
 }
 
 export async function GET(request) {
-  const auth = await authenticatedSession()
-  if (auth.error) return auth.error
+  const traceId = createTraceId()
+  const auth = await authenticatedSession(traceId)
+  if (auth.error) return withTrace(auth.error, traceId)
   const requestedFilters = Object.fromEntries(request.nextUrl.searchParams)
-  return discoveryResponse(auth.session, requestedFilters)
+  return discoveryResponse(auth.session, requestedFilters, [], traceId)
 }
 
 export async function POST(request) {
-  if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
-  const auth = await authenticatedSession()
-  if (auth.error) return auth.error
+  const traceId = createTraceId()
+  if (!verifyCsrf(request)) return withTrace(NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 }), traceId)
+  const auth = await authenticatedSession(traceId)
+  if (auth.error) return withTrace(auth.error, traceId)
   try {
     const body = await readJsonLimited(request, 40_000)
     const filters = body?.filters && typeof body.filters === 'object' && !Array.isArray(body.filters) ? body.filters : {}
-    return discoveryResponse(auth.session, filters, continuationExcludes(body?.excludeIds))
+    return discoveryResponse(auth.session, filters, continuationExcludes(body?.excludeIds), traceId)
   } catch (error) {
-    return NextResponse.json(
+    return withTrace(NextResponse.json(
       { error: safeSecurityError(error, 'That discovery continuation request is not valid.') },
       { status: error?.status || 400, headers: { 'Cache-Control': 'private, no-store' } }
-    )
+    ), traceId)
   }
 }

@@ -96,21 +96,31 @@ test('social feed uses exact keyset pages, indexed top-N comments, and lazy frie
   assert.doesNotMatch(bounds, /row_number\(\) over/)
 })
 
-test('global discovery failures cannot stampede the relational database', async () => {
+test('global discovery failures are isolated from the relational database', async () => {
   const discovery = await read('lib/app/discovery.js')
   const env = await read('.env.example')
 
   assert.match(discovery, /FAILURE_THRESHOLD = 3/)
   assert.match(discovery, /CIRCUIT_COOLDOWN_MS = 60_000/)
-  assert.match(discovery, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE \|\| 'false'/)
-  assert.match(discovery, /GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK \|\| 'false'/)
-  assert.match(discovery, /!legacyEnabled \|\| !emergencyEnabled/)
-  assert.match(discovery, /nextRelationalFallbackAt/)
   assert.match(discovery, /global-location-stale-cache/)
   assert.match(discovery, /global-location-degraded/)
   assert.match(discovery, /markCached/)
-  assert.match(env, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE=false/)
-  assert.match(env, /GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK=false/)
+  assert.match(discovery, /return emptyDegradedFeed\(session, filters, reason\)/)
+  assert.match(discovery, /if \(!useGlobalLocationServing\(\)\) return getRelationalDiscoveryFeed\(session, filters, options\)/)
+  assert.equal(discovery.match(/getRelationalDiscoveryFeed\(session, filters, options\)/g)?.length, 1)
+
+  for (const forbidden of [
+    'GLOBAL_LOCATION_FALLBACK_TO_SUPABASE',
+    'GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK',
+    'GLOBAL_LOCATION_RELATIONAL_FALLBACK_MIN_INTERVAL_MS',
+    'nextRelationalFallbackAt',
+    'relational-discovery-fallback'
+  ]) {
+    assert.doesNotMatch(discovery, new RegExp(forbidden))
+    if (forbidden.startsWith('GLOBAL_')) assert.doesNotMatch(env, new RegExp(forbidden))
+  }
+
+  assert.match(env, /never fail over to Supabase\/Postgres/)
 })
 
 test('legacy social readers delegate to bounded v2 contracts', async () => {

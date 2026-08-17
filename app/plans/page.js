@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getLocationPlansSnapshot } from '@/lib/app/location-plans-data'
+import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import styles from './Plans.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -82,19 +82,33 @@ function SavedCategoryRail({ folders, selectedCategory }) {
   </nav>
 }
 
+function nextPageHref({ active, category, query, cursor }) {
+  const params = new URLSearchParams()
+  params.set('tab', active)
+  if (active === 'saved' && category && category !== 'all') params.set('category', category)
+  if (active === 'saved' && query) params.set('q', query)
+  if (cursor) params.set('cursor', cursor)
+  return `/plans?${params.toString()}`
+}
+
 export default async function PlansPage({ searchParams }) {
   const params = await searchParams
   const active = params?.tab === 'planned' ? 'planned' : params?.tab === 'past' ? 'past' : 'saved'
   const requestedCategory = typeof params?.category === 'string' ? params.category : 'all'
-  const query = typeof params?.q === 'string' ? params.q.trim().toLowerCase() : ''
+  const query = typeof params?.q === 'string' ? params.q.trim() : ''
+  const cursor = typeof params?.cursor === 'string' ? params.cursor : null
 
   return renderProductPage(async (session) => {
-    const snapshot = await getLocationPlansSnapshot(session)
-    const rawItems = snapshot[active]
-    const items = query ? rawItems.filter((item) => `${item.title || ''} ${item.city || ''} ${item.category || ''}`.toLowerCase().includes(query)) : rawItems
+    const page = await getLocationPlansPage(session, {
+      tab: active,
+      cursor,
+      category: active === 'saved' ? requestedCategory : null,
+      query: active === 'saved' ? query : ''
+    })
+    const items = page.items
     const folders = foldersFor(items)
-    const selectedCategory = requestedCategory === 'all' || folders.some(([category]) => category === requestedCategory) ? requestedCategory : 'all'
-    const visible = selectedCategory === 'all' ? items : folders.find(([category]) => category === selectedCategory)?.[1] || []
+    const selectedCategory = active === 'saved' ? requestedCategory : 'all'
+    const visible = items
 
     return <div className={styles.screen} data-testid="saved-screen" data-tab={active}>
       <AuthMessage searchParams={params} />
@@ -113,10 +127,19 @@ export default async function PlansPage({ searchParams }) {
         {visible.map((item) => <SavedCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}
       </section> : <div className={styles.empty} data-testid="saved-empty"><strong>{active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong><Link href="/discover">Start swiping</Link></div>}
 
+      {page.pagination.hasMore ? <div className={styles.historyLink}>
+        <Link data-testid="saved-next-page" href={nextPageHref({
+          active,
+          category: selectedCategory,
+          query,
+          cursor: page.pagination.nextCursor
+        })}>{active === 'past' ? 'Older history' : active === 'planned' ? 'More plans' : 'More saved places'}</Link>
+      </div> : null}
+
       {active === 'saved' ? <form className={styles.floatingSearch} action="/plans" method="get" data-testid="saved-search">
         <input type="hidden" name="tab" value="saved" />
         {selectedCategory !== 'all' ? <input type="hidden" name="category" value={selectedCategory} /> : null}
-        <label><input aria-label="Search saved puddles" type="search" name="q" defaultValue={params?.q || ''} placeholder="Search a saved puddle..." /></label>
+        <label><input aria-label="Search saved puddles" type="search" name="q" defaultValue={query} placeholder="Search a saved puddle..." /></label>
         <button type="submit" aria-label="Search saved puddles">↑</button>
       </form> : null}
 
