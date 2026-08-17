@@ -91,6 +91,8 @@ export default async function SavedPlacePage({ params, searchParams }) {
     ])
     const isSaved = Boolean(savedState)
     const isPinned = Boolean(savedState?.pinned_at)
+    const plannedItem = (plansSnapshot?.planned || []).find((item) => item.location_id === location.id) || null
+    const mapStates = [isSaved ? 'saved' : null, plannedItem ? 'planned' : null].filter(Boolean)
     const friendList = friends || []
     const reviewList = reviews || []
     const myReview = reviewList.find((review) => review.author_id === session.user.id) || null
@@ -111,9 +113,9 @@ export default async function SavedPlacePage({ params, searchParams }) {
       longitude: Number(location.longitude),
       href: `/plans/${location.slug}`,
       photo_url: location.cover_url || location.gallery?.[0]?.url || null,
-      states: [isSaved ? 'saved' : 'planned'],
+      states: mapStates.length ? mapStates : ['catalogue'],
       match: null,
-      plan: null
+      plan: plannedItem ? { planned_for: plannedItem.planned_for, source: plannedItem.plan_source } : null
     }] : []
     const mapCenter = mapPoint.length ? { latitude: mapPoint[0].latitude, longitude: mapPoint[0].longitude } : null
     const gallery = [location.cover_url, ...(location.gallery || []).map((item) => item.url)].filter(Boolean)
