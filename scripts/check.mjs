@@ -158,7 +158,7 @@ const friendsPage = await read('app/matches/page.js')
 const socialHub = await read('components/figma-social-hub.js')
 const profile = await read('app/profile/page.js')
 for (const marker of ['FigmaSocialHub','getSocialHubSnapshot']) if (!friendsPage.includes(marker)) throw new Error(`Friends page is missing ${marker}`)
-for (const marker of ['Message','Shared','Add','social_friend_search_v1','social_send_message_v1']) if (!socialHub.includes(marker)) throw new Error(`Figma social hub is missing ${marker}`)
+for (const marker of ['Message','Shared','Add','social_friend_search_v2','social_friends_v2','social_messages_v2','social_send_message_v1']) if (!socialHub.includes(marker)) throw new Error(`Figma social hub is missing ${marker}`)
 if (!profile.includes('ProfilePhotoEditor')) throw new Error('Profile photo management is missing')
 if (!profile.includes('customize=1')) throw new Error('Profile customization state is missing')
 
