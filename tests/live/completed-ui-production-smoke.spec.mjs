@@ -109,19 +109,22 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     // Create, update, and delete a real review.
     const originalReview = `Live review ${suffix}`
     const updatedReview = `Updated live review ${suffix}`
+    const reviewSection = page.getByTestId('saved-place-reviews')
+    const ownReviewCard = reviewSection.locator('article').filter({ hasText: owner.displayName })
     await page.getByLabel('Your rating').selectOption('5')
     await page.getByLabel('Review').fill(originalReview)
     await page.getByRole('button', { name: 'Post review' }).click()
-    await expect(page.getByText(originalReview, { exact: true })).toBeVisible({ timeout: 30_000 })
+    await expect(ownReviewCard.getByText(originalReview, { exact: true })).toBeVisible({ timeout: 30_000 })
 
     await page.getByLabel('Your rating').selectOption('4')
     await page.getByLabel('Review').fill(updatedReview)
     await page.getByRole('button', { name: 'Update review' }).click()
-    await expect(page.getByText(updatedReview, { exact: true })).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByText(originalReview, { exact: true })).toHaveCount(0)
+    await expect(ownReviewCard.getByText(updatedReview, { exact: true })).toBeVisible({ timeout: 30_000 })
+    await expect(ownReviewCard.getByText(originalReview, { exact: true })).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Delete my review' }).click()
-    await expect(page.getByText(updatedReview, { exact: true })).toHaveCount(0)
+    await expect(ownReviewCard).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Post review' })).toBeVisible()
 
     // Send an outgoing friend request, then cancel it from the actual Sent list.
     await page.goto('/matches?tab=add')
