@@ -51,19 +51,22 @@ test('reviews, request cancellation, category overflow, and catalogue map search
     await expect(overflow.getByRole('link')).toHaveCount(2)
 
     // Review CRUD must persist through the real server actions and RPCs.
+    const reviewSection = page.getByTestId('saved-place-reviews')
+    const ownReviewCard = reviewSection.locator('article').filter({ hasText: 'Completed UI Owner' })
     await page.getByLabel('Your rating').selectOption('5')
     await page.getByLabel('Review').fill('Excellent espresso and a useful E2E review.')
     await page.getByRole('button', { name: 'Post review' }).click()
-    await expect(page.getByText('Excellent espresso and a useful E2E review.', { exact: true })).toBeVisible()
+    await expect(ownReviewCard.getByText('Excellent espresso and a useful E2E review.', { exact: true })).toBeVisible()
 
     await page.getByLabel('Your rating').selectOption('4')
     await page.getByLabel('Review').fill('Updated E2E review body.')
     await page.getByRole('button', { name: 'Update review' }).click()
-    await expect(page.getByText('Updated E2E review body.', { exact: true })).toBeVisible()
-    await expect(page.getByText('Excellent espresso and a useful E2E review.', { exact: true })).toHaveCount(0)
+    await expect(ownReviewCard.getByText('Updated E2E review body.', { exact: true })).toBeVisible()
+    await expect(ownReviewCard.getByText('Excellent espresso and a useful E2E review.', { exact: true })).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Delete my review' }).click()
-    await expect(page.getByText('No reviews yet. Be the first to review this place.')).toBeVisible()
+    await expect(ownReviewCard).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Post review' })).toBeVisible()
 
     // An outgoing pending friend request must be cancellable from the Add tab.
     await page.goto('/matches?tab=add')
