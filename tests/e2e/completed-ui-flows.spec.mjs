@@ -104,6 +104,13 @@ test('reviews, request cancellation, category overflow, and viewport map loading
 
     const moonlight = locationBySlug.get('moonlight-cafe')
     await page.route('**/api/map/viewport?**', async (route) => {
+      const requestUrl = new URL(route.request().url())
+      const north = Number(requestUrl.searchParams.get('north'))
+      const south = Number(requestUrl.searchParams.get('south'))
+      const west = Number(requestUrl.searchParams.get('west'))
+      const east = Number(requestUrl.searchParams.get('east'))
+      const viewportLatitude = (north + south) / 2
+      const viewportLongitude = (west + east) / 2
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -116,8 +123,8 @@ test('reviews, request cancellation, category overflow, and viewport map loading
             category: moonlight.kind,
             neighborhood: moonlight.neighborhood,
             city: moonlight.city,
-            latitude: Number(moonlight.latitude),
-            longitude: Number(moonlight.longitude),
+            latitude: viewportLatitude,
+            longitude: viewportLongitude,
             href: `/plans/${moonlight.slug}`,
             photo_url: null,
             states: ['catalogue'],
