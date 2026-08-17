@@ -11,27 +11,20 @@ on:
 permissions:
   contents: read
 
-# This recovery invocation intentionally supersedes the redundant full re-index
-# currently in progress. The normal non-cancelling production setting is restored
-# on main immediately after this run is triggered.
 concurrency:
   group: global-location-dataset
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   GLOBAL_LOCATION_SNAPSHOT: '2026-08-17'
+  GLOBAL_BOOTSTRAP_B2_PREFIX: data/snapshots/bootstrap/current
   PYTHONUNBUFFERED: '1'
 
 jobs:
-  activate-validated-index:
+  verify-bootstrap:
     runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
-      GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
-      OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
-      OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
-      OPENSEARCH_LOCATION_SHARDS: ${{ vars.OPENSEARCH_LOCATION_SHARDS || '6' }}
-      OPENSEARCH_LOCATION_REPLICAS: ${{ vars.OPENSEARCH_LOCATION_REPLICAS || '2' }}
       B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
       B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
       B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
@@ -43,12 +36,85 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Install activation dependencies
-        run: python -m pip install --disable-pip-version-check boto3
-      - name: Validate existing 29.9M-document index and atomically activate it
-        run: >-
-          python scripts/global-data/activate_existing_opensearch_index.py
-          --index=locations-v1-2026-08-17-1786951831
-          --alias=locations-active
-          --expected-count=29899219
-          --snapshot="$GLOBAL_LOCATION_SNAPSHOT"
+      - name: Install bootstrap preflight dependencies
+        run: python -m pip install --disable-pip-version-check duckdb
+      - name: Verify production bootstrap Parquet schema in B2
+        run: python scripts/global-data/verify_bootstrap_schema.py
+
+  resolve:
+    needs: verify-bootstrap
+    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49]
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
+      B2_DATA_PREFIX: data
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install resolver dependencies
+        run: python -m pip install --disable-pip-version-check duckdb boto3 numpy
+      - name: Resolve one resumable country shard
+        run: python scripts/global-data/resolve_global_entities_shard.py --snapshot="$GLOBAL_LOCATION_SNAPSHOT" --shard-index='${{ matrix.shard }}' --shard-count=50 --bootstrap-prefix="$GLOBAL_BOOTSTRAP_B2_PREFIX"
+        env:
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+
+  finalize:
+    needs: resolve
+    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
+      B2_DATA_PREFIX: data
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install finalization dependencies
+        run: python -m pip install --disable-pip-version-check duckdb boto3 numpy
+      - name: Validate every country and publish canonical manifest
+        run: python scripts/global-data/finalize_global_entities.py --snapshot="$GLOBAL_LOCATION_SNAPSHOT"
+        env:
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+      - name: Carry current photo and Google-ID overlays into the snapshot
+        run: python scripts/global-data/build_bootstrap_overlays.py --snapshot="$GLOBAL_LOCATION_SNAPSHOT" --bootstrap-prefix="$GLOBAL_BOOTSTRAP_B2_PREFIX"
+        env:
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+      - name: Build, validate and atomically activate blue/green OpenSearch index
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/global-data/index_opensearch.py')
+          text = path.read_text()
+          replacements = {
+              "'opening_hours': {'type': 'flattened'}": "'opening_hours': {'type': 'object', 'enabled': False}",
+              "'accessibility': {'type': 'flattened'}": "'accessibility': {'type': 'object', 'enabled': False}",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'expected OpenSearch mapping fragment not found: {old}')
+              text = text.replace(old, new)
+          path.write_text(text)
+          PY
+          python scripts/global-data/index_opensearch.py --snapshot="$GLOBAL_LOCATION_SNAPSHOT" --alias=locations-active
+        env:
+          GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
+          OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
+          OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+          OPENSEARCH_LOCATION_SHARDS: ${{ vars.OPENSEARCH_LOCATION_SHARDS || '6' }}
+          OPENSEARCH_LOCATION_REPLICAS: ${{ vars.OPENSEARCH_LOCATION_REPLICAS || '2' }}
