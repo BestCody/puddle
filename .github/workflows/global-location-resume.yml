@@ -96,22 +96,7 @@ jobs:
         env:
           DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
       - name: Build, validate and atomically activate blue/green OpenSearch index
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('scripts/global-data/index_opensearch.py')
-          text = path.read_text()
-          replacements = {
-              "'opening_hours': {'type': 'flattened'}": "'opening_hours': {'type': 'object', 'enabled': False}",
-              "'accessibility': {'type': 'flattened'}": "'accessibility': {'type': 'object', 'enabled': False}",
-          }
-          for old, new in replacements.items():
-              if old not in text:
-                  raise SystemExit(f'expected OpenSearch mapping fragment not found: {old}')
-              text = text.replace(old, new)
-          path.write_text(text)
-          PY
-          python scripts/global-data/index_opensearch.py --snapshot="$GLOBAL_LOCATION_SNAPSHOT" --alias=locations-active
+        run: python scripts/global-data/index_opensearch.py --snapshot="$GLOBAL_LOCATION_SNAPSHOT" --alias=locations-active
         env:
           GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
           OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
