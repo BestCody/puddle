@@ -251,15 +251,16 @@ test('Feed and Map preserve the approved Figma composition', async ({ page }, te
     await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
     await expect(page.getByTestId('feed-tabs').getByRole('link', { name: 'Map', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Back to Swipe' })).toBeVisible()
-    if (testInfo.project.name === 'figma-desktop') await expect(page.getByTestId('map-search')).toBeHidden()
-    else await expect(page.getByTestId('map-search')).toBeVisible()
-
-    await page.addStyleTag({ content: '.location-map-tiles { visibility: hidden !important; }' })
-    await expect(page).toHaveScreenshot('map-route.png', {
-      animations: 'disabled',
-      fullPage: false,
-      maxDiffPixelRatio: 0.012
-    })
+    // The map now loads catalogue data by viewport; legacy map text search and its
+    // Figma snapshot are intentionally gone. Keep the visual contract focused on
+    // the authored shell while verifying the saved marker is actually on-screen.
+    await expect(page.getByTestId('map-search')).toHaveCount(0)
+    const mapBounds = await box(page.getByTestId('feed-map-canvas'))
+    const savedMarker = await box(page.getByRole('button', { name: 'Maple Grove Park, Saved' }))
+    expect(savedMarker.x).toBeGreaterThanOrEqual(mapBounds.x)
+    expect(savedMarker.y).toBeGreaterThanOrEqual(mapBounds.y)
+    expect(savedMarker.x + savedMarker.width).toBeLessThanOrEqual(mapBounds.x + mapBounds.width)
+    expect(savedMarker.y + savedMarker.height).toBeLessThanOrEqual(mapBounds.y + mapBounds.height)
   } finally {
     await cleanupFixture({ userId: account.user.id, ...fixture })
   }
