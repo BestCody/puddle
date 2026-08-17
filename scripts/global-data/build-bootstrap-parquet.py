@@ -32,7 +32,13 @@ for table, metadata in manifest['tables'].items():
     output_file = target / f'{table}.parquet'
     escaped_input = str(input_file).replace("'", "''")
     escaped_output = str(output_file).replace("'", "''")
-    con.execute(f"COPY (SELECT * FROM read_json_auto('{escaped_input}', format='newline_delimited', union_by_name=true)) TO '{escaped_output}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000)")
+    # Source identifiers can look numeric in early rows and be alphanumeric later.
+    # Scan the complete NDJSON export for type inference so DuckDB does not infer
+    # an integer from its default sample and reject valid string identifiers later.
+    con.execute(
+        f"COPY (SELECT * FROM read_json_auto('{escaped_input}', format='newline_delimited', union_by_name=true, sample_size=-1)) "
+        f"TO '{escaped_output}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000)"
+    )
     actual_rows = int(con.execute(f"SELECT count(*) FROM read_parquet('{escaped_output}')").fetchone()[0])
     expected_rows = int(metadata['rows'])
     if actual_rows != expected_rows:
