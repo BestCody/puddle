@@ -209,8 +209,6 @@ function AddView({ client, snapshot }) {
   const router = useRouter()
   const incoming = snapshot.requests.filter((item) => item.direction === 'incoming')
   const outgoing = snapshot.requests.filter((item) => item.direction === 'outgoing')
-  const [friends, setFriends] = useState(snapshot.friends || [])
-  const [friendsHasMore, setFriendsHasMore] = useState(Boolean(snapshot.friendsHasMore))
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -223,22 +221,6 @@ function AddView({ client, snapshot }) {
     setSearching(true)
     const { data } = await client.rpc('social_friend_search_v2', { search_term: term, result_limit: 30 })
     setResults(data || [])
-    setSearching(false)
-  }
-
-  async function loadMoreFriends() {
-    if (!friendsHasMore || searching || !friends.length) return
-    const cursor = friends[friends.length - 1]
-    setSearching(true)
-    const { data, error } = await client.rpc('social_friends_v2', {
-      before_name: cursor.sort_name,
-      before_id: cursor.id,
-      result_limit: 40
-    })
-    if (!error) {
-      setFriends((current) => mergeById(current, data || []))
-      setFriendsHasMore((data || []).length === 40)
-    }
     setSearching(false)
   }
 
@@ -278,12 +260,6 @@ function AddView({ client, snapshot }) {
       <hr />
       <small>Sent</small>
       {outgoing.length ? outgoing.map((person) => <div className="figma-friends-request-row" key={`out:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button type="button" onClick={() => cancel(person)} disabled={pendingTarget === person.id} aria-label={`Cancel friend request to ${person.display_name || person.username || 'Puddle person'}`}>−</button></div></div>) : <p>No sent requests</p>}
-    </article>
-
-    <article className="figma-friends-request-card" aria-label="Friends">
-      <small>Friends</small>
-      {friends.length ? friends.map((person) => <div className="figma-friends-request-row" key={`friend:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username || 'Puddle person'}</strong>{person.places_in_common ? <em>{person.places_in_common} places in common</em> : null}</span><div>{person.conversation_id ? <button type="button" onClick={() => router.push(`/matches?tab=messages&conversation=${encodeURIComponent(person.conversation_id)}`)}>Message</button> : null}</div></div>) : <p>No friends yet</p>}
-      {friendsHasMore ? <button type="button" onClick={loadMoreFriends} disabled={searching}>Load more friends</button> : null}
     </article>
   </section>
 }
