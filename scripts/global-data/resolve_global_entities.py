@@ -289,9 +289,9 @@ for country in countries:
 
     con.execute("""
     CREATE OR REPLACE TEMP VIEW source_crosswalk AS
-    SELECT 'overture'::VARCHAR source, source_id, canonical_id AS location_id, source_confidence, source_updated_at FROM canonical_o
+    SELECT 'overture'::VARCHAR AS source, source_id, canonical_id AS location_id, source_confidence, source_updated_at FROM canonical_o
     UNION ALL
-    SELECT 'fsq_os'::VARCHAR source, source_id, canonical_id AS location_id, source_confidence, source_updated_at FROM canonical_f;
+    SELECT 'fsq_os'::VARCHAR AS source, source_id, canonical_id AS location_id, source_confidence, source_updated_at FROM canonical_f;
     """)
     con.execute("""
     CREATE OR REPLACE TEMP VIEW location_aliases AS
