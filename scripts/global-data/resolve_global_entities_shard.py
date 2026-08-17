@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one deterministic shard of global entity resolution, skipping completed countries."""
+"""Run one deterministic shard of global entity resolution, skipping completed countries unless forced."""
 import argparse
 import os
 import re
@@ -23,6 +23,10 @@ def clean_prefix(value):
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
+def env_truthy(name):
+    return str(os.getenv(name, '')).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 parser.add_argument('--shard-index', type=int, required=True)
@@ -37,11 +41,15 @@ key_id = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
 key = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
 bucket = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
 data_prefix = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+force_reresolve = env_truthy('GLOBAL_FORCE_RERESOLVE')
 if not endpoint or not key_id or not key:
     raise RuntimeError('B2 endpoint and credentials are required.')
 
 s3 = boto3.client(
-    's3', endpoint_url=endpoint, aws_access_key_id=key_id, aws_secret_access_key=key,
+    's3',
+    endpoint_url=endpoint,
+    aws_access_key_id=key_id,
+    aws_secret_access_key=key,
     config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
 )
 staged_prefix = f'{data_prefix}/staged/places/schema=v1/snapshot={args.snapshot}/'
@@ -75,8 +83,12 @@ for page in s3.get_paginator('list_objects_v2').paginate(Bucket=bucket, Prefix=n
 complete = locations & crosswalk & aliases
 
 assigned = sorted(expected)[args.shard_index::args.shard_count]
-pending = [country for country in assigned if country not in complete]
-print(f'shard={args.shard_index}/{args.shard_count} assigned={len(assigned)} already_complete={len(assigned)-len(pending)} pending={len(pending)}')
+pending = list(assigned) if force_reresolve else [country for country in assigned if country not in complete]
+already_complete = len(assigned) - len(pending)
+print(
+    f'shard={args.shard_index}/{args.shard_count} assigned={len(assigned)} '
+    f'already_complete={already_complete} pending={len(pending)} force_reresolve={force_reresolve}'
+)
 if not pending:
     print('nothing to resolve for this shard')
     raise SystemExit(0)
