@@ -4,7 +4,8 @@ import { LocationMap } from '@/components/location-map'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
 import { getSocialFeedSnapshot } from '@/lib/app/social-feed-data'
-import { createFeedComment, shareFeedPost, toggleFeedSave } from './actions'
+import { FeedShareMenu } from './feed-share-menu'
+import { createFeedComment, toggleFeedSave } from './actions'
 import styles from './MapFeed.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -40,30 +41,15 @@ function FeedPhotos({ post, href }) {
   const count = photos.length
 
   return <div className={styles.photos} aria-label={`${post.location.name} photos`}>
-    <Link
-      href={href}
-      className={`${styles.photo} ${styles.photoMain}`}
-      style={photos[0] ? { backgroundImage: `url(${photos[0]})` } : undefined}
-      aria-label={`Open ${post.location.name}`}
-    />
-    <Link
-      href={href}
-      className={styles.photo}
-      style={photos[1] ? { backgroundImage: `url(${photos[1]})` } : undefined}
-      aria-label={`Open ${post.location.name} photo 2`}
-    />
-    <Link
-      href={href}
-      className={styles.photo}
-      style={photos[2] ? { backgroundImage: `url(${photos[2]})` } : undefined}
-      aria-label={`Open ${post.location.name} photo 3`}
-    >
+    <Link href={href} className={`${styles.photo} ${styles.photoMain}`} style={photos[0] ? { backgroundImage: `url(${photos[0]})` } : undefined} aria-label={`Open ${post.location.name}`} />
+    <Link href={href} className={styles.photo} style={photos[1] ? { backgroundImage: `url(${photos[1]})` } : undefined} aria-label={`Open ${post.location.name} photo 2`} />
+    <Link href={href} className={styles.photo} style={photos[2] ? { backgroundImage: `url(${photos[2]})` } : undefined} aria-label={`Open ${post.location.name} photo 3`}>
       {count > 3 ? `+${count - 2}` : null}
     </Link>
   </div>
 }
 
-function FeedPost({ post, friends }) {
+function FeedPost({ post }) {
   const author = post.author || {}
   const location = post.location
   const href = `/plans/${location.slug}`
@@ -74,10 +60,7 @@ function FeedPost({ post, friends }) {
       <span className={styles.avatar} style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>
         {post.author_avatar_url ? null : initials(authorName)}
       </span>
-      <span className={styles.authorMeta}>
-        <strong>{authorName}</strong>
-        <small>{timeLabel(post.created_at)}</small>
-      </span>
+      <span className={styles.authorMeta}><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
     </header>
 
     {post.body ? <p className={styles.copy}>{post.body}</p> : null}
@@ -97,7 +80,7 @@ function FeedPost({ post, friends }) {
           {post.comments.length ? <div className={styles.commentList}>{post.comments.map((comment) => <p key={comment.id}>
             <strong>{comment.author?.display_name || comment.author?.username || 'Puddle person'}</strong>
             <span>{comment.body}</span>
-          </p>)}</div> : <p>No comments yet.</p>}
+          </p>)}</div> : <p>No recent comments.</p>}
           <form action={createFeedComment}>
             <input type="hidden" name="post_id" value={post.id} />
             <input name="comment_body" required maxLength="2000" placeholder="Add a comment" aria-label="Add a comment" />
@@ -115,17 +98,7 @@ function FeedPost({ post, friends }) {
         </button>
       </form>
 
-      <details className={styles.actionMenu}>
-        <summary aria-label={`Share ${post.title}`}>↗</summary>
-        <div className={`${styles.actionPanel} ${styles.sharePanel}`}>
-          <strong>Share with a friend</strong>
-          {friends.length ? friends.map((friend) => <form action={shareFeedPost} key={friend.id}>
-            <input type="hidden" name="post_id" value={post.id} />
-            <input type="hidden" name="friend_id" value={friend.id} />
-            <button type="submit">{friend.display_name || friend.username || 'Friend'}</button>
-          </form>) : <p>Add a friend before sharing.</p>}
-        </div>
-      </details>
+      <FeedShareMenu postId={post.id} title={post.title || location.name} />
     </footer>
   </article>
 }
@@ -146,22 +119,20 @@ function FeedTop({ view, query }) {
 
 function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false }) {
   return <section className={styles.mapScreen} data-testid="feed-map-canvas">
-    {selectingForPost ? <div className={styles.mapSelectionNotice}>
-      <strong>Choose a place for your post.</strong>
-      <Link href="/create/post">Cancel</Link>
-    </div> : null}
-
+    {selectingForPost ? <div className={styles.mapSelectionNotice}><strong>Choose a place for your post.</strong><Link href="/create/post">Cancel</Link></div> : null}
     <div className={styles.mapCanvas}>
-      <LocationMap
-        initialPoints={points}
-        initialCenter={center}
-        heatmapPoints={heatmap}
-        passActive={passActive && !selectingForPost}
-        loadCatalogue
-        selectingForPost={selectingForPost}
-      />
+      <LocationMap initialPoints={points} initialCenter={center} heatmapPoints={heatmap} passActive={passActive && !selectingForPost} loadCatalogue selectingForPost={selectingForPost} />
     </div>
   </section>
+}
+
+function nextFeedHref(query, pagination) {
+  if (!pagination?.hasMore || !pagination.nextBeforeCreatedAt || !pagination.nextBeforePostId) return null
+  const params = new URLSearchParams()
+  if (query) params.set('q', query)
+  params.set('before', pagination.nextBeforeCreatedAt)
+  params.set('beforeId', pagination.nextBeforePostId)
+  return `/map?${params.toString()}`
 }
 
 export default async function LocationMapPage({ searchParams }) {
@@ -169,13 +140,16 @@ export default async function LocationMapPage({ searchParams }) {
   const view = params?.view === 'map' ? 'map' : 'feed'
   const query = typeof params?.q === 'string' ? params.q.trim() : ''
   const selectingForPost = view === 'map' && params?.selectForPost === '1'
+  const beforeCreatedAt = typeof params?.before === 'string' ? params.before : null
+  const beforePostId = typeof params?.beforeId === 'string' ? params.beforeId : null
 
   return renderProductPage(async (session) => {
     const mapSnapshot = await getLocationMapSnapshot(session)
-    const feed = view === 'feed' ? await getSocialFeedSnapshot(session, query) : null
+    const feed = view === 'feed' ? await getSocialFeedSnapshot(session, query, { beforeCreatedAt, beforePostId }) : null
     const mapPoints = selectingForPost
       ? mapSnapshot.points.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
       : mapSnapshot.points
+    const moreHref = feed ? nextFeedHref(query, feed.pagination) : null
 
     return <>
       <AuthMessage searchParams={params} />
@@ -184,10 +158,11 @@ export default async function LocationMapPage({ searchParams }) {
 
         {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} /> : <>
           <section className={styles.stream} aria-label="Puddle feed" data-testid="feed-stream">
-            {feed.items.length ? feed.items.map((post) => <FeedPost post={post} friends={feed.friends} key={post.id} />) : <div className={styles.empty}>
-              <strong>{query ? 'No puddles match that search.' : 'No one has posted a puddle yet.'}</strong>
-              <Link href="/create/post">Create the first one</Link>
+            {feed.items.length ? feed.items.map((post) => <FeedPost post={post} key={post.id} />) : <div className={styles.empty}>
+              <strong>{query ? 'No puddles match that search on this page.' : 'No one has posted a puddle yet.'}</strong>
+              {moreHref ? <Link href={moreHref}>Search older puddles</Link> : <Link href="/create/post">Create the first one</Link>}
             </div>}
+            {moreHref && feed.items.length ? <nav aria-label="Feed pagination"><Link href={moreHref}>More puddles</Link></nav> : null}
           </section>
 
           <Link className={styles.composer} href="/create/post" data-testid="feed-composer">
