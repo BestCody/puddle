@@ -130,8 +130,7 @@ SELECT * EXCLUDE(rn) FROM (
     try_cast(g.match_score AS DOUBLE) google_place_match_score,
     row_number() OVER (
       PARTITION BY cast(g.location_id AS VARCHAR)
-      ORDER BY coalesce(try_cast(g.verified_at AS TIMESTAMP), TIMESTAMP '1970-01-01') DESC,
-               cast(g.google_place_id AS VARCHAR)
+      ORDER BY cast(g.google_place_id AS VARCHAR)
     ) rn
   FROM google_rows g
   JOIN canonical_overlay_locations l ON l.id=cast(g.location_id AS VARCHAR)
