@@ -78,7 +78,7 @@ for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','react'
   if (!pkg.dependencies?.[dependency]) throw new Error(`Missing dependency: ${dependency}`)
 }
 const serializedScripts = JSON.stringify(pkg.scripts || {})
-for (const forbidden of ['catalogue:build-static','catalogue:publish-b2','static-catalogue','cleanup-b2-assets','cleanup-r2-assets']) {
+for (const forbidden of ['catalogue:build-static','catalogue:publish-b2','static-catalogue','cleanup-b2-assets','cleanup-r2-assets','locations:photos:migrate-b2']) {
   if (serializedScripts.includes(forbidden)) throw new Error(`Legacy package command remains: ${forbidden}`)
 }
 for (const requiredScript of ['b2:upload-tree','global:bootstrap:export','global:overture:mirror','global:fsq:mirror','global:index','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview']) {
