@@ -51,9 +51,10 @@ jobs:
           const required = [
             'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_KEY',
             'B2_MEDIA_APPLICATION_KEY_ID', 'B2_MEDIA_APPLICATION_KEY',
-            'B2_MEDIA_BUCKET_ID', 'B2_MEDIA_BUCKET_NAME'
+            'B2_MEDIA_BUCKET_NAME'
           ]
           for (const name of required) if (!process.env[name]) throw new Error(`${name} is not configured.`)
+
           const authorization = `Basic ${Buffer.from(`${process.env.B2_MEDIA_APPLICATION_KEY_ID}:${process.env.B2_MEDIA_APPLICATION_KEY}`).toString('base64')}`
           const b2Response = await fetch('https://api.backblazeb2.com/b2api/v4/b2_authorize_account', {
             headers: { Authorization: authorization, Accept: 'application/json' },
@@ -66,9 +67,15 @@ jobs:
           const capabilities = new Set(storage?.allowed?.capabilities || [])
           if (!storage?.downloadUrl || !b2?.authorizationToken) throw new Error('B2 authorization did not return a download endpoint.')
           if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 media key lacks readFiles capability.')
-          if (buckets.length && !buckets.some((bucket) => bucket?.id === process.env.B2_MEDIA_BUCKET_ID && bucket?.name === process.env.B2_MEDIA_BUCKET_NAME)) {
-            throw new Error('B2 media key is not authorized for the configured production bucket.')
+
+          const namedBucket = buckets.find((bucket) => bucket?.name === process.env.B2_MEDIA_BUCKET_NAME)
+          if (buckets.length && !namedBucket) throw new Error('B2 media key is not authorized for the configured production bucket.')
+          if (process.env.B2_MEDIA_BUCKET_ID && namedBucket?.id && namedBucket.id !== process.env.B2_MEDIA_BUCKET_ID) {
+            throw new Error('Configured B2 bucket ID does not match the bucket authorized by the media key.')
           }
+          const bucketId = process.env.B2_MEDIA_BUCKET_ID || namedBucket?.id
+          if (!bucketId) throw new Error('B2 bucket ID could not be securely derived from the restricted media key.')
+
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
           const serviceKey = process.env.SUPABASE_SECRET_KEY
           const response = await fetch(`${supabaseUrl}/rest/v1/rpc/set_b2_media_runtime_auth`, {
@@ -77,7 +84,7 @@ jobs:
             body: JSON.stringify({
               p_key_id: process.env.B2_MEDIA_APPLICATION_KEY_ID,
               p_application_key: process.env.B2_MEDIA_APPLICATION_KEY,
-              p_bucket_id: process.env.B2_MEDIA_BUCKET_ID,
+              p_bucket_id: bucketId,
               p_bucket_name: process.env.B2_MEDIA_BUCKET_NAME
             }),
             redirect: 'error', signal: AbortSignal.timeout(10_000)
