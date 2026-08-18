@@ -12,6 +12,7 @@ import hashlib
 import io
 import json
 import os
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -73,7 +74,7 @@ media_s3 = boto3.client(
 )
 data_s3 = boto3.client(
     's3', endpoint_url=DATA_ENDPOINT_URL, aws_access_key_id=DATA_KEY_ID, aws_secret_access_key=DATA_KEY,
-    config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
+    region_name=DATA_REGION, config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
 )
 
 
@@ -212,7 +213,23 @@ def write_country_exclusions(con, country, rows):
         ) for row in unique.values()])
     safe = ''.join(ch for ch in str(country).upper() if ch.isalnum() or ch in {'-','_'}) or 'ZZ'
     key = f'{EXCLUSION_PREFIX}/existing-global-{safe}.parquet'
-    con.execute(f"COPY reconcile_exclusions TO 's3://{DATA_BUCKET}/{key}' (FORMAT PARQUET,COMPRESSION ZSTD,OVERWRITE_OR_IGNORE true)")
+    with tempfile.NamedTemporaryFile(suffix='.parquet', delete=False) as handle:
+        local_path = handle.name
+    try:
+        escaped = local_path.replace("'", "''")
+        con.execute(f"COPY reconcile_exclusions TO '{escaped}' (FORMAT PARQUET,COMPRESSION ZSTD)")
+        with open(local_path, 'rb') as handle:
+            payload = handle.read()
+        data_s3.put_object(
+            Bucket=DATA_BUCKET, Key=key, Body=payload,
+            ContentType='application/vnd.apache.parquet',
+            Metadata={'purpose': 'puddle_existing_global_photo_exclusions', 'snapshot': SNAPSHOT, 'country': safe},
+        )
+    finally:
+        try:
+            os.remove(local_path)
+        except FileNotFoundError:
+            pass
     return key
 
 
