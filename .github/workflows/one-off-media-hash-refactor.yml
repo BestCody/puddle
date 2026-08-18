@@ -1,0 +1,257 @@
+name: One-off media hash architecture refactor
+
+on:
+  push:
+    branches: [media-hash-serving-architecture-20260817]
+    paths:
+      - '.github/workflows/one-off-media-hash-refactor.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: media-hash-serving-architecture-20260817
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Replace provider URLs with canonical media hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          def read(path):
+              return Path(path).read_text()
+
+          def write(path, text):
+              p = Path(path)
+              p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_text(text)
+
+          def replace(path, old, new, expected_at_least=1):
+              text = read(path)
+              count = text.count(old)
+              if count < expected_at_least:
+                  raise RuntimeError(f'{path}: expected at least {expected_at_least} occurrence(s) of {old!r}, found {count}')
+              write(path, text.replace(old, new))
+              print(f'{path}: replaced {count} occurrence(s)')
+
+          # Single public media abstraction. Storage-provider URLs never cross into clients.
+          write('lib/media/open-photo-url.js', """const OPEN_PHOTO_HASH_RE = /^[0-9a-f]{64}$/\n\nexport function normalizeOpenPhotoHash(value) {\n  const hash = String(value || '').trim().toLowerCase()\n  return OPEN_PHOTO_HASH_RE.test(hash) ? hash : null\n}\n\nexport function openPhotoUrlForHash(value) {\n  const hash = normalizeOpenPhotoHash(value)\n  return hash ? `/api/open-photo/${hash}` : null\n}\n""")
+
+          # Discovery and map responses derive same-origin delivery routes from hashes.
+          replace(
+              'lib/app/discovery-global.js',
+              "import { searchGlobalLocations } from './global-location-search.js'\n",
+              "import { searchGlobalLocations } from './global-location-search.js'\nimport { openPhotoUrlForHash } from '../media/open-photo-url.js'\n"
+          )
+          replace(
+              'lib/app/discovery-global.js',
+              "  const photoUrl = String(photo.url || '').trim() || null\n",
+              "  const photoUrl = openPhotoUrlForHash(photo.content_hash)\n"
+          )
+          replace(
+              'app/api/map/viewport/route.js',
+              "import { searchGlobalLocationsInViewport } from '@/lib/app/global-location-search'\n",
+              "import { searchGlobalLocationsInViewport } from '@/lib/app/global-location-search'\nimport { openPhotoUrlForHash } from '@/lib/media/open-photo-url'\n"
+          )
+          replace(
+              'app/api/map/viewport/route.js',
+              "    photo_url: row.primary_photo?.url || null,\n",
+              "    photo_url: openPhotoUrlForHash(row.primary_photo?.content_hash),\n"
+          )
+          replace('lib/app/global-location-search.js', 'primary_photo.url', 'primary_photo.content_hash', expected_at_least=2)
+
+          # Next/Image optimizes only same-origin app routes. No Supabase/B2 hostname exceptions.
+          write('lib/media/discovery-image.js', """export const DISCOVERY_IMAGE_SIZES = '(max-width: 760px) 320px, 400px'\n\nexport function canOptimizeDiscoveryImage(url) {\n  return Boolean(url) && String(url).startsWith('/')\n}\n""")
+
+          # Future runtime ingestion must register/dedupe the uploaded bytes in media_objects.
+          replace('lib/app/open-photo-b2.js', 'export async function storeOpenPhotoInB2(_admin, source, { client = null } = {}) {', 'export async function storeOpenPhotoInB2(admin, source, { client = null } = {}) {')
+          replace(
+              'lib/app/open-photo-b2.js',
+              "\n  return {\n    mediaObjectId: null,\n    remoteUrl: uploaded.publicUrl,\n",
+              """\n  if (!admin?.from) throw new Error('Supabase admin client is required to register B2 media.')\n  const now = new Date().toISOString()\n  const { data: mediaObject, error: mediaError } = await admin\n    .from('media_objects')\n    .upsert({\n      storage_backend: 'b2',\n      storage_key: key,\n      public_url: null,\n      content_hash: transformed.contentHash,\n      perceptual_hash: transformed.perceptualHash,\n      byte_size: transformed.byteSize,\n      width: transformed.width,\n      height: transformed.height,\n      updated_at: now\n    }, { onConflict: 'content_hash' })\n    .select('id,storage_backend,storage_key,content_hash,byte_size')\n    .single()\n  if (mediaError) throw mediaError\n  if (!mediaObject?.id || mediaObject.storage_backend !== 'b2' || mediaObject.storage_key !== key ||\n      String(mediaObject.content_hash || '').toLowerCase() !== transformed.contentHash ||\n      Number(mediaObject.byte_size) !== transformed.byteSize) {\n    throw new Error('Canonical B2 media registration did not match the uploaded bytes.')\n  }\n\n  return {\n    mediaObjectId: mediaObject.id,\n    remoteUrl: null,\n"""
+          )
+
+          # Bootstrap exports media_objects so location_photo_sources can resolve media identity.
+          replace(
+              'scripts/global-data/export-supabase-bootstrap.mjs',
+              "  { name: 'location_photo_sources', order: ['id'] },\n",
+              "  { name: 'location_photo_sources', order: ['id'] },\n  { name: 'media_objects', order: ['id'] },\n"
+          )
+
+          # Validate that every approved B2 photo has a canonical registered media object.
+          replace(
+              'scripts/global-data/build-bootstrap-parquet.py',
+              "photo_rows = int(con.execute(f\"SELECT count(*) FROM {parquet('location_photo_sources')}\").fetchone()[0])\n",
+              """photo_rows = int(con.execute(f\"SELECT count(*) FROM {parquet('location_photo_sources')}\").fetchone()[0])\nmedia_rows = int(con.execute(f\"SELECT count(*) FROM {parquet('media_objects')}\").fetchone()[0])\napproved_b2_photo_rows = int(con.execute(f\"SELECT count(*) FROM {parquet('location_photo_sources')} WHERE lower(coalesce(cast(status AS VARCHAR),''))='approved' AND lower(coalesce(cast(storage_backend AS VARCHAR),''))='b2'\").fetchone()[0])\ninvalid_approved_b2_media = int(con.execute(f\"\"\"\nSELECT count(*)\nFROM {parquet('location_photo_sources')} p\nLEFT JOIN {parquet('media_objects')} m ON cast(m.id AS VARCHAR)=cast(p.media_object_id AS VARCHAR)\nWHERE lower(coalesce(cast(p.status AS VARCHAR),''))='approved'\n  AND lower(coalesce(cast(p.storage_backend AS VARCHAR),''))='b2'\n  AND (\n    m.id IS NULL\n    OR lower(coalesce(cast(m.storage_backend AS VARCHAR),'')) <> 'b2'\n    OR NOT regexp_full_match(lower(coalesce(cast(m.content_hash AS VARCHAR),'')), '[0-9a-f]{64}')\n    OR cast(m.storage_key AS VARCHAR) <> 'media/photos/by-sha256/' || substr(lower(cast(m.content_hash AS VARCHAR)),1,2) || '/' || lower(cast(m.content_hash AS VARCHAR)) || '.jpg'\n  )\n\"\"\").fetchone()[0])\nif invalid_approved_b2_media:\n    raise RuntimeError(f'bootstrap contains {invalid_approved_b2_media} approved B2 photo rows without canonical media_objects identity')\n"""
+          )
+          replace(
+              'scripts/global-data/build-bootstrap-parquet.py',
+              "    'photoMetadataRows': photo_rows,\n",
+              "    'photoMetadataRows': photo_rows,\n    'mediaObjectRows': media_rows,\n    'approvedB2PhotoRows': approved_b2_photo_rows,\n    'invalidApprovedB2MediaRows': invalid_approved_b2_media,\n"
+          )
+
+          # Overlay projection is hash-only and rejects broken B2/media relationships.
+          replace(
+              'scripts/global-data/build_bootstrap_overlays.py',
+              "con.execute(f\"CREATE OR REPLACE TEMP VIEW photo_rows AS SELECT * FROM read_parquet('{BOOT}/location_photo_sources.parquet')\")\n",
+              "con.execute(f\"CREATE OR REPLACE TEMP VIEW photo_rows AS SELECT * FROM read_parquet('{BOOT}/location_photo_sources.parquet')\")\ncon.execute(f\"CREATE OR REPLACE TEMP VIEW media_rows AS SELECT * FROM read_parquet('{BOOT}/media_objects.parquet')\")\n"
+          )
+          old_primary = """con.execute(\"\"\"\nCREATE OR REPLACE TEMP TABLE primary_photos AS\nSELECT * EXCLUDE(rn) FROM (\n  SELECT\n    cast(p.location_id AS VARCHAR) location_id,\n    l.country_code,\n    cast(p.remote_url AS VARCHAR) url,\n    cast(p.provider AS VARCHAR) provider,\n    cast(p.attribution_text AS VARCHAR) attribution,\n    cast(p.attribution_url AS VARCHAR) attribution_url,\n    cast(p.license_code AS VARCHAR) license,\n    try_cast(p.width AS INTEGER) width,\n    try_cast(p.height AS INTEGER) height,\n    row_number() OVER (\n      PARTITION BY cast(p.location_id AS VARCHAR)\n      ORDER BY\n        coalesce(try_cast(p.is_primary AS BOOLEAN), false) DESC,\n        CASE cast(p.source AS VARCHAR)\n          WHEN 'venue' THEN 0\n          WHEN 'puddle_user' THEN 1\n          WHEN 'provider' THEN 2\n          WHEN 'licensed_public' THEN 3\n          ELSE 9\n        END,\n        coalesce(try_cast(p.sort_order AS INTEGER), 0),\n        coalesce(try_cast(p.verified_at AS TIMESTAMP), TIMESTAMP '1970-01-01') DESC\n    ) rn\n  FROM photo_rows p\n  JOIN canonical_overlay_locations l ON l.id=cast(p.location_id AS VARCHAR)\n  WHERE cast(p.status AS VARCHAR)='approved'\n    AND coalesce(try_cast(p.is_ai_generated AS BOOLEAN), false)=false\n    AND p.remote_url IS NOT NULL\n    AND (\n      try_cast(p.expires_at AS TIMESTAMP) IS NULL\n      OR try_cast(p.expires_at AS TIMESTAMP) > now()\n    )\n) WHERE rn=1;\n\"\"\")\n"""
+          new_primary = """invalid_b2_photos = con.execute(\"\"\"\nSELECT count(*)\nFROM photo_rows p\nLEFT JOIN media_rows m ON cast(m.id AS VARCHAR)=cast(p.media_object_id AS VARCHAR)\nWHERE cast(p.status AS VARCHAR)='approved'\n  AND coalesce(try_cast(p.is_ai_generated AS BOOLEAN), false)=false\n  AND lower(coalesce(cast(p.storage_backend AS VARCHAR),''))='b2'\n  AND (\n    m.id IS NULL\n    OR lower(coalesce(cast(m.storage_backend AS VARCHAR),'')) <> 'b2'\n    OR NOT regexp_full_match(lower(coalesce(cast(m.content_hash AS VARCHAR),'')), '[0-9a-f]{64}')\n    OR cast(m.storage_key AS VARCHAR) <> 'media/photos/by-sha256/' || substr(lower(cast(m.content_hash AS VARCHAR)),1,2) || '/' || lower(cast(m.content_hash AS VARCHAR)) || '.jpg'\n  );\n\"\"\").fetchone()[0]\nif invalid_b2_photos:\n    raise RuntimeError(f'{invalid_b2_photos} approved B2 photos are missing canonical media_objects identity')\n\ncon.execute(\"\"\"\nCREATE OR REPLACE TEMP TABLE primary_photos AS\nSELECT * EXCLUDE(rn) FROM (\n  SELECT\n    cast(p.location_id AS VARCHAR) location_id,\n    l.country_code,\n    lower(cast(m.content_hash AS VARCHAR)) content_hash,\n    cast(p.provider AS VARCHAR) provider,\n    cast(p.attribution_text AS VARCHAR) attribution,\n    cast(p.attribution_url AS VARCHAR) attribution_url,\n    cast(p.license_code AS VARCHAR) license,\n    coalesce(try_cast(m.width AS INTEGER), try_cast(p.width AS INTEGER)) width,\n    coalesce(try_cast(m.height AS INTEGER), try_cast(p.height AS INTEGER)) height,\n    row_number() OVER (\n      PARTITION BY cast(p.location_id AS VARCHAR)\n      ORDER BY\n        coalesce(try_cast(p.is_primary AS BOOLEAN), false) DESC,\n        CASE cast(p.source AS VARCHAR)\n          WHEN 'venue' THEN 0\n          WHEN 'puddle_user' THEN 1\n          WHEN 'provider' THEN 2\n          WHEN 'licensed_public' THEN 3\n          ELSE 9\n        END,\n        coalesce(try_cast(p.sort_order AS INTEGER), 0),\n        coalesce(try_cast(p.verified_at AS TIMESTAMP), TIMESTAMP '1970-01-01') DESC\n    ) rn\n  FROM photo_rows p\n  JOIN media_rows m ON cast(m.id AS VARCHAR)=cast(p.media_object_id AS VARCHAR)\n  JOIN canonical_overlay_locations l ON l.id=cast(p.location_id AS VARCHAR)\n  WHERE cast(p.status AS VARCHAR)='approved'\n    AND coalesce(try_cast(p.is_ai_generated AS BOOLEAN), false)=false\n    AND lower(coalesce(cast(p.storage_backend AS VARCHAR),''))='b2'\n    AND lower(coalesce(cast(m.storage_backend AS VARCHAR),''))='b2'\n    AND regexp_full_match(lower(cast(m.content_hash AS VARCHAR)), '[0-9a-f]{64}')\n    AND cast(m.storage_key AS VARCHAR) = 'media/photos/by-sha256/' || substr(lower(cast(m.content_hash AS VARCHAR)),1,2) || '/' || lower(cast(m.content_hash AS VARCHAR)) || '.jpg'\n    AND (\n      try_cast(p.expires_at AS TIMESTAMP) IS NULL\n      OR try_cast(p.expires_at AS TIMESTAMP) > now()\n    )\n) WHERE rn=1;\n\"\"\")\n"""
+          replace('scripts/global-data/build_bootstrap_overlays.py', old_primary, new_primary)
+          replace(
+              'scripts/global-data/build_bootstrap_overlays.py',
+              "f\"COPY (SELECT location_id,url,provider,attribution,attribution_url,license,width,height \"\n",
+              "f\"COPY (SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height \"\n"
+          )
+
+          # Global materialization emits hash identity only; no public B2 base exists.
+          replace('scripts/global-data/materialize_photo_candidates.py', "MEDIA_BASE = first_env('B2_MEDIA_PUBLIC_BASE_URL', 'B2_DOWNLOAD_BASE_URL').rstrip('/')\n", '')
+          replace('scripts/global-data/materialize_photo_candidates.py', "if not MEDIA_BASE.startswith('https://'):\n    raise RuntimeError('B2_MEDIA_PUBLIC_BASE_URL or B2_DOWNLOAD_BASE_URL must be HTTPS.')\n", '')
+          materializer = read('scripts/global-data/materialize_photo_candidates.py')
+          materializer = re.sub(r"\n\ndef public_url\(key\):\n    return MEDIA_BASE \+ '/' \+ '/'.*?\n\n", "\n", materializer, count=1)
+          if 'def public_url' in materializer:
+              raise RuntimeError('failed to remove public_url helper from materializer')
+          materializer = materializer.replace("        'url': public_url(key), 'storage_backend': 'b2',", "        'storage_backend': 'b2',")
+          write('scripts/global-data/materialize_photo_candidates.py', materializer)
+
+          # OpenSearch schema and documents carry content_hash, never a provider URL.
+          index_path = 'scripts/global-data/index_opensearch.py'
+          index_text = read(index_path)
+          replacements = [
+              ("'url': {'type': 'keyword', 'index': False}, 'provider': {'type': 'keyword'},", "'content_hash': {'type': 'keyword'}, 'provider': {'type': 'keyword'},"),
+              ("SELECT location_id,url,provider,attribution,attribution_url,license,width,height,NULL::VARCHAR verified_at", "SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height,NULL::VARCHAR verified_at"),
+              ("SELECT location_id,url,provider,attribution,attribution_url,license,width,height,verified_at", "SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height,verified_at"),
+              ("NULL::VARCHAR url,NULL::VARCHAR provider", "NULL::VARCHAR content_hash,NULL::VARCHAR provider"),
+              ("p.url photo_url, p.provider photo_provider", "p.content_hash photo_content_hash, p.provider photo_provider"),
+              ("if row['photo_url']:", "if row['photo_content_hash']:"),
+              ("'url': row['photo_url'], 'provider': row['photo_provider']", "'content_hash': row['photo_content_hash'], 'provider': row['photo_provider']")
+          ]
+          for old, new in replacements:
+              if old not in index_text:
+                  raise RuntimeError(f'{index_path}: missing expected legacy fragment {old!r}')
+              index_text = index_text.replace(old, new)
+          write(index_path, index_text)
+
+          # Retire URL fields as canonical B2 metadata. Historical source URLs are nullable provenance only.
+          write('supabase/migrations/10073_canonical_b2_media_identity.sql', """-- B2-backed open photos are identified by media_object_id/content_hash, never a serving URL.\nalter table public.location_photo_sources alter column remote_url drop not null;\n\nupdate public.location_photo_sources\nset remote_url = null, updated_at = now()\nwhere lower(coalesce(storage_backend, '')) = 'b2'\n  and media_object_id is not null;\n\nupdate public.media_objects\nset public_url = null, updated_at = now()\nwhere lower(storage_backend) = 'b2'\n  and public_url is not null;\n""")
+
+          # Remove migration-only environment variables and direct B2/Supabase media origins.
+          env_text = read('.env.example')
+          for line in [
+              'B2_DOWNLOAD_BASE_URL=https://f005.backblazeb2.com/file/puddle-assets\n',
+              '# Use the direct B2 base until an application-owned CDN/custom domain is provisioned.\n',
+              'B2_MEDIA_PUBLIC_BASE_URL=https://f005.backblazeb2.com/file/puddle-assets\n',
+              'B2_MEDIA_MIGRATION_CONCURRENCY=16\n',
+              '# Legacy Supabase photo bucket is read only during migration/recovery.\n',
+              'OPEN_PHOTO_SUPABASE_BUCKET=puddle-public-media\n'
+          ]:
+              env_text = env_text.replace(line, '')
+          env_text = env_text.replace('LOCATION_PHOTO_ALLOWED_HOSTS=media.puddle.app,f005.backblazeb2.com', 'LOCATION_PHOTO_ALLOWED_HOSTS=media.puddle.app')
+          write('.env.example', env_text)
+
+          # Remove the completed one-time migration command from npm surface.
+          package = read('package.json')
+          package = package.replace(',\"locations:photos:migrate-b2\":\"node scripts/migrate-open-photos-to-b2.mjs\"', '')
+          write('package.json', package)
+
+          # Durable architecture documentation for future agents/operators.
+          write('docs/media-architecture.md', """# Canonical media architecture\n\n## Invariants\n\n- Backblaze B2 is the canonical private byte store for approved open-location photos.\n- B2 photo keys are immutable and content addressed: `media/photos/by-sha256/<first-two>/<sha256>.jpg`.\n- `public.media_objects` is the canonical relational registration/deduplication layer for those bytes.\n- `public.location_photo_sources.media_object_id` links approved photo provenance to the canonical media object.\n- OpenSearch is a rebuildable serving projection. `primary_photo` stores `content_hash` plus attribution metadata, never a Supabase Storage URL, B2 URL, bucket URL, or other storage-provider URL.\n- Public clients receive a same-origin Puddle route derived at the API boundary: `/api/open-photo/<sha256>`.\n- The `/api/open-photo/<sha256>` route privately reads B2 and verifies canonical storage key, byte size, and SHA-256 before returning an immutable cacheable image.\n- Supabase Storage is not an approved open-photo byte store. The Supabase-to-B2 migration and cleanup are complete and must not be reintroduced.\n\n## Ingestion\n\n`source bytes -> normalize JPEG -> SHA-256 -> content-addressed B2 upload -> media_objects upsert/dedupe -> location_photo_sources.media_object_id`\n\nDo not persist a B2 public URL or Puddle delivery URL as media identity. `remote_url` is nullable provenance only and must be null for B2-backed canonical rows. `media_objects.public_url` must be null for B2-backed objects.\n\n## Global catalogue / OpenSearch\n\nThe Supabase bootstrap exports both `location_photo_sources` and `media_objects`. The overlay resolves approved B2 photo rows through `media_object_id`, verifies the canonical B2 key/hash invariant, and writes `content_hash` into `photo_metadata.parquet`. The OpenSearch index maps `primary_photo.content_hash`. Discovery and map APIs derive `/api/open-photo/<sha256>` from that hash.\n\nOpenSearch can always be rebuilt from canonical data; it is never media truth. A storage-provider migration must therefore not require rewriting frontend code or client contracts.\n\n## Retired systems\n\nThe one-time Supabase open-photo migration, validator, cleanup workflows, trigger files, and migration scripts are intentionally removed. Do not recreate them for normal operation. Runtime B2 credential synchronization and the private `/api/open-photo/<sha256>` delivery route remain durable production infrastructure.\n""")
+
+          # Remove migration-only files. Keep runtime B2 auth/sync and generic media cleanup.
+          retired = [
+              '.github/workflows/cleanup-open-photo-supabase.yml',
+              '.github/workflows/migrate-open-photos-b2.yml',
+              '.github/workflows/validate-open-photo-b2.yml',
+              '.github/trigger-cleanup-open-photo-supabase',
+              '.github/trigger-migrate-open-photos-b2',
+              '.github/trigger-validate-open-photo-b2',
+              'scripts/migrate-open-photos-to-b2.mjs',
+              'scripts/migrate-open-photos-b2.mjs',
+              'scripts/validate-open-photo-b2-migration.mjs'
+          ]
+          for path in retired:
+              p = Path(path)
+              if p.exists():
+                  p.unlink()
+                  print(f'retired {path}')
+
+          # The one-off refactor workflow must not survive its own commit.
+          Path('.github/workflows/one-off-media-hash-refactor.yml').unlink()
+
+          # Static architecture gates: fail rather than commit a partial refactor.
+          forbidden = {
+              'lib/app/discovery-global.js': ['photo.url', 'primary_photo.url'],
+              'app/api/map/viewport/route.js': ['primary_photo?.url'],
+              'lib/app/global-location-search.js': ['primary_photo.url'],
+              'scripts/global-data/build_bootstrap_overlays.py': ['p.remote_url AS VARCHAR) url', 'SELECT location_id,url,provider'],
+              'scripts/global-data/index_opensearch.py': ["'url': row['photo_url']", 'p.url photo_url', "'url': {'type': 'keyword', 'index': False}"],
+              'scripts/global-data/materialize_photo_candidates.py': ['B2_MEDIA_PUBLIC_BASE_URL', 'B2_DOWNLOAD_BASE_URL', 'public_url(key)'],
+              '.env.example': ['B2_MEDIA_PUBLIC_BASE_URL', 'B2_DOWNLOAD_BASE_URL', 'OPEN_PHOTO_SUPABASE_BUCKET', 'f005.backblazeb2.com']
+          }
+          for path, needles in forbidden.items():
+              text = read(path)
+              hits = [needle for needle in needles if needle in text]
+              if hits:
+                  raise RuntimeError(f'{path} still contains legacy media coupling: {hits}')
+
+          required = {
+              'lib/app/discovery-global.js': ['openPhotoUrlForHash(photo.content_hash)'],
+              'app/api/map/viewport/route.js': ['openPhotoUrlForHash(row.primary_photo?.content_hash)'],
+              'lib/app/global-location-search.js': ['primary_photo.content_hash'],
+              'scripts/global-data/build_bootstrap_overlays.py': ['media_objects.parquet', 'content_hash'],
+              'scripts/global-data/index_opensearch.py': ["'content_hash': {'type': 'keyword'}", 'photo_content_hash'],
+              'lib/app/open-photo-b2.js': [".from('media_objects')", 'mediaObjectId: mediaObject.id', 'remoteUrl: null']
+          }
+          for path, needles in required.items():
+              text = read(path)
+              missing = [needle for needle in needles if needle not in text]
+              if missing:
+                  raise RuntimeError(f'{path} missing new media architecture fragments: {missing}')
+
+          # Catch accidental reintroduction in active runtime/data-pipeline code, excluding historical migrations/docs/tests.
+          scan_roots = [Path('app'), Path('components'), Path('lib'), Path('scripts/global-data')]
+          bad = []
+          for root in scan_roots:
+              for p in root.rglob('*'):
+                  if not p.is_file() or p.suffix not in {'.js', '.mjs', '.py', '.ts', '.tsx'}:
+                      continue
+                  text = p.read_text(errors='ignore')
+                  if 'puddle-public-media/open-photos/by-hash' in text or 'B2_MEDIA_PUBLIC_BASE_URL' in text:
+                      bad.append(str(p))
+          if bad:
+              raise RuntimeError(f'legacy open-photo serving references remain in active code: {bad}')
+          PY
+
+      - name: Install dependencies and run focused verification
+        run: |
+          npm ci --no-audit --no-fund
+          node --test tests/unit/global-location-search.test.mjs tests/unit/b2-native.test.mjs
+          node scripts/check-secrets.mjs
+          node scripts/check-client-boundaries.mjs
+          python3 -m py_compile scripts/global-data/build-bootstrap-parquet.py scripts/global-data/build_bootstrap_overlays.py scripts/global-data/index_opensearch.py scripts/global-data/materialize_photo_candidates.py
+
+      - name: Commit durable architecture only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Hansen"
+          git config user.email "louhansen811@gmail.com"
+          git add -A
+          git status --short
+          git diff --cached --check
+          git commit -m "Use canonical hashes for B2 photo serving"
+          git push origin HEAD:media-hash-serving-architecture-20260817
