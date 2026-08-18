@@ -1,7 +1,7 @@
 import { createServer } from 'node:http'
 import { mkdir, open } from 'node:fs/promises'
 import { extname, resolve, sep } from 'node:path'
-import { chromium } from 'playwright'
+import { chromium } from 'playwright-core'
 
 const publicRoot = resolve(process.cwd(), 'public')
 const publicPrefix = `${publicRoot}${sep}`
@@ -54,7 +54,10 @@ const server = createServer(async (request, response) => {
 await mkdir(outputRoot, { recursive: true })
 await new Promise((resolveListening) => server.listen(0, '127.0.0.1', resolveListening))
 const baseUrl = `http://127.0.0.1:${server.address().port}/`
-const browser = await chromium.launch({ headless: true })
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: process.env.CHROME_BIN || undefined
+})
 const page = await browser.newPage()
 
 try {
