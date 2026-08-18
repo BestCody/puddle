@@ -66,6 +66,11 @@ jobs:
           GLOBAL_LOCATION_SNAPSHOT: ${{ steps.active.outputs.snapshot }}
           GLOBAL_PHOTO_FINGERPRINT_BACKFILL_CONCURRENCY: ${{ vars.GLOBAL_PHOTO_FINGERPRINT_BACKFILL_CONCURRENCY || '64' }}
           GLOBAL_PHOTO_FINGERPRINT_BACKFILL_BATCH: ${{ vars.GLOBAL_PHOTO_FINGERPRINT_BACKFILL_BATCH || '5000' }}
+      - name: Reconcile pre-registry global B2 photo metadata once per snapshot
+        run: python scripts/global-data/reconcile_existing_global_photo_claims.py
+        env:
+          GLOBAL_LOCATION_SNAPSHOT: ${{ steps.active.outputs.snapshot }}
+          GLOBAL_PHOTO_EXISTING_RECONCILE_CONCURRENCY: ${{ vars.GLOBAL_PHOTO_EXISTING_RECONCILE_CONCURRENCY || '32' }}
       - name: Drain ranked unique licensed photos into immutable B2 media
         run: >-
           python scripts/global-data/materialize_photo_candidates.py
