@@ -13,7 +13,7 @@ const B2_BUCKET_ID = String(process.env.B2_MEDIA_BUCKET_ID || '').trim()
 const B2_BUCKET_NAME = String(process.env.B2_MEDIA_BUCKET_NAME || process.env.B2_BUCKET || '').trim()
 const RETRYABLE_HTTP = new Set([401, 408, 425, 429, 500, 502, 503, 504])
 
-for (const [name, value] of Object.entries({ B2_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_ID, B2_BUCKET_NAME })) {
+for (const [name, value] of Object.entries({ B2_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_NAME })) {
   if (!value) throw new Error(`${name} is required for guarded cleanup validation.`)
 }
 
@@ -89,8 +89,11 @@ async function refreshB2Auth() {
         const capabilities = new Set(auth.allowed?.capabilities || [])
         const buckets = Array.isArray(auth.allowed?.buckets) ? auth.allowed.buckets : []
         if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 media key lacks readFiles capability.')
-        if (buckets.length && !buckets.some((bucket) => bucket?.id === B2_BUCKET_ID && bucket?.name === B2_BUCKET_NAME)) {
+        if (buckets.length && !buckets.some((bucket) => bucket?.name === B2_BUCKET_NAME && (!B2_BUCKET_ID || bucket?.id === B2_BUCKET_ID))) {
           throw new Error('B2 media key is not authorized for the configured bucket.')
+        }
+        if (!B2_BUCKET_ID && !buckets.some((bucket) => bucket?.name === B2_BUCKET_NAME && bucket?.id)) {
+          throw new Error('B2 bucket ID is not configured and could not be derived from the restricted key.')
         }
         b2Auth = auth
         return auth
