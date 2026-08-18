@@ -35,6 +35,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name "Hansen"
+          git config user.email "louhansen811@gmail.com"
           git fetch origin main
           git show origin/main:scripts/one-off-finalize-media-architecture.py | python -
       - name: Verify durable media architecture
@@ -57,8 +59,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "Hansen"
-          git config user.email "louhansen811@gmail.com"
           git add -A
           git diff --cached --check
           git commit -m "Remove retired open-photo compatibility"
