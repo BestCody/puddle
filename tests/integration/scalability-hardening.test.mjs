@@ -123,11 +123,20 @@ test('global discovery failures are isolated from the relational database', asyn
   assert.match(env, /never fail over to Supabase\/Postgres/)
 })
 
-test('legacy social readers delegate to bounded v2 contracts', async () => {
-  const compatibility = await read('supabase/migrations/10066_scalability_compatibility.sql')
+test('temporary v1 social RPC compatibility wrappers are dropped after the v2 cutover', async () => {
+  const cleanup = await read('supabase/migrations/10073_drop_legacy_social_rpc_compatibility.sql')
+  const activeData = await read('lib/app/social-hub-data.js')
+  const activeFeed = await read('lib/app/social-feed-data.js')
 
-  assert.match(compatibility, /social_friend_search_v2\(search_term,30\)/)
-  assert.match(compatibility, /social_friends_v2\(null,null,100\)/)
-  assert.match(compatibility, /social_conversations_v2\(null,null,100\)/)
-  assert.match(compatibility, /social_messages_v2\(target,null,100\)/)
+  for (const signature of [
+    'social_friend_search_v1\\(text\\)',
+    'pass_message_search_v1\\(text\\)',
+    'social_friends_v1\\(\\)',
+    'social_conversations_v1\\(\\)',
+    'social_messages_v1\\(uuid\\)'
+  ]) {
+    assert.match(cleanup, new RegExp(`drop function if exists public\\.${signature}`))
+  }
+  assert.doesNotMatch(activeData, /social_(?:friend_search|friends|conversations|messages)_v1/)
+  assert.doesNotMatch(activeFeed, /social_friends_v1/)
 })
