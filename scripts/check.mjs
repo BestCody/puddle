@@ -15,8 +15,8 @@ const required = [
   'components/product-nav.js','components/product-shell.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/swipe-action-dock.js','components/figma-social-hub.js','components/profile-photo-editor.js',
   'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/social-hub-data.js',
   'lib/app/open-photo-b2.js','lib/app/open-photo-supabase.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/media/pipeline.js',
-  'scripts/b2-upload-tree.mjs','scripts/migrate-open-photos-to-b2.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
-  '.github/workflows/global-bootstrap.yml','.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml','.github/workflows/migrate-open-photos-b2.yml',
+  'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
+  '.github/workflows/global-bootstrap.yml','.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
   'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
   'supabase/migrations/10046_friends_messages_social_hub.sql','supabase/migrations/10050_relational_discovery_runtime.sql','supabase/migrations/10061_discovery_unbounded_pagination.sql','supabase/migrations/10062_discovery_pagination_performance.sql','supabase/seed.sql'
 ]
@@ -33,6 +33,7 @@ const removed = [
   'lib/app/discovery-infrastructure.js','lib/app/discovery-infrastructure-v2.js','lib/app/discovery-relational-fallback.js',
   'lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js','lib/app/use-private-b2-asset.js','lib/app/use-static-catalogue-details.js','lib/app/use-static-media-resolution.js',
   'lib/app/open-photo-r2.js','lib/app/r2-s3.js',
+  'scripts/migrate-open-photos-to-b2.mjs','.github/workflows/migrate-open-photos-b2.yml',
   '.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml',
   '.github/workflows/ops-live-photo-open-import.yml','.github/workflows/ops-live-photo-google-match.yml'
 ]
@@ -47,7 +48,7 @@ for (const path of removed) {
 
 const syntaxFiles = [
   'next.config.mjs','proxy.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/open-photo-b2.js','lib/app/open-photo-supabase.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/app/social-hub-data.js','lib/media/pipeline.js',
-  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/import-open-location-photos.mjs','scripts/b2-upload-tree.mjs','scripts/migrate-open-photos-to-b2.mjs','scripts/global-data/export-supabase-bootstrap.mjs',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/import-open-location-photos.mjs','scripts/b2-upload-tree.mjs','scripts/global-data/export-supabase-bootstrap.mjs',
   'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
@@ -57,10 +58,10 @@ for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','react'
   if (!pkg.dependencies?.[dependency]) throw new Error(`Missing dependency: ${dependency}`)
 }
 const serializedScripts = JSON.stringify(pkg.scripts || {})
-for (const forbidden of ['catalogue:build-static','catalogue:publish-b2','static-catalogue','cleanup-b2-assets','cleanup-r2-assets']) {
+for (const forbidden of ['catalogue:build-static','catalogue:publish-b2','static-catalogue','cleanup-b2-assets','cleanup-r2-assets','locations:photos:migrate-b2']) {
   if (serializedScripts.includes(forbidden)) throw new Error(`Legacy package command remains: ${forbidden}`)
 }
-for (const requiredScript of ['b2:upload-tree','locations:photos:migrate-b2','global:bootstrap:export','global:overture:mirror','global:fsq:mirror','global:index','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview']) {
+for (const requiredScript of ['b2:upload-tree','global:bootstrap:export','global:overture:mirror','global:fsq:mirror','global:index','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview']) {
   if (!pkg.scripts?.[requiredScript]) throw new Error(`Global data-platform package command is missing: ${requiredScript}`)
 }
 
@@ -68,7 +69,7 @@ const env = await read('.env.example')
 for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG']) {
   if (env.includes(forbidden)) throw new Error(`Legacy environment setting remains: ${forbidden}`)
 }
-for (const requiredEnv of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_TINDER_PRICE_ID','GOOGLE_PLACES_API_KEY','GLOBAL_LOCATION_SEARCH_ENABLED','GLOBAL_LOCATION_SEARCH_URL','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','B2_MEDIA_PUBLIC_BASE_URL','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
+for (const requiredEnv of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_TINDER_PRICE_ID','GOOGLE_PLACES_API_KEY','GLOBAL_LOCATION_SEARCH_ENABLED','GLOBAL_LOCATION_SEARCH_URL','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
   if (!env.includes(requiredEnv)) throw new Error(`Environment example is missing ${requiredEnv}`)
 }
 
