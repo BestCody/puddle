@@ -22,7 +22,7 @@ async function visibleLandingCanvas(page) {
   await expect(page.locator(stage)).toBeVisible()
   await expect(page.locator(mode === 'desktop' ? '.landing-stage--mobile' : '.landing-stage--desktop')).not.toBeVisible()
   await expect(page.locator(selector)).toBeVisible()
-  if (mode === 'desktop') await expect(page.locator('.landing-sticky-left')).toBeVisible()
+  if (mode === 'desktop') await expect(page.locator('.landing-sticky-left__canvas')).toBeVisible()
   return { mode, stage, selector, authRoot: landingAuthRoot(mode) }
 }
 
@@ -38,57 +38,156 @@ for (const [path, heading] of publicPages) {
   })
 }
 
-test('landing page uses the correct responsive composition and real DOM content', async ({ page }, testInfo) => {
+test('landing page uses the Figma responsive composition and real DOM content', async ({ page }, testInfo) => {
   const health = trackFrontendHealth(page, { baseURL: testInfo.project.use.baseURL, strictConsole: false })
   await page.goto('/')
-  const { mode, selector, authRoot } = await visibleLandingCanvas(page)
+  const { mode, stage, selector, authRoot } = await visibleLandingCanvas(page)
 
   if (mode === 'desktop') {
     await expect(page.locator('[data-figma-node="83:76"]')).toBeVisible()
     await expect(page.locator('.landing-sticky-left .login-panel input')).toHaveCount(2)
-    await expect(page.locator('.landing-sticky-left')).toHaveAttribute('data-footer-suspended', 'false')
     await expect(page.locator('.feature-card--d-swipe')).toBeVisible()
+    await expect(page.locator('.feature-card--d-profile')).toHaveCount(0)
   } else {
     await expect(page.locator('[data-figma-node="161:116"]')).toBeVisible()
-    await expect(page.locator('.mobile-jump')).toBeVisible()
+    const jump = page.locator('.mobile-jump')
+    // Figma annotation 164:146: JUMP IN fades in only after the user scrolls.
+    await expect(jump).toHaveCSS('visibility', 'hidden')
+    await expect(jump).toHaveCSS('opacity', '0')
+    await page.evaluate(() => window.scrollTo({ top: 24, behavior: 'instant' }))
+    await expect(jump).toHaveCSS('visibility', 'visible')
+    await expect(jump).toHaveCSS('opacity', '1')
     await expect(page.locator('.feature-card--m-swipe')).toBeVisible()
+    await expect(page.locator('.feature-card--m-profile')).toBeVisible()
     await expect(page.locator('.landing-sticky-left')).not.toBeVisible()
   }
 
   await expect(page.locator('img[src="/figma/landing-desktop.png"]')).toHaveCount(0)
   await expect(page.locator('img[src="/figma/landing-mobile.png"]')).toHaveCount(0)
-  await expect(page.locator('.interactive-pill')).toHaveCount(0)
+  await expect(page.locator(`${selector} .interactive-pill`).first()).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Discover places. See who’s there.', level: 1 })).toBeVisible()
 
   for (const path of ['/signin', '/signup']) expect(await page.locator(`${authRoot} a[href="${path}"]`).count()).toBeGreaterThan(0)
-  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${selector} a[href="${path}"]`).count()).toBeGreaterThan(0)
+  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
   await assertImagesLoaded(page)
   await assertNoHorizontalOverflow(page)
   health.assertHealthy()
 })
 
-test('desktop landing releases the sticky sign-in pane for the full-width footer and restores it above the footer', async ({ page }, testInfo) => {
+test('landing phone routes render the correct Figma screen identities and hydrate interactions', async ({ page }) => {
+  await page.goto('/landing-demo/swipe')
+  const swipe = page.locator('[data-demo-screen="swipe"]')
+  await expect(swipe).toBeVisible()
+  await expect(swipe).toHaveAttribute('data-figma-screen', '40:641')
+  await expect(swipe.getByRole('img', { name: 'Puddle' })).toBeVisible()
+  await expect(swipe.getByText('Maple Grove Park', { exact: true })).toBeVisible()
+  await expect(swipe.getByText('2243 Devon Road, Oakville', { exact: true })).toBeVisible()
+  await expect(swipe.getByRole('link', { name: 'Swipe' })).toHaveAttribute('aria-current', 'page')
+  await swipe.getByRole('button', { name: 'Save place' }).click()
+  await expect(swipe.getByText('Firehall Cool Bar Hot Grill', { exact: true })).toBeVisible()
+  await swipe.getByRole('button', { name: 'Back' }).click()
+  await expect(swipe.getByText('Maple Grove Park', { exact: true })).toBeVisible()
+
+  await page.goto('/landing-demo/save')
+  const saved = page.locator('[data-demo-screen="save"]')
+  await expect(saved).toBeVisible()
+  await expect(saved).toHaveAttribute('data-figma-screen', '25:180')
+  await expect(saved.getByRole('img', { name: 'Puddle' })).toBeVisible()
+  await expect(saved.getByText('Firehall Cool Bar Hot Grill', { exact: true })).toBeVisible()
+  await expect(saved.getByRole('link', { name: 'Saved' })).toHaveAttribute('aria-current', 'page')
+  await saved.getByRole('button', { name: 'Plans', exact: true }).click()
+  await expect(saved.getByText('Night Gallery', { exact: true })).toBeVisible()
+  await saved.getByRole('button', { name: 'Saved', exact: true }).click()
+  await saved.getByRole('button', { name: /Theatres/ }).click()
+  await expect(saved.getByText('Film House', { exact: true })).toBeVisible()
+  await expect(saved.getByText('Firehall Cool Bar Hot Grill', { exact: true })).toHaveCount(0)
+  await saved.getByText('Film House', { exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Film House details' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
+
+  await page.goto('/landing-demo/feed')
+  const feed = page.locator('[data-demo-screen="feed"]')
+  await expect(feed).toBeVisible()
+  await expect(feed).toHaveAttribute('data-figma-screen', '40:519')
+  await expect(feed.getByRole('img', { name: 'Puddle' })).toBeVisible()
+  await expect(feed.getByText('Richie Zheng', { exact: true })).toBeVisible()
+  await expect(feed.getByText(/This place is amazing! The atmosphere is beautiful/)).toBeVisible()
+  await expect(feed.getByRole('link', { name: 'Feed' })).toHaveAttribute('aria-current', 'page')
+  await feed.getByRole('button', { name: 'Map', exact: true }).click()
+  await expect(feed.getByLabel('Interactive map preview')).toBeVisible()
+  await feed.getByRole('button', { name: 'Open Maple Grove Park' }).click()
+  await expect(page.getByRole('dialog', { name: 'Maple Grove Park details' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
+  await feed.getByRole('button', { name: 'Feed', exact: true }).click()
+  await feed.getByRole('button', { name: 'Search puddle', exact: true }).click()
+  await feed.getByPlaceholder('Search puddle').fill('not-a-puddle')
+  await expect(feed.getByText('No puddles found.', { exact: true })).toBeVisible()
+
+  await page.goto('/landing-demo/profile')
+  const profile = page.locator('[data-demo-screen="profile"]')
+  await expect(profile).toBeVisible()
+  await expect(profile).toHaveAttribute('data-figma-screen', '40:347')
+  await expect(profile.getByRole('heading', { name: 'Richie Zheng', exact: true })).toBeVisible()
+  await expect(profile.getByText('@Richiezh77', { exact: true })).toBeVisible()
+  await expect(profile.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page')
+  await profile.getByRole('button', { name: 'Follow', exact: true }).click()
+  await expect(profile.getByRole('button', { name: 'Following', exact: true })).toBeVisible()
+  await profile.getByRole('button', { name: 'Edit', exact: true }).click()
+  await profile.getByRole('textbox', { name: 'Display name' }).fill('Richie Test')
+  await profile.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(profile.getByRole('heading', { name: 'Richie Test', exact: true })).toBeVisible()
+  await profile.getByRole('button', { name: /Message/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Message Richie Zheng' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close message' }).click()
+})
+
+test('landing embeds each Figma phone route in the corresponding feature card', async ({ page }) => {
+  await page.goto('/')
+  const { mode, selector } = await visibleLandingCanvas(page)
+  const expected = [
+    ['swipe', 'Maple Grove Park'],
+    ['save', 'Firehall Cool Bar Hot Grill'],
+    ['feed', 'Richie Zheng'],
+    ...(mode === 'mobile' ? [['profile', '@Richiezh77']] : [])
+  ]
+
+  for (const [view, identity] of expected) {
+    const shell = page.locator(`${selector} [data-phone-demo="${view}"]`)
+    await shell.scrollIntoViewIfNeeded()
+    await expect(shell).toBeVisible()
+    const frame = shell.locator('iframe')
+    await expect(frame).toHaveAttribute('src', `/landing-demo/${view}`)
+    await expect(frame.contentFrame().getByText(identity, { exact: true }).first()).toBeVisible()
+  }
+})
+
+test('desktop landing sticky sign-in canvas ends before the full-width footer', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Desktop sticky-footer behavior only')
 
   await page.goto('/')
   await visibleLandingCanvas(page)
-  const sticky = page.locator('.landing-sticky-left')
+  const sticky = page.locator('.landing-sticky-left__canvas')
   const footer = page.locator('#footer-d')
 
-  await expect(sticky).toHaveAttribute('data-footer-suspended', 'false')
-  await expect(sticky).toHaveAttribute('aria-hidden', 'false')
-
+  await expect(sticky).toBeVisible()
   await footer.scrollIntoViewIfNeeded()
   await expect(footer).toBeVisible()
-  await expect(sticky).toHaveAttribute('data-footer-suspended', 'true')
-  await expect(sticky).toHaveAttribute('aria-hidden', 'true')
+
+  const overlap = await page.evaluate(() => {
+    const stickyNode = document.querySelector('.landing-sticky-left__canvas')
+    const footerNode = document.querySelector('#footer-d')
+    if (!stickyNode || !footerNode) return null
+    const stickyRect = stickyNode.getBoundingClientRect()
+    const footerRect = footerNode.getBoundingClientRect()
+    return Math.max(0, Math.min(stickyRect.bottom, footerRect.bottom) - Math.max(stickyRect.top, footerRect.top))
+  })
+  expect(overlap).toBe(0)
   for (const label of ['Explore', 'Company', 'Connect']) {
     await expect(footer.getByText(label, { exact: true })).toBeVisible()
   }
 
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
-  await expect(sticky).toHaveAttribute('data-footer-suspended', 'false')
-  await expect(sticky).toHaveAttribute('aria-hidden', 'false')
+  await expect(sticky).toBeVisible()
 })
 
 test('landing safety modal and navigation work', async ({ page }) => {
@@ -106,9 +205,9 @@ test('landing safety modal and navigation work', async ({ page }) => {
 
 test('landing exposes real auth and legal links', async ({ page }) => {
   await page.goto('/')
-  const { selector, authRoot } = await visibleLandingCanvas(page)
+  const { stage, authRoot } = await visibleLandingCanvas(page)
   for (const path of ['/signin', '/signup']) expect(await page.locator(`${authRoot} a[href="${path}"]`).count()).toBeGreaterThan(0)
-  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${selector} a[href="${path}"]`).count()).toBeGreaterThan(0)
+  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
   await expect(page.locator('button[data-open-app]')).toHaveCount(0)
   await expect(page.locator('[data-open-modal="waitlist"]')).toHaveCount(0)
 })

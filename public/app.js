@@ -1,112 +1,10 @@
 const $ = (selector, root = document) => root.querySelector(selector)
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)]
 
-const DESKTOP_WIDTH = 1281
-const DESKTOP_HEIGHT = 7578
-const DESKTOP_LEFT_WIDTH = 615
-const DESKTOP_HERO_HEIGHT = 875
-const MOBILE_WIDTH = 704
-const MOBILE_HEIGHT = 9660
-
 function activeLandingStage() {
   return window.matchMedia('(max-width: 760px)').matches
     ? $('.landing-stage--mobile')
     : $('.landing-stage--desktop')
-}
-
-function ensureDesktopStickyPane() {
-  const stage = $('.landing-stage--desktop')
-  if (!stage) return null
-  const existing = $('.landing-sticky-left', stage)
-  if (existing) return existing
-
-  const hero = $('.hero--desktop', stage)
-  if (!hero) return null
-
-  const pane = document.createElement('div')
-  pane.className = 'landing-sticky-left'
-  pane.setAttribute('role', 'region')
-  pane.setAttribute('aria-label', 'Puddle sign in')
-
-  const surface = document.createElement('div')
-  surface.className = 'landing-sticky-left__canvas'
-  pane.append(surface)
-
-  for (const selector of ['.hero-photo--left', '.brand--desktop', '.login-panel']) {
-    const node = $(selector, hero)
-    if (node) surface.append(node)
-  }
-
-  stage.append(pane)
-  return pane
-}
-
-function desktopFooterHasReachedViewport() {
-  if (window.matchMedia('(max-width: 760px)').matches) return false
-  const footer = $('.site-footer--desktop')
-  if (!footer) return false
-  const footerRect = footer.getBoundingClientRect()
-  return footerRect.top < window.innerHeight && footerRect.bottom > 0
-}
-
-function updateDesktopStickyState() {
-  const pane = $('.landing-sticky-left')
-  if (!pane) return
-  const suspended = desktopFooterHasReachedViewport()
-  pane.classList.toggle('is-footer-suspended', suspended)
-  pane.style.visibility = suspended ? 'hidden' : 'visible'
-  pane.style.pointerEvents = suspended ? 'none' : 'auto'
-  pane.setAttribute('aria-hidden', suspended ? 'true' : 'false')
-  pane.dataset.footerSuspended = suspended ? 'true' : 'false'
-}
-
-function syncDesktopStickyPane(stage, scale, hidden) {
-  const pane = ensureDesktopStickyPane()
-  if (!pane) return
-  if (hidden) {
-    pane.style.display = 'none'
-    return
-  }
-
-  pane.style.display = 'block'
-  const stageRect = stage.getBoundingClientRect()
-  pane.style.left = `${stageRect.left}px`
-  pane.style.width = `${DESKTOP_LEFT_WIDTH * scale}px`
-
-  const surface = $('.landing-sticky-left__canvas', pane)
-  if (surface) {
-    surface.style.transform = `scale(${scale})`
-    surface.dataset.scale = String(scale)
-  }
-  updateDesktopStickyState()
-}
-
-function fitLanding() {
-  const mobile = window.matchMedia('(max-width: 760px)').matches
-  const desktopStage = $('.landing-stage--desktop')
-  const mobileStage = $('.landing-stage--mobile')
-  const desktopCanvas = $('.landing-canvas--desktop')
-  const mobileCanvas = $('.landing-canvas--mobile')
-  if (!desktopStage || !mobileStage || !desktopCanvas || !mobileCanvas) return
-
-  const desktopScale = Math.min(window.innerWidth / DESKTOP_WIDTH, 1, (window.innerHeight * 1.425) / DESKTOP_WIDTH)
-  const mobileScale = Math.min(window.innerWidth / MOBILE_WIDTH, 1)
-
-  const setScale = (stage, canvas, nativeWidth, nativeHeight, scale) => {
-    stage.style.width = `${nativeWidth * scale}px`
-    stage.style.height = `${nativeHeight * scale}px`
-    canvas.style.width = `${nativeWidth}px`
-    canvas.style.height = `${nativeHeight}px`
-    canvas.style.transform = `scale(${scale})`
-    canvas.dataset.scale = String(scale)
-    canvas.dataset.nativeWidth = String(nativeWidth)
-    canvas.dataset.nativeHeight = String(nativeHeight)
-  }
-
-  setScale(desktopStage, desktopCanvas, DESKTOP_WIDTH, DESKTOP_HEIGHT, desktopScale)
-  setScale(mobileStage, mobileCanvas, MOBILE_WIDTH, MOBILE_HEIGHT, mobileScale)
-  syncDesktopStickyPane(desktopStage, desktopScale, mobile)
-  document.documentElement.dataset.landingMode = mobile ? 'mobile' : 'desktop'
 }
 
 function protectInteractiveLayers() {
@@ -116,21 +14,6 @@ function protectInteractiveLayers() {
   $$('.final-cta > a').forEach((link) => {
     link.style.pointerEvents = 'auto'
   })
-}
-
-function removeInteractivePills() {
-  $$('.interactive-pill').forEach((pill) => pill.remove())
-}
-
-function updateMobileJump() {
-  const canvas = $('.landing-canvas--mobile')
-  const jump = $('.mobile-jump')
-  if (!canvas || !jump) return
-  const visible = window.scrollY > 24
-  canvas.classList.toggle('is-scrolled', visible)
-  jump.setAttribute('aria-hidden', visible ? 'false' : 'true')
-  if (visible) jump.removeAttribute('tabindex')
-  else jump.setAttribute('tabindex', '-1')
 }
 
 function openSafetyDialog() {
@@ -155,6 +38,28 @@ function initSignInHandoff() {
       window.location.assign('/signin')
     })
   })
+}
+
+// Figma annotation 164:146: “JUMP IN FADES IN ONLY AFTER THE USER SCROLLS”.
+function initMobileJumpIn() {
+  const jump = $('.mobile-jump')
+  if (!jump) return
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  jump.style.transition = reducedMotion ? 'none' : 'opacity 220ms ease, transform 220ms ease'
+
+  const sync = () => {
+    const mobile = window.matchMedia('(max-width: 760px)').matches
+    const revealed = mobile && window.scrollY > 8
+    jump.style.opacity = revealed ? '1' : '0'
+    jump.style.visibility = revealed ? 'visible' : 'hidden'
+    jump.style.pointerEvents = revealed ? 'auto' : 'none'
+    jump.style.transform = revealed ? 'translateY(0)' : 'translateY(-4px)'
+    jump.setAttribute('aria-hidden', revealed ? 'false' : 'true')
+  }
+
+  sync()
+  window.addEventListener('scroll', sync, { passive: true })
+  window.addEventListener('resize', sync, { passive: true })
 }
 
 const phoneDemoByAsset = new Map([
@@ -251,9 +156,7 @@ function initDraggablePhones() {
 
     phone.addEventListener('pointermove', (event) => {
       if (event.pointerId !== pointerId) return
-      const canvas = phone.closest('.landing-canvas')
-      const scale = Number(canvas?.dataset.scale || 1) || 1
-      dx = Math.max(-45, Math.min(45, (event.clientX - startX) / scale))
+      dx = Math.max(-45, Math.min(45, event.clientX - startX))
       phone.style.transform = `translateX(${dx}px) rotate(${dx * 0.035}deg)`
     })
 
@@ -265,22 +168,11 @@ function initDraggablePhones() {
   })
 }
 
-function updateLandingScrollState() {
-  updateMobileJump()
-  updateDesktopStickyState()
-}
-
 function initLanding() {
-  ensureDesktopStickyPane()
-  removeInteractivePills()
-  fitLanding()
   protectInteractiveLayers()
-  updateLandingScrollState()
+  initMobileJumpIn()
   initInteractivePhoneDemos()
   initPhoneDemoLoading()
-  window.addEventListener('resize', fitLanding, { passive: true })
-  window.addEventListener('orientationchange', fitLanding, { passive: true })
-  window.addEventListener('scroll', updateLandingScrollState, { passive: true })
 
   $$('[data-open-safety]').forEach((button) => button.addEventListener('click', openSafetyDialog))
   $$('[data-close-safety]').forEach((button) => button.addEventListener('click', closeSafetyDialog))

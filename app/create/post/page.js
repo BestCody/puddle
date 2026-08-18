@@ -61,46 +61,52 @@ export default async function CreatePostPage({ searchParams }) {
     const requestedLocation = typeof params?.location === 'string' ? params.location : null
     const selectedPoint = snapshot.points.find((point) => point.id === requestedLocation) || snapshot.points[0] || null
 
-    return <div className="figma-create-post-screen">
+    return <div className="figma-create-post-screen" data-figma-node="25:79">
       <AuthMessage searchParams={params} />
-      <Link className="figma-feed-back" href="/map" aria-label="Back to Feed">‹</Link>
-      <nav className="figma-dashboard-segment figma-feed-tabs" aria-label="Feed or map">
-        <Link className="is-active" href="/map">Feed</Link>
-        <Link href="/map?view=map">Map</Link>
-      </nav>
-      <form className="figma-feed-search figma-create-post-search" action="/plans" method="get">
-        <label><input aria-label="Search saved puddles" type="search" name="q" placeholder="Search saved puddles" /></label>
-        <button type="submit" aria-label="Search">⌕</button>
-      </form>
 
-      <CreatePostPreview avatar={avatar} name={name} point={selectedPoint} />
+      <header className="figma-create-post-topbar">
+        <Link className="figma-feed-back" href="/map" aria-label="Back to Feed">‹</Link>
+        <span className="figma-create-post-mobile-logo" aria-hidden="true" />
+        <nav className="figma-dashboard-segment figma-feed-tabs" aria-label="Feed or map">
+          <Link className="is-active" href="/map">Feed</Link>
+          <Link href="/map?view=map">Map</Link>
+        </nav>
+        <form className="figma-feed-search figma-create-post-search" action="/plans" method="get">
+          <label><input aria-label="Search saved puddles" type="search" name="q" placeholder="Search saved puddles" /></label>
+          <button type="submit" aria-label="Search">⌕</button>
+        </form>
+      </header>
 
-      <form className="figma-create-post-card" aria-label="Create a puddle post" action={createPuddlePost}>
-        <input type="hidden" name="location_id" value={selectedPoint?.id || ''} />
-        <span className="figma-feed-post-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(name)}</span>
-        <fieldset className="figma-create-post-visibility" aria-label="Post visibility">
-          <label><input type="radio" name="visibility" value="public" defaultChecked /><span>Public</span></label>
-          <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>
-        </fieldset>
-        <button className="figma-create-post-submit" type="submit" disabled={!selectedPoint} aria-label="Publish post">↑</button>
-        <label className="figma-create-post-title"><input aria-label="Title" name="title" maxLength="80" required placeholder="Title" /></label>
-        <label className="figma-create-post-description"><textarea aria-label="Description" name="description" maxLength="1000" placeholder="Description" /></label>
-        <details className="figma-create-post-add">
-          <summary aria-label="Open add menu">＋</summary>
-          <div className="figma-create-post-add-menu">
-            <strong>Attach a saved place</strong>
-            {snapshot.points.length ? <div className="figma-create-post-location-options">
-              {snapshot.points.slice(0, 12).map((point) => <Link
-                className={selectedPoint?.id === point.id ? 'is-selected' : ''}
-                href={`/create/post?location=${encodeURIComponent(point.id)}`}
-                key={point.id}
-              ><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
-            </div> : <p>Save a place first, then come back to create a puddle.</p>}
-          </div>
-          <div className="figma-create-post-add-footer"><span>{selectedPoint ? selectedPoint.title : 'No place selected'}</span></div>
-        </details>
-        <Link className="figma-create-post-map" href="/map?view=map&selectForPost=1" aria-label="Choose a place from the map">⌑</Link>
-      </form>
+      <section className="figma-create-post-workspace" aria-label="Post composer preview">
+        <CreatePostPreview avatar={avatar} name={name} point={selectedPoint} />
+
+        <form className="figma-create-post-card" aria-label="Create a puddle post" action={createPuddlePost}>
+          <input type="hidden" name="location_id" value={selectedPoint?.id || ''} />
+          <span className="figma-feed-post-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(name)}</span>
+          <fieldset className="figma-create-post-visibility" aria-label="Post visibility">
+            <label><input type="radio" name="visibility" value="public" defaultChecked /><span>Public</span></label>
+            <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>
+          </fieldset>
+          <button className="figma-create-post-submit" type="submit" disabled={!selectedPoint} aria-label="Publish post">↑</button>
+          <label className="figma-create-post-title"><input aria-label="Title" name="title" maxLength="80" required placeholder="Title" /></label>
+          <label className="figma-create-post-description"><textarea aria-label="Description" name="description" maxLength="1000" placeholder="Description" /></label>
+          <details className="figma-create-post-add">
+            <summary aria-label="Open add menu">＋</summary>
+            <div className="figma-create-post-add-menu">
+              <strong>Attach a saved place</strong>
+              {snapshot.points.length ? <div className="figma-create-post-location-options">
+                {snapshot.points.slice(0, 12).map((point) => <Link
+                  className={selectedPoint?.id === point.id ? 'is-selected' : ''}
+                  href={`/create/post?location=${encodeURIComponent(point.id)}`}
+                  key={point.id}
+                ><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
+              </div> : <p>Save a place first, then come back to create a puddle.</p>}
+            </div>
+            <div className="figma-create-post-add-footer"><span>{selectedPoint ? selectedPoint.title : 'No place selected'}</span></div>
+          </details>
+          <Link className="figma-create-post-map" href="/map?view=map&selectForPost=1" aria-label="Choose a place from the map">⌑</Link>
+        </form>
+      </section>
 
       {!selectedPoint ? <div className="figma-create-post-empty"><strong>You need a saved place before you can post.</strong><Link href="/discover">Start swiping</Link></div> : null}
     </div>

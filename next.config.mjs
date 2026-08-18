@@ -44,9 +44,7 @@ const nextConfig = {
       { source: '/events/:path*', headers: durableAssetCache },
       { source: '/puddle-mark.svg', headers: durableAssetCache },
       { source: '/og-puddle.svg', headers: durableAssetCache },
-      { source: '/styles.css', headers: landingAssetCache },
-      { source: '/landing-responsive.css', headers: landingAssetCache },
-      { source: '/landing-hardening.css', headers: landingAssetCache },
+      { source: '/landing.css', headers: landingAssetCache },
       { source: '/app.js', headers: landingAssetCache },
       { source: '/:path*', headers: securityHeaders },
       { source: '/landing-demo/:path*', headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }] }
