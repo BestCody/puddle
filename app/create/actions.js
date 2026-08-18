@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
 import { locationPayload, objectFromFormData, validateLocation } from '@/lib/app/content-input'
+import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function firstError(error, fallback) {
   const message = String(error?.message || '').trim()
@@ -43,7 +45,7 @@ async function persistLocation(formData) {
   }
 
   if (id) {
-    const { data } = await session.supabase.from('locations').select('*').eq('id', id).maybeSingle()
+    const { data } = await session.supabase.from('location_submissions').select('*').eq('id', id).maybeSingle()
     existing = data
     if (!existing) redirect(pathWithMessage('/create/place', 'error', 'That location draft is not available.'))
   }
@@ -61,8 +63,8 @@ async function persistLocation(formData) {
   }
 
   const query = existing
-    ? session.supabase.from('locations').update(writable).eq('id', id).select('id,slug,status').single()
-    : session.supabase.from('locations').insert(writable).select('id,slug,status').single()
+    ? session.supabase.from('location_submissions').update(writable).eq('id', id).select('id,slug,status').single()
+    : session.supabase.from('location_submissions').insert(writable).select('id,slug,status').single()
   const { data, error } = await query
   if (error || !data) {
     redirect(pathWithMessage(editLocationPath(id), 'error', firstError(error, 'We could not save this location draft.')))
@@ -87,9 +89,8 @@ export async function requestLocationPublication(formData) {
   if (error) {
     redirect(pathWithMessage(`/studio/places/${location.id}`, 'error', firstError(error, 'This location is not ready to publish yet.')))
   }
-  revalidatePath('/discover')
-  revalidatePath(`/places/${location.slug}`)
-  redirect(pathWithMessage(`/studio/places/${location.id}`, 'success', data === 'published' ? 'Location published.' : 'Location submitted for review.'))
+  revalidatePath(`/studio/places/${location.id}`)
+  redirect(pathWithMessage(`/studio/places/${location.id}`, 'success', data === 'published' ? 'Location approved for the canonical location pipeline.' : 'Location submitted for review.'))
 }
 
 export async function transitionLocationStatus(formData) {
@@ -119,6 +120,12 @@ export async function submitLocationClaim(formData) {
   const next = safeNextPath(String(formData.get('next') || '/discover'))
   if (!locationId || !relationship) {
     redirect(pathWithMessage(next, 'error', 'Describe your relationship to this location.'))
+  }
+
+  try {
+    await ensureGlobalLocationReferences(createAdminClient(), [locationId])
+  } catch {
+    redirect(pathWithMessage(next, 'error', 'That location is not available in the canonical catalogue.'))
   }
 
   const { error } = await session.supabase.from('location_claims').insert({
