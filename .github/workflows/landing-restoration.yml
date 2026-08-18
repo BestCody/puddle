@@ -24,6 +24,7 @@ on:
       - scripts/test-landing-restoration.mjs
       - scripts/test-responsive-landing.mjs
       - scripts/test-live-landing.mjs
+      - scripts/capture-desktop-fullpage.mjs
       - tests/live/public-figma-smoke.spec.mjs
       - .github/workflows/landing-restoration.yml
   pull_request:
@@ -49,6 +50,7 @@ on:
       - scripts/test-landing-restoration.mjs
       - scripts/test-responsive-landing.mjs
       - scripts/test-live-landing.mjs
+      - scripts/capture-desktop-fullpage.mjs
       - tests/live/public-figma-smoke.spec.mjs
       - .github/workflows/landing-restoration.yml
   workflow_dispatch:
@@ -59,7 +61,7 @@ permissions:
 jobs:
   browser-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v7
@@ -75,6 +77,21 @@ jobs:
           node scripts/test-responsive-landing.mjs
           node --test tests/integration/swipe-motion.test.mjs
           node --test tests/integration/landing-phone-demos.test.mjs
+      - name: Start current Puddle source and capture complete desktop pages
+        run: |
+          npm run dev -- --hostname 127.0.0.1 > /tmp/puddle-next.log 2>&1 &
+          echo $! > /tmp/puddle-next.pid
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 90 ]; then
+              cat /tmp/puddle-next.log
+              exit 1
+            fi
+            sleep 2
+          done
+          LANDING_CAPTURE_URL=http://127.0.0.1:3000/ node scripts/capture-desktop-fullpage.mjs
       - name: Upload landing comparison renders
         if: always()
         uses: actions/upload-artifact@v4
