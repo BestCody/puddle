@@ -87,6 +87,32 @@ for (const signature of [
   }
 }
 
+const databaseCleanup = await read('supabase/migrations/10075_retire_shared_deck_static_catalogue.sql')
+for (const required of [
+  'drop table if exists public.date_match_decks;',
+  'drop table if exists public.date_match_members;',
+  'drop table if exists public.date_match_items;',
+  'drop table if exists public.date_match_swipes;',
+  'drop table if exists public.date_match_matches;',
+  'drop table if exists public.date_match_feedback;',
+  'drop table if exists public.static_catalogue_actions;',
+  'drop table if exists public.static_catalogue_materializations;',
+  'drop table if exists public.static_location_assets;',
+  'drop table if exists public.static_media_resolution_states;',
+  'drop trigger if exists location_photo_sources_attach_r2_media on public.location_photo_sources;',
+  'drop trigger if exists location_photo_sources_retain_static on public.location_photo_sources;',
+  'create or replace function public.claim_google_place_candidates_v3',
+  'create or replace view public.location_card_quality_v1 as'
+]) {
+  if (!databaseCleanup.includes(required)) throw new Error(`Database legacy cleanup is missing required boundary: ${required}`)
+}
+for (const forbidden of [
+  'drop function if exists public.claim_google_place_candidates_v3(integer);',
+  'drop function if exists public.r2_discovery_overlay_v2'
+]) {
+  if (databaseCleanup.includes(forbidden)) throw new Error(`Database cleanup would remove an active compatibility contract: ${forbidden}`)
+}
+
 const architecture = await read('docs/system-architecture.md')
 for (const required of [
   'OpenSearch failures do not silently fail over to Postgres',
@@ -96,4 +122,4 @@ for (const required of [
   if (!architecture.includes(required)) throw new Error(`System architecture is missing invariant: ${required}`)
 }
 
-console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of marker triggers/public-B2 delivery coupling, v1 social compatibility dropped.`)
+console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of marker triggers/public-B2 delivery coupling, social compatibility dropped, and retired database runtimes fenced.`)
