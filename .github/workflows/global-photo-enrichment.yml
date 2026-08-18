@@ -68,6 +68,10 @@ jobs:
           GLOBAL_LOCATION_SNAPSHOT: ${{ steps.active.outputs.snapshot }}
           GLOBAL_PHOTO_FINGERPRINT_BACKFILL_CONCURRENCY: ${{ vars.GLOBAL_PHOTO_FINGERPRINT_BACKFILL_CONCURRENCY || '64' }}
           GLOBAL_PHOTO_FINGERPRINT_BACKFILL_BATCH: ${{ vars.GLOBAL_PHOTO_FINGERPRINT_BACKFILL_BATCH || '5000' }}
+      - name: Remove only stale partial reconciliation files when snapshot setup is incomplete
+        run: python scripts/global-data/prepare_existing_global_photo_reconciliation.py
+        env:
+          GLOBAL_LOCATION_SNAPSHOT: ${{ steps.active.outputs.snapshot }}
       - name: Reconcile pre-registry global B2 photo metadata once per snapshot
         run: python scripts/global-data/reconcile_existing_global_photo_claims.py
         env:
