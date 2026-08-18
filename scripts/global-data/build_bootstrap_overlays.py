@@ -58,6 +58,7 @@ CREATE OR REPLACE SECRET b2_data_secret (
 """)
 
 con.execute(f"CREATE OR REPLACE TEMP VIEW photo_rows AS SELECT * FROM read_parquet('{BOOT}/location_photo_sources.parquet')")
+con.execute(f"CREATE OR REPLACE TEMP VIEW media_rows AS SELECT * FROM read_parquet('{BOOT}/media_objects.parquet')")
 con.execute(f"CREATE OR REPLACE TEMP VIEW google_rows AS SELECT * FROM read_parquet('{BOOT}/location_google_places.parquet')")
 
 # Limit the global canonical scan to IDs that can possibly receive an overlay.
@@ -82,19 +83,36 @@ FROM read_parquet('{OUT}/country_code=*/locations.parquet', union_by_name=true, 
 JOIN overlay_ids o ON o.id=cast(c.id AS VARCHAR);
 """)
 
+invalid_b2_photos = con.execute("""
+SELECT count(*)
+FROM photo_rows p
+LEFT JOIN media_rows m ON cast(m.id AS VARCHAR)=cast(p.media_object_id AS VARCHAR)
+WHERE cast(p.status AS VARCHAR)='approved'
+  AND coalesce(try_cast(p.is_ai_generated AS BOOLEAN), false)=false
+  AND lower(coalesce(cast(p.storage_backend AS VARCHAR),''))='b2'
+  AND (
+    m.id IS NULL
+    OR lower(coalesce(cast(m.storage_backend AS VARCHAR),'')) <> 'b2'
+    OR NOT regexp_full_match(lower(coalesce(cast(m.content_hash AS VARCHAR),'')), '[0-9a-f]{64}')
+    OR cast(m.storage_key AS VARCHAR) <> 'media/photos/by-sha256/' || substr(lower(cast(m.content_hash AS VARCHAR)),1,2) || '/' || lower(cast(m.content_hash AS VARCHAR)) || '.jpg'
+  );
+""").fetchone()[0]
+if invalid_b2_photos:
+    raise RuntimeError(f'{invalid_b2_photos} approved B2 photos are missing canonical media_objects identity')
+
 con.execute("""
 CREATE OR REPLACE TEMP TABLE primary_photos AS
 SELECT * EXCLUDE(rn) FROM (
   SELECT
     cast(p.location_id AS VARCHAR) location_id,
     l.country_code,
-    cast(p.remote_url AS VARCHAR) url,
+    lower(cast(m.content_hash AS VARCHAR)) content_hash,
     cast(p.provider AS VARCHAR) provider,
     cast(p.attribution_text AS VARCHAR) attribution,
     cast(p.attribution_url AS VARCHAR) attribution_url,
     cast(p.license_code AS VARCHAR) license,
-    try_cast(p.width AS INTEGER) width,
-    try_cast(p.height AS INTEGER) height,
+    coalesce(try_cast(m.width AS INTEGER), try_cast(p.width AS INTEGER)) width,
+    coalesce(try_cast(m.height AS INTEGER), try_cast(p.height AS INTEGER)) height,
     row_number() OVER (
       PARTITION BY cast(p.location_id AS VARCHAR)
       ORDER BY
@@ -110,10 +128,14 @@ SELECT * EXCLUDE(rn) FROM (
         coalesce(try_cast(p.verified_at AS TIMESTAMP), TIMESTAMP '1970-01-01') DESC
     ) rn
   FROM photo_rows p
+  JOIN media_rows m ON cast(m.id AS VARCHAR)=cast(p.media_object_id AS VARCHAR)
   JOIN canonical_overlay_locations l ON l.id=cast(p.location_id AS VARCHAR)
   WHERE cast(p.status AS VARCHAR)='approved'
     AND coalesce(try_cast(p.is_ai_generated AS BOOLEAN), false)=false
-    AND p.remote_url IS NOT NULL
+    AND lower(coalesce(cast(p.storage_backend AS VARCHAR),''))='b2'
+    AND lower(coalesce(cast(m.storage_backend AS VARCHAR),''))='b2'
+    AND regexp_full_match(lower(cast(m.content_hash AS VARCHAR)), '[0-9a-f]{64}')
+    AND cast(m.storage_key AS VARCHAR) = 'media/photos/by-sha256/' || substr(lower(cast(m.content_hash AS VARCHAR)),1,2) || '/' || lower(cast(m.content_hash AS VARCHAR)) || '.jpg'
     AND (
       try_cast(p.expires_at AS TIMESTAMP) IS NULL
       OR try_cast(p.expires_at AS TIMESTAMP) > now()
@@ -155,7 +177,7 @@ countries = [
 for country in countries:
     safe = str(country or 'ZZ').upper() or 'ZZ'
     con.execute(
-        f"COPY (SELECT location_id,url,provider,attribution,attribution_url,license,width,height "
+        f"COPY (SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height "
         f"FROM primary_photos WHERE country_code='{safe}') "
         f"TO '{OUT}/country_code={safe}/photo_metadata.parquet' "
         "(FORMAT PARQUET, COMPRESSION ZSTD, OVERWRITE_OR_IGNORE true)"

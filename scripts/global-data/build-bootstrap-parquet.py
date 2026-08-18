@@ -71,6 +71,23 @@ if location_rows != nonnull_ids or location_rows != unique_ids:
 source_link_rows = int(con.execute(f"SELECT count(*) FROM {parquet('location_source_links')}").fetchone()[0])
 source_link_locations = int(con.execute(f"SELECT count(DISTINCT cast(location_id AS VARCHAR)) FROM {parquet('location_source_links')}").fetchone()[0])
 photo_rows = int(con.execute(f"SELECT count(*) FROM {parquet('location_photo_sources')}").fetchone()[0])
+media_rows = int(con.execute(f"SELECT count(*) FROM {parquet('media_objects')}").fetchone()[0])
+approved_b2_photo_rows = int(con.execute(f"SELECT count(*) FROM {parquet('location_photo_sources')} WHERE lower(coalesce(cast(status AS VARCHAR),''))='approved' AND lower(coalesce(cast(storage_backend AS VARCHAR),''))='b2'").fetchone()[0])
+invalid_approved_b2_media = int(con.execute(f"""
+SELECT count(*)
+FROM {parquet('location_photo_sources')} p
+LEFT JOIN {parquet('media_objects')} m ON cast(m.id AS VARCHAR)=cast(p.media_object_id AS VARCHAR)
+WHERE lower(coalesce(cast(p.status AS VARCHAR),''))='approved'
+  AND lower(coalesce(cast(p.storage_backend AS VARCHAR),''))='b2'
+  AND (
+    m.id IS NULL
+    OR lower(coalesce(cast(m.storage_backend AS VARCHAR),'')) <> 'b2'
+    OR NOT regexp_full_match(lower(coalesce(cast(m.content_hash AS VARCHAR),'')), '[0-9a-f]{64}')
+    OR cast(m.storage_key AS VARCHAR) <> 'media/photos/by-sha256/' || substr(lower(cast(m.content_hash AS VARCHAR)),1,2) || '/' || lower(cast(m.content_hash AS VARCHAR)) || '.jpg'
+  )
+""").fetchone()[0])
+if invalid_approved_b2_media:
+    raise RuntimeError(f'bootstrap contains {invalid_approved_b2_media} approved B2 photo rows without canonical media_objects identity')
 google_rows = int(con.execute(f"SELECT count(*) FROM {parquet('location_google_places')}").fetchone()[0])
 verified_google_rows = int(con.execute(
     f"SELECT count(*) FROM {parquet('location_google_places')} WHERE lower(coalesce(cast(status AS VARCHAR),''))='verified' AND google_place_id IS NOT NULL"
@@ -90,6 +107,9 @@ output_manifest['validation'] = {
     'locations': {'rows': int(location_rows), 'uniqueStableIds': int(unique_ids)},
     'sourceLinks': {'rows': source_link_rows, 'distinctLocations': source_link_locations, 'orphans': orphan_source_links},
     'photoMetadataRows': photo_rows,
+    'mediaObjectRows': media_rows,
+    'approvedB2PhotoRows': approved_b2_photo_rows,
+    'invalidApprovedB2MediaRows': invalid_approved_b2_media,
     'googlePlaceRows': google_rows,
     'verifiedGooglePlaceIds': verified_google_rows,
     'allParquetRowCountsMatchExport': True,

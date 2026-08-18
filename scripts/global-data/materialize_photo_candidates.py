@@ -52,7 +52,6 @@ MEDIA_BUCKET = first_env('B2_MEDIA_BUCKET_NAME', 'B2_BUCKET', default=DATA_BUCKE
 MEDIA_ENDPOINT = first_env('B2_MEDIA_S3_ENDPOINT', 'B2_S3_ENDPOINT', default=DATA_ENDPOINT_URL)
 MEDIA_KEY_ID = first_env('B2_MEDIA_KEY_ID', 'B2_MEDIA_APPLICATION_KEY_ID', 'B2_KEY_ID', default=DATA_KEY_ID)
 MEDIA_KEY = first_env('B2_MEDIA_APPLICATION_KEY', 'B2_APPLICATION_KEY', default=DATA_KEY)
-MEDIA_BASE = first_env('B2_MEDIA_PUBLIC_BASE_URL', 'B2_DOWNLOAD_BASE_URL').rstrip('/')
 MEDIA_PREFIX = clean_prefix(first_env('B2_MEDIA_OPEN_PHOTO_PREFIX', default='media/photos/by-sha256'))
 MAPILLARY_TOKEN = os.getenv('MAPILLARY_ACCESS_TOKEN', '').strip()
 CONCURRENCY = max(1, min(256, int(os.getenv('GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY', '96'))))
@@ -63,8 +62,6 @@ if not DATA_ENDPOINT_URL or not DATA_KEY_ID or not DATA_KEY:
     raise RuntimeError('B2 data endpoint and credentials are required.')
 if not MEDIA_ENDPOINT or not MEDIA_KEY_ID or not MEDIA_KEY:
     raise RuntimeError('B2 media endpoint and credentials are required.')
-if not MEDIA_BASE.startswith('https://'):
-    raise RuntimeError('B2_MEDIA_PUBLIC_BASE_URL or B2_DOWNLOAD_BASE_URL must be HTTPS.')
 if not MEDIA_PREFIX:
     raise RuntimeError('B2 media photo prefix is empty.')
 
@@ -80,10 +77,6 @@ data_s3 = boto3.client(
 
 def prefix_exists(prefix):
     return bool(data_s3.list_objects_v2(Bucket=DATA_BUCKET, Prefix=prefix.rstrip('/') + '/', MaxKeys=1).get('KeyCount'))
-
-
-def public_url(key):
-    return MEDIA_BASE + '/' + '/'.join(urllib.parse.quote(part, safe='') for part in key.split('/'))
 
 
 def mapillary_details(image_id):
@@ -205,7 +198,7 @@ def materialize(row):
     key, content_hash = upload_media(normalized)
     return {
         'location_id': row['location_id'], 'provider': provider, 'external_photo_id': row['external_photo_id'],
-        'url': public_url(key), 'storage_backend': 'b2', 'storage_key': key, 'content_hash': content_hash, 'perceptual_hash': perceptual,
+        'storage_backend': 'b2', 'storage_key': key, 'content_hash': content_hash, 'perceptual_hash': perceptual,
         'byte_size': len(normalized), 'width': width, 'height': height, 'attribution': candidate.get('attribution'),
         'attribution_url': candidate.get('page_url'), 'license': candidate.get('license'), 'license_url': candidate.get('license_url'),
         'rank_score': float(row.get('rank_score') or 0), 'verified_at': datetime.now(timezone.utc).isoformat()
@@ -284,9 +277,9 @@ for country in countries():
                 failures.append({'location_id': row['location_id'], 'provider': row['provider'], 'error': str(error)[:300]})
     if results:
         con.execute('DROP TABLE IF EXISTS materialized_results')
-        con.execute('CREATE TEMP TABLE materialized_results(location_id VARCHAR,provider VARCHAR,external_photo_id VARCHAR,url VARCHAR,storage_backend VARCHAR,storage_key VARCHAR,content_hash VARCHAR,perceptual_hash VARCHAR,byte_size BIGINT,width INTEGER,height INTEGER,attribution VARCHAR,attribution_url VARCHAR,license VARCHAR,license_url VARCHAR,rank_score DOUBLE,verified_at VARCHAR)')
-        keys = ['location_id', 'provider', 'external_photo_id', 'url', 'storage_backend', 'storage_key', 'content_hash', 'perceptual_hash', 'byte_size', 'width', 'height', 'attribution', 'attribution_url', 'license', 'license_url', 'rank_score', 'verified_at']
-        con.executemany('INSERT INTO materialized_results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [tuple(r[k] for k in keys) for r in results])
+        con.execute('CREATE TEMP TABLE materialized_results(location_id VARCHAR,provider VARCHAR,external_photo_id VARCHAR,storage_backend VARCHAR,storage_key VARCHAR,content_hash VARCHAR,perceptual_hash VARCHAR,byte_size BIGINT,width INTEGER,height INTEGER,attribution VARCHAR,attribution_url VARCHAR,license VARCHAR,license_url VARCHAR,rank_score DOUBLE,verified_at VARCHAR)')
+        keys = ['location_id', 'provider', 'external_photo_id', 'storage_backend', 'storage_key', 'content_hash', 'perceptual_hash', 'byte_size', 'width', 'height', 'attribution', 'attribution_url', 'license', 'license_url', 'rank_score', 'verified_at']
+        con.executemany('INSERT INTO materialized_results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [tuple(r[k] for k in keys) for r in results])
         stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
         out = f's3://{DATA_BUCKET}/{DATA_PREFIX}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code={country}/part-{stamp}.parquet'
         con.execute(f"COPY materialized_results TO '{out}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 100000)")
