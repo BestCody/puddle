@@ -1,6 +1,6 @@
 name: Enrich place photos
 
-# Transitional Supabase queue for the existing ~72k catalogue. Accepted image bytes
+# Relational enrichment queue for the existing catalogue. Accepted image bytes
 # are written to B2. Global-scale candidate discovery runs in global-photo-enrichment.yml.
 on:
   workflow_dispatch:
@@ -47,7 +47,6 @@ jobs:
           B2_MEDIA_BUCKET_ID: ${{ secrets.B2_MEDIA_BUCKET_ID }}
           B2_MEDIA_BUCKET_NAME: ${{ vars.B2_MEDIA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
           B2_MEDIA_OPEN_PHOTO_PREFIX: ${{ vars.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256' }}
-          PHOTO_ENRICH_SYNC_MEDIA: 'false'
           PHOTO_ENRICH_BATCH_SIZE: '100'
           PHOTO_ENRICH_MAX_BATCHES: '200'
           PHOTO_ENRICH_MAX_RUNTIME_MINUTES: '110'
