@@ -16,6 +16,28 @@ const savedPlaces = [
   { id: 'lookout', title: 'Lake Lookout', category: 'Courts', city: 'Oakville', distance: '3.8 km' }
 ]
 
+const demoNav = [
+  ['swipe', 'Swipe', '↻'],
+  ['feed', 'Feed', '◉'],
+  ['save', 'Saved', '♡'],
+  ['friends', 'Friends', '♧'],
+  ['pass', 'Pass', '◇'],
+  ['profile', 'Profile', '●']
+]
+
+function DemoLogo({ centered = false }) {
+  return <img className={`landing-demo-logo${centered ? ' is-centered' : ''}`} src="/figma/assets/logo.svg" alt="Puddle" />
+}
+
+function DemoBottomNav({ active }) {
+  return <nav className="landing-demo-bottom-nav" aria-label="Puddle app navigation">
+    {demoNav.map(([view, label, glyph]) => {
+      const href = view === 'save' ? '/landing-demo/save' : ['swipe', 'feed', 'profile'].includes(view) ? `/landing-demo/${view}` : `/${view}`
+      return <a key={view} href={href} className={active === view ? `is-active is-${view}` : ''} aria-current={active === view ? 'page' : undefined} aria-label={label}><span aria-hidden="true">{glyph}</span></a>
+    })}
+  </nav>
+}
+
 function DemoDetails({ title, subtitle, onClose }) {
   return <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section className="landing-demo-dialog" role="dialog" aria-modal="true" aria-label={`${title} details`}>
@@ -69,8 +91,8 @@ function SwipeDemo() {
     else setDragX(0)
   }
 
-  return <div className="landing-demo-screen landing-demo-screen--swipe" data-demo-screen="swipe">
-    <div className="landing-demo-swipe-topbar"><span>Swipe</span><button type="button" aria-label="Open swipe menu">☰</button></div>
+  return <div className="landing-demo-screen landing-demo-screen--swipe" data-demo-screen="swipe" data-figma-screen="40:641">
+    <header className="landing-demo-mobile-header landing-demo-mobile-header--swipe"><DemoLogo centered /></header>
     <div className="landing-demo-swipe-stack">
       <article
         className="landing-demo-swipe-card"
@@ -93,6 +115,7 @@ function SwipeDemo() {
       <button type="button" className="is-star" onClick={() => choose('star')} aria-label="Star place">☆<small>Star</small></button>
     </div>
     <div className="landing-demo-progress" aria-label={`Swipe demo place ${index + 1}`}><span style={{ width: `${((index % swipePlaces.length) + 1) / swipePlaces.length * 100}%` }} /></div>
+    <DemoBottomNav active="swipe" />
   </div>
 }
 
@@ -106,11 +129,15 @@ function SavedDemo() {
     return `${item.title} ${item.city}`.toLowerCase().includes(query.trim().toLowerCase())
   }), [category, query])
 
-  return <div className="landing-demo-screen landing-demo-screen--saved" data-demo-screen="save">
-    <div className="landing-demo-segment landing-demo-segment--purple" aria-label="Saved or plans">
-      <button className={tab === 'saved' ? 'is-active' : ''} type="button" onClick={() => setTab('saved')}>Saved</button>
-      <button className={tab === 'plans' ? 'is-active' : ''} type="button" onClick={() => setTab('plans')}>Plans</button>
-    </div>
+  return <div className="landing-demo-screen landing-demo-screen--saved" data-demo-screen="save" data-figma-screen="25:180">
+    <header className="landing-demo-mobile-header landing-demo-mobile-header--split">
+      <DemoLogo />
+      <div className="landing-demo-segment landing-demo-segment--purple" aria-label="Saved or plans">
+        <button className={tab === 'saved' ? 'is-active' : ''} type="button" onClick={() => setTab('saved')}>Saved</button>
+        <button className={tab === 'plans' ? 'is-active' : ''} type="button" onClick={() => setTab('plans')}>Plans</button>
+      </div>
+      <span className="landing-demo-header-spacer" aria-hidden="true" />
+    </header>
     {tab === 'saved' ? <>
       <nav className="landing-demo-saved-categories" aria-label="Saved categories">
         {['All', 'Courts', 'Theatres'].map((value) => <button className={category === value ? 'is-active' : ''} type="button" onClick={() => setCategory(value)} key={value}>{value === 'Courts' ? '◉ Courts' : value === 'Theatres' ? '▦ Theatres' : value}</button>)}
@@ -127,6 +154,7 @@ function SavedDemo() {
       <article><small>Saturday · 7:00 PM</small><strong>Night Gallery</strong><span>Planned with friends</span></article>
       <article><small>Sunday · 2:30 PM</small><strong>Maple Grove Park</strong><span>2 people going</span></article>
     </section>}
+    <DemoBottomNav active="save" />
     {openItem ? <DemoDetails title={openItem.title} subtitle={`${openItem.city} · ${openItem.distance}`} onClose={() => setOpenItem(null)} /> : null}
   </div>
 }
@@ -148,17 +176,21 @@ function FeedPost({ onOpen }) {
 function FeedDemo() {
   const [view, setView] = useState('feed')
   const [query, setQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
   const [open, setOpen] = useState(false)
   const [composing, setComposing] = useState(false)
   const showPost = !query.trim() || 'maple grove park richie zheng'.includes(query.trim().toLowerCase())
 
-  return <div className="landing-demo-screen landing-demo-screen--feed" data-demo-screen="feed">
-    <div className="landing-demo-feed-toolbar">
+  return <div className="landing-demo-screen landing-demo-screen--feed" data-demo-screen="feed" data-figma-screen="40:519">
+    <header className="landing-demo-feed-toolbar">
+      <DemoLogo />
       <div className="landing-demo-segment landing-demo-segment--yellow" aria-label="Feed or map"><button className={view === 'feed' ? 'is-active' : ''} type="button" onClick={() => setView('feed')}>Feed</button><button className={view === 'map' ? 'is-active' : ''} type="button" onClick={() => setView('map')}>Map</button></div>
-      <label className="landing-demo-feed-search"><span className="sr-only">Search puddle</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search puddle" /><b>⌕</b></label>
-    </div>
+      <button type="button" className="landing-demo-feed-search-toggle" aria-label="Search puddle" aria-expanded={searchOpen} onClick={() => setSearchOpen((value) => !value)}>⌕</button>
+    </header>
+    {searchOpen ? <label className="landing-demo-feed-search"><span className="sr-only">Search puddle</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search puddle" /><b aria-hidden="true">⌕</b></label> : null}
     {view === 'feed' ? <section className="landing-demo-feed-list" aria-label="Puddle feed">{showPost ? <FeedPost onOpen={() => setOpen(true)} /> : <p className="landing-demo-empty">No puddles found.</p>}</section> : <section className="landing-demo-map" aria-label="Interactive map preview"><span className="landing-demo-map-road road-a" /><span className="landing-demo-map-road road-b" /><button type="button" className="landing-demo-map-pin pin-a" aria-label="Open Maple Grove Park" onClick={() => setOpen(true)}>●</button><button type="button" className="landing-demo-map-pin pin-b" aria-label="Open Firehall Cool Bar Hot Grill" onClick={() => setOpen(true)}>●</button><strong>Oakville</strong></section>}
     <button className="landing-demo-compose" type="button" onClick={() => setComposing((value) => !value)}><span className="landing-demo-avatar">R</span><span>{composing ? 'Share something about this place…' : 'Create a puddle...'}</span><b>↑</b></button>
+    <DemoBottomNav active="feed" />
     {open ? <DemoDetails title="Maple Grove Park" subtitle="2243 Devon Road, Oakville · 208m" onClose={() => setOpen(false)} /> : null}
   </div>
 }
@@ -169,7 +201,7 @@ function ProfileDemo() {
   const [following, setFollowing] = useState(false)
   const [messageOpen, setMessageOpen] = useState(false)
 
-  return <div className="landing-demo-screen landing-demo-screen--profile" data-demo-screen="profile">
+  return <div className="landing-demo-screen landing-demo-screen--profile" data-demo-screen="profile" data-figma-screen="40:347">
     <header className="landing-demo-profile-cover"><button type="button" onClick={() => setEditing((value) => !value)}>{editing ? 'Done' : 'Edit'}</button></header>
     <section className="landing-demo-profile-identity">
       <div className="landing-demo-avatar landing-demo-avatar--large">R</div>
@@ -186,6 +218,7 @@ function ProfileDemo() {
       <article className="is-friends"><h2>Friends</h2></article>
       <button className="landing-demo-profile-add" type="button" aria-label="Add profile section">＋</button>
     </section>
+    <DemoBottomNav active="profile" />
     {messageOpen ? <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setMessageOpen(false) }}><section className="landing-demo-message" role="dialog" aria-modal="true" aria-label="Message Richie Zheng"><button type="button" onClick={() => setMessageOpen(false)} aria-label="Close message">×</button><strong>Message Richie Zheng</strong><textarea aria-label="Message" placeholder="Write a message…" /><button type="button" onClick={() => setMessageOpen(false)}>Send</button></section></div> : null}
   </div>
 }
