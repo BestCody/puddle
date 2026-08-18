@@ -38,36 +38,37 @@ for (const [path, heading] of publicPages) {
   })
 }
 
-test('landing page uses the correct responsive composition and real DOM content', async ({ page }, testInfo) => {
+test('landing page uses the Figma responsive composition and real DOM content', async ({ page }, testInfo) => {
   const health = trackFrontendHealth(page, { baseURL: testInfo.project.use.baseURL, strictConsole: false })
   await page.goto('/')
-  const { mode, selector, authRoot } = await visibleLandingCanvas(page)
+  const { mode, stage, selector, authRoot } = await visibleLandingCanvas(page)
 
   if (mode === 'desktop') {
     await expect(page.locator('[data-figma-node="83:76"]')).toBeVisible()
     await expect(page.locator('.landing-sticky-left .login-panel input')).toHaveCount(2)
-    await expect(page.locator('.landing-sticky-left')).toHaveAttribute('data-footer-suspended', 'false')
     await expect(page.locator('.feature-card--d-swipe')).toBeVisible()
+    await expect(page.locator('.feature-card--d-profile')).toHaveCount(0)
   } else {
     await expect(page.locator('[data-figma-node="161:116"]')).toBeVisible()
     await expect(page.locator('.mobile-jump')).toBeVisible()
     await expect(page.locator('.feature-card--m-swipe')).toBeVisible()
+    await expect(page.locator('.feature-card--m-profile')).toBeVisible()
     await expect(page.locator('.landing-sticky-left')).not.toBeVisible()
   }
 
   await expect(page.locator('img[src="/figma/landing-desktop.png"]')).toHaveCount(0)
   await expect(page.locator('img[src="/figma/landing-mobile.png"]')).toHaveCount(0)
-  await expect(page.locator('.interactive-pill')).toHaveCount(0)
+  await expect(page.locator(`${selector} .interactive-pill`).first()).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Discover places. See who’s there.', level: 1 })).toBeVisible()
 
   for (const path of ['/signin', '/signup']) expect(await page.locator(`${authRoot} a[href="${path}"]`).count()).toBeGreaterThan(0)
-  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${selector} a[href="${path}"]`).count()).toBeGreaterThan(0)
+  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
   await assertImagesLoaded(page)
   await assertNoHorizontalOverflow(page)
   health.assertHealthy()
 })
 
-test('desktop landing releases the sticky sign-in pane for the full-width footer and restores it above the footer', async ({ page }, testInfo) => {
+test('desktop landing sticky sign-in column ends before the full-width footer', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Desktop sticky-footer behavior only')
 
   await page.goto('/')
@@ -75,20 +76,25 @@ test('desktop landing releases the sticky sign-in pane for the full-width footer
   const sticky = page.locator('.landing-sticky-left')
   const footer = page.locator('#footer-d')
 
-  await expect(sticky).toHaveAttribute('data-footer-suspended', 'false')
-  await expect(sticky).toHaveAttribute('aria-hidden', 'false')
-
+  await expect(sticky).toBeVisible()
   await footer.scrollIntoViewIfNeeded()
   await expect(footer).toBeVisible()
-  await expect(sticky).toHaveAttribute('data-footer-suspended', 'true')
-  await expect(sticky).toHaveAttribute('aria-hidden', 'true')
+
+  const overlap = await page.evaluate(() => {
+    const stickyNode = document.querySelector('.landing-sticky-left')
+    const footerNode = document.querySelector('#footer-d')
+    if (!stickyNode || !footerNode) return null
+    const stickyRect = stickyNode.getBoundingClientRect()
+    const footerRect = footerNode.getBoundingClientRect()
+    return Math.max(0, Math.min(stickyRect.bottom, footerRect.bottom) - Math.max(stickyRect.top, footerRect.top))
+  })
+  expect(overlap).toBe(0)
   for (const label of ['Explore', 'Company', 'Connect']) {
     await expect(footer.getByText(label, { exact: true })).toBeVisible()
   }
 
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
-  await expect(sticky).toHaveAttribute('data-footer-suspended', 'false')
-  await expect(sticky).toHaveAttribute('aria-hidden', 'false')
+  await expect(sticky).toBeVisible()
 })
 
 test('landing safety modal and navigation work', async ({ page }) => {
@@ -106,9 +112,9 @@ test('landing safety modal and navigation work', async ({ page }) => {
 
 test('landing exposes real auth and legal links', async ({ page }) => {
   await page.goto('/')
-  const { selector, authRoot } = await visibleLandingCanvas(page)
+  const { stage, authRoot } = await visibleLandingCanvas(page)
   for (const path of ['/signin', '/signup']) expect(await page.locator(`${authRoot} a[href="${path}"]`).count()).toBeGreaterThan(0)
-  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${selector} a[href="${path}"]`).count()).toBeGreaterThan(0)
+  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
   await expect(page.locator('button[data-open-app]')).toHaveCount(0)
   await expect(page.locator('[data-open-modal="waitlist"]')).toHaveCount(0)
 })
