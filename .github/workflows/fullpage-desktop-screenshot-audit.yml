@@ -1,0 +1,49 @@
+name: Full-page desktop screenshot audit
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          npm install --no-save --package-lock=false playwright@1.54.1
+          npx playwright install --with-deps chromium
+      - name: Start Puddle
+        run: |
+          npm run dev -- --hostname 127.0.0.1 > /tmp/puddle-next.log 2>&1 &
+          echo $! > /tmp/puddle-next.pid
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 90 ]; then
+              cat /tmp/puddle-next.log
+              exit 1
+            fi
+            sleep 2
+          done
+      - name: Capture complete landing page at every desktop viewport
+        env:
+          LANDING_CAPTURE_URL: http://127.0.0.1:3000/
+        run: node scripts/capture-desktop-fullpage.mjs
+      - name: Upload complete full-page screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-desktop-fullpage-screenshots
+          path: landing-artifacts/desktop-*.png
+          if-no-files-found: error
+          retention-days: 14
