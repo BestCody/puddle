@@ -24,6 +24,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: team_aY04PVtKs2MUrxR38csNwmUc
       VERCEL_PROJECT_ID: prj_7By05EO9g3fqAJkubBtaeYelvwEQ
+      VERCEL_SCOPE: bestcodys-projects
       NEXT_TELEMETRY_DISABLED: 1
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -58,19 +59,26 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+        run: npm install --global vercel@59.1.4
+
+      - name: Verify Vercel account and team access
+        shell: bash
+        run: |
+          set -euo pipefail
+          vercel whoami --token="$VERCEL_TOKEN"
+          vercel teams list --token="$VERCEL_TOKEN"
 
       - name: Pull production project configuration
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
       - name: Build production artifact on GitHub
-        run: vercel build --prod --token="$VERCEL_TOKEN"
+        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
       - name: Upload prebuilt artifact to production
         shell: bash
         run: |
           set -euo pipefail
-          deployment_url="$(vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")"
+          deployment_url="$(vercel deploy --prebuilt --prod --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN")"
           echo "Production deployment submitted: ${deployment_url}"
 
       - name: Publish deploy success status
