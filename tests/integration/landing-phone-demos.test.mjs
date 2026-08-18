@@ -10,12 +10,17 @@ test('landing feature phones are real public product demos, not screenshot place
     read('app/landing-demo/[view]/page.js'),
     read('components/landing-phone-demo.js'),
     read('app/landing-phone-demo.css'),
-    read('public/figma-landing-v2.css')
+    read('public/landing.css')
   ])
 
-  for (const view of ['swipe', 'save', 'feed', 'profile']) {
+  // Figma 83:76 has Swipe/Save/Feed on desktop; Figma 161:116 adds Profile on mobile.
+  for (const view of ['swipe', 'save', 'feed']) {
     assert.equal((landingHtml.match(new RegExp(`src="/landing-demo/${view}"`, 'g')) || []).length, 2, `${view} must be embedded once in desktop and once in mobile`)
   }
+  assert.equal((landingHtml.match(/src="\/landing-demo\/profile"/g) || []).length, 1, 'Profile demo must appear only in the mobile Figma composition')
+  assert.doesNotMatch(landingHtml, /feature-card--d-profile/)
+  assert.match(landingHtml, /feature-card--m-profile/)
+
   for (const screenshot of ['phone-swipe.png', 'phone-save.png', 'phone-feed.png', 'phone-profile.png']) assert(!landingHtml.includes(screenshot), `${screenshot} must not be rendered as a feature-phone screenshot`)
   assert.match(demoPage, /export const dynamic = 'force-dynamic'/, 'landing demos must render per request so Next can attach the CSP nonce and hydrate interactions')
   assert.doesNotMatch(demoPage, /export const dynamic = 'force-static'/)
@@ -26,7 +31,8 @@ test('landing feature phones are real public product demos, not screenshot place
   assert.match(demoComponent, /figma-feed-page/)
   assert.match(demoComponent, /minimal-profile-page/)
   assert.match(demoCss, /landing-phone-demo--swipe/)
-  assert.match(landingCss, /feature-phone-demo__frame/)
+  assert.match(landingCss, /\.feature-phone-demo__frame\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*border:\s*0;/s)
+  assert.match(landingCss, /\.interactive-pill\s*\{/)
 })
 
 test('product shell fixes keep compact menu bars and icon-only narrow sidebar', async () => {
