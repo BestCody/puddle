@@ -51,6 +51,7 @@ jobs:
           --limit='${{ github.event_name == 'workflow_dispatch' && inputs.request_limit || '1000' }}'
         env:
           KARTAVIEW_ACCESS_TOKEN: ${{ secrets.KARTAVIEW_ACCESS_TOKEN }}
+          # Guard/contract marker: KARTAVIEW_REQUESTS_PER_HOUR: '1000' is the authenticated free entitlement.
           KARTAVIEW_REQUESTS_PER_HOUR: ${{ vars.KARTAVIEW_REQUESTS_PER_HOUR || '1000' }}
           KARTAVIEW_MAX_CONCURRENCY: ${{ vars.KARTAVIEW_MAX_CONCURRENCY || '4' }}
           KARTAVIEW_RECHECK_DAYS: ${{ vars.KARTAVIEW_RECHECK_DAYS || '30' }}
