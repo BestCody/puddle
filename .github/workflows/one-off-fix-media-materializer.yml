@@ -1,0 +1,50 @@
+name: One-off fix media materializer
+
+on:
+  push:
+    branches: [media-hash-serving-architecture-20260817]
+    paths:
+      - '.github/workflows/one-off-fix-media-materializer.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: media-hash-serving-architecture-20260817
+          fetch-depth: 0
+      - name: Remove stale URL column from materialized photo parquet
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('scripts/global-data/materialize_photo_candidates.py')
+          text = p.read_text()
+          old_table = "con.execute('CREATE TEMP TABLE materialized_results(location_id VARCHAR,provider VARCHAR,external_photo_id VARCHAR,url VARCHAR,storage_backend VARCHAR,storage_key VARCHAR,content_hash VARCHAR,perceptual_hash VARCHAR,byte_size BIGINT,width INTEGER,height INTEGER,attribution VARCHAR,attribution_url VARCHAR,license VARCHAR,license_url VARCHAR,rank_score DOUBLE,verified_at VARCHAR)')"
+          new_table = "con.execute('CREATE TEMP TABLE materialized_results(location_id VARCHAR,provider VARCHAR,external_photo_id VARCHAR,storage_backend VARCHAR,storage_key VARCHAR,content_hash VARCHAR,perceptual_hash VARCHAR,byte_size BIGINT,width INTEGER,height INTEGER,attribution VARCHAR,attribution_url VARCHAR,license VARCHAR,license_url VARCHAR,rank_score DOUBLE,verified_at VARCHAR)')"
+          old_keys = "keys = ['location_id', 'provider', 'external_photo_id', 'url', 'storage_backend', 'storage_key', 'content_hash', 'perceptual_hash', 'byte_size', 'width', 'height', 'attribution', 'attribution_url', 'license', 'license_url', 'rank_score', 'verified_at']"
+          new_keys = "keys = ['location_id', 'provider', 'external_photo_id', 'storage_backend', 'storage_key', 'content_hash', 'perceptual_hash', 'byte_size', 'width', 'height', 'attribution', 'attribution_url', 'license', 'license_url', 'rank_score', 'verified_at']"
+          old_insert = "con.executemany('INSERT INTO materialized_results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [tuple(r[k] for k in keys) for r in results])"
+          new_insert = "con.executemany('INSERT INTO materialized_results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [tuple(r[k] for k in keys) for r in results])"
+          for old, new in [(old_table,new_table),(old_keys,new_keys),(old_insert,new_insert)]:
+              if old not in text:
+                  raise RuntimeError(f'missing expected legacy materializer fragment: {old}')
+              text = text.replace(old,new)
+          if "'url'" in text[text.index("CREATE TEMP TABLE materialized_results"):]:
+              raise RuntimeError('stale url field remains in materialized result schema')
+          p.write_text(text)
+          PY
+          python3 -m py_compile scripts/global-data/materialize_photo_candidates.py
+          rm -rf scripts/global-data/__pycache__
+          rm .github/workflows/one-off-fix-media-materializer.yml
+          git config user.name "Hansen"
+          git config user.email "louhansen811@gmail.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Fix hash-only photo materializer schema"
+          git push origin HEAD:media-hash-serving-architecture-20260817
