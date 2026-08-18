@@ -1,0 +1,35 @@
+name: Figma raster transparency audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - public/figma/assets/**
+      - public/landing.html
+      - public/landing.css
+      - components/**
+      - scripts/audit-figma-raster-transparency.mjs
+      - .github/workflows/figma-raster-transparency-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/audit-figma-raster-transparency.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: figma-raster-transparency-audit
+          path: figma-raster-transparency-audit.json
+          if-no-files-found: error
+          retention-days: 7
