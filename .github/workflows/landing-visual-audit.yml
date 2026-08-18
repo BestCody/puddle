@@ -1,0 +1,39 @@
+name: Landing visual audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/render-landing-desktop-matrix.mjs
+      - .github/workflows/landing-visual-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install renderer
+        run: npm install --no-save --package-lock=false playwright-core@1.54.1
+      - name: Locate system Chrome
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+          echo "Using $CHROME_BIN"
+      - name: Render desktop matrix
+        run: node scripts/render-landing-desktop-matrix.mjs
+      - name: Upload desktop matrix
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-desktop-visual-matrix
+          path: landing-artifacts/desktop-matrix/
+          if-no-files-found: error
+          retention-days: 7
