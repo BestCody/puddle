@@ -124,6 +124,56 @@ if search_marker in source and "globalSearch.includes('primary_photo.content_has
     )
 check.write_text(source)
 
+# Update integration tests so they validate the canonical direct-B2 path rather than
+# the compatibility shim that this cleanup intentionally removes.
+throughput = Path('tests/integration/open-photo-throughput.test.mjs')
+source = throughput.read_text()
+source = source.replace(
+    "const storage = await source('lib/app/open-photo-supabase.js')",
+    "const storage = await source('lib/app/open-photo-b2.js')",
+)
+source = source.replace(
+    "  assert.match(storage, /production writes are now B2-only/)\n"
+    "  assert.match(storage, /import\\('\\.\\/open-photo-b2\\.js'\\)/)",
+    "  assert.match(importer, /storeOpenPhotoInB2/)\n"
+    "  assert.doesNotMatch(importer, /storeOpenPhotoInSupabase|open-photo-supabase/)\n"
+    "  assert.match(storage, /storageBackend: 'b2'/)\n"
+    "  assert.match(storage, /media\\/photos\\/by-sha256/)\n"
+    "  assert.match(storage, /\\.from\\('media_objects'\\)/)\n"
+    "  assert.match(storage, /mediaObjectId: mediaObject\\.id/)",
+)
+if 'open-photo-supabase.js' in source or 'production writes are now B2-only' in source:
+    raise RuntimeError('open-photo throughput test still depends on the removed compatibility shim')
+throughput.write_text(source)
+
+relational = Path('tests/integration/relational-media-delivery.test.mjs')
+source = relational.read_text()
+source = source.replace(
+    "  const compatibility = await read('lib/app/open-photo-supabase.js')\n"
+    "  const b2 = await read('lib/app/open-photo-b2.js')",
+    "  const importer = await read('scripts/import-open-location-photos.mjs')\n"
+    "  const b2 = await read('lib/app/open-photo-b2.js')\n"
+    "  const deliveryUrl = await read('lib/media/open-photo-url.js')",
+)
+source = source.replace(
+    "  assert.match(compatibility, /storeOpenPhotoInLegacySupabase/)\n"
+    "  assert.match(compatibility, /production writes are now B2-only/)\n"
+    "  assert.match(compatibility, /storeOpenPhotoInB2/)\n"
+    "  assert.match(b2, /storageBackend: 'b2'/)\n"
+    "  assert.match(b2, /media\\/photos\\/by-sha256/)\n",
+    "  assert.match(importer, /storeOpenPhotoInB2/)\n"
+    "  assert.doesNotMatch(importer, /storeOpenPhotoInSupabase|open-photo-supabase/)\n"
+    "  assert.match(b2, /storageBackend: 'b2'/)\n"
+    "  assert.match(b2, /media\\/photos\\/by-sha256/)\n"
+    "  assert.match(b2, /\\.from\\('media_objects'\\)/)\n"
+    "  assert.match(b2, /mediaObjectId: mediaObject\\.id/)\n"
+    "  assert.match(deliveryUrl, /normalizeOpenPhotoHash/)\n"
+    "  assert.match(deliveryUrl, /\\/api\\/open-photo\\//)\n",
+)
+if 'open-photo-supabase.js' in source or 'storeOpenPhotoInLegacySupabase' in source:
+    raise RuntimeError('relational media delivery test still depends on the removed compatibility shim')
+relational.write_text(source)
+
 Path('.github/workflows/validate.yml').write_text(original_validate)
 for path in [
     Path('.github/workflows/one-off-remove-open-photo-legacy.yml'),
