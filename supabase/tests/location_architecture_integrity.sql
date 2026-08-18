@@ -34,6 +34,25 @@ begin
   if found is not null then raise exception 'retired location tables still exist: %',found; end if;
 end $$;
 
+\echo 'location architecture: retired catalogue sync hooks are absent'
+do $$
+declare found text;
+begin
+  select string_agg(p.proname||'('||pg_get_function_identity_arguments(p.oid)||')',', ' order by p.proname)
+  into found
+  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+  where n.nspname='public' and p.proname in (
+    'catalogue_radius_bucket','queue_catalogue_region_v1','queue_profile_catalogue_region_trigger','touch_catalogue_sync_region'
+  );
+  if found is not null then raise exception 'retired catalogue sync functions still exist: %',found; end if;
+  if exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid=t.tgrelid
+    join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relname='profiles' and t.tgname='profiles_queue_catalogue_region' and not t.tgisinternal
+  ) then raise exception 'retired profiles_queue_catalogue_region trigger still exists'; end if;
+end $$;
+
 \echo 'location architecture: Google Places quota ledger is preserved'
 do $$
 begin
