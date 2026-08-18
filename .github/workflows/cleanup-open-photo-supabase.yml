@@ -17,6 +17,16 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_MEDIA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_MEDIA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_MEDIA_BUCKET_ID: ${{ secrets.B2_MEDIA_BUCKET_ID }}
+      B2_MEDIA_BUCKET_NAME: ${{ vars.B2_MEDIA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_MEDIA_DELIVERY_BASE_URL: https://puddle.you/api/open-photo
+      OPEN_PHOTO_SUPABASE_BUCKET: puddle-public-media
+      B2_MEDIA_VALIDATION_CONCURRENCY: ${{ vars.B2_MEDIA_VALIDATION_CONCURRENCY || '16' }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
@@ -24,10 +34,59 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Revalidate B2 and delete audited legacy Supabase objects
+
+      - name: Verify B2 credentials and synchronize protected runtime auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const required = [
+            'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_KEY',
+            'B2_MEDIA_APPLICATION_KEY_ID', 'B2_MEDIA_APPLICATION_KEY',
+            'B2_MEDIA_BUCKET_ID', 'B2_MEDIA_BUCKET_NAME'
+          ]
+          for (const name of required) if (!process.env[name]) throw new Error(`${name} is not configured.`)
+
+          const authorization = `Basic ${Buffer.from(`${process.env.B2_MEDIA_APPLICATION_KEY_ID}:${process.env.B2_MEDIA_APPLICATION_KEY}`).toString('base64')}`
+          const b2Response = await fetch('https://api.backblazeb2.com/b2api/v4/b2_authorize_account', {
+            headers: { Authorization: authorization, Accept: 'application/json' },
+            redirect: 'error', signal: AbortSignal.timeout(10_000)
+          })
+          if (!b2Response.ok) throw new Error(`B2 credential verification failed with HTTP ${b2Response.status}.`)
+          const b2 = await b2Response.json()
+          const storage = b2?.apiInfo?.storageApi
+          const buckets = Array.isArray(storage?.allowed?.buckets) ? storage.allowed.buckets : []
+          const capabilities = new Set(storage?.allowed?.capabilities || [])
+          if (!storage?.downloadUrl || !b2?.authorizationToken) throw new Error('B2 authorization did not return a download endpoint.')
+          if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 media key lacks readFiles capability.')
+          if (buckets.length && !buckets.some((bucket) => bucket?.id === process.env.B2_MEDIA_BUCKET_ID && bucket?.name === process.env.B2_MEDIA_BUCKET_NAME)) {
+            throw new Error('B2 media key is not authorized for the configured production bucket.')
+          }
+
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
+          const serviceKey = process.env.SUPABASE_SECRET_KEY
+          const response = await fetch(`${supabaseUrl}/rest/v1/rpc/set_b2_media_runtime_auth`, {
+            method: 'POST',
+            headers: {
+              apikey: serviceKey,
+              Authorization: `Bearer ${serviceKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json'
+            },
+            body: JSON.stringify({
+              p_key_id: process.env.B2_MEDIA_APPLICATION_KEY_ID,
+              p_application_key: process.env.B2_MEDIA_APPLICATION_KEY,
+              p_bucket_id: process.env.B2_MEDIA_BUCKET_ID,
+              p_bucket_name: process.env.B2_MEDIA_BUCKET_NAME
+            }),
+            redirect: 'error', signal: AbortSignal.timeout(10_000)
+          })
+          if (!response.ok) {
+            const message = await response.text().catch(() => '')
+            throw new Error(`Supabase Vault sync failed with HTTP ${response.status}${message ? `: ${message.slice(0, 200)}` : ''}.`)
+          }
+          console.log('B2 media runtime auth verified and synchronized.')
+          NODE
+
+      - name: Revalidate B2 origin and production delivery, then delete audited legacy objects
         run: node scripts/validate-open-photo-b2-migration.mjs --delete-source
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-          OPEN_PHOTO_SUPABASE_BUCKET: puddle-public-media
-          B2_MEDIA_VALIDATION_CONCURRENCY: ${{ vars.B2_MEDIA_VALIDATION_CONCURRENCY || '16' }}
