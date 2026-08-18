@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage } from '@/lib/auth/redirect'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
 
 function text(formData, key, max) {
   return String(formData.get(key) || '').trim().slice(0, max)
@@ -19,12 +21,9 @@ export async function createPuddlePost(formData) {
   if (!title) redirect(pathWithMessage('/create/post', 'error', 'Add a title before publishing.'))
   if (!locationId) redirect(pathWithMessage('/create/post', 'error', 'Choose a saved place for this puddle.'))
 
-  const { data: location } = await session.supabase
-    .from('locations')
-    .select('id,status,visibility')
-    .eq('id', locationId)
-    .maybeSingle()
-  if (!location || location.status !== 'published' || location.visibility !== 'public') {
+  try {
+    await ensureGlobalLocationReferences(createAdminClient(), [locationId])
+  } catch {
     redirect(pathWithMessage('/create/post', 'error', 'That place is not available to post.'))
   }
 
