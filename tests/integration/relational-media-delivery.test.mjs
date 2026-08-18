@@ -25,25 +25,20 @@ test('discovery has a global-serving seam and uses Supabase only when global ser
   assert.match(relational, /r2_discovery_overlay_v2/)
 })
 
-test('new approved open-photo writes are B2-only while the legacy Supabase writer is migration-only', async () => {
+test('new approved open-photo writes are B2-only after the one-off Supabase migration is retired', async () => {
   const compatibility = await read('lib/app/open-photo-supabase.js')
   const b2 = await read('lib/app/open-photo-b2.js')
-  const migrator = await read('scripts/migrate-open-photos-to-b2.mjs')
-  const workflow = await read('.github/workflows/migrate-open-photos-b2.yml')
+  const packageJson = JSON.parse(await read('package.json'))
+  const repositoryCheck = await read('scripts/check.mjs')
 
   assert.match(compatibility, /storeOpenPhotoInLegacySupabase/)
   assert.match(compatibility, /production writes are now B2-only/)
   assert.match(compatibility, /storeOpenPhotoInB2/)
   assert.match(b2, /storageBackend: 'b2'/)
   assert.match(b2, /media\/photos\/by-sha256/)
-  assert.match(migrator, /--delete-source/)
-  assert.match(migrator, /verifyUpdatedRow/)
-  assert.match(migrator, /content_hash/)
-  assert.match(workflow, /delete_source:/)
-  assert.match(workflow, /default: false/)
-  assert.match(workflow, /B2_MEDIA_SOURCE_DELETION_ENABLED/)
-  assert.match(workflow, /secrets\.B2_KEY_ID/)
-  assert.match(workflow, /'puddle-assets'/)
+  assert.equal(packageJson.scripts['locations:photos:migrate-b2'], undefined)
+  assert.match(repositoryCheck, /scripts\/migrate-open-photos-to-b2\.mjs/)
+  assert.match(repositoryCheck, /\.github\/workflows\/migrate-open-photos-b2\.yml/)
 })
 
 test('storage-neutral open-photo transform produces immutable JPEG identity metadata', async () => {

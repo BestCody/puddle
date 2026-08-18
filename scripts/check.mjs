@@ -8,15 +8,15 @@ const read = (path) => readFile(join(root, path), 'utf8')
 
 const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
-  'public/landing.html','public/styles.css','public/landing-responsive.css','public/landing-hardening.css','public/app.js','public/puddle-mark.svg',
+  'public/landing.html','public/styles.css','public/landing.css','public/app.js','public/puddle-mark.svg',
   'app/layout.js','app/discover/page.js','app/map/page.js','app/map/MapFeed.module.css','app/matches/page.js','app/profile/page.js','app/plans/page.js','app/plans/Plans.module.css','app/plans/[slug]/page.js','app/membership/page.js','app/account/page.js','app/create/post/page.js',
-  'app/figma-dashboard-rebuild.css','app/figma-dashboard-create-post.css','app/figma-dashboard-friends.css','app/figma-dashboard-pass.css','app/figma-dashboard-profile.css','app/figma-dashboard-profile-customize.css','app/figma-dashboard-settings.css',
+  'app/figma-dashboard-rebuild.css','app/figma-dashboard-create-post.css','app/figma-dashboard-friends.css','app/figma-dashboard-pass.css','app/figma-dashboard-profile.css','app/figma-dashboard-profile-customize.css','app/figma-dashboard-settings.css','app/figma-dashboard-fidelity.css','app/figma-dashboard-flow.css',
   'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js',
   'components/product-nav.js','components/product-shell.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/swipe-action-dock.js','components/figma-social-hub.js','components/profile-photo-editor.js',
   'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/social-hub-data.js',
   'lib/app/open-photo-b2.js','lib/app/open-photo-supabase.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/media/pipeline.js',
-  'scripts/b2-upload-tree.mjs','scripts/migrate-open-photos-to-b2.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
-  '.github/workflows/global-bootstrap.yml','.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml','.github/workflows/migrate-open-photos-b2.yml',
+  'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
+  '.github/workflows/global-bootstrap.yml','.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
   'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
   'supabase/migrations/10046_friends_messages_social_hub.sql','supabase/migrations/10050_relational_discovery_runtime.sql','supabase/migrations/10061_discovery_unbounded_pagination.sql','supabase/migrations/10062_discovery_pagination_performance.sql','supabase/seed.sql'
 ]
@@ -24,13 +24,16 @@ for (const path of required) await access(join(root, path))
 
 const removed = [
   '.vercel-redeploy','action-schema-audit.txt','dependency-audit.txt','legacy-audit.txt','cutover-output.txt','landing-demo.js','requirements.txt',
+  'public/figma-landing.css','public/figma-landing-exact.css','public/figma-landing-v2.css','public/landing-responsive.css','public/landing-hardening.css',
   'app/date-match','app/hangout','app/api/date-match','app/api/static-catalogue','app/api/storage/b2-access','app/date-match.css',
   'app/figma-dashboard-feed.css','app/figma-dashboard-feed-fidelity.css','app/figma-dashboard-saved.css','app/figma-dashboard-saved-detail-fidelity.css',
+  'app/figma-dashboard-centering.css','app/figma-dashboard-shell-fidelity.css','app/figma-dashboard-swipe-fidelity.css','app/figma-dashboard-friends-fidelity.css','app/figma-dashboard-pass-fidelity.css','app/figma-dashboard-profile-fidelity.css','app/figma-dashboard-settings-fidelity.css',
   'components/date-match-workspace.js','components/date-match-workspace-realtime.js',
   'lib/app/date-match.js','lib/app/date-match-rules.js','lib/app/date-match-snapshot.js',
   'lib/app/discovery-infrastructure.js','lib/app/discovery-infrastructure-v2.js','lib/app/discovery-relational-fallback.js',
   'lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js','lib/app/use-private-b2-asset.js','lib/app/use-static-catalogue-details.js','lib/app/use-static-media-resolution.js',
   'lib/app/open-photo-r2.js','lib/app/r2-s3.js',
+  'scripts/migrate-open-photos-to-b2.mjs','.github/workflows/migrate-open-photos-b2.yml',
   '.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml',
   '.github/workflows/ops-live-photo-open-import.yml','.github/workflows/ops-live-photo-google-match.yml'
 ]
@@ -45,7 +48,7 @@ for (const path of removed) {
 
 const syntaxFiles = [
   'next.config.mjs','proxy.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/open-photo-b2.js','lib/app/open-photo-supabase.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/app/social-hub-data.js','lib/media/pipeline.js',
-  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/import-open-location-photos.mjs','scripts/b2-upload-tree.mjs','scripts/migrate-open-photos-to-b2.mjs','scripts/global-data/export-supabase-bootstrap.mjs',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/import-open-location-photos.mjs','scripts/b2-upload-tree.mjs','scripts/global-data/export-supabase-bootstrap.mjs',
   'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
@@ -55,10 +58,10 @@ for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','react'
   if (!pkg.dependencies?.[dependency]) throw new Error(`Missing dependency: ${dependency}`)
 }
 const serializedScripts = JSON.stringify(pkg.scripts || {})
-for (const forbidden of ['catalogue:build-static','catalogue:publish-b2','static-catalogue','cleanup-b2-assets','cleanup-r2-assets']) {
+for (const forbidden of ['catalogue:build-static','catalogue:publish-b2','static-catalogue','cleanup-b2-assets','cleanup-r2-assets','locations:photos:migrate-b2']) {
   if (serializedScripts.includes(forbidden)) throw new Error(`Legacy package command remains: ${forbidden}`)
 }
-for (const requiredScript of ['b2:upload-tree','locations:photos:migrate-b2','global:bootstrap:export','global:overture:mirror','global:fsq:mirror','global:index','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview']) {
+for (const requiredScript of ['b2:upload-tree','global:bootstrap:export','global:overture:mirror','global:fsq:mirror','global:index','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview']) {
   if (!pkg.scripts?.[requiredScript]) throw new Error(`Global data-platform package command is missing: ${requiredScript}`)
 }
 
@@ -66,7 +69,7 @@ const env = await read('.env.example')
 for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG']) {
   if (env.includes(forbidden)) throw new Error(`Legacy environment setting remains: ${forbidden}`)
 }
-for (const requiredEnv of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_TINDER_PRICE_ID','GOOGLE_PLACES_API_KEY','GLOBAL_LOCATION_SEARCH_ENABLED','GLOBAL_LOCATION_SEARCH_URL','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','B2_MEDIA_PUBLIC_BASE_URL','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
+for (const requiredEnv of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_TINDER_PRICE_ID','GOOGLE_PLACES_API_KEY','GLOBAL_LOCATION_SEARCH_ENABLED','GLOBAL_LOCATION_SEARCH_URL','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
   if (!env.includes(requiredEnv)) throw new Error(`Environment example is missing ${requiredEnv}`)
 }
 
@@ -76,13 +79,19 @@ for (const route of ['/dashboard','/discover','/matches','/global-matches','/pla
 }
 for (const retired of ['/date-match','/hangout']) if (proxy.includes(`'${retired}'`)) throw new Error(`Proxy still references retired route ${retired}`)
 
+const landing = await read('public/landing.html')
+if (!landing.includes('/landing.css?v=1')) throw new Error('Landing does not load the consolidated responsive stylesheet')
+for (const retiredLandingStyle of ['figma-landing.css','figma-landing-exact.css','figma-landing-v2.css','landing-responsive.css','landing-hardening.css']) {
+  if (landing.includes(retiredLandingStyle)) throw new Error(`Landing still loads retired style: ${retiredLandingStyle}`)
+}
+
 const layout = await read('app/layout.js')
 if (layout.includes("import './date-match.css'")) throw new Error('Retired shared swipe stylesheet is still imported')
-for (const dashboardStyle of ['figma-dashboard-rebuild.css','figma-dashboard-friends.css','figma-dashboard-pass.css','figma-dashboard-profile.css','figma-dashboard-settings.css']) {
+for (const dashboardStyle of ['figma-dashboard-rebuild.css','figma-dashboard-friends.css','figma-dashboard-pass.css','figma-dashboard-profile.css','figma-dashboard-settings.css','figma-dashboard-fidelity.css','figma-dashboard-flow.css']) {
   if (!layout.includes(`import './${dashboardStyle}'`)) throw new Error(`Dashboard rebuild stylesheet is not loaded: ${dashboardStyle}`)
 }
-for (const retiredRouteStyle of ['figma-dashboard-feed.css','figma-dashboard-feed-fidelity.css','figma-dashboard-saved.css','figma-dashboard-saved-detail-fidelity.css']) {
-  if (layout.includes(retiredRouteStyle)) throw new Error(`Migrated route must not load retired global stylesheet: ${retiredRouteStyle}`)
+for (const retiredRouteStyle of ['figma-dashboard-feed.css','figma-dashboard-feed-fidelity.css','figma-dashboard-saved.css','figma-dashboard-saved-detail-fidelity.css','figma-dashboard-centering.css','figma-dashboard-shell-fidelity.css','figma-dashboard-swipe-fidelity.css','figma-dashboard-friends-fidelity.css','figma-dashboard-pass-fidelity.css','figma-dashboard-profile-fidelity.css','figma-dashboard-settings-fidelity.css']) {
+  if (layout.includes(retiredRouteStyle)) throw new Error(`Retired dashboard stylesheet must not be loaded: ${retiredRouteStyle}`)
 }
 const feedPage = await read('app/map/page.js')
 if (!feedPage.includes("import styles from './MapFeed.module.css'")) throw new Error('Feed route is not using its scoped CSS Module')
@@ -168,4 +177,4 @@ for (const marker of ['social_send_friend_request_v1','social_conversations_v1',
   if (!socialMigration.includes(marker)) throw new Error(`Social migration is missing ${marker}`)
 }
 
-console.log(`Current-product repository check passed: ${required.length} required paths verified, global B2/OpenSearch serving present, and retired static-catalogue/R2 runtime paths absent.`)
+console.log(`Current-product repository check passed: ${required.length} required paths verified, Figma flow/fidelity layers consolidated, global B2/OpenSearch serving present, and retired static-catalogue/R2 runtime paths absent.`)

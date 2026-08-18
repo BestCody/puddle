@@ -111,19 +111,23 @@ export default async function ProfilePage({ searchParams }) {
       </section>
 
       <section className="figma-profile-cards" aria-label="Profile details">
-        <article className="figma-profile-card figma-profile-puddles-card">
-          <h2>Puddles</h2>
-          {recentPost ? <Link className="figma-profile-post-preview figma-profile-real-post" href="/map">
-            <header><span className="figma-profile-post-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? '' : initials(displayName)}</span><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
-            <p>{recentPost.body || recentPost.title}</p>
-            <div className="figma-profile-post-collage" style={recentCover ? { backgroundImage: `url(${recentCover})` } : undefined}><i /><i /><i>{visiblePosts.length > 1 ? `+${visiblePosts.length - 1}` : ''}</i></div>
-            <div className="figma-profile-post-place"><small>{String(recentLocation?.kind || 'Place').replaceAll('_', ' ')}</small><strong>{recentLocation?.name || recentPost.title}</strong><b>+</b></div>
-          </Link> : <div className="figma-profile-card-empty"><p>No puddles posted yet.</p><Link href="/create/post">Create one</Link></div>}
-        </article>
-        <article className="figma-profile-card figma-profile-location-card"><h2>Location</h2><strong>{locationLabel}</strong></article>
-        <article className="figma-profile-card figma-profile-saves-card"><h2>Saves</h2>{visibleSaves.length ? <div className="figma-profile-mini-list">{visibleSaves.slice(0, 4).map((item) => <Link href={`/plans/${item.locations.slug}`} key={item.location_id}><span>{item.locations.name}</span>{item.pinned_at ? <b>PINNED</b> : null}</Link>)}</div> : <p>Nothing saved yet.</p>}<Link className="figma-profile-card-link" href="/plans">View Saved</Link></article>
-        <article className="figma-profile-card figma-profile-friends-card"><h2>Friends</h2>{friends.length ? <div className="figma-profile-mini-list">{friends.slice(0, 4).map((friend) => <Link href="/matches?tab=messages" key={friend.id}><span>{friend.display_name || friend.username || 'Friend'}</span></Link>)}</div> : <p>No friends yet.</p>}<Link className="figma-profile-card-link" href="/matches?tab=add">Manage Friends</Link></article>
-        <article className="figma-profile-card figma-profile-add-card"><Link href="/create/post" aria-label="Create a puddle">+</Link></article>
+        <div className="figma-profile-card-column figma-profile-card-column--left">
+          <article className="figma-profile-card figma-profile-puddles-card">
+            <h2>Puddles</h2>
+            {recentPost ? <Link className="figma-profile-post-preview figma-profile-real-post" href="/map">
+              <header><span className="figma-profile-post-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? '' : initials(displayName)}</span><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
+              <p>{recentPost.body || recentPost.title}</p>
+              <div className="figma-profile-post-collage" style={recentCover ? { backgroundImage: `url(${recentCover})` } : undefined}><i /><i /><i>{visiblePosts.length > 1 ? `+${visiblePosts.length - 1}` : ''}</i></div>
+              <div className="figma-profile-post-place"><small>{String(recentLocation?.kind || 'Place').replaceAll('_', ' ')}</small><strong>{recentLocation?.name || recentPost.title}</strong><b>+</b></div>
+            </Link> : <div className="figma-profile-card-empty"><p>No puddles posted yet.</p><Link href="/create/post">Create one</Link></div>}
+          </article>
+          <article className="figma-profile-card figma-profile-friends-card"><h2>Friends</h2>{friends.length ? <div className="figma-profile-mini-list">{friends.slice(0, 4).map((friend) => <Link href="/matches?tab=messages" key={friend.id}><span>{friend.display_name || friend.username || 'Friend'}</span></Link>)}</div> : <p>No friends yet.</p>}<Link className="figma-profile-card-link" href="/matches?tab=add">Manage Friends</Link></article>
+        </div>
+        <div className="figma-profile-card-column figma-profile-card-column--right">
+          <article className="figma-profile-card figma-profile-location-card"><h2>Location</h2><strong>{locationLabel}</strong></article>
+          <article className="figma-profile-card figma-profile-saves-card"><h2>Saves</h2>{visibleSaves.length ? <div className="figma-profile-mini-list">{visibleSaves.slice(0, 4).map((item) => <Link href={`/plans/${item.locations.slug}`} key={item.location_id}><span>{item.locations.name}</span>{item.pinned_at ? <b>PINNED</b> : null}</Link>)}</div> : <p>Nothing saved yet.</p>}<Link className="figma-profile-card-link" href="/plans">View Saved</Link></article>
+          <article className="figma-profile-card figma-profile-add-card"><Link href="/create/post" aria-label="Create a puddle">+</Link></article>
+        </div>
       </section>
     </div>
   })

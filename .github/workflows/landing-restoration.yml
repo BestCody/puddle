@@ -6,9 +6,7 @@ on:
     paths:
       - public/app.js
       - public/landing.html
-      - public/figma-landing.css
-      - public/figma-landing-exact.css
-      - public/figma-landing-v2.css
+      - public/landing.css
       - public/figma/**
       - app/landing-demo/**
       - app/landing-phone-demo.css
@@ -33,9 +31,7 @@ on:
     paths:
       - public/app.js
       - public/landing.html
-      - public/figma-landing.css
-      - public/figma-landing-exact.css
-      - public/figma-landing-v2.css
+      - public/landing.css
       - public/figma/**
       - app/landing-demo/**
       - app/landing-phone-demo.css

@@ -147,5 +147,5 @@ test('transition photo enrichment writes B2 media and uses the full configured p
   assert.equal(packageJson.scripts['locations:photos:migrate-r2'], undefined)
   assert.equal(packageJson.scripts['locations:catalogue:open'], undefined)
   assert.equal(packageJson.scripts['locations:catalogue:refresh'], undefined)
-  assert.equal(packageJson.scripts['locations:photos:migrate-b2'], 'node scripts/migrate-open-photos-to-b2.mjs')
+  assert.equal(packageJson.scripts['locations:photos:migrate-b2'], undefined)
 })
