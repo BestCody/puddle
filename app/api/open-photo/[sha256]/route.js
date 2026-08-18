@@ -22,8 +22,8 @@ function encodeB2Key(key) {
   return String(key || '').split('/').map((part) => encodeURIComponent(part)).join('/')
 }
 
-function canonicalStorageKey(key, hash) {
-  return String(key || '') === `media/photos/by-sha256/${hash.slice(0, 2)}/${hash}.jpg`
+function canonicalStorageKey(hash) {
+  return `media/photos/by-sha256/${hash.slice(0, 2)}/${hash}.jpg`
 }
 
 async function runtimeConfig(admin) {
@@ -87,24 +87,10 @@ export async function GET(_request, { params }) {
     const hash = String(rawHash || '').trim().toLowerCase()
     if (!HASH_RE.test(hash)) return NextResponse.json({ error: 'Photo not found.' }, { status: 404 })
 
-    const admin = createAdminClient()
-    const { data: media, error: mediaError } = await admin
-      .from('media_objects')
-      .select('storage_backend,storage_key,content_hash,byte_size')
-      .eq('storage_backend', 'b2')
-      .eq('content_hash', hash)
-      .maybeSingle()
-    if (mediaError) throw mediaError
-    if (!media || !canonicalStorageKey(media.storage_key, hash)) {
-      return NextResponse.json({ error: 'Photo not found.' }, { status: 404 })
-    }
-
-    const config = await runtimeConfig(admin)
-    const body = await downloadPrivateObject(config, media.storage_key)
+    const config = await runtimeConfig(createAdminClient())
+    const body = await downloadPrivateObject(config, canonicalStorageKey(hash))
     const actualHash = createHash('sha256').update(body).digest('hex')
-    if (body.length !== Number(media.byte_size) || actualHash !== hash) {
-      throw new Error('Private B2 media failed canonical byte verification.')
-    }
+    if (actualHash !== hash) throw new Error('Private B2 media failed canonical SHA256 verification.')
 
     return new Response(body, {
       status: 200,
