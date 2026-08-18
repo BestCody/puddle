@@ -1,0 +1,1085 @@
+{
+  "scannedPngs": 31,
+  "suspiciousForegroundExports": 15,
+  "referencedSuspiciousForegroundExports": 15,
+  "suspicious": [
+    {
+      "asset": "public/figma/assets/heart.png",
+      "width": 97,
+      "height": 97,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 9409,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:97"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/hero-phone-exact.png",
+      "width": 430,
+      "height": 666,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 286380,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/landing.html:15",
+        "public/landing.html:48",
+        "public/landing.html:93",
+        "scripts/generate-transparent-hero-phone.mjs:6",
+        "scripts/prepare-figma-transparency-production-patch.mjs:14",
+        "scripts/prepare-figma-transparency-production-patch.mjs:63",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:103"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/hero-phone.png",
+      "width": 430,
+      "height": 666,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 286380,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:87"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/iphone-frame.png",
+      "width": 331,
+      "height": 666,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 220446,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:88"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/lock.png",
+      "width": 93,
+      "height": 93,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 8649,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:98",
+        "scripts/test-landing-restoration.mjs:70"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/mobile-logo.png",
+      "width": 46,
+      "height": 47,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 2162,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:99"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/move.png",
+      "width": 42,
+      "height": 42,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 1764,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:100"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-feed-exact.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:94"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-feed.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/app.js:68",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:93",
+        "tests/integration/landing-phone-demos.test.mjs:24"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-profile-exact.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:96"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-profile.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/app.js:69",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:95",
+        "tests/integration/landing-phone-demos.test.mjs:24"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-save-exact.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:92"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-save.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/app.js:67",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:91",
+        "tests/integration/landing-phone-demos.test.mjs:24"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-swipe-exact.png",
+      "width": 453,
+      "height": 690,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 312570,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:90"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-swipe.png",
+      "width": 453,
+      "height": 690,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 312570,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/app.js:66",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:89",
+        "tests/integration/landing-phone-demos.test.mjs:24"
+      ]
+    }
+  ],
+  "all": [
+    {
+      "asset": "public/figma/assets/city-exact.png",
+      "width": 685,
+      "height": 1332,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 912420,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": []
+    },
+    {
+      "asset": "public/figma/assets/city.png",
+      "width": 687,
+      "height": 1031,
+      "sourceHasAlpha": false,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 708297,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:53"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/collage-1.png",
+      "width": 1170,
+      "height": 780,
+      "sourceHasAlpha": false,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 912600,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:55",
+        "public/landing.html:99"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/collage-4.png",
+      "width": 1190,
+      "height": 776,
+      "sourceHasAlpha": false,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 923440,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:56",
+        "public/landing.html:100"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/collage-5.png",
+      "width": 1171,
+      "height": 781,
+      "sourceHasAlpha": false,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 914551,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:57",
+        "public/landing.html:101"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/footer-bottom-desktop.png",
+      "width": 1281,
+      "height": 528,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 676368,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:77"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/footer-bottom-mobile.png",
+      "width": 704,
+      "height": 298,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 209792,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:116"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/footer-glass-left-desktop.png",
+      "width": 663,
+      "height": 742,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 491946,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:78"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/footer-glass-left-mobile.png",
+      "width": 362,
+      "height": 425,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 153850,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:117"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/footer-glass-right-desktop.png",
+      "width": 618,
+      "height": 706,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 436308,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:79"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/footer-glass-right-mobile.png",
+      "width": 340,
+      "height": 410,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 139400,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:118"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/google.png",
+      "width": 900,
+      "height": 916,
+      "sourceHasAlpha": true,
+      "transparentPixels": 400968,
+      "translucentPixels": 10788,
+      "opaquePixels": 412644,
+      "transparentPercent": 49.9461,
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fullyOpaque": false,
+      "likelyForeground": true,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:37",
+        "public/landing.html:94"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/heart.png",
+      "width": 97,
+      "height": 97,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 9409,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:97"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/hero-left.png",
+      "width": 1091,
+      "height": 1441,
+      "sourceHasAlpha": false,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 1572131,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:13",
+        "public/landing.html:24",
+        "public/landing.html:86"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/hero-phone-exact.png",
+      "width": 430,
+      "height": 666,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 286380,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/landing.html:15",
+        "public/landing.html:48",
+        "public/landing.html:93",
+        "scripts/generate-transparent-hero-phone.mjs:6",
+        "scripts/prepare-figma-transparency-production-patch.mjs:14",
+        "scripts/prepare-figma-transparency-production-patch.mjs:63",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:103"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/hero-phone-screen.png",
+      "width": 292,
+      "height": 633,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 184836,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": []
+    },
+    {
+      "asset": "public/figma/assets/hero-phone.png",
+      "width": 430,
+      "height": 666,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 286380,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:87"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/hero-right.png",
+      "width": 1024,
+      "height": 1024,
+      "sourceHasAlpha": true,
+      "transparentPixels": 9216,
+      "translucentPixels": 1024,
+      "opaquePixels": 1038336,
+      "transparentPercent": 0.9766,
+      "cornerAlpha": [
+        255,
+        255,
+        0,
+        0
+      ],
+      "fullyOpaque": false,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:14",
+        "public/landing.html:45",
+        "public/landing.html:87"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/iphone-frame.png",
+      "width": 331,
+      "height": 666,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 220446,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:88"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/lock.png",
+      "width": 93,
+      "height": 93,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 8649,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:98",
+        "scripts/test-landing-restoration.mjs:70"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/mobile-divider.png",
+      "width": 705,
+      "height": 68,
+      "sourceHasAlpha": true,
+      "transparentPixels": 357,
+      "translucentPixels": 47583,
+      "opaquePixels": 0,
+      "transparentPercent": 100,
+      "cornerAlpha": [
+        0,
+        1,
+        252,
+        252
+      ],
+      "fullyOpaque": false,
+      "likelyForeground": false,
+      "suspicious": false,
+      "references": [
+        "public/landing.html:95"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/mobile-logo.png",
+      "width": 46,
+      "height": 47,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 2162,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:99"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/move.png",
+      "width": 42,
+      "height": 42,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 1764,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:100"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-feed-exact.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:94"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-feed.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/app.js:68",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:93",
+        "tests/integration/landing-phone-demos.test.mjs:24"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-profile-exact.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:96"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-profile.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/app.js:69",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:95",
+        "tests/integration/landing-phone-demos.test.mjs:24"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-save-exact.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:92"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-save.png",
+      "width": 453,
+      "height": 692,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 313476,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/app.js:67",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:91",
+        "tests/integration/landing-phone-demos.test.mjs:24"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-swipe-exact.png",
+      "width": 453,
+      "height": 690,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 312570,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:90"
+      ]
+    },
+    {
+      "asset": "public/figma/assets/phone-swipe.png",
+      "width": 453,
+      "height": 690,
+      "sourceHasAlpha": true,
+      "transparentPixels": 0,
+      "translucentPixels": 0,
+      "opaquePixels": 312570,
+      "transparentPercent": 0,
+      "cornerAlpha": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "fullyOpaque": true,
+      "likelyForeground": true,
+      "suspicious": true,
+      "references": [
+        "public/app.js:66",
+        "scripts/prepare-figma-transparency-production-patch.mjs:80",
+        "scripts/prepare-figma-transparency-production-patch.mjs:89",
+        "tests/integration/landing-phone-demos.test.mjs:24"
+      ]
+    }
+  ]
+}
