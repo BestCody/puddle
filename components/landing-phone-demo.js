@@ -1,77 +1,29 @@
 "use client"
 
 import { useMemo, useRef, useState } from 'react'
-import { MinimalSwipeCard, MinimalSwipePreviewCard } from '@/components/minimal-swipe-card'
-import { SwipeActionDock } from '@/components/swipe-action-dock'
 
-const demoPlaces = [
-  {
-    content_id: 'landing-demo-harbourfront',
-    title: 'Harbourfront Park',
-    category: 'park',
-    city: 'Toronto',
-    neighborhood: 'Waterfront',
-    distanceLabel: '1.2 km',
-    average_rating: 4.8,
-    rating_count: 248,
-    priceLabel: 'Free',
-    photo_url: '/figma/assets/collage-4.png',
-    address_public: 'Waterfront, Toronto',
-    summary: 'A waterfront place for walking, sitting outside, and meeting friends.',
-    amenities: ['waterfront', 'outdoor seating', 'walking']
-  },
-  {
-    content_id: 'landing-demo-coffee',
-    title: 'Corner Coffee',
-    category: 'cafe',
-    city: 'Toronto',
-    neighborhood: 'Downtown',
-    distanceLabel: '1.8 km',
-    average_rating: 4.6,
-    rating_count: 132,
-    priceLabel: '$$',
-    photo_url: '/figma/assets/collage-1.png',
-    address_public: 'Downtown, Toronto',
-    summary: 'Coffee, pastries, and a relaxed place to catch up.',
-    amenities: ['coffee', 'wifi', 'indoor seating']
-  },
-  {
-    content_id: 'landing-demo-gallery',
-    title: 'Night Gallery',
-    category: 'gallery',
-    city: 'Toronto',
-    neighborhood: 'West End',
-    distanceLabel: '2.4 km',
-    average_rating: 4.7,
-    rating_count: 96,
-    priceLabel: '$',
-    photo_url: '/figma/assets/collage-5.png',
-    address_public: 'West End, Toronto',
-    summary: 'Small rotating exhibitions with late evening hours.',
-    amenities: ['art', 'indoors', 'evening']
-  }
+const swipePlaces = [
+  { id: 'maple-grove', title: 'Maple Grove Park', category: 'Park', distance: '208m', address: '2243 Devon Road, Oakville' },
+  { id: 'firehall', title: 'Firehall Cool Bar Hot Grill', category: 'Bar', distance: '3.4 km', address: 'Oakville' },
+  { id: 'gallery', title: 'Night Gallery', category: 'Theatre', distance: '4.1 km', address: 'Oakville' }
 ]
 
-const savedDemoPlaces = [
-  { ...demoPlaces[0], category: 'park' },
-  { ...demoPlaces[1], category: 'cafe' },
-  { ...demoPlaces[2], category: 'gallery' },
-  { ...demoPlaces[0], content_id: 'landing-demo-lookout', title: 'Lake Lookout', category: 'scenic_spot', distanceLabel: '3.1 km' }
+const savedPlaces = [
+  { id: 'firehall', title: 'Firehall Cool Bar Hot Grill', category: 'Courts', city: 'Oakville', distance: '3.4 km' },
+  { id: 'maple-grove', title: 'Maple Grove Park', category: 'Courts', city: 'Oakville', distance: '208m' },
+  { id: 'film-house', title: 'Film House', category: 'Theatres', city: 'Oakville', distance: '2.1 km' },
+  { id: 'night-gallery', title: 'Night Gallery', category: 'Theatres', city: 'Oakville', distance: '4.1 km' },
+  { id: 'lookout', title: 'Lake Lookout', category: 'Courts', city: 'Oakville', distance: '3.8 km' }
 ]
 
-function categoryLabel(value) {
-  return String(value || 'place').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
-function DemoPlaceDetails({ item, onClose }) {
-  return <div className="landing-demo-details" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section role="dialog" aria-modal="true" aria-label={`Details for ${item.title}`}>
-      <button type="button" onClick={onClose} aria-label="Close details">×</button>
-      <div className="landing-demo-details-photo" style={{ backgroundImage: `url(${item.photo_url})` }} />
-      <small>{categoryLabel(item.category)}</small>
-      <h2>{item.title}</h2>
-      <p>{item.summary}</p>
-      <strong>{item.neighborhood || item.city}</strong>
+function DemoDetails({ title, subtitle, onClose }) {
+  return <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="landing-demo-dialog" role="dialog" aria-modal="true" aria-label={`${title} details`}>
+      <button type="button" className="landing-demo-dialog-close" onClick={onClose} aria-label="Close details">×</button>
+      <div className="landing-demo-dialog-photo" aria-hidden="true" />
+      <small>Oakville</small>
+      <h2>{title}</h2>
+      <p>{subtitle}</p>
     </section>
   </div>
 }
@@ -79,164 +31,168 @@ function DemoPlaceDetails({ item, onClose }) {
 function SwipeDemo() {
   const [index, setIndex] = useState(0)
   const [history, setHistory] = useState([])
-  const [actionRequest, setActionRequest] = useState(null)
-  const sequence = useRef(0)
-  const current = demoPlaces[index % demoPlaces.length]
-  const next = demoPlaces[(index + 1) % demoPlaces.length]
+  const [dragX, setDragX] = useState(0)
+  const pointer = useRef(null)
+  const originX = useRef(0)
+  const current = swipePlaces[index % swipePlaces.length]
 
-  function requestChoice(action) {
-    sequence.current += 1
-    setActionRequest({ action, id: sequence.current })
-  }
-
-  async function onChoice(action, item) {
-    setHistory((entries) => [...entries, { action, item }])
+  function choose(action) {
+    setHistory((items) => [...items, { index, action }])
     setIndex((value) => value + 1)
+    setDragX(0)
   }
 
   function undo() {
     if (!history.length) return
-    setHistory((entries) => entries.slice(0, -1))
+    setHistory((items) => items.slice(0, -1))
     setIndex((value) => Math.max(0, value - 1))
+    setDragX(0)
   }
 
-  return <div className="landing-demo-swipe">
-    <header className="landing-demo-swipe-toolbar">
-      <strong>Swipe</strong>
-      <button type="button" aria-label="Open filters" onClick={() => {}}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
-      </button>
-    </header>
-    <section className="minimal-swipe-workspace">
-      <div className="minimal-card-stage">
-        <MinimalSwipePreviewCard item={next} />
-        <MinimalSwipeCard item={current} onChoice={onChoice} busy={false} actionRequest={actionRequest} />
-      </div>
-      <SwipeActionDock
-        onUndo={undo}
-        onPass={() => requestChoice('pass')}
-        onSave={() => requestChoice('save')}
-        onPerfect={() => requestChoice('perfect')}
-        canUndo={history.length > 0}
-        busy={false}
-      />
-      <div className="minimal-progress" aria-label={`Demo place ${index + 1}`}><span style={{ width: `${((index % demoPlaces.length) + 1) / demoPlaces.length * 100}%` }} /></div>
-    </section>
+  function pointerDown(event) {
+    pointer.current = event.pointerId
+    originX.current = event.clientX
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+
+  function pointerMove(event) {
+    if (pointer.current !== event.pointerId) return
+    setDragX(Math.max(-130, Math.min(130, event.clientX - originX.current)))
+  }
+
+  function pointerUp(event) {
+    if (pointer.current !== event.pointerId) return
+    const distance = event.clientX - originX.current
+    pointer.current = null
+    if (distance <= -75) choose('pass')
+    else if (distance >= 75) choose('save')
+    else setDragX(0)
+  }
+
+  return <div className="landing-demo-screen landing-demo-screen--swipe" data-demo-screen="swipe">
+    <div className="landing-demo-swipe-topbar"><span>Swipe</span><button type="button" aria-label="Open swipe menu">☰</button></div>
+    <div className="landing-demo-swipe-stack">
+      <article
+        className="landing-demo-swipe-card"
+        data-place-id={current.id}
+        style={{ transform: `translateX(${dragX}px) rotate(${dragX / 30}deg)` }}
+        onPointerDown={pointerDown}
+        onPointerMove={pointerMove}
+        onPointerUp={pointerUp}
+        onPointerCancel={() => { pointer.current = null; setDragX(0) }}
+      >
+        <header><span>{current.category}</span><span>{current.distance}</span></header>
+        <div className="landing-demo-swipe-photo" aria-hidden="true" />
+        <footer><h1>{current.title}</h1><p>{current.address}</p><button type="button" aria-label={`Open ${current.title}`}>+</button></footer>
+      </article>
+    </div>
+    <div className="landing-demo-swipe-actions" aria-label="Swipe controls">
+      <button type="button" className="is-back" onClick={undo} disabled={!history.length} aria-label="Back">↶<small>Back</small></button>
+      <button type="button" className="is-pass" onClick={() => choose('pass')} aria-label="Pass place">×<small>Pass</small></button>
+      <button type="button" className="is-save" onClick={() => choose('save')} aria-label="Save place">♡<small>Save</small></button>
+      <button type="button" className="is-star" onClick={() => choose('star')} aria-label="Star place">☆<small>Star</small></button>
+    </div>
+    <div className="landing-demo-progress" aria-label={`Swipe demo place ${index + 1}`}><span style={{ width: `${((index % swipePlaces.length) + 1) / swipePlaces.length * 100}%` }} /></div>
   </div>
 }
 
 function SavedDemo() {
   const [tab, setTab] = useState('saved')
-  const [category, setCategory] = useState('all')
+  const [category, setCategory] = useState('All')
   const [query, setQuery] = useState('')
   const [openItem, setOpenItem] = useState(null)
-  const categories = ['all', ...new Set(savedDemoPlaces.map((item) => item.category))]
-  const places = useMemo(() => savedDemoPlaces.filter((item) => {
-    if (category !== 'all' && item.category !== category) return false
-    return `${item.title} ${item.city} ${item.category}`.toLowerCase().includes(query.toLowerCase())
+  const filtered = useMemo(() => savedPlaces.filter((item) => {
+    if (category !== 'All' && item.category !== category) return false
+    return `${item.title} ${item.city}`.toLowerCase().includes(query.trim().toLowerCase())
   }), [category, query])
 
-  return <div className="minimal-list-page figma-saved-page landing-demo-saved">
-    <nav className="minimal-tabs figma-segmented-tabs figma-saved-segment" aria-label="Saved and plans">
-      {['saved', 'planned'].map((value) => <a className={tab === value ? 'is-active' : ''} href="#" onClick={(event) => { event.preventDefault(); setTab(value) }} key={value}>{value === 'saved' ? 'Saved' : 'Plans'}</a>)}
-    </nav>
+  return <div className="landing-demo-screen landing-demo-screen--saved" data-demo-screen="save">
+    <div className="landing-demo-segment landing-demo-segment--purple" aria-label="Saved or plans">
+      <button className={tab === 'saved' ? 'is-active' : ''} type="button" onClick={() => setTab('saved')}>Saved</button>
+      <button className={tab === 'plans' ? 'is-active' : ''} type="button" onClick={() => setTab('plans')}>Plans</button>
+    </div>
     {tab === 'saved' ? <>
-      <nav className="figma-category-tabs" aria-label="Saved categories">
-        {categories.map((value) => <a className={category === value ? 'is-active' : ''} href="#" onClick={(event) => { event.preventDefault(); setCategory(value) }} key={value}>{value === 'all' ? 'All' : categoryLabel(value)}</a>)}
+      <nav className="landing-demo-saved-categories" aria-label="Saved categories">
+        {['All', 'Courts', 'Theatres'].map((value) => <button className={category === value ? 'is-active' : ''} type="button" onClick={() => setCategory(value)} key={value}>{value === 'Courts' ? '◉ Courts' : value === 'Theatres' ? '▦ Theatres' : value}</button>)}
+        <button type="button" aria-label="Add category">＋</button>
       </nav>
-      <div className="figma-saved-rule" aria-hidden="true" />
-      <section className="minimal-saved-folders" aria-label="Saved places">
-        <div className="minimal-place-grid figma-saved-grid">
-          {places.map((item) => <article className="minimal-place-card figma-saved-card" key={item.content_id}>
-            <a className="minimal-place-photo figma-saved-photo" href="#" onClick={(event) => { event.preventDefault(); setOpenItem(item) }} style={{ backgroundImage: `url(${item.photo_url})` }} aria-label={`Open ${item.title}`} />
-            <div className="minimal-place-copy figma-saved-copy"><h2><a href="#" onClick={(event) => { event.preventDefault(); setOpenItem(item) }}>{item.title}</a></h2><div className="figma-saved-meta"><small>{item.city}</small></div></div>
-            <a className="figma-card-open" href="#" onClick={(event) => { event.preventDefault(); setOpenItem(item) }} aria-label={`View details for ${item.title}`}>+</a>
-          </article>)}
-        </div>
+      <section className="landing-demo-saved-grid" aria-label="Saved places">
+        {filtered.map((item, itemIndex) => <button className="landing-demo-saved-card" type="button" onClick={() => setOpenItem(item)} key={item.id}>
+          <span className={`landing-demo-saved-photo landing-demo-saved-photo--${itemIndex % 3}`} aria-hidden="true" />
+          <strong>{item.title}</strong><small><span>{item.city}</span><span>{item.distance}</span></small>
+        </button>)}
       </section>
-      <form className="figma-saved-search" onSubmit={(event) => event.preventDefault()}>
-        <label><span className="sr-only">Search saved puddles</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a saved puddle..." /></label>
-        <button type="submit" aria-label="Search saved puddles">↑</button>
-      </form>
-    </> : <section className="landing-demo-plans">
-      <article><strong>Saturday · 7:00 PM</strong><h2>Night Gallery</h2><small>Planned with friends</small></article>
-      <article><strong>Sunday · 2:30 PM</strong><h2>Harbourfront Park</h2><small>2 people going</small></article>
+      <label className="landing-demo-search landing-demo-search--saved"><span className="sr-only">Search saved puddles</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a saved puddle..." /><b aria-hidden="true">↑</b></label>
+    </> : <section className="landing-demo-plans" aria-label="Plans">
+      <article><small>Saturday · 7:00 PM</small><strong>Night Gallery</strong><span>Planned with friends</span></article>
+      <article><small>Sunday · 2:30 PM</small><strong>Maple Grove Park</strong><span>2 people going</span></article>
     </section>}
-    {openItem ? <DemoPlaceDetails item={openItem} onClose={() => setOpenItem(null)} /> : null}
+    {openItem ? <DemoDetails title={openItem.title} subtitle={`${openItem.city} · ${openItem.distance}`} onClose={() => setOpenItem(null)} /> : null}
   </div>
 }
 
-function FeedCard({ item, onOpen }) {
-  return <article className="figma-feed-card">
-    <header className="figma-feed-author"><span className="figma-feed-avatar">P</span><div><strong>Puddle Person</strong><small>Saved in Puddle</small></div></header>
-    <p className="figma-feed-note">Found somewhere worth going together.</p>
-    <a className="figma-feed-photo" href="#" onClick={(event) => { event.preventDefault(); onOpen(item) }} style={{ backgroundImage: `url(${item.photo_url})` }} aria-label={`Open ${item.title}`} />
-    <a className="figma-feed-place" href="#" onClick={(event) => { event.preventDefault(); onOpen(item) }}><span>{categoryLabel(item.category)}</span><h2>{item.title}</h2><small>{item.neighborhood || item.city}</small><b aria-hidden="true">+</b></a>
-    <footer className="figma-feed-actions"><button type="button" onClick={() => onOpen(item)}>Details</button><button type="button">Saved</button><button type="button">Share</button></footer>
+function FeedPost({ onOpen }) {
+  return <article className="landing-demo-feed-post">
+    <header><span className="landing-demo-avatar">R</span><div><strong>Richie Zheng</strong><small>2 hours ago</small></div></header>
+    <p>This place is amazing! The atmosphere is beautiful, the location feels welcoming, and there’s so much to see and do. Definitely a spot I’d come back to.</p>
+    <div className="landing-demo-feed-pictures" aria-label="Post photos"><span /><span /><span>+30</span></div>
+    <button className="landing-demo-feed-place" type="button" onClick={onOpen}>
+      <span className="landing-demo-feed-place-meta"><em>Park</em><em>208m</em></span>
+      <span className="landing-demo-feed-place-space" aria-hidden="true" />
+      <strong>Maple Grove Park</strong><b aria-hidden="true">+</b>
+    </button>
+    <footer><button type="button">◯ 3</button><button type="button">♢ 21</button><button type="button">▱ 5</button><button type="button">➤ 7</button></footer>
   </article>
 }
 
 function FeedDemo() {
   const [view, setView] = useState('feed')
   const [query, setQuery] = useState('')
-  const [openItem, setOpenItem] = useState(null)
-  const filtered = demoPlaces.filter((item) => `${item.title} ${item.category}`.toLowerCase().includes(query.toLowerCase()))
+  const [open, setOpen] = useState(false)
+  const [composing, setComposing] = useState(false)
+  const showPost = !query.trim() || 'maple grove park richie zheng'.includes(query.trim().toLowerCase())
 
-  return <div className="figma-feed-page landing-demo-feed">
-    <nav className="figma-segmented-tabs figma-feed-segment" aria-label="Feed or map">
-      {['feed', 'map'].map((value) => <a className={view === value ? 'is-active' : ''} href="#" onClick={(event) => { event.preventDefault(); setView(value) }} key={value}>{value === 'feed' ? 'Feed' : 'Map'}</a>)}
-    </nav>
-    <form className="figma-feed-search" onSubmit={(event) => event.preventDefault()}><label><span className="sr-only">Search Puddle</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search puddle" /></label><button type="submit" aria-label="Search">⌕</button></form>
-    {view === 'feed' ? <section className="figma-feed-list" aria-label="Puddle feed">{filtered.map((item) => <FeedCard item={item} onOpen={setOpenItem} key={item.content_id} />)}</section> : <section className="figma-map-view landing-demo-map-view">
-      <div className="figma-map-stats"><span>4 saved</span><span>2 matched</span><span>2 planned</span></div>
-      <div className="landing-demo-map" aria-label="Interactive map preview">
-        {filtered.map((item, index) => <button type="button" className={`landing-demo-map-pin pin-${index + 1}`} onClick={() => setOpenItem(item)} aria-label={`Open ${item.title}`} key={item.content_id}>●</button>)}
-        <small>Toronto</small>
-      </div>
-    </section>}
-    <button className="figma-feed-compose landing-demo-compose" type="button"><span className="figma-feed-avatar">P</span><span>Create a puddle...</span><b>↑</b></button>
-    {openItem ? <DemoPlaceDetails item={openItem} onClose={() => setOpenItem(null)} /> : null}
+  return <div className="landing-demo-screen landing-demo-screen--feed" data-demo-screen="feed">
+    <div className="landing-demo-feed-toolbar">
+      <div className="landing-demo-segment landing-demo-segment--yellow" aria-label="Feed or map"><button className={view === 'feed' ? 'is-active' : ''} type="button" onClick={() => setView('feed')}>Feed</button><button className={view === 'map' ? 'is-active' : ''} type="button" onClick={() => setView('map')}>Map</button></div>
+      <label className="landing-demo-feed-search"><span className="sr-only">Search puddle</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search puddle" /><b>⌕</b></label>
+    </div>
+    {view === 'feed' ? <section className="landing-demo-feed-list" aria-label="Puddle feed">{showPost ? <FeedPost onOpen={() => setOpen(true)} /> : <p className="landing-demo-empty">No puddles found.</p>}</section> : <section className="landing-demo-map" aria-label="Interactive map preview"><span className="landing-demo-map-road road-a" /><span className="landing-demo-map-road road-b" /><button type="button" className="landing-demo-map-pin pin-a" aria-label="Open Maple Grove Park" onClick={() => setOpen(true)}>●</button><button type="button" className="landing-demo-map-pin pin-b" aria-label="Open Firehall Cool Bar Hot Grill" onClick={() => setOpen(true)}>●</button><strong>Oakville</strong></section>}
+    <button className="landing-demo-compose" type="button" onClick={() => setComposing((value) => !value)}><span className="landing-demo-avatar">R</span><span>{composing ? 'Share something about this place…' : 'Create a puddle...'}</span><b>↑</b></button>
+    {open ? <DemoDetails title="Maple Grove Park" subtitle="2243 Devon Road, Oakville · 208m" onClose={() => setOpen(false)} /> : null}
   </div>
 }
 
 function ProfileDemo() {
   const [editing, setEditing] = useState(false)
-  const [name, setName] = useState('Puddle Person')
-  const [location, setLocation] = useState('Toronto, ON')
-  const [radius, setRadius] = useState(10)
-  const [avatar, setAvatar] = useState(null)
-  const [preferences, setPreferences] = useState(['coffee', 'parks'])
+  const [name, setName] = useState('Richie Zheng')
+  const [following, setFollowing] = useState(false)
+  const [messageOpen, setMessageOpen] = useState(false)
 
-  function togglePreference(value) {
-    setPreferences((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])
-  }
-
-  function chooseAvatar(event) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const url = URL.createObjectURL(file)
-    setAvatar(url)
-  }
-
-  return <div className="minimal-profile-page landing-demo-profile">
-    <section className="minimal-profile-card">
-      <div className="minimal-profile-avatar" style={avatar ? { backgroundImage: `url(${avatar})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>{avatar ? null : 'PP'}</div>
-      <div><h1>{name}</h1><small>@puddleperson</small><p>{location}</p></div>
-      <a href="#" onClick={(event) => { event.preventDefault(); setEditing((value) => !value) }}>{editing ? 'Done' : 'Edit'}</a>
+  return <div className="landing-demo-screen landing-demo-screen--profile" data-demo-screen="profile">
+    <header className="landing-demo-profile-cover"><button type="button" onClick={() => setEditing((value) => !value)}>{editing ? 'Done' : 'Edit'}</button></header>
+    <section className="landing-demo-profile-identity">
+      <div className="landing-demo-avatar landing-demo-avatar--large">R</div>
+      {editing ? <label><span className="sr-only">Display name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label> : <h1>{name}</h1>}
+      <strong>@Richiezh77</strong>
+      <p><span>345 Followers</span><span>230 Following</span></p>
+      <div className="landing-demo-profile-tags"><span>🍻Bar</span><span>🌙Nightlife</span><span>🛍️Shop</span><button type="button" aria-label="Add preference">+</button></div>
+      <div className="landing-demo-profile-actions"><button type="button" className="is-follow" onClick={() => setFollowing((value) => !value)}>{following ? 'Following' : 'Follow'}</button><button type="button" onClick={() => setMessageOpen(true)}>◯ Message</button></div>
     </section>
-    <section className="minimal-profile-settings">
-      <div className="minimal-profile-photo-setting"><span>Profile picture</span><div className="landing-demo-photo-editor"><div className="landing-demo-photo-preview" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : 'PP'}</div><label>Change photo<input type="file" accept="image/*" onChange={chooseAvatar} /></label></div></div>
-      <div><span>Location</span>{editing ? <input value={location} onChange={(event) => setLocation(event.target.value)} /> : <strong>{location}</strong>}</div>
-      <div><span>Search radius</span>{editing ? <label className="landing-demo-radius"><input type="range" min="2" max="50" value={radius} onChange={(event) => setRadius(Number(event.target.value))} /><strong>{radius} km</strong></label> : <strong>{radius} km</strong>}</div>
-      <div className="minimal-profile-preferences"><span>Preferences</span><div>{['coffee', 'parks', 'art', 'nightlife'].map((value) => <button type="button" className={preferences.includes(value) ? 'is-selected' : ''} onClick={() => togglePreference(value)} key={value}>{value}</button>)}</div></div>
-      <a href="#" onClick={(event) => event.preventDefault()}>Account settings</a>
+    <section className="landing-demo-profile-grid">
+      <article className="is-puddles"><h2>Puddles</h2><div className="landing-demo-profile-mini-post"><span className="landing-demo-avatar">R</span><strong>Richie Zheng</strong><div /><b>Maple Grove Park</b></div></article>
+      <article className="is-location"><h2>Location</h2></article>
+      <article className="is-saves"><h2>Saves</h2></article>
+      <article className="is-friends"><h2>Friends</h2></article>
+      <button className="landing-demo-profile-add" type="button" aria-label="Add profile section">＋</button>
     </section>
+    {messageOpen ? <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setMessageOpen(false) }}><section className="landing-demo-message" role="dialog" aria-modal="true" aria-label="Message Richie Zheng"><button type="button" onClick={() => setMessageOpen(false)} aria-label="Close message">×</button><strong>Message Richie Zheng</strong><textarea aria-label="Message" placeholder="Write a message…" /><button type="button" onClick={() => setMessageOpen(false)}>Send</button></section></div> : null}
   </div>
 }
 
 export function LandingPhoneDemo({ view }) {
-  if (view === 'swipe') return <main className="landing-phone-demo landing-phone-demo--swipe"><SwipeDemo /></main>
-  if (view === 'save') return <main className="landing-phone-demo landing-phone-demo--save"><SavedDemo /></main>
-  if (view === 'feed') return <main className="landing-phone-demo landing-phone-demo--feed"><FeedDemo /></main>
-  return <main className="landing-phone-demo landing-phone-demo--profile"><ProfileDemo /></main>
+  if (view === 'swipe') return <main className="landing-phone-demo"><SwipeDemo /></main>
+  if (view === 'save') return <main className="landing-phone-demo"><SavedDemo /></main>
+  if (view === 'feed') return <main className="landing-phone-demo"><FeedDemo /></main>
+  return <main className="landing-phone-demo"><ProfileDemo /></main>
 }
