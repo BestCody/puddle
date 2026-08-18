@@ -425,7 +425,7 @@ select
     when nullif(trim(l.cover_path),'') is not null or exists(select 1 from public.location_photo_sources p where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false) then 2
     else 1
   end::integer as card_tier,
-  null::numeric as average_rating,
+  null::numeric(4,3) as average_rating,
   3.8::numeric as confidence_adjusted_rating,
   0::integer as rating_count,
   0::integer as happened_count,
