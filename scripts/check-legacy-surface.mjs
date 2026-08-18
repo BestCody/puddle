@@ -74,7 +74,7 @@ for (const required of ['OpenSearch `locations-active`', '/api/open-photo/<sha25
   if (!readme.includes(required)) throw new Error(`README is missing canonical architecture marker: ${required}`)
 }
 
-const socialCleanup = await read('supabase/migrations/10073_drop_legacy_social_rpc_compatibility.sql')
+const socialCleanup = await read('supabase/migrations/10074_drop_legacy_social_rpc_compatibility.sql')
 for (const signature of [
   'social_friend_search_v1(text)',
   'pass_message_search_v1(text)',
