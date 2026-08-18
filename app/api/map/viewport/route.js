@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { searchGlobalLocationsInViewport } from '@/lib/app/global-location-search'
+import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -52,7 +53,7 @@ function mapPoint(row) {
     latitude,
     longitude,
     href: `/plans/${row.slug}`,
-    photo_url: row.primary_photo?.url || null,
+    photo_url: openPhotoUrlForHash(row.primary_photo?.content_hash),
     states: ['catalogue'],
     match: null,
     plan: null
