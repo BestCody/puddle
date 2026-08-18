@@ -1,0 +1,33 @@
+name: Cleanup migrated open photos from Supabase
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/trigger-cleanup-open-photo-supabase'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cleanup-open-photo-supabase
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Revalidate B2 and delete audited legacy Supabase objects
+        run: node scripts/validate-open-photo-b2-migration.mjs --delete-source
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          OPEN_PHOTO_SUPABASE_BUCKET: puddle-public-media
+          B2_MEDIA_VALIDATION_CONCURRENCY: ${{ vars.B2_MEDIA_VALIDATION_CONCURRENCY || '16' }}
