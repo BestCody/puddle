@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Publish retired relational B2 photo identities as a fixed B2 exclusion overlay."""
+import hashlib
 import json
 import os
 import tempfile
@@ -61,19 +62,34 @@ if rows:
 key = f'{DATA_PREFIX}/enrichment/photo_exclusions/snapshot={SNAPSHOT}/retired-relational.parquet'
 with tempfile.NamedTemporaryFile(suffix='.parquet', delete=False) as handle:
     local_path = handle.name
+changed = True
 try:
     escaped = local_path.replace("'", "''")
     con.execute(f"COPY retired_exclusions TO '{escaped}' (FORMAT PARQUET,COMPRESSION ZSTD)")
     with open(local_path, 'rb') as handle:
         payload = handle.read()
-    data_s3.put_object(
-        Bucket=DATA_BUCKET, Key=key, Body=payload,
-        ContentType='application/vnd.apache.parquet',
-        Metadata={'purpose': 'puddle_retired_photo_exclusions', 'snapshot': SNAPSHOT},
-    )
+    payload_sha256 = hashlib.sha256(payload).hexdigest()
+    try:
+        existing = data_s3.head_object(Bucket=DATA_BUCKET, Key=key)
+        changed = not (
+            int(existing.get('ContentLength', -1)) == len(payload)
+            and existing.get('Metadata', {}).get('sha256') == payload_sha256
+        )
+    except Exception:
+        changed = True
+    if changed:
+        data_s3.put_object(
+            Bucket=DATA_BUCKET, Key=key, Body=payload,
+            ContentType='application/vnd.apache.parquet',
+            Metadata={
+                'purpose': 'puddle_retired_photo_exclusions',
+                'snapshot': SNAPSHOT,
+                'sha256': payload_sha256,
+            },
+        )
 finally:
     try:
         os.remove(local_path)
     except FileNotFoundError:
         pass
-print(json.dumps({'retiredExclusions': len(rows), 'key': key}, indent=2))
+print(json.dumps({'retiredExclusions': len(rows), 'key': key, 'changed': changed}, indent=2))
