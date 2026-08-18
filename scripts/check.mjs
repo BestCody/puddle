@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises'
+import { access, readFile, readdir } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,13 +10,13 @@ const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
   'public/landing.html','public/styles.css','public/landing.css','public/app.js','public/puddle-mark.svg',
   'app/layout.js','app/discover/page.js','app/map/page.js','app/matches/page.js','app/profile/page.js','app/plans/page.js','app/plans/[slug]/page.js',
-  'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js',
+  'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js',
   'components/product-nav.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/google-place-photo-fallback.js',
   'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js',
-  'lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
+  'lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/app/location-moderation-overlay.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
   'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
   '.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
-  'supabase/migrations/20260818204500_lazy_location_refs_cutover.sql','supabase/migrations/20260818204600_location_relational_overlays.sql',
+  'supabase/migrations/20260818204500_lazy_location_refs_cutover.sql','supabase/migrations/20260818204600_location_relational_overlays.sql','supabase/migrations/20260818204700_opensearch_heatmap_and_actions.sql','supabase/migrations/20260818204800_remove_remaining_location_catalogue_coupling.sql',
   'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs'
 ]
 for (const path of required) await access(join(root, path))
@@ -25,9 +25,10 @@ const removed = [
   'lib/app/discovery-relational.js','lib/app/discovery-relational-fallback.js',
   'lib/app/catalogue-batch-writer.js','lib/app/catalogue-import-runner.js','lib/app/catalogue-quality.js','lib/app/catalogue-regions.js','lib/app/open-place-catalogue.js',
   'lib/app/approved-open-photo.js','lib/app/open-photo-candidates.js','lib/app/open-photo-b2.js','lib/app/open-photo-transform.js','lib/app/static-open-photo-provider.js','lib/app/photo-enrichment.js','lib/app/place-photos.js','lib/app/location-quality.js',
-  'lib/app/google-place-client.js','lib/app/google-place-discovery.js','lib/app/google-place-match.js','lib/app/google-place-photo-proxy.js',
+  'lib/app/google-place-client.js','lib/app/google-place-discovery.js','lib/app/google-place-match.js','lib/app/google-place-photo-proxy.js','lib/app/provider-request-limiter.js',
   'scripts/register-location-photos.mjs','scripts/enrich-open-location-photos.mjs','scripts/import-open-location-photos.mjs','scripts/match-google-places.mjs','scripts/discover-google-place-ids.mjs','scripts/repair-google-place-addresses.mjs','scripts/profile-discovery-spatial.mjs',
   'scripts/global-data/export-supabase-bootstrap.mjs','scripts/global-data/build-bootstrap-parquet.py','.github/workflows/global-bootstrap.yml',
+  '.github/workflows/photo-enrichment.yml','.github/workflows/google-place-discovery.yml','.github/workflows/google-place-geocode.yml','.github/workflows/google-place-match.yml',
   'app/api/location-google-photo/[id]/route.js','app/api/location-open-photo/[id]/route.js','app/api/location-photo-status/[id]/route.js','app/api/location-photos/[id]/route.js',
   'app/api/static-catalogue','lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js',
   'lib/app/open-photo-supabase.js','lib/app/open-photo-r2.js','lib/app/r2-s3.js'
@@ -42,9 +43,9 @@ for (const path of removed) {
 }
 
 const syntaxFiles = [
-  'next.config.mjs','proxy.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
+  'next.config.mjs','proxy.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/location-moderation-overlay.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
   'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs',
-  'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js'
+  'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
 
@@ -73,6 +74,9 @@ if (!discoverySelector.includes('getGlobalDiscoveryFeed')) throw new Error('Disc
 for (const forbidden of ['getRelationalDiscoveryFeed','discovery-relational','GLOBAL_LOCATION_SEARCH_ENABLED']) {
   if (discoverySelector.includes(forbidden)) throw new Error(`Discovery still contains a legacy serving selector: ${forbidden}`)
 }
+for (const marker of ['suspendedLocationIds','location-moderation-overlay']) {
+  if (!discoverySelector.includes(marker)) throw new Error(`Discovery moderation overlay is missing ${marker}`)
+}
 
 const globalDiscovery = await read('lib/app/discovery-global.js')
 for (const marker of ['global-location-serving','searchGlobalLocations','global-location-v1']) {
@@ -93,13 +97,13 @@ for (const forbidden of ["from('locations')",'source_metadata','latitude:','long
 }
 
 const publicLocation = await read('lib/app/public-location-cache.js')
-for (const marker of ['getGlobalLocationBySlug','searchGlobalLocations',"from('location_host_links')"]) {
+for (const marker of ['getGlobalLocationBySlug','searchGlobalLocations',"from('location_host_links')",'isLocationSuspended']) {
   if (!publicLocation.includes(marker)) throw new Error(`Public location path is missing ${marker}`)
 }
 if (publicLocation.includes("from('locations')")) throw new Error('Public location path still reads the Supabase catalogue')
 
 const actions = await read('app/api/discovery/actions/route.js')
-for (const marker of ['record_discovery_actions_v4','ensureGlobalLocationReferences']) {
+for (const marker of ['record_discovery_actions_v4','ensureGlobalLocationReferences','adjust_location_save_density_batch_v1']) {
   if (!actions.includes(marker)) throw new Error(`Discovery action path is missing ${marker}`)
 }
 
@@ -120,6 +124,35 @@ for (const marker of ['create table if not exists public.location_refs','create 
 const overlays = await read('supabase/migrations/20260818204600_location_relational_overlays.sql')
 for (const marker of ['public.location_host_links','public.location_submissions','public.location_refs','approve_location_claim','can_view_media_asset']) {
   if (!overlays.includes(marker)) throw new Error(`Relational overlay migration is missing ${marker}`)
+}
+const heatmap = await read('supabase/migrations/20260818204700_opensearch_heatmap_and_actions.sql')
+for (const marker of ['adjust_location_save_density_batch_v1','location_save_density_tiles','densityDelta','drop function if exists public.record_discovery_actions_v3']) {
+  if (!heatmap.includes(marker)) throw new Error(`OpenSearch action/heatmap migration is missing ${marker}`)
+}
+const finalCleanup = await read('supabase/migrations/20260818204800_remove_remaining_location_catalogue_coupling.sql')
+for (const marker of ['location_moderation_overrides','public.location_host_links','public.location_submissions','drop function if exists public.recommendation_candidate_pool_v1','delete from public.content_embeddings where content_kind=\'place\'']) {
+  if (!finalCleanup.includes(marker)) throw new Error(`Final catalogue cleanup migration is missing ${marker}`)
+}
+
+// Exhaustively fence the application runtime against direct Supabase catalogue reads.
+// Historical migrations are intentionally excluded: they remain immutable history.
+for (const directory of ['app','components','lib']) {
+  const entries = await readdir(join(root, directory), { recursive: true, withFileTypes: true })
+  for (const entry of entries) {
+    if (!entry.isFile() || !/\.(?:[cm]?js|jsx|ts|tsx)$/.test(entry.name)) continue
+    const fullPath = join(entry.parentPath || entry.path, entry.name)
+    const relative = fullPath.slice(root.length + 1).replaceAll('\\','/')
+    const source = await readFile(fullPath, 'utf8')
+    for (const pattern of [
+      /\.from\(\s*['"]locations['"]\s*\)/,
+      /\.from\(\s*['"]location_photo_sources['"]\s*\)/,
+      /\.from\(\s*['"]location_google_places['"]\s*\)/,
+      /\bdiscovery-relational\b/,
+      /\/api\/location-(?:google-photo|open-photo|photo-status|photos)\//
+    ]) {
+      if (pattern.test(source)) throw new Error(`Runtime restored retired location catalogue coupling in ${relative}: ${pattern}`)
+    }
+  }
 }
 
 console.log('Architecture checks passed: B2/OpenSearch catalogue with lazy Supabase location refs.')
