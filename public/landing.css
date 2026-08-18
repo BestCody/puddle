@@ -222,7 +222,7 @@ img{display:block;max-width:100%}
 }
 
 /* Short desktop viewports compact only the sticky auth surface so every action remains reachable. */
-@media(min-width:1024px) and (max-height:700px){
+@media(min-width:1024px) and (max-height:820px){
   .brand--desktop{top:clamp(24px,5vh,32px)}
   .login-panel{top:clamp(84px,15vh,96px);gap:10px}
   .login-panel h1{margin-bottom:8px;font-size:clamp(38px,3.4vw,44px);line-height:1.15}
