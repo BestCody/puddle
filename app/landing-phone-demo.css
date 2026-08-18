@@ -1,74 +1,112 @@
-/* Public, backend-free versions of the real product screens used inside landing-page phones. */
-html:has(.landing-phone-demo),body:has(.landing-phone-demo){margin:0;width:100%;min-height:100%;background:#fff;overscroll-behavior:none}
+/* Interactive, backend-free miniatures of the authoritative Puddle Figma app screens. */
+html:has(.landing-phone-demo),body:has(.landing-phone-demo){margin:0;width:100%;min-height:100%;background:#f6f6f6;overscroll-behavior:none}
 body:has(.landing-phone-demo){overflow:hidden}
-.landing-phone-demo{width:100%;height:100svh;overflow:auto;scrollbar-width:none;background:#fff;color:#111;padding:12px 9px 28px}
+.landing-phone-demo,.landing-phone-demo *{box-sizing:border-box}
+.landing-phone-demo{--blue:#4ca5f7;--yellow:#f2c035;--purple:#b784e4;--green:#78e152;--grey:#858585;width:100%;height:100svh;overflow:auto;scrollbar-width:none;background:#f6f6f6;color:#111;font-family:Manrope,Inter,system-ui,sans-serif}
 .landing-phone-demo::-webkit-scrollbar{display:none}
-.landing-phone-demo *{box-sizing:border-box}
+.landing-phone-demo button,.landing-phone-demo input,.landing-phone-demo textarea{font:inherit}
+.landing-phone-demo button{cursor:pointer}
+.landing-phone-demo .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.landing-demo-screen{width:100%;min-height:100%;padding:14px 12px 24px;position:relative}
 
-.landing-phone-demo--swipe{padding:10px 8px 18px;background:#f6f6f6}
-.landing-demo-swipe-toolbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 4px 4px 10px}
-.landing-demo-swipe-toolbar>strong{font:800 18px/1 Manrope,Inter,sans-serif;letter-spacing:-.04em}
-.landing-demo-swipe-toolbar>button{width:42px;height:42px;display:grid;place-items:center;border:2px solid #d1d1d1;border-radius:999px;background:#fff;color:#111}
-.landing-demo-swipe-toolbar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-.landing-phone-demo .minimal-swipe-workspace{width:100%;max-width:none;margin:0;gap:10px}
-.landing-phone-demo .minimal-card-stage{min-height:520px;height:520px}
-.landing-phone-demo .minimal-swipe-card,.landing-phone-demo .minimal-swipe-card-preview{width:100%;max-width:365px;height:520px;min-height:520px;border-radius:23px}
-.landing-phone-demo .minimal-swipe-actions{max-width:365px;gap:7px}
-.landing-phone-demo .minimal-swipe-action>span{width:50px;height:50px}
-.landing-phone-demo .minimal-progress{max-width:365px}
+/* Swipe — Figma 12:11 / Mobile Swipe 40:641 */
+.landing-demo-screen--swipe{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:10px;min-height:100svh;background:#f6f6f6;overflow:hidden;touch-action:pan-y}
+.landing-demo-swipe-topbar{display:flex;align-items:center;justify-content:space-between;min-height:42px;padding:0 3px 0 7px;font-weight:800}
+.landing-demo-swipe-topbar>span{font-size:17px;letter-spacing:-.04em}
+.landing-demo-swipe-topbar>button{width:38px;height:38px;border:2px solid #e2e2e2;border-radius:999px;background:#fff;color:#aaa;font-size:16px}
+.landing-demo-swipe-stack{display:grid;place-items:stretch center;min-height:0}
+.landing-demo-swipe-card{width:min(100%,365px);height:100%;min-height:430px;max-height:560px;display:grid;grid-template-rows:auto minmax(170px,1fr) auto;padding:13px 13px 14px;border:3px solid #d1d1d1;border-radius:25px;background:#fff;transition:transform .2s ease;touch-action:none;user-select:none;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+.landing-demo-swipe-card>header{display:flex;justify-content:space-between;align-items:center}
+.landing-demo-swipe-card>header span{padding:4px 9px;border-radius:30px;background:#d9d9d9;font:700 11px/1.1 "Martian Mono",monospace}
+.landing-demo-swipe-photo{min-height:0;border-radius:20px;background:linear-gradient(145deg,#fafafa,#f0f0f0);margin:8px 0 10px}
+.landing-demo-swipe-card>footer{position:relative;padding-right:38px}
+.landing-demo-swipe-card h1{margin:0;font-size:clamp(25px,7vw,38px);line-height:.98;letter-spacing:-.055em;font-weight:800}
+.landing-demo-swipe-card p{margin:8px 0 0;font:700 11px/1.25 "Martian Mono",monospace}
+.landing-demo-swipe-card>footer>button{position:absolute;right:0;bottom:0;width:34px;height:34px;border:0;border-radius:999px;background:#eee;font-size:24px;line-height:1}
+.landing-demo-swipe-actions{display:flex;justify-content:center;gap:8px}
+.landing-demo-swipe-actions>button{width:62px;display:grid;grid-template-rows:48px auto;place-items:center;border:0;background:transparent;font-size:29px;font-weight:500}
+.landing-demo-swipe-actions>button::first-line{line-height:48px}
+.landing-demo-swipe-actions>button small{font:800 9px/1 "Martian Mono",monospace}
+.landing-demo-swipe-actions>button.is-back{color:#b4b4b4}.landing-demo-swipe-actions>button.is-pass{color:#e73668}.landing-demo-swipe-actions>button.is-save{color:#43ce19}.landing-demo-swipe-actions>button.is-star{color:#d99c00}
+.landing-demo-swipe-actions>button:not(.is-back){filter:drop-shadow(0 2px 3px rgba(0,0,0,.14))}
+.landing-demo-swipe-actions>button:disabled{opacity:.42;cursor:default}
+.landing-demo-progress{width:min(100%,365px);height:4px;margin:0 auto;border-radius:999px;background:#e7e7e7;overflow:hidden}
+.landing-demo-progress span{display:block;height:100%;border-radius:inherit;background:var(--blue);transition:width .2s ease}
 
-.landing-phone-demo .figma-saved-page,.landing-phone-demo .figma-feed-page{width:100%;min-height:100%;margin:0;padding:8px 0 78px}
-.landing-phone-demo .figma-saved-segment,.landing-phone-demo .figma-feed-segment{position:relative!important;top:auto!important;left:auto!important;transform:none!important;margin:2px auto 14px;width:max-content;z-index:2}
-.landing-phone-demo .figma-category-tabs{overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
-.landing-phone-demo .figma-category-tabs::-webkit-scrollbar{display:none}
-.landing-phone-demo .figma-saved-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.landing-phone-demo .figma-saved-card{grid-template-rows:124px auto;min-width:0}
-.landing-phone-demo .figma-saved-copy{padding:9px!important}
-.landing-phone-demo .figma-saved-copy h2{font-size:14px;line-height:1.05}
-.landing-phone-demo .figma-card-open{width:30px;height:30px;font-size:21px}
-.landing-phone-demo .figma-saved-search{position:sticky;left:auto;bottom:6px;transform:none;width:calc(100% - 10px);margin:14px auto 0}
-.landing-demo-plans{display:grid;gap:10px;padding:10px 4px}
-.landing-demo-plans article{padding:14px;border:2px solid #e6e6e6;border-radius:18px;background:#fff;box-shadow:0 3px 0 rgba(0,0,0,.08)}
-.landing-demo-plans h2{margin:5px 0;font-size:20px}
-.landing-demo-plans strong,.landing-demo-plans small{font-family:monospace;font-size:11px;color:#858585}
+/* Shared segmented control */
+.landing-demo-segment{display:flex;width:max-content;margin:0 auto;padding:4px;border:2px solid #d9d9d9;border-radius:999px;background:#fff}
+.landing-demo-segment button{min-width:58px;padding:7px 10px;border:0;border-radius:999px;background:transparent;color:var(--grey);font-size:13px;font-weight:700}
+.landing-demo-segment button.is-active{color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.1)}
+.landing-demo-segment--purple button.is-active{background:var(--purple)}
+.landing-demo-segment--yellow button.is-active{background:var(--yellow)}
 
-.landing-phone-demo .figma-feed-search{position:relative!important;top:auto!important;right:auto!important;width:calc(100% - 10px);margin:0 auto 12px}
-.landing-phone-demo .figma-feed-list{width:100%;margin:0;gap:14px}
-.landing-phone-demo .figma-feed-card{padding:9px;border-radius:20px}
-.landing-phone-demo .figma-feed-photo{min-height:175px}
-.landing-phone-demo .figma-feed-place{min-height:122px}
-.landing-phone-demo .figma-feed-actions button{min-height:34px;border:0;border-radius:999px;background:transparent;color:#858585;font:800 11px monospace;cursor:pointer}
-.landing-phone-demo .figma-feed-actions button:hover{background:#f4f4f4;color:#111}
-.landing-phone-demo .figma-feed-compose{position:sticky!important;left:auto!important;bottom:4px!important;transform:none!important;width:calc(100% - 10px)!important;margin:14px auto 0;border:2px solid #e6e6e6;cursor:pointer}
-.landing-demo-map-view{padding:0 3px}
-.landing-demo-map{position:relative;height:510px;overflow:hidden;border:2px solid #d8d8d8;border-radius:24px;background:linear-gradient(35deg,transparent 48%,rgba(255,255,255,.9) 49% 53%,transparent 54%),linear-gradient(-22deg,transparent 44%,rgba(255,255,255,.8) 45% 49%,transparent 50%),#dcefd7}
-.landing-demo-map::before,.landing-demo-map::after{content:"";position:absolute;background:#b9def5;border-radius:999px;transform:rotate(-18deg)}
-.landing-demo-map::before{width:78px;height:560px;left:38px;top:-28px}.landing-demo-map::after{width:42px;height:470px;right:30px;top:70px}
-.landing-demo-map>small{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:2;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.9);font:800 11px monospace}
-.landing-demo-map-pin{position:absolute;z-index:3;width:36px;height:36px;border:3px solid #fff;border-radius:999px;background:#4ca5f7;color:#fff;box-shadow:0 3px 9px rgba(0,0,0,.2);cursor:pointer}
-.landing-demo-map-pin.pin-1{left:48%;top:25%}.landing-demo-map-pin.pin-2{left:21%;top:53%}.landing-demo-map-pin.pin-3{right:18%;top:62%}
+/* Saved — Figma 25:180 */
+.landing-demo-screen--saved{display:flex;flex-direction:column;gap:12px;min-height:100svh;background:#f6f6f6;padding-bottom:14px}
+.landing-demo-saved-categories{display:flex;align-items:end;gap:5px;margin:4px -12px -12px;padding:0 12px;border-bottom:2px solid #c2a3dd;overflow-x:auto;scrollbar-width:none}
+.landing-demo-saved-categories::-webkit-scrollbar{display:none}
+.landing-demo-saved-categories button{flex:0 0 auto;padding:7px 10px 9px;border:0;background:transparent;color:#727272;font:500 13px/1 "Martian Mono",monospace}
+.landing-demo-saved-categories button.is-active{border:2px solid #c2a3dd;border-bottom:0;border-radius:15px 15px 0 0;background:#e8d8f6;color:#43255c}
+.landing-demo-saved-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;flex:1;padding-top:8px}
+.landing-demo-saved-card{min-width:0;display:grid;grid-template-rows:minmax(104px,1fr) auto auto;gap:4px;padding:4px 5px 9px;text-align:left;border:2.5px solid #e5e5e5;border-radius:20px;background:#fff;box-shadow:0 4px 0 rgba(0,0,0,.1);overflow:hidden}
+.landing-demo-saved-photo{display:block;min-height:104px;border:2px solid #dedede;border-radius:17px;background:#f0f0f0}
+.landing-demo-saved-photo--1{background:linear-gradient(145deg,#f3f3f3,#eaeaea)}.landing-demo-saved-photo--2{background:linear-gradient(35deg,#f6f6f6,#ececec)}
+.landing-demo-saved-card strong{font-size:12px;line-height:1.05;letter-spacing:-.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.landing-demo-saved-card small{display:flex;justify-content:space-between;gap:4px;color:var(--grey);font:800 9px/1 "Martian Mono",monospace}
+.landing-demo-search{display:flex;align-items:center;width:calc(100% - 22px);margin:auto auto 0;padding:4px 5px 4px 14px;border:2px solid #e6e6e6;border-radius:999px;background:#fff;box-shadow:0 4px 0 rgba(0,0,0,.08)}
+.landing-demo-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:#111;font-size:12px}.landing-demo-search input::placeholder{color:#b0b0b0}
+.landing-demo-search b{width:30px;height:30px;display:grid;place-items:center;border:2px solid var(--purple);border-radius:999px;color:var(--purple);font-size:18px}
+.landing-demo-plans{display:grid;gap:10px;align-content:start;flex:1;padding-top:16px}
+.landing-demo-plans article{display:grid;gap:5px;padding:14px;border:2px solid #e6e6e6;border-radius:18px;background:#fff;box-shadow:0 3px 0 rgba(0,0,0,.08)}
+.landing-demo-plans small,.landing-demo-plans span{color:var(--grey);font:700 10px/1.2 "Martian Mono",monospace}.landing-demo-plans strong{font-size:18px}
 
-.landing-phone-demo--profile{padding:0;background:#e8f4ff}
-.landing-phone-demo .minimal-profile-page{width:100%;min-height:100%;margin:0 auto!important;padding-bottom:28px;background:linear-gradient(180deg,#e8f4ff 0%,#f0f8ff 36%,#fff 100%)}
-.landing-phone-demo .minimal-profile-card{min-height:430px;padding-bottom:32px!important}
-.landing-phone-demo .minimal-profile-card::before{top:22px;height:245px}
-.landing-phone-demo .minimal-profile-card>a{top:38px}
-.landing-phone-demo .minimal-profile-settings{width:calc(100% - 20px);gap:10px!important}
-.landing-phone-demo .minimal-profile-settings>div,.landing-phone-demo .minimal-profile-settings>a{min-height:130px;padding:14px!important;border-radius:18px!important}
-.landing-phone-demo .minimal-profile-photo-setting{min-height:250px!important}
-.landing-demo-photo-editor{display:grid;justify-items:center;gap:10px}
-.landing-demo-photo-preview{width:92px;height:92px;display:grid;place-items:center;border-radius:999px;background:#4ca5f7 center/cover;color:#fff;font-weight:900}
-.landing-demo-photo-editor label{padding:8px 11px;border-radius:999px;background:#111;color:#fff;font:800 11px monospace;cursor:pointer}
-.landing-demo-photo-editor input{position:absolute;opacity:0;pointer-events:none}
-.landing-phone-demo .minimal-profile-settings input:not([type="range"]){width:100%;padding:9px;border:1.5px solid #d9d9d9;border-radius:10px;background:#fafafa;font:700 12px Manrope,sans-serif}
-.landing-demo-radius{display:grid;gap:8px}.landing-demo-radius input{width:100%}
-.landing-phone-demo .minimal-profile-preferences button{padding:7px 9px;border:0;border-radius:999px;background:#f2f2f2;color:#111;font:700 11px monospace;text-transform:capitalize;cursor:pointer}
-.landing-phone-demo .minimal-profile-preferences button.is-selected{background:#78e152}
+/* Feed — Figma 14:114 */
+.landing-demo-screen--feed{display:flex;flex-direction:column;gap:12px;min-height:100svh;background:#f6f6f6;padding-bottom:12px}
+.landing-demo-feed-toolbar{display:grid;grid-template-columns:auto minmax(115px,1fr);align-items:center;gap:10px}
+.landing-demo-feed-toolbar .landing-demo-segment{margin:0}
+.landing-demo-feed-search{display:flex;align-items:center;min-width:0;padding:8px 10px;border:2px solid #d9d9d9;border-radius:999px;background:#fff}
+.landing-demo-feed-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;font-size:11px}.landing-demo-feed-search input::placeholder{color:#b3b3b3}.landing-demo-feed-search b{font-size:13px}
+.landing-demo-feed-list{display:grid;gap:14px;flex:1;align-content:start}
+.landing-demo-feed-post{display:grid;gap:7px;padding:10px;border:2.5px solid #e5e5e5;border-radius:22px;background:#fff;box-shadow:0 4px 0 rgba(0,0,0,.1)}
+.landing-demo-feed-post>header{display:flex;align-items:center;gap:8px}.landing-demo-avatar{width:32px;height:32px;display:grid;place-items:center;flex:0 0 auto;border-radius:999px;background:linear-gradient(145deg,#1b5b8f,#77bce8);color:#fff;font-weight:900}
+.landing-demo-feed-post>header>div{display:grid}.landing-demo-feed-post header strong{font-size:13px}.landing-demo-feed-post header small{color:var(--grey);font:700 8px/1.1 "Martian Mono",monospace}
+.landing-demo-feed-post>p{margin:0 4px;font-size:11px;line-height:1.05}
+.landing-demo-feed-pictures{display:grid;grid-template-columns:1.6fr 1fr;grid-template-rows:55px 55px;gap:5px;padding:0 3px}
+.landing-demo-feed-pictures span{display:grid;place-items:center;border:2px solid #dedede;border-radius:17px;background:#f0f0f0;color:var(--grey);font-size:20px;font-weight:800}.landing-demo-feed-pictures span:first-child{grid-row:1/3}
+.landing-demo-feed-place{display:grid;grid-template-columns:1fr auto;gap:4px;padding:7px 8px 8px;border:2px solid #f0f0f0;border-radius:17px;background:#fff;text-align:left}
+.landing-demo-feed-place-meta{grid-column:1/-1;display:flex;justify-content:space-between}.landing-demo-feed-place-meta em{padding:3px 7px;border-radius:999px;background:#d9d9d9;color:var(--grey);font:700 8px/1 "Martian Mono",monospace;font-style:normal}
+.landing-demo-feed-place-space{grid-column:1/-1;height:40px;border-radius:10px;background:#fafafa}
+.landing-demo-feed-place>strong{align-self:center;font-size:15px;letter-spacing:-.05em}.landing-demo-feed-place>b{width:28px;height:28px;display:grid;place-items:center;align-self:end;border-radius:999px;background:#d9d9d9;font-size:20px}
+.landing-demo-feed-post>footer{display:flex;justify-content:space-between}.landing-demo-feed-post>footer button{border:0;background:transparent;color:var(--grey);font:700 10px "Martian Mono",monospace}
+.landing-demo-compose{display:flex;align-items:center;gap:8px;width:calc(100% - 24px);margin:auto auto 0;padding:5px 6px;border:2px solid #e6e6e6;border-radius:999px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.1);color:#b0b0b0;text-align:left}
+.landing-demo-compose>span:nth-child(2){flex:1;font-size:12px}.landing-demo-compose>b{width:29px;height:29px;display:grid;place-items:center;border:2px solid var(--yellow);border-radius:999px;color:#d99c00;font-size:18px}
+.landing-demo-compose .landing-demo-avatar{width:28px;height:28px;font-size:11px}
+.landing-demo-map{position:relative;flex:1;min-height:500px;overflow:hidden;border:2px solid #d7d7d7;border-radius:22px;background:#dcefd7}
+.landing-demo-map-road{position:absolute;display:block;border-radius:999px;background:#fff}.landing-demo-map-road.road-a{width:72px;height:130%;left:25%;top:-12%;transform:rotate(25deg)}.landing-demo-map-road.road-b{width:52px;height:115%;right:20%;top:-6%;transform:rotate(-32deg)}
+.landing-demo-map-pin{position:absolute;z-index:2;width:34px;height:34px;border:3px solid #fff;border-radius:999px;background:var(--yellow);color:#fff;box-shadow:0 3px 9px rgba(0,0,0,.25)}.landing-demo-map-pin.pin-a{left:42%;top:30%}.landing-demo-map-pin.pin-b{right:17%;top:60%}.landing-demo-map>strong{position:absolute;z-index:1;left:50%;top:47%;transform:translate(-50%,-50%);padding:5px 8px;border-radius:8px;background:#fff;font:800 10px "Martian Mono",monospace}
+.landing-demo-empty{margin:auto;color:var(--grey);font-weight:700}
 
-.landing-demo-details{position:fixed;inset:0;z-index:120;display:grid;place-items:end center;background:rgba(0,0,0,.42);padding:8px}
-.landing-demo-details>section{position:relative;width:100%;max-height:86vh;overflow:auto;padding:12px 14px 22px;border-radius:24px 24px 18px 18px;background:#fff;box-shadow:0 -12px 35px rgba(0,0,0,.18)}
-.landing-demo-details>section>button{position:absolute;right:18px;top:18px;z-index:2;width:38px;height:38px;border:0;border-radius:999px;background:#fff;font-size:24px}
-.landing-demo-details-photo{height:230px;border-radius:18px;background:#eee center/cover no-repeat}
-.landing-demo-details small{display:block;margin-top:14px;color:#4ca5f7;font:800 11px monospace;text-transform:uppercase}.landing-demo-details h2{margin:5px 0;font-size:28px;letter-spacing:-.05em}.landing-demo-details p{font-size:13px;line-height:1.45;color:#666}.landing-demo-details strong{font-size:12px}
+/* Profile — Figma 40:347 */
+.landing-demo-screen--profile{min-height:100svh;padding:10px 10px 24px;background:linear-gradient(180deg,#e8f4ff 0%,#f0f8ff 36%,#fff 100%)}
+.landing-demo-profile-cover{height:178px;border:3px solid #fff;border-radius:22px;background:var(--blue);position:relative}
+.landing-demo-profile-cover button{position:absolute;right:10px;top:9px;min-width:78px;padding:7px 15px;border:0;border-radius:999px;background:#fff;font:700 12px "Martian Mono",monospace}
+.landing-demo-profile-identity{display:grid;justify-items:center;margin-top:-50px;position:relative;z-index:1}
+.landing-demo-avatar--large{width:78px;height:78px;border:4px solid #f6f6f6;font-size:25px}
+.landing-demo-profile-identity h1{margin:8px 0 0;font-size:27px;line-height:1;letter-spacing:-.045em}.landing-demo-profile-identity>strong{margin-top:4px;color:#285075;font:800 11px "Martian Mono",monospace}
+.landing-demo-profile-identity>label{margin-top:8px}.landing-demo-profile-identity>label input{max-width:230px;padding:7px 10px;border:2px solid var(--blue);border-radius:10px;text-align:center;font-size:18px;font-weight:800}
+.landing-demo-profile-identity>p{display:flex;gap:16px;margin:8px 0 0;color:#758fa7;font:800 10px "Martian Mono",monospace}
+.landing-demo-profile-tags{display:flex;gap:5px;margin-top:10px}.landing-demo-profile-tags span,.landing-demo-profile-tags button{padding:5px 8px;border:0;border-radius:999px;background:rgba(228,215,132,.45);font:700 9px "Martian Mono",monospace}.landing-demo-profile-tags span:nth-child(2){background:rgba(220,90,238,.25)}.landing-demo-profile-tags span:nth-child(3){background:rgba(144,238,90,.3)}.landing-demo-profile-tags button{background:rgba(155,155,155,.3)}
+.landing-demo-profile-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:min(100%,310px);margin-top:10px}.landing-demo-profile-actions button{padding:8px;border:2px solid #b7b7b7;border-radius:999px;background:#fff;font:700 11px "Martian Mono",monospace}.landing-demo-profile-actions button.is-follow{border-color:#347aba;background:var(--blue);color:#fff}
+.landing-demo-profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:min(100%,330px);margin:14px auto 0;align-items:start}
+.landing-demo-profile-grid article,.landing-demo-profile-add{min-height:120px;padding:10px;border:2px solid #e6e6e6;border-radius:18px;background:#fff;box-shadow:0 3px 0 rgba(0,0,0,.1)}
+.landing-demo-profile-grid h2{margin:0;font:700 14px "Martian Mono",monospace}.landing-demo-profile-grid .is-puddles h2{color:var(--yellow)}.landing-demo-profile-grid .is-location h2{color:var(--blue)}.landing-demo-profile-grid .is-saves h2{color:var(--purple)}.landing-demo-profile-grid .is-friends h2{color:var(--green)}
+.landing-demo-profile-grid .is-puddles{min-height:185px}.landing-demo-profile-grid .is-saves{min-height:220px}.landing-demo-profile-grid .is-friends{min-height:215px}
+.landing-demo-profile-mini-post{display:grid;grid-template-columns:26px 1fr;grid-template-rows:auto 73px auto;gap:4px;margin-top:10px;padding:6px;border:1.5px solid #e5e5e5;border-radius:13px}.landing-demo-profile-mini-post .landing-demo-avatar{width:26px;height:26px;font-size:9px}.landing-demo-profile-mini-post>strong{font-size:8px;align-self:center}.landing-demo-profile-mini-post>div{grid-column:1/-1;border-radius:9px;background:#f0f0f0}.landing-demo-profile-mini-post>b{grid-column:1/-1;font-size:8px}
+.landing-demo-profile-add{display:grid;place-items:center;min-height:125px;color:#285075;font-size:52px;font-weight:300}
 
-@media(max-width:360px){.landing-phone-demo .figma-saved-grid{grid-template-columns:1fr}.landing-phone-demo .minimal-swipe-card,.landing-phone-demo .minimal-swipe-card-preview{max-width:335px}}
+/* Dialogs used by Saved, Feed, and Profile interactions. */
+.landing-demo-dialog-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:end center;padding:8px;background:rgba(0,0,0,.38)}
+.landing-demo-dialog,.landing-demo-message{width:100%;max-height:82svh;overflow:auto;padding:14px;border-radius:22px;background:#fff;box-shadow:0 -10px 30px rgba(0,0,0,.18);position:relative}
+.landing-demo-dialog-close,.landing-demo-message>button:first-child{position:absolute;right:12px;top:12px;width:34px;height:34px;border:0;border-radius:999px;background:#fff;font-size:22px}.landing-demo-dialog-photo{height:180px;border-radius:16px;background:#f0f0f0}.landing-demo-dialog small{display:block;margin-top:10px;color:var(--blue);font:800 9px "Martian Mono",monospace}.landing-demo-dialog h2{margin:4px 0;font-size:24px;letter-spacing:-.04em}.landing-demo-dialog p{margin:0;color:#666;font-size:12px}
+.landing-demo-message{display:grid;gap:10px;padding-top:50px}.landing-demo-message strong{font-size:18px}.landing-demo-message textarea{min-height:100px;resize:none;padding:10px;border:2px solid #e0e0e0;border-radius:12px}.landing-demo-message>button:last-child{padding:9px;border:0;border-radius:999px;background:var(--blue);color:#fff;font-weight:800}
+
+@media(max-width:360px){.landing-demo-screen{padding-left:9px;padding-right:9px}.landing-demo-saved-grid{gap:7px}.landing-demo-saved-card strong{font-size:10px}.landing-demo-feed-toolbar{grid-template-columns:1fr}.landing-demo-feed-toolbar .landing-demo-segment{margin:auto}.landing-demo-feed-search{width:100%}.landing-demo-profile-grid{gap:7px}}
