@@ -106,8 +106,8 @@ test('global discovery failures are isolated from the relational database', asyn
   assert.match(discovery, /global-location-degraded/)
   assert.match(discovery, /markCached/)
   assert.match(discovery, /return emptyDegradedFeed\(session, filters, reason\)/)
-  assert.match(discovery, /if \(!useGlobalLocationServing\(\)\) return getRelationalDiscoveryFeed\(session, filters, options\)/)
-  assert.equal(discovery.match(/getRelationalDiscoveryFeed\(session, filters, options\)/g)?.length, 1)
+  assert.match(discovery, /getGlobalDiscoveryFeed/)
+  assert.doesNotMatch(discovery, /getRelationalDiscoveryFeed|discovery-relational|from\(['"]locations['"]\)/)
 
   for (const forbidden of [
     'GLOBAL_LOCATION_FALLBACK_TO_SUPABASE',
