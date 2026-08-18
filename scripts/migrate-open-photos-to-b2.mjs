@@ -52,20 +52,74 @@ async function downloadLegacy(storage, row) {
   return { body, hash }
 }
 
+function verifyRegisteredMediaObject(actual, expected) {
+  if (!actual) throw new Error(`B2 media object ${expected.hash} is not registered.`)
+  if (actual.storage_backend !== 'b2') throw new Error(`Registered media object ${actual.id} is not B2-backed.`)
+  if (String(actual.content_hash || '').toLowerCase() !== expected.hash) throw new Error(`Registered media object ${actual.id} SHA256 verification failed.`)
+  if (Number(actual.byte_size) !== expected.bytes) throw new Error(`Registered media object ${actual.id} byte-size verification failed.`)
+  if (!actual.storage_key) throw new Error(`Registered media object ${actual.id} is missing its B2 storage key.`)
+  if (!actual.public_url) throw new Error(`Registered media object ${actual.id} is missing its B2 delivery URL.`)
+  return actual
+}
+
+async function readMediaObjectByHash(admin, hash) {
+  const result = await admin
+    .from('media_objects')
+    .select('id,storage_backend,storage_key,public_url,content_hash,byte_size')
+    .eq('content_hash', hash)
+    .maybeSingle()
+  if (result.error) throw result.error
+  return result.data || null
+}
+
+async function registerB2MediaObject(admin, expected) {
+  const existing = await readMediaObjectByHash(admin, expected.hash)
+  if (existing) return verifyRegisteredMediaObject(existing, expected)
+
+  const inserted = await admin
+    .from('media_objects')
+    .insert({
+      storage_backend: 'b2',
+      storage_key: expected.key,
+      public_url: expected.publicUrl,
+      content_hash: expected.hash,
+      byte_size: expected.bytes,
+      updated_at: new Date().toISOString()
+    })
+    .select('id,storage_backend,storage_key,public_url,content_hash,byte_size')
+    .maybeSingle()
+
+  if (!inserted.error && inserted.data) return verifyRegisteredMediaObject(inserted.data, expected)
+
+  // Multiple photo rows can reference identical bytes. Concurrent workers may race
+  // to register the same unique content hash/storage key; the winning row is canonical.
+  if (inserted.error?.code === '23505') {
+    const raced = await readMediaObjectByHash(admin, expected.hash)
+    return verifyRegisteredMediaObject(raced, expected)
+  }
+  if (inserted.error) throw inserted.error
+  throw new Error(`B2 media object ${expected.hash} could not be registered.`)
+}
+
 async function verifyUpdatedRow(admin, rowId, expected) {
   const result = await admin
     .from('location_photo_sources')
-    .select('id,storage_backend,storage_key,remote_url,content_hash,byte_size')
+    .select('id,storage_backend,storage_key,remote_url,content_hash,byte_size,media_object_id')
     .eq('id', rowId)
     .maybeSingle()
   if (result.error) throw result.error
   const actual = result.data
   if (!actual) throw new Error(`Migrated photo row ${rowId} could not be re-read for verification.`)
   if (actual.storage_backend !== 'b2') throw new Error(`Migrated photo row ${rowId} did not persist storage_backend=b2.`)
-  if (actual.storage_key !== expected.key) throw new Error(`Migrated photo row ${rowId} storage_key verification failed.`)
-  if (String(actual.content_hash || '').toLowerCase() !== expected.hash) throw new Error(`Migrated photo row ${rowId} SHA256 verification failed.`)
-  if (Number(actual.byte_size) !== expected.bytes) throw new Error(`Migrated photo row ${rowId} byte-size verification failed.`)
-  if (!actual.remote_url) throw new Error(`Migrated photo row ${rowId} is missing its B2 delivery URL.`)
+  if (actual.media_object_id !== expected.mediaObject.id) throw new Error(`Migrated photo row ${rowId} media_object_id verification failed.`)
+  if (actual.storage_key !== null || actual.content_hash !== null || actual.byte_size !== null) {
+    throw new Error(`Migrated photo row ${rowId} was not normalized onto media_objects.`)
+  }
+  if (actual.remote_url !== expected.mediaObject.public_url) throw new Error(`Migrated photo row ${rowId} delivery URL verification failed.`)
+
+  const registered = await readMediaObjectByHash(admin, expected.hash)
+  verifyRegisteredMediaObject(registered, { hash: expected.hash, bytes: expected.bytes })
+  if (registered.id !== expected.mediaObject.id) throw new Error(`Migrated photo row ${rowId} resolved to the wrong media object.`)
   return actual
 }
 
@@ -85,12 +139,19 @@ async function migrateRow(admin, storage, uploader, row) {
     throw new Error(`B2 SHA256 metadata verification failed for ${row.id}.`)
   }
 
+  const mediaObject = await registerB2MediaObject(admin, {
+    key,
+    publicUrl: uploaded.publicUrl,
+    hash,
+    bytes: body.length
+  })
+
   const update = await admin
     .from('location_photo_sources')
     .update({
       storage_backend: 'b2',
-      storage_key: key,
-      remote_url: uploaded.publicUrl,
+      storage_key: mediaObject.storage_key,
+      remote_url: mediaObject.public_url,
       content_hash: hash,
       byte_size: body.length,
       updated_at: new Date().toISOString()
@@ -102,10 +163,10 @@ async function migrateRow(admin, storage, uploader, row) {
   if (update.error) throw update.error
   if (!update.data) throw new Error('Photo row changed while it was being migrated; B2 copy was left intact for idempotent retry.')
 
-  await verifyUpdatedRow(admin, row.id, { key, hash, bytes: body.length })
+  await verifyUpdatedRow(admin, row.id, { mediaObject, hash, bytes: body.length })
 
   // Initial migrations never delete by default. Even when explicitly enabled by the
-  // caller, cleanup occurs only after the B2 upload and persisted DB metadata verify.
+  // caller, cleanup occurs only after the B2 upload, registry, and DB relationship verify.
   if (DELETE_SOURCE) {
     const removed = await storage.remove([row.storage_key])
     if (removed.error) throw new Error(`B2 migration succeeded but Supabase cleanup failed: ${removed.error.message}`)
@@ -113,9 +174,10 @@ async function migrateRow(admin, storage, uploader, row) {
   return {
     id: row.id,
     status: DELETE_SOURCE ? 'migrated_verified_and_deleted_source' : 'migrated_verified',
-    key,
+    key: mediaObject.storage_key,
     bytes: body.length,
     hash,
+    mediaObjectId: mediaObject.id,
     verified: true
   }
 }
@@ -148,7 +210,7 @@ await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(1, rows.le
       summary.migrated += 1
       if (result.verified) summary.verified += 1
       summary.bytes += Number(result.bytes || 0)
-      console.log(`${result.status}: ${row.id} -> ${result.key}`)
+      console.log(`${result.status}: ${row.id} -> ${result.key}${result.mediaObjectId ? ` (${result.mediaObjectId})` : ''}`)
     } catch (error) {
       summary.failed += 1
       if (summary.failures.length < 20) summary.failures.push({ id: row.id, error: error.message })
