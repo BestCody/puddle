@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: deploy-production-prebuilt
@@ -24,7 +25,17 @@ jobs:
       VERCEL_ORG_ID: team_aY04PVtKs2MUrxR38csNwmUc
       VERCEL_PROJECT_ID: prj_7By05EO9g3fqAJkubBtaeYelvwEQ
       NEXT_TELEMETRY_DISABLED: 1
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Publish deploy pending status
+        shell: bash
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state=pending \
+            -f context='Prebuilt production deploy' \
+            -f description='Checking CI deploy credentials and building production artifact' \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >/dev/null
+
       - name: Verify deployment credential exists
         shell: bash
         run: |
@@ -59,5 +70,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          deployment_url="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
+          deployment_url="$(vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")"
           echo "Production deployment submitted: ${deployment_url}"
+
+      - name: Publish deploy success status
+        if: success()
+        shell: bash
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state=success \
+            -f context='Prebuilt production deploy' \
+            -f description='Production artifact built in GitHub and uploaded to Vercel' \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >/dev/null
+
+      - name: Publish deploy failure status
+        if: failure()
+        shell: bash
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state=failure \
+            -f context='Prebuilt production deploy' \
+            -f description='Prebuilt deploy failed; inspect the linked Actions run' \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >/dev/null
