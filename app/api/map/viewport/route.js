@@ -75,12 +75,6 @@ function tracedJson(body, { status = 200, traceId, headers = {} } = {}) {
 export async function GET(request) {
   const traceId = createTraceId()
   const requestStarted = latencyStart()
-  const auth = await requireUser(traceId)
-  if (auth.error) {
-    auth.error.headers.set('x-puddle-trace-id', traceId)
-    recordSloObservation('mapViewport', elapsedMs(requestStarted), false, { trace_id: traceId, service: 'vercel' })
-    return auth.error
-  }
 
   try {
     const params = request.nextUrl.searchParams
@@ -91,10 +85,25 @@ export async function GET(request) {
       west: finiteParam(params, 'west'),
       zoom: Number(params.get('zoom') || 11)
     }
+
+    // Authentication and catalogue search are independent network reads. Run them in
+    // parallel so map latency is bounded by the slower backend rather than their sum.
     const searchStarted = latencyStart()
-    const result = await searchGlobalLocationsInViewport(viewport, { traceId })
-    const candidates = await filterModeratedLocationRows(auth.supabase, result.candidates)
+    const [auth, result] = await Promise.all([
+      requireUser(traceId),
+      searchGlobalLocationsInViewport(viewport, { traceId })
+    ])
     const searchDuration = elapsedMs(searchStarted)
+
+    if (auth.error) {
+      auth.error.headers.set('x-puddle-trace-id', traceId)
+      recordSloObservation('mapViewport', elapsedMs(requestStarted), false, { trace_id: traceId, service: 'vercel' })
+      return auth.error
+    }
+
+    const moderationStarted = latencyStart()
+    const candidates = await filterModeratedLocationRows(auth.supabase, result.candidates)
+    const moderationDuration = elapsedMs(moderationStarted)
     recordSloObservation('openSearch', searchDuration, !result.timedOut, {
       trace_id: traceId,
       service: 'opensearch',
@@ -115,7 +124,7 @@ export async function GET(request) {
       {
         traceId,
         headers: {
-          'server-timing': `opensearch;dur=${searchDuration}, total;dur=${totalMs}`
+          'server-timing': `opensearch;dur=${searchDuration}, moderation;dur=${moderationDuration}, total;dur=${totalMs}`
         }
       }
     )
