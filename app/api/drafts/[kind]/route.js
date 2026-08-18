@@ -53,7 +53,7 @@ export async function POST(request, context) {
   const id = String(input.id || '').trim()
   let existing = null
   if (id) {
-    const result = await supabase.from('locations').select('*').eq('id', id).maybeSingle()
+    const result = await supabase.from('location_submissions').select('*').eq('id', id).maybeSingle()
     existing = result.data
     if (!existing) return NextResponse.json({ error: 'Draft not found.' }, { status: 404 })
   }
@@ -70,8 +70,8 @@ export async function POST(request, context) {
     delete writable.slug
   }
   const query = existing
-    ? supabase.from('locations').update(writable).eq('id', id).select('id,slug,status,autosaved_at').single()
-    : supabase.from('locations').insert(writable).select('id,slug,status,autosaved_at').single()
+    ? supabase.from('location_submissions').update(writable).eq('id', id).select('id,slug,status,autosaved_at').single()
+    : supabase.from('location_submissions').insert(writable).select('id,slug,status,autosaved_at').single()
   const { data, error } = await query
   if (error || !data) return NextResponse.json({ error: message(error, 'Draft could not be saved.') }, { status: 400 })
 
