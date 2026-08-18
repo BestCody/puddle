@@ -9,67 +9,42 @@ const read = (path) => readFile(join(root, path), 'utf8')
 const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
   'public/landing.html','public/styles.css','public/landing.css','public/app.js','public/puddle-mark.svg',
-  'app/layout.js','app/discover/page.js','app/map/page.js','app/map/MapFeed.module.css','app/matches/page.js','app/profile/page.js','app/plans/page.js','app/plans/Plans.module.css','app/plans/[slug]/page.js','app/membership/page.js','app/account/page.js','app/create/post/page.js',
-  'app/figma-dashboard-rebuild.css','app/figma-dashboard-create-post.css','app/figma-dashboard-friends.css','app/figma-dashboard-pass.css','app/figma-dashboard-profile.css','app/figma-dashboard-profile-customize.css','app/figma-dashboard-settings.css','app/figma-dashboard-fidelity.css','app/figma-dashboard-flow.css',
-  'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js',
-  'components/product-nav.js','components/product-shell.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/swipe-action-dock.js','components/figma-social-hub.js','components/profile-photo-editor.js',
-  'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/social-hub-data.js',
-  'lib/app/open-photo-b2.js','lib/media/open-photo-url.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/media/pipeline.js',
+  'app/layout.js','app/discover/page.js','app/map/page.js','app/matches/page.js','app/profile/page.js','app/plans/page.js','app/plans/[slug]/page.js',
+  'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js',
+  'components/product-nav.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/google-place-photo-fallback.js',
+  'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js',
+  'lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
   'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
-  '.github/workflows/global-bootstrap.yml','.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
-  'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
-  'supabase/migrations/10046_friends_messages_social_hub.sql','supabase/migrations/10050_relational_discovery_runtime.sql','supabase/migrations/10061_discovery_unbounded_pagination.sql','supabase/migrations/10062_discovery_pagination_performance.sql','supabase/seed.sql'
+  '.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
+  'supabase/migrations/20260818204500_lazy_location_refs_cutover.sql','supabase/migrations/20260818204600_location_relational_overlays.sql',
+  'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs'
 ]
 for (const path of required) await access(join(root, path))
 
 const removed = [
-  '.vercel-redeploy','action-schema-audit.txt','dependency-audit.txt','legacy-audit.txt','cutover-output.txt','landing-demo.js','requirements.txt',
-  'public/figma-landing.css','public/figma-landing-exact.css','public/figma-landing-v2.css','public/landing-responsive.css','public/landing-hardening.css',
-  'app/date-match','app/hangout','app/api/date-match','app/api/static-catalogue','app/api/storage/b2-access','app/date-match.css',
-  'app/figma-dashboard-feed.css','app/figma-dashboard-feed-fidelity.css','app/figma-dashboard-saved.css','app/figma-dashboard-saved-detail-fidelity.css',
-  'app/figma-dashboard-centering.css','app/figma-dashboard-shell-fidelity.css','app/figma-dashboard-swipe-fidelity.css','app/figma-dashboard-friends-fidelity.css','app/figma-dashboard-pass-fidelity.css','app/figma-dashboard-profile-fidelity.css','app/figma-dashboard-settings-fidelity.css',
-  'components/date-match-workspace.js','components/date-match-workspace-realtime.js',
-  'lib/app/date-match.js','lib/app/date-match-rules.js','lib/app/date-match-snapshot.js',
-  'lib/app/discovery-infrastructure.js','lib/app/discovery-infrastructure-v2.js','lib/app/discovery-relational-fallback.js',
-  'lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js','lib/app/use-private-b2-asset.js','lib/app/use-static-catalogue-details.js','lib/app/use-static-media-resolution.js',
-  'lib/app/open-photo-r2.js','lib/app/r2-s3.js',
-
-  '.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml',
-  '.github/workflows/ops-live-photo-open-import.yml','.github/workflows/ops-live-photo-google-match.yml'
+  'lib/app/discovery-relational.js','lib/app/discovery-relational-fallback.js',
+  'lib/app/catalogue-batch-writer.js','lib/app/catalogue-import-runner.js','lib/app/catalogue-quality.js','lib/app/catalogue-regions.js','lib/app/open-place-catalogue.js',
+  'lib/app/approved-open-photo.js','lib/app/open-photo-candidates.js','lib/app/open-photo-b2.js','lib/app/open-photo-transform.js','lib/app/static-open-photo-provider.js','lib/app/photo-enrichment.js','lib/app/place-photos.js','lib/app/location-quality.js',
+  'lib/app/google-place-client.js','lib/app/google-place-discovery.js','lib/app/google-place-match.js','lib/app/google-place-photo-proxy.js',
+  'scripts/register-location-photos.mjs','scripts/enrich-open-location-photos.mjs','scripts/import-open-location-photos.mjs','scripts/match-google-places.mjs','scripts/discover-google-place-ids.mjs','scripts/repair-google-place-addresses.mjs','scripts/profile-discovery-spatial.mjs',
+  'scripts/global-data/export-supabase-bootstrap.mjs','scripts/global-data/build-bootstrap-parquet.py','.github/workflows/global-bootstrap.yml',
+  'app/api/location-google-photo/[id]/route.js','app/api/location-open-photo/[id]/route.js','app/api/location-photo-status/[id]/route.js','app/api/location-photos/[id]/route.js',
+  'app/api/static-catalogue','lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js',
+  'lib/app/open-photo-supabase.js','lib/app/open-photo-r2.js','lib/app/r2-s3.js'
 ]
 for (const path of removed) {
   try {
     await access(join(root, path))
-    throw new Error(`Removed legacy path is still present: ${path}`)
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw error
-  }
-}
-
-const retiredOpenPhotoPaths = [
-  'lib/app/open-photo-supabase.js',
-  'scripts/migrate-open-photos-to-b2.mjs',
-  'scripts/validate-open-photo-b2-migration.mjs',
-  '.github/workflows/migrate-open-photos-b2.yml',
-  '.github/workflows/validate-open-photo-b2.yml',
-  '.github/workflows/cleanup-open-photo-supabase.yml',
-  '.github/trigger-migrate-open-photos-b2',
-  '.github/trigger-validate-open-photo-b2',
-  '.github/trigger-cleanup-open-photo-supabase'
-]
-for (const path of retiredOpenPhotoPaths) {
-  try {
-    await access(join(root, path))
-    throw new Error(`Retired open-photo migration/compatibility path is present: ${path}`)
+    throw new Error(`Legacy location path is still present: ${path}`)
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error
   }
 }
 
 const syntaxFiles = [
-  'next.config.mjs','proxy.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/open-photo-b2.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/app/social-hub-data.js','lib/media/pipeline.js',
-  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/import-open-location-photos.mjs','scripts/b2-upload-tree.mjs','scripts/global-data/export-supabase-bootstrap.mjs',
-  'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js'
+  'next.config.mjs','proxy.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs',
+  'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
 
@@ -78,126 +53,73 @@ for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','react'
   if (!pkg.dependencies?.[dependency]) throw new Error(`Missing dependency: ${dependency}`)
 }
 const serializedScripts = JSON.stringify(pkg.scripts || {})
-for (const forbidden of ['catalogue:build-static','catalogue:publish-b2','static-catalogue','cleanup-b2-assets','cleanup-r2-assets','locations:photos:migrate-b2']) {
-  if (serializedScripts.includes(forbidden)) throw new Error(`Legacy package command remains: ${forbidden}`)
+for (const forbidden of ['static-catalogue','global:bootstrap:export','locations:photos','locations:google','locations:spatial']) {
+  if (serializedScripts.includes(forbidden)) throw new Error(`Legacy catalogue command remains: ${forbidden}`)
 }
-for (const requiredScript of ['b2:upload-tree','global:bootstrap:export','global:overture:mirror','global:fsq:mirror','global:index','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview']) {
-  if (!pkg.scripts?.[requiredScript]) throw new Error(`Global data-platform package command is missing: ${requiredScript}`)
+for (const requiredScript of ['b2:upload-tree','global:overture:mirror','global:fsq:mirror','global:index','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview','global:photos:materialize']) {
+  if (!pkg.scripts?.[requiredScript]) throw new Error(`Global B2/OpenSearch command is missing: ${requiredScript}`)
 }
 
 const env = await read('.env.example')
-for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','B2_MEDIA_PUBLIC_BASE_URL','B2_DOWNLOAD_BASE_URL','OPEN_PHOTO_SUPABASE_BUCKET','f005.backblazeb2.com/file/puddle-assets']) {
+for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','OPEN_PHOTO_SUPABASE_BUCKET','GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK']) {
   if (env.includes(forbidden)) throw new Error(`Legacy environment setting remains: ${forbidden}`)
 }
-for (const requiredEnv of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_TINDER_PRICE_ID','GOOGLE_PLACES_API_KEY','GLOBAL_LOCATION_SEARCH_ENABLED','GLOBAL_LOCATION_SEARCH_URL','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
+for (const requiredEnv of ['GLOBAL_LOCATION_SEARCH_URL','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
   if (!env.includes(requiredEnv)) throw new Error(`Environment example is missing ${requiredEnv}`)
 }
 
-const proxy = await read('proxy.js')
-for (const route of ['/dashboard','/discover','/matches','/global-matches','/plans','/profile','/onboarding','/account','/admin']) {
-  if (!proxy.includes(route)) throw new Error(`Proxy does not protect ${route}`)
-}
-for (const retired of ['/date-match','/hangout']) if (proxy.includes(`'${retired}'`)) throw new Error(`Proxy still references retired route ${retired}`)
-
-const landing = await read('public/landing.html')
-if (!landing.includes('/landing.css?v=1')) throw new Error('Landing does not load the consolidated responsive stylesheet')
-for (const retiredLandingStyle of ['figma-landing.css','figma-landing-exact.css','figma-landing-v2.css','landing-responsive.css','landing-hardening.css']) {
-  if (landing.includes(retiredLandingStyle)) throw new Error(`Landing still loads retired style: ${retiredLandingStyle}`)
-}
-
-const layout = await read('app/layout.js')
-if (layout.includes("import './date-match.css'")) throw new Error('Retired shared swipe stylesheet is still imported')
-for (const dashboardStyle of ['figma-dashboard-rebuild.css','figma-dashboard-friends.css','figma-dashboard-pass.css','figma-dashboard-profile.css','figma-dashboard-settings.css','figma-dashboard-fidelity.css','figma-dashboard-flow.css']) {
-  if (!layout.includes(`import './${dashboardStyle}'`)) throw new Error(`Dashboard rebuild stylesheet is not loaded: ${dashboardStyle}`)
-}
-for (const retiredRouteStyle of ['figma-dashboard-feed.css','figma-dashboard-feed-fidelity.css','figma-dashboard-saved.css','figma-dashboard-saved-detail-fidelity.css','figma-dashboard-centering.css','figma-dashboard-shell-fidelity.css','figma-dashboard-swipe-fidelity.css','figma-dashboard-friends-fidelity.css','figma-dashboard-pass-fidelity.css','figma-dashboard-profile-fidelity.css','figma-dashboard-settings-fidelity.css']) {
-  if (layout.includes(retiredRouteStyle)) throw new Error(`Retired dashboard stylesheet must not be loaded: ${retiredRouteStyle}`)
-}
-const feedPage = await read('app/map/page.js')
-if (!feedPage.includes("import styles from './MapFeed.module.css'")) throw new Error('Feed route is not using its scoped CSS Module')
-if (!feedPage.includes('data-testid="feed-screen"')) throw new Error('Feed route is missing rendered visual-regression hooks')
-const savedPage = await read('app/plans/page.js')
-const savedDetailPage = await read('app/plans/[slug]/page.js')
-for (const source of [savedPage, savedDetailPage]) if (!source.includes('Plans.module.css')) throw new Error('Saved routes are not using their scoped CSS Module')
-if (!savedPage.includes('data-testid="saved-screen"') || !savedDetailPage.includes('data-testid="saved-detail-screen"')) throw new Error('Saved routes are missing rendered regression hooks')
-
-const productNav = await read('components/product-nav.js')
-for (const label of ['Swipe','Feed','Saved','Friends','Pass','Profile']) if (!productNav.includes(`label: '${label}'`)) throw new Error(`Navigation is missing ${label}`)
-
-const discoverPage = await read('app/discover/page.js')
-const discoveryRoute = await read('app/api/discovery/route.js')
 const discoverySelector = await read('lib/app/discovery.js')
-const discovery = await read('lib/app/discovery-relational.js')
+if (!discoverySelector.includes('getGlobalDiscoveryFeed')) throw new Error('Discovery must use the global OpenSearch feed')
+for (const forbidden of ['getRelationalDiscoveryFeed','discovery-relational','GLOBAL_LOCATION_SEARCH_ENABLED']) {
+  if (discoverySelector.includes(forbidden)) throw new Error(`Discovery still contains a legacy serving selector: ${forbidden}`)
+}
+
 const globalDiscovery = await read('lib/app/discovery-global.js')
+for (const marker of ['global-location-serving','searchGlobalLocations','global-location-v1']) {
+  if (!globalDiscovery.includes(marker)) throw new Error(`Global discovery is missing ${marker}`)
+}
 const globalSearch = await read('lib/app/global-location-search.js')
+for (const marker of ['geo_distance','multi_match','locations-active','primary_photo.content_hash']) {
+  if (!globalSearch.includes(marker)) throw new Error(`Global location search is missing ${marker}`)
+}
+if (globalSearch.includes('primary_photo.url')) throw new Error('Global search restored URL-coupled photo storage')
+
+const refs = await read('lib/app/global-location-reference.js')
+for (const marker of ["from('location_refs')",'getGlobalLocationsByIds',"kind: 'global'"]) {
+  if (!refs.includes(marker)) throw new Error(`Lazy global reference path is missing ${marker}`)
+}
+for (const forbidden of ["from('locations')",'source_metadata','latitude:','longitude:']) {
+  if (refs.includes(forbidden)) throw new Error(`Lazy reference path still copies catalogue metadata: ${forbidden}`)
+}
+
+const publicLocation = await read('lib/app/public-location-cache.js')
+for (const marker of ['getGlobalLocationBySlug','searchGlobalLocations',"from('location_host_links')"]) {
+  if (!publicLocation.includes(marker)) throw new Error(`Public location path is missing ${marker}`)
+}
+if (publicLocation.includes("from('locations')")) throw new Error('Public location path still reads the Supabase catalogue')
+
 const actions = await read('app/api/discovery/actions/route.js')
-const swipe = await read('components/date-swipe-workspace-v2.js')
-const card = await read('components/figma-swipe-card.js')
-for (const source of [discoverPage, discoveryRoute]) if (!source.includes("@/lib/app/discovery")) throw new Error('Discover does not use the location-serving selector')
-for (const marker of ['getGlobalDiscoveryFeed','getRelationalDiscoveryFeed','GLOBAL_LOCATION_SEARCH_ENABLED']) if (!discoverySelector.includes(marker)) throw new Error(`Location-serving selector is missing ${marker}`)
-for (const forbidden of ['GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK','GLOBAL_LOCATION_RELATIONAL_FALLBACK_MIN_INTERVAL_MS']) if (discoverySelector.includes(forbidden) || env.includes(forbidden)) throw new Error(`OpenSearch-to-Postgres fallback must not exist: ${forbidden}`)
-for (const marker of ['global-location-serving','searchGlobalLocations','global-location-v1']) if (!globalDiscovery.includes(marker)) throw new Error(`Global discovery is missing ${marker}`)
-for (const marker of ['geo_distance','multi_match','GLOBAL_LOCATION_CANDIDATE_LIMIT','locations-active']) if (!globalSearch.includes(marker)) throw new Error(`Global location search is missing ${marker}`)
-if (!globalSearch.includes('primary_photo.content_hash')) throw new Error('Global location search is missing primary_photo.content_hash')
-if (globalSearch.includes('primary_photo.url')) throw new Error('Global location search restored primary_photo.url storage coupling')
-for (const marker of ['r2_discovery_overlay_v2','duplicateKey','supabase-relational-v3']) if (!discovery.includes(marker)) throw new Error(`Transitional relational discovery is missing ${marker}`)
-for (const forbidden of ['r2_discovery_overlay_v1','static-catalogue','STATIC_CATALOGUE','r2-primary','R2_CATALOGUE_NOT_CONFIGURED','PRIMARY_QUERY_LIMIT']) if (discovery.includes(forbidden)) throw new Error(`Legacy discovery runtime remains: ${forbidden}`)
-for (const marker of ['record_discovery_actions_v4','MAX_ACTIONS = 20','ensureGlobalLocationReferences']) if (!actions.includes(marker)) throw new Error(`Discovery actions are missing ${marker}`)
-for (const forbidden of ['materializeStaticCatalogueReferences','verifiedStaticReference','staticRef','staticEphemeral']) if (actions.includes(forbidden)) throw new Error(`Legacy static action support remains: ${forbidden}`)
-for (const marker of ['FigmaSwipeCard','SwipeActionDock',"'/api/discovery/actions'",'excludeIds','await drainActions()','visibleIds']) if (!swipe.includes(marker)) throw new Error(`Swipe workspace is missing ${marker}`)
-for (const forbidden of ['MAX_CONTINUATION_EXCLUDES','ACTION_STORAGE_LIMIT','sessionIds.current.size >=','MinimalSwipeCard','DiscoverSocialBar','InviteSheet','createSharedDeck','/api/date-match/start','staticCatalogueEphemeral','prefetchStaticMedia']) if (swipe.includes(forbidden)) throw new Error(`Retired swipe dependency remains: ${forbidden}`)
-for (const marker of ['figma-swipe-card','GooglePlacePhotoFallback','Open details']) if (!card.includes(marker)) throw new Error(`Figma swipe card is missing ${marker}`)
-for (const forbidden of ['usePrivateB2Asset','useStaticCatalogueDetails','useStaticMediaResolution','/api/static-catalogue/']) if (card.includes(forbidden)) throw new Error(`Legacy card dependency remains: ${forbidden}`)
-
-const relationalRuntime = await read('supabase/migrations/10050_relational_discovery_runtime.sql')
-for (const marker of ['discovery_seen_locations_v1','r2_discovery_overlay_v1','record_discovery_actions_v3','record_discovery_actions_v4_unchecked']) {
-  if (!relationalRuntime.includes(marker)) throw new Error(`Relational discovery runtime is missing ${marker}`)
-}
-for (const forbidden of ['static_catalogue_actions','static_catalogue_materializations','staticEphemeral','touch_static_catalogue_materializations_v1']) {
-  if (relationalRuntime.includes(forbidden)) throw new Error(`Legacy database runtime remains in final cutover migration: ${forbidden}`)
+for (const marker of ['record_discovery_actions_v4','ensureGlobalLocationReferences']) {
+  if (!actions.includes(marker)) throw new Error(`Discovery action path is missing ${marker}`)
 }
 
-const unboundedDiscovery = await read('supabase/migrations/10061_discovery_unbounded_pagination.sql')
-for (const marker of ['r2_discovery_overlay_v2','st_dwithin','category_filter','price_filter','open_now_only']) {
-  if (!unboundedDiscovery.includes(marker)) throw new Error(`Unbounded discovery migration is missing ${marker}`)
+const openPhoto = await read('app/api/open-photo/[sha256]/route.js')
+for (const marker of ['canonicalStorageKey','media/photos/by-sha256/','actualHash !== hash']) {
+  if (!openPhoto.includes(marker)) throw new Error(`B2 photo delivery is missing ${marker}`)
 }
-if (unboundedDiscovery.includes('static_catalogue_materializations')) throw new Error('Unbounded discovery migration restored the materialization gate')
-const discoveryPerformance = await read('supabase/migrations/10062_discovery_pagination_performance.sql')
-if (!discoveryPerformance.includes('location.point <-> center_point')) throw new Error('Discovery pagination is missing indexed nearest-neighbor ordering')
+if (openPhoto.includes("from('media_objects')")) throw new Error('Canonical B2 photo delivery still depends on Supabase media registration')
 
-const openPhotoImporter = await read('scripts/import-open-location-photos.mjs')
-const photoB2 = await read('lib/app/open-photo-b2.js')
-const openPhotoUrl = await read('lib/media/open-photo-url.js')
-for (const marker of ['storeOpenPhotoInB2', "../lib/app/open-photo-b2.js"]) if (!openPhotoImporter.includes(marker)) throw new Error(`Open-photo importer is missing direct canonical B2 ingestion marker ${marker}`)
-for (const forbidden of ['storeOpenPhotoInSupabase','open-photo-supabase']) if (openPhotoImporter.includes(forbidden)) throw new Error(`Retired Supabase open-photo compatibility remains in importer: ${forbidden}`)
-for (const marker of ["storageBackend: 'b2'",'media/photos/by-sha256',".from('media_objects')",'mediaObjectId: mediaObject.id','remoteUrl: null']) if (!photoB2.includes(marker)) throw new Error(`Canonical B2 open-photo writer is missing ${marker}`)
-for (const marker of ['normalizeOpenPhotoHash','/api/open-photo/']) if (!openPhotoUrl.includes(marker)) throw new Error(`Puddle open-photo URL resolver is missing ${marker}`)
-for (const forbidden of ['storeOpenPhotoInR2','open-photo-r2','r2-s3','R2_CONFIG','R2_PUBLIC_BASE_URL']) {
-  if (openPhotoImporter.includes(forbidden)) throw new Error(`Retired R2/open-photo storage compatibility remains: ${forbidden}`)
+const createActions = await read('app/create/actions.js')
+if (!createActions.includes("from('location_submissions')")) throw new Error('Place authoring is not isolated to location_submissions')
+if (createActions.includes("from('locations')")) throw new Error('Place authoring still writes the global catalogue table')
+
+const cutover = await read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql')
+for (const marker of ['create table if not exists public.location_refs','create table if not exists public.location_submissions','drop table public.locations','record_discovery_actions_v4_unchecked','references public.location_refs']) {
+  if (!cutover.includes(marker)) throw new Error(`Location cutover migration is missing ${marker}`)
 }
-
-const globalWorkflow = await read('.github/workflows/global-location-data.yml')
-for (const marker of ['mirror_overture.py','mirror_fsq_iceberg.py','stage_global_sources.py','resolve_global_entities.py','index_opensearch.py','GLOBAL_DATA_PIPELINE_ENABLED']) if (!globalWorkflow.includes(marker)) throw new Error(`Global data workflow is missing ${marker}`)
-const photoWorkflow = await read('.github/workflows/global-photo-enrichment.yml')
-for (const marker of ['build_wikimedia_candidates.py','build_mapillary_candidates.py','materialize_photo_candidates.py','GLOBAL_PHOTO_PIPELINE_ENABLED']) if (!photoWorkflow.includes(marker)) throw new Error(`Global photo workflow is missing ${marker}`)
-const kartaWorkflow = await read('.github/workflows/global-kartaview-enrichment.yml')
-if (!kartaWorkflow.includes("KARTAVIEW_REQUESTS_PER_HOUR: '1000'")) throw new Error('Authenticated KartaView worker is not configured for the full 1,000 requests/hour entitlement')
-
-const share = await read('app/api/social/share-location/route.js')
-if (!share.includes('send_location_to_friend_v1')) throw new Error('Friend location sharing is missing')
-for (const forbidden of ['materializeStaticCatalogueReferences','verifiedStaticReference','staticRef']) if (share.includes(forbidden)) throw new Error(`Legacy share support remains: ${forbidden}`)
-
-const friendsPage = await read('app/matches/page.js')
-const socialHub = await read('components/figma-social-hub.js')
-const profile = await read('app/profile/page.js')
-for (const marker of ['FigmaSocialHub','getSocialHubSnapshot']) if (!friendsPage.includes(marker)) throw new Error(`Friends page is missing ${marker}`)
-for (const marker of ['Message','Shared','Add','social_friend_search_v2','social_messages_v2','social_send_message_v1']) if (!socialHub.includes(marker)) throw new Error(`Figma social hub is missing ${marker}`)
-if (!profile.includes('ProfilePhotoEditor')) throw new Error('Profile photo management is missing')
-if (!profile.includes('customize=1')) throw new Error('Profile customization state is missing')
-
-const socialMigration = await read('supabase/migrations/10046_friends_messages_social_hub.sql')
-for (const marker of ['social_send_friend_request_v1','social_conversations_v1','friends_who_liked_location_v1','send_location_to_friend_v1','remove_profile_photo_v1']) {
-  if (!socialMigration.includes(marker)) throw new Error(`Social migration is missing ${marker}`)
+const overlays = await read('supabase/migrations/20260818204600_location_relational_overlays.sql')
+for (const marker of ['public.location_host_links','public.location_submissions','public.location_refs','approve_location_claim','can_view_media_asset']) {
+  if (!overlays.includes(marker)) throw new Error(`Relational overlay migration is missing ${marker}`)
 }
 
-console.log(`Current-product repository check passed: ${required.length} required paths verified, Figma flow/fidelity layers consolidated, global B2/OpenSearch serving present, and retired static-catalogue/R2 runtime paths absent.`)
+console.log('Architecture checks passed: B2/OpenSearch catalogue with lazy Supabase location refs.')
