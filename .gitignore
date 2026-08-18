@@ -7,3 +7,5 @@ node_modules
 supabase/.temp/
 .DS_Store
 npm-debug.log*
+__pycache__/
+*.py[cod]
