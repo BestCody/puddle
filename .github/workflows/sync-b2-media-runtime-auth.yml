@@ -6,7 +6,6 @@ on:
     paths:
       - '.github/workflows/sync-b2-media-runtime-auth.yml'
       - 'supabase/migrations/10072_b2_media_runtime_vault.sql'
-      - '.github/trigger-sync-b2-media-runtime-auth'
   workflow_dispatch:
 
 permissions:
