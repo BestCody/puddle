@@ -2,6 +2,7 @@
 """One-time PR #170 cleanup. This file deletes itself before the durable commit."""
 from pathlib import Path
 import re
+import shutil
 import subprocess
 
 
@@ -175,6 +176,11 @@ source = source.replace(
 if 'open-photo-supabase.js' in source or 'storeOpenPhotoInLegacySupabase' in source:
     raise RuntimeError('relational media delivery test still depends on the removed compatibility shim')
 relational.write_text(source)
+
+# Python compilation during verification must never leak bytecode into the durable diff.
+for cache in [Path('scripts/__pycache__'), Path('scripts/global-data/__pycache__')]:
+    if cache.exists():
+        shutil.rmtree(cache)
 
 Path('.github/workflows/validate.yml').write_text(original_validate)
 for path in [
