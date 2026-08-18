@@ -10,6 +10,7 @@ on:
       - components/**
       - scripts/audit-figma-raster-transparency.mjs
       - scripts/generate-transparent-hero-phone.mjs
+      - scripts/prepare-figma-transparency-production-patch.mjs
       - .github/workflows/figma-raster-transparency-audit.yml
   workflow_dispatch:
 
@@ -29,11 +30,13 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: node scripts/audit-figma-raster-transparency.mjs
       - run: node scripts/generate-transparent-hero-phone.mjs
+      - run: node scripts/prepare-figma-transparency-production-patch.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: figma-raster-transparency-audit
           path: |
             figma-raster-transparency-audit.json
             figma-raster-artifacts/
+            figma-transparency-production-patch/
           if-no-files-found: error
           retention-days: 7
