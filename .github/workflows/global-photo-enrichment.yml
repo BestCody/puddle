@@ -1,5 +1,10 @@
 name: Materialize global licensed photos
 
+# Candidate discovery is intentionally split into independent quota workers:
+# - scripts/global-data/build_wikimedia_candidates.py via global-wikimedia-enrichment.yml
+# - scripts/global-data/build_mapillary_candidates.py via global-mapillary-enrichment.yml
+# This workflow only drains their selected candidates into canonical B2 media.
+
 on:
   workflow_dispatch:
     inputs:
