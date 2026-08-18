@@ -38,9 +38,13 @@ async function attachAsset(supabase, user, asset, purpose, targetId, sortOrder) 
     const { error } = await supabase.from('event_media').insert({ event_id: targetId, media_asset_id: asset.id, sort_order: sortOrder })
     if (error) throw error
   } else if (purpose === 'location_cover') {
-    const { error } = await supabase.from('locations').update({ cover_path: asset.object_path }).eq('id', targetId)
+    // A cover upload belongs to an authored Puddle submission. Published global
+    // catalogue photos are canonical B2/OpenSearch data and are never overwritten here.
+    const { error } = await supabase.from('location_submissions').update({ cover_path: asset.object_path }).eq('id', targetId)
     if (error) throw error
   } else if (purpose === 'location_gallery') {
+    // User/host-contributed gallery media is relational product state. The
+    // location ID itself points at a lazy location_ref, not a copied catalogue row.
     const { error } = await supabase.from('location_media').insert({ location_id: targetId, media_asset_id: asset.id, sort_order: sortOrder })
     if (error) throw error
   } else if (purpose === 'host_logo') {
