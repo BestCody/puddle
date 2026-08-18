@@ -66,6 +66,7 @@ LOCATION_BATCH = max(100, min(10_000, int(os.getenv('GLOBAL_PHOTO_LOCATION_BATCH
 CLAIM_LEASE_SECONDS = max(300, min(3600, int(os.getenv('GLOBAL_PHOTO_CLAIM_LEASE_SECONDS', '1200'))))
 MAX_BYTES = 10_000_000
 PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3}
+EXCLUSION_PREFIX = f'{DATA_PREFIX}/enrichment/photo_exclusions/snapshot={args.snapshot}'
 
 if not DATA_ENDPOINT_URL or not DATA_KEY_ID or not DATA_KEY:
     raise RuntimeError('B2 data endpoint and credentials are required.')
@@ -328,6 +329,10 @@ con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
 con.execute(f"""CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{DATA_KEY_ID.replace("'","''")}',SECRET '{DATA_KEY.replace("'","''")}',REGION '{DATA_REGION.replace("'","''")}',ENDPOINT '{DATA_ENDPOINT.replace("'","''")}',URL_STYLE 'path',USE_SSL true);""")
 con.execute('CREATE TEMP TABLE attempted_photo_locations(location_id VARCHAR PRIMARY KEY)')
+if prefix_exists(EXCLUSION_PREFIX):
+    con.execute(f"CREATE OR REPLACE TEMP VIEW photo_exclusions AS SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('s3://{DATA_BUCKET}/{EXCLUSION_PREFIX}/*.parquet',union_by_name=true)")
+else:
+    con.execute("CREATE OR REPLACE TEMP VIEW photo_exclusions AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false")
 
 
 def countries():
@@ -373,12 +378,20 @@ for country in countries():
     existing_sources = []
     bootstrap_photo = f'{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/photo_metadata.parquet'
     if prefix_exists(bootstrap_photo.rsplit('/', 1)[0]):
-        existing_sources.append(f"SELECT location_id FROM read_parquet('s3://{DATA_BUCKET}/{bootstrap_photo}')")
+        existing_sources.append(f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('s3://{DATA_BUCKET}/{bootstrap_photo}')")
     enriched_prefix = f'{DATA_PREFIX}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code={country}'
     if prefix_exists(enriched_prefix):
-        existing_sources.append(f"SELECT location_id FROM read_parquet('s3://{DATA_BUCKET}/{enriched_prefix}/*.parquet', union_by_name=true)")
+        existing_sources.append(f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('s3://{DATA_BUCKET}/{enriched_prefix}/*.parquet', union_by_name=true)")
     if existing_sources:
-        con.execute(f"CREATE OR REPLACE TEMP VIEW existing_photos AS {' UNION ALL '.join(existing_sources)}")
+        con.execute(f"CREATE OR REPLACE TEMP VIEW raw_existing_photos AS {' UNION ALL '.join(existing_sources)}")
+        con.execute("""CREATE OR REPLACE TEMP VIEW existing_photos AS
+          SELECT DISTINCT e.location_id
+          FROM raw_existing_photos e
+          WHERE NOT EXISTS (
+            SELECT 1 FROM photo_exclusions x
+            WHERE x.location_id=e.location_id AND x.content_hash=e.content_hash
+          )
+        """)
     else:
         con.execute("CREATE OR REPLACE TEMP VIEW existing_photos AS SELECT NULL::VARCHAR AS location_id WHERE false")
 
@@ -394,7 +407,7 @@ for country in countries():
               row_number() OVER(PARTITION BY c.location_id ORDER BY provider_rank,coalesce(c.rank_score,0) DESC,c.external_photo_id) candidate_rank
             FROM all_candidates c
             JOIN l ON l.id=c.location_id
-            WHERE NOT EXISTS (SELECT 1 FROM existing_photos e WHERE e.location_id=c.location_id)
+            WHERE NOT EXISTS (SELECT 1 FROM existing_photos e WHERE e.location_id=cast(c.location_id AS VARCHAR))
               AND NOT EXISTS (SELECT 1 FROM attempted_photo_locations a WHERE a.location_id=cast(c.location_id AS VARCHAR))
           ), targets AS (
             SELECT location_id,min(provider_rank) best_provider,max(coalesce(rank_score,0)) best_score
