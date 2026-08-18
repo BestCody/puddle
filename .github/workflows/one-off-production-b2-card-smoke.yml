@@ -1,0 +1,109 @@
+name: One-off production B2 card smoke
+
+on:
+  push:
+    branches: [ops/production-open-photo-cleanup-20260817]
+    paths:
+      - '.github/workflows/one-off-production-b2-card-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
+      GLOBAL_LOCATION_SEARCH_INDEX: locations-active
+      OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
+      OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Verify card-facing URLs and B2 production delivery
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto'
+          import { searchGlobalLocationsInViewport } from './lib/app/global-location-search.js'
+
+          for (const name of ['GLOBAL_LOCATION_SEARCH_URL','OPENSEARCH_USERNAME','OPENSEARCH_PASSWORD','NEXT_PUBLIC_SUPABASE_URL','SUPABASE_SECRET_KEY']) {
+            if (!String(process.env[name] || '').trim()) throw new Error(`${name} is not configured.`)
+          }
+
+          const viewports = [
+            { name: 'Toronto', north: 43.85, south: 43.45, west: -79.80, east: -79.00, zoom: 11 },
+            { name: 'Montreal', north: 45.75, south: 45.35, west: -74.05, east: -73.35, zoom: 11 },
+            { name: 'Vancouver', north: 49.45, south: 49.05, west: -123.45, east: -122.80, zoom: 11 }
+          ]
+
+          let candidateCount = 0
+          let photoCount = 0
+          let puddleDeliveryCount = 0
+          const unsafe = []
+          const sampled = []
+
+          for (const viewport of viewports) {
+            const result = await searchGlobalLocationsInViewport(viewport)
+            if (result.timedOut) throw new Error(`${viewport.name} OpenSearch viewport timed out.`)
+            if (!Array.isArray(result.candidates) || result.candidates.length === 0) throw new Error(`${viewport.name} returned no candidates.`)
+            candidateCount += result.candidates.length
+            for (const row of result.candidates) {
+              const url = String(row?.primary_photo?.url || '').trim()
+              if (!url) continue
+              photoCount += 1
+              if (sampled.length < 12) sampled.push({ id: row.id, url })
+              if (/backblazeb2\.com|\.s3\.[^/]*backblazeb2\.com|puddle-assets\.s3/i.test(url)) {
+                unsafe.push({ id: row.id, url })
+              }
+              if (/^https:\/\/puddle\.you\/api\/open-photo\/[0-9a-f]{64}$/i.test(url)) {
+                puddleDeliveryCount += 1
+                const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(15000) })
+                if (!response.ok) throw new Error(`Card photo delivery failed ${response.status} for ${url}`)
+                const type = String(response.headers.get('content-type') || '')
+                if (!type.startsWith('image/')) throw new Error(`Card photo delivery returned non-image content type ${type}`)
+              }
+            }
+          }
+
+          if (unsafe.length) throw new Error(`Private B2 origin leaked into card-facing OpenSearch data: ${JSON.stringify(unsafe.slice(0,5))}`)
+
+          const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL).replace(/\/$/, '')
+          const serviceKey = process.env.SUPABASE_SECRET_KEY
+          const mediaResponse = await fetch(`${supabaseUrl}/rest/v1/media_objects?storage_backend=eq.b2&content_hash=not.is.null&select=content_hash,byte_size&order=created_at.asc&limit=8`, {
+            headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Accept: 'application/json' },
+            redirect: 'error', signal: AbortSignal.timeout(15000)
+          })
+          if (!mediaResponse.ok) throw new Error(`Could not read B2 media samples from Supabase: HTTP ${mediaResponse.status}`)
+          const media = await mediaResponse.json()
+          if (!Array.isArray(media) || media.length < 3) throw new Error('Not enough canonical B2 media samples for smoke test.')
+
+          for (const item of media) {
+            const hash = String(item.content_hash || '').toLowerCase()
+            if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error(`Invalid canonical hash ${hash}`)
+            const response = await fetch(`https://puddle.you/api/open-photo/${hash}`, { redirect: 'error', signal: AbortSignal.timeout(15000) })
+            if (!response.ok) throw new Error(`Production B2 delivery failed HTTP ${response.status} for ${hash}`)
+            const bytes = Buffer.from(await response.arrayBuffer())
+            const actual = createHash('sha256').update(bytes).digest('hex')
+            if (actual !== hash) throw new Error(`Production delivery hash mismatch for ${hash}`)
+            if (Number(item.byte_size) !== bytes.length) throw new Error(`Production delivery byte-size mismatch for ${hash}: expected ${item.byte_size}, got ${bytes.length}`)
+            const type = String(response.headers.get('content-type') || '')
+            if (!type.startsWith('image/')) throw new Error(`Production delivery returned non-image content type ${type}`)
+          }
+
+          console.log(JSON.stringify({
+            ok: true,
+            candidateCount,
+            photoCount,
+            puddleDeliveryCount,
+            unsafePrivateB2Urls: unsafe.length,
+            canonicalB2SamplesVerified: media.length,
+            sampledCardUrls: sampled
+          }, null, 2))
+          NODE
