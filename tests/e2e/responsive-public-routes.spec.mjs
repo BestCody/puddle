@@ -127,7 +127,7 @@ test('landing phone routes render the correct Figma screen identities and hydrat
   const profile = page.locator('[data-demo-screen="profile"]')
   await expect(profile).toBeVisible()
   await expect(profile).toHaveAttribute('data-figma-screen', '40:347')
-  await expect(profile.getByText('Richie Zheng', { exact: true })).toBeVisible()
+  await expect(profile.getByRole('heading', { name: 'Richie Zheng', exact: true })).toBeVisible()
   await expect(profile.getByText('@Richiezh77', { exact: true })).toBeVisible()
   await expect(profile.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page')
   await profile.getByRole('button', { name: 'Follow', exact: true }).click()
