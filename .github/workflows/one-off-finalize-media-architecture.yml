@@ -1,3 +1,4 @@
+# Trigger after initial workflow registration.
 name: One-off finalize canonical media architecture
 
 on:
@@ -58,8 +59,6 @@ jobs:
 
           check = Path('scripts/check.mjs')
           source = check.read_text()
-
-          # Retired migration/compatibility paths must not be required or syntax-checked.
           for token in [
               "'lib/app/open-photo-supabase.js',", ",'lib/app/open-photo-supabase.js'",
               "'scripts/migrate-open-photos-to-b2.mjs',", ",'scripts/migrate-open-photos-to-b2.mjs'",
@@ -130,7 +129,6 @@ for (const path of retiredOpenPhotoPaths) {
               source = source.replace(search_marker, search_marker + "\nif (!globalSearch.includes('primary_photo.content_hash')) throw new Error('Global location search is missing primary_photo.content_hash')\nif (globalSearch.includes('primary_photo.url')) throw new Error('Global location search restored primary_photo.url storage coupling')", 1)
 
           check.write_text(source)
-
           Path('.github/workflows/one-off-finalize-media-architecture.yml').unlink()
           PY
 
