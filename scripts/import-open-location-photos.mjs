@@ -1,5 +1,5 @@
 import { createAdminClient } from '../lib/supabase/admin.js'
-import { storeOpenPhotoInSupabase } from '../lib/app/open-photo-supabase.js'
+import { storeOpenPhotoInB2 } from '../lib/app/open-photo-b2.js'
 import { commonsCandidateScore, providerOrderForCategory, streetCandidateScore } from '../lib/app/open-photo-candidates.js'
 import { createProviderRequestLimiter } from '../lib/app/provider-request-limiter.js'
 import {
@@ -315,7 +315,7 @@ async function candidatesFor(provider, location) {
 
 async function registerCandidate(admin, location, candidate) {
   const source = await downloadAsset(candidate.assetUrl, candidate.provider)
-  const stored = await storeOpenPhotoInSupabase(admin, source)
+  const stored = await storeOpenPhotoInB2(admin, source)
   const { error } = await admin.from('location_photo_sources').upsert({
     location_id: location.id,
     source: 'licensed_public',

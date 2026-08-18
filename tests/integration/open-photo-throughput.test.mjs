@@ -46,7 +46,7 @@ test('provider limiter enforces maximum concurrency', async () => {
 test('transitional photo queue writes to B2 and consumes full configured provider entitlements', async () => {
   const workflow = await source('.github/workflows/photo-enrichment.yml')
   const importer = await source('scripts/import-open-location-photos.mjs')
-  const storage = await source('lib/app/open-photo-supabase.js')
+  const storage = await source('lib/app/open-photo-b2.js')
 
   assert.match(workflow, /cron: '17 \* \* \* \*'/)
   assert.match(workflow, /B2_MEDIA_ENABLED/)
@@ -61,8 +61,12 @@ test('transitional photo queue writes to B2 and consumes full configured provide
   assert.match(importer, /provider: 'wikimedia-api'/)
   assert.match(importer, /provider: 'mapillary-api'/)
   assert.match(importer, /provider: 'kartaview-api'/)
-  assert.match(storage, /production writes are now B2-only/)
-  assert.match(storage, /import\('\.\/open-photo-b2\.js'\)/)
+  assert.match(importer, /storeOpenPhotoInB2/)
+  assert.doesNotMatch(importer, /storeOpenPhotoInSupabase|open-photo-supabase/)
+  assert.match(storage, /storageBackend: 'b2'/)
+  assert.match(storage, /media\/photos\/by-sha256/)
+  assert.match(storage, /\.from\('media_objects'\)/)
+  assert.match(storage, /mediaObjectId: mediaObject\.id/)
 })
 
 test('global photo enrichment is coverage-first instead of one request per POI', async () => {

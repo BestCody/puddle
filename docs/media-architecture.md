@@ -17,6 +17,8 @@
 
 Do not persist a B2 public URL or Puddle delivery URL as media identity. `remote_url` is nullable provenance only and must be null for B2-backed canonical rows. `media_objects.public_url` must be null for B2-backed objects.
 
+The open-photo importer calls the canonical B2 writer directly. There is no Supabase-named storage compatibility layer in the supported ingestion path.
+
 ## Global catalogue / OpenSearch
 
 The Supabase bootstrap exports both `location_photo_sources` and `media_objects`. The overlay resolves approved B2 photo rows through `media_object_id`, verifies the canonical B2 key/hash invariant, and writes `content_hash` into `photo_metadata.parquet`. The OpenSearch index maps `primary_photo.content_hash`. Discovery and map APIs derive `/api/open-photo/<sha256>` from that hash.
@@ -25,4 +27,6 @@ OpenSearch can always be rebuilt from canonical data; it is never media truth. A
 
 ## Retired systems
 
-The one-time Supabase open-photo migration, validator, cleanup workflows, trigger files, and migration scripts are intentionally removed. Do not recreate them for normal operation. Runtime B2 credential synchronization and the private `/api/open-photo/<sha256>` delivery route remain durable production infrastructure.
+The one-time Supabase open-photo migration, validator, cleanup workflows, trigger files, migration scripts, and Supabase-named open-photo compatibility shim are intentionally removed. Do not recreate them for normal operation. Runtime B2 credential synchronization and the private `/api/open-photo/<sha256>` delivery route remain durable production infrastructure.
+
+Repository checks explicitly reject restoration of those retired open-photo paths, provider-specific public B2 URL settings, or `primary_photo.url` serving contracts.

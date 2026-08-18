@@ -14,7 +14,7 @@ const required = [
   'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js',
   'components/product-nav.js','components/product-shell.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/swipe-action-dock.js','components/figma-social-hub.js','components/profile-photo-editor.js',
   'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/social-hub-data.js',
-  'lib/app/open-photo-b2.js','lib/app/open-photo-supabase.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/media/pipeline.js',
+  'lib/app/open-photo-b2.js','lib/media/open-photo-url.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/media/pipeline.js',
   'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
   '.github/workflows/global-bootstrap.yml','.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
   'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs',
@@ -33,7 +33,7 @@ const removed = [
   'lib/app/discovery-infrastructure.js','lib/app/discovery-infrastructure-v2.js','lib/app/discovery-relational-fallback.js',
   'lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js','lib/app/use-private-b2-asset.js','lib/app/use-static-catalogue-details.js','lib/app/use-static-media-resolution.js',
   'lib/app/open-photo-r2.js','lib/app/r2-s3.js',
-  'scripts/migrate-open-photos-to-b2.mjs','.github/workflows/migrate-open-photos-b2.yml',
+
   '.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml',
   '.github/workflows/ops-live-photo-open-import.yml','.github/workflows/ops-live-photo-google-match.yml'
 ]
@@ -46,8 +46,28 @@ for (const path of removed) {
   }
 }
 
+const retiredOpenPhotoPaths = [
+  'lib/app/open-photo-supabase.js',
+  'scripts/migrate-open-photos-to-b2.mjs',
+  'scripts/validate-open-photo-b2-migration.mjs',
+  '.github/workflows/migrate-open-photos-b2.yml',
+  '.github/workflows/validate-open-photo-b2.yml',
+  '.github/workflows/cleanup-open-photo-supabase.yml',
+  '.github/trigger-migrate-open-photos-b2',
+  '.github/trigger-validate-open-photo-b2',
+  '.github/trigger-cleanup-open-photo-supabase'
+]
+for (const path of retiredOpenPhotoPaths) {
+  try {
+    await access(join(root, path))
+    throw new Error(`Retired open-photo migration/compatibility path is present: ${path}`)
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error
+  }
+}
+
 const syntaxFiles = [
-  'next.config.mjs','proxy.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/open-photo-b2.js','lib/app/open-photo-supabase.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/app/social-hub-data.js','lib/media/pipeline.js',
+  'next.config.mjs','proxy.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-relational.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/open-photo-b2.js','lib/app/open-photo-transform.js','lib/storage/b2-native.js','lib/app/social-hub-data.js','lib/media/pipeline.js',
   'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/import-open-location-photos.mjs','scripts/b2-upload-tree.mjs','scripts/global-data/export-supabase-bootstrap.mjs',
   'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/media/upload/route.js'
 ]
@@ -66,7 +86,7 @@ for (const requiredScript of ['b2:upload-tree','global:bootstrap:export','global
 }
 
 const env = await read('.env.example')
-for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG']) {
+for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','B2_MEDIA_PUBLIC_BASE_URL','B2_DOWNLOAD_BASE_URL','OPEN_PHOTO_SUPABASE_BUCKET','f005.backblazeb2.com/file/puddle-assets']) {
   if (env.includes(forbidden)) throw new Error(`Legacy environment setting remains: ${forbidden}`)
 }
 for (const requiredEnv of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_TINDER_PRICE_ID','GOOGLE_PLACES_API_KEY','GLOBAL_LOCATION_SEARCH_ENABLED','GLOBAL_LOCATION_SEARCH_URL','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
@@ -118,6 +138,8 @@ for (const marker of ['getGlobalDiscoveryFeed','getRelationalDiscoveryFeed','GLO
 for (const forbidden of ['GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK','GLOBAL_LOCATION_RELATIONAL_FALLBACK_MIN_INTERVAL_MS']) if (discoverySelector.includes(forbidden) || env.includes(forbidden)) throw new Error(`OpenSearch-to-Postgres fallback must not exist: ${forbidden}`)
 for (const marker of ['global-location-serving','searchGlobalLocations','global-location-v1']) if (!globalDiscovery.includes(marker)) throw new Error(`Global discovery is missing ${marker}`)
 for (const marker of ['geo_distance','multi_match','GLOBAL_LOCATION_CANDIDATE_LIMIT','locations-active']) if (!globalSearch.includes(marker)) throw new Error(`Global location search is missing ${marker}`)
+if (!globalSearch.includes('primary_photo.content_hash')) throw new Error('Global location search is missing primary_photo.content_hash')
+if (globalSearch.includes('primary_photo.url')) throw new Error('Global location search restored primary_photo.url storage coupling')
 for (const marker of ['r2_discovery_overlay_v2','duplicateKey','supabase-relational-v3']) if (!discovery.includes(marker)) throw new Error(`Transitional relational discovery is missing ${marker}`)
 for (const forbidden of ['r2_discovery_overlay_v1','static-catalogue','STATIC_CATALOGUE','r2-primary','R2_CATALOGUE_NOT_CONFIGURED','PRIMARY_QUERY_LIMIT']) if (discovery.includes(forbidden)) throw new Error(`Legacy discovery runtime remains: ${forbidden}`)
 for (const marker of ['record_discovery_actions_v4','MAX_ACTIONS = 20','ensureGlobalLocationReferences']) if (!actions.includes(marker)) throw new Error(`Discovery actions are missing ${marker}`)
@@ -144,11 +166,12 @@ const discoveryPerformance = await read('supabase/migrations/10062_discovery_pag
 if (!discoveryPerformance.includes('location.point <-> center_point')) throw new Error('Discovery pagination is missing indexed nearest-neighbor ordering')
 
 const openPhotoImporter = await read('scripts/import-open-location-photos.mjs')
-const photoCompatibility = await read('lib/app/open-photo-supabase.js')
 const photoB2 = await read('lib/app/open-photo-b2.js')
-if (!openPhotoImporter.includes('storeOpenPhotoInSupabase')) throw new Error('Open-photo importer lost its compatibility storage entry point')
-for (const marker of ['production writes are now B2-only','storeOpenPhotoInB2']) if (!photoCompatibility.includes(marker)) throw new Error(`Open-photo compatibility layer is missing ${marker}`)
-for (const marker of ["storageBackend: 'b2'",'photos/by-sha256']) if (!photoB2.includes(marker)) throw new Error(`B2 open-photo writer is missing ${marker}`)
+const openPhotoUrl = await read('lib/media/open-photo-url.js')
+for (const marker of ['storeOpenPhotoInB2', "../lib/app/open-photo-b2.js"]) if (!openPhotoImporter.includes(marker)) throw new Error(`Open-photo importer is missing direct canonical B2 ingestion marker ${marker}`)
+for (const forbidden of ['storeOpenPhotoInSupabase','open-photo-supabase']) if (openPhotoImporter.includes(forbidden)) throw new Error(`Retired Supabase open-photo compatibility remains in importer: ${forbidden}`)
+for (const marker of ["storageBackend: 'b2'",'media/photos/by-sha256',".from('media_objects')",'mediaObjectId: mediaObject.id','remoteUrl: null']) if (!photoB2.includes(marker)) throw new Error(`Canonical B2 open-photo writer is missing ${marker}`)
+for (const marker of ['normalizeOpenPhotoHash','/api/open-photo/']) if (!openPhotoUrl.includes(marker)) throw new Error(`Puddle open-photo URL resolver is missing ${marker}`)
 for (const forbidden of ['storeOpenPhotoInR2','open-photo-r2','r2-s3','R2_CONFIG','R2_PUBLIC_BASE_URL']) {
   if (openPhotoImporter.includes(forbidden)) throw new Error(`Retired R2/open-photo storage compatibility remains: ${forbidden}`)
 }

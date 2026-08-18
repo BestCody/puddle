@@ -82,7 +82,7 @@ WHERE lower(coalesce(cast(p.status AS VARCHAR),''))='approved'
   AND (
     m.id IS NULL
     OR lower(coalesce(cast(m.storage_backend AS VARCHAR),'')) <> 'b2'
-    OR NOT regexp_full_match(lower(coalesce(cast(m.content_hash AS VARCHAR),'')), '[0-9a-f]{64}')
+    OR NOT regexp_full_match(lower(coalesce(cast(m.content_hash AS VARCHAR),'')), '[0-9a-f]{{64}}')
     OR cast(m.storage_key AS VARCHAR) <> 'media/photos/by-sha256/' || substr(lower(cast(m.content_hash AS VARCHAR)),1,2) || '/' || lower(cast(m.content_hash AS VARCHAR)) || '.jpg'
   )
 """).fetchone()[0])
