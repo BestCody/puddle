@@ -1,0 +1,245 @@
+/*
+ * Desktop scaling layer for the public landing page.
+ *
+ * The Figma desktop composition remains the visual source of truth, but the
+ * browser layout is allowed to flow continuously between desktop widths.
+ * Nothing here scales the page with transform: scale(); transforms below are
+ * only local positioning/decoration inherited from the original composition.
+ */
+
+@media (min-width: 761px) {
+  .landing-stage--desktop {
+    --landing-canonical-width: 1440px;
+    --landing-section-gap: clamp(52px, 4.7vw, 76px);
+    --landing-card-width: clamp(480px, 43vw, 590px);
+    --landing-phone-width: clamp(330px, 34vw, 470px);
+    width: min(100%, var(--landing-canonical-width));
+    grid-template-columns: minmax(0, var(--desktop-left)) minmax(0, var(--desktop-right));
+  }
+
+  /* Keep the two desktop columns fluid. Individual children own their padding. */
+  .landing-sticky-left,
+  .landing-canvas--desktop {
+    min-width: 0;
+  }
+
+  .landing-sticky-left__canvas {
+    width: 100%;
+    min-height: min(680px, 100vh);
+  }
+
+  /* Hero geometry scales from the original 1280-ish reference toward 1440. */
+  .hero--desktop {
+    min-height: clamp(820px, 68vw, 960px);
+  }
+
+  .brand--desktop {
+    left: clamp(28px, 4.2vw, 64px);
+    top: clamp(38px, 5vw, 72px);
+  }
+
+  .menu-button--desktop {
+    top: clamp(38px, 4.2vw, 60px);
+    right: clamp(28px, 3.5vw, 52px);
+  }
+
+  .login-panel {
+    left: clamp(28px, 4vw, 58px);
+    right: clamp(28px, 4.8vw, 70px);
+    top: clamp(132px, 12vw, 188px);
+  }
+
+  .login-panel h1 {
+    font-size: clamp(38px, 4.3vw, 58px);
+  }
+
+  .hero-phone-composite--desktop {
+    top: clamp(120px, 9.2vw, 140px);
+    width: min(68%, var(--landing-phone-width));
+  }
+
+  .discovery--desktop {
+    min-height: clamp(720px, 62vw, 880px);
+  }
+
+  .discovery h2 {
+    font-size: clamp(30px, 3.2vw, 46px);
+  }
+
+  /*
+   * Preserve the Figma card proportions instead of pinning every desktop to
+   * the same pixel dimensions. The iframe phone keeps its native aspect ratio.
+   */
+  .feature-card {
+    width: min(82%, var(--landing-card-width));
+    min-height: 0;
+    aspect-ratio: 550 / 896;
+    height: auto;
+    margin-bottom: var(--landing-section-gap);
+    padding: clamp(38px, 3.75vw, 54px) clamp(22px, 2.2vw, 32px) 0;
+  }
+
+  .feature-card h3 {
+    font-size: clamp(42px, 4.25vw, 60px);
+  }
+
+  .feature-card > p {
+    font-size: clamp(14px, 1.45vw, 20px);
+  }
+
+  .feature-phone {
+    width: min(78%, clamp(320px, 30.7vw, 420px));
+    height: auto;
+    aspect-ratio: 393 / 852;
+    margin-top: clamp(24px, 2.5vw, 34px);
+  }
+
+  .trust-heading {
+    width: min(90%, clamp(500px, 43.75vw, 600px));
+    margin-top: clamp(72px, 6vw, 96px);
+    margin-bottom: clamp(36px, 3.2vw, 48px);
+  }
+
+  .trust-heading h2,
+  .final-cta h2 {
+    font-size: clamp(42px, 4.25vw, 60px);
+  }
+
+  .safety-panel {
+    width: min(95%, clamp(560px, 49.3vw, 680px));
+    min-height: 0;
+    height: auto;
+    margin-bottom: clamp(64px, 5vw, 84px);
+    padding: clamp(44px, 3.8vw, 58px) clamp(30px, 2.7vw, 40px) clamp(46px, 4vw, 64px);
+  }
+
+  .safety-panel h2 {
+    font-size: clamp(38px, 3.7vw, 52px);
+  }
+
+  .safety-posts div {
+    min-height: clamp(210px, 18vw, 250px);
+  }
+
+  .final-cta {
+    width: min(90%, clamp(500px, 43.75vw, 600px));
+    margin-bottom: clamp(56px, 5vw, 76px);
+  }
+
+  /*
+   * The footer is a full-bleed section; only its navigation is constrained.
+   * This prevents the footer from looking like a small Figma canvas floating
+   * in the middle of large desktop monitors.
+   */
+  .site-footer--desktop {
+    width: 100vw;
+    margin-left: calc((100% - 100vw) / 2);
+    margin-right: calc((100% - 100vw) / 2);
+    min-height: clamp(520px, 45vw, 720px);
+  }
+
+  .site-footer--desktop .footer-columns {
+    width: min(100%, var(--landing-canonical-width));
+    margin-inline: auto;
+    padding: clamp(72px, 8vw, 120px) clamp(28px, 7vw, 104px) 0;
+  }
+
+  .site-footer--desktop .footer-columns h2 {
+    font-size: clamp(20px, 1.55vw, 24px);
+  }
+
+  .site-footer--desktop .footer-columns a,
+  .site-footer--desktop .footer-columns span {
+    font-size: clamp(13px, 1vw, 15px);
+  }
+}
+
+/* Compact desktop/tablet transition: keep the desktop interaction model while
+ * giving the visual column more room before the dedicated mobile frame takes over.
+ */
+@media (min-width: 761px) and (max-width: 1023px) {
+  .landing-stage--desktop {
+    --desktop-left: 44%;
+    --desktop-right: 56%;
+  }
+
+  .landing-sticky-left__canvas {
+    min-height: 620px;
+  }
+
+  .login-panel {
+    left: clamp(22px, 3vw, 32px);
+    right: clamp(22px, 3vw, 32px);
+    top: clamp(118px, 14vw, 150px);
+    gap: 13px;
+  }
+
+  .login-panel h1 {
+    margin-bottom: 12px;
+    font-size: clamp(34px, 4.2vw, 42px);
+  }
+
+  .landing-login-form {
+    gap: 13px;
+  }
+
+  .landing-login-form input,
+  .continue-button,
+  .auth-choice {
+    min-height: 52px;
+  }
+
+  .hero--desktop {
+    min-height: clamp(700px, 86vw, 820px);
+  }
+
+  .hero-phone-composite--desktop {
+    top: clamp(118px, 14vw, 138px);
+    width: min(72%, clamp(280px, 38vw, 350px));
+  }
+
+  .discovery--desktop {
+    min-height: clamp(650px, 78vw, 760px);
+  }
+
+  .feature-card {
+    width: min(88%, 500px);
+  }
+
+  .interactive-pill {
+    right: 14px;
+    bottom: 14px;
+    min-width: 205px;
+    height: 62px;
+  }
+
+  .interactive-pill > img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .interactive-pill span {
+    font-size: 17px;
+  }
+
+  .site-footer--desktop .footer-columns {
+    gap: 24px;
+    padding-inline: clamp(24px, 5vw, 48px);
+  }
+}
+
+/* Ultrawide monitors keep a readable 1440px composition while full-bleed
+ * backgrounds/art can continue to the viewport edges. */
+@media (min-width: 1920px) {
+  .landing-stage--desktop {
+    width: var(--landing-canonical-width);
+  }
+
+  .site-footer--desktop .footer-bottom-art--desktop {
+    left: 50%;
+    right: auto;
+    width: min(100vw, 1920px);
+    max-width: none;
+    transform: translateX(-50%);
+  }
+}
