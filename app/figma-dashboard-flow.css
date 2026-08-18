@@ -246,6 +246,102 @@
 .figma-pass-manage-actions { margin-left: 23px; }
 .figma-pass-history { width: 100%; min-height: 123px; height: auto !important; }
 
+/* Create Post — Figma 25:79 / 65:433. The blurred post and editor overlap by
+   sharing grid rows instead of being page-positioned with fixed x/y values. */
+.figma-create-post-screen {
+  min-height: 832px;
+  position: relative;
+  overflow: visible;
+  display: grid;
+  grid-template-rows: 110px max-content max-content;
+  align-content: start;
+  background: #f6f6f6;
+}
+.figma-create-post-topbar {
+  position: relative;
+  width: 100%;
+  height: 110px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  padding: 31px 28px 0;
+  box-sizing: border-box;
+}
+.figma-create-post-mobile-logo { display: none; }
+.figma-create-post-topbar .figma-feed-back,
+.figma-create-post-topbar .figma-feed-tabs,
+.figma-create-post-topbar .figma-create-post-search {
+  position: relative !important;
+  inset: auto !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+}
+.figma-create-post-topbar .figma-feed-back {
+  grid-column: 1;
+  justify-self: start;
+  margin-left: 4px;
+}
+.figma-create-post-topbar .figma-feed-tabs {
+  grid-column: 2;
+  justify-self: center;
+  width: 152px;
+  height: 55px;
+}
+.figma-create-post-topbar .figma-create-post-search {
+  grid-column: 3;
+  justify-self: end;
+  width: 190px;
+  min-width: 0;
+  margin: 3px 0 0;
+}
+.figma-create-post-workspace {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 278px 406px;
+  justify-items: center;
+  align-items: start;
+  overflow: visible;
+}
+.figma-create-post-blur,
+.figma-create-post-card {
+  position: relative !important;
+  inset: auto !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  margin: 0;
+}
+.figma-create-post-blur {
+  z-index: 1;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  justify-self: center;
+  width: min(469px, calc(100% - 40px));
+  height: 511px;
+  margin-right: 85px;
+}
+.figma-create-post-card {
+  z-index: 10;
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: center;
+  width: min(697px, calc(100% - 40px));
+  height: 406px;
+}
+.figma-create-post-empty {
+  position: relative !important;
+  inset: auto !important;
+  margin: 20px auto 70px;
+}
+
 /* Settings — Figma 40:381 / 47:960. The window is a two-column grid, sections stack. */
 .figma-settings-screen {
   min-height: 0 !important;
@@ -354,6 +450,100 @@
   .figma-pass-plan { width: 100%; height: 430px; }
   .figma-pass-manage-screen { padding: 18px 0 0; }
   .figma-pass-manage-actions { margin-left: 16px; flex-wrap: wrap; }
+
+  .figma-create-post-screen {
+    min-height: 874px;
+    grid-template-rows: 104px max-content max-content;
+    background: #fff;
+  }
+  .figma-create-post-screen::before { content: none !important; }
+  .figma-create-post-topbar {
+    height: 104px;
+    grid-template-columns: 55px minmax(127px, auto) 55px;
+    justify-content: space-between;
+    align-items: start;
+    padding: 40px 27px 0;
+  }
+  .figma-create-post-topbar .figma-feed-back { display: none !important; }
+  .figma-create-post-mobile-logo {
+    grid-column: 1;
+    display: block;
+    width: 37px;
+    height: 38px;
+    justify-self: start;
+    background: url('/puddle-mark-outline.svg') center/contain no-repeat;
+  }
+  .figma-create-post-topbar .figma-feed-tabs {
+    grid-column: 2;
+    width: 127.12px;
+    height: 38.27px;
+    justify-self: center;
+  }
+  .figma-create-post-topbar .figma-create-post-search {
+    grid-column: 3;
+    width: 55px;
+    height: 41px;
+    margin: 0;
+    justify-self: end;
+  }
+  .figma-create-post-workspace {
+    grid-template-rows: 266px 400px;
+  }
+  .figma-create-post-blur {
+    width: min(368.23px, calc(100% - 30px));
+    height: 401.21px;
+    margin-right: 0;
+    border-width: 1.96px;
+    border-radius: 19.63px;
+    filter: blur(7.85px);
+  }
+  .figma-create-post-card {
+    width: min(382px, calc(100% - 18px));
+    height: 400px;
+    border-radius: 25px;
+  }
+  .figma-create-post-card > .figma-feed-post-avatar {
+    top: 15.5px;
+    left: 18.5px;
+    width: 31.22px;
+    height: 31.22px;
+    flex-basis: 31.22px;
+  }
+  .figma-create-post-visibility {
+    top: 15.59px;
+    left: auto;
+    right: 52.3px;
+    width: 132px;
+    height: 33px;
+  }
+  .figma-create-post-visibility label { height: 25px; }
+  .figma-create-post-visibility span { height: 25px; font-size: 10.92px; }
+  .figma-create-post-visibility label:first-of-type { flex: 0 0 48px; }
+  .figma-create-post-visibility label:last-of-type { flex: 1; }
+  .figma-create-post-submit {
+    top: 13px;
+    left: auto;
+    right: 10px;
+    width: 37px;
+    height: 37px;
+  }
+  .figma-create-post-title { top: 60.62px; left: 20.22px; right: 20px; }
+  .figma-create-post-description { top: 117.67px; left: 23.34px; right: 20px; }
+  .figma-create-post-title input { height: 45px; font-size: 47.38px; line-height: .95; }
+  .figma-create-post-description textarea { height: 180px; font-size: 20px; line-height: .95; }
+  .figma-create-post-add { left: 8.5px; bottom: 18.5px; }
+  .figma-create-post-map {
+    left: auto;
+    right: 15.5px;
+    bottom: 16.5px;
+    width: 60px;
+    height: 42px;
+  }
+  .figma-create-post-card:has(.figma-create-post-add[open]) .figma-create-post-map {
+    left: 73.5px;
+    right: auto;
+    bottom: 17.5px;
+  }
 
   .figma-settings-screen { padding: 24px 12px 130px; }
   .figma-settings-window,
