@@ -1,5 +1,6 @@
 import { access, readFile } from 'node:fs/promises'
 import path from 'node:path'
+import sharp from 'sharp'
 
 const publicDirectory = path.join(process.cwd(), 'public')
 const landingPath = path.join(publicDirectory, 'landing.html')
@@ -19,6 +20,40 @@ for (const reference of references) {
 if (missing.length) {
   console.error(`Landing page references missing public assets:\n${missing.map((item) => `- ${item}`).join('\n')}`)
   process.exit(1)
+}
+
+const heroPhonePath = path.join(publicDirectory, 'figma/assets/hero-phone-exact.png')
+const heroPhone = await sharp(heroPhonePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+const alphaOffset = heroPhone.info.channels - 1
+let heroTransparentPixels = 0
+for (let offset = alphaOffset; offset < heroPhone.data.length; offset += heroPhone.info.channels) {
+  if (heroPhone.data[offset] < 255) heroTransparentPixels += 1
+}
+const cornerOffsets = [
+  alphaOffset,
+  (heroPhone.info.width - 1) * heroPhone.info.channels + alphaOffset,
+  ((heroPhone.info.height - 1) * heroPhone.info.width) * heroPhone.info.channels + alphaOffset,
+  (((heroPhone.info.height - 1) * heroPhone.info.width) + heroPhone.info.width - 1) * heroPhone.info.channels + alphaOffset
+]
+if (heroTransparentPixels < 1000 || cornerOffsets.some((offset) => heroPhone.data[offset] !== 0)) {
+  console.error('Hero phone must preserve a transparent exterior canvas around the physical device')
+  process.exit(1)
+}
+
+const legacyOpaqueForegroundAssets = [
+  'hero-phone.png', 'iphone-frame.png',
+  'phone-swipe.png', 'phone-swipe-exact.png',
+  'phone-save.png', 'phone-save-exact.png',
+  'phone-feed.png', 'phone-feed-exact.png',
+  'phone-profile.png', 'phone-profile-exact.png',
+  'heart.png', 'lock.png', 'mobile-logo.png', 'move.png'
+]
+const productionLandingSource = landing + '\n' + app
+for (const asset of legacyOpaqueForegroundAssets) {
+  if (productionLandingSource.includes(asset)) {
+    console.error('Landing production source references legacy opaque Figma foreground export: ' + asset)
+    process.exit(1)
+  }
 }
 
 const requiredRoutes = ['/signin', '/signup', '/privacy', '/terms']
