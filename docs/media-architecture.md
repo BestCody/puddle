@@ -28,3 +28,5 @@ OpenSearch can always be rebuilt from canonical data; it is never media truth. A
 ## Retired systems
 
 The one-time Supabase open-photo migration, validator, cleanup workflows, trigger files, migration scripts, and Supabase-named open-photo compatibility shim are intentionally removed. Do not recreate them for normal operation. Runtime B2 credential synchronization and the private `/api/open-photo/<sha256>` delivery route remain durable production infrastructure.
+
+Repository checks explicitly reject restoration of those retired open-photo paths, provider-specific public B2 URL settings, or `primary_photo.url` serving contracts.
