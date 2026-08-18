@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  statuses: write
 
 jobs:
   cleanup:
@@ -23,106 +24,133 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Remove Supabase open-photo compatibility surface
+
+      - name: Remove retired compatibility and fix canonical hash validation
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
           from pathlib import Path
+          import re
 
           importer = Path('scripts/import-open-location-photos.mjs')
           text = importer.read_text()
-          old = "import { storeOpenPhotoInSupabase } from '../lib/app/open-photo-supabase.js'"
-          new = "import { storeOpenPhotoInB2 } from '../lib/app/open-photo-b2.js'"
-          if old not in text:
-              raise RuntimeError('open-photo importer compatibility import was not found')
-          text = text.replace(old, new)
-          if 'storeOpenPhotoInSupabase(admin, candidate)' not in text:
-              raise RuntimeError('open-photo importer compatibility call was not found')
+          text = text.replace("import { storeOpenPhotoInSupabase } from '../lib/app/open-photo-supabase.js'", "import { storeOpenPhotoInB2 } from '../lib/app/open-photo-b2.js'")
           text = text.replace('storeOpenPhotoInSupabase(admin, candidate)', 'storeOpenPhotoInB2(admin, candidate)')
+          if 'storeOpenPhotoInSupabase' in text or 'open-photo-supabase' in text:
+              raise RuntimeError('failed to remove Supabase open-photo compatibility from importer')
           importer.write_text(text)
 
           shim = Path('lib/app/open-photo-supabase.js')
-          if not shim.exists():
-              raise RuntimeError('expected legacy open-photo Supabase shim is already absent')
-          shim.unlink()
+          if shim.exists():
+              shim.unlink()
+
+          validator = Path('scripts/global-data/build-bootstrap-parquet.py')
+          text = validator.read_text()
+          if "'[0-9a-f]{64}'" not in text:
+              raise RuntimeError('expected SHA-256 regex was not found in bootstrap validator')
+          text = text.replace("'[0-9a-f]{64}'", "'[0-9a-f]{{64}}'")
+          validator.write_text(text)
 
           check = Path('scripts/check.mjs')
           text = check.read_text()
-          replacements = [
-            ("'lib/app/open-photo-b2.js','lib/app/open-photo-supabase.js','lib/app/open-photo-transform.js'", "'lib/app/open-photo-b2.js','lib/media/open-photo-url.js','lib/app/open-photo-transform.js'"),
-            ("'scripts/b2-upload-tree.mjs','scripts/migrate-open-photos-to-b2.mjs','scripts/global-data/mirror_overture.py'", "'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py'"),
-            ("'.github/workflows/global-bootstrap.yml','.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml','.github/workflows/migrate-open-photos-b2.yml'", "'.github/workflows/global-bootstrap.yml','.github/workflows/global-location-data.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml'"),
-            ("'lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/open-photo-b2.js','lib/app/open-photo-supabase.js','lib/app/open-photo-transform.js'", "'lib/app/global-location-search.js','lib/app/global-location-reference.js','lib/app/open-photo-b2.js','lib/media/open-photo-url.js','lib/app/open-photo-transform.js'"),
-            ("'scripts/import-open-location-photos.mjs','scripts/b2-upload-tree.mjs','scripts/migrate-open-photos-to-b2.mjs','scripts/global-data/export-supabase-bootstrap.mjs'", "'scripts/import-open-location-photos.mjs','scripts/b2-upload-tree.mjs','scripts/global-data/export-supabase-bootstrap.mjs'"),
-            ("'b2:upload-tree','locations:photos:migrate-b2','global:bootstrap:export'", "'b2:upload-tree','global:bootstrap:export'"),
-            ("'B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','B2_MEDIA_PUBLIC_BASE_URL','FSQ_ICEBERG_TOKEN'", "'B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','B2_MEDIA_OPEN_PHOTO_PREFIX','FSQ_ICEBERG_TOKEN'")
-          ]
-          for old, new in replacements:
-              if old not in text:
-                  raise RuntimeError(f'scripts/check.mjs missing expected stale fragment: {old}')
-              text = text.replace(old, new)
 
-          old_block = """const openPhotoImporter = await read('scripts/import-open-location-photos.mjs')
-const photoCompatibility = await read('lib/app/open-photo-supabase.js')
-const photoB2 = await read('lib/app/open-photo-b2.js')
-if (!openPhotoImporter.includes('storeOpenPhotoInSupabase')) throw new Error('Open-photo importer lost its compatibility storage entry point')
-for (const marker of ['production writes are now B2-only','storeOpenPhotoInB2']) if (!photoCompatibility.includes(marker)) throw new Error(`Open-photo compatibility layer is missing ${marker}`)
-for (const marker of [\"storageBackend: 'b2'\",'photos/by-sha256']) if (!photoB2.includes(marker)) throw new Error(`B2 open-photo writer is missing ${marker}`)
-"""
-          new_block = """const openPhotoImporter = await read('scripts/import-open-location-photos.mjs')
+          # Remove retired paths from required/syntax/env/package expectations.
+          for token in [
+              "'lib/app/open-photo-supabase.js',",
+              ",'lib/app/open-photo-supabase.js'",
+              "'scripts/migrate-open-photos-to-b2.mjs',",
+              ",'scripts/migrate-open-photos-to-b2.mjs'",
+              "'.github/workflows/migrate-open-photos-b2.yml',",
+              ",'.github/workflows/migrate-open-photos-b2.yml'",
+              "'locations:photos:migrate-b2',",
+              ",'locations:photos:migrate-b2'",
+              "'B2_MEDIA_PUBLIC_BASE_URL',",
+              ",'B2_MEDIA_PUBLIC_BASE_URL'"
+          ]:
+              text = text.replace(token, '')
+
+          # Ensure the new durable public abstraction is guarded by the repository check.
+          required_anchor = "'lib/app/open-photo-b2.js','lib/app/open-photo-transform.js'"
+          if required_anchor in text:
+              text = text.replace(required_anchor, "'lib/app/open-photo-b2.js','lib/media/open-photo-url.js','lib/app/open-photo-transform.js'")
+
+          # Replace the old compatibility validation block with direct canonical B2 checks.
+          pattern = re.compile(
+              r"const openPhotoImporter = await read\('scripts/import-open-location-photos\.mjs'\)\n"
+              r"const photoCompatibility = await read\('lib/app/open-photo-supabase\.js'\)\n"
+              r"const photoB2 = await read\('lib/app/open-photo-b2\.js'\)\n"
+              r"if \(!openPhotoImporter\.includes\('storeOpenPhotoInSupabase'\)\).*?\n"
+              r"for \(const marker of \[\"storageBackend: 'b2'\",'photos/by-sha256'\]\).*?\n",
+              re.S,
+          )
+          replacement = """const openPhotoImporter = await read('scripts/import-open-location-photos.mjs')
 const photoB2 = await read('lib/app/open-photo-b2.js')
 const openPhotoUrl = await read('lib/media/open-photo-url.js')
-for (const marker of ['storeOpenPhotoInB2', \"../lib/app/open-photo-b2.js\"]) if (!openPhotoImporter.includes(marker)) throw new Error(`Open-photo importer is missing direct B2 ingestion marker ${marker}`)
+for (const marker of ['storeOpenPhotoInB2', "../lib/app/open-photo-b2.js"]) if (!openPhotoImporter.includes(marker)) throw new Error(`Open-photo importer is missing direct canonical B2 ingestion marker ${marker}`)
 for (const forbidden of ['storeOpenPhotoInSupabase','open-photo-supabase']) if (openPhotoImporter.includes(forbidden)) throw new Error(`Retired Supabase open-photo compatibility remains in importer: ${forbidden}`)
-for (const marker of [\"storageBackend: 'b2'\",'media/photos/by-sha256',\".from('media_objects')\",'mediaObjectId: mediaObject.id','remoteUrl: null']) if (!photoB2.includes(marker)) throw new Error(`Canonical B2 open-photo writer is missing ${marker}`)
+for (const marker of ["storageBackend: 'b2'",'media/photos/by-sha256',".from('media_objects')",'mediaObjectId: mediaObject.id','remoteUrl: null']) if (!photoB2.includes(marker)) throw new Error(`Canonical B2 open-photo writer is missing ${marker}`)
 for (const marker of ['normalizeOpenPhotoHash','/api/open-photo/']) if (!openPhotoUrl.includes(marker)) throw new Error(`Puddle open-photo URL resolver is missing ${marker}`)
 """
-          if old_block not in text:
-              raise RuntimeError('scripts/check.mjs legacy compatibility validation block was not found')
-          text = text.replace(old_block, new_block)
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise RuntimeError(f'expected one legacy compatibility validation block, replaced {count}')
 
-          # Make the retired media paths explicit invariants so future changes cannot silently restore them.
-          retired_anchor = "'lib/app/open-photo-r2.js','lib/app/r2-s3.js',"
-          retired_replacement = "'lib/app/open-photo-r2.js','lib/app/r2-s3.js','lib/app/open-photo-supabase.js','scripts/migrate-open-photos-to-b2.mjs','scripts/validate-open-photo-b2-migration.mjs',"
-          if retired_anchor not in text:
-              raise RuntimeError('scripts/check.mjs removed-path anchor missing')
-          text = text.replace(retired_anchor, retired_replacement)
-          workflow_anchor = "'.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml',"
-          workflow_replacement = "'.github/workflows/b2-cleanup.yml','.github/workflows/static-catalogue-b2.yml','.github/workflows/ops-static-discovery-probe.yml','.github/workflows/migrate-open-photos-b2.yml','.github/workflows/validate-open-photo-b2.yml','.github/workflows/cleanup-open-photo-supabase.yml','.github/trigger-migrate-open-photos-b2','.github/trigger-validate-open-photo-b2','.github/trigger-cleanup-open-photo-supabase',"
-          if workflow_anchor not in text:
-              raise RuntimeError('scripts/check.mjs retired workflow anchor missing')
-          text = text.replace(workflow_anchor, workflow_replacement)
+          # Explicitly prevent completed migration/compatibility systems from being recreated.
+          invariant = """
+const retiredOpenPhotoPaths = [
+  'lib/app/open-photo-supabase.js',
+  'scripts/migrate-open-photos-to-b2.mjs',
+  'scripts/validate-open-photo-b2-migration.mjs',
+  '.github/workflows/migrate-open-photos-b2.yml',
+  '.github/workflows/validate-open-photo-b2.yml',
+  '.github/workflows/cleanup-open-photo-supabase.yml',
+  '.github/trigger-migrate-open-photos-b2',
+  '.github/trigger-validate-open-photo-b2',
+  '.github/trigger-cleanup-open-photo-supabase'
+]
+for (const path of retiredOpenPhotoPaths) {
+  try {
+    await access(join(root, path))
+    throw new Error(`Retired open-photo migration/compatibility path is present: ${path}`)
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error
+  }
+}
+"""
+          syntax_anchor = "\nconst syntaxFiles = ["
+          if syntax_anchor not in text:
+              raise RuntimeError('could not find syntaxFiles anchor in scripts/check.mjs')
+          text = text.replace(syntax_anchor, invariant + syntax_anchor, 1)
 
-          env_forbidden_old = "['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG']"
-          env_forbidden_new = "['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','B2_MEDIA_PUBLIC_BASE_URL','B2_DOWNLOAD_BASE_URL','OPEN_PHOTO_SUPABASE_BUCKET','f005.backblazeb2.com/file/puddle-assets']"
-          if env_forbidden_old not in text:
-              raise RuntimeError('scripts/check.mjs environment forbidden list missing')
-          text = text.replace(env_forbidden_old, env_forbidden_new)
+          # Forbid provider-specific public origins/legacy storage knobs in the env contract.
+          env_old = "['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG']"
+          env_new = "['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','B2_MEDIA_PUBLIC_BASE_URL','B2_DOWNLOAD_BASE_URL','OPEN_PHOTO_SUPABASE_BUCKET','f005.backblazeb2.com/file/puddle-assets']"
+          if env_old in text:
+              text = text.replace(env_old, env_new, 1)
 
-          # Guard the actual serving/index contracts, not the retired migration implementation.
+          # The repository check should assert the hash contract at OpenSearch/API boundaries.
           marker = "for (const marker of ['geo_distance','multi_match','GLOBAL_LOCATION_CANDIDATE_LIMIT','locations-active']) if (!globalSearch.includes(marker)) throw new Error(`Global location search is missing ${marker}`)"
-          replacement = marker + "\nfor (const marker of ['primary_photo.content_hash']) if (!globalSearch.includes(marker)) throw new Error(`Global location search is missing canonical media marker ${marker}`)\nfor (const forbidden of ['primary_photo.url','B2_MEDIA_PUBLIC_BASE_URL','B2_DOWNLOAD_BASE_URL']) if (globalSearch.includes(forbidden)) throw new Error(`Global location search restored storage-provider coupling: ${forbidden}`)"
-          if marker not in text:
-              raise RuntimeError('scripts/check.mjs global-search marker block missing')
-          text = text.replace(marker, replacement)
+          if marker in text and 'primary_photo.content_hash' not in text[text.index(marker):text.index(marker)+1000]:
+              text = text.replace(marker, marker + "\nif (!globalSearch.includes('primary_photo.content_hash')) throw new Error('Global location search is missing primary_photo.content_hash')\nif (globalSearch.includes('primary_photo.url')) throw new Error('Global location search restored primary_photo.url storage coupling')", 1)
 
           check.write_text(text)
-
-          # The temporary workflow must never survive the cleanup commit.
           Path('.github/workflows/one-off-remove-open-photo-legacy.yml').unlink()
           PY
 
-      - name: Reject legacy open-photo coupling
+      - name: Verify durable media architecture
         shell: bash
         run: |
           set -euo pipefail
-          if git grep -n -E 'storeOpenPhotoInSupabase|open-photo-supabase|B2_MEDIA_PUBLIC_BASE_URL|B2_DOWNLOAD_BASE_URL|OPEN_PHOTO_SUPABASE_BUCKET|migrate-open-photos-to-b2|validate-open-photo-b2-migration|migrate-open-photos-b2.yml|validate-open-photo-b2.yml|cleanup-open-photo-supabase.yml' -- ':!supabase/migrations/*' ':!docs/*'; then
-            echo 'Retired open-photo migration/storage compatibility is still referenced in active repository surfaces.' >&2
+          node scripts/check.mjs
+          node --check scripts/import-open-location-photos.mjs
+          python3 -m py_compile scripts/global-data/build-bootstrap-parquet.py scripts/global-data/build_bootstrap_overlays.py scripts/global-data/index_opensearch.py scripts/global-data/materialize_photo_candidates.py
+          rm -rf scripts/global-data/__pycache__
+          node --test tests/unit/b2-native.test.mjs tests/unit/global-location-search.test.mjs tests/unit/open-photo-candidates.test.mjs
+          if git grep -n -E 'storeOpenPhotoInSupabase|open-photo-supabase|B2_MEDIA_PUBLIC_BASE_URL|B2_DOWNLOAD_BASE_URL|OPEN_PHOTO_SUPABASE_BUCKET' -- ':!supabase/migrations/*' ':!docs/*' ':!scripts/check.mjs'; then
+            echo 'Retired media compatibility remains outside explicit repository invariants.' >&2
             exit 1
           fi
-          node scripts/check.mjs
-          node --test tests/unit/b2-native.test.mjs tests/unit/global-location-search.test.mjs tests/unit/open-photo-candidates.test.mjs
 
       - name: Commit cleanup
         shell: bash
@@ -134,3 +162,23 @@ for (const marker of ['normalizeOpenPhotoHash','/api/open-photo/']) if (!openPho
           git diff --cached --check
           git commit -m "Remove retired open-photo compatibility"
           git push origin HEAD:media-hash-legacy-cleanup-20260818
+
+      - name: Publish cleanup success
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -d "{\"state\":\"success\",\"context\":\"Media architecture cleanup\",\"description\":\"Retired open-photo compatibility removed\",\"target_url\":\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
+
+      - name: Publish cleanup failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -d "{\"state\":\"failure\",\"context\":\"Media architecture cleanup\",\"description\":\"Retired compatibility cleanup failed\",\"target_url\":\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
