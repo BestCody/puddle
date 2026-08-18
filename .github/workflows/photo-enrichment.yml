@@ -2,9 +2,12 @@ name: Enrich place photos (legacy manual)
 
 # Transitional relational-catalogue importer. Continuous free-provider quota is
 # owned by the global B2 workers so KartaView/Wikimedia requests are not spent
-# twice. Keep this workflow available for explicit relational repair/backfill.
+# twice. The historical schedule remains as a compatibility trigger, but the job
+# is deliberately skipped unless this workflow is manually dispatched.
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
 
 permissions:
   contents: read
@@ -15,6 +18,8 @@ concurrency:
 
 jobs:
   enrich:
+    # B2_MEDIA_ENABLED no longer enables scheduled legacy imports; global B2 workers own that quota.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
