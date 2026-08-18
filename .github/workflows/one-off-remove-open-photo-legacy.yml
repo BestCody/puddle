@@ -1,3 +1,4 @@
+# Retry after validating production hash/key relationships.
 name: One-off remove open-photo legacy compatibility
 
 on:
@@ -55,7 +56,6 @@ jobs:
           check = Path('scripts/check.mjs')
           text = check.read_text()
 
-          # Remove retired paths from required/syntax/env/package expectations.
           for token in [
               "'lib/app/open-photo-supabase.js',",
               ",'lib/app/open-photo-supabase.js'",
@@ -70,12 +70,10 @@ jobs:
           ]:
               text = text.replace(token, '')
 
-          # Ensure the new durable public abstraction is guarded by the repository check.
           required_anchor = "'lib/app/open-photo-b2.js','lib/app/open-photo-transform.js'"
           if required_anchor in text:
               text = text.replace(required_anchor, "'lib/app/open-photo-b2.js','lib/media/open-photo-url.js','lib/app/open-photo-transform.js'")
 
-          # Replace the old compatibility validation block with direct canonical B2 checks.
           pattern = re.compile(
               r"const openPhotoImporter = await read\('scripts/import-open-location-photos\.mjs'\)\n"
               r"const photoCompatibility = await read\('lib/app/open-photo-supabase\.js'\)\n"
@@ -96,7 +94,6 @@ for (const marker of ['normalizeOpenPhotoHash','/api/open-photo/']) if (!openPho
           if count != 1:
               raise RuntimeError(f'expected one legacy compatibility validation block, replaced {count}')
 
-          # Explicitly prevent completed migration/compatibility systems from being recreated.
           invariant = """
 const retiredOpenPhotoPaths = [
   'lib/app/open-photo-supabase.js',
@@ -123,13 +120,11 @@ for (const path of retiredOpenPhotoPaths) {
               raise RuntimeError('could not find syntaxFiles anchor in scripts/check.mjs')
           text = text.replace(syntax_anchor, invariant + syntax_anchor, 1)
 
-          # Forbid provider-specific public origins/legacy storage knobs in the env contract.
           env_old = "['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG']"
           env_new = "['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','B2_MEDIA_PUBLIC_BASE_URL','B2_DOWNLOAD_BASE_URL','OPEN_PHOTO_SUPABASE_BUCKET','f005.backblazeb2.com/file/puddle-assets']"
           if env_old in text:
               text = text.replace(env_old, env_new, 1)
 
-          # The repository check should assert the hash contract at OpenSearch/API boundaries.
           marker = "for (const marker of ['geo_distance','multi_match','GLOBAL_LOCATION_CANDIDATE_LIMIT','locations-active']) if (!globalSearch.includes(marker)) throw new Error(`Global location search is missing ${marker}`)"
           if marker in text and 'primary_photo.content_hash' not in text[text.index(marker):text.index(marker)+1000]:
               text = text.replace(marker, marker + "\nif (!globalSearch.includes('primary_photo.content_hash')) throw new Error('Global location search is missing primary_photo.content_hash')\nif (globalSearch.includes('primary_photo.url')) throw new Error('Global location search restored primary_photo.url storage coupling')", 1)
