@@ -5,6 +5,10 @@ on:
   push:
     paths:
       - '.github/trigger-cleanup-open-photo-supabase'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/trigger-cleanup-open-photo-supabase'
 
 permissions:
   contents: read
@@ -15,6 +19,9 @@ concurrency:
 
 jobs:
   cleanup:
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.actor == 'BestCody' && github.head_ref == 'ops/production-open-photo-cleanup-20260817')
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
