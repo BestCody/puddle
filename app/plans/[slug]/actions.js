@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage } from '@/lib/auth/redirect'
+import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function value(formData, key, max = 1000) {
   return String(formData.get(key) || '').trim().slice(0, max)
@@ -11,11 +13,20 @@ function value(formData, key, max = 1000) {
 
 function destination(formData) {
   const slug = value(formData, 'slug', 180)
-  return slug ? `/plans/${encodeURIComponent(slug)}` : '/plans'
+  return slug ? `/places/${encodeURIComponent(slug)}` : '/plans'
 }
 
 function finish(formData, message, type = 'success') {
   redirect(pathWithMessage(destination(formData), type, message))
+}
+
+async function ensureLocation(formData, locationId) {
+  if (!locationId) finish(formData, 'That place is unavailable.', 'error')
+  try {
+    await ensureGlobalLocationReferences(createAdminClient(), [locationId])
+  } catch {
+    finish(formData, 'That place is no longer available in the canonical catalogue.', 'error')
+  }
 }
 
 async function savedState(session, locationId) {
@@ -32,14 +43,12 @@ async function savedState(session, locationId) {
 export async function toggleSavedPlace(formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = value(formData, 'location_id', 80)
+  await ensureLocation(formData, locationId)
   const existing = await savedState(session, locationId)
-  if (!locationId) finish(formData, 'That place is unavailable.', 'error')
-
   const result = existing
     ? await session.supabase.from('user_content_states').delete().eq('profile_id', session.user.id).eq('location_id', locationId).eq('state', 'saved')
     : await session.supabase.from('user_content_states').insert({ profile_id: session.user.id, location_id: locationId, state: 'saved' })
   if (result.error) finish(formData, 'We could not update your saved places.', 'error')
-
   revalidatePath('/plans')
   revalidatePath('/map')
   revalidatePath('/profile')
@@ -49,14 +58,13 @@ export async function toggleSavedPlace(formData) {
 export async function togglePinnedPlace(formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = value(formData, 'location_id', 80)
-  if (!locationId) finish(formData, 'That place is unavailable.', 'error')
+  await ensureLocation(formData, locationId)
   const existing = await savedState(session, locationId)
   const pinnedAt = existing?.pinned_at ? null : new Date().toISOString()
   const result = existing
     ? await session.supabase.from('user_content_states').update({ pinned_at: pinnedAt }).eq('profile_id', session.user.id).eq('location_id', locationId).eq('state', 'saved')
     : await session.supabase.from('user_content_states').insert({ profile_id: session.user.id, location_id: locationId, state: 'saved', pinned_at: pinnedAt })
   if (result.error) finish(formData, 'We could not update that pin.', 'error')
-
   revalidatePath('/plans')
   revalidatePath('/profile')
   finish(formData, pinnedAt ? 'Pinned to the top of Saved.' : 'Unpinned.')
@@ -71,7 +79,7 @@ export async function planPlaceVisit(formData) {
   if (!locationId || !plannedForInput || Number.isNaN(plannedFor.getTime()) || plannedFor.getTime() <= Date.now()) {
     finish(formData, 'Choose a future date and time.', 'error')
   }
-
+  await ensureLocation(formData, locationId)
   const { error } = await session.supabase.from('location_visits').upsert({
     profile_id: session.user.id,
     location_id: locationId,
@@ -82,7 +90,6 @@ export async function planPlaceVisit(formData) {
     updated_at: new Date().toISOString()
   }, { onConflict: 'profile_id,location_id' })
   if (error) finish(formData, 'We could not plan that visit.', 'error')
-
   revalidatePath('/plans')
   revalidatePath('/map')
   finish(formData, 'Visit added to Plans.')
@@ -93,6 +100,7 @@ export async function shareSavedPlace(formData) {
   const locationId = value(formData, 'location_id', 80)
   const friendId = value(formData, 'friend_id', 80)
   if (!locationId || !friendId) finish(formData, 'Choose a friend to share with.', 'error')
+  await ensureLocation(formData, locationId)
   const { error } = await session.supabase.rpc('share_content_v1', {
     target_kind: 'place',
     target_id: locationId,
@@ -110,16 +118,14 @@ export async function upsertPlaceReview(formData) {
   const locationId = value(formData, 'location_id', 80)
   const rating = Number(value(formData, 'rating', 1))
   const body = value(formData, 'body', 2000)
-  if (!locationId) finish(formData, 'That place is unavailable.', 'error')
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) finish(formData, 'Choose a rating from 1 to 5.', 'error')
-
+  await ensureLocation(formData, locationId)
   const { error } = await session.supabase.rpc('upsert_location_review_v1', {
     target_location: locationId,
     review_rating: rating,
     review_body: body
   })
   if (error) finish(formData, 'We could not save your review.', 'error')
-
   revalidatePath(destination(formData))
   finish(formData, 'Your review was saved.')
 }
@@ -127,11 +133,9 @@ export async function upsertPlaceReview(formData) {
 export async function deletePlaceReview(formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = value(formData, 'location_id', 80)
-  if (!locationId) finish(formData, 'That place is unavailable.', 'error')
-
+  await ensureLocation(formData, locationId)
   const { data, error } = await session.supabase.rpc('delete_location_review_v1', { target_location: locationId })
   if (error || !data) finish(formData, 'We could not remove your review.', 'error')
-
   revalidatePath(destination(formData))
   finish(formData, 'Your review was removed.')
 }
