@@ -5,7 +5,7 @@ on:
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -51,8 +51,8 @@ jobs:
           test ! -e scripts/migrate-open-photos-to-b2.mjs
           test ! -e scripts/validate-open-photo-b2-migration.mjs
           test ! -e scripts/one-off-finalize-media-architecture.py
-          if git grep -n -E 'storeOpenPhotoInSupabase|B2_MEDIA_PUBLIC_BASE_URL|B2_DOWNLOAD_BASE_URL|OPEN_PHOTO_SUPABASE_BUCKET' -- ':!supabase/migrations/*' ':!docs/*' ':!scripts/check.mjs'; then
-            echo 'Retired media coupling remains in active code.' >&2
+          if git grep -n -E 'storeOpenPhotoInSupabase|open-photo-supabase|OPEN_PHOTO_SUPABASE_BUCKET' -- ':!supabase/migrations/*' ':!docs/*' ':!scripts/check.mjs'; then
+            echo 'Retired open-photo compatibility remains in active code.' >&2
             exit 1
           fi
       - name: Commit and push verified cleanup
