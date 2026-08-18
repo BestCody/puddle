@@ -27,14 +27,63 @@ export function normalizeOpenSearchRuntimeEnv(env = process.env) {
   }
 }
 
-export function register() {
-  const openSearch = normalizeOpenSearchRuntimeEnv()
+export async function hydrateOpenSearchRuntimeAuthFromVault(env = process.env, { fetchFn = fetch } = {}) {
+  const current = normalizeOpenSearchRuntimeEnv(env)
+  if (current.authMode === 'basic' || current.authMode === 'bearer') {
+    return { loaded: false, source: 'environment' }
+  }
+
+  const supabaseUrl = String(env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/$/, '')
+  const serviceKey = String(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+  if (!supabaseUrl || !serviceKey) return { loaded: false, source: 'none' }
+
+  const response = await fetchFn(`${supabaseUrl}/rest/v1/rpc/get_opensearch_runtime_auth`, {
+    method: 'POST',
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: '{}',
+    cache: 'no-store',
+    redirect: 'error',
+    signal: AbortSignal.timeout(5000)
+  })
+  if (!response.ok) throw new Error(`OpenSearch Vault credential lookup returned HTTP ${response.status}.`)
+
+  const payload = await response.json()
+  const username = String(payload?.username || '').trim()
+  const password = String(payload?.password || '')
+  if (!username || !password) throw new Error('OpenSearch Vault credential is unavailable.')
+
+  env.OPENSEARCH_USERNAME = username
+  env.OPENSEARCH_PASSWORD = password
+  return { loaded: true, source: 'supabase-vault' }
+}
+
+export async function register() {
+  let authSource = 'environment'
+  let openSearch = normalizeOpenSearchRuntimeEnv()
+
+  if (process.env.NEXT_RUNTIME !== 'edge' && openSearch.endpointConfigured && !['basic', 'bearer'].includes(openSearch.authMode)) {
+    try {
+      const hydrated = await hydrateOpenSearchRuntimeAuthFromVault()
+      authSource = hydrated.source
+      openSearch = normalizeOpenSearchRuntimeEnv()
+    } catch (error) {
+      authSource = 'vault-error'
+      console.error(`[puddle_observability] OpenSearch runtime auth hydration failed: ${error?.message || 'unknown error'}`)
+    }
+  }
+
   console.info('[puddle_observability]', JSON.stringify({
     event: 'puddle_observability_boot',
     service: 'vercel',
     region: process.env.VERCEL_REGION || 'local',
     opensearch_endpoint_configured: openSearch.endpointConfigured,
     opensearch_auth_mode: openSearch.authMode,
+    opensearch_auth_source: authSource,
     opensearch_username_configured: openSearch.usernameConfigured,
     opensearch_password_configured: openSearch.passwordConfigured
   }))
