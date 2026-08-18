@@ -33,7 +33,7 @@ test('latest Figma glyph assets keep transparent canvases', async () => {
   assert.match(css, /\.safety-heart\s*\{[^}]*width:\s*97px;[^}]*height:\s*97px;/s)
 })
 
-test('current desktop Figma uses a row-constrained CSS Grid sticky split and a normal-flow right-column feature stack', async () => {
+test('current desktop Figma uses a fluid row-constrained Grid, sticky split, and normal-flow feature stack', async () => {
   const [css, html, app] = await Promise.all([
     read('public/landing.css'),
     read('public/landing.html'),
@@ -50,12 +50,15 @@ test('current desktop Figma uses a row-constrained CSS Grid sticky split and a n
   assert.doesNotMatch(html, /feature-card--d-profile/)
   assert.match(html, /class="hero-phone-composite hero-phone-composite--desktop"/)
 
-  assert.match(css, /\.landing-stage--desktop\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:/s)
+  assert.match(css, /\.landing-stage\s*\{[^}]*width:\s*min\(100%,1440px\);[^}]*margin-inline:\s*auto;/s)
+  assert.match(css, /\.landing-stage--desktop\s*\{[^}]*--landing-section-gap:\s*clamp\([^;]+\);[^}]*display:\s*grid;[^}]*grid-template-columns:/s)
   assert.match(css, /\.landing-sticky-left\s*\{[^}]*position:\s*relative;[^}]*align-self:\s*stretch;/s)
   assert.match(css, /\.landing-sticky-left__canvas\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;[^}]*height:\s*100vh;/s)
   assert.match(css, /\.landing-canvas\s*\{[^}]*position:\s*relative!important;[^}]*height:\s*auto!important;[^}]*transform:\s*none!important;/s)
   assert.match(css, /\.landing-canvas--desktop\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s)
-  assert.match(css, /\.feature-card\s*\{[^}]*position:\s*relative;[^}]*margin:\s*0 auto 60px;/s)
+  assert.match(css, /\.feature-card\s*\{[^}]*position:\s*relative;[^}]*aspect-ratio:\s*550\/896;[^}]*margin:\s*0 auto var\(--landing-section-gap\);/s)
+  assert.match(css, /\.feature-phone\s*\{[^}]*aspect-ratio:\s*393\/852;/s)
+  assert.match(css, /\.site-footer--desktop\s*\{[^}]*width:\s*100vw;[^}]*min-height:\s*clamp\(/s)
   assert.match(css, /\.feature-card--d-profile,\.profile-backdrop--desktop\s*\{\s*display:\s*none\s*\}/)
   assert.doesNotMatch(css, /\.feature-card--d-swipe\s*\{[^}]*left:/s, 'Swipe page placement must not use a Figma x coordinate')
   assert.doesNotMatch(css, /\.feature-card--d-save\s*\{[^}]*top:/s, 'Save page placement must not use a Figma y coordinate')

@@ -31,7 +31,11 @@ const baseUrl = `http://127.0.0.1:${server.address().port}/`
 const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage()
 const cases = [
+  { width: 2560, height: 1440, mode: 'desktop' },
   { width: 1920, height: 1080, mode: 'desktop' },
+  { width: 1648, height: 928, mode: 'desktop' },
+  { width: 1600, height: 900, mode: 'desktop' },
+  { width: 1536, height: 864, mode: 'desktop' },
   { width: 1440, height: 900, mode: 'desktop' },
   { width: 1366, height: 768, mode: 'desktop' },
   { width: 1280, height: 600, mode: 'desktop' },
@@ -95,11 +99,11 @@ try {
       }
     })
 
-    const targetWidth = Math.min(testCase.width, testCase.mode === 'desktop' ? 1281 : 704)
+    const targetWidth = Math.min(testCase.width, testCase.mode === 'desktop' ? 1440 : 704)
     assert(Math.abs(metrics.stageWidth - targetWidth) < 1.1, `${testCase.mode} stage width ${metrics.stageWidth} does not match fluid max-width ${targetWidth}`)
     assert(Math.abs(metrics.left - metrics.right) < 1.1, `${testCase.mode} stage is not centered at ${testCase.width}x${testCase.height}`)
     assert(metrics.scrollWidth <= metrics.viewportWidth, `${testCase.mode} page horizontally overflows at ${testCase.width}x${testCase.height}`)
-    assert(metrics.canvasTransform === 'none', `${testCase.mode} canvas still uses transform scaling at ${testCase.width}x${testCase.height}`)
+    assert(metrics.canvasTransform === 'none', `${testCase.mode} canvas still uses global transform sizing at ${testCase.width}x${testCase.height}`)
     assert(metrics.canvasPosition !== 'absolute', `${testCase.mode} canvas is still absolutely positioned at ${testCase.width}x${testCase.height}`)
     assert(metrics.canvasHeight > testCase.height, `${testCase.mode} canvas does not grow naturally with document content`)
 
@@ -112,14 +116,14 @@ try {
       assert(Math.abs(metrics.sticky.left - metrics.leftCell.left) < 1.1, 'sticky sign-in canvas is not aligned to its grid cell')
       assert(Math.abs(metrics.canvasWidth + metrics.leftCell.width - metrics.stageWidth) < 2, 'desktop columns do not fill the landing stage')
       const ratio = metrics.leftCell.width / metrics.stageWidth
-      assert(ratio >= .45 && ratio <= .55, `desktop split ratio ${ratio} drifted too far from the Figma composition`)
+      assert(ratio >= .43 && ratio <= .55, `desktop split ratio ${ratio} drifted too far from the Figma composition`)
     } else {
       assert(metrics.stageDisplay === 'block', 'mobile landing is not a single-column composition')
       assert(!metrics.leftCell || metrics.leftCell.width === 0 || !(await page.locator('.landing-sticky-left').isVisible()), 'desktop left pane leaked into mobile layout')
       assert(Math.abs(metrics.canvasWidth - metrics.stageWidth) < 1.1, 'mobile canvas is not fluid with its stage')
     }
   }
-  console.log('Responsive Figma landing passed: centered max-width stage, row-constrained sticky desktop split, normal-flow content, mobile single column, and no whole-canvas scaling.')
+  console.log('Responsive Figma landing passed: 1440px canonical desktop composition, compact desktop continuity, mobile single column, normal-flow content, and no whole-canvas sizing transform.')
 } finally {
   await page.close()
   await browser.close()
