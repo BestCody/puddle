@@ -121,15 +121,15 @@ try {
   assert(await page.locator('.trust-heading--desktop img').getAttribute('src') === '/figma/assets/lock.svg', 'desktop Lock must use Figma SVG')
   assert(await page.locator('.safety-panel--desktop .safety-heart').getAttribute('src') === '/figma/assets/heart.svg', 'desktop Heart must use Figma SVG')
 
-  const stickyBefore = await page.locator('.landing-sticky-left').boundingBox()
+  const stickyBefore = await page.locator('.landing-sticky-left__canvas').boundingBox()
   const loginBefore = await page.locator('.landing-sticky-left .login-panel').boundingBox()
   const swipeBefore = await page.locator('.feature-card--d-swipe').boundingBox()
   await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; window.scrollTo(0, 1000) })
   await page.waitForFunction(() => Math.abs(window.scrollY - 1000) < 3)
-  const stickyAfter = await page.locator('.landing-sticky-left').boundingBox()
+  const stickyAfter = await page.locator('.landing-sticky-left__canvas').boundingBox()
   const loginAfter = await page.locator('.landing-sticky-left .login-panel').boundingBox()
   const swipeAfter = await page.locator('.feature-card--d-swipe').boundingBox()
-  assert(stickyBefore && stickyAfter && Math.abs(stickyAfter.y - stickyBefore.y) < 2, 'CSS sticky left column moved during right-content scroll')
+  assert(stickyBefore && stickyAfter && Math.abs(stickyAfter.y - stickyBefore.y) < 2, 'CSS sticky sign-in canvas moved during right-content scroll')
   assert(loginBefore && loginAfter && Math.abs(loginAfter.y - loginBefore.y) < 2, 'left login content moved during right-content scroll')
   assert(swipeBefore && swipeAfter && swipeAfter.y < swipeBefore.y - 900, 'right content did not scroll independently of the sticky left column')
 
@@ -137,12 +137,12 @@ try {
   await footer.scrollIntoViewIfNeeded()
   assert(await footer.isVisible(), 'desktop full-width footer is not visible')
   const overlap = await page.evaluate(() => {
-    const sticky = document.querySelector('.landing-sticky-left')?.getBoundingClientRect()
+    const sticky = document.querySelector('.landing-sticky-left__canvas')?.getBoundingClientRect()
     const footer = document.querySelector('#footer-d')?.getBoundingClientRect()
     if (!sticky || !footer) return Infinity
     return Math.max(0, Math.min(sticky.bottom, footer.bottom) - Math.max(sticky.top, footer.top))
   })
-  assert(overlap === 0, `sticky sign-in column overlaps full-width footer by ${overlap}px`)
+  assert(overlap === 0, `sticky sign-in canvas overlaps full-width footer by ${overlap}px`)
   for (const label of ['Explore', 'Company', 'Connect']) assert(await footer.getByRole('heading', { name: label, exact: true }).isVisible(), `${label} footer column is not visible`)
 
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'desktop page horizontally overflows')
@@ -191,7 +191,7 @@ try {
   await page.screenshot({ path: join(artifacts, 'mobile-real-dom.png'), fullPage: true })
 
   assert(errors.length === 0, `browser errors detected:\n${errors.join('\n')}`)
-  console.log('Figma landing passed: semantic desktop split, normal-flow sections, mobile composition, interactive phones, safety controls, and zero global canvas scaling.')
+  console.log('Figma landing passed: semantic desktop split, row-constrained sticky sign-in, normal-flow sections, mobile composition, interactive phones, and zero global canvas scaling.')
 } finally {
   await browser.close()
   await new Promise((resolveClosing) => server.close(resolveClosing))
