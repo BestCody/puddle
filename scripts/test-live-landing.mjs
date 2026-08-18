@@ -20,10 +20,12 @@ async function assertResponsiveFlow(page, width, height, mode) {
 
   const metrics = await page.locator(stageSelector).evaluate((stage) => {
     const canvas = stage.querySelector('.landing-canvas')
-    const sticky = document.querySelector('.landing-sticky-left')
+    const leftCell = document.querySelector('.landing-sticky-left')
+    const stickyCanvas = document.querySelector('.landing-sticky-left__canvas')
     const stageRect = stage.getBoundingClientRect()
     const canvasRect = canvas.getBoundingClientRect()
-    const stickyRect = sticky?.getBoundingClientRect() || null
+    const leftRect = leftCell?.getBoundingClientRect() || null
+    const stickyRect = stickyCanvas?.getBoundingClientRect() || null
     return {
       viewportWidth: document.documentElement.clientWidth,
       stageWidth: stageRect.width,
@@ -35,11 +37,17 @@ async function assertResponsiveFlow(page, width, height, mode) {
       stageDisplay: getComputedStyle(stage).display,
       canvasTransform: getComputedStyle(canvas).transform,
       canvasPosition: getComputedStyle(canvas).position,
+      leftCell: leftRect ? {
+        left: leftRect.left,
+        width: leftRect.width,
+        display: getComputedStyle(leftCell).display,
+        position: getComputedStyle(leftCell).position
+      } : null,
       sticky: stickyRect ? {
         left: stickyRect.left,
         width: stickyRect.width,
-        display: getComputedStyle(sticky).display,
-        position: getComputedStyle(sticky).position
+        display: getComputedStyle(stickyCanvas).display,
+        position: getComputedStyle(stickyCanvas).position
       } : null
     }
   })
@@ -54,13 +62,15 @@ async function assertResponsiveFlow(page, width, height, mode) {
 
   if (mode === 'desktop') {
     assert(metrics.stageDisplay === 'grid', 'production desktop landing is not CSS Grid')
-    assert(metrics.sticky?.display !== 'none', 'production sticky left pane is hidden')
-    assert(metrics.sticky?.position === 'sticky', `production left pane uses ${metrics.sticky?.position} instead of sticky`)
-    assert(Math.abs(metrics.sticky.left - metrics.left) < 1.1, 'production sticky pane is not aligned to the Figma stage')
-    assert(Math.abs(metrics.canvasWidth + metrics.sticky.width - metrics.stageWidth) < 2, 'production desktop columns do not fill the stage')
+    assert(metrics.leftCell?.display !== 'none', 'production left grid cell is hidden')
+    assert(metrics.leftCell?.position === 'relative', `production left grid cell uses ${metrics.leftCell?.position} instead of relative flow`)
+    assert(metrics.sticky?.position === 'sticky', `production sign-in canvas uses ${metrics.sticky?.position} instead of sticky`)
+    assert(Math.abs(metrics.leftCell.left - metrics.left) < 1.1, 'production left grid cell is not aligned to the Figma stage')
+    assert(Math.abs(metrics.sticky.left - metrics.leftCell.left) < 1.1, 'production sticky canvas is not aligned to its grid cell')
+    assert(Math.abs(metrics.canvasWidth + metrics.leftCell.width - metrics.stageWidth) < 2, 'production desktop columns do not fill the stage')
   } else {
     assert(metrics.stageDisplay === 'block', 'production mobile landing is not single-column')
-    assert(!metrics.sticky || metrics.sticky.display === 'none', 'desktop sticky pane leaked into production mobile')
+    assert(!(await page.locator('.landing-sticky-left').isVisible()), 'desktop left pane leaked into production mobile')
   }
 }
 
@@ -100,24 +110,24 @@ async function runLiveChecks() {
       previousBottom = item.bottom
     }
 
-    const stickyBefore = await page.locator('.landing-sticky-left').boundingBox()
+    const stickyBefore = await page.locator('.landing-sticky-left__canvas').boundingBox()
     const swipeBefore = await page.locator('.feature-card--d-swipe').boundingBox()
     await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; window.scrollTo(0, 1000) })
     await page.waitForFunction(() => Math.abs(window.scrollY - 1000) < 3)
-    const stickyAfter = await page.locator('.landing-sticky-left').boundingBox()
+    const stickyAfter = await page.locator('.landing-sticky-left__canvas').boundingBox()
     const swipeAfter = await page.locator('.feature-card--d-swipe').boundingBox()
-    assert(stickyBefore && stickyAfter && Math.abs(stickyAfter.y - stickyBefore.y) < 2, 'production left pane moves while scrolling')
+    assert(stickyBefore && stickyAfter && Math.abs(stickyAfter.y - stickyBefore.y) < 2, 'production sign-in canvas moves while scrolling')
     assert(swipeBefore && swipeAfter && swipeAfter.y < swipeBefore.y - 900, 'production right column does not scroll independently')
 
     const footer = page.locator('#footer-d')
     await footer.scrollIntoViewIfNeeded()
     const overlap = await page.evaluate(() => {
-      const sticky = document.querySelector('.landing-sticky-left')?.getBoundingClientRect()
+      const sticky = document.querySelector('.landing-sticky-left__canvas')?.getBoundingClientRect()
       const footer = document.querySelector('#footer-d')?.getBoundingClientRect()
       if (!sticky || !footer) return Infinity
       return Math.max(0, Math.min(sticky.bottom, footer.bottom) - Math.max(sticky.top, footer.top))
     })
-    assert(overlap === 0, `production sticky sign-in column overlaps footer by ${overlap}px`)
+    assert(overlap === 0, `production sticky sign-in canvas overlaps footer by ${overlap}px`)
 
     const phone = await page.locator('.feature-card--d-swipe .feature-phone-demo').boundingBox()
     assert(phone && phone.width > 250 && phone.height > 500, 'production interactive Swipe phone has no usable viewport')
@@ -136,7 +146,7 @@ async function runLiveChecks() {
     assert(await page.locator('.feature-card--m-swipe .interactive-pill').isVisible(), 'production mobile Interactive pill is missing')
 
     for (const [width, height] of [[760,900],[704,900],[430,932],[390,844],[320,700]]) await assertResponsiveFlow(page, width, height, 'mobile')
-    console.log('Live Figma frontend passed: semantic desktop split, normal-flow sections, interactive phones, mobile composition, footer handoff, and no whole-canvas scaling.')
+    console.log('Live Figma frontend passed: semantic row-constrained sticky split, normal-flow sections, interactive phones, mobile composition, footer handoff, and no whole-canvas scaling.')
   } finally { await page.close() }
 }
 
