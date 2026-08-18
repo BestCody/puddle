@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { searchGlobalLocationsInViewport } from '@/lib/app/global-location-search'
+import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overlay'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createClient } from '@/lib/supabase/server'
@@ -28,7 +29,7 @@ async function requireUser(traceId) {
     failed: !user
   })
   if (!user) return { error: NextResponse.json({ error: 'Sign in to browse map locations.' }, { status: 401 }) }
-  return { user }
+  return { user, supabase }
 }
 
 function finiteParam(params, name) {
@@ -92,16 +93,17 @@ export async function GET(request) {
     }
     const searchStarted = latencyStart()
     const result = await searchGlobalLocationsInViewport(viewport, { traceId })
+    const candidates = await filterModeratedLocationRows(auth.supabase, result.candidates)
     const searchDuration = elapsedMs(searchStarted)
     recordSloObservation('openSearch', searchDuration, !result.timedOut, {
       trace_id: traceId,
       service: 'opensearch',
       search_took_ms: Math.max(0, Number(result.tookMs) || 0),
-      candidate_count: result.candidates.length,
+      candidate_count: candidates.length,
       timed_out: Boolean(result.timedOut)
     })
 
-    const points = result.candidates.map(mapPoint).filter(Boolean)
+    const points = candidates.map(mapPoint).filter(Boolean)
     const totalMs = elapsedMs(requestStarted)
     recordSloObservation('mapViewport', totalMs, true, {
       trace_id: traceId,
