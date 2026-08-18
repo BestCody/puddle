@@ -17,6 +17,17 @@ function sha256(body) {
   return createHash('sha256').update(body).digest('hex')
 }
 
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds))
+}
+
+function isTransientDownloadError(error) {
+  const status = Number(error?.status || error?.statusCode || 0)
+  if ([408, 425, 429, 500, 502, 503, 504].includes(status)) return true
+  const message = String(error?.message || error || '').toLowerCase()
+  return /bad gateway|gateway timeout|fetch failed|network|timeout|temporar/.test(message)
+}
+
 async function loadRows(admin) {
   const rows = []
   const pageSize = 1000
@@ -38,18 +49,30 @@ async function loadRows(admin) {
 }
 
 async function downloadLegacy(storage, row) {
-  const result = await storage.download(row.storage_key)
-  if (result.error) throw result.error
-  const body = Buffer.from(await result.data.arrayBuffer())
-  if (!body.length) throw new Error('Legacy Supabase object is empty.')
-  const hash = sha256(body)
-  if (row.content_hash && String(row.content_hash).toLowerCase() !== hash) {
-    throw new Error(`SHA256 mismatch for ${row.storage_key}.`)
+  let lastError = null
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const result = await storage.download(row.storage_key)
+      if (result.error) throw result.error
+      const body = Buffer.from(await result.data.arrayBuffer())
+      if (!body.length) throw new Error('Legacy Supabase object is empty.')
+      const hash = sha256(body)
+      if (row.content_hash && String(row.content_hash).toLowerCase() !== hash) {
+        throw new Error(`SHA256 mismatch for ${row.storage_key}.`)
+      }
+      if (row.byte_size && Number(row.byte_size) !== body.length) {
+        throw new Error(`Byte-size mismatch for ${row.storage_key}: metadata=${row.byte_size}, downloaded=${body.length}.`)
+      }
+      return { body, hash }
+    } catch (error) {
+      lastError = error
+      if (!isTransientDownloadError(error) || attempt === 4) throw error
+      const delay = Math.min(8_000, 500 * (2 ** attempt))
+      console.warn(`transient Supabase download failure for ${row.id}; retrying in ${delay}ms: ${error.message}`)
+      await sleep(delay)
+    }
   }
-  if (row.byte_size && Number(row.byte_size) !== body.length) {
-    throw new Error(`Byte-size mismatch for ${row.storage_key}: metadata=${row.byte_size}, downloaded=${body.length}.`)
-  }
-  return { body, hash }
+  throw lastError
 }
 
 function verifyRegisteredMediaObject(actual, expected) {
