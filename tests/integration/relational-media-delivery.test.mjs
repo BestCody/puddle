@@ -60,15 +60,17 @@ test('storage-neutral open-photo transform produces immutable JPEG identity meta
   assert.ok(transformed.height > 0)
 })
 
-test('global media delivery accepts transition B2 origin and keeps Google photo bytes transient', async () => {
+test('global media delivery keeps private B2 behind same-origin open-photo URLs and Google photo bytes transient', async () => {
   const nextConfig = await read('next.config.mjs')
+  const deliveryUrl = await read('lib/media/open-photo-url.js')
+  const openPhotoRoute = await read('app/api/open-photo/[sha256]/route.js')
   const photoHelper = await read('lib/app/google-place-photo-proxy.js')
   const googleRoute = await read('app/api/location-google-photo/[id]/route.js')
   const globalDoc = await read('scripts/global-data/index_opensearch.py')
 
-  assert.match(nextConfig, /B2_MEDIA_PUBLIC_BASE_URL/)
-  assert.match(nextConfig, /B2_DOWNLOAD_BASE_URL/)
-  assert.match(nextConfig, /media\.puddle\.app/)
+  assert.doesNotMatch(nextConfig, /B2_MEDIA_PUBLIC_BASE_URL|B2_DOWNLOAD_BASE_URL|media\.puddle\.app/)
+  assert.match(deliveryUrl, /\/api\/open-photo\//)
+  assert.match(openPhotoRoute, /getB2DownloadAuthorization|downloadUrl/)
   assert.match(globalDoc, /primary_photo/)
   assert.match(globalDoc, /DATA_PREFIX/)
   assert.match(googleRoute, /Cache-Control': 'private, no-store/)
