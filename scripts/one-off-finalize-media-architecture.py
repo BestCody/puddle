@@ -122,6 +122,8 @@ if search_marker in source and "globalSearch.includes('primary_photo.content_has
         + "\nif (globalSearch.includes('primary_photo.url')) throw new Error('Global location search restored primary_photo.url storage coupling')",
         1,
     )
+# Keep the generated durable diff clean for git diff --check.
+source = '\n'.join(line.rstrip() for line in source.splitlines()) + '\n'
 check.write_text(source)
 
 # Update integration tests so they validate the canonical direct-B2 path rather than
