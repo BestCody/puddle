@@ -33,7 +33,7 @@ test('latest Figma glyph assets keep transparent canvases', async () => {
   assert.match(css, /\.safety-heart\s*\{[^}]*width:\s*97px;[^}]*height:\s*97px;/s)
 })
 
-test('current desktop Figma uses a CSS Grid sticky split and a normal-flow right-column feature stack', async () => {
+test('current desktop Figma uses a row-constrained CSS Grid sticky split and a normal-flow right-column feature stack', async () => {
   const [css, html, app] = await Promise.all([
     read('public/landing.css'),
     read('public/landing.html'),
@@ -42,6 +42,7 @@ test('current desktop Figma uses a CSS Grid sticky split and a normal-flow right
 
   assert.match(html, /data-figma-node="83:76"/)
   assert.match(html, /class="landing-sticky-left"/)
+  assert.match(html, /class="landing-sticky-left__canvas"/)
   assert.match(html, /class="landing-canvas landing-canvas--desktop"/)
   assert.match(html, /feature-card--d-swipe/)
   assert.match(html, /feature-card--d-save/)
@@ -50,7 +51,8 @@ test('current desktop Figma uses a CSS Grid sticky split and a normal-flow right
   assert.match(html, /class="hero-phone-composite hero-phone-composite--desktop"/)
 
   assert.match(css, /\.landing-stage--desktop\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:/s)
-  assert.match(css, /\.landing-sticky-left\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;/s)
+  assert.match(css, /\.landing-sticky-left\s*\{[^}]*position:\s*relative;[^}]*align-self:\s*stretch;/s)
+  assert.match(css, /\.landing-sticky-left__canvas\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;[^}]*height:\s*100vh;/s)
   assert.match(css, /\.landing-canvas\s*\{[^}]*position:\s*relative!important;[^}]*height:\s*auto!important;[^}]*transform:\s*none!important;/s)
   assert.match(css, /\.landing-canvas--desktop\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s)
   assert.match(css, /\.feature-card\s*\{[^}]*position:\s*relative;[^}]*margin:\s*0 auto 60px;/s)
