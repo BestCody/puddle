@@ -11,37 +11,22 @@ test('global discovery failures never fail over to Supabase/Postgres', async () 
     read('.env.example')
   ])
 
-  for (const forbiddenFlag of [
+  for (const forbidden of [
     'GLOBAL_LOCATION_FALLBACK_TO_SUPABASE',
     'GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK',
-    'GLOBAL_LOCATION_RELATIONAL_FALLBACK_MIN_INTERVAL_MS'
+    'GLOBAL_LOCATION_RELATIONAL_FALLBACK_MIN_INTERVAL_MS',
+    'getRelationalDiscoveryFeed',
+    'discovery-relational'
   ]) {
-    assert.doesNotMatch(discoverySource, new RegExp(forbiddenFlag))
-    assert.doesNotMatch(publicLocationSource, new RegExp(forbiddenFlag))
-    assert.doesNotMatch(envExample, new RegExp(forbiddenFlag))
+    assert.doesNotMatch(discoverySource, new RegExp(forbidden))
   }
 
-  // Relational discovery remains legal only when the global serving flag is deliberately off.
-  assert.match(
-    discoverySource,
-    /return String\(env\.GLOBAL_LOCATION_SEARCH_ENABLED \|\| ''\)\.toLowerCase\(\) === 'true'/
-  )
-  assert.doesNotMatch(discoverySource, /isGlobalLocationSearchConfigured/)
-  assert.match(
-    discoverySource,
-    /if \(!useGlobalLocationServing\(\)\) return getRelationalDiscoveryFeed\(session, filters, options\)/
-  )
-  assert.equal(
-    discoverySource.match(/getRelationalDiscoveryFeed\(session, filters, options\)/g)?.length,
-    1
-  )
+  assert.doesNotMatch(publicLocationSource, /from\('locations'\)/)
+  assert.doesNotMatch(publicLocationSource, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE/)
+  assert.doesNotMatch(envExample, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE/)
 
-  // Public location details follow the same invariant: enabled but misconfigured is an outage,
-  // never permission to reach for relational location serving.
-  assert.match(publicLocationSource, /const useGlobal = String\(process\.env\.GLOBAL_LOCATION_SEARCH_ENABLED \|\| ''\)\.toLowerCase\(\) === 'true'/)
-  assert.doesNotMatch(publicLocationSource, /isGlobalLocationSearchConfigured/)
-
+  assert.match(discoverySource, /getGlobalDiscoveryFeed/)
   assert.match(discoverySource, /global-location-stale-cache/)
+  assert.match(discoverySource, /global-location-degraded/)
   assert.match(discoverySource, /return emptyDegradedFeed\(session, filters, reason\)/)
-  assert.match(envExample, /never fail over to Supabase\/Postgres/)
 })
