@@ -350,6 +350,60 @@ drop function if exists public.capture_date_match_context_v1();
 drop function if exists public.touch_date_match_room_version_v1();
 drop function if exists public.refresh_location_rating_summary_trigger_v1();
 drop function if exists public.refresh_location_rating_summary_v1(uuid);
+
+-- Preserve the current location-card quality API after date-match ratings are retired.
+create or replace view public.location_card_quality_v1 as
+select
+  l.id as location_id,
+  coalesce(
+    d.description,
+    public.location_factual_description_v1(
+      l.name,l.kind,l.summary,l.neighborhood,l.city,l.price_level,l.amenities,l.opening_hours
+    )
+  ) as description,
+  coalesce(
+    d.source,
+    case when nullif(trim(l.summary),'') is not null then 'location_summary'::text else 'generated_factual'::text end
+  ) as description_source,
+  nullif(trim(l.cover_path),'') is not null or exists (
+    select 1 from public.location_photo_sources p
+    where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false
+  ) as has_real_photo,
+  case
+    when (
+      nullif(trim(l.cover_path),'') is not null or exists (
+        select 1 from public.location_photo_sources p
+        where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false
+      )
+    ) and d.source in ('venue','editorial','community','wikipedia') then 3
+    when nullif(trim(l.cover_path),'') is not null or exists (
+      select 1 from public.location_photo_sources p
+      where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false
+    ) then 2
+    else 1
+  end::integer as card_tier,
+  null::numeric as average_rating,
+  3.8::numeric as confidence_adjusted_rating,
+  0::integer as rating_count,
+  0::integer as happened_count,
+  null::timestamptz as last_feedback_at
+from public.locations l
+left join lateral (
+  select ld.description,ld.source
+  from public.location_descriptions ld
+  where ld.location_id=l.id and ld.status='approved'
+  order by case ld.source
+    when 'venue' then 1
+    when 'editorial' then 2
+    when 'community' then 3
+    when 'wikipedia' then 4
+    when 'location_summary' then 5
+    else 6
+  end,ld.verified_at desc nulls last,ld.updated_at desc
+  limit 1
+) d on true
+where l.status='published' and l.visibility='public' and coalesce(l.has_private_address,false)=false;
+
 drop table if exists public.location_rating_summaries;
 
 -- Static catalogue/media tables and their service-only workers are no longer part of runtime.
