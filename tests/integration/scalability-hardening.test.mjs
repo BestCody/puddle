@@ -124,7 +124,7 @@ test('global discovery failures are isolated from the relational database', asyn
 })
 
 test('temporary v1 social RPC compatibility wrappers are dropped after the v2 cutover', async () => {
-  const cleanup = await read('supabase/migrations/10073_drop_legacy_social_rpc_compatibility.sql')
+  const cleanup = await read('supabase/migrations/10074_drop_legacy_social_rpc_compatibility.sql')
   const activeData = await read('lib/app/social-hub-data.js')
   const activeFeed = await read('lib/app/social-feed-data.js')
 
