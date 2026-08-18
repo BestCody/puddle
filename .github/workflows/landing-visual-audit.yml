@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - public/landing.css
       - scripts/render-landing-desktop-matrix.mjs
       - .github/workflows/landing-visual-audit.yml
   workflow_dispatch:
