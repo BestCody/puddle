@@ -40,22 +40,24 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
   assert.match(styles, /height: 56px/)
 })
 
-test('saved places stay category-grouped while loading bounded keyset pages', async () => {
-  const [plans, data, styles, layout, migration] = await Promise.all([
+test('saved places hydrate canonical metadata from OpenSearch while Supabase pages relationship state', async () => {
+  const [plans, data, styles, layout, cutover] = await Promise.all([
     read('app/plans/page.js'),
     read('lib/app/location-plans-data.js'),
     read('app/plans/Plans.module.css'),
     read('app/layout.js'),
-    read('supabase/migrations/10070_location_history_single_photo.sql')
+    read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql')
   ])
 
   assert.match(data, /LOCATION_HISTORY_PAGE_SIZE = 24/)
   assert.match(data, /location_saved_page_v1/)
-  assert.match(data, /category: row\.kind \|\| 'other'/)
-  assert.doesNotMatch(data, /\.from\('user_content_states'\)/)
-  assert.doesNotMatch(data, /\.from\('discovery_context_outbox'\)/)
-  assert.match(migration, /event_name='perfect'/)
-  assert.match(migration, /location_saved_page_v1/)
+  assert.match(data, /getGlobalLocationsByIds/)
+  assert.match(data, /openPhotoUrlForHash/)
+  assert.match(data, /hydratedLocation/)
+  assert.match(data, /location\.kind \|\| 'other'/)
+  assert.doesNotMatch(data, /from\('locations'\)/)
+  assert.match(cutover, /location_saved_page_v1/)
+  assert.match(cutover, /null::text/)
 
   assert.match(plans, /import styles from '\.\/Plans\.module\.css'/)
   assert.match(plans, /function foldersFor\(items\)/)
@@ -68,9 +70,7 @@ test('saved places stay category-grouped while loading bounded keyset pages', as
   assert.match(plans, /getLocationPlansPage\(session/)
   assert.match(plans, /data-testid="saved-next-page"/)
   assert.match(plans, /data-testid="saved-screen"/)
-  assert.doesNotMatch(plans, /getLocationPlansSnapshot\(session\)/)
   assert.doesNotMatch(plans, /figma-saved-/)
-  assert.doesNotMatch(plans, /minimal-saved-folder/)
 
   assert.match(styles, /\.placeGrid\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 297px\)\)/s)
   assert.match(styles, /\.placeCard\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*156px minmax\(0, 1fr\)/s)
