@@ -40,10 +40,10 @@ function haversineMeters(aLat, aLon, bLat, bLon) {
 function search(body) {
   let places = [...GLOBAL_LOCATION_FIXTURES]
   const slug = firstClause(body, 'term', 'slug')
-  const ids = firstClause(body, 'terms', 'id')
+  const directIds = Array.isArray(body?.query?.terms?.id) ? body.query.terms.id : null
   if (slug) places = places.filter((place) => place.slug === String(slug))
-  if (Array.isArray(ids)) {
-    const allowed = new Set(ids.map(String))
+  if (directIds) {
+    const allowed = new Set(directIds.map(String))
     places = places.filter((place) => allowed.has(place.id))
   }
 
@@ -56,7 +56,7 @@ function search(body) {
   }
 
   const excludedGroups = allClauseValues(body, 'terms', 'id').filter(Array.isArray)
-  if (!Array.isArray(ids) && excludedGroups.length) {
+  if (!directIds && excludedGroups.length) {
     const excluded = new Set(excludedGroups.flat().map(String))
     places = places.filter((place) => !excluded.has(place.id))
   }
