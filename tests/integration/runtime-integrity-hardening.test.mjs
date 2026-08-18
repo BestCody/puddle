@@ -58,8 +58,9 @@ test('relational fallback photo delivery no longer depends on private B2 grants'
   assert.match(card, /GoogleServerPlacePhoto/)
 })
 
-test('transition photo enrichment drains approved providers into canonical B2 media at full configured pacing', async () => {
+test('photo enrichment drains approved providers into canonical B2 media without retired static-media sync', async () => {
   const workflow = await read('.github/workflows/photo-enrichment.yml')
+  const worker = await read('scripts/enrich-open-location-photos.mjs')
   assert.match(workflow, /workflow_dispatch:/)
   assert.match(workflow, /\bschedule:/)
   assert.match(workflow, /cron: '17 \* \* \* \*'/)
@@ -73,6 +74,6 @@ test('transition photo enrichment drains approved providers into canonical B2 me
   assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'/)
   assert.match(workflow, /OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '32'/)
   assert.match(workflow, /OPEN_PHOTO_KARTAVIEW_MIN_INTERVAL_MS: '3600'/)
-  assert.match(workflow, /PHOTO_ENRICH_SYNC_MEDIA: 'false'/)
-  assert.doesNotMatch(workflow, /B2_INFRA_ENABLED|R2_CONFIG|R2_PUBLIC_BASE_URL/)
+  assert.doesNotMatch(workflow, /PHOTO_ENRICH_SYNC_MEDIA|B2_INFRA_ENABLED|R2_CONFIG|R2_PUBLIC_BASE_URL/)
+  assert.doesNotMatch(worker, /PHOTO_ENRICH_SYNC_MEDIA|sync-static-media-overlays\.mjs/)
 })
