@@ -6,6 +6,7 @@ import {
   globalLocationSearchConfig,
   isGlobalLocationSearchConfigured,
   normalizeGlobalLocationViewport,
+  searchGlobalLocationsInViewport,
   viewportLocationLimit
 } from '../../lib/app/global-location-search.js'
 
@@ -38,6 +39,52 @@ test('map viewport search uses an OpenSearch geo bounding box and zoom-aware cap
   assert.deepEqual(geo.geo_bounding_box.location.bottom_right, { lat: 43.55, lon: -79.1 })
   assert.ok(bool.filter.some((entry) => entry.term?.status === 'published'))
   assert.equal(body.track_total_hits, false)
+})
+
+test('map viewport request sends configured Basic auth to locations-active', async () => {
+  const env = {
+    GLOBAL_LOCATION_SEARCH_URL: 'https://search.example.com',
+    GLOBAL_LOCATION_SEARCH_INDEX: 'locations-active',
+    OPENSEARCH_USERNAME: 'puddle-indexer',
+    OPENSEARCH_PASSWORD: 'secret-value'
+  }
+  let request
+  const fetchFn = async (url, options) => {
+    request = { url, options }
+    return new Response(JSON.stringify({
+      took: 7,
+      timed_out: false,
+      hits: {
+        hits: [{
+          _id: 'location-1',
+          _score: 10,
+          _source: {
+            id: 'location-1',
+            slug: 'test-place',
+            name: 'Test Place',
+            status: 'published',
+            latitude: 43.6532,
+            longitude: -79.3832
+          }
+        }]
+      }
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  const result = await searchGlobalLocationsInViewport({
+    north: 43.8,
+    south: 43.5,
+    west: -79.7,
+    east: -79.1,
+    zoom: 13
+  }, { env, fetchFn })
+
+  assert.equal(request.url, 'https://search.example.com/locations-active/_search')
+  assert.equal(request.options.headers.Authorization, `Basic ${Buffer.from('puddle-indexer:secret-value').toString('base64')}`)
+  assert.equal(request.options.method, 'POST')
+  assert.equal(result.timedOut, false)
+  assert.equal(result.candidates.length, 1)
+  assert.equal(result.candidates[0].slug, 'test-place')
 })
 
 test('map viewport search splits a date-line crossing into two bounding boxes', () => {
