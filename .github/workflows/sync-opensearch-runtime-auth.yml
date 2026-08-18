@@ -1,0 +1,86 @@
+name: Sync OpenSearch runtime auth
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-opensearch-runtime-auth.yml'
+      - 'supabase/migrations/10071_opensearch_runtime_vault.sql'
+      - '.github/trigger-sync-opensearch-runtime-auth'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-opensearch-runtime-auth
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      OPENSEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
+      OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
+      OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+    steps:
+      - name: Validate required secret presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$SUPABASE_SECRET_KEY"
+          test -n "$OPENSEARCH_URL"
+          test -n "$OPENSEARCH_USERNAME"
+          test -n "$OPENSEARCH_PASSWORD"
+
+      - name: Verify OpenSearch credentials and store encrypted runtime copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const required = ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'OPENSEARCH_URL', 'OPENSEARCH_USERNAME', 'OPENSEARCH_PASSWORD']
+          for (const name of required) {
+            if (!process.env[name]) throw new Error(`${name} is not configured.`)
+          }
+
+          const endpoint = new URL(process.env.OPENSEARCH_URL)
+          if (endpoint.protocol !== 'https:') throw new Error('OPENSEARCH_URL must use HTTPS.')
+          endpoint.pathname = `${endpoint.pathname.replace(/\/$/, '')}/locations-active/_search`
+          const authorization = `Basic ${Buffer.from(`${process.env.OPENSEARCH_USERNAME}:${process.env.OPENSEARCH_PASSWORD}`).toString('base64')}`
+          const searchResponse = await fetch(endpoint, {
+            method: 'POST',
+            headers: { Authorization: authorization, 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ size: 1, track_total_hits: false, query: { term: { status: 'published' } } }),
+            redirect: 'error',
+            signal: AbortSignal.timeout(10_000)
+          })
+          if (!searchResponse.ok) throw new Error(`OpenSearch credential verification failed with HTTP ${searchResponse.status}.`)
+
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
+          const serviceKey = process.env.SUPABASE_SECRET_KEY
+          const vaultResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/set_opensearch_runtime_auth`, {
+            method: 'POST',
+            headers: {
+              apikey: serviceKey,
+              Authorization: `Bearer ${serviceKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json'
+            },
+            body: JSON.stringify({
+              p_username: process.env.OPENSEARCH_USERNAME,
+              p_password: process.env.OPENSEARCH_PASSWORD
+            }),
+            redirect: 'error',
+            signal: AbortSignal.timeout(10_000)
+          })
+          if (!vaultResponse.ok) {
+            const message = await vaultResponse.text().catch(() => '')
+            throw new Error(`Supabase Vault sync failed with HTTP ${vaultResponse.status}${message ? `: ${message.slice(0, 200)}` : ''}.`)
+          }
+
+          console.log('OpenSearch credentials verified and encrypted runtime auth synchronized to Supabase Vault.')
+          NODE
