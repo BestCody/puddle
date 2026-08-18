@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Validate the production bootstrap Parquet schema directly in B2.
 
-This is a cheap preflight for the resumable global location workflow. It checks
+This is a cheap preflight for the canonical global location build. It checks
 exactly the bootstrap files consumed by entity resolution and overlay projection
-before the expensive country resolver matrix starts.
+before the expensive source mirroring and country resolver work starts.
 """
 import os
 
