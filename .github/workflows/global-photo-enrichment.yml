@@ -26,7 +26,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: global-photo-materialization
+  # Preserve the legacy group's name so a pre-merge monolithic run can never
+  # overlap the first registry reconciliation/materialization run.
+  group: global-photo-enrichment
   cancel-in-progress: false
 
 jobs:
