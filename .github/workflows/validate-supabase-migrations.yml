@@ -42,12 +42,13 @@ jobs:
           set -o pipefail
           npx --yes supabase@2.111.0 db start --debug 2>&1 | tee supabase-db-start.log
 
-      - name: Test catalogue import integrity after initial migration apply
+      - name: Test catalogue and photo uniqueness after initial migration apply
         shell: bash
         run: |
           database="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)"
           test -n "$database"
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/catalogue_import_integrity.sql
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/global_photo_uniqueness.sql
 
       - name: Dump local database logs after failure
         if: failure()
@@ -61,9 +62,10 @@ jobs:
       - name: Rebuild database from all migrations
         run: npx --yes supabase@2.111.0 db reset --debug
 
-      - name: Test catalogue import integrity after clean rebuild
+      - name: Test catalogue and photo uniqueness after clean rebuild
         shell: bash
         run: |
           database="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)"
           test -n "$database"
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/catalogue_import_integrity.sql
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/global_photo_uniqueness.sql
