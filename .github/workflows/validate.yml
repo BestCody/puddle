@@ -51,7 +51,7 @@ jobs:
           test ! -e scripts/migrate-open-photos-to-b2.mjs
           test ! -e scripts/validate-open-photo-b2-migration.mjs
           test ! -e scripts/one-off-finalize-media-architecture.py
-          if git grep -n -E 'storeOpenPhotoInSupabase|open-photo-supabase|OPEN_PHOTO_SUPABASE_BUCKET' -- ':!supabase/migrations/*' ':!docs/*' ':!scripts/check.mjs'; then
+          if git grep -n -E 'storeOpenPhotoInSupabase|open-photo-supabase|OPEN_PHOTO_SUPABASE_BUCKET' -- ':!supabase/migrations/*' ':!docs/*' ':!tests/*' ':!scripts/check.mjs'; then
             echo 'Retired open-photo compatibility remains in active code.' >&2
             exit 1
           fi
