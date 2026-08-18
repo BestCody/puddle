@@ -1,4 +1,4 @@
-import { access, readFile, readdir } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -135,24 +135,22 @@ for (const marker of ['location_moderation_overrides','public.location_host_link
 }
 
 // Exhaustively fence the application runtime against direct Supabase catalogue reads.
-// Historical migrations are intentionally excluded: they remain immutable history.
-for (const directory of ['app','components','lib']) {
-  const entries = await readdir(join(root, directory), { recursive: true, withFileTypes: true })
-  for (const entry of entries) {
-    if (!entry.isFile() || !/\.(?:[cm]?js|jsx|ts|tsx)$/.test(entry.name)) continue
-    const fullPath = join(entry.parentPath || entry.path, entry.name)
-    const relative = fullPath.slice(root.length + 1).replaceAll('\\','/')
-    const source = await readFile(fullPath, 'utf8')
-    for (const pattern of [
-      /\.from\(\s*['"]locations['"]\s*\)/,
-      /\.from\(\s*['"]location_photo_sources['"]\s*\)/,
-      /\.from\(\s*['"]location_google_places['"]\s*\)/,
-      /\bdiscovery-relational\b/,
-      /\/api\/location-(?:google-photo|open-photo|photo-status|photos)\//
-    ]) {
-      if (pattern.test(source)) throw new Error(`Runtime restored retired location catalogue coupling in ${relative}: ${pattern}`)
-    }
+// Git is the source of truth for exact tracked paths; historical migrations are excluded.
+const runtimeFiles = execFileSync('git', ['ls-files', '-z', 'app', 'components', 'lib'], { cwd: root })
+  .toString()
+  .split('\0')
+  .filter((path) => path && /\.(?:[cm]?js|jsx|ts|tsx)$/.test(path))
+for (const relative of runtimeFiles) {
+  const source = await read(relative)
+  for (const pattern of [
+    /\.from\(\s*['"]locations['"]\s*\)/,
+    /\.from\(\s*['"]location_photo_sources['"]\s*\)/,
+    /\.from\(\s*['"]location_google_places['"]\s*\)/,
+    /\bdiscovery-relational\b/,
+    /\/api\/location-(?:google-photo|open-photo|photo-status|photos)\//
+  ]) {
+    if (pattern.test(source)) throw new Error(`Runtime restored retired location catalogue coupling in ${relative}: ${pattern}`)
   }
 }
 
-console.log('Architecture checks passed: B2/OpenSearch catalogue with lazy Supabase location refs.')
+console.log(`Architecture checks passed: B2/OpenSearch catalogue with lazy Supabase location refs across ${runtimeFiles.length} runtime files.`)
