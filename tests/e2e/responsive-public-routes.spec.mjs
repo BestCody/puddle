@@ -50,7 +50,13 @@ test('landing page uses the Figma responsive composition and real DOM content', 
     await expect(page.locator('.feature-card--d-profile')).toHaveCount(0)
   } else {
     await expect(page.locator('[data-figma-node="161:116"]')).toBeVisible()
-    await expect(page.locator('.mobile-jump')).toBeVisible()
+    const jump = page.locator('.mobile-jump')
+    // Figma annotation 164:146: JUMP IN fades in only after the user scrolls.
+    await expect(jump).toHaveCSS('visibility', 'hidden')
+    await expect(jump).toHaveCSS('opacity', '0')
+    await page.evaluate(() => window.scrollTo({ top: 24, behavior: 'instant' }))
+    await expect(jump).toHaveCSS('visibility', 'visible')
+    await expect(jump).toHaveCSS('opacity', '1')
     await expect(page.locator('.feature-card--m-swipe')).toBeVisible()
     await expect(page.locator('.feature-card--m-profile')).toBeVisible()
     await expect(page.locator('.landing-sticky-left')).not.toBeVisible()
@@ -66,6 +72,81 @@ test('landing page uses the Figma responsive composition and real DOM content', 
   await assertImagesLoaded(page)
   await assertNoHorizontalOverflow(page)
   health.assertHealthy()
+})
+
+test('landing phone routes render the correct Figma screen identities and hydrate interactions', async ({ page }) => {
+  await page.goto('/landing-demo/swipe')
+  const swipe = page.locator('[data-demo-screen="swipe"]')
+  await expect(swipe).toBeVisible()
+  await expect(swipe.getByText('Maple Grove Park', { exact: true })).toBeVisible()
+  await expect(swipe.getByText('2243 Devon Road, Oakville', { exact: true })).toBeVisible()
+  await swipe.getByRole('button', { name: 'Save place' }).click()
+  await expect(swipe.getByText('Firehall Cool Bar Hot Grill', { exact: true })).toBeVisible()
+  await swipe.getByRole('button', { name: 'Back' }).click()
+  await expect(swipe.getByText('Maple Grove Park', { exact: true })).toBeVisible()
+
+  await page.goto('/landing-demo/save')
+  const saved = page.locator('[data-demo-screen="save"]')
+  await expect(saved).toBeVisible()
+  await expect(saved.getByText('Firehall Cool Bar Hot Grill', { exact: true })).toBeVisible()
+  await saved.getByRole('button', { name: 'Plans', exact: true }).click()
+  await expect(saved.getByText('Night Gallery', { exact: true })).toBeVisible()
+  await saved.getByRole('button', { name: 'Saved', exact: true }).click()
+  await saved.getByRole('button', { name: /Theatres/ }).click()
+  await expect(saved.getByText('Film House', { exact: true })).toBeVisible()
+  await expect(saved.getByText('Firehall Cool Bar Hot Grill', { exact: true })).toHaveCount(0)
+  await saved.getByText('Film House', { exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Film House details' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
+
+  await page.goto('/landing-demo/feed')
+  const feed = page.locator('[data-demo-screen="feed"]')
+  await expect(feed).toBeVisible()
+  await expect(feed.getByText('Richie Zheng', { exact: true })).toBeVisible()
+  await expect(feed.getByText(/This place is amazing! The atmosphere is beautiful/)).toBeVisible()
+  await feed.getByRole('button', { name: 'Map', exact: true }).click()
+  await expect(feed.getByLabel('Interactive map preview')).toBeVisible()
+  await feed.getByRole('button', { name: 'Open Maple Grove Park' }).click()
+  await expect(page.getByRole('dialog', { name: 'Maple Grove Park details' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
+  await feed.getByRole('button', { name: 'Feed', exact: true }).click()
+  await feed.getByPlaceholder('Search puddle').fill('not-a-puddle')
+  await expect(feed.getByText('No puddles found.', { exact: true })).toBeVisible()
+
+  await page.goto('/landing-demo/profile')
+  const profile = page.locator('[data-demo-screen="profile"]')
+  await expect(profile).toBeVisible()
+  await expect(profile.getByText('Richie Zheng', { exact: true })).toBeVisible()
+  await expect(profile.getByText('@Richiezh77', { exact: true })).toBeVisible()
+  await profile.getByRole('button', { name: 'Follow', exact: true }).click()
+  await expect(profile.getByRole('button', { name: 'Following', exact: true })).toBeVisible()
+  await profile.getByRole('button', { name: 'Edit', exact: true }).click()
+  await profile.getByRole('textbox', { name: 'Display name' }).fill('Richie Test')
+  await profile.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(profile.getByRole('heading', { name: 'Richie Test', exact: true })).toBeVisible()
+  await profile.getByRole('button', { name: /Message/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Message Richie Zheng' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close message' }).click()
+})
+
+test('landing embeds each Figma phone route in the corresponding feature card', async ({ page }) => {
+  await page.goto('/')
+  const { mode, selector } = await visibleLandingCanvas(page)
+  const expected = [
+    ['swipe', 'Maple Grove Park'],
+    ['save', 'Firehall Cool Bar Hot Grill'],
+    ['feed', 'Richie Zheng'],
+    ...(mode === 'mobile' ? [['profile', '@Richiezh77']] : [])
+  ]
+
+  for (const [view, identity] of expected) {
+    const shell = page.locator(`${selector} [data-phone-demo="${view}"]`)
+    await shell.scrollIntoViewIfNeeded()
+    await expect(shell).toBeVisible()
+    const frame = shell.locator('iframe')
+    await expect(frame).toHaveAttribute('src', `/landing-demo/${view}`)
+    await expect(frame.contentFrame().getByText(identity, { exact: true }).first()).toBeVisible()
+  }
 })
 
 test('desktop landing sticky sign-in canvas ends before the full-width footer', async ({ page }, testInfo) => {
