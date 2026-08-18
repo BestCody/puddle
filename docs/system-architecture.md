@@ -93,6 +93,8 @@ Wikimedia / Mapillary / KartaView candidate
 
 The browser never needs a B2 public URL. `/api/open-photo/<sha256>` authorizes private B2 access using runtime credentials from Supabase Vault, validates the canonical key, byte size, and SHA-256, and returns cacheable JPEG bytes.
 
+Supabase Storage is not an approved open-photo byte store. It remains active only for the separate user/private-media path described below.
+
 Durable photo operations:
 
 - `photo-enrichment.yml`: drains the transitional existing-catalogue candidate queue into canonical B2 media.
