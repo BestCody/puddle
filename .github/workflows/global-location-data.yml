@@ -38,6 +38,8 @@ jobs:
           python-version: '3.13'
       - name: Install bulk data dependencies
         run: python -m pip install --disable-pip-version-check duckdb boto3 numpy
+      - name: Validate current bootstrap schema before expensive global work
+        run: python scripts/global-data/verify_bootstrap_schema.py
       - id: snapshot
         shell: bash
         run: echo "snapshot=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
