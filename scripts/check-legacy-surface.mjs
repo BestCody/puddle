@@ -12,7 +12,8 @@ const retiredPaths = [
   '.github/trigger-global-location-progress',
   '.github/trigger-global-location-resume',
   '.github/trigger-opensearch-map-smoke',
-  '.github/trigger-sync-b2-media-runtime-auth'
+  '.github/trigger-sync-b2-media-runtime-auth',
+  'scripts/sync-static-media-overlays.mjs'
 ]
 
 for (const path of retiredPaths) {
@@ -34,9 +35,14 @@ const workflowNames = (await readdir(join(root, '.github', 'workflows'))).filter
 for (const name of workflowNames) {
   const source = await read(`.github/workflows/${name}`)
   if (source.includes('.github/trigger-')) throw new Error(`Workflow ${name} still references a marker-file trigger.`)
-  for (const retired of ['B2_MEDIA_PUBLIC_BASE_URL', 'B2_DOWNLOAD_BASE_URL']) {
+  for (const retired of ['B2_MEDIA_PUBLIC_BASE_URL', 'B2_DOWNLOAD_BASE_URL', 'PHOTO_ENRICH_SYNC_MEDIA']) {
     if (source.includes(retired)) throw new Error(`Workflow ${name} still references retired media setting ${retired}.`)
   }
+}
+
+const photoEnrichment = await read('scripts/enrich-open-location-photos.mjs')
+for (const retired of ['sync-static-media-overlays.mjs', 'PHOTO_ENRICH_SYNC_MEDIA']) {
+  if (photoEnrichment.includes(retired)) throw new Error(`Photo enrichment restored retired static-media sync coupling: ${retired}`)
 }
 
 const nextConfig = await read('next.config.mjs')
@@ -122,4 +128,4 @@ for (const required of [
   if (!architecture.includes(required)) throw new Error(`System architecture is missing invariant: ${required}`)
 }
 
-console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of marker triggers/public-B2 delivery coupling, social compatibility dropped, and retired database runtimes fenced.`)
+console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of marker triggers/public-B2/static-sync coupling, social compatibility dropped, and retired database runtimes fenced.`)
