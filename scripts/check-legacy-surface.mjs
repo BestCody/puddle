@@ -52,6 +52,16 @@ for (const required of ['NEXT_PUBLIC_SUPABASE_URL', '/storage/v1/object/**']) {
   if (!nextConfig.includes(required)) throw new Error(`next.config.mjs is missing active Supabase user-media image configuration: ${required}`)
 }
 
+const b2Storage = await read('lib/storage/b2-native.js')
+for (const retired of ['b2PublicUrl', 'publicBaseUrl', 'B2_MEDIA_PUBLIC_BASE_URL', 'B2_DOWNLOAD_BASE_URL']) {
+  if (b2Storage.includes(retired)) throw new Error(`B2 storage helper restored retired public delivery API: ${retired}`)
+}
+
+const envExample = await read('.env.example')
+if (/^LOCATION_PHOTO_ALLOWED_HOSTS=media\.puddle\.app$/m.test(envExample)) {
+  throw new Error('.env.example restored the retired media.puddle.app direct photo host.')
+}
+
 const readme = await read('README.md')
 for (const stale of [
   'stored in the `puddle-public-media` Supabase bucket',
@@ -64,6 +74,19 @@ for (const required of ['OpenSearch `locations-active`', '/api/open-photo/<sha25
   if (!readme.includes(required)) throw new Error(`README is missing canonical architecture marker: ${required}`)
 }
 
+const socialCleanup = await read('supabase/migrations/10073_drop_legacy_social_rpc_compatibility.sql')
+for (const signature of [
+  'social_friend_search_v1(text)',
+  'pass_message_search_v1(text)',
+  'social_friends_v1()',
+  'social_conversations_v1()',
+  'social_messages_v1(uuid)'
+]) {
+  if (!socialCleanup.includes(`drop function if exists public.${signature};`)) {
+    throw new Error(`Legacy social RPC cleanup is missing ${signature}.`)
+  }
+}
+
 const architecture = await read('docs/system-architecture.md')
 for (const required of [
   'OpenSearch failures do not silently fail over to Postgres',
@@ -73,4 +96,4 @@ for (const required of [
   if (!architecture.includes(required)) throw new Error(`System architecture is missing invariant: ${required}`)
 }
 
-console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of marker triggers/public-B2 URL coupling.`)
+console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of marker triggers/public-B2 delivery coupling, v1 social compatibility dropped.`)
