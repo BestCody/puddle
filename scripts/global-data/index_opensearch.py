@@ -130,7 +130,7 @@ mapping = {
             'popularity_score': {'type': 'float'}, 'google_place_id': {'type': 'keyword'},
             'google_place_match_score': {'type': 'float'}, 'primary_photo': {
                 'properties': {
-                    'url': {'type': 'keyword', 'index': False}, 'provider': {'type': 'keyword'},
+                    'content_hash': {'type': 'keyword'}, 'provider': {'type': 'keyword'},
                     'attribution': {'type': 'keyword', 'index': False}, 'attribution_url': {'type': 'keyword', 'index': False},
                     'license': {'type': 'keyword'}, 'width': {'type': 'integer'}, 'height': {'type': 'integer'}
                 }
@@ -168,12 +168,12 @@ con.execute(f"CREATE OR REPLACE TEMP VIEW loc AS SELECT * FROM read_parquet('{lo
 photo_sources = []
 try:
     con.execute(f"SELECT 1 FROM read_parquet('{photo_glob}', union_by_name=true, hive_partitioning=true) LIMIT 1").fetchall()
-    photo_sources.append(f"SELECT location_id,url,provider,attribution,attribution_url,license,width,height,NULL::VARCHAR verified_at FROM read_parquet('{photo_glob}', union_by_name=true, hive_partitioning=true)")
+    photo_sources.append(f"SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height,NULL::VARCHAR verified_at FROM read_parquet('{photo_glob}', union_by_name=true, hive_partitioning=true)")
 except Exception:
     pass
 try:
     con.execute(f"SELECT 1 FROM read_parquet('{enriched_photo_glob}', union_by_name=true, hive_partitioning=true) LIMIT 1").fetchall()
-    photo_sources.append(f"SELECT location_id,url,provider,attribution,attribution_url,license,width,height,verified_at FROM read_parquet('{enriched_photo_glob}', union_by_name=true, hive_partitioning=true)")
+    photo_sources.append(f"SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height,verified_at FROM read_parquet('{enriched_photo_glob}', union_by_name=true, hive_partitioning=true)")
 except Exception:
     pass
 if photo_sources:
@@ -183,7 +183,7 @@ if photo_sources:
       FROM photo_union
     ) WHERE rn=1""")
 else:
-    con.execute("CREATE OR REPLACE TEMP VIEW photos AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR url,NULL::VARCHAR provider,NULL::VARCHAR attribution,NULL::VARCHAR attribution_url,NULL::VARCHAR license,NULL::INTEGER width,NULL::INTEGER height WHERE false")
+    con.execute("CREATE OR REPLACE TEMP VIEW photos AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash,NULL::VARCHAR provider,NULL::VARCHAR attribution,NULL::VARCHAR attribution_url,NULL::VARCHAR license,NULL::INTEGER width,NULL::INTEGER height WHERE false")
 try:
     con.execute(f"CREATE OR REPLACE TEMP VIEW google AS SELECT * FROM read_parquet('{google_glob}', union_by_name=true, hive_partitioning=true)")
     con.execute('SELECT 1 FROM google LIMIT 1').fetchall()
@@ -202,7 +202,7 @@ SELECT
   l.website_url, l.phone_public, l.brand_id, l.brand_name, l.source_parent_place_id,
   NULL::VARCHAR duplicate_group_key, NULL::VARCHAR catalogue_group_key,
   l.quality_score, l.popularity_score,
-  p.url photo_url, p.provider photo_provider, p.attribution photo_attribution,
+  p.content_hash photo_content_hash, p.provider photo_provider, p.attribution photo_attribution,
   p.attribution_url photo_attribution_url, p.license photo_license, p.width photo_width, p.height photo_height,
   g.google_place_id, g.google_place_match_score,
   l.status, l.updated_at
@@ -239,9 +239,9 @@ while True:
             'google_place_match_score': row['google_place_match_score'], 'status': row['status'],
             'updated_at': row['updated_at'].isoformat() if hasattr(row['updated_at'], 'isoformat') else row['updated_at'],
         }
-        if row['photo_url']:
+        if row['photo_content_hash']:
             document['primary_photo'] = {
-                'url': row['photo_url'], 'provider': row['photo_provider'], 'attribution': row['photo_attribution'],
+                'content_hash': row['photo_content_hash'], 'provider': row['photo_provider'], 'attribution': row['photo_attribution'],
                 'attribution_url': row['photo_attribution_url'], 'license': row['photo_license'],
                 'width': row['photo_width'], 'height': row['photo_height']
             }

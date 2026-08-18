@@ -15,6 +15,7 @@ const TABLES = [
   { name: 'location_source_links', order: ['source', 'source_place_id'] },
   { name: 'location_descriptions', order: ['location_id', 'source'] },
   { name: 'location_photo_sources', order: ['id'] },
+  { name: 'media_objects', order: ['id'] },
   { name: 'location_google_places', order: ['location_id'] },
   { name: 'catalogue_region_locations', order: ['region_id', 'source', 'source_place_id'] }
 ]
