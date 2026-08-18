@@ -57,10 +57,12 @@ try {
 
     const metrics = await page.locator(stageSelector).evaluate((stage) => {
       const canvas = stage.querySelector('.landing-canvas')
-      const sticky = document.querySelector('.landing-sticky-left')
+      const leftCell = document.querySelector('.landing-sticky-left')
+      const stickyCanvas = document.querySelector('.landing-sticky-left__canvas')
       const stageRect = stage.getBoundingClientRect()
       const canvasRect = canvas.getBoundingClientRect()
-      const stickyRect = sticky?.getBoundingClientRect() || null
+      const leftRect = leftCell?.getBoundingClientRect() || null
+      const stickyRect = stickyCanvas?.getBoundingClientRect() || null
       const canvasStyle = getComputedStyle(canvas)
       const stageStyle = getComputedStyle(stage)
       return {
@@ -76,13 +78,19 @@ try {
         stageDisplay: stageStyle.display,
         canvasPosition: canvasStyle.position,
         canvasTransform: canvasStyle.transform,
+        leftCell: leftRect ? {
+          left: leftRect.left,
+          width: leftRect.width,
+          display: getComputedStyle(leftCell).display,
+          position: getComputedStyle(leftCell).position
+        } : null,
         sticky: stickyRect ? {
           left: stickyRect.left,
           top: stickyRect.top,
           width: stickyRect.width,
           height: stickyRect.height,
-          display: getComputedStyle(sticky).display,
-          position: getComputedStyle(sticky).position
+          display: getComputedStyle(stickyCanvas).display,
+          position: getComputedStyle(stickyCanvas).position
         } : null
       }
     })
@@ -97,19 +105,21 @@ try {
 
     if (testCase.mode === 'desktop') {
       assert(metrics.stageDisplay === 'grid', 'desktop landing is not using CSS Grid')
-      assert(metrics.sticky?.display !== 'none', 'desktop sticky left pane is hidden')
-      assert(metrics.sticky?.position === 'sticky', `desktop left pane uses ${metrics.sticky?.position} instead of CSS sticky`)
-      assert(Math.abs(metrics.sticky.left - metrics.left) < 1.1, 'sticky left pane is not aligned to the centered stage')
-      assert(Math.abs(metrics.canvasWidth + metrics.sticky.width - metrics.stageWidth) < 2, 'desktop columns do not fill the landing stage')
-      const ratio = metrics.sticky.width / metrics.stageWidth
+      assert(metrics.leftCell?.display !== 'none', 'desktop left grid cell is hidden')
+      assert(metrics.leftCell?.position === 'relative', `desktop left grid cell uses ${metrics.leftCell?.position} instead of row-constrained relative flow`)
+      assert(metrics.sticky?.position === 'sticky', `desktop sign-in canvas uses ${metrics.sticky?.position} instead of CSS sticky`)
+      assert(Math.abs(metrics.leftCell.left - metrics.left) < 1.1, 'left grid cell is not aligned to the centered stage')
+      assert(Math.abs(metrics.sticky.left - metrics.leftCell.left) < 1.1, 'sticky sign-in canvas is not aligned to its grid cell')
+      assert(Math.abs(metrics.canvasWidth + metrics.leftCell.width - metrics.stageWidth) < 2, 'desktop columns do not fill the landing stage')
+      const ratio = metrics.leftCell.width / metrics.stageWidth
       assert(ratio >= .45 && ratio <= .55, `desktop split ratio ${ratio} drifted too far from the Figma composition`)
     } else {
       assert(metrics.stageDisplay === 'block', 'mobile landing is not a single-column composition')
-      assert(!metrics.sticky || metrics.sticky.display === 'none', 'desktop sticky pane leaked into mobile layout')
+      assert(!metrics.leftCell || metrics.leftCell.width === 0 || !(await page.locator('.landing-sticky-left').isVisible()), 'desktop left pane leaked into mobile layout')
       assert(Math.abs(metrics.canvasWidth - metrics.stageWidth) < 1.1, 'mobile canvas is not fluid with its stage')
     }
   }
-  console.log('Responsive Figma landing passed: centered max-width stage, CSS Grid desktop split, normal-flow content, mobile single column, and no whole-canvas scaling.')
+  console.log('Responsive Figma landing passed: centered max-width stage, row-constrained sticky desktop split, normal-flow content, mobile single column, and no whole-canvas scaling.')
 } finally {
   await page.close()
   await browser.close()
