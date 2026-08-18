@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
@@ -40,3 +40,27 @@ jobs:
             figma-transparency-production-patch/
           if-no-files-found: error
           retention-days: 7
+      - name: Apply verified patch to production branch
+        env:
+          PRODUCTION_BRANCH: fix/figma-transparent-raster-exports
+        run: |
+          set -euo pipefail
+          cp -a figma-transparency-production-patch /tmp/figma-transparency-production-patch
+          git fetch origin "$PRODUCTION_BRANCH"
+          git switch -C "$PRODUCTION_BRANCH" "origin/$PRODUCTION_BRANCH"
+          cp /tmp/figma-transparency-production-patch/public/figma/assets/hero-phone-exact.png public/figma/assets/hero-phone-exact.png
+          cp /tmp/figma-transparency-production-patch/public/app.js public/app.js
+          cp /tmp/figma-transparency-production-patch/scripts/check-landing-assets.mjs scripts/check-landing-assets.mjs
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            rm -f "$path"
+          done < <(node -e "for (const p of require('/tmp/figma-transparency-production-patch/deletions.json')) console.log(p)")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No production patch changes"
+            exit 0
+          fi
+          git commit -m "Fix opaque Figma foreground exports"
+          git push origin "HEAD:$PRODUCTION_BRANCH"
