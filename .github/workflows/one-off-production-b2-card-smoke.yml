@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Verify card-facing URLs and B2 production delivery
+      - name: Verify actual card URLs and canonical B2 delivery
         shell: bash
         run: |
           set -euo pipefail
@@ -45,11 +45,7 @@ jobs:
           ]
 
           let candidateCount = 0
-          let photoCount = 0
-          let puddleDeliveryCount = 0
-          const unsafe = []
-          const sampled = []
-
+          const cardPhotos = []
           for (const viewport of viewports) {
             const result = await searchGlobalLocationsInViewport(viewport)
             if (result.timedOut) throw new Error(`${viewport.name} OpenSearch viewport timed out.`)
@@ -57,23 +53,27 @@ jobs:
             candidateCount += result.candidates.length
             for (const row of result.candidates) {
               const url = String(row?.primary_photo?.url || '').trim()
-              if (!url) continue
-              photoCount += 1
-              if (sampled.length < 12) sampled.push({ id: row.id, url })
-              if (/backblazeb2\.com|\.s3\.[^/]*backblazeb2\.com|puddle-assets\.s3/i.test(url)) {
-                unsafe.push({ id: row.id, url })
-              }
-              if (/^https:\/\/puddle\.you\/api\/open-photo\/[0-9a-f]{64}$/i.test(url)) {
-                puddleDeliveryCount += 1
-                const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(15000) })
-                if (!response.ok) throw new Error(`Card photo delivery failed ${response.status} for ${url}`)
-                const type = String(response.headers.get('content-type') || '')
-                if (!type.startsWith('image/')) throw new Error(`Card photo delivery returned non-image content type ${type}`)
-              }
+              if (url) cardPhotos.push({ id: row.id, url })
             }
           }
+          if (cardPhotos.length === 0) throw new Error('No card photos were returned in smoke viewports.')
 
-          if (unsafe.length) throw new Error(`Private B2 origin leaked into card-facing OpenSearch data: ${JSON.stringify(unsafe.slice(0,5))}`)
+          const badCards = []
+          for (const photo of cardPhotos) {
+            const isPuddleB2Delivery = /^https:\/\/puddle\.you\/api\/open-photo\/[0-9a-f]{64}$/i.test(photo.url)
+            let status = null
+            let type = null
+            try {
+              const response = await fetch(photo.url, { redirect: 'error', signal: AbortSignal.timeout(15000) })
+              status = response.status
+              type = String(response.headers.get('content-type') || '')
+            } catch (error) {
+              status = `fetch_error:${error.message}`
+            }
+            if (!isPuddleB2Delivery || status !== 200 || !String(type || '').startsWith('image/')) {
+              badCards.push({ ...photo, isPuddleB2Delivery, status, type })
+            }
+          }
 
           const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL).replace(/\/$/, '')
           const serviceKey = process.env.SUPABASE_SECRET_KEY
@@ -81,56 +81,40 @@ jobs:
             headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Accept: 'application/json' },
             redirect: 'error', signal: AbortSignal.timeout(15000)
           })
-          if (!mediaResponse.ok) throw new Error(`Could not read canonical B2 photo samples from Supabase: HTTP ${mediaResponse.status}`)
+          if (!mediaResponse.ok) throw new Error(`Could not read canonical B2 photo samples: HTTP ${mediaResponse.status}`)
           const media = await mediaResponse.json()
-          if (!Array.isArray(media) || media.length < 3) throw new Error('Not enough canonical B2 photo samples for smoke test.')
+          if (!Array.isArray(media) || media.length < 3) throw new Error('Not enough canonical B2 photo samples.')
 
           for (const item of media) {
             const hash = String(item.content_hash || '').toLowerCase()
-            if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error(`Invalid canonical hash ${hash}`)
             const expectedKey = `media/photos/by-sha256/${hash.slice(0, 2)}/${hash}.jpg`
-            if (String(item.storage_key || '') !== expectedKey) throw new Error(`Non-canonical B2 photo key for ${hash}`)
+            if (!/^[0-9a-f]{64}$/.test(hash) || String(item.storage_key || '') !== expectedKey) throw new Error(`Invalid canonical B2 photo ${hash}`)
             const response = await fetch(`https://puddle.you/api/open-photo/${hash}`, { redirect: 'error', signal: AbortSignal.timeout(15000) })
             if (!response.ok) throw new Error(`Production B2 delivery failed HTTP ${response.status} for ${hash}`)
             const bytes = Buffer.from(await response.arrayBuffer())
-            const actual = createHash('sha256').update(bytes).digest('hex')
-            if (actual !== hash) throw new Error(`Production delivery hash mismatch for ${hash}`)
-            if (Number(item.byte_size) !== bytes.length) throw new Error(`Production delivery byte-size mismatch for ${hash}: expected ${item.byte_size}, got ${bytes.length}`)
-            const type = String(response.headers.get('content-type') || '')
-            if (!type.startsWith('image/')) throw new Error(`Production delivery returned non-image content type ${type}`)
+            if (createHash('sha256').update(bytes).digest('hex') !== hash) throw new Error(`Production delivery hash mismatch for ${hash}`)
+            if (bytes.length !== Number(item.byte_size)) throw new Error(`Production delivery size mismatch for ${hash}`)
+            if (!String(response.headers.get('content-type') || '').startsWith('image/')) throw new Error(`Production delivery was not an image for ${hash}`)
           }
 
-          console.log(JSON.stringify({
-            ok: true,
-            candidateCount,
-            photoCount,
-            puddleDeliveryCount,
-            unsafePrivateB2Urls: unsafe.length,
-            canonicalB2SamplesVerified: media.length,
-            sampledCardUrls: sampled
-          }, null, 2))
+          console.log(JSON.stringify({ candidateCount, cardPhotoCount: cardPhotos.length, badCardCount: badCards.length, canonicalB2SamplesVerified: media.length, badCards: badCards.slice(0, 12) }, null, 2))
+          if (badCards.length) throw new Error(`Live card photo path is stale or incorrect for ${badCards.length}/${cardPhotos.length} sampled photos.`)
           NODE
       - name: Publish smoke success
         if: success()
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          curl --fail-with-body --silent --show-error \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-            -d "{\"state\":\"success\",\"context\":\"One-off production B2 card smoke\",\"description\":\"Card URLs and B2 delivery passed\",\"target_url\":\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
+            -d "{\"state\":\"success\",\"context\":\"Strict production B2 card smoke\",\"description\":\"Live card URLs use verified Puddle B2 delivery\",\"target_url\":\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
       - name: Publish smoke failure
         if: failure()
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          curl --fail-with-body --silent --show-error \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-            -d "{\"state\":\"failure\",\"context\":\"One-off production B2 card smoke\",\"description\":\"Card URL or B2 delivery smoke failed\",\"target_url\":\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
+            -d "{\"state\":\"failure\",\"context\":\"Strict production B2 card smoke\",\"description\":\"Live card URL path is stale or incorrect\",\"target_url\":\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
