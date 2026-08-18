@@ -119,7 +119,7 @@ jobs:
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-            -d '{"state":"success","context":"One-off production B2 card smoke","description":"Card URLs and B2 delivery passed"}'
+            -d "{\"state\":\"success\",\"context\":\"One-off production B2 card smoke\",\"description\":\"Card URLs and B2 delivery passed\",\"target_url\":\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
       - name: Publish smoke failure
         if: failure()
         env:
@@ -131,4 +131,4 @@ jobs:
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
-            -d '{"state":"failure","context":"One-off production B2 card smoke","description":"Card URL or B2 delivery smoke failed"}'
+            -d "{\"state\":\"failure\",\"context\":\"One-off production B2 card smoke\",\"description\":\"Card URL or B2 delivery smoke failed\",\"target_url\":\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
