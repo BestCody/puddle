@@ -73,6 +73,7 @@ jobs:
         run: |
           node scripts/test-landing-restoration.mjs
           node scripts/test-responsive-landing.mjs
+          node scripts/render-landing-desktop-matrix.mjs
           node --test tests/integration/swipe-motion.test.mjs
           node --test tests/integration/landing-phone-demos.test.mjs
       - name: Upload landing comparison renders
