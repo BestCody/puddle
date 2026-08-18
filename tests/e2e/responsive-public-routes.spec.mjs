@@ -22,7 +22,7 @@ async function visibleLandingCanvas(page) {
   await expect(page.locator(stage)).toBeVisible()
   await expect(page.locator(mode === 'desktop' ? '.landing-stage--mobile' : '.landing-stage--desktop')).not.toBeVisible()
   await expect(page.locator(selector)).toBeVisible()
-  if (mode === 'desktop') await expect(page.locator('.landing-sticky-left')).toBeVisible()
+  if (mode === 'desktop') await expect(page.locator('.landing-sticky-left__canvas')).toBeVisible()
   return { mode, stage, selector, authRoot: landingAuthRoot(mode) }
 }
 
@@ -68,12 +68,12 @@ test('landing page uses the Figma responsive composition and real DOM content', 
   health.assertHealthy()
 })
 
-test('desktop landing sticky sign-in column ends before the full-width footer', async ({ page }, testInfo) => {
+test('desktop landing sticky sign-in canvas ends before the full-width footer', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Desktop sticky-footer behavior only')
 
   await page.goto('/')
   await visibleLandingCanvas(page)
-  const sticky = page.locator('.landing-sticky-left')
+  const sticky = page.locator('.landing-sticky-left__canvas')
   const footer = page.locator('#footer-d')
 
   await expect(sticky).toBeVisible()
@@ -81,7 +81,7 @@ test('desktop landing sticky sign-in column ends before the full-width footer', 
   await expect(footer).toBeVisible()
 
   const overlap = await page.evaluate(() => {
-    const stickyNode = document.querySelector('.landing-sticky-left')
+    const stickyNode = document.querySelector('.landing-sticky-left__canvas')
     const footerNode = document.querySelector('#footer-d')
     if (!stickyNode || !footerNode) return null
     const stickyRect = stickyNode.getBoundingClientRect()
