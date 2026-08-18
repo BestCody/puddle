@@ -26,27 +26,23 @@ const server = createServer(async (request, response) => {
   } finally { await handle?.close() }
 })
 
-function expectedWidth(testCase) {
-  if (testCase.mode === 'desktop') return Math.min(testCase.width, 1281, testCase.height * 1.425)
-  return Math.min(testCase.width, 704)
-}
-
 await new Promise((resolveListening) => server.listen(0, '127.0.0.1', resolveListening))
 const baseUrl = `http://127.0.0.1:${server.address().port}/`
 const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage()
 const cases = [
-  { width: 1920, height: 1080, mode: 'desktop', sourceWidth: 1281, sourceHeight: 7578 },
-  { width: 1440, height: 900, mode: 'desktop', sourceWidth: 1281, sourceHeight: 7578 },
-  { width: 1366, height: 768, mode: 'desktop', sourceWidth: 1281, sourceHeight: 7578 },
-  { width: 1280, height: 600, mode: 'desktop', sourceWidth: 1281, sourceHeight: 7578 },
-  { width: 1024, height: 768, mode: 'desktop', sourceWidth: 1281, sourceHeight: 7578 },
-  { width: 800, height: 600, mode: 'desktop', sourceWidth: 1281, sourceHeight: 7578 },
-  { width: 760, height: 900, mode: 'mobile', sourceWidth: 704, sourceHeight: 9660 },
-  { width: 704, height: 900, mode: 'mobile', sourceWidth: 704, sourceHeight: 9660 },
-  { width: 430, height: 932, mode: 'mobile', sourceWidth: 704, sourceHeight: 9660 },
-  { width: 390, height: 844, mode: 'mobile', sourceWidth: 704, sourceHeight: 9660 },
-  { width: 320, height: 700, mode: 'mobile', sourceWidth: 704, sourceHeight: 9660 }
+  { width: 1920, height: 1080, mode: 'desktop' },
+  { width: 1440, height: 900, mode: 'desktop' },
+  { width: 1366, height: 768, mode: 'desktop' },
+  { width: 1280, height: 600, mode: 'desktop' },
+  { width: 1024, height: 768, mode: 'desktop' },
+  { width: 800, height: 600, mode: 'desktop' },
+  { width: 761, height: 900, mode: 'desktop' },
+  { width: 760, height: 900, mode: 'mobile' },
+  { width: 704, height: 900, mode: 'mobile' },
+  { width: 430, height: 932, mode: 'mobile' },
+  { width: 390, height: 844, mode: 'mobile' },
+  { width: 320, height: 700, mode: 'mobile' }
 ]
 
 try {
@@ -65,6 +61,8 @@ try {
       const stageRect = stage.getBoundingClientRect()
       const canvasRect = canvas.getBoundingClientRect()
       const stickyRect = sticky?.getBoundingClientRect() || null
+      const canvasStyle = getComputedStyle(canvas)
+      const stageStyle = getComputedStyle(stage)
       return {
         viewportWidth: document.documentElement.clientWidth,
         viewportHeight: window.innerHeight,
@@ -75,34 +73,43 @@ try {
         left: stageRect.left,
         right: document.documentElement.clientWidth - stageRect.right,
         scrollWidth: document.documentElement.scrollWidth,
-        sticky: stickyRect ? { left: stickyRect.left, top: stickyRect.top, width: stickyRect.width, height: stickyRect.height, display: getComputedStyle(sticky).display } : null
+        stageDisplay: stageStyle.display,
+        canvasPosition: canvasStyle.position,
+        canvasTransform: canvasStyle.transform,
+        sticky: stickyRect ? {
+          left: stickyRect.left,
+          top: stickyRect.top,
+          width: stickyRect.width,
+          height: stickyRect.height,
+          display: getComputedStyle(sticky).display,
+          position: getComputedStyle(sticky).position
+        } : null
       }
     })
 
-    const targetWidth = expectedWidth(testCase)
-    const targetHeight = targetWidth * testCase.sourceHeight / testCase.sourceWidth
-    assert(Math.abs(metrics.stageWidth - targetWidth) < 1.1, `${testCase.mode} stage width ${metrics.stageWidth} does not match ${targetWidth}`)
-    assert(Math.abs(metrics.canvasWidth - targetWidth) < 1.1, `${testCase.mode} canvas width ${metrics.canvasWidth} does not match ${targetWidth}`)
-    assert(Math.abs(metrics.stageHeight - targetHeight) < 1.5, `${testCase.mode} stage aspect ratio changed at ${testCase.width}x${testCase.height}`)
-    assert(Math.abs(metrics.canvasHeight - targetHeight) < 1.5, `${testCase.mode} canvas aspect ratio changed at ${testCase.width}x${testCase.height}`)
+    const targetWidth = Math.min(testCase.width, testCase.mode === 'desktop' ? 1281 : 704)
+    assert(Math.abs(metrics.stageWidth - targetWidth) < 1.1, `${testCase.mode} stage width ${metrics.stageWidth} does not match fluid max-width ${targetWidth}`)
     assert(Math.abs(metrics.left - metrics.right) < 1.1, `${testCase.mode} stage is not centered at ${testCase.width}x${testCase.height}`)
     assert(metrics.scrollWidth <= metrics.viewportWidth, `${testCase.mode} page horizontally overflows at ${testCase.width}x${testCase.height}`)
+    assert(metrics.canvasTransform === 'none', `${testCase.mode} canvas still uses transform scaling at ${testCase.width}x${testCase.height}`)
+    assert(metrics.canvasPosition !== 'absolute', `${testCase.mode} canvas is still absolutely positioned at ${testCase.width}x${testCase.height}`)
+    assert(metrics.canvasHeight > testCase.height, `${testCase.mode} canvas does not grow naturally with document content`)
 
     if (testCase.mode === 'desktop') {
-      const scale = targetWidth / 1281
-      assert(metrics.stageWidth <= 1281.6, 'desktop stage upscaled beyond native Figma width')
-      assert(metrics.stageWidth <= testCase.height * 1.425 + 1.1, 'desktop stage overfits a short viewport')
+      assert(metrics.stageDisplay === 'grid', 'desktop landing is not using CSS Grid')
       assert(metrics.sticky?.display !== 'none', 'desktop sticky left pane is hidden')
-      assert(Math.abs(metrics.sticky.left - metrics.left) < 1.1, 'sticky left pane is not aligned to the centered Figma stage')
-      assert(Math.abs(metrics.sticky.top) < 1.1, 'sticky left pane is not pinned to the viewport top')
-      assert(Math.abs(metrics.sticky.width - 615 * scale) < 1.1, 'sticky left pane width does not track Figma scale')
-      assert(Math.abs(metrics.sticky.height - metrics.viewportHeight) < 1.1, 'sticky left pane does not cover the viewport height')
+      assert(metrics.sticky?.position === 'sticky', `desktop left pane uses ${metrics.sticky?.position} instead of CSS sticky`)
+      assert(Math.abs(metrics.sticky.left - metrics.left) < 1.1, 'sticky left pane is not aligned to the centered stage')
+      assert(Math.abs(metrics.canvasWidth + metrics.sticky.width - metrics.stageWidth) < 2, 'desktop columns do not fill the landing stage')
+      const ratio = metrics.sticky.width / metrics.stageWidth
+      assert(ratio >= .45 && ratio <= .55, `desktop split ratio ${ratio} drifted too far from the Figma composition`)
     } else {
-      assert(metrics.stageWidth <= 704.6, 'mobile stage upscaled beyond native Figma width')
+      assert(metrics.stageDisplay === 'block', 'mobile landing is not a single-column composition')
       assert(!metrics.sticky || metrics.sticky.display === 'none', 'desktop sticky pane leaked into mobile layout')
+      assert(Math.abs(metrics.canvasWidth - metrics.stageWidth) < 1.1, 'mobile canvas is not fluid with its stage')
     }
   }
-  console.log('Responsive Figma landing passed: desktop sticky split, right-side canvas scaling, and mobile single-column scaling are correct.')
+  console.log('Responsive Figma landing passed: centered max-width stage, CSS Grid desktop split, normal-flow content, mobile single column, and no whole-canvas scaling.')
 } finally {
   await page.close()
   await browser.close()
