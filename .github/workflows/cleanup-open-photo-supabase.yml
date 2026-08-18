@@ -9,12 +9,13 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - '.github/trigger-cleanup-open-photo-supabase'
+      - '.github/workflows/cleanup-open-photo-supabase.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: cleanup-open-photo-supabase
+  group: cleanup-open-photo-supabase-v2
   cancel-in-progress: false
 
 jobs:
@@ -53,7 +54,6 @@ jobs:
             'B2_MEDIA_BUCKET_ID', 'B2_MEDIA_BUCKET_NAME'
           ]
           for (const name of required) if (!process.env[name]) throw new Error(`${name} is not configured.`)
-
           const authorization = `Basic ${Buffer.from(`${process.env.B2_MEDIA_APPLICATION_KEY_ID}:${process.env.B2_MEDIA_APPLICATION_KEY}`).toString('base64')}`
           const b2Response = await fetch('https://api.backblazeb2.com/b2api/v4/b2_authorize_account', {
             headers: { Authorization: authorization, Accept: 'application/json' },
@@ -69,17 +69,11 @@ jobs:
           if (buckets.length && !buckets.some((bucket) => bucket?.id === process.env.B2_MEDIA_BUCKET_ID && bucket?.name === process.env.B2_MEDIA_BUCKET_NAME)) {
             throw new Error('B2 media key is not authorized for the configured production bucket.')
           }
-
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
           const serviceKey = process.env.SUPABASE_SECRET_KEY
           const response = await fetch(`${supabaseUrl}/rest/v1/rpc/set_b2_media_runtime_auth`, {
             method: 'POST',
-            headers: {
-              apikey: serviceKey,
-              Authorization: `Bearer ${serviceKey}`,
-              'Content-Type': 'application/json',
-              Accept: 'application/json'
-            },
+            headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({
               p_key_id: process.env.B2_MEDIA_APPLICATION_KEY_ID,
               p_application_key: process.env.B2_MEDIA_APPLICATION_KEY,
