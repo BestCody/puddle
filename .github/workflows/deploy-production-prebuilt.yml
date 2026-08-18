@@ -21,7 +21,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_TOKEN_PRIMARY: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ACCESS_TOKEN_CANDIDATE: ${{ secrets.VERCEL_ACCESS_TOKEN }}
+      VERCEL_API_TOKEN_CANDIDATE: ${{ secrets.VERCEL_API_TOKEN }}
+      VERCEL_CLI_TOKEN_CANDIDATE: ${{ secrets.VERCEL_CLI_TOKEN }}
+      VERCEL_AUTH_TOKEN_CANDIDATE: ${{ secrets.VERCEL_AUTH_TOKEN }}
+      VERCEL_TEAM_TOKEN_CANDIDATE: ${{ secrets.VERCEL_TEAM_TOKEN }}
       VERCEL_ORG_ID: team_aY04PVtKs2MUrxR38csNwmUc
       VERCEL_PROJECT_ID: prj_7By05EO9g3fqAJkubBtaeYelvwEQ
       VERCEL_SCOPE: bestcodys-projects
@@ -34,17 +39,8 @@ jobs:
           gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -f state=pending \
             -f context='Prebuilt production deploy' \
-            -f description='Checking CI deploy credentials and building production artifact' \
+            -f description='Selecting a valid Vercel credential and building production artifact' \
             -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >/dev/null
-
-      - name: Verify deployment credential exists
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "${VERCEL_TOKEN:-}" ]]; then
-            echo 'VERCEL_TOKEN is not configured in GitHub Actions secrets.' >&2
-            exit 2
-          fi
 
       - name: Check out production main
         uses: actions/checkout@v6
@@ -61,24 +57,50 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@59.1.4
 
-      - name: Verify Vercel account and team access
+      - name: Select a valid Vercel API token
         shell: bash
         run: |
           set -euo pipefail
-          vercel whoami --token="$VERCEL_TOKEN"
-          vercel teams list --token="$VERCEL_TOKEN"
+          selected=''
+          selected_name=''
+          for candidate_name in \
+            VERCEL_TOKEN_PRIMARY \
+            VERCEL_ACCESS_TOKEN_CANDIDATE \
+            VERCEL_API_TOKEN_CANDIDATE \
+            VERCEL_CLI_TOKEN_CANDIDATE \
+            VERCEL_AUTH_TOKEN_CANDIDATE \
+            VERCEL_TEAM_TOKEN_CANDIDATE
+          do
+            candidate="${!candidate_name:-}"
+            [[ -n "$candidate" ]] || continue
+            echo "::add-mask::$candidate"
+            if vercel whoami --token="$candidate" >/dev/null 2>&1; then
+              selected="$candidate"
+              selected_name="$candidate_name"
+              break
+            fi
+          done
+          if [[ -z "$selected" ]]; then
+            echo 'No configured GitHub Actions secret contains a valid Vercel API access token.' >&2
+            exit 2
+          fi
+          echo "VERCEL_DEPLOY_TOKEN=$selected" >> "$GITHUB_ENV"
+          echo "Using valid Vercel credential from ${selected_name}."
+
+      - name: Verify Puddle team access
+        run: vercel teams list --token="$VERCEL_DEPLOY_TOKEN"
 
       - name: Pull production project configuration
-        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_DEPLOY_TOKEN"
 
       - name: Build production artifact on GitHub
-        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_DEPLOY_TOKEN"
 
       - name: Upload prebuilt artifact to production
         shell: bash
         run: |
           set -euo pipefail
-          deployment_url="$(vercel deploy --prebuilt --prod --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN")"
+          deployment_url="$(vercel deploy --prebuilt --prod --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_DEPLOY_TOKEN")"
           echo "Production deployment submitted: ${deployment_url}"
 
       - name: Publish deploy success status
@@ -98,5 +120,5 @@ jobs:
           gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -f state=failure \
             -f context='Prebuilt production deploy' \
-            -f description='Prebuilt deploy failed; inspect the linked Actions run' \
+            -f description='No valid Vercel API token or prebuilt deployment failed' \
             -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >/dev/null
