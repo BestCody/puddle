@@ -1,0 +1,93 @@
+name: One-off refresh media hash overlay
+
+on:
+  push:
+    branches: [ops/media-hash-serving-rollout-20260818]
+    paths:
+      - '.github/workflows/one-off-refresh-media-hash-overlay.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-media-hash-overlay-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_ID: ${{ secrets.B2_DATA_BUCKET_ID }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
+      B2_DATA_PREFIX: data
+      GLOBAL_BOOTSTRAP_B2_PREFIX: data/snapshots/bootstrap/current
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ops/media-hash-serving-rollout-20260818
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: npm ci --no-audit --no-fund
+      - run: python -m pip install --disable-pip-version-check duckdb boto3
+
+      - name: Resolve currently active canonical snapshot
+        id: active
+        run: python scripts/global-data/active_snapshot.py
+
+      - name: Export canonical transactional overlays
+        run: npm run global:bootstrap:export -- --out=.global-data/bootstrap-jsonl
+
+      - name: Convert and validate bootstrap Parquet
+        run: npm run global:bootstrap:parquet -- --input=.global-data/bootstrap-jsonl --output=.global-data/bootstrap-parquet
+
+      - name: Upload immutable bootstrap copy
+        shell: bash
+        run: |
+          stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          npm run b2:upload-tree -- --dir=.global-data/bootstrap-parquet --prefix="data/snapshots/bootstrap/snapshot=$stamp" --env-prefix=B2_DATA --concurrency=32
+
+      - name: Update current bootstrap pointer
+        run: npm run b2:upload-tree -- --dir=.global-data/bootstrap-parquet --prefix=data/snapshots/bootstrap/current --env-prefix=B2_DATA --concurrency=32
+
+      - name: Project hash-only photo metadata into active snapshot
+        run: python scripts/global-data/build_bootstrap_overlays.py --snapshot='${{ steps.active.outputs.snapshot }}' --bootstrap-prefix="$GLOBAL_BOOTSTRAP_B2_PREFIX"
+        env:
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+
+      - name: Validate active snapshot photo projection is hash-only
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import duckdb
+          bucket=os.environ['B2_DATA_BUCKET_NAME']
+          endpoint=os.environ['B2_DATA_S3_ENDPOINT'].replace('https://','').replace('http://','').rstrip('/')
+          key_id=os.environ['B2_DATA_APPLICATION_KEY_ID']
+          key=os.environ['B2_DATA_APPLICATION_KEY']
+          region=os.environ['B2_DATA_S3_REGION']
+          snapshot='${{ steps.active.outputs.snapshot }}'
+          con=duckdb.connect()
+          con.execute('INSTALL httpfs; LOAD httpfs;')
+          con.execute(f"CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{key_id}',SECRET '{key}',REGION '{region}',ENDPOINT '{endpoint}',URL_STYLE 'path',USE_SSL true)")
+          glob=f"s3://{bucket}/data/normalized/schema=v1/snapshot={snapshot}/country_code=*/photo_metadata.parquet"
+          schema={row[0] for row in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{glob}', union_by_name=true, hive_partitioning=true)").fetchall()}
+          if 'content_hash' not in schema: raise RuntimeError(f'content_hash missing from photo projection: {sorted(schema)}')
+          if 'url' in schema: raise RuntimeError(f'legacy url column remains in photo projection: {sorted(schema)}')
+          invalid=con.execute(f"SELECT count(*) FROM read_parquet('{glob}', union_by_name=true, hive_partitioning=true) WHERE NOT regexp_full_match(lower(cast(content_hash as varchar)), '[0-9a-f]{{64}}')").fetchone()[0]
+          total=con.execute(f"SELECT count(*) FROM read_parquet('{glob}', union_by_name=true, hive_partitioning=true)").fetchone()[0]
+          if invalid: raise RuntimeError(f'{invalid} photo metadata rows have invalid content hashes')
+          print({'snapshot': snapshot, 'photoRows': total, 'invalidHashes': invalid, 'schema': sorted(schema)})
+          PY
