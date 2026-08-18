@@ -1,7 +1,7 @@
--- Retire the removed shared date/hangout deck and static-catalogue database runtimes.
--- This migration deliberately avoids CASCADE so an unexpected live dependency fails loudly.
+-- Retire the removed shared date/hangout deck and static-catalogue/R2 runtimes.
+-- Deliberately avoid CASCADE so an unexpected live dependency fails loudly.
 
--- Current Saved / Planned / Past pages are personal-location state only.
+-- Saved / Planned / Past are personal-location state only.
 create or replace function public.location_history_page_v1(
   before_sort_at timestamptz default null,
   before_location_id uuid default null,
@@ -84,8 +84,7 @@ as $$
   limit greatest(1,least(coalesce(result_limit,25),41))
 $$;
 
--- Normalize recommendation-context writes around current discovery only. Generic mode values are retained
--- because they are recommendation context, but shared-deck identity and date_match_* sources are retired.
+-- Recommendation context remains, but shared-deck identity and date_match_* sources are retired.
 create or replace function public.sync_recommendation_context_event_v1()
 returns trigger language plpgsql set search_path='public'
 as $$
@@ -147,7 +146,7 @@ begin
 end
 $$;
 
--- Keep the fallback action contract for opened/undo and unusual batches, but remove all static-catalogue paths.
+-- Keep opened/undo and unusual-batch fallback behavior, but remove staticEphemeral handling.
 create or replace function public.record_discovery_actions_v3(actions jsonb)
 returns jsonb language plpgsql security definer set search_path='public'
 as $$
@@ -203,7 +202,6 @@ begin
 end
 $$;
 
--- Preserve the set-based fast path but remove staticEphemeral support and static-catalogue writes.
 create or replace function public.record_discovery_actions_v4_unchecked(actions jsonb)
 returns jsonb language plpgsql security definer set search_path='public'
 as $$
@@ -316,17 +314,76 @@ begin
 end
 $$;
 
+-- Google matching is current. Keep v3, but remove its static-materialization prioritization dependency.
+create or replace function public.claim_google_place_candidates_v3(batch_size integer default 100)
+returns table(
+  id uuid,name text,kind text,latitude double precision,longitude double precision,
+  city text,region text,country text,country_code text,address_public text,attempt_count integer,
+  candidate_place_ids text[],candidate_consensus numeric
+)
+language sql security definer set search_path='public'
+as $$
+  with base as materialized (
+    select location.id,location.published_at
+    from public.locations location
+    where location.status='published' and location.visibility='public'
+      and location.latitude is not null and location.longitude is not null
+  ), candidate_grouped as materialized (
+    select candidate.location_id,candidate.google_place_id,count(*)::integer as variant_count,
+      sum(candidate.sightings)::integer as sightings,max(candidate.last_seen_at) as last_seen_at
+    from public.google_place_id_candidates candidate
+    group by candidate.location_id,candidate.google_place_id
+  ), candidate_ranked as materialized (
+    select candidate_grouped.*,
+      least(0.99::numeric,0.45::numeric+least(4,candidate_grouped.variant_count)::numeric*0.12::numeric+least(10,candidate_grouped.sightings)::numeric*0.015::numeric) as consensus_score,
+      row_number() over(partition by candidate_grouped.location_id order by candidate_grouped.variant_count desc,candidate_grouped.sightings desc,candidate_grouped.last_seen_at desc,candidate_grouped.google_place_id) as candidate_rank
+    from candidate_grouped
+  ), evidence as materialized (
+    select candidate_ranked.location_id,
+      array_agg(candidate_ranked.google_place_id order by candidate_ranked.variant_count desc,candidate_ranked.sightings desc,candidate_ranked.last_seen_at desc,candidate_ranked.google_place_id) as candidate_place_ids,
+      max(candidate_ranked.consensus_score) as candidate_consensus
+    from candidate_ranked where candidate_ranked.candidate_rank<=5
+    group by candidate_ranked.location_id
+  ), selected as materialized (
+    select base.id,coalesce(attempt.attempt_count,0) as attempt_count,
+      coalesce(evidence.candidate_place_ids,'{}'::text[]) as candidate_place_ids,
+      coalesce(evidence.candidate_consensus,0::numeric) as candidate_consensus,
+      case when attempt.location_id is null then 0 else 1 end as attempted_sort,
+      base.published_at as touched_sort
+    from base
+    left join public.google_place_match_attempts attempt on attempt.location_id=base.id
+    left join evidence on evidence.location_id=base.id
+    where not exists(select 1 from public.location_google_places mapping where mapping.location_id=base.id and mapping.status='verified')
+      and not exists(select 1 from public.location_photo_sources photo where photo.location_id=base.id and photo.status='approved' and photo.is_ai_generated is not true)
+      and (attempt.location_id is null or attempt.retry_after is null or attempt.retry_after<=now() or (attempt.status='no_match' and attempt.last_attempt_at is not null and attempt.last_attempt_at<=now()-interval '6 hours'))
+    order by coalesce(evidence.candidate_consensus,0) desc,
+      case when attempt.location_id is null then 0 else 1 end,
+      coalesce(attempt.attempt_count,0) asc,base.published_at desc nulls last,base.id
+    limit greatest(1,least(coalesce(batch_size,100),5000))
+  )
+  select location.id,location.name,location.kind,location.latitude,location.longitude,
+    location.city,location.region,location.country,location.country_code,location.address_public,
+    selected.attempt_count,selected.candidate_place_ids,selected.candidate_consensus
+  from selected join public.locations location on location.id=selected.id
+  order by selected.candidate_consensus desc,selected.attempted_sort,selected.attempt_count,selected.touched_sort desc nulls last,selected.id
+$$;
+
+-- Normalize any old learning rows before narrowing the source contract.
+update public.recommendation_context_events
+set source='discovery',deck_id=null,metadata=coalesce(metadata,'{}'::jsonb)-'deck_id'
+where source in ('date_match_swipe','date_match_feedback') or deck_id is not null;
+
 alter table public.discovery_context_outbox drop column if exists touch_reason;
 alter table public.recommendation_context_events drop constraint if exists recommendation_context_events_deck_id_fkey;
 alter table public.recommendation_context_events drop column if exists deck_id;
 alter table public.recommendation_context_events drop constraint if exists recommendation_context_events_source_check;
 alter table public.recommendation_context_events add constraint recommendation_context_events_source_check check (source in ('discovery','backfill'));
 
--- Remove external triggers that still feed the static/R2 compatibility layer.
+-- Remove external triggers that still feed the retired static/R2 layer.
 drop trigger if exists location_photo_sources_attach_r2_media on public.location_photo_sources;
 drop trigger if exists location_photo_sources_retain_static on public.location_photo_sources;
 
--- Public shared-deck RPCs are retired before their tables.
+-- Shared-deck RPCs are retired before their tables.
 drop function if exists public.create_date_match_v1(uuid[],double precision,double precision);
 drop function if exists public.create_shared_location_deck_v2(uuid[],double precision,double precision,text,integer,jsonb);
 drop function if exists public.date_match_reveals_v1(uuid);
@@ -338,10 +395,11 @@ drop function if exists public.record_date_match_swipe_v1(uuid,uuid,text,text);
 drop function if exists public.schedule_date_match_v1(uuid,uuid,timestamptz);
 drop function if exists public.record_recommendation_context_v1(uuid,text,text,text,jsonb,uuid);
 
+-- FK-safe shared-deck table order: feedback/swipes -> matches -> items -> members/versions -> decks.
 drop table if exists public.date_match_feedback;
 drop table if exists public.date_match_swipes;
-drop table if exists public.date_match_items;
 drop table if exists public.date_match_matches;
+drop table if exists public.date_match_items;
 drop table if exists public.date_match_members;
 drop table if exists public.date_match_room_versions;
 drop table if exists public.date_match_decks;
@@ -351,35 +409,20 @@ drop function if exists public.touch_date_match_room_version_v1();
 drop function if exists public.refresh_location_rating_summary_trigger_v1();
 drop function if exists public.refresh_location_rating_summary_v1(uuid);
 
--- Preserve the current location-card quality API after date-match ratings are retired.
+-- Preserve the current card-quality API. The retired rating table is empty in production, so these
+-- neutral values match current observable output while removing the dependency.
 create or replace view public.location_card_quality_v1 as
 select
   l.id as location_id,
-  coalesce(
-    d.description,
-    public.location_factual_description_v1(
-      l.name,l.kind,l.summary,l.neighborhood,l.city,l.price_level,l.amenities,l.opening_hours
-    )
-  ) as description,
-  coalesce(
-    d.source,
-    case when nullif(trim(l.summary),'') is not null then 'location_summary'::text else 'generated_factual'::text end
-  ) as description_source,
-  nullif(trim(l.cover_path),'') is not null or exists (
-    select 1 from public.location_photo_sources p
-    where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false
+  coalesce(d.description,public.location_factual_description_v1(l.name,l.kind,l.summary,l.neighborhood,l.city,l.price_level,l.amenities,l.opening_hours)) as description,
+  coalesce(d.source,case when nullif(trim(l.summary),'') is not null then 'location_summary'::text else 'generated_factual'::text end) as description_source,
+  nullif(trim(l.cover_path),'') is not null or exists(
+    select 1 from public.location_photo_sources p where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false
   ) as has_real_photo,
   case
-    when (
-      nullif(trim(l.cover_path),'') is not null or exists (
-        select 1 from public.location_photo_sources p
-        where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false
-      )
-    ) and d.source in ('venue','editorial','community','wikipedia') then 3
-    when nullif(trim(l.cover_path),'') is not null or exists (
-      select 1 from public.location_photo_sources p
-      where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false
-    ) then 2
+    when (nullif(trim(l.cover_path),'') is not null or exists(select 1 from public.location_photo_sources p where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false))
+      and d.source in ('venue','editorial','community','wikipedia') then 3
+    when nullif(trim(l.cover_path),'') is not null or exists(select 1 from public.location_photo_sources p where p.location_id=l.id and p.status='approved' and coalesce(p.is_ai_generated,false)=false) then 2
     else 1
   end::integer as card_tier,
   null::numeric as average_rating,
@@ -392,47 +435,45 @@ left join lateral (
   select ld.description,ld.source
   from public.location_descriptions ld
   where ld.location_id=l.id and ld.status='approved'
-  order by case ld.source
-    when 'venue' then 1
-    when 'editorial' then 2
-    when 'community' then 3
-    when 'wikipedia' then 4
-    when 'location_summary' then 5
-    else 6
-  end,ld.verified_at desc nulls last,ld.updated_at desc
+  order by case ld.source when 'venue' then 1 when 'editorial' then 2 when 'community' then 3 when 'wikipedia' then 4 when 'location_summary' then 5 else 6 end,
+    ld.verified_at desc nulls last,ld.updated_at desc
   limit 1
 ) d on true
 where l.status='published' and l.visibility='public' and coalesce(l.has_private_address,false)=false;
 
 drop table if exists public.location_rating_summaries;
 
--- Static catalogue/media tables and their service-only workers are no longer part of runtime.
-drop table if exists public.static_location_assets;
-drop table if exists public.static_catalogue_materializations;
-drop table if exists public.static_catalogue_actions;
-drop table if exists public.static_media_resolution_states;
-drop table if exists public.static_google_runtime_budgets;
-drop table if exists public.static_photo_runtime_budget;
-
+-- Remove static/R2 worker functions before their tables where possible.
 drop function if exists public.attach_static_location_asset_v1(uuid,uuid);
 drop function if exists public.claim_static_media_resolution_v1(text,uuid,text,text,integer,integer);
 drop function if exists public.consume_static_google_runtime_budget_v1(integer,integer);
 drop function if exists public.delete_cold_static_materialization_v1(uuid);
 drop function if exists public.finish_static_media_resolution_v1(text,uuid,uuid,text,text);
-drop function if exists public.guard_static_media_resolution_database_size_v1();
 drop function if exists public.materialize_static_catalogue_location_v1(uuid,text,jsonb);
 drop function if exists public.materialize_static_catalogue_locations_v2(jsonb);
 drop function if exists public.prepare_r2_cleanup_v2(integer,integer,boolean);
 drop function if exists public.reserve_static_photo_runtime_bytes_v1(bigint,bigint,bigint);
 drop function if exists public.retain_static_location_with_photo_v1();
 drop function if exists public.static_catalogue_launch_database_bytes_v1();
-drop function if exists public.static_location_assets_attach_materialized_v1();
-drop function if exists public.static_materialization_attach_asset_v1();
 drop function if exists public.static_media_runtime_readiness_v1();
 drop function if exists public.touch_static_catalogue_materializations_v1(uuid[],text);
 drop function if exists public.upsert_static_location_asset_v1(uuid,text,text,uuid,text,text,text,text,text,text,text,real,text);
 drop function if exists public.claim_google_place_candidates_v1(integer);
 drop function if exists public.claim_google_place_candidates_v2(integer);
-drop function if exists public.claim_google_place_candidates_v3(integer);
 drop function if exists public.r2_discovery_overlay_v1(uuid[],double precision,double precision,integer,integer);
 drop function if exists public.attach_r2_media_object_v1();
+
+-- Internal static-table triggers are removed explicitly so their functions can be retired before table drops.
+drop trigger if exists static_materialization_attach_asset on public.static_catalogue_materializations;
+drop trigger if exists static_location_assets_attach_materialized on public.static_location_assets;
+drop trigger if exists static_media_resolution_database_size_guard on public.static_media_resolution_states;
+drop function if exists public.static_location_assets_attach_materialized_v1();
+drop function if exists public.static_materialization_attach_asset_v1();
+drop function if exists public.guard_static_media_resolution_database_size_v1();
+
+drop table if exists public.static_location_assets;
+drop table if exists public.static_catalogue_materializations;
+drop table if exists public.static_catalogue_actions;
+drop table if exists public.static_media_resolution_states;
+drop table if exists public.static_google_runtime_budgets;
+drop table if exists public.static_photo_runtime_budget;
