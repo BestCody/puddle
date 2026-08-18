@@ -6,7 +6,6 @@ on:
     paths:
       - '.github/workflows/sync-opensearch-runtime-auth.yml'
       - 'supabase/migrations/10071_opensearch_runtime_vault.sql'
-      - '.github/trigger-sync-opensearch-runtime-auth'
   workflow_dispatch:
 
 permissions:

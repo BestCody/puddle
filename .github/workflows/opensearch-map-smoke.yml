@@ -8,7 +8,6 @@ on:
       - 'lib/app/global-location-search.js'
       - 'instrumentation.js'
       - 'supabase/migrations/10071_opensearch_runtime_vault.sql'
-      - '.github/trigger-opensearch-map-smoke'
   workflow_dispatch:
 
 permissions:

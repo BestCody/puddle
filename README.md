@@ -16,23 +16,55 @@ location preferences
 
 Current capabilities include:
 
-- Supabase authentication, onboarding, account settings, and profile-photo management
-- relational Supabase discovery with distinct-location filtering across swipes and reloads
-- image-rich place cards with open licensed photos and Google Places fallback
+- Supabase authentication, onboarding, account settings, relational product data, and social state
+- global location discovery through OpenSearch when `GLOBAL_LOCATION_SEARCH_ENABLED=true`
+- relational Supabase discovery as an explicit serving mode when global serving is disabled; OpenSearch incidents never silently fail over into Postgres
+- image-rich place cards with licensed open photos and Google Places fallback
 - Pass, Save, Perfect Pick, details, filters, undo, and continuous nearby-place refill
 - Friends, friend requests, direct messages, rich shared-place messages, and places in common
-- indicators for friends who also liked a place and a Send to action from Discover
 - Saved, Planned, and Past place views
 - optional Tinder-tier worldwide adult connections under the separate global-matches flow
 - location contribution, editing, media moderation, reports, and security administration
 
-The active browser path does not depend on the retired shared pair/group deck system or the retired B2/R2 static-catalogue runtime.
+The active browser path does not depend on the retired shared pair/group deck system, static catalogue, R2 media runtime, or Supabase Storage for canonical open-location photos.
 
-## Data and media
+## Production architecture
 
-Published places are served from relational Supabase data. Approved Wikimedia Commons, Mapillary, and KartaView photos are normalized and stored in the `puddle-public-media` Supabase bucket. Google Places is used as a non-persisted photo fallback where eligible.
+```text
+Browser
+  → Next.js / Vercel
+    → security + Supabase session proxy
+    → product APIs and pages
+
+Discovery
+  → global mode: OpenSearch `locations-active`
+  → relational mode: Supabase/Postgres
+
+Global data build
+  → Overture + Foursquare bulk sources
+  → normalized/resolved Parquet in Backblaze B2
+  → existing Puddle metadata/photo overlays
+  → validated blue/green OpenSearch index
+  → atomic `locations-active` alias switch
+
+Approved open-location photos
+  → Wikimedia / Mapillary / KartaView
+  → normalized JPEG + SHA-256
+  → content-addressed private Backblaze B2 object
+  → Supabase `media_objects` metadata/provenance
+  → same-origin `/api/open-photo/<sha256>` delivery
+
+User/private media
+  → validated application upload pipeline
+  → Supabase Storage + `media_assets`
+  → public or short-lived signed URL according to visibility/access policy
+```
+
+Google Places is used for stable Place IDs and eligible non-persisted photo fallback. Google photo bytes and photo resource URLs are not canonical Puddle media.
 
 Historical database migrations remain in `supabase/migrations/` because applied migrations are immutable deployment history even when the runtime feature they originally supported has been retired.
+
+For the detailed open-photo invariants, see `docs/media-architecture.md`. For the system-wide runtime and operations map, see `docs/system-architecture.md`.
 
 ## Run locally
 
@@ -51,7 +83,7 @@ Open `http://localhost:3000`.
 # Dry run first
 npm run locations:photos:open -- --limit=200
 
-# Persist approved results to Supabase public media
+# Persist approved results to canonical B2 media
 npm run locations:photos:open -- --limit=200 --apply
 
 # Existing enrichment / Google matching helpers

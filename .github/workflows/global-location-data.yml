@@ -8,11 +8,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/trigger-global-location-build'
   schedule:
     - cron: '23 5 * * *'
 
@@ -25,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || vars.GLOBAL_DATA_PIPELINE_ENABLED == 'true'
+    if: github.event_name == 'workflow_dispatch' || vars.GLOBAL_DATA_PIPELINE_ENABLED == 'true'
     runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 360
     env:
@@ -43,6 +38,8 @@ jobs:
           python-version: '3.13'
       - name: Install bulk data dependencies
         run: python -m pip install --disable-pip-version-check duckdb boto3 numpy
+      - name: Validate current bootstrap schema before expensive global work
+        run: python scripts/global-data/verify_bootstrap_schema.py
       - id: snapshot
         shell: bash
         run: echo "snapshot=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
@@ -71,7 +68,7 @@ jobs:
       - name: Carry current photo and Google-ID overlays into the snapshot
         run: python scripts/global-data/build_bootstrap_overlays.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --bootstrap-prefix='data/snapshots/bootstrap/current'
       - name: Build, validate and atomically activate blue/green OpenSearch index
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.activate_opensearch) || (github.event_name != 'workflow_dispatch' && vars.GLOBAL_OPENSEARCH_INDEX_ENABLED == 'true')
+        if: (github.event_name == 'workflow_dispatch' && inputs.activate_opensearch) || (github.event_name != 'workflow_dispatch' && vars.GLOBAL_OPENSEARCH_INDEX_ENABLED == 'true')
         run: python scripts/global-data/index_opensearch.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --alias=locations-active
         env:
           GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}

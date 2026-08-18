@@ -121,8 +121,9 @@ test('the active relational card uses Google server photos and UI Kit fallback w
   assert.ok(card.includes('Wikimedia Commons, Mapillary, and KartaView'))
 })
 
-test('transition photo enrichment writes B2 media and uses the full configured provider entitlement', async () => {
+test('photo enrichment writes B2 media and has no retired static-media sync', async () => {
   const photoWorkflow = await read('.github/workflows/photo-enrichment.yml')
+  const photoWorker = await read('scripts/enrich-open-location-photos.mjs')
   const packageJson = JSON.parse(await read('package.json'))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_BATCH_SIZE: '100'"))
   assert.ok(photoWorkflow.includes("PHOTO_ENRICH_MAX_BATCHES: '200'"))
@@ -134,7 +135,9 @@ test('transition photo enrichment writes B2 media and uses the full configured p
   assert.ok(photoWorkflow.includes('B2_MEDIA_APPLICATION_KEY_ID'))
   assert.ok(photoWorkflow.includes('B2_MEDIA_APPLICATION_KEY'))
   assert.ok(photoWorkflow.includes('npm run locations:photos:enrich'))
-  assert.ok(photoWorkflow.includes("PHOTO_ENRICH_SYNC_MEDIA: 'false'"))
+  assert.equal(photoWorkflow.includes('PHOTO_ENRICH_SYNC_MEDIA'), false)
+  assert.equal(photoWorker.includes('PHOTO_ENRICH_SYNC_MEDIA'), false)
+  assert.equal(photoWorker.includes('sync-static-media-overlays.mjs'), false)
   assert.ok(photoWorkflow.includes("OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '300'"))
   assert.ok(photoWorkflow.includes("OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'"))
   assert.ok(photoWorkflow.includes("OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '32'"))
