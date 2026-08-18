@@ -77,17 +77,19 @@ jobs:
 
           const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL).replace(/\/$/, '')
           const serviceKey = process.env.SUPABASE_SECRET_KEY
-          const mediaResponse = await fetch(`${supabaseUrl}/rest/v1/media_objects?storage_backend=eq.b2&content_hash=not.is.null&select=content_hash,byte_size&order=created_at.asc&limit=8`, {
+          const mediaResponse = await fetch(`${supabaseUrl}/rest/v1/media_objects?storage_backend=eq.b2&storage_key=like.media/photos/by-sha256/*&content_hash=not.is.null&select=content_hash,byte_size,storage_key&order=created_at.asc&limit=8`, {
             headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Accept: 'application/json' },
             redirect: 'error', signal: AbortSignal.timeout(15000)
           })
-          if (!mediaResponse.ok) throw new Error(`Could not read B2 media samples from Supabase: HTTP ${mediaResponse.status}`)
+          if (!mediaResponse.ok) throw new Error(`Could not read canonical B2 photo samples from Supabase: HTTP ${mediaResponse.status}`)
           const media = await mediaResponse.json()
-          if (!Array.isArray(media) || media.length < 3) throw new Error('Not enough canonical B2 media samples for smoke test.')
+          if (!Array.isArray(media) || media.length < 3) throw new Error('Not enough canonical B2 photo samples for smoke test.')
 
           for (const item of media) {
             const hash = String(item.content_hash || '').toLowerCase()
             if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error(`Invalid canonical hash ${hash}`)
+            const expectedKey = `media/photos/by-sha256/${hash.slice(0, 2)}/${hash}.jpg`
+            if (String(item.storage_key || '') !== expectedKey) throw new Error(`Non-canonical B2 photo key for ${hash}`)
             const response = await fetch(`https://puddle.you/api/open-photo/${hash}`, { redirect: 'error', signal: AbortSignal.timeout(15000) })
             if (!response.ok) throw new Error(`Production B2 delivery failed HTTP ${response.status} for ${hash}`)
             const bytes = Buffer.from(await response.arrayBuffer())
