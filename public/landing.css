@@ -221,6 +221,16 @@ img{display:block;max-width:100%}
   .site-footer--desktop .footer-columns{gap:24px;padding-inline:clamp(24px,5vw,48px)}
 }
 
+/* Short desktop viewports compact only the sticky auth surface so every action remains reachable. */
+@media(min-width:1024px) and (max-height:820px){
+  .brand--desktop{top:clamp(24px,5vh,32px)}
+  .login-panel{top:clamp(84px,15vh,96px);gap:10px}
+  .login-panel h1{margin-bottom:8px;font-size:clamp(38px,3.4vw,44px);line-height:1.15}
+  .landing-login-form{gap:9px}
+  .landing-login-form input,.continue-button,.auth-choice{min-height:48px}
+  .or-divider{gap:12px}
+}
+
 /* On very wide monitors the authored composition stops at a readable width while the footer remains full bleed. */
 @media(min-width:1920px){
   .footer-bottom-art--desktop{left:50%;right:auto;width:min(100vw,1920px);max-width:none;transform:translateX(-50%)}

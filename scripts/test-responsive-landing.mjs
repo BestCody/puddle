@@ -117,13 +117,21 @@ try {
       assert(Math.abs(metrics.canvasWidth + metrics.leftCell.width - metrics.stageWidth) < 2, 'desktop columns do not fill the landing stage')
       const ratio = metrics.leftCell.width / metrics.stageWidth
       assert(ratio >= .43 && ratio <= .55, `desktop split ratio ${ratio} drifted too far from the Figma composition`)
+
+      const stickyBox = await page.locator('.landing-sticky-left__canvas').boundingBox()
+      const authChoices = page.locator('.landing-sticky-left .auth-choice')
+      assert(await authChoices.count() === 2, `desktop auth actions are incomplete at ${testCase.width}x${testCase.height}`)
+      const lastAuthBox = await authChoices.nth(1).boundingBox()
+      assert(stickyBox && lastAuthBox, `desktop auth bounds are unavailable at ${testCase.width}x${testCase.height}`)
+      assert(lastAuthBox.y >= stickyBox.y - 1, `desktop auth starts above the sticky viewport at ${testCase.width}x${testCase.height}`)
+      assert(lastAuthBox.y + lastAuthBox.height <= stickyBox.y + stickyBox.height + 1, `desktop auth actions clip below the sticky viewport at ${testCase.width}x${testCase.height}`)
     } else {
       assert(metrics.stageDisplay === 'block', 'mobile landing is not a single-column composition')
       assert(!metrics.leftCell || metrics.leftCell.width === 0 || !(await page.locator('.landing-sticky-left').isVisible()), 'desktop left pane leaked into mobile layout')
       assert(Math.abs(metrics.canvasWidth - metrics.stageWidth) < 1.1, 'mobile canvas is not fluid with its stage')
     }
   }
-  console.log('Responsive Figma landing passed: 1440px canonical desktop composition, compact desktop continuity, mobile single column, normal-flow content, and no whole-canvas sizing transform.')
+  console.log('Responsive Figma landing passed: 1440px canonical desktop composition, compact desktop continuity, visible desktop auth actions, mobile single column, normal-flow content, and no whole-canvas sizing transform.')
 } finally {
   await page.close()
   await browser.close()
