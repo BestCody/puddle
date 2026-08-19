@@ -4,19 +4,29 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('map catalogue loading is viewport-bounded and OpenSearch-only', async () => {
-  const [searchSource, routeSource, mapSource, dataSource, pageSource] = await Promise.all([
+test('map catalogue loading is viewport-bounded through the selected global search backend', async () => {
+  const [facadeSource, b2Source, shardSource, routeSource, mapSource, dataSource, pageSource] = await Promise.all([
     read('lib/app/global-location-search.js'),
+    read('lib/app/b2-location-search.js'),
+    read('lib/app/location-search-shards.js'),
     read('app/api/map/viewport/route.js'),
     read('components/location-map.js'),
     read('lib/app/location-map-data.js'),
     read('app/map/page.js')
   ])
 
-  assert.match(searchSource, /buildGlobalLocationViewportSearchBody/)
-  assert.match(searchSource, /geo_bounding_box/)
-  assert.match(searchSource, /searchGlobalLocationsInViewport/)
-  assert.match(searchSource, /track_total_hits:\s*false/)
+  assert.match(facadeSource, /GLOBAL_LOCATION_SEARCH_BACKEND/)
+  assert.match(facadeSource, /searchGlobalLocationsInViewport/)
+  assert.match(facadeSource, /searchB2GlobalLocationsInViewport/)
+  assert.match(b2Source, /normalizeGlobalLocationViewport/)
+  assert.match(b2Source, /fetchCoarseViewportDocuments/)
+  assert.match(b2Source, /resolveGeoShardPlan/)
+  assert.match(b2Source, /pointInBounds/)
+  assert.match(shardSource, /GLOBAL_LOCATION_MAX_DIRECTORY_TILES/)
+  assert.match(shardSource, /GLOBAL_LOCATION_MAX_SHARDS/)
+  assert.match(shardSource, /GLOBAL_LOCATION_MAX_COMPRESSED_BYTES/)
+  assert.match(shardSource, /GLOBAL_LOCATION_MAX_CANDIDATES/)
+  assert.match(shardSource, /directoryTilesForBounds/)
 
   assert.match(routeSource, /searchGlobalLocationsInViewport/)
   assert.match(routeSource, /Cache-Control': 'private, no-store'/)
