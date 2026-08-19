@@ -82,7 +82,8 @@ test('provider rate limits match upstream contracts', async () => {
   assert.match(mapillary, /release_unused_budget/)
 
   assert.match(kartaWorkflow, /default: '1000'/)
-  assert.match(kartaWorkflow, /KARTAVIEW_REQUESTS_PER_HOUR: .*'1000'/)
+  assert.match(kartaWorkflow, /KARTAVIEW_REQUESTS_PER_HOUR: '1000'/)
+  assert.match(kartaWorkflow, /KARTAVIEW_MAX_CONCURRENCY: '8'/)
   assert.match(karta, /PROVIDER_HOURLY_MAX = 1000 if TOKEN else 100/)
   assert.match(karta, /START_INTERVAL = 3600\.0 \/ REQUESTS_PER_HOUR/)
   assert.match(karta, /Retry-After/)
