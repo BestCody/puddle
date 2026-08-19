@@ -1,4 +1,5 @@
 import { access, readFile, readdir } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -40,6 +41,8 @@ const retiredPaths = [
   'scripts/profile-discovery-spatial.mjs',
   'scripts/global-data/export-supabase-bootstrap.mjs',
   'scripts/global-data/build-bootstrap-parquet.py',
+  'scripts/global-data/sync_retired_photo_exclusions.py',
+  'scripts/global-data/backfill_global_photo_fingerprints.py',
   'app/api/location-google-photo/[id]/route.js',
   'app/api/location-open-photo/[id]/route.js',
   'app/api/location-photo-status/[id]/route.js',
@@ -114,4 +117,50 @@ for (const required of ['OpenSearch failures do not silently fail over to Postgr
   if (!architecture.includes(required)) throw new Error(`System architecture is missing invariant: ${required}`)
 }
 
-console.log(`Legacy surface check passed: ${retiredPaths.length} retired catalogue paths absent and ${workflowNames.length} workflows free of Postgres/B2 compatibility fallbacks.`)
+// Derive the retired database contract directly from the migrations that performed
+// the production cutovers. Historical migrations are intentionally excluded from
+// the runtime scan; active code must never call objects these migrations dropped.
+const retirementMigrations = [
+  'supabase/migrations/10074_drop_legacy_social_rpc_compatibility.sql',
+  'supabase/migrations/10075_retire_shared_deck_static_catalogue.sql',
+  'supabase/migrations/20260818204500_lazy_location_refs_cutover.sql',
+  'supabase/migrations/20260818204800_remove_remaining_location_catalogue_coupling.sql',
+  'supabase/migrations/20260818204900_retire_legacy_location_function_coupling.sql',
+  'supabase/migrations/20260818205000_retire_catalogue_sync_region_hooks.sql',
+  'supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql'
+]
+const retiredDatabaseIdentifiers = new Set()
+for (const migration of retirementMigrations) {
+  const source = await read(migration)
+  const drops = source.matchAll(/\bdrop\s+(?:function|table|view)\s+(?:if\s+exists\s+)?public\.([a-z][a-z0-9_]*)/gi)
+  for (const match of drops) retiredDatabaseIdentifiers.add(match[1])
+}
+// `locations` is also the canonical B2 parquet dataset name, so a raw word scan
+// would be a false positive. Direct Supabase `locations` access is fenced above
+// and in check.mjs with syntax-aware patterns.
+retiredDatabaseIdentifiers.delete('locations')
+
+const activeTrackedFiles = execFileSync('git', [
+  'ls-files', '-z',
+  'app', 'components', 'lib', 'scripts', '.github/workflows',
+  'package.json', '.env.example', 'vercel.json', 'next.config.mjs', 'proxy.js'
+], { cwd: root })
+  .toString()
+  .split('\0')
+  .filter(Boolean)
+  .filter((path) => /\.(?:[cm]?js|jsx|ts|tsx|py|ya?ml|json)$/.test(path) || ['.env.example'].includes(path))
+  .filter((path) => !['scripts/check.mjs', 'scripts/check-legacy-surface.mjs'].includes(path))
+
+const legacyHits = []
+for (const relative of activeTrackedFiles) {
+  const source = await read(relative)
+  for (const identifier of retiredDatabaseIdentifiers) {
+    const pattern = new RegExp(`(^|[^A-Za-z0-9_])${identifier}([^A-Za-z0-9_]|$)`)
+    if (pattern.test(source)) legacyHits.push(`${relative}: ${identifier}`)
+  }
+}
+if (legacyHits.length) {
+  throw new Error(`Active runtime/config still references database objects retired by cutover migrations:\n${legacyHits.sort().join('\n')}`)
+}
+
+console.log(`Legacy surface check passed: ${retiredPaths.length} retired catalogue paths absent, ${workflowNames.length} workflows free of compatibility fallbacks, and ${activeTrackedFiles.length} active files contain none of ${retiredDatabaseIdentifiers.size} retired database identifiers.`)
