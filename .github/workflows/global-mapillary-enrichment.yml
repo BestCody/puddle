@@ -50,6 +50,7 @@ jobs:
           --request-limit='${{ github.event_name == 'workflow_dispatch' && inputs.request_limit || '50000' }}'
         env:
           MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+          # Reserve up to the full published daily tile allowance; the B2 UTC-day ledger prevents overspend and releases unused reservations.
           MAPILLARY_TILE_DAILY_LIMIT: '50000'
           MAPILLARY_TILE_CONCURRENCY: ${{ vars.MAPILLARY_TILE_CONCURRENCY || '192' }}
           MAPILLARY_RESCAN_DAYS: ${{ vars.MAPILLARY_RESCAN_DAYS || '30' }}
