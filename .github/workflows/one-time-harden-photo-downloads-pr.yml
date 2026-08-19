@@ -1,0 +1,154 @@
+name: One-time harden photo downloads PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/harden-photo-downloads
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Patch materializer retry and Pillow compatibility
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/global-data/materialize_photo_candidates.py')
+          text = path.read_text()
+          text = text.replace('import os\nimport time\n', 'import os\nimport random\nimport threading\nimport time\n', 1)
+          text = text.replace(
+              "PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3}\n",
+              "PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3}\n"
+              "TRANSIENT_HTTP_CODES = {408, 425, 429, 500, 502, 503, 504}\n"
+              "WIKIMEDIA_DOWNLOAD_CONCURRENCY = max(1, min(CONCURRENCY, int(os.getenv('GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY', '16'))))\n"
+              "WIKIMEDIA_DOWNLOAD_GATE = threading.BoundedSemaphore(WIKIMEDIA_DOWNLOAD_CONCURRENCY)\n",
+              1,
+          )
+          old_download = '''def download(url, provider):
+              current = str(url or '')
+              for _ in range(3):
+                  parsed = urllib.parse.urlparse(current)
+                  if parsed.scheme != 'https' or not approved_host(provider, parsed.hostname or ''):
+                      raise RuntimeError(f'unapproved {provider} asset host')
+                  req = urllib.request.Request(current, headers={'Accept': 'image/avif,image/webp,image/png,image/jpeg', 'User-Agent': 'Puddle/1.0 licensed photo materializer'})
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as response:
+                          content_type = (response.headers.get_content_type() or '').lower()
+                          declared = int(response.headers.get('Content-Length') or 0)
+                          if declared > MAX_BYTES:
+                              raise RuntimeError('image exceeds 10 MB')
+                          body = response.read(MAX_BYTES + 1)
+                          if not body or len(body) > MAX_BYTES:
+                              raise RuntimeError('image is empty or exceeds 10 MB')
+                          if content_type not in {'image/jpeg', 'image/png', 'image/webp', 'image/avif', 'application/octet-stream'}:
+                              raise RuntimeError(f'unsupported image type {content_type}')
+                          return body
+                  except urllib.error.HTTPError as error:
+                      if error.code in {301, 302, 303, 307, 308} and error.headers.get('Location'):
+                          current = urllib.parse.urljoin(current, error.headers['Location'])
+                          continue
+                      raise
+              raise RuntimeError('too many image redirects')
+          '''.replace('              ', '')
+          new_download = '''def download(url, provider):
+              current = str(url or '')
+              redirects = 0
+              transient_attempt = 0
+              while True:
+                  parsed = urllib.parse.urlparse(current)
+                  if parsed.scheme != 'https' or not approved_host(provider, parsed.hostname or ''):
+                      raise RuntimeError(f'unapproved {provider} asset host')
+                  req = urllib.request.Request(current, headers={'Accept': 'image/avif,image/webp,image/png,image/jpeg', 'User-Agent': 'Puddle/1.0 licensed photo materializer'})
+                  try:
+                      gate = WIKIMEDIA_DOWNLOAD_GATE if provider == 'wikimedia-commons' else None
+                      if gate:
+                          gate.acquire()
+                      try:
+                          with urllib.request.urlopen(req, timeout=30) as response:
+                              content_type = (response.headers.get_content_type() or '').lower()
+                              declared = int(response.headers.get('Content-Length') or 0)
+                              if declared > MAX_BYTES:
+                                  raise RuntimeError('image exceeds 10 MB')
+                              body = response.read(MAX_BYTES + 1)
+                              if not body or len(body) > MAX_BYTES:
+                                  raise RuntimeError('image is empty or exceeds 10 MB')
+                              if content_type not in {'image/jpeg', 'image/png', 'image/webp', 'image/avif', 'application/octet-stream'}:
+                                  raise RuntimeError(f'unsupported image type {content_type}')
+                              return body
+                      finally:
+                          if gate:
+                              gate.release()
+                  except urllib.error.HTTPError as error:
+                      if error.code in {301, 302, 303, 307, 308} and error.headers.get('Location'):
+                          redirects += 1
+                          if redirects > 3:
+                              raise RuntimeError('too many image redirects') from error
+                          current = urllib.parse.urljoin(current, error.headers['Location'])
+                          continue
+                      if error.code in TRANSIENT_HTTP_CODES and transient_attempt < 5:
+                          retry_after = error.headers.get('Retry-After')
+                          try:
+                              delay = float(retry_after) if retry_after else 0.0
+                          except ValueError:
+                              delay = 0.0
+                          if delay <= 0:
+                              delay = min(30.0, 0.5 * (2 ** transient_attempt))
+                          time.sleep(min(60.0, delay) + random.uniform(0.0, 0.75))
+                          transient_attempt += 1
+                          continue
+                      raise
+          '''.replace('              ', '')
+          if old_download not in text:
+              raise SystemExit('download function did not match expected source')
+          text = text.replace(old_download, new_download, 1)
+          text = text.replace(
+              "def dhash(image):\n    gray = image.convert('L').resize((9, 8), Image.Resampling.LANCZOS)\n    pixels = list(gray.getdata())\n",
+              "def flattened_pixels(image):\n    getter = getattr(image, 'get_flattened_data', None)\n    return list(getter() if getter else image.getdata())\n\n\ndef dhash(image):\n    gray = image.convert('L').resize((9, 8), Image.Resampling.LANCZOS)\n    pixels = flattened_pixels(gray)\n",
+              1,
+          )
+          text = text.replace(
+              "def average_hash(image):\n    gray = image.convert('L').resize((8, 8), Image.Resampling.LANCZOS)\n    pixels = list(gray.getdata())\n",
+              "def average_hash(image):\n    gray = image.convert('L').resize((8, 8), Image.Resampling.LANCZOS)\n    pixels = flattened_pixels(gray)\n",
+              1,
+          )
+          path.write_text(text)
+
+          test_path = Path('tests/integration/photo-enrichment-runner.test.mjs')
+          tests = test_path.read_text()
+          marker = "test('retired relational photo enrichment is not part of the production pipeline'"
+          addition = '''test('photo downloads back off on provider throttling and cap Wikimedia bursts', async () => {
+            const materializer = await read('scripts/global-data/materialize_photo_candidates.py')
+            assert.match(materializer, /TRANSIENT_HTTP_CODES = \{408, 425, 429, 500, 502, 503, 504\}/)
+            assert.match(materializer, /GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY/)
+            assert.match(materializer, /Retry-After/)
+            assert.match(materializer, /random\.uniform/)
+            assert.match(materializer, /get_flattened_data/)
+          })
+
+          '''
+          if addition not in tests:
+              tests = tests.replace(marker, addition + marker, 1)
+          test_path.write_text(tests)
+          PY
+      - name: Validate patch
+        run: |
+          python -m py_compile scripts/global-data/materialize_photo_candidates.py
+          node --test tests/integration/photo-enrichment-runner.test.mjs
+      - name: Commit patch
+        run: |
+          git config user.name 'puddle-maintenance-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add scripts/global-data/materialize_photo_candidates.py tests/integration/photo-enrichment-runner.test.mjs
+          git commit -m 'Harden photo downloads against provider throttling'
+          git push origin HEAD:agent/harden-photo-downloads
