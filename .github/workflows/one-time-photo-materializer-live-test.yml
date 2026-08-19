@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/photo-materializer-live-test
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
