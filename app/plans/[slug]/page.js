@@ -85,7 +85,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
         .eq('location_id', location.id)
         .eq('state', 'saved')
         .maybeSingle(),
-      session.supabase.rpc('social_friends_v1'),
+      session.supabase.rpc('social_friends_v2'),
       session.supabase.rpc('location_reviews_v1', { target_location: location.id }),
       getLocationPlansSnapshot(session)
     ])

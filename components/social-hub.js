@@ -90,7 +90,7 @@ function FriendsTab({ client, snapshot, onChanged, onOpenConversation, onMessage
     const term = query.trim()
     if (!term) return setResults([])
     setSearching(true)
-    const { data, error } = await client.rpc('social_friend_search_v1', { search_term: term })
+    const { data, error } = await client.rpc('social_friend_search_v2', { search_term: term })
     setSearching(false)
     if (error) return onMessage(error.message || 'Search failed.')
     setResults(data || [])
@@ -170,7 +170,7 @@ function MessagesTab({ client, snapshot, onChanged, onMessage }) {
 
   async function refreshMessages() {
     if (!selected) return
-    const { data } = await client.rpc('social_messages_v1', { target: selected.conversation_id })
+    const { data } = await client.rpc('social_messages_v2', { target: selected.conversation_id })
     if (data) {
       setMessages(data)
       const last = data[data.length - 1]

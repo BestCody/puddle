@@ -3,8 +3,9 @@ name: Materialize global licensed photos
 # Candidate discovery is intentionally split into independent quota workers:
 # - scripts/global-data/build_wikimedia_candidates.py via global-wikimedia-enrichment.yml
 # - scripts/global-data/build_mapillary_candidates.py via global-mapillary-enrichment.yml
-# This workflow drains ranked candidates through the global uniqueness registry
-# before writing canonical B2 media.
+# - scripts/global-data/build_kartaview_candidates.py via global-kartaview-enrichment.yml
+# Historical relational photo bridges are retired. This workflow only reconciles
+# canonical B2 metadata/claims and then drains ranked candidates into B2 media.
 
 on:
   workflow_dispatch:
@@ -57,16 +58,6 @@ jobs:
       - run: python -m pip install --disable-pip-version-check duckdb boto3 pillow
       - id: active
         run: python scripts/global-data/active_snapshot.py
-      - name: Publish retired historical photo exclusions for the active snapshot
-        run: python scripts/global-data/sync_retired_photo_exclusions.py
-        env:
-          GLOBAL_LOCATION_SNAPSHOT: ${{ steps.active.outputs.snapshot }}
-      - name: Complete historical B2 fingerprint registry before accepting new photos
-        run: python scripts/global-data/backfill_global_photo_fingerprints.py
-        env:
-          GLOBAL_LOCATION_SNAPSHOT: ${{ steps.active.outputs.snapshot }}
-          GLOBAL_PHOTO_FINGERPRINT_BACKFILL_CONCURRENCY: ${{ vars.GLOBAL_PHOTO_FINGERPRINT_BACKFILL_CONCURRENCY || '64' }}
-          GLOBAL_PHOTO_FINGERPRINT_BACKFILL_BATCH: ${{ vars.GLOBAL_PHOTO_FINGERPRINT_BACKFILL_BATCH || '5000' }}
       - name: Reconcile pre-registry global B2 photo metadata once per snapshot
         run: python scripts/global-data/reconcile_existing_global_photo_claims.py
         env:

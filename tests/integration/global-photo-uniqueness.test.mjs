@@ -9,16 +9,14 @@ async function source(path) {
 test('existing B2 photos are reconciled once and retired identities cannot resurface', async () => {
   const workflow = await source('.github/workflows/global-photo-enrichment.yml')
   const reconcile = await source('scripts/global-data/reconcile_existing_global_photo_claims.py')
-  const syncExclusions = await source('scripts/global-data/sync_retired_photo_exclusions.py')
   const materializer = await source('scripts/global-data/materialize_photo_candidates.py')
   const indexer = await source('scripts/global-data/index_opensearch.py')
   const registration = await source('supabase/migrations/10079_reconcile_existing_global_photo_claims.sql')
-  const exclusionFeed = await source('supabase/migrations/10078_global_photo_exclusion_feed.sql')
+  const retirement = await source('supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql')
 
-  assert.match(workflow, /sync_retired_photo_exclusions\.py/)
-  assert.match(workflow, /backfill_global_photo_fingerprints\.py/)
+  assert.doesNotMatch(workflow, /sync_retired_photo_exclusions\.py/)
+  assert.doesNotMatch(workflow, /backfill_global_photo_fingerprints\.py/)
   assert.match(workflow, /reconcile_existing_global_photo_claims\.py/)
-  assert.ok(workflow.indexOf('backfill_global_photo_fingerprints.py') < workflow.indexOf('reconcile_existing_global_photo_claims.py'))
   assert.ok(workflow.indexOf('reconcile_existing_global_photo_claims.py') < workflow.indexOf('materialize_photo_candidates.py'))
 
   assert.match(reconcile, /existing-global-reconciled-v1\.json/)
@@ -38,8 +36,8 @@ test('existing B2 photos are reconciled once and retired identities cannot resur
   assert.match(registration, /bit_count\(g\.perceptual_hash # v_perceptual\)<=5/)
   assert.match(registration, /pg_advisory_xact_lock\(19370001,v_lock_key\)/)
 
-  assert.match(exclusionFeed, /list_retired_b2_photo_exclusions_v1/)
-  assert.match(syncExclusions, /retired-relational\.parquet/)
+  assert.match(retirement, /drop function if exists public\.list_retired_b2_photo_exclusions_v1\(integer\)/)
+  assert.match(retirement, /drop function if exists public\.retire_duplicate_global_photo_claim_v1\(uuid, text\)/)
   assert.match(materializer, /photo_exclusions/)
   assert.match(materializer, /x\.location_id=e\.location_id AND x\.content_hash=e\.content_hash/)
   assert.match(materializer, /def object_exists\(key\):/)
