@@ -81,9 +81,9 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
   const totalMs = elapsedMs(started)
   const degraded = feed.emptyReason === 'temporarily_unavailable'
   if (String(feed.infrastructure?.requestedSource || feed.infrastructure?.source || '').startsWith('global-location')) {
-    recordSloObservation('openSearch', queryMs, !degraded && !feed.infrastructure?.searchTimedOut, {
+    recordSloObservation('locationSearch', queryMs, !degraded && !feed.infrastructure?.searchTimedOut, {
       trace_id: traceId,
-      service: 'opensearch',
+      service: 'b2',
       search_took_ms: Number(feed.infrastructure?.searchTookMs || 0),
       candidate_count: Number(feed.infrastructure?.candidates || 0),
       circuit_open: Boolean(feed.infrastructure?.circuitOpen)
