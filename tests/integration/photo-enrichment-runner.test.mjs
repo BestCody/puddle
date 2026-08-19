@@ -65,7 +65,7 @@ test('provider rate limits match upstream contracts', async () => {
   assert.match(materializer, /WIKIMEDIA_DOWNLOAD_CONCURRENCY/)
   assert.match(materializer, /WIKIMEDIA_DOWNLOAD_MBIT/)
   assert.match(materializer, /MAPILLARY_GRAPH_REQUESTS_PER_MINUTE/)
-  assert.match(materializer, /Authorization': f'OAuth/)
+  assert.match(materializer, /'access_token': MAPILLARY_TOKEN/)
   assert.match(materializer, /Retry-After/)
 
   assert.match(wikimediaWorkflow, /WIKIMEDIA_REQUESTS_PER_MINUTE: '200'/)

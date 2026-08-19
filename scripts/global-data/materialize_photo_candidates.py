@@ -200,13 +200,12 @@ def mapillary_details(image_id):
     if not MAPILLARY_TOKEN:
         raise RuntimeError('MAPILLARY_ACCESS_TOKEN is required to materialize Mapillary candidates.')
     fields = 'id,thumb_2048_url,width,height,creator,quality_score'
-    url = f'https://graph.mapillary.com/{urllib.parse.quote(str(image_id))}?' + urllib.parse.urlencode({'fields': fields})
+    url = f'https://graph.mapillary.com/{urllib.parse.quote(str(image_id))}?' + urllib.parse.urlencode({'fields': fields, 'access_token': MAPILLARY_TOKEN})
     for attempt in range(6):
         wait_mapillary_graph_start()
         try:
             request = urllib.request.Request(url, headers={
                 'Accept': 'application/json',
-                'Authorization': f'OAuth {MAPILLARY_TOKEN}',
                 'User-Agent': 'Puddle/1.0 global photo materializer (https://puddle.you/)',
             })
             with urllib.request.urlopen(request, timeout=20) as response:
