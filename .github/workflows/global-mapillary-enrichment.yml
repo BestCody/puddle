@@ -36,7 +36,7 @@ jobs:
       B2_DATA_PREFIX: data
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
       - run: python -m pip install --disable-pip-version-check duckdb boto3 mapbox-vector-tile
