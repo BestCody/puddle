@@ -1,0 +1,50 @@
+name: One-time legacy location scan refinement
+
+on:
+  push:
+    branches:
+      - agent/post-cutover-runtime-cleanup
+    paths:
+      - .github/workflows/agent-fix-legacy-location-scan.yml
+
+permissions:
+  contents: write
+
+jobs:
+  rewrite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/post-cutover-runtime-cleanup
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Refine deleted catalogue table detection
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check-legacy-surface.mjs')
+          source = path.read_text()
+          source = source.replace("const retiredDatabaseIdentifiers = new Set(['locations'])", "const retiredDatabaseIdentifiers = new Set()")
+          needle = "const legacyHits = []\nfor (const relative of activeTrackedFiles) {\n  const source = await read(relative)"
+          replacement = """const legacyHits = []
+const retiredCataloguePatterns = [
+  /\\.from\\(\\s*['\"]locations['\"]\\s*\\)/,
+  /\\bpublic\\.locations(?:[^A-Za-z0-9_]|$)/,
+  /(?:table\\s*:\\s*|table=)['\"]?locations(?:['\"]|\\b)/,
+  /['\"][^'\"]*\\blocations\\s*(?:!|\\()[^'\"]*['\"]/
+]
+for (const relative of activeTrackedFiles) {
+  const source = await read(relative)
+  if (retiredCataloguePatterns.some((pattern) => pattern.test(source))) legacyHits.push(`${relative}: locations`)"""
+          if needle not in source:
+              raise SystemExit('legacy scan insertion point not found')
+          source = source.replace(needle, replacement)
+          path.write_text(source)
+          PY
+          git config user.name 'puddle-maintenance-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add scripts/check-legacy-surface.mjs
+          git commit -m 'Refine deleted catalogue table scan'
+          git push origin HEAD:agent/post-cutover-runtime-cleanup
