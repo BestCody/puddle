@@ -14,6 +14,7 @@ const hydrationFloor = Math.max(0.5, Math.min(1, Number(base.GLOBAL_LOCATION_PAR
 
 const cases = [
   ['toronto', 43.6532, -79.3832, 25],
+  ['toronto-suburbs', 43.7615, -79.4111, 25],
   ['new-york', 40.7128, -74.0060, 25],
   ['london', 51.5074, -0.1278, 25],
   ['tokyo', 35.6762, 139.6503, 25],
@@ -30,6 +31,34 @@ function overlap(left, right) {
   let common = 0
   for (const value of a) if (b.has(value)) common += 1
   return { common, left: a.size, right: b.size, ratio: Math.max(a.size, b.size) ? common / Math.max(a.size, b.size) : 1 }
+}
+
+function typo(value) {
+  const text = String(value || '').trim()
+  if (text.length < 5) return null
+  const last = text.at(-1)?.toLowerCase()
+  return `${text.slice(0, -1)}${last === 'x' ? 'z' : 'x'}`
+}
+
+async function compareFiltered(name, input, filters, validate) {
+  const [oldResult, nextResult] = await Promise.all([
+    searchGlobalLocations({ ...input, filters }, { env: openSearchEnv }),
+    searchGlobalLocations({ ...input, filters }, { env: b2Env })
+  ])
+  if (oldResult.candidates.length && !nextResult.candidates.length) {
+    throw new Error(`${name}: B2 returned zero filtered candidates while OpenSearch returned ${oldResult.candidates.length}: ${JSON.stringify(filters)}`)
+  }
+  if (validate) {
+    for (const row of nextResult.candidates) {
+      if (!validate(row)) throw new Error(`${name}: B2 returned a row violating ${JSON.stringify(filters)}: ${row?.id}`)
+    }
+  }
+  return {
+    filters,
+    openSearchCount: oldResult.candidates.length,
+    b2Count: nextResult.candidates.length,
+    overlap: overlap(ids(oldResult.candidates), ids(nextResult.candidates))
+  }
 }
 
 const reports = []
@@ -52,15 +81,54 @@ for (const [name, latitude, longitude, distanceKm] of cases) {
   }
 
   let exactName = null
+  let fuzzyName = null
   const sample = oldResult.candidates.find((row) => row?.id && row?.name)
   if (sample) {
-    const textInput = { ...input, filters: { q: sample.name } }
-    const textResult = await searchGlobalLocations(textInput, { env: b2Env })
+    const textResult = await searchGlobalLocations({ ...input, filters: { q: sample.name } }, { env: b2Env })
     exactName = { target: sample.id, returned: ids(textResult.candidates).includes(String(sample.id)), count: textResult.candidates.length }
     if (!exactName.returned) throw new Error(`${name}: exact-name B2 query did not recover sampled OpenSearch location ${sample.id}.`)
+
+    const fuzzyQuery = typo(sample.name)
+    if (fuzzyQuery) {
+      const fuzzyResult = await searchGlobalLocations({ ...input, filters: { q: fuzzyQuery } }, { env: b2Env })
+      fuzzyName = { query: fuzzyQuery, target: sample.id, returned: ids(fuzzyResult.candidates).includes(String(sample.id)), count: fuzzyResult.candidates.length }
+      if (!fuzzyName.returned) throw new Error(`${name}: one-edit fuzzy B2 query did not recover sampled OpenSearch location ${sample.id}.`)
+    }
+
     if (sample.slug) {
       const bySlug = await getGlobalLocationBySlug(sample.slug, { env: b2Env })
       if (String(bySlug?.id || '') !== String(sample.id)) throw new Error(`${name}: slug hydration did not resolve ${sample.slug} to ${sample.id}.`)
+    }
+  }
+
+  const filterChecks = []
+  const categorySample = oldResult.candidates.find((row) => row?.category)
+  if (categorySample) {
+    const category = String(categorySample.category)
+    filterChecks.push(await compareFiltered(name, input, { category }, (row) => String(row?.category || '') === category))
+  }
+  const priceSample = oldResult.candidates.find((row) => [1, 2, 3, 4].includes(Number(row?.price_level)))
+  if (priceSample) {
+    const price = String(Number(priceSample.price_level))
+    filterChecks.push(await compareFiltered(name, input, { price }, (row) => Number(row?.price_level) === Number(price)))
+  }
+  const amenitySample = oldResult.candidates.find((row) => Array.isArray(row?.amenities) && row.amenities.length)
+  if (amenitySample) {
+    const amenity = String(amenitySample.amenities[0]).toLowerCase()
+    filterChecks.push(await compareFiltered(name, input, { amenity }, (row) => Array.isArray(row?.amenities) && row.amenities.some((value) => String(value).toLowerCase() === amenity)))
+  }
+  if (oldResult.candidates.some((row) => row?.accessible === true)) {
+    filterChecks.push(await compareFiltered(name, input, { accessible: true }, (row) => row?.accessible === true))
+  }
+
+  let preferredCategory = null
+  if (categorySample) {
+    const category = String(categorySample.category)
+    const boosted = await searchGlobalLocations({ ...input, preferredCategories: [category] }, { env: b2Env })
+    preferredCategory = {
+      category,
+      count: boosted.candidates.length,
+      topCategoryMatches: boosted.candidates.slice(0, 20).filter((row) => String(row?.category || '') === category).length
     }
   }
 
@@ -71,6 +139,9 @@ for (const [name, latitude, longitude, distanceKm] of cases) {
     topOverlap: overlap(oldIds, nextIds),
     hydrationRatio,
     exactName,
+    fuzzyName,
+    filterChecks,
+    preferredCategory,
     b2Diagnostics: nextResult.diagnostics || null
   })
 }
@@ -81,6 +152,9 @@ const [oldViewport, nextViewport] = await Promise.all([
   searchGlobalLocationsInViewport(dateLine, { env: openSearchEnv }),
   searchGlobalLocationsInViewport(dateLine, { env: b2Env })
 ])
+if (oldViewport.candidates.length && !nextViewport.candidates.length) {
+  throw new Error('international-date-line: B2 returned zero viewport candidates while OpenSearch returned results.')
+}
 reports.push({
   name: 'international-date-line',
   openSearchCount: oldViewport.candidates.length,
