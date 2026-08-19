@@ -162,6 +162,7 @@ CREATE OR REPLACE SECRET b2_data_secret (
 locations_glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet'
 photo_glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/photo_metadata.parquet'
 enriched_photo_glob = f's3://{BUCKET}/{DATA_PREFIX}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code=*/*.parquet'
+photo_exclusion_glob = f's3://{BUCKET}/{DATA_PREFIX}/enrichment/photo_exclusions/snapshot={args.snapshot}/*.parquet'
 google_glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/google_places.parquet'
 
 con.execute(f"CREATE OR REPLACE TEMP VIEW loc AS SELECT * FROM read_parquet('{locations_glob}', union_by_name=true, hive_partitioning=true)")
@@ -176,8 +177,22 @@ try:
     photo_sources.append(f"SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height,verified_at FROM read_parquet('{enriched_photo_glob}', union_by_name=true, hive_partitioning=true)")
 except Exception:
     pass
+try:
+    con.execute(f"CREATE OR REPLACE TEMP VIEW photo_exclusions AS SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('{photo_exclusion_glob}', union_by_name=true)")
+    con.execute('SELECT 1 FROM photo_exclusions LIMIT 1').fetchall()
+except Exception:
+    con.execute("CREATE OR REPLACE TEMP VIEW photo_exclusions AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false")
 if photo_sources:
-    con.execute("CREATE OR REPLACE TEMP VIEW photo_union AS " + " UNION ALL ".join(photo_sources))
+    con.execute("CREATE OR REPLACE TEMP VIEW photo_union_raw AS " + " UNION ALL ".join(photo_sources))
+    con.execute("""CREATE OR REPLACE TEMP VIEW photo_union AS
+      SELECT p.*
+      FROM photo_union_raw p
+      WHERE NOT EXISTS (
+        SELECT 1 FROM photo_exclusions x
+        WHERE x.location_id=cast(p.location_id AS VARCHAR)
+          AND x.content_hash=lower(cast(p.content_hash AS VARCHAR))
+      )
+    """)
     con.execute("""CREATE OR REPLACE TEMP VIEW photos AS SELECT * EXCLUDE(rn,verified_at) FROM (
       SELECT *,row_number() OVER(PARTITION BY location_id ORDER BY coalesce(try_cast(verified_at AS TIMESTAMP),TIMESTAMP '1970-01-01') DESC,provider) rn
       FROM photo_union

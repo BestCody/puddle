@@ -1,31 +1,25 @@
-name: Enrich place photos
+name: Enrich place photos (legacy manual)
 
-# Relational enrichment queue for the existing catalogue. Accepted image bytes
-# are written to B2. Global-scale candidate discovery runs in global-photo-enrichment.yml.
+# Transitional relational-catalogue importer. Continuous free-provider quota is
+# owned by the global B2 workers so KartaView/Wikimedia requests are not spent
+# twice. The historical schedule remains as a compatibility trigger, but the job
+# is deliberately skipped unless this workflow is manually dispatched.
 on:
   workflow_dispatch:
   schedule:
     - cron: '17 * * * *'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/photo-enrichment.yml'
-      - 'scripts/import-open-location-photos.mjs'
-      - 'scripts/enrich-open-location-photos.mjs'
-      - 'lib/app/open-photo-b2.js'
-      - 'lib/app/open-photo-transform.js'
-      - 'lib/storage/b2-native.js'
 
 permissions:
   contents: read
 
 concurrency:
-  group: progressive-place-photo-enrichment
+  group: legacy-place-photo-enrichment
   cancel-in-progress: false
 
 jobs:
   enrich:
-    if: github.event_name == 'workflow_dispatch' || vars.B2_MEDIA_ENABLED == 'true'
+    # B2_MEDIA_ENABLED no longer enables scheduled legacy imports; global B2 workers own that quota.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -53,12 +47,9 @@ jobs:
           OPEN_PHOTO_MIN_SCORE: '0.76'
           OPEN_PHOTO_REQUEST_TIMEOUT_MS: '12000'
           OPEN_PHOTO_LOCATION_CONCURRENCY: '100'
-          # Identified Wikimedia clients: full 200 requests/minute, <=3 concurrent.
           OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '300'
           OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'
-          # No artificial Mapillary delay; current fallback importer saturates its 32-worker code path.
           OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '32'
-          # Authenticated KartaView quota is 1,000/hour => 3.6 seconds/request.
           OPEN_PHOTO_KARTAVIEW_MIN_INTERVAL_MS: '3600'
           OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER: '3'
           OPEN_PHOTO_CLAIM_MIN_BATCH_SIZE: '1'
