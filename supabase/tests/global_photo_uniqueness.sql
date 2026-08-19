@@ -12,7 +12,7 @@ begin
   into v_status,v_token,v_conflict,v_kind
   from public.claim_global_photo_v1(
     '11111111-1111-1111-1111-111111111111'::uuid,
-    1,
+    1::smallint,
     repeat('a',64),
     repeat('1',64),
     '0000000000000000',
@@ -35,7 +35,7 @@ begin
   into v_status,v_token,v_conflict,v_kind
   from public.claim_global_photo_v1(
     '22222222-2222-2222-2222-222222222222'::uuid,
-    2,
+    2::smallint,
     repeat('b',64),
     repeat('1',64),
     'ffffffffffffffff',
@@ -52,7 +52,7 @@ begin
   into v_status,v_token,v_conflict,v_kind
   from public.claim_global_photo_v1(
     '33333333-3333-3333-3333-333333333333'::uuid,
-    1,
+    1::smallint,
     repeat('a',64),
     repeat('2',64),
     'ffffffffffffffff',
@@ -69,7 +69,7 @@ begin
   into v_status,v_token,v_conflict,v_kind
   from public.claim_global_photo_v1(
     '44444444-4444-4444-4444-444444444444'::uuid,
-    3,
+    3::smallint,
     repeat('d',64),
     repeat('3',64),
     '000000000000001f',
@@ -87,7 +87,7 @@ begin
   into v_status,v_token,v_conflict,v_kind
   from public.claim_global_photo_v1(
     '55555555-5555-5555-5555-555555555555'::uuid,
-    3,
+    3::smallint,
     repeat('e',64),
     repeat('4',64),
     '000000000000003f',
@@ -109,7 +109,7 @@ begin
   into v_status,v_token,v_conflict,v_kind
   from public.claim_global_photo_v1(
     '11111111-1111-1111-1111-111111111111'::uuid,
-    2,
+    2::smallint,
     repeat('f',64),
     repeat('5',64),
     'ffffffffffffffff',
@@ -127,7 +127,7 @@ begin
   into v_status,v_conflict,v_kind
   from public.register_existing_global_photo_v1(
     '66666666-6666-6666-6666-666666666666'::uuid,
-    2,
+    2::smallint,
     repeat('6',64),
     repeat('6',64),
     'aaaaaaaaaaaaaaaa',
@@ -143,7 +143,7 @@ begin
   into v_status,v_conflict,v_kind
   from public.register_existing_global_photo_v1(
     '66666666-6666-6666-6666-666666666666'::uuid,
-    2,
+    2::smallint,
     repeat('6',64),
     repeat('6',64),
     'aaaaaaaaaaaaaaaa',
@@ -159,7 +159,7 @@ begin
   into v_status,v_conflict,v_kind
   from public.register_existing_global_photo_v1(
     '77777777-7777-7777-7777-777777777777'::uuid,
-    1,
+    1::smallint,
     repeat('7',64),
     repeat('7',64),
     'aaaaaaaaaaaaaaab',
