@@ -11,7 +11,7 @@ on:
       request_limit:
         description: Maximum tile-request attempts to reserve for this run
         required: false
-        default: '12500'
+        default: '50000'
         type: string
   schedule:
     - cron: '7 */6 * * *'
@@ -47,7 +47,7 @@ jobs:
           python scripts/global-data/build_mapillary_candidates.py
           --snapshot='${{ steps.active.outputs.snapshot }}'
           --countries='${{ github.event_name == 'workflow_dispatch' && inputs.countries || vars.GLOBAL_PHOTO_COUNTRIES }}'
-          --request-limit='${{ github.event_name == 'workflow_dispatch' && inputs.request_limit || '12500' }}'
+          --request-limit='${{ github.event_name == 'workflow_dispatch' && inputs.request_limit || '50000' }}'
         env:
           MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
           MAPILLARY_TILE_DAILY_LIMIT: '50000'
