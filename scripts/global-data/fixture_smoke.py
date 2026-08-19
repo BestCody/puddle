@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""No-key smoke test for the global data platform's identity and photo-priority contracts.
+"""No-key smoke test for global-data identity, slug, and photo-priority contracts.
 
 This intentionally uses only local fixture data and the Python standard library. It
-exercises the invariants that must hold before any production B2/provider/OpenSearch
-access is attempted.
+exercises invariants that must hold before any production B2/provider/search access
+is attempted.
 """
 import json
 import math
 import re
 import uuid
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -51,12 +52,63 @@ def photo_choice(category, candidates):
     )['provider']
 
 
+def collision_safe_slugs(rows):
+    """Reference model for the SQL projection's deterministic duplicate-slug policy."""
+    counts = Counter(str(row['slug']) for row in rows if str(row.get('slug') or '').strip())
+    winners = {}
+    for row in rows:
+        slug = str(row.get('slug') or '').strip()
+        if slug and counts[slug] > 1:
+            identifier = str(row['id'])
+            winners[slug] = min(identifier, winners.get(slug, identifier))
+
+    resolved = {}
+    for row in rows:
+        identifier = str(row['id'])
+        slug = str(row.get('slug') or '').strip()
+        if slug and slug in winners and identifier != winners[slug]:
+            slug = f"{slug}-{identifier.replace('-', '')}"
+        if slug in resolved and resolved[slug] != identifier:
+            raise AssertionError(f'second-order slug collision for {slug}')
+        resolved[slug] = identifier
+    return resolved
+
+
+def assert_slug_collision_regression():
+    # This is the exact collision that stopped the 29,899,219-row production build.
+    first = 'f68941ee-ba28-5cbd-ae22-4496f8822175'
+    second = 'f68941ee-67eb-5c5e-a152-9e288eeb2f62'
+    original = 'place-f68941ee'
+    rows = [
+        {'id': first, 'slug': original},
+        {'id': second, 'slug': original},
+        {'id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'slug': 'already-unique'},
+    ]
+    resolved = collision_safe_slugs(rows)
+    winner = min(first, second)
+    loser = max(first, second)
+    expected_loser_slug = f"{original}-{loser.replace('-', '')}"
+    assert resolved[original] == winner, 'duplicate slug winner must be deterministic'
+    assert resolved[expected_loser_slug] == loser, 'duplicate slug loser must receive its full UUID suffix'
+    assert resolved['already-unique'] == 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'non-conflicting slugs must remain stable'
+    assert len(resolved) == len(rows), 'slug collision policy must remain one-to-one with canonical IDs'
+
+    # Keep the fixture tied to the production SQL rather than testing only a copy.
+    common = (ROOT / 'scripts' / 'global-data' / 'location_search_common.py').read_text(encoding='utf-8')
+    for marker in (
+        'slug_collision_winners',
+        'HAVING count(*) > 1',
+        "min(cast(id AS VARCHAR)) AS winner_id",
+        "replace(cast(l.id AS VARCHAR), '-', '')",
+    ):
+        assert marker in common, f'canonical slug collision projection is missing {marker}'
+
+
 def main():
     fixture = json.loads(FIXTURE.read_text(encoding='utf-8'))
     namespace = uuid.UUID(fixture['namespace'])
     bootstrap = {(row['source'], row['source_id']): row['location_id'] for row in fixture['bootstrapLinks']}
 
-    overture_by_id = {row['source_id']: row for row in fixture['overture']}
     overture_canonical = {}
 
     # Existing Overture identity wins. If only a matched FSQ identity existed, it
@@ -107,6 +159,8 @@ def main():
     canonical_ids = {row[2] for row in crosswalk}
     assert len(canonical_ids) == 3, f'fixture expected 3 canonical locations, got {len(canonical_ids)}'
 
+    assert_slug_collision_regression()
+
     for case in fixture['photoPriorityCases']:
         chosen = photo_choice(case['category'], case['candidates'])
         assert chosen == case['expected'], f"{case['category']} chose {chosen}, expected {case['expected']}"
@@ -117,6 +171,7 @@ def main():
         'sourceLinks': len(crosswalk),
         'canonicalLocations': len(canonical_ids),
         'aliases': len(aliases),
+        'slugCollisionRegression': True,
         'photoPriorityCases': len(fixture['photoPriorityCases']),
     }, indent=2))
 
