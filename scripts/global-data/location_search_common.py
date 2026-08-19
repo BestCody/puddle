@@ -125,6 +125,26 @@ def create_canonical_views(con, snapshot: str, source: B2SourceConfig) -> None:
 
     con.execute(f"CREATE OR REPLACE TEMP VIEW loc AS SELECT * FROM read_parquet('{locations_glob}', union_by_name=true, hive_partitioning=true)")
 
+    # Slugs are public lookup keys and therefore must be one-to-one with canonical IDs.
+    # Historical generated slugs used only the first eight UUID hex digits, so collisions
+    # are possible at global scale. Detect only duplicate keys once, preserve the original
+    # slug for the lexicographically-smallest ID, and suffix conflicting rows with their
+    # full UUID. This keeps all non-conflicting URLs stable while making the projection
+    # deterministic and collision-safe for old snapshots.
+    con.execute("""
+CREATE OR REPLACE TEMP TABLE slug_collision_winners AS
+SELECT
+  cast(slug AS VARCHAR) AS slug,
+  min(cast(id AS VARCHAR)) AS winner_id
+FROM loc
+WHERE slug IS NOT NULL AND trim(cast(slug AS VARCHAR)) <> ''
+GROUP BY 1
+HAVING count(*) > 1
+""")
+    collision_count = con.execute('SELECT count(*) FROM slug_collision_winners').fetchone()[0]
+    if collision_count:
+        print(f'search projection: resolving {collision_count} duplicate canonical slug keys', flush=True)
+
     photo_sources: list[str] = []
     normalized_photo_columns = _parquet_columns(con, photo_glob)
     normalized_photo_sql = _photo_source_sql(photo_glob, normalized_photo_columns)
@@ -213,7 +233,13 @@ def create_canonical_views(con, snapshot: str, source: B2SourceConfig) -> None:
 
 CANONICAL_SQL = """
 SELECT
-  l.id, l.slug, l.name, []::VARCHAR[] AS aliases, l.summary, NULL::VARCHAR description,
+  l.id,
+  CASE
+    WHEN sc.slug IS NOT NULL AND cast(l.id AS VARCHAR) <> sc.winner_id
+      THEN cast(l.slug AS VARCHAR) || '-' || replace(cast(l.id AS VARCHAR), '-', '')
+    ELSE l.slug
+  END AS slug,
+  l.name, []::VARCHAR[] AS aliases, l.summary, NULL::VARCHAR description,
   l.category, NULL::VARCHAR subcategory,
   l.latitude, l.longitude, l.country, l.country_code, l.region, l.region_code, l.city, l.neighborhood,
   l.postal_code, l.address, l.timezone, l.timezone_verified,
@@ -228,6 +254,7 @@ SELECT
   g.google_place_id, g.google_place_match_score,
   l.status, l.updated_at
 FROM loc l
+LEFT JOIN slug_collision_winners sc ON sc.slug=cast(l.slug AS VARCHAR)
 LEFT JOIN photos p ON p.location_id=l.id
 LEFT JOIN google g ON g.location_id=l.id
 """
