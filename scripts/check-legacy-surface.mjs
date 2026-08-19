@@ -153,16 +153,22 @@ const activeTrackedFiles = execFileSync('git', [
   .filter((path) => !['scripts/check.mjs', 'scripts/check-legacy-surface.mjs'].includes(path))
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const isJavaScriptLike = (path) => /\.(?:[cm]?js|jsx|ts|tsx)$/.test(path)
 const legacyHits = []
 const retiredCataloguePatterns = [
   /\.from\(\s*['"]locations['"]\s*\)/,
   /\bpublic\.locations(?:[^A-Za-z0-9_]|$)/,
-  /(?:table\s*:\s*|table=)['"]?locations(?:['"]|\b)/,
-  /['"][^'"]*\blocations\s*(?:!|\()[^'"]*['"]/
+  /(?:table\s*:\s*|table=)['"]?locations(?:['"]|\b)/
 ]
+const retiredCatalogueRelationPattern = /['"][^'"]*\blocations\s*(?:!|\()[^'"]*['"]/
+
 for (const relative of activeTrackedFiles) {
   const source = await read(relative)
-  if (retiredCataloguePatterns.some((pattern) => pattern.test(source))) legacyHits.push(`${relative}: locations`)
+  if (
+    retiredCataloguePatterns.some((pattern) => pattern.test(source)) ||
+    (isJavaScriptLike(relative) && retiredCatalogueRelationPattern.test(source))
+  ) legacyHits.push(`${relative}: locations`)
+
   for (const identifier of retiredDatabaseIdentifiers) {
     const escaped = escapeRegex(identifier)
     const patterns = [
@@ -170,10 +176,13 @@ for (const relative of activeTrackedFiles) {
       new RegExp(`\\.from\\(\\s*['\"]${escaped}['\"]`),
       new RegExp(`(?:table\\s*:\\s*|table=)['\"]?${escaped}(?:['\"]|\\b)`),
       new RegExp(`/rest/v1/rpc/${escaped}(?:[^A-Za-z0-9_]|$)`),
-      new RegExp(`\\bpublic\\.${escaped}(?:[^A-Za-z0-9_]|$)`),
-      new RegExp(`['\"][^'\"]*\\b${escaped}\\s*(?:!|\\()[^'\"]*['\"]`)
+      new RegExp(`\\bpublic\\.${escaped}(?:[^A-Za-z0-9_]|$)`)
     ]
-    if (patterns.some((pattern) => pattern.test(source))) legacyHits.push(`${relative}: ${identifier}`)
+    const relationPattern = new RegExp(`['\"][^'\"]*\\b${escaped}\\s*(?:!|\\()[^'\"]*['\"]`)
+    if (
+      patterns.some((pattern) => pattern.test(source)) ||
+      (isJavaScriptLike(relative) && relationPattern.test(source))
+    ) legacyHits.push(`${relative}: ${identifier}`)
   }
 }
 if (legacyHits.length) {
