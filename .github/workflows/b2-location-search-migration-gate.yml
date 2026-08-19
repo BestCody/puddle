@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: b2-location-search-production-migration
@@ -40,6 +41,31 @@ jobs:
       GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
       GLOBAL_LOCATION_FETCH_CONCURRENCY: '8'
     steps:
+      - name: Publish migration pending status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          url = f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}"
+          body = json.dumps({
+              'state': 'pending',
+              'context': 'B2 search migration gate',
+              'description': 'Building and validating immutable B2 search snapshot',
+              'target_url': os.environ['STATUS_URL'],
+          }).encode()
+          request = urllib.request.Request(url, data=body, method='POST', headers={
+              'Authorization': f"Bearer {os.environ['GH_TOKEN']}",
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'Content-Type': 'application/json',
+          })
+          with urllib.request.urlopen(request, timeout=30) as response:
+              print(response.status)
+          PY
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
@@ -98,7 +124,6 @@ jobs:
           print(f'snapshot={snapshot}')
           print(f'source_manifest_key={manifest_key}')
           PY
-          echo "Using completed canonical normalized snapshot ${{ steps.snapshot.outputs.snapshot }}"
       - id: candidate
         name: Reuse completed immutable search candidate when present
         shell: bash
@@ -219,3 +244,31 @@ jobs:
             radius: radius.diagnostics
           }, null, 2))
           NODE
+      - name: Publish migration final status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS_STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+          STATUS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          state = os.environ['STATUS_STATE']
+          url = f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/statuses/{os.environ['GITHUB_SHA']}"
+          body = json.dumps({
+              'state': state,
+              'context': 'B2 search migration gate',
+              'description': 'B2 search snapshot gate passed' if state == 'success' else 'B2 search snapshot gate failed',
+              'target_url': os.environ['STATUS_URL'],
+          }).encode()
+          request = urllib.request.Request(url, data=body, method='POST', headers={
+              'Authorization': f"Bearer {os.environ['GH_TOKEN']}",
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'Content-Type': 'application/json',
+          })
+          with urllib.request.urlopen(request, timeout=30) as response:
+              print(response.status)
+          PY
