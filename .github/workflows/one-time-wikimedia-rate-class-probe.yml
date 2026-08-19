@@ -1,0 +1,83 @@
+name: One-time Wikimedia rate-class probe
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Probe Wikimedia assigned rate class
+        env:
+          WIKIMEDIA_ACCESS_TOKEN: ${{ secrets.WIKIMEDIA_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import base64
+          import http.cookiejar
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          token = os.environ.get('WIKIMEDIA_ACCESS_TOKEN', '').strip()
+          if not token:
+              raise SystemExit('WIKIMEDIA_ACCESS_TOKEN is not configured')
+
+          jar = http.cookiejar.CookieJar()
+          opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+          params = urllib.parse.urlencode({
+              'action': 'query',
+              'format': 'json',
+              'meta': 'userinfo|globaluserinfo',
+              'uiprop': 'groups|centralids',
+              'guiprop': 'groups|editcount',
+          })
+          request = urllib.request.Request(
+              'https://commons.wikimedia.org/w/api.php?' + params,
+              headers={
+                  'Accept': 'application/json',
+                  'Authorization': f'Bearer {token}',
+                  'User-Agent': 'Puddle/1.0 Wikimedia rate-class probe (https://puddle.you/)',
+              },
+          )
+          with opener.open(request, timeout=30) as response:
+              payload = json.load(response)
+
+          userinfo = (payload.get('query') or {}).get('userinfo') or {}
+          globalinfo = (payload.get('query') or {}).get('globaluserinfo') or {}
+          authenticated = int(userinfo.get('id') or 0) > 0
+          global_groups = set(globalinfo.get('groups') or [])
+          local_groups = set(userinfo.get('groups') or [])
+
+          rate_class = None
+          cookie_names = []
+          for cookie in jar:
+              cookie_names.append(cookie.name)
+              if cookie.name.lower() != 'sessionjwt':
+                  continue
+              parts = cookie.value.split('.')
+              if len(parts) < 2:
+                  continue
+              padded = parts[1] + '=' * (-len(parts[1]) % 4)
+              try:
+                  claims = json.loads(base64.urlsafe_b64decode(padded.encode()))
+              except Exception:
+                  continue
+              rate_class = claims.get('rlc')
+
+          print(json.dumps({
+              'authenticated': authenticated,
+              'rateClass': rate_class,
+              'botFlag': bool({'bot', 'global-bot', 'local-bot'} & (global_groups | local_groups)),
+              'globalEditCount': globalinfo.get('editcount'),
+              'sessionJwtPresent': any(name.lower() == 'sessionjwt' for name in cookie_names),
+          }, sort_keys=True))
+          PY
