@@ -51,8 +51,9 @@ jobs:
           --limit='${{ github.event_name == 'workflow_dispatch' && inputs.request_limit || '1000' }}'
         env:
           KARTAVIEW_ACCESS_TOKEN: ${{ secrets.KARTAVIEW_ACCESS_TOKEN }}
-          # Guard/contract marker: KARTAVIEW_REQUESTS_PER_HOUR: '1000' is the authenticated free entitlement.
-          KARTAVIEW_REQUESTS_PER_HOUR: ${{ vars.KARTAVIEW_REQUESTS_PER_HOUR || '1000' }}
-          KARTAVIEW_MAX_CONCURRENCY: ${{ vars.KARTAVIEW_MAX_CONCURRENCY || '4' }}
+          # Puddle has an authenticated KartaView token, so use the full published entitlement.
+          KARTAVIEW_REQUESTS_PER_HOUR: '1000'
+          # Eight workers cover the 25-second timeout while the global gate still spaces starts 3.6 seconds apart.
+          KARTAVIEW_MAX_CONCURRENCY: '8'
           KARTAVIEW_RECHECK_DAYS: ${{ vars.KARTAVIEW_RECHECK_DAYS || '30' }}
           OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER: '3'
