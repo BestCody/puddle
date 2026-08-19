@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { ProfilePhotoEditor } from '@/components/profile-photo-editor'
+import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
 import { renderProductPage } from '@/lib/app/render-product-page'
+import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { updateProfileTheme } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -45,33 +47,64 @@ async function queryOr(query, fallback = []) {
   }
 }
 
+async function globalLocationsOr(ids, traceId) {
+  const unique = [...new Set(ids.map(String).filter(Boolean))]
+  if (!unique.length) return []
+  try {
+    return await getGlobalLocationsByIds(unique, { traceId })
+  } catch {
+    return []
+  }
+}
+
+function profileLocationShape(location) {
+  if (!location) return null
+  const photoHash = location.primary_photo && typeof location.primary_photo === 'object'
+    ? location.primary_photo.content_hash
+    : null
+  return {
+    ...location,
+    kind: location.kind || location.category || 'place',
+    cover_path: openPhotoUrlForHash(photoHash)
+  }
+}
+
 export default async function ProfilePage({ searchParams }) {
   const params = await searchParams
   const customizing = params?.customize === '1'
 
   return renderProductPage(async (session) => {
-    const [posts, saves, friends] = await Promise.all([
+    const [postRows, saveRows, friends] = await Promise.all([
       queryOr(session.supabase
         .from('social_posts')
-        .select('id,title,body,created_at,location_id,locations!social_posts_location_id_fkey(name,slug,kind,city,cover_path,status)')
+        .select('id,title,body,created_at,location_id')
         .eq('author_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(6)),
       queryOr(session.supabase
         .from('user_content_states')
-        .select('location_id,pinned_at,created_at,locations(id,name,slug,kind,city,cover_path,status)')
+        .select('location_id,pinned_at,created_at')
         .eq('profile_id', session.user.id)
         .eq('state', 'saved')
+        .not('location_id', 'is', null)
         .order('pinned_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(12)),
-      queryOr(session.supabase.rpc('social_friends_v1'))
+      queryOr(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 100 }))
     ])
+
+    const globalRows = await globalLocationsOr([
+      ...postRows.map((row) => row.location_id),
+      ...saveRows.map((row) => row.location_id)
+    ], session.traceId || null)
+    const locations = new Map(globalRows.map((row) => [String(row.id), profileLocationShape(row)]))
+    const posts = postRows.map((post) => ({ ...post, locations: locations.get(String(post.location_id)) || null }))
+    const saves = saveRows.map((item) => ({ ...item, locations: locations.get(String(item.location_id)) || null }))
     const visiblePosts = posts.filter((post) => post.locations?.status === 'published')
     const visibleSaves = saves.filter((item) => item.locations?.status === 'published')
     const recentPost = visiblePosts[0] || null
     const recentLocation = recentPost?.locations || null
-    const recentCover = profilePhotoUrl(session, recentLocation?.cover_path)
+    const recentCover = recentLocation?.cover_path || null
     const avatarUrl = profilePhotoUrl(session, session.profile.avatar_path)
     const preferences = (session.profile.interests || []).map(preferenceLabel).filter(Boolean).slice(0, 3)
     const chips = preferences.length ? preferences : ['Add interests']
