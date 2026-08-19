@@ -1,17 +1,9 @@
 name: B2 location search smoke
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/b2-location-search-smoke.yml'
-      - 'lib/app/global-location-search.js'
-      - 'lib/app/b2-location-search.js'
-      - 'lib/app/location-search-shards.js'
-      - 'lib/app/location-search-ranking.js'
-      - 'lib/app/b2-search-object-store.js'
-      - 'scripts/global-data/build_b2_search_index.py'
-      - 'scripts/global-data/validate_b2_search_index.py'
+  workflow_run:
+    workflows: ['Build and gate B2 location search']
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -23,6 +15,7 @@ concurrency:
 
 jobs:
   smoke:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -31,6 +24,8 @@ jobs:
       GLOBAL_LOCATION_MAX_RADIUS_KM: '100'
       GLOBAL_LOCATION_MAX_DIRECTORY_TILES: '64'
       GLOBAL_LOCATION_MAX_SHARDS: '128'
+      GLOBAL_LOCATION_MAX_OBJECT_BYTES: '16777216'
+      GLOBAL_LOCATION_MAX_DECODED_OBJECT_BYTES: '67108864'
       GLOBAL_LOCATION_MAX_COMPRESSED_BYTES: '16777216'
       GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
       B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
