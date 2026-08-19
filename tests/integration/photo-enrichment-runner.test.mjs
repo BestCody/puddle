@@ -4,12 +4,12 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('global photo enrichment is scheduled and can be dispatched manually', async () => {
+test('global photo materialization runs hourly and can be dispatched manually', async () => {
   const workflow = await read('.github/workflows/global-photo-enrichment.yml')
   assert.match(workflow, /workflow_dispatch:/)
   assert.match(workflow, /\bschedule:/)
-  assert.match(workflow, /cron: '41 \*\/6 \* \* \*'/)
-  assert.match(workflow, /timeout-minutes: 360/)
+  assert.match(workflow, /cron: '31 \* \* \* \*'/)
+  assert.doesNotMatch(workflow, /timeout-minutes:/)
   assert.match(workflow, /cancel-in-progress: false/)
 })
 
