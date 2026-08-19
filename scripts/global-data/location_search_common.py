@@ -78,6 +78,43 @@ CREATE OR REPLACE SECRET b2_data_secret (
 """)
 
 
+def _parquet_columns(con, glob: str, *, hive_partitioning: bool = True) -> set[str]:
+    """Read Parquet metadata only; optional historical overlays are allowed to differ."""
+    hive = 'true' if hive_partitioning else 'false'
+    try:
+        rows = con.execute(
+            f"DESCRIBE SELECT * FROM read_parquet('{glob}', union_by_name=true, hive_partitioning={hive})"
+        ).fetchall()
+        return {str(row[0]) for row in rows}
+    except Exception:
+        return set()
+
+
+def _optional_column(columns: set[str], name: str, sql_type: str) -> str:
+    return name if name in columns else f'NULL::{sql_type} AS {name}'
+
+
+def _photo_source_sql(glob: str, columns: set[str], *, hive_partitioning: bool = True) -> str | None:
+    if not {'location_id', 'content_hash'}.issubset(columns):
+        return None
+    hive = 'true' if hive_partitioning else 'false'
+    projection = [
+        'location_id',
+        'content_hash',
+        _optional_column(columns, 'provider', 'VARCHAR'),
+        _optional_column(columns, 'attribution', 'VARCHAR'),
+        _optional_column(columns, 'attribution_url', 'VARCHAR'),
+        _optional_column(columns, 'license', 'VARCHAR'),
+        _optional_column(columns, 'width', 'INTEGER'),
+        _optional_column(columns, 'height', 'INTEGER'),
+        _optional_column(columns, 'verified_at', 'VARCHAR'),
+    ]
+    return (
+        f"SELECT {','.join(projection)} FROM read_parquet("
+        f"'{glob}', union_by_name=true, hive_partitioning={hive})"
+    )
+
+
 def create_canonical_views(con, snapshot: str, source: B2SourceConfig) -> None:
     root = f's3://{source.bucket}/{source.data_prefix}'
     locations_glob = f'{root}/normalized/schema=v1/snapshot={snapshot}/country_code=*/locations.parquet'
@@ -87,22 +124,42 @@ def create_canonical_views(con, snapshot: str, source: B2SourceConfig) -> None:
     google_glob = f'{root}/normalized/schema=v1/snapshot={snapshot}/country_code=*/google_places.parquet'
 
     con.execute(f"CREATE OR REPLACE TEMP VIEW loc AS SELECT * FROM read_parquet('{locations_glob}', union_by_name=true, hive_partitioning=true)")
+
     photo_sources: list[str] = []
-    try:
-        con.execute(f"SELECT 1 FROM read_parquet('{photo_glob}', union_by_name=true, hive_partitioning=true) LIMIT 1").fetchall()
-        photo_sources.append(f"SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height,NULL::VARCHAR verified_at FROM read_parquet('{photo_glob}', union_by_name=true, hive_partitioning=true)")
-    except Exception:
-        pass
-    try:
-        con.execute(f"SELECT 1 FROM read_parquet('{enriched_photo_glob}', union_by_name=true, hive_partitioning=true) LIMIT 1").fetchall()
-        photo_sources.append(f"SELECT location_id,content_hash,provider,attribution,attribution_url,license,width,height,verified_at FROM read_parquet('{enriched_photo_glob}', union_by_name=true, hive_partitioning=true)")
-    except Exception:
-        pass
-    try:
-        con.execute(f"CREATE OR REPLACE TEMP VIEW photo_exclusions AS SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('{photo_exclusion_glob}', union_by_name=true)")
-        con.execute('SELECT 1 FROM photo_exclusions LIMIT 1').fetchall()
-    except Exception:
-        con.execute("CREATE OR REPLACE TEMP VIEW photo_exclusions AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false")
+    normalized_photo_columns = _parquet_columns(con, photo_glob)
+    normalized_photo_sql = _photo_source_sql(photo_glob, normalized_photo_columns)
+    if normalized_photo_sql:
+        photo_sources.append(normalized_photo_sql)
+    elif normalized_photo_columns:
+        print(
+            'search projection: ignoring incompatible historical normalized photo_metadata schema '
+            f'columns={sorted(normalized_photo_columns)}',
+            flush=True,
+        )
+
+    enriched_photo_columns = _parquet_columns(con, enriched_photo_glob)
+    enriched_photo_sql = _photo_source_sql(enriched_photo_glob, enriched_photo_columns)
+    if enriched_photo_sql:
+        photo_sources.append(enriched_photo_sql)
+    elif enriched_photo_columns:
+        print(
+            'search projection: ignoring incompatible photo enrichment schema '
+            f'columns={sorted(enriched_photo_columns)}',
+            flush=True,
+        )
+
+    exclusion_columns = _parquet_columns(con, photo_exclusion_glob, hive_partitioning=False)
+    if {'location_id', 'content_hash'}.issubset(exclusion_columns):
+        con.execute(
+            f"CREATE OR REPLACE TEMP VIEW photo_exclusions AS "
+            f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash "
+            f"FROM read_parquet('{photo_exclusion_glob}', union_by_name=true)"
+        )
+    else:
+        con.execute(
+            "CREATE OR REPLACE TEMP VIEW photo_exclusions AS "
+            "SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false"
+        )
 
     if photo_sources:
         con.execute('CREATE OR REPLACE TEMP VIEW photo_union_raw AS ' + ' UNION ALL '.join(photo_sources))
@@ -115,17 +172,43 @@ def create_canonical_views(con, snapshot: str, source: B2SourceConfig) -> None:
           )
         """)
         con.execute("""CREATE OR REPLACE TEMP VIEW photos AS SELECT * EXCLUDE(rn,verified_at) FROM (
-          SELECT *,row_number() OVER(PARTITION BY location_id ORDER BY coalesce(try_cast(verified_at AS TIMESTAMP),TIMESTAMP '1970-01-01') DESC,provider) rn
+          SELECT *,row_number() OVER(
+            PARTITION BY location_id
+            ORDER BY coalesce(try_cast(verified_at AS TIMESTAMP),TIMESTAMP '1970-01-01') DESC,provider,content_hash
+          ) rn
           FROM photo_union
         ) WHERE rn=1""")
     else:
-        con.execute("CREATE OR REPLACE TEMP VIEW photos AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash,NULL::VARCHAR provider,NULL::VARCHAR attribution,NULL::VARCHAR attribution_url,NULL::VARCHAR license,NULL::INTEGER width,NULL::INTEGER height WHERE false")
+        con.execute(
+            "CREATE OR REPLACE TEMP VIEW photos AS "
+            "SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash,NULL::VARCHAR provider,"
+            "NULL::VARCHAR attribution,NULL::VARCHAR attribution_url,NULL::VARCHAR license,"
+            "NULL::INTEGER width,NULL::INTEGER height WHERE false"
+        )
 
-    try:
-        con.execute(f"CREATE OR REPLACE TEMP VIEW google AS SELECT * FROM read_parquet('{google_glob}', union_by_name=true, hive_partitioning=true)")
-        con.execute('SELECT 1 FROM google LIMIT 1').fetchall()
-    except Exception:
-        con.execute("CREATE OR REPLACE TEMP VIEW google AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR google_place_id,NULL::DOUBLE google_place_match_score WHERE false")
+    google_columns = _parquet_columns(con, google_glob)
+    if {'location_id', 'google_place_id'}.issubset(google_columns):
+        google_projection = [
+            'location_id',
+            'google_place_id',
+            _optional_column(google_columns, 'google_place_match_score', 'DOUBLE'),
+        ]
+        con.execute(
+            f"CREATE OR REPLACE TEMP VIEW google AS SELECT {','.join(google_projection)} "
+            f"FROM read_parquet('{google_glob}', union_by_name=true, hive_partitioning=true)"
+        )
+    else:
+        if google_columns:
+            print(
+                'search projection: ignoring incompatible historical google_places schema '
+                f'columns={sorted(google_columns)}',
+                flush=True,
+            )
+        con.execute(
+            "CREATE OR REPLACE TEMP VIEW google AS "
+            "SELECT NULL::VARCHAR location_id,NULL::VARCHAR google_place_id,"
+            "NULL::DOUBLE google_place_match_score WHERE false"
+        )
 
 
 CANONICAL_SQL = """
