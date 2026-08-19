@@ -49,6 +49,7 @@ jobs:
           test -n "$database"
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/location_architecture_integrity.sql
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/global_photo_uniqueness.sql
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/no_missing_public_relations.sql
 
       - name: Dump local database logs after failure
         if: failure()
@@ -69,3 +70,4 @@ jobs:
           test -n "$database"
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/location_architecture_integrity.sql
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/global_photo_uniqueness.sql
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/no_missing_public_relations.sql
