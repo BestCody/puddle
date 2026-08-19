@@ -54,11 +54,14 @@ test('global free-photo workers saturate provider budgets and direct delivery st
 test('global photo materialization claims exact and MIH uniqueness before B2 upload and falls back', async () => {
   const workflow = await source('.github/workflows/global-photo-enrichment.yml')
   const materializer = await source('scripts/global-data/materialize_photo_candidates.py')
-  const backfill = await source('scripts/global-data/backfill_global_photo_fingerprints.py')
   const registry = await source('supabase/migrations/10076_global_photo_uniqueness_registry.sql')
   const historical = await source('supabase/migrations/10077_seed_and_backfill_global_photo_fingerprints.sql')
+  const retirement = await source('supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql')
+  const reconcile = await source('scripts/global-data/reconcile_existing_global_photo_claims.py')
 
-  assert.match(workflow, /backfill_global_photo_fingerprints\.py/)
+  assert.doesNotMatch(workflow, /backfill_global_photo_fingerprints\.py/)
+  assert.doesNotMatch(workflow, /sync_retired_photo_exclusions\.py/)
+  assert.match(workflow, /reconcile_existing_global_photo_claims\.py/)
   assert.match(workflow, /SUPABASE_SECRET_KEY/)
   assert.match(workflow, /GLOBAL_PHOTO_FALLBACK_CANDIDATES/)
 
@@ -76,6 +79,8 @@ test('global photo materialization claims exact and MIH uniqueness before B2 upl
   assert.match(materializer, /average_hash/)
   assert.match(materializer, /def object_exists\(key\):/)
   assert.match(materializer, /if object_exists\(bootstrap_photo\):/)
+  assert.match(materializer, /head = s3\.head_object\(Bucket=MEDIA_BUCKET, Key=key\)/)
+  assert.match(materializer, /B2 media SHA256 metadata verification failed/)
 
   assert.match(registry, /global_photo_claims_content_unique/)
   assert.match(registry, /global_photo_claims_provider_asset_unique/)
@@ -88,11 +93,13 @@ test('global photo materialization claims exact and MIH uniqueness before B2 upl
   assert.match(registry, /lease_expires_at/)
   assert.match(registry, /grant execute on function public\.claim_global_photo_v1[\s\S]*service_role/)
 
+  // The historical migration remains part of migration history, but its runtime
+  // bridge helpers are retired once every live claim is fingerprinted/reconciled.
   assert.match(historical, /alter table public\.global_photo_claims alter column perceptual_hash drop not null/)
-  assert.match(historical, /join public\.media_objects m on m\.id=p\.media_object_id/)
   assert.match(historical, /backfill_global_photo_fingerprint_v1/)
-  assert.match(historical, /retire_duplicate_global_photo_claim_v1/)
-  assert.match(backfill, /B2 SHA-256 mismatch/)
-  assert.match(backfill, /near_duplicate/)
-  assert.match(backfill, /photo_exclusions/)
+  assert.match(retirement, /drop function if exists public\.retire_duplicate_global_photo_claim_v1\(uuid, text\)/)
+  assert.match(retirement, /drop function if exists public\.list_retired_b2_photo_exclusions_v1\(integer\)/)
+  assert.match(reconcile, /B2 SHA-256 mismatch/)
+  assert.match(reconcile, /register_existing_global_photo_v1/)
+  assert.match(reconcile, /photo_exclusions/)
 })
