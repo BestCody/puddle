@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - run: python -m pip install --disable-pip-version-check duckdb boto3
+      - run: python -m pip install --disable-pip-version-check duckdb boto3 numpy
       - id: active
         run: python scripts/global-data/active_snapshot.py
       - name: Spend the Wikimedia request entitlement on new geographic cells
