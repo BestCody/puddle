@@ -13,6 +13,7 @@ import hashlib
 import io
 import json
 import os
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -66,6 +67,17 @@ LOCATION_BATCH = max(100, min(10_000, int(os.getenv('GLOBAL_PHOTO_LOCATION_BATCH
 CLAIM_LEASE_SECONDS = max(300, min(3600, int(os.getenv('GLOBAL_PHOTO_CLAIM_LEASE_SECONDS', '1200'))))
 MAX_BYTES = 10_000_000
 PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3}
+TRANSIENT_HTTP_CODES = {408, 425, 429, 500, 502, 503, 504}
+WIKIMEDIA_DOWNLOAD_CONCURRENCY = max(1, min(2, int(os.getenv('GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY', '2'))))
+WIKIMEDIA_DOWNLOAD_MBIT = max(1.0, min(25.0, float(os.getenv('GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_MBIT', '25'))))
+WIKIMEDIA_DOWNLOAD_BYTES_PER_SECOND = WIKIMEDIA_DOWNLOAD_MBIT * 1_000_000 / 8.0
+WIKIMEDIA_DOWNLOAD_GATE = threading.BoundedSemaphore(WIKIMEDIA_DOWNLOAD_CONCURRENCY)
+WIKIMEDIA_BANDWIDTH_LOCK = threading.Lock()
+WIKIMEDIA_BANDWIDTH_NEXT_AT = 0.0
+MAPILLARY_GRAPH_REQUESTS_PER_MINUTE = max(1, min(50_000, int(os.getenv('MAPILLARY_GRAPH_REQUESTS_PER_MINUTE', '50000'))))
+MAPILLARY_GRAPH_START_INTERVAL = 60.0 / MAPILLARY_GRAPH_REQUESTS_PER_MINUTE
+MAPILLARY_GRAPH_LOCK = threading.Lock()
+MAPILLARY_GRAPH_NEXT_AT = 0.0
 EXCLUSION_PREFIX = f'{DATA_PREFIX}/enrichment/photo_exclusions/snapshot={args.snapshot}'
 
 if not DATA_ENDPOINT_URL or not DATA_KEY_ID or not DATA_KEY:
@@ -163,14 +175,41 @@ def finalize_claim(token, storage_key):
         raise RuntimeError('global photo claim could not be finalized after B2 verification')
 
 
+def wait_mapillary_graph_start():
+    global MAPILLARY_GRAPH_NEXT_AT
+    with MAPILLARY_GRAPH_LOCK:
+        now = time.monotonic()
+        start = max(now, MAPILLARY_GRAPH_NEXT_AT)
+        MAPILLARY_GRAPH_NEXT_AT = start + MAPILLARY_GRAPH_START_INTERVAL
+    if start > now:
+        time.sleep(start - now)
+
+
+def reserve_wikimedia_bandwidth(byte_count):
+    global WIKIMEDIA_BANDWIDTH_NEXT_AT
+    duration = max(0, int(byte_count)) / WIKIMEDIA_DOWNLOAD_BYTES_PER_SECOND
+    with WIKIMEDIA_BANDWIDTH_LOCK:
+        now = time.monotonic()
+        start = max(now, WIKIMEDIA_BANDWIDTH_NEXT_AT)
+        WIKIMEDIA_BANDWIDTH_NEXT_AT = start + duration
+    if start > now:
+        time.sleep(start - now)
+
+
 def mapillary_details(image_id):
     if not MAPILLARY_TOKEN:
         raise RuntimeError('MAPILLARY_ACCESS_TOKEN is required to materialize Mapillary candidates.')
     fields = 'id,thumb_2048_url,width,height,creator,quality_score'
-    url = f'https://graph.mapillary.com/{urllib.parse.quote(str(image_id))}?' + urllib.parse.urlencode({'fields': fields, 'access_token': MAPILLARY_TOKEN})
+    url = f'https://graph.mapillary.com/{urllib.parse.quote(str(image_id))}?' + urllib.parse.urlencode({'fields': fields})
     for attempt in range(6):
+        wait_mapillary_graph_start()
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers={'Accept': 'application/json', 'User-Agent': 'Puddle/1.0 global photo materializer'}), timeout=20) as response:
+            request = urllib.request.Request(url, headers={
+                'Accept': 'application/json',
+                'Authorization': f'OAuth {MAPILLARY_TOKEN}',
+                'User-Agent': 'Puddle/1.0 global photo materializer (https://puddle.you/)',
+            })
+            with urllib.request.urlopen(request, timeout=20) as response:
                 row = json.load(response)
             creator = str((row.get('creator') or {}).get('username') or (row.get('creator') or {}).get('name') or 'Mapillary contributor').strip()
             return {
@@ -204,18 +243,40 @@ def approved_host(provider, hostname):
 
 def download(url, provider):
     current = str(url or '')
-    for _ in range(3):
+    redirects = 0
+    for attempt in range(6):
         parsed = urllib.parse.urlparse(current)
         if parsed.scheme != 'https' or not approved_host(provider, parsed.hostname or ''):
             raise RuntimeError(f'unapproved {provider} asset host')
-        req = urllib.request.Request(current, headers={'Accept': 'image/avif,image/webp,image/png,image/jpeg', 'User-Agent': 'Puddle/1.0 licensed photo materializer'})
+        request = urllib.request.Request(current, headers={
+            'Accept': 'image/avif,image/webp,image/png,image/jpeg',
+            'User-Agent': 'Puddle/1.0 licensed photo materializer (https://puddle.you/)',
+        })
+        gate = WIKIMEDIA_DOWNLOAD_GATE if provider == 'wikimedia-commons' else None
+        if gate:
+            gate.acquire()
         try:
-            with urllib.request.urlopen(req, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=30) as response:
                 content_type = (response.headers.get_content_type() or '').lower()
                 declared = int(response.headers.get('Content-Length') or 0)
                 if declared > MAX_BYTES:
                     raise RuntimeError('image exceeds 10 MB')
-                body = response.read(MAX_BYTES + 1)
+                if provider == 'wikimedia-commons':
+                    chunks = []
+                    total = 0
+                    while total <= MAX_BYTES:
+                        chunk_size = min(64 * 1024, MAX_BYTES + 1 - total)
+                        if chunk_size <= 0:
+                            break
+                        reserve_wikimedia_bandwidth(chunk_size)
+                        chunk = response.read(chunk_size)
+                        if not chunk:
+                            break
+                        chunks.append(chunk)
+                        total += len(chunk)
+                    body = b''.join(chunks)
+                else:
+                    body = response.read(MAX_BYTES + 1)
                 if not body or len(body) > MAX_BYTES:
                     raise RuntimeError('image is empty or exceeds 10 MB')
                 if content_type not in {'image/jpeg', 'image/png', 'image/webp', 'image/avif', 'application/octet-stream'}:
@@ -223,11 +284,26 @@ def download(url, provider):
                 return body
         except urllib.error.HTTPError as error:
             if error.code in {301, 302, 303, 307, 308} and error.headers.get('Location'):
+                redirects += 1
+                if redirects > 3:
+                    raise RuntimeError('too many image redirects') from error
                 current = urllib.parse.urljoin(current, error.headers['Location'])
                 continue
+            if error.code in TRANSIENT_HTTP_CODES and attempt < 5:
+                retry_after = error.headers.get('Retry-After')
+                try:
+                    delay = float(retry_after) if retry_after else 0.0
+                except ValueError:
+                    delay = 0.0
+                if delay <= 0:
+                    delay = min(30.0, 0.5 * (2 ** attempt))
+                time.sleep(min(60.0, delay))
+                continue
             raise
-    raise RuntimeError('too many image redirects')
-
+        finally:
+            if gate:
+                gate.release()
+    raise RuntimeError(f'{provider} image download exhausted retries')
 
 def dhash(image):
     gray = image.convert('L').resize((9, 8), Image.Resampling.LANCZOS)

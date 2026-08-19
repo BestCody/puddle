@@ -8,6 +8,7 @@ coverage instead of restarting from the first country.
 """
 import argparse
 import concurrent.futures
+import gzip
 import hashlib
 import html
 import json
@@ -57,10 +58,12 @@ if not B2_ENDPOINT or not B2_KEY_ID or not B2_KEY:
 
 BASE_CELL = max(0.01, min(0.1, float(os.getenv('WIKIMEDIA_CELL_DEGREES', '0.05'))))
 MIN_CELL = max(0.003, min(BASE_CELL, float(os.getenv('WIKIMEDIA_MIN_CELL_DEGREES', '0.00625'))))
-REQUESTS_PER_MINUTE = max(1, min(2000, int(os.getenv('WIKIMEDIA_REQUESTS_PER_MINUTE', '200'))))
-MIN_INTERVAL = 60.0 / REQUESTS_PER_MINUTE
-CONCURRENCY = max(1, min(3, int(os.getenv('WIKIMEDIA_MAX_CONCURRENCY', '3'))))
 ACCESS_TOKEN = os.getenv('WIKIMEDIA_ACCESS_TOKEN', '').strip()
+# Use the guaranteed identified/new-authenticated tier until account privileges are explicitly verified higher.
+REQUESTS_PER_MINUTE = max(1, min(200, int(os.getenv('WIKIMEDIA_REQUESTS_PER_MINUTE', '200'))))
+MIN_INTERVAL = 60.0 / REQUESTS_PER_MINUTE
+# Action API robot policy: concurrency 1 unauthenticated, up to 3 authenticated.
+CONCURRENCY = max(1, min(3 if ACCESS_TOKEN else 1, int(os.getenv('WIKIMEDIA_MAX_CONCURRENCY', '3'))))
 MAX_CANDIDATES = max(1, min(10, int(os.getenv('OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER', '3'))))
 USER_AGENT = os.getenv('WIKIMEDIA_USER_AGENT', 'Puddle/1.0 global location photo indexer (https://puddle.you/)')
 DEFAULT_REQUEST_LIMIT = REQUESTS_PER_MINUTE * 350
@@ -173,11 +176,11 @@ def commons_request(lat, lon, radius):
         'action': 'query', 'format': 'json', 'generator': 'geosearch', 'maxlag': '5',
         'ggsprimary': 'all', 'ggsnamespace': '6', 'ggsradius': str(int(radius)), 'ggslimit': '500',
         'ggscoord': f'{lat}|{lon}', 'prop': 'coordinates|imageinfo',
-        'iiprop': 'url|size|extmetadata', 'iiurlwidth': '1800',
+        'iiprop': 'url|size|extmetadata', 'iiurlwidth': '1920',
         'iiextmetadatafilter': 'Artist|Credit|ImageDescription|LicenseShortName|UsageTerms'
     }
     url = 'https://commons.wikimedia.org/w/api.php?' + urllib.parse.urlencode(params)
-    headers = {'Accept': 'application/json', 'User-Agent': USER_AGENT}
+    headers = {'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'User-Agent': USER_AGENT}
     if ACCESS_TOKEN:
         headers['Authorization'] = f'Bearer {ACCESS_TOKEN}'
     for attempt in range(6):
@@ -185,8 +188,15 @@ def commons_request(lat, lon, radius):
             return None, 'budget_exhausted'
         gate.wait()
         try:
+            started = time.monotonic()
             with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=25) as response:
-                return json.load(response), None
+                raw = response.read()
+                if (response.headers.get('Content-Encoding') or '').lower() == 'gzip':
+                    raw = gzip.decompress(raw)
+                payload = json.loads(raw)
+            if time.monotonic() - started > 1.0:
+                gate.defer(5.0)
+            return payload, None
         except urllib.error.HTTPError as error:
             if error.code not in {408, 425, 429, 500, 502, 503, 504} or attempt == 5:
                 return None, f'HTTP {error.code}'
