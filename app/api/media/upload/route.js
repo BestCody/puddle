@@ -39,7 +39,7 @@ async function attachAsset(supabase, user, asset, purpose, targetId, sortOrder) 
     if (error) throw error
   } else if (purpose === 'location_cover') {
     // A cover upload belongs to an authored Puddle submission. Published global
-    // catalogue photos are canonical B2/OpenSearch data and are never overwritten here.
+    // catalogue photos are canonical B2 data and are never overwritten here.
     const { error } = await supabase.from('location_submissions').update({ cover_path: asset.object_path }).eq('id', targetId)
     if (error) throw error
   } else if (purpose === 'location_gallery') {

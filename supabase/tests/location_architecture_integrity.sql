@@ -73,7 +73,7 @@ begin
   if found is not null then raise exception 'functions still reference retired locations table:%',E'\n'||found; end if;
 end $$;
 
-\echo 'location architecture: retired catalogue RPCs are absent'
+\echo 'location architecture: retired catalogue and OpenSearch RPCs are absent'
 do $$
 declare found text;
 begin
@@ -86,9 +86,10 @@ begin
     'find_open_location_match_v1','find_open_location_match_v2','r2_discovery_overlay_v2','upsert_open_catalogue_location_v1',
     'recommendation_candidate_pool_v1','recommendation_context_base_v1','recommendation_preference_text_base_v1',
     'recommendation_preference_text_v1','record_recommendation_outcome_v1','claim_embedding_jobs_v1','queue_embedding_regeneration_v1',
-    'record_discovery_actions_v3','pass_location_heatmap_v1','update_location_point_v1'
+    'record_discovery_actions_v3','pass_location_heatmap_v1','update_location_point_v1',
+    'get_opensearch_runtime_auth','set_opensearch_runtime_auth'
   );
-  if found is not null then raise exception 'retired location RPCs still exist: %',found; end if;
+  if found is not null then raise exception 'retired location/search RPCs still exist: %',found; end if;
 end $$;
 
 \echo 'location architecture: relational location FKs target lazy refs or submissions'

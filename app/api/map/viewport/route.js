@@ -104,9 +104,9 @@ export async function GET(request) {
     const moderationStarted = latencyStart()
     const candidates = await filterModeratedLocationRows(auth.supabase, result.candidates)
     const moderationDuration = elapsedMs(moderationStarted)
-    recordSloObservation('openSearch', searchDuration, !result.timedOut, {
+    recordSloObservation('locationSearch', searchDuration, !result.timedOut, {
       trace_id: traceId,
-      service: 'opensearch',
+      service: 'b2',
       search_took_ms: Math.max(0, Number(result.tookMs) || 0),
       candidate_count: candidates.length,
       timed_out: Boolean(result.timedOut)
@@ -124,7 +124,7 @@ export async function GET(request) {
       {
         traceId,
         headers: {
-          'server-timing': `opensearch;dur=${searchDuration}, moderation;dur=${moderationDuration}, total;dur=${totalMs}`
+          'server-timing': `locationsearch;dur=${searchDuration}, moderation;dur=${moderationDuration}, total;dur=${totalMs}`
         }
       }
     )

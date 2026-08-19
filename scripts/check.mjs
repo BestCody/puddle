@@ -14,8 +14,8 @@ const required = [
   'components/product-nav.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/google-place-photo-fallback.js',
   'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js',
   'lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/app/location-moderation-overlay.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
-  'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/location_search_common.py','scripts/global-data/build_b2_search_index.py','scripts/global-data/validate_b2_search_index.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
-  '.github/workflows/global-location-data.yml','.github/workflows/b2-location-search-smoke.yml','.github/workflows/location-search-parity.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
+  'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/location_search_common.py','scripts/global-data/build_b2_search_index.py','scripts/global-data/validate_b2_search_index.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
+  '.github/workflows/global-location-data.yml','.github/workflows/b2-location-search-smoke.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
   'supabase/migrations/20260818204500_lazy_location_refs_cutover.sql','supabase/migrations/20260818204600_location_relational_overlays.sql','supabase/migrations/20260818204700_opensearch_heatmap_and_actions.sql','supabase/migrations/20260818204800_remove_remaining_location_catalogue_coupling.sql',
   'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs'
 ]
@@ -26,12 +26,14 @@ const removed = [
   'lib/app/catalogue-batch-writer.js','lib/app/catalogue-import-runner.js','lib/app/catalogue-quality.js','lib/app/catalogue-regions.js','lib/app/open-place-catalogue.js',
   'lib/app/approved-open-photo.js','lib/app/open-photo-candidates.js','lib/app/open-photo-b2.js','lib/app/open-photo-transform.js','lib/app/static-open-photo-provider.js','lib/app/photo-enrichment.js','lib/app/place-photos.js','lib/app/location-quality.js',
   'lib/app/google-place-client.js','lib/app/google-place-discovery.js','lib/app/google-place-match.js','lib/app/google-place-photo-proxy.js','lib/app/provider-request-limiter.js',
+  'lib/app/opensearch-location-search.js',
   'scripts/register-location-photos.mjs','scripts/enrich-open-location-photos.mjs','scripts/import-open-location-photos.mjs','scripts/match-google-places.mjs','scripts/discover-google-place-ids.mjs','scripts/repair-google-place-addresses.mjs','scripts/profile-discovery-spatial.mjs',
-  'scripts/global-data/export-supabase-bootstrap.mjs','scripts/global-data/build-bootstrap-parquet.py','.github/workflows/global-bootstrap.yml',
-  '.github/workflows/photo-enrichment.yml','.github/workflows/google-place-discovery.yml','.github/workflows/google-place-geocode.yml','.github/workflows/google-place-match.yml',
+  'scripts/global-data/export-supabase-bootstrap.mjs','scripts/global-data/build-bootstrap-parquet.py','scripts/global-data/index_opensearch.py','scripts/global-data/activate_existing_opensearch_index.py','scripts/global-data/compare_location_search_backends.mjs','.github/workflows/global-bootstrap.yml',
+  '.github/workflows/photo-enrichment.yml','.github/workflows/google-place-discovery.yml','.github/workflows/google-place-geocode.yml','.github/workflows/google-place-match.yml','.github/workflows/location-search-parity.yml','.github/workflows/b2-location-search-migration-gate.yml','.github/b2-location-search-migration-trigger',
   'app/api/location-google-photo/[id]/route.js','app/api/location-open-photo/[id]/route.js','app/api/location-photo-status/[id]/route.js','app/api/location-photos/[id]/route.js',
   'app/api/static-catalogue','lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js',
-  'lib/app/open-photo-supabase.js','lib/app/open-photo-r2.js','lib/app/r2-s3.js'
+  'lib/app/open-photo-supabase.js','lib/app/open-photo-r2.js','lib/app/r2-s3.js',
+  'tests/unit/opensearch-runtime-env.test.mjs'
 ]
 for (const path of removed) {
   try {
@@ -43,8 +45,8 @@ for (const path of removed) {
 }
 
 const syntaxFiles = [
-  'next.config.mjs','proxy.js','instrumentation.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/opensearch-location-search.js','lib/app/global-location-reference.js','lib/app/location-moderation-overlay.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
-  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs','scripts/global-data/compare_location_search_backends.mjs',
+  'next.config.mjs','proxy.js','instrumentation.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js','lib/app/location-moderation-overlay.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs',
   'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
@@ -54,18 +56,18 @@ for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','react'
   if (!pkg.dependencies?.[dependency]) throw new Error(`Missing dependency: ${dependency}`)
 }
 const serializedScripts = JSON.stringify(pkg.scripts || {})
-for (const forbidden of ['static-catalogue','global:bootstrap:export','locations:photos','locations:google','locations:spatial']) {
-  if (serializedScripts.includes(forbidden)) throw new Error(`Legacy catalogue command remains: ${forbidden}`)
+for (const forbidden of ['static-catalogue','global:bootstrap:export','locations:photos','locations:google','locations:spatial','opensearch']) {
+  if (serializedScripts.toLowerCase().includes(forbidden)) throw new Error(`Legacy catalogue/search command remains: ${forbidden}`)
 }
 for (const requiredScript of ['b2:upload-tree','global:overture:mirror','global:fsq:mirror','global:index','global:index:validate','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview','global:photos:materialize']) {
   if (!pkg.scripts?.[requiredScript]) throw new Error(`Global B2 command is missing: ${requiredScript}`)
 }
 
 const env = await read('.env.example')
-for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','OPEN_PHOTO_SUPABASE_BUCKET','GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK']) {
+for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','OPEN_PHOTO_SUPABASE_BUCKET','GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK','GLOBAL_LOCATION_SEARCH_BACKEND','GLOBAL_LOCATION_SEARCH_URL','GLOBAL_LOCATION_SEARCH_INDEX','OPENSEARCH_']) {
   if (env.includes(forbidden)) throw new Error(`Legacy environment setting remains: ${forbidden}`)
 }
-for (const requiredEnv of ['GLOBAL_LOCATION_SEARCH_BACKEND','GLOBAL_LOCATION_SEARCH_MANIFEST_KEY','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
+for (const requiredEnv of ['GLOBAL_LOCATION_SEARCH_MANIFEST_KEY','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
   if (!env.includes(requiredEnv)) throw new Error(`Environment example is missing ${requiredEnv}`)
 }
 
@@ -83,9 +85,10 @@ for (const marker of ['global-location-serving','searchGlobalLocations','global-
   if (!globalDiscovery.includes(marker)) throw new Error(`Global discovery is missing ${marker}`)
 }
 const globalSearch = await read('lib/app/global-location-search.js')
-for (const marker of ['GLOBAL_LOCATION_SEARCH_BACKEND','searchB2GlobalLocations','searchB2GlobalLocationsInViewport','getB2GlobalLocationBySlug','getB2GlobalLocationsByIds']) {
+for (const marker of ['searchB2GlobalLocations','searchB2GlobalLocationsInViewport','getB2GlobalLocationBySlug','getB2GlobalLocationsByIds']) {
   if (!globalSearch.includes(marker)) throw new Error(`Global location-search facade is missing ${marker}`)
 }
+if (/opensearch/i.test(globalSearch)) throw new Error('Global location-search facade restored OpenSearch')
 const b2Search = await read('lib/app/b2-location-search.js')
 for (const marker of ['resolveGeoShardPlan','haversineDistanceMeters','matchesStructuredFilters','scoreTextMatch','createTopK']) {
   if (!b2Search.includes(marker)) throw new Error(`B2 location search is missing ${marker}`)
@@ -142,7 +145,7 @@ for (const marker of ['location_moderation_overrides','public.location_host_link
   if (!finalCleanup.includes(marker)) throw new Error(`Final catalogue cleanup migration is missing ${marker}`)
 }
 
-// Exhaustively fence the application runtime against direct Supabase catalogue reads.
+// Exhaustively fence the application runtime against direct Supabase catalogue reads and retired OpenSearch use.
 // Git is the source of truth for exact tracked paths; historical migrations are excluded.
 const runtimeFiles = execFileSync('git', ['ls-files', '-z', 'app', 'components', 'lib'], { cwd: root })
   .toString()
@@ -155,10 +158,11 @@ for (const relative of runtimeFiles) {
     /\.from\(\s*['"]location_photo_sources['"]\s*\)/,
     /\.from\(\s*['"]location_google_places['"]\s*\)/,
     /\bdiscovery-relational\b/,
-    /\/api\/location-(?:google-photo|open-photo|photo-status|photos)\//
+    /\/api\/location-(?:google-photo|open-photo|photo-status|photos)\//,
+    /\bopensearch\b/i
   ]) {
-    if (pattern.test(source)) throw new Error(`Runtime restored retired location catalogue coupling in ${relative}: ${pattern}`)
+    if (pattern.test(source)) throw new Error(`Runtime restored retired location catalogue/search coupling in ${relative}: ${pattern}`)
   }
 }
 
-console.log(`Architecture checks passed: B2 sharded global catalogue with lazy Supabase location refs across ${runtimeFiles.length} runtime files.`)
+console.log(`Architecture checks passed: B2-only sharded global catalogue with lazy Supabase location refs across ${runtimeFiles.length} runtime files.`)

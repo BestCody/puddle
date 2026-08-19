@@ -42,7 +42,7 @@ jobs:
           set -o pipefail
           npx --yes supabase@2.114.0 db start --debug 2>&1 | tee supabase-db-start.log
 
-      - name: Test B2/OpenSearch location architecture and global photo uniqueness after initial migration apply
+      - name: Test B2-only location architecture and global photo uniqueness after initial migration apply
         shell: bash
         run: |
           database="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)"
@@ -63,7 +63,7 @@ jobs:
       - name: Rebuild database from all migrations
         run: npx --yes supabase@2.114.0 db reset --debug
 
-      - name: Test B2/OpenSearch location architecture and global photo uniqueness after clean rebuild
+      - name: Test B2-only location architecture and global photo uniqueness after clean rebuild
         shell: bash
         run: |
           database="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)"
