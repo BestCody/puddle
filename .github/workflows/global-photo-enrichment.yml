@@ -71,10 +71,13 @@ jobs:
           --limit='${{ github.event_name == 'workflow_dispatch' && inputs.materialize_limit || vars.GLOBAL_PHOTO_MATERIALIZE_LIMIT || '100000' }}'
         env:
           MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
-          # The materializer is network-bound; 192 concurrent image downloads caused
-          # Wikimedia 429s during the live production proof. Keep the provider burst
-          # bounded rather than trading useful throughput for throttled requests.
-          GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY: '16'
+          # High overall parallelism; published provider limits are enforced independently in the materializer.
+          GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY: '192'
+          # Wikimedia media policy: total concurrency <=2 and aggregate download speed <=25 Mbps.
+          GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY: '2'
+          GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_MBIT: '25'
+          # Mapillary Graph API ceiling; direct CDN limits are not publicly specified, so 429/Retry-After controls downloads.
+          MAPILLARY_GRAPH_REQUESTS_PER_MINUTE: '50000'
           GLOBAL_PHOTO_FALLBACK_CANDIDATES: ${{ vars.GLOBAL_PHOTO_FALLBACK_CANDIDATES || '9' }}
           GLOBAL_PHOTO_LOCATION_BATCH: ${{ vars.GLOBAL_PHOTO_LOCATION_BATCH || '2500' }}
           GLOBAL_PHOTO_CLAIM_LEASE_SECONDS: ${{ vars.GLOBAL_PHOTO_CLAIM_LEASE_SECONDS || '1200' }}
