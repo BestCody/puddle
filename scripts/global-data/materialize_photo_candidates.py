@@ -383,10 +383,20 @@ for country in countries():
     existing_sources = []
     bootstrap_photo = f'{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/photo_metadata.parquet'
     if object_exists(bootstrap_photo):
-        existing_sources.append(f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('s3://{DATA_BUCKET}/{bootstrap_photo}')")
+        bootstrap_uri = f's3://{DATA_BUCKET}/{bootstrap_photo}'
+        bootstrap_columns = {str(row[0]).lower() for row in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{bootstrap_uri}')").fetchall()}
+        if 'location_id' in bootstrap_columns and 'content_hash' in bootstrap_columns:
+            existing_sources.append(f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('{bootstrap_uri}')")
+        else:
+            print(f'{country}: ignoring legacy bootstrap photo metadata without content_hash', flush=True)
     enriched_prefix = f'{DATA_PREFIX}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code={country}'
     if prefix_exists(enriched_prefix):
-        existing_sources.append(f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('s3://{DATA_BUCKET}/{enriched_prefix}/*.parquet', union_by_name=true)")
+        enriched_uri = f's3://{DATA_BUCKET}/{enriched_prefix}/*.parquet'
+        enriched_columns = {str(row[0]).lower() for row in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{enriched_uri}', union_by_name=true)").fetchall()}
+        if 'location_id' in enriched_columns and 'content_hash' in enriched_columns:
+            existing_sources.append(f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('{enriched_uri}', union_by_name=true)")
+        else:
+            print(f'{country}: ignoring legacy enrichment photo metadata without content_hash', flush=True)
     if existing_sources:
         con.execute(f"CREATE OR REPLACE TEMP VIEW raw_existing_photos AS {' UNION ALL '.join(existing_sources)}")
         con.execute("""CREATE OR REPLACE TEMP VIEW existing_photos AS
