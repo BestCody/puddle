@@ -91,6 +91,11 @@ def prefix_exists(prefix):
     return bool(data_s3.list_objects_v2(Bucket=DATA_BUCKET, Prefix=prefix.rstrip('/') + '/', MaxKeys=1).get('KeyCount'))
 
 
+def object_exists(key):
+    listing = data_s3.list_objects_v2(Bucket=DATA_BUCKET, Prefix=key, MaxKeys=1)
+    return any(str(item.get('Key') or '') == key for item in listing.get('Contents', []))
+
+
 def supabase_rpc(name, payload, retries=6):
     url = f'{SUPABASE_URL}/rest/v1/rpc/{urllib.parse.quote(name)}'
     body = json.dumps(payload, separators=(',', ':')).encode()
@@ -377,7 +382,7 @@ for country in countries():
     con.execute(f"CREATE OR REPLACE TEMP VIEW all_candidates AS {union}")
     existing_sources = []
     bootstrap_photo = f'{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/photo_metadata.parquet'
-    if prefix_exists(bootstrap_photo.rsplit('/', 1)[0]):
+    if object_exists(bootstrap_photo):
         existing_sources.append(f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('s3://{DATA_BUCKET}/{bootstrap_photo}')")
     enriched_prefix = f'{DATA_PREFIX}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code={country}'
     if prefix_exists(enriched_prefix):
