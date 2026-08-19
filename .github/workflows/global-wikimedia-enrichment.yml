@@ -53,7 +53,9 @@ jobs:
           python scripts/global-data/build_wikimedia_candidates.py "${args[@]}"
         env:
           WIKIMEDIA_ACCESS_TOKEN: ${{ secrets.WIKIMEDIA_ACCESS_TOKEN }}
-          WIKIMEDIA_REQUESTS_PER_MINUTE: ${{ vars.WIKIMEDIA_REQUESTS_PER_MINUTE || '200' }}
+          # This repository currently has no Wikimedia token, so the compliant User-Agent tier is 200 requests/minute.
+          WIKIMEDIA_REQUESTS_PER_MINUTE: '200'
+          # The worker clamps this to 1 when no access token is present, matching the Action API robot policy.
           WIKIMEDIA_MAX_CONCURRENCY: '3'
           WIKIMEDIA_RESCAN_DAYS: ${{ vars.WIKIMEDIA_RESCAN_DAYS || '30' }}
           OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER: '3'
