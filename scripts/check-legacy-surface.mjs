@@ -131,12 +131,15 @@ const retirementMigrations = [
   'supabase/migrations/20260818205000_retire_catalogue_sync_region_hooks.sql',
   'supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql'
 ]
-const retiredDatabaseIdentifiers = new Set(['locations'])
+const retiredDatabaseIdentifiers = new Set()
 for (const migration of retirementMigrations) {
   const source = await read(migration)
   const drops = source.matchAll(/\bdrop\s+(?:function|table|view)\s+(?:if\s+exists\s+)?public\.([a-z][a-z0-9_]*)/gi)
   for (const match of drops) retiredDatabaseIdentifiers.add(match[1])
 }
+// `locations` is both the deleted relational table and the canonical B2 dataset
+// filename. Handle it separately using only database-access syntax.
+retiredDatabaseIdentifiers.delete('locations')
 
 const activeTrackedFiles = execFileSync('git', [
   'ls-files', '-z',
@@ -151,8 +154,15 @@ const activeTrackedFiles = execFileSync('git', [
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const legacyHits = []
+const retiredCataloguePatterns = [
+  /\.from\(\s*['"]locations['"]\s*\)/,
+  /\bpublic\.locations(?:[^A-Za-z0-9_]|$)/,
+  /(?:table\s*:\s*|table=)['"]?locations(?:['"]|\b)/,
+  /['"][^'"]*\blocations\s*(?:!|\()[^'"]*['"]/
+]
 for (const relative of activeTrackedFiles) {
   const source = await read(relative)
+  if (retiredCataloguePatterns.some((pattern) => pattern.test(source))) legacyHits.push(`${relative}: locations`)
   for (const identifier of retiredDatabaseIdentifiers) {
     const escaped = escapeRegex(identifier)
     const patterns = [
@@ -170,4 +180,4 @@ if (legacyHits.length) {
   throw new Error(`Active runtime/config still calls database objects retired by cutover migrations:\n${[...new Set(legacyHits)].sort().join('\n')}`)
 }
 
-console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of compatibility fallbacks, and ${activeTrackedFiles.length} active files make no calls to ${retiredDatabaseIdentifiers.size} retired database objects.`)
+console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of compatibility fallbacks, and ${activeTrackedFiles.length} active files make no calls to ${retiredDatabaseIdentifiers.size + 1} retired database objects.`)
