@@ -40,14 +40,15 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npx --yes supabase@2.111.0 db start --debug 2>&1 | tee supabase-db-start.log
+          npx --yes supabase@2.114.0 db start --debug 2>&1 | tee supabase-db-start.log
 
-      - name: Test B2/OpenSearch location architecture after initial migration apply
+      - name: Test B2/OpenSearch location architecture and global photo uniqueness after initial migration apply
         shell: bash
         run: |
           database="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)"
           test -n "$database"
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/location_architecture_integrity.sql
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/global_photo_uniqueness.sql
 
       - name: Dump local database logs after failure
         if: failure()
@@ -59,11 +60,12 @@ jobs:
           done
 
       - name: Rebuild database from all migrations
-        run: npx --yes supabase@2.111.0 db reset --debug
+        run: npx --yes supabase@2.114.0 db reset --debug
 
-      - name: Test B2/OpenSearch location architecture after clean rebuild
+      - name: Test B2/OpenSearch location architecture and global photo uniqueness after clean rebuild
         shell: bash
         run: |
           database="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)"
           test -n "$database"
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/location_architecture_integrity.sql
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/global_photo_uniqueness.sql

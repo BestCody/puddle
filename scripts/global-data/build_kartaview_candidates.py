@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Use the full authenticated KartaView quota as a global photo fallback.
 
-KartaView does not provide the same bulk/tile discovery path used for Wikimedia
-and Mapillary, so this worker deliberately targets only locations that still have
-no stored photo and no higher-priority candidate. Request starts are globally
-paced to the configured hourly entitlement (1,000/hour by default with a token).
+Successful no-match lookups are persisted in B2 so the 1,000 requests/hour
+allowance continuously advances to new locations instead of retrying the same
+places. Candidate files are merged, not overwritten, and transient failures are
+left unattempted so a later run can retry them.
 """
 import argparse
 import concurrent.futures
@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 import boto3
 import duckdb
 from botocore.client import Config
+from botocore.exceptions import ClientError
 
 
 def first_env(*names, default=''):
@@ -50,13 +51,50 @@ REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
 DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
 if not ENDPOINT_URL or not KEY_ID or not KEY:
     raise RuntimeError('B2 endpoint and credentials are required.')
-REQUESTS_PER_HOUR = max(1, min(1000 if TOKEN else 100, int(os.getenv('KARTAVIEW_REQUESTS_PER_HOUR', '1000' if TOKEN else '100'))))
+
+PROVIDER_HOURLY_MAX = 1000 if TOKEN else 100
+REQUESTS_PER_HOUR = max(1, min(PROVIDER_HOURLY_MAX, int(os.getenv('KARTAVIEW_REQUESTS_PER_HOUR', str(PROVIDER_HOURLY_MAX)))))
 START_INTERVAL = 3600.0 / REQUESTS_PER_HOUR
 CONCURRENCY = max(1, min(8, int(os.getenv('KARTAVIEW_MAX_CONCURRENCY', '4'))))
 MAX_DISTANCE_M = float(os.getenv('KARTAVIEW_MAX_DISTANCE_M', '45'))
 MAX_HEADING_ERROR = float(os.getenv('KARTAVIEW_MAX_HEADING_ERROR', '110'))
-LIMIT = max(1, min(1000 if TOKEN else 100, args.limit))
+LIMIT = max(1, min(PROVIDER_HOURLY_MAX, args.limit))
 MAX_CANDIDATES = max(1, min(10, int(os.getenv('OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER', '3'))))
+RECHECK_DAYS = max(1, min(365, int(os.getenv('KARTAVIEW_RECHECK_DAYS', '30'))))
+
+data_s3 = boto3.client(
+    's3', endpoint_url=ENDPOINT_URL, aws_access_key_id=KEY_ID, aws_secret_access_key=KEY,
+    config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}, max_pool_connections=64),
+)
+
+
+def object_exists(key):
+    try:
+        data_s3.head_object(Bucket=BUCKET, Key=key)
+        return True
+    except ClientError as error:
+        code = str(error.response.get('Error', {}).get('Code', ''))
+        if code in {'404', 'NoSuchKey', 'NotFound'}:
+            return False
+        raise
+
+
+def prefix_exists(prefix):
+    return bool(data_s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix.rstrip('/') + '/', MaxKeys=1).get('KeyCount'))
+
+
+class RequestBudget:
+    def __init__(self, limit):
+        self.limit = max(0, int(limit))
+        self.used = 0
+        self.lock = threading.Lock()
+
+    def claim(self):
+        with self.lock:
+            if self.used >= self.limit:
+                return False
+            self.used += 1
+            return True
 
 
 class RateGate:
@@ -79,15 +117,8 @@ class RateGate:
             self.paused_until = max(self.paused_until, time.monotonic() + max(0.0, seconds))
 
 
+budget = RequestBudget(LIMIT)
 gate = RateGate(START_INTERVAL)
-data_s3 = boto3.client(
-    's3', endpoint_url=ENDPOINT_URL, aws_access_key_id=KEY_ID, aws_secret_access_key=KEY,
-    config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}, max_pool_connections=64),
-)
-
-
-def prefix_exists(prefix):
-    return bool(data_s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix.rstrip('/') + '/', MaxKeys=1).get('KeyCount'))
 
 
 def rows_from_payload(payload):
@@ -120,22 +151,24 @@ def request_location(row):
         params['access_token'] = TOKEN
     url = 'https://api.openstreetcam.org/2.0/photo/?' + urllib.parse.urlencode(params)
     for attempt in range(6):
+        if not budget.claim():
+            return row, [], False, 'budget_exhausted'
         gate.wait()
         try:
-            req = urllib.request.Request(url, headers={'Accept': 'application/json', 'User-Agent': 'Puddle/1.0 global KartaView fallback indexer'})
+            req = urllib.request.Request(url, headers={'Accept': 'application/json', 'User-Agent': 'Puddle/1.0 global KartaView fallback indexer (https://puddle.you/)'})
             with urllib.request.urlopen(req, timeout=25) as response:
                 payload = json.load(response)
-            return row, rows_from_payload(payload)
+            return row, rows_from_payload(payload), True, None
         except urllib.error.HTTPError as error:
             if error.code not in {408, 425, 429, 500, 502, 503, 504} or attempt == 5:
-                raise
+                return row, [], False, f'HTTP {error.code}'
             retry = error.headers.get('Retry-After')
             gate.defer(float(retry) if retry and retry.isdigit() else min(60, 1.0 * (2 ** attempt)))
-        except Exception:
+        except Exception as error:
             if attempt == 5:
-                raise
+                return row, [], False, str(error)[:200]
             gate.defer(min(20, 1.0 * (2 ** attempt)))
-    return row, []
+    return row, [], False, 'request_failed'
 
 
 def haversine(a_lat, a_lon, b_lat, b_lon):
@@ -184,49 +217,132 @@ def countries(con):
     return [str(r[0]) for r in con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}', hive_partitioning=true) ORDER BY country_code").fetchall() if r[0]]
 
 
+def merge_attempts(con, country, attempted):
+    if not attempted:
+        return
+    key = f'{DATA_PREFIX}/enrichment/photo_attempts/provider=kartaview/snapshot={args.snapshot}/country_code={country}/attempts.parquet'
+    path = f's3://{BUCKET}/{key}'
+    con.execute('DROP TABLE IF EXISTS new_kartaview_attempts')
+    con.execute('CREATE TEMP TABLE new_kartaview_attempts(location_id VARCHAR, attempted_at VARCHAR)')
+    stamp = datetime.now(timezone.utc).isoformat()
+    con.executemany('INSERT INTO new_kartaview_attempts VALUES (?,?)', [(location_id, stamp) for location_id in attempted])
+    if object_exists(key):
+        con.execute('DROP TABLE IF EXISTS all_kartaview_attempts')
+        con.execute(f"""
+          CREATE TEMP TABLE all_kartaview_attempts AS
+          SELECT * FROM read_parquet('{path}')
+          UNION ALL BY NAME
+          SELECT * FROM new_kartaview_attempts
+        """)
+    else:
+        con.execute('DROP TABLE IF EXISTS all_kartaview_attempts')
+        con.execute('CREATE TEMP TABLE all_kartaview_attempts AS SELECT * FROM new_kartaview_attempts')
+    con.execute(f"""
+      COPY (
+        SELECT location_id, max(attempted_at) attempted_at
+        FROM all_kartaview_attempts GROUP BY location_id
+      ) TO '{path}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 100000,OVERWRITE_OR_IGNORE true)
+    """)
+
+
+def merge_candidates(con, country, candidates):
+    if not candidates:
+        return 0
+    key = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=kartaview/snapshot={args.snapshot}/country_code={country}/candidates.parquet'
+    path = f's3://{BUCKET}/{key}'
+    con.execute('DROP TABLE IF EXISTS new_kartaview_candidates')
+    con.execute('CREATE TEMP TABLE new_kartaview_candidates(location_id VARCHAR,provider VARCHAR,external_photo_id VARCHAR,asset_url VARCHAR,page_url VARCHAR,attribution VARCHAR,license VARCHAR,license_url VARCHAR,distance_m DOUBLE,heading_error DOUBLE,rank_score DOUBLE)')
+    con.executemany('INSERT INTO new_kartaview_candidates VALUES (?,?,?,?,?,?,?,?,?,?,?)', candidates)
+    if object_exists(key):
+        con.execute('DROP TABLE IF EXISTS all_kartaview_candidates')
+        con.execute(f"""
+          CREATE TEMP TABLE all_kartaview_candidates AS
+          SELECT * FROM read_parquet('{path}')
+          UNION ALL BY NAME
+          SELECT * FROM new_kartaview_candidates
+        """)
+    else:
+        con.execute('DROP TABLE IF EXISTS all_kartaview_candidates')
+        con.execute('CREATE TEMP TABLE all_kartaview_candidates AS SELECT * FROM new_kartaview_candidates')
+    con.execute(f"""
+      COPY (
+        WITH dedup AS (
+          SELECT *, row_number() OVER (
+            PARTITION BY location_id, external_photo_id
+            ORDER BY coalesce(rank_score,0) DESC, coalesce(distance_m,1e18), external_photo_id
+          ) duplicate_rank
+          FROM all_kartaview_candidates
+        ), ranked AS (
+          SELECT * EXCLUDE duplicate_rank,
+                 row_number() OVER (
+                   PARTITION BY location_id
+                   ORDER BY coalesce(rank_score,0) DESC, coalesce(distance_m,1e18), external_photo_id
+                 ) location_rank
+          FROM dedup WHERE duplicate_rank=1
+        )
+        SELECT * EXCLUDE location_rank FROM ranked WHERE location_rank<={MAX_CANDIDATES}
+      ) TO '{path}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 100000,OVERWRITE_OR_IGNORE true)
+    """)
+    return len(candidates)
+
+
 con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute(f"""CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{KEY_ID.replace("'","''")}',SECRET '{KEY.replace("'","''")}',REGION '{REGION.replace("'","''")}',ENDPOINT '{ENDPOINT.replace("'","''")}',URL_STYLE 'path',USE_SSL true);""")
 
-remaining = LIMIT
+remaining_locations = LIMIT
+summaries = []
 for country in countries(con):
-    if remaining <= 0:
+    if budget.used >= budget.limit or remaining_locations <= 0:
         break
+
     loc = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/locations.parquet'
     existing = []
     bootstrap_prefix = f'{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}'
-    if prefix_exists(bootstrap_prefix):
-        try:
-            data_s3.head_object(Bucket=BUCKET, Key=f'{bootstrap_prefix}/photo_metadata.parquet')
-            existing.append(f"SELECT location_id FROM read_parquet('s3://{BUCKET}/{bootstrap_prefix}/photo_metadata.parquet')")
-        except Exception:
-            pass
+    if object_exists(f'{bootstrap_prefix}/photo_metadata.parquet'):
+        existing.append(f"SELECT location_id FROM read_parquet('s3://{BUCKET}/{bootstrap_prefix}/photo_metadata.parquet')")
     for provider in ('wikimedia-commons', 'mapillary', 'kartaview'):
-        prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider={provider}/snapshot={args.snapshot}/country_code={country}'
-        if prefix_exists(prefix):
-            existing.append(f"SELECT location_id FROM read_parquet('s3://{BUCKET}/{prefix}/candidates.parquet')")
+        key = f'{DATA_PREFIX}/enrichment/photo_candidates/provider={provider}/snapshot={args.snapshot}/country_code={country}/candidates.parquet'
+        if object_exists(key):
+            existing.append(f"SELECT location_id FROM read_parquet('s3://{BUCKET}/{key}')")
     photo_prefix = f'{DATA_PREFIX}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code={country}'
     if prefix_exists(photo_prefix):
         existing.append(f"SELECT location_id FROM read_parquet('s3://{BUCKET}/{photo_prefix}/*.parquet', union_by_name=true)")
+    attempt_key = f'{DATA_PREFIX}/enrichment/photo_attempts/provider=kartaview/snapshot={args.snapshot}/country_code={country}/attempts.parquet'
+    if object_exists(attempt_key):
+        existing.append(
+            f"SELECT location_id FROM read_parquet('s3://{BUCKET}/{attempt_key}') "
+            f"WHERE try_cast(attempted_at AS TIMESTAMP) >= current_timestamp - INTERVAL {RECHECK_DAYS} DAY"
+        )
+
     if existing:
         con.execute(f"CREATE OR REPLACE TEMP VIEW occupied AS {' UNION ALL '.join(existing)}")
     else:
         con.execute('CREATE OR REPLACE TEMP VIEW occupied AS SELECT NULL::VARCHAR location_id WHERE false')
+
+    select_limit = min(remaining_locations, budget.limit - budget.used)
     requested = con.execute(f"""
       SELECT id location_id, latitude, longitude
       FROM read_parquet('{loc}') l
       WHERE latitude IS NOT NULL AND longitude IS NOT NULL
         AND NOT EXISTS (SELECT 1 FROM occupied o WHERE o.location_id=l.id)
       ORDER BY id
-      LIMIT {remaining}
+      LIMIT {select_limit}
     """).fetchall()
     locations = [{'location_id': str(row[0]), 'latitude': float(row[1]), 'longitude': float(row[2])} for row in requested]
     if not locations:
         continue
-    print(f'{country}: using up to {len(locations)} KartaView requests at {REQUESTS_PER_HOUR}/hour')
+
+    print(f'{country}: spending up to {budget.limit - budget.used} remaining KartaView request starts at {REQUESTS_PER_HOUR}/hour')
     candidates = []
+    attempted = []
+    failures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-        for location, images in pool.map(request_location, locations, chunksize=1):
+        for location, images, success, error in pool.map(request_location, locations, chunksize=1):
+            if not success:
+                failures.append({'location_id': location['location_id'], 'error': error})
+                continue
+            attempted.append(location['location_id'])
             ranked = []
             for image in images:
                 measured = score(location, image)
@@ -236,15 +352,37 @@ for country in countries(con):
                     continue
                 value, distance, heading_error = measured
                 sequence = image.get('sequenceId') or (image.get('sequence') or {}).get('id') or ''
-                ranked.append((value, str(external), url, f'https://kartaview.org/details/{urllib.parse.quote(str(sequence))}/{urllib.parse.quote(str(external))}/track-info', distance, heading_error))
+                ranked.append((
+                    value, str(external), url,
+                    f'https://kartaview.org/details/{urllib.parse.quote(str(sequence))}/{urllib.parse.quote(str(external))}/track-info',
+                    distance, heading_error
+                ))
             ranked.sort(reverse=True)
             for value, external, url, page_url, distance, heading_error in ranked[:MAX_CANDIDATES]:
-                candidates.append((location['location_id'], 'kartaview', external, url, page_url, 'KartaView contributors · CC BY-SA 4.0', 'CC-BY-SA-4.0', 'https://creativecommons.org/licenses/by-sa/4.0/', distance, heading_error, value))
-    if candidates:
-        con.execute('DROP TABLE IF EXISTS kartaview_results')
-        con.execute('CREATE TEMP TABLE kartaview_results(location_id VARCHAR,provider VARCHAR,external_photo_id VARCHAR,asset_url VARCHAR,page_url VARCHAR,attribution VARCHAR,license VARCHAR,license_url VARCHAR,distance_m DOUBLE,heading_error DOUBLE,rank_score DOUBLE)')
-        con.executemany('INSERT INTO kartaview_results VALUES (?,?,?,?,?,?,?,?,?,?,?)', candidates)
-        out = f's3://{BUCKET}/{DATA_PREFIX}/enrichment/photo_candidates/provider=kartaview/snapshot={args.snapshot}/country_code={country}/candidates.parquet'
-        con.execute(f"COPY kartaview_results TO '{out}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000)")
-    print(json.dumps({'country': country, 'requests': len(locations), 'candidates': len(candidates), 'requestsPerHour': REQUESTS_PER_HOUR}, indent=2))
-    remaining -= len(locations)
+                candidates.append((
+                    location['location_id'], 'kartaview', external, url, page_url,
+                    'KartaView contributors · CC BY-SA 4.0', 'CC-BY-SA-4.0',
+                    'https://creativecommons.org/licenses/by-sa/4.0/', distance, heading_error, value
+                ))
+
+    merge_attempts(con, country, attempted)
+    candidate_count = merge_candidates(con, country, candidates)
+    remaining_locations -= len(attempted)
+    summaries.append({
+        'country': country,
+        'selected': len(locations),
+        'attempted': len(attempted),
+        'candidates': candidate_count,
+        'failures': failures[:10],
+    })
+
+print(json.dumps({
+    'provider': 'kartaview',
+    'snapshot': args.snapshot,
+    'authenticated': bool(TOKEN),
+    'requests': budget.used,
+    'requestLimit': LIMIT,
+    'requestsPerHour': REQUESTS_PER_HOUR,
+    'maxConcurrency': CONCURRENCY,
+    'countries': summaries,
+}, indent=2))
