@@ -129,7 +129,8 @@ const retirementMigrations = [
   'supabase/migrations/20260818204800_remove_remaining_location_catalogue_coupling.sql',
   'supabase/migrations/20260818204900_retire_legacy_location_function_coupling.sql',
   'supabase/migrations/20260818205000_retire_catalogue_sync_region_hooks.sql',
-  'supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql'
+  'supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql',
+  'supabase/migrations/20260819073341_retire_remaining_catalogue_enrichment_helpers.sql'
 ]
 const retiredDatabaseIdentifiers = new Set()
 for (const migration of retirementMigrations) {
