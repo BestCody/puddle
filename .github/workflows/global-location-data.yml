@@ -3,10 +3,10 @@ name: Build global location dataset
 on:
   workflow_dispatch:
     inputs:
-      activate_opensearch:
-        description: Build, validate, and switch the OpenSearch active alias after the canonical snapshot succeeds
+      activate_search:
+        description: Build, validate, and atomically activate the B2 search snapshot
         required: false
-        default: false
+        default: true
         type: boolean
   schedule:
     - cron: '23 5 * * *'
@@ -31,13 +31,14 @@ jobs:
       B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
       B2_DATA_PREFIX: data
       GLOBAL_BOOTSTRAP_B2_PREFIX: data/snapshots/bootstrap/current
+      PYTHONUNBUFFERED: '1'
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Install bulk data dependencies
-        run: python -m pip install --disable-pip-version-check duckdb boto3 numpy
+      - name: Install bulk data and search-index dependencies
+        run: python -m pip install --disable-pip-version-check duckdb boto3 numpy 'h3>=4,<5' brotli orjson zstandard
       - name: Validate current bootstrap schema before expensive global work
         run: python scripts/global-data/verify_bootstrap_schema.py
       - id: snapshot
@@ -67,13 +68,20 @@ jobs:
           GLOBAL_LOCATION_COUNTRIES: ${{ vars.GLOBAL_LOCATION_COUNTRIES }}
       - name: Carry current photo and Google-ID overlays into the snapshot
         run: python scripts/global-data/build_bootstrap_overlays.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --bootstrap-prefix='data/snapshots/bootstrap/current'
-      - name: Build, validate and atomically activate blue/green OpenSearch index
-        if: (github.event_name == 'workflow_dispatch' && inputs.activate_opensearch) || (github.event_name != 'workflow_dispatch' && vars.GLOBAL_OPENSEARCH_INDEX_ENABLED == 'true')
-        run: python scripts/global-data/index_opensearch.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --alias=locations-active
+      - name: Build immutable adaptive-H3 B2 search snapshot
+        run: python scripts/global-data/build_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'
         env:
-          GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
-          OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
-          OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
-          OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
-          OPENSEARCH_LOCATION_SHARDS: ${{ vars.OPENSEARCH_LOCATION_SHARDS || '6' }}
-          OPENSEARCH_LOCATION_REPLICAS: ${{ vars.OPENSEARCH_LOCATION_REPLICAS || '2' }}
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+          GLOBAL_LOCATION_SEARCH_WORK_DIR: ${{ runner.temp }}/b2-search-index
+          GLOBAL_LOCATION_BUILD_THREADS: ${{ vars.GLOBAL_LOCATION_BUILD_THREADS || '8' }}
+          GLOBAL_LOCATION_H3_ROOT_RESOLUTION: ${{ vars.GLOBAL_LOCATION_H3_ROOT_RESOLUTION || '5' }}
+          GLOBAL_LOCATION_H3_MAX_RESOLUTION: ${{ vars.GLOBAL_LOCATION_H3_MAX_RESOLUTION || '10' }}
+          GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES || '6000' }}
+          GLOBAL_LOCATION_SHARD_HARD_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_CANDIDATES || '20000' }}
+          GLOBAL_LOCATION_SHARD_TARGET_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_BYTES || '786432' }}
+          GLOBAL_LOCATION_SHARD_HARD_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_BYTES || '2097152' }}
+      - name: Validate immutable B2 search snapshot
+        run: python scripts/global-data/validate_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'
+      - name: Atomically activate validated B2 search snapshot
+        if: github.event_name != 'workflow_dispatch' || inputs.activate_search
+        run: python scripts/global-data/validate_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --activate

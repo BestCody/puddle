@@ -1,0 +1,221 @@
+name: Build and gate B2 location search
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/b2-location-search-migration-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b2-location-search-production-migration
+  cancel-in-progress: false
+
+jobs:
+  build-validate-parity-activate:
+    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
+    env:
+      PYTHONUNBUFFERED: '1'
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
+      B2_DATA_PREFIX: data
+      GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
+      GLOBAL_LOCATION_SEARCH_INDEX: locations-active
+      OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
+      OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+      OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
+      GLOBAL_LOCATION_MAX_RADIUS_KM: '100'
+      GLOBAL_LOCATION_MAX_DIRECTORY_TILES: '64'
+      GLOBAL_LOCATION_MAX_SHARDS: '128'
+      GLOBAL_LOCATION_MAX_OBJECT_BYTES: '16777216'
+      GLOBAL_LOCATION_MAX_DECODED_OBJECT_BYTES: '67108864'
+      GLOBAL_LOCATION_MAX_COMPRESSED_BYTES: '16777216'
+      GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
+      GLOBAL_LOCATION_FETCH_CONCURRENCY: '8'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install search build dependencies
+        run: python -m pip install --disable-pip-version-check duckdb boto3 'h3>=4,<5' brotli orjson zstandard
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
+      - id: snapshot
+        name: Resolve newest completed canonical normalized B2 snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os, re
+          import boto3
+          from botocore.client import Config
+
+          bucket = os.environ['B2_DATA_BUCKET_NAME']
+          endpoint = os.environ['B2_DATA_S3_ENDPOINT']
+          region = os.environ.get('B2_DATA_S3_REGION') or 'us-east-005'
+          key_id = os.environ['B2_DATA_APPLICATION_KEY_ID']
+          key = os.environ['B2_DATA_APPLICATION_KEY']
+          data_prefix = os.environ.get('B2_DATA_PREFIX', 'data').strip('/')
+          prefix = f'{data_prefix}/normalized/schema=v1/snapshot='
+          client = boto3.client(
+              's3', endpoint_url=endpoint, aws_access_key_id=key_id,
+              aws_secret_access_key=key, region_name=region,
+              config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
+          )
+          candidates = set()
+          paginator = client.get_paginator('list_objects_v2')
+          for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/'):
+              for item in page.get('CommonPrefixes', []):
+                  match = re.search(r'/snapshot=(\d{4}-\d{2}-\d{2})/$', item.get('Prefix', ''))
+                  if match:
+                      candidates.add(match.group(1))
+
+          completed = []
+          for snapshot in sorted(candidates, reverse=True):
+              manifest_key = f'{data_prefix}/normalized/schema=v1/snapshot={snapshot}/manifest.json'
+              try:
+                  client.head_object(Bucket=bucket, Key=manifest_key)
+              except Exception:
+                  continue
+              completed.append((snapshot, manifest_key))
+              break
+
+          if not completed:
+              raise SystemExit(f'No completed canonical normalized snapshots found below s3://{bucket}/{prefix}')
+          snapshot, manifest_key = completed[0]
+          print(f'snapshot={snapshot}')
+          print(f'source_manifest_key={manifest_key}')
+          PY
+          echo "Using completed canonical normalized snapshot ${{ steps.snapshot.outputs.snapshot }}"
+      - id: candidate
+        name: Reuse completed immutable search candidate when present
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          import boto3
+          from botocore.client import Config
+
+          snapshot = '${{ steps.snapshot.outputs.snapshot }}'
+          bucket = os.environ['B2_DATA_BUCKET_NAME']
+          data_prefix = os.environ.get('B2_DATA_PREFIX', 'data').strip('/')
+          client = boto3.client(
+              's3', endpoint_url=os.environ['B2_DATA_S3_ENDPOINT'],
+              aws_access_key_id=os.environ['B2_DATA_APPLICATION_KEY_ID'],
+              aws_secret_access_key=os.environ['B2_DATA_APPLICATION_KEY'],
+              region_name=os.environ.get('B2_DATA_S3_REGION') or 'us-east-005',
+              config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
+          )
+          required = [
+              f'{data_prefix}/search/schema=v1/snapshot={snapshot}/manifest.json',
+              f'{data_prefix}/search/candidates/{snapshot}.json',
+          ]
+          exists = True
+          for key in required:
+              try:
+                  client.head_object(Bucket=bucket, Key=key)
+              except Exception:
+                  exists = False
+                  break
+          print(f'exists={str(exists).lower()}')
+          PY
+      - name: Build immutable adaptive-H3 B2 search candidate
+        if: steps.candidate.outputs.exists != 'true'
+        run: python scripts/global-data/build_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'
+        env:
+          DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
+          GLOBAL_LOCATION_SEARCH_WORK_DIR: ${{ runner.temp }}/b2-search-index
+          GLOBAL_LOCATION_BUILD_THREADS: ${{ vars.GLOBAL_LOCATION_BUILD_THREADS || '8' }}
+          GLOBAL_LOCATION_H3_ROOT_RESOLUTION: ${{ vars.GLOBAL_LOCATION_H3_ROOT_RESOLUTION || '5' }}
+          GLOBAL_LOCATION_H3_MAX_RESOLUTION: ${{ vars.GLOBAL_LOCATION_H3_MAX_RESOLUTION || '10' }}
+          GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES || '6000' }}
+          GLOBAL_LOCATION_SHARD_HARD_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_CANDIDATES || '20000' }}
+          GLOBAL_LOCATION_SHARD_TARGET_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_BYTES || '786432' }}
+          GLOBAL_LOCATION_SHARD_HARD_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_BYTES || '2097152' }}
+      - name: Assert generated search count matches canonical source manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          import boto3
+          from botocore.client import Config
+
+          snapshot = '${{ steps.snapshot.outputs.snapshot }}'
+          source_manifest_key = '${{ steps.snapshot.outputs.source_manifest_key }}'
+          data_prefix = os.environ.get('B2_DATA_PREFIX', 'data').strip('/')
+          search_manifest_key = f'{data_prefix}/search/schema=v1/snapshot={snapshot}/manifest.json'
+          client = boto3.client(
+              's3', endpoint_url=os.environ['B2_DATA_S3_ENDPOINT'],
+              aws_access_key_id=os.environ['B2_DATA_APPLICATION_KEY_ID'],
+              aws_secret_access_key=os.environ['B2_DATA_APPLICATION_KEY'],
+              region_name=os.environ.get('B2_DATA_S3_REGION') or 'us-east-005',
+              config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
+          )
+          def load(key):
+              return json.loads(client.get_object(Bucket=os.environ['B2_DATA_BUCKET_NAME'], Key=key)['Body'].read())
+          source = load(source_manifest_key)
+          search = load(search_manifest_key)
+          expected = int(source.get('locationRows', -1))
+          actual = int(search.get('location_count', -2))
+          if expected <= 0:
+              raise SystemExit(f'Canonical normalized manifest has invalid locationRows={expected}')
+          if actual != expected:
+              raise SystemExit(f'Search location_count={actual} does not match canonical locationRows={expected}')
+          print(f'canonical_count_match={actual}')
+          PY
+      - name: Validate candidate artifacts and canonical counts
+        run: python scripts/global-data/validate_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'
+      - name: Compare candidate against live OpenSearch before activation
+        run: node scripts/global-data/compare_location_search_backends.mjs
+        env:
+          GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/candidates/${{ steps.snapshot.outputs.snapshot }}.json
+      - name: Atomically activate only the validated parity-passing candidate
+        run: python scripts/global-data/validate_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --activate
+      - name: Smoke active B2 radius, viewport, ID and slug paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          GLOBAL_LOCATION_SEARCH_BACKEND=b2 GLOBAL_LOCATION_SEARCH_MANIFEST_KEY=data/search/active.json node --input-type=module <<'NODE'
+          import {
+            getGlobalLocationBySlug,
+            getGlobalLocationsByIds,
+            searchGlobalLocations,
+            searchGlobalLocationsInViewport
+          } from './lib/app/global-location-search.js'
+
+          const viewport = await searchGlobalLocationsInViewport({
+            north: 43.85, south: 43.45, west: -79.80, east: -79.00, zoom: 11
+          })
+          if (!viewport.candidates.length) throw new Error('Active B2 Toronto viewport returned zero locations.')
+          const sample = viewport.candidates.find((row) => row?.id && row?.slug)
+          if (!sample) throw new Error('Active B2 viewport had no hydratable sample.')
+          const ids = await getGlobalLocationsByIds([sample.id])
+          if (String(ids[0]?.id || '') !== String(sample.id)) throw new Error('Active B2 ID hydration failed.')
+          const slug = await getGlobalLocationBySlug(sample.slug)
+          if (String(slug?.id || '') !== String(sample.id)) throw new Error('Active B2 slug hydration failed.')
+          const radius = await searchGlobalLocations({
+            latitude: 43.6532, longitude: -79.3832, distanceKm: 25,
+            filters: {}, candidateLimit: 20
+          })
+          if (!radius.candidates.length) throw new Error('Active B2 Toronto radius query returned zero locations.')
+          console.log(JSON.stringify({
+            ok: true,
+            snapshot: '${{ steps.snapshot.outputs.snapshot }}',
+            viewport: viewport.diagnostics,
+            radius: radius.diagnostics
+          }, null, 2))
+          NODE

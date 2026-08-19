@@ -1,0 +1,80 @@
+name: B2 location search smoke
+
+on:
+  workflow_run:
+    workflows: ['Build and gate B2 location search']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b2-location-search-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GLOBAL_LOCATION_SEARCH_BACKEND: b2
+      GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
+      GLOBAL_LOCATION_MAX_RADIUS_KM: '100'
+      GLOBAL_LOCATION_MAX_DIRECTORY_TILES: '64'
+      GLOBAL_LOCATION_MAX_SHARDS: '128'
+      GLOBAL_LOCATION_MAX_OBJECT_BYTES: '16777216'
+      GLOBAL_LOCATION_MAX_DECODED_OBJECT_BYTES: '67108864'
+      GLOBAL_LOCATION_MAX_COMPRESSED_BYTES: '16777216'
+      GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Exercise Toronto discovery, viewport, ID and slug hydration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {
+            getGlobalLocationBySlug,
+            getGlobalLocationsByIds,
+            searchGlobalLocations,
+            searchGlobalLocationsInViewport
+          } from './lib/app/global-location-search.js'
+
+          const viewport = await searchGlobalLocationsInViewport({
+            north: 43.85, south: 43.45, west: -79.80, east: -79.00, zoom: 11
+          })
+          if (viewport.backend !== 'b2') throw new Error(`Unexpected backend ${viewport.backend}.`)
+          if (!viewport.candidates.length) throw new Error('Toronto B2 viewport returned zero published locations.')
+          const sample = viewport.candidates.find((row) => row?.id && row?.slug && Number.isFinite(Number(row?.latitude)) && Number.isFinite(Number(row?.longitude)))
+          if (!sample) throw new Error('Toronto viewport returned no renderable location with ID and slug.')
+
+          const byId = await getGlobalLocationsByIds([sample.id])
+          if (String(byId[0]?.id || '') !== String(sample.id)) throw new Error('B2 ID hydration failed.')
+          const bySlug = await getGlobalLocationBySlug(sample.slug)
+          if (String(bySlug?.id || '') !== String(sample.id)) throw new Error('B2 slug hydration failed.')
+
+          const discovery = await searchGlobalLocations({
+            latitude: 43.6532, longitude: -79.3832, distanceKm: 25,
+            filters: {}, candidateLimit: 20
+          })
+          if (!discovery.candidates.length) throw new Error('Toronto B2 radius discovery returned zero locations.')
+
+          console.log(JSON.stringify({
+            ok: true,
+            index: discovery.index,
+            viewportCount: viewport.candidates.length,
+            discoveryCount: discovery.candidates.length,
+            viewportDiagnostics: viewport.diagnostics,
+            discoveryDiagnostics: discovery.diagnostics
+          }, null, 2))
+          NODE

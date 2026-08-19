@@ -63,10 +63,16 @@ export async function hydrateOpenSearchRuntimeAuthFromVault(env = process.env, {
 }
 
 export async function register() {
-  let authSource = 'environment'
+  const searchBackend = String(process.env.GLOBAL_LOCATION_SEARCH_BACKEND || 'opensearch').trim().toLowerCase()
+  let authSource = searchBackend === 'opensearch' ? 'environment' : 'not-required'
   let openSearch = normalizeOpenSearchRuntimeEnv()
 
-  if (process.env.NEXT_RUNTIME !== 'edge' && openSearch.endpointConfigured && !['basic', 'bearer'].includes(openSearch.authMode)) {
+  if (
+    searchBackend === 'opensearch' &&
+    process.env.NEXT_RUNTIME !== 'edge' &&
+    openSearch.endpointConfigured &&
+    !['basic', 'bearer'].includes(openSearch.authMode)
+  ) {
     try {
       const hydrated = await hydrateOpenSearchRuntimeAuthFromVault()
       authSource = hydrated.source
@@ -81,6 +87,7 @@ export async function register() {
     event: 'puddle_observability_boot',
     service: 'vercel',
     region: process.env.VERCEL_REGION || 'local',
+    location_search_backend: searchBackend,
     opensearch_endpoint_configured: openSearch.endpointConfigured,
     opensearch_auth_mode: openSearch.authMode,
     opensearch_auth_source: authSource,
