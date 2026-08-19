@@ -17,6 +17,9 @@ const textFile = /(?:^|\/)(?:[^/]+\.(?:[cm]?js|jsx|ts|tsx|py|ya?ml|json|md|txt)|
 const forbidden = /\bopensearch\b/i
 
 for (const relative of tracked) {
+  if (forbidden.test(relative)) {
+    throw new Error(`Retired OpenSearch filename remains in executable/test surface: ${relative}`)
+  }
   if (!textFile.test(relative)) continue
   const source = await readFile(join(root, relative), 'utf8')
   if (forbidden.test(source)) {
