@@ -31,6 +31,14 @@ test('selected licensed photos materialize directly into immutable B2 media', as
   assert.match(materializer, /B2_MEDIA_OPEN_PHOTO_PREFIX/)
 })
 
+test('materializer tolerates pre-B2 bootstrap photo metadata without content hashes', async () => {
+  const materializer = await read('scripts/global-data/materialize_photo_candidates.py')
+  assert.match(materializer, /DESCRIBE SELECT \* FROM read_parquet/)
+  assert.match(materializer, /'content_hash' in bootstrap_columns/)
+  assert.match(materializer, /ignoring legacy bootstrap photo metadata without content_hash/)
+  assert.match(materializer, /'content_hash' in enriched_columns/)
+})
+
 test('retired relational photo enrichment is not part of the production pipeline', async () => {
   const repositoryCheck = await read('scripts/check.mjs')
   const packageJson = JSON.parse(await read('package.json'))
