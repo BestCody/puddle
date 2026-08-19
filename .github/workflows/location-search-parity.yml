@@ -1,0 +1,40 @@
+name: Location search parity
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: location-search-parity
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
+      GLOBAL_LOCATION_SEARCH_INDEX: locations-active
+      OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
+      OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+      OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
+      GLOBAL_LOCATION_MAX_RADIUS_KM: '100'
+      GLOBAL_LOCATION_MAX_DIRECTORY_TILES: '64'
+      GLOBAL_LOCATION_MAX_SHARDS: '128'
+      GLOBAL_LOCATION_MAX_COMPRESSED_BYTES: '16777216'
+      GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Compare live OpenSearch and B2 query behavior
+        run: node scripts/global-data/compare_location_search_backends.mjs
