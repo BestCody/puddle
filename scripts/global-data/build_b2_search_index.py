@@ -57,6 +57,32 @@ def finite_coordinate(value: object, minimum: float, maximum: float) -> bool:
     return math.isfinite(number) and minimum <= number <= maximum
 
 
+def disambiguated_slug(slug: str, identifier: str) -> str:
+    """Return a deterministic collision-only slug without changing normal slugs."""
+    compact_id = str(identifier).replace('-', '').lower()
+    if not compact_id:
+        raise ValueError('Cannot disambiguate a slug without a location id.')
+    return f'{slug}-{compact_id}'
+
+
+def resolved_slug_entries(slug: str, identifiers) -> list[tuple[str, str]]:
+    """Keep one stable winner on the original slug and rewrite only collision losers."""
+    ordered = sorted({str(identifier) for identifier in identifiers if str(identifier)})
+    if not ordered:
+        return []
+    entries = [(str(slug), ordered[0])]
+    entries.extend((disambiguated_slug(str(slug), identifier), identifier) for identifier in ordered[1:])
+    return entries
+
+
+def apply_slug_override(document: dict, overrides: dict[str, str]) -> dict:
+    identifier = str(document.get('id') or '')
+    replacement = overrides.get(identifier)
+    if replacement:
+        document['slug'] = replacement
+    return document
+
+
 class ZstdPartitionSpool:
     """Append NDJSON to many partitions with bounded RAM and compressed on-disk frames."""
 
@@ -303,6 +329,8 @@ def main() -> None:
         'location_count': 0,
         'published_count': 0,
         'geo_location_count': 0,
+        'slug_collision_groups': 0,
+        'slug_collision_rewrites': 0,
         'id_shards': 0,
         'slug_shards': 0,
         'geo_shards': 0,
@@ -311,9 +339,11 @@ def main() -> None:
         'geo_map_z1_shards': 0,
     }
 
-    # Phase 1: external hash partition by ID. Only this full-record spool exists on disk during hydration build.
+    # Phase 1: external hash partition by ID and lightweight slug references.
     id_spool_root = work_root / 'id-spool'
     id_spool = ZstdPartitionSpool(id_spool_root, buffer_bytes=64 * 1024, max_buffers=None)
+    raw_slug_spool_root = work_root / 'slug-raw-spool'
+    raw_slug_spool = ZstdPartitionSpool(raw_slug_spool_root, buffer_bytes=32 * 1024, max_buffers=None)
     query = canonical_query(con)
     columns = canonical_columns(query)
     while True:
@@ -330,45 +360,69 @@ def main() -> None:
                 if not finite_coordinate(document.get('latitude'), -90, 90) or not finite_coordinate(document.get('longitude'), -180, 180):
                     raise RuntimeError(f'Published location {identifier} has invalid coordinates.')
             id_spool.write(hash_bucket(identifier), orjson.dumps(document))
+            slug = str(document.get('slug') or '').strip()
+            if slug:
+                raw_slug_spool.write(hash_bucket(slug), orjson.dumps([slug, identifier]))
             stats['location_count'] += 1
         print(f"hydration_spooled={stats['location_count']}", flush=True)
     id_spool.close()
+    raw_slug_spool.close()
     if stats['location_count'] <= 0:
         raise RuntimeError('Canonical snapshot produced no search documents.')
 
-    slug_spool_root = work_root / 'slug-spool'
-    slug_spool = ZstdPartitionSpool(slug_spool_root, buffer_bytes=32 * 1024, max_buffers=None)
+    # Resolve collisions before emitting any document-bearing shard. Only collision losers
+    # are retained in memory, so memory is O(number of collisions), not O(location_count).
+    slug_overrides: dict[str, str] = {}
+    final_slug_spool_root = work_root / 'slug-final-spool'
+    final_slug_spool = ZstdPartitionSpool(final_slug_spool_root, buffer_bytes=32 * 1024, max_buffers=None)
+    for path in raw_slug_spool.paths():
+        groups: dict[str, set[str]] = {}
+        for line in raw_slug_spool.lines(path):
+            slug, identifier = orjson.loads(line)
+            groups.setdefault(str(slug), set()).add(str(identifier))
+        for slug, identifiers in groups.items():
+            entries = resolved_slug_entries(slug, identifiers)
+            if len(entries) > 1:
+                stats['slug_collision_groups'] += 1
+                stats['slug_collision_rewrites'] += len(entries) - 1
+                print(f'slug_collision={slug!r} ids={sorted(identifiers)}', flush=True)
+            for resolved_slug, identifier in entries:
+                if resolved_slug != slug:
+                    slug_overrides[identifier] = resolved_slug
+                final_slug_spool.write(hash_bucket(resolved_slug), orjson.dumps([resolved_slug, identifier]))
+        path.unlink()
+    shutil.rmtree(raw_slug_spool_root, ignore_errors=True)
+    final_slug_spool.close()
+
+    # Emit hydration shards after collision resolution so ID documents expose the same slug
+    # as slug lookup and geo search documents.
     for path in id_spool.paths():
         bucket = id_spool.partition(path)
         values: dict[str, dict] = {}
         for line in id_spool.lines(path):
-            document = orjson.loads(line)
+            document = apply_slug_override(orjson.loads(line), slug_overrides)
             identifier = str(document['id'])
             if identifier in values:
                 raise RuntimeError(f'Duplicate canonical location id {identifier}.')
             values[identifier] = document
-            slug = str(document.get('slug') or '').strip()
-            if slug:
-                slug_spool.write(hash_bucket(slug), orjson.dumps([slug, identifier]))
         writer.put_json(f'id/{bucket}.json.br', values, count=len(values), kind='id')
         stats['id_shards'] += 1
         path.unlink()
     shutil.rmtree(id_spool_root, ignore_errors=True)
-    slug_spool.close()
 
-    for path in slug_spool.paths():
-        bucket = slug_spool.partition(path)
+    for path in final_slug_spool.paths():
+        bucket = final_slug_spool.partition(path)
         values: dict[str, str] = {}
-        for line in slug_spool.lines(path):
+        for line in final_slug_spool.lines(path):
             slug, identifier = orjson.loads(line)
             existing = values.get(slug)
             if existing and existing != identifier:
-                raise RuntimeError(f'Duplicate slug {slug!r} maps to both {existing} and {identifier}.')
+                raise RuntimeError(f'Secondary slug collision {slug!r} maps to both {existing} and {identifier}.')
             values[slug] = identifier
         writer.put_json(f'slug/{bucket}.json.br', values, count=len(values), kind='slug')
         stats['slug_shards'] += 1
         path.unlink()
-    shutil.rmtree(slug_spool_root, ignore_errors=True)
+    shutil.rmtree(final_slug_spool_root, ignore_errors=True)
 
     # Phase 2: re-stream canonical documents once for geography. This halves peak temp-disk usage versus dual full spools.
     geo_spool_root = work_root / 'geo-spool'
@@ -383,7 +437,7 @@ def main() -> None:
         if not rows:
             break
         for values in rows:
-            document = document_from_values(columns, values)
+            document = apply_slug_override(document_from_values(columns, values), slug_overrides)
             lat = document.get('latitude')
             lon = document.get('longitude')
             if not finite_coordinate(lat, -90, 90) or not finite_coordinate(lon, -180, 180):
@@ -506,6 +560,8 @@ def main() -> None:
         'location_count': stats['location_count'],
         'published_count': stats['published_count'],
         'geo_location_count': stats['geo_location_count'],
+        'slug_collision_groups': stats['slug_collision_groups'],
+        'slug_collision_rewrites': stats['slug_collision_rewrites'],
         'shard_counts': {key: value for key, value in stats.items() if key.endswith('_shards')},
         'geo': {
             'root_resolution': root_resolution,
