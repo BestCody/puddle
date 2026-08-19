@@ -47,11 +47,15 @@ test('production location media has an exact one-photo invariant', async () => {
   assert.doesNotMatch(socialFeed, /list\.length < 5/)
 })
 
-test('global detail serving also fails closed instead of falling back to Postgres', async () => {
+test('global detail serving fails closed instead of falling back to Postgres', async () => {
   const publicLocation = await read('lib/app/public-location-cache.js')
+  assert.match(publicLocation, /getGlobalLocationBySlug/)
+  assert.match(publicLocation, /searchGlobalLocations/)
+  assert.match(publicLocation, /from\('location_host_links'\)/)
+  assert.match(publicLocation, /isLocationSuspended/)
   assert.doesNotMatch(publicLocation, /GLOBAL_LOCATION_FALLBACK_TO_SUPABASE/)
   assert.doesNotMatch(publicLocation, /transitional Supabase fallback/)
-  assert.match(publicLocation, /useGlobal\s*\?\s*await loadGlobalPublicLocation/)
+  assert.doesNotMatch(publicLocation, /from\(['"]locations['"]\)|loadRelationalPublicLocation|useGlobal/)
 })
 
 test('production SLO observations and trace IDs cover Vercel, Supabase, and OpenSearch', async () => {

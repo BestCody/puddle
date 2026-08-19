@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
 import { GoogleServerPlacePhoto } from '@/components/google-server-place-photo'
-import { photoDisplayState } from '@/lib/app/photo-enrichment'
 
 const categoryLabels = {
   cafe: 'Coffee shop', restaurant: 'Restaurant', bar: 'Bar or lounge', park: 'Park or garden',
@@ -165,22 +164,6 @@ function DetailsSheet({ item, photos, busy, onChoice, onClose }) {
   )
 }
 
-function PhotoSearchState({ state, placeholderUrl }) {
-  const retrying = state === 'retrying'
-  return <div
-    aria-live="polite"
-    style={{
-      position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', alignContent: 'center', gap: 10,
-      padding: 24, textAlign: 'center', color: '#756c70',
-      background: placeholderUrl ? `linear-gradient(rgba(238,233,235,.84),rgba(221,214,217,.84)),url(${placeholderUrl}) center/cover` : 'linear-gradient(145deg,#eee9eb,#ddd6d9)'
-    }}
-  >
-    <span aria-hidden="true" style={{ fontSize: '2.3rem' }}>⌖</span>
-    <strong style={{ fontSize: '.9rem' }}>{retrying ? 'Photo search will retry' : 'Finding a real photo'}</strong>
-    <small style={{ maxWidth: 250, lineHeight: 1.4 }}>Checking Wikimedia Commons, Mapillary, and KartaView.</small>
-  </div>
-}
-
 export function MinimalSwipePreviewCard({ item }) {
   const candidates = photoCandidates(item)
   const photo = candidates[0] || item.category_placeholder_url || null
@@ -236,21 +219,8 @@ export function MinimalSwipeCard({ item, onChoice, busy, actionRequest }) {
   const googleServerPhotoUrl = item.google_photo_proxy_url || null
   const useGoogleServerPhoto = !mainPhoto && Boolean(googleServerPhotoUrl)
   const useGoogleUiKit = !useGoogleServerPhoto && !mainPhoto && Boolean(googleLookup)
-  const [photoStatus, setPhotoStatus] = useState(item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending'))
-  const displayState = photoDisplayState(photoStatus, Boolean(mainPhoto))
+  const showPlaceholder = !mainPhoto && !useGoogleServerPhoto && !useGoogleUiKit
   const rating = ratingLabel(item)
-
-  useEffect(() => {
-    const nextStatus = item.photo_enrichment_status || (mainPhoto ? 'matched' : 'pending')
-    setPhotoStatus(nextStatus)
-    if (mainPhoto || !item.content_id || !['pending', 'processing', 'failed'].includes(nextStatus)) return undefined
-    let cancelled = false
-    fetch(`/api/location-photo-status/${encodeURIComponent(item.content_id)}`, { cache: 'no-store' })
-      .then((response) => response.ok ? response.json() : null)
-      .then((result) => { if (!cancelled && result?.status) setPhotoStatus(result.status) })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [item.content_id, item.photo_enrichment_status, mainPhoto])
 
   async function choose(action) {
     if (busy || choiceInFlight.current) return
@@ -335,8 +305,7 @@ export function MinimalSwipeCard({ item, onChoice, busy, actionRequest }) {
         {useGoogleServerPhoto
           ? <GoogleServerPlacePhoto title={item.title} url={googleServerPhotoUrl} placeholderUrl={placeholderUrl} />
           : useGoogleUiKit ? <GooglePlacePhotoFallback title={item.title} placeId={null} lookup={googleLookup} placeholderUrl={placeholderUrl} /> : null}
-        {!useGoogleServerPhoto && !useGoogleUiKit && displayState === 'unavailable' ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found" style={placeholderUrl ? { backgroundImage: `url(${placeholderUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
-        {!useGoogleServerPhoto && !useGoogleUiKit && (displayState === 'searching' || displayState === 'retrying') ? <PhotoSearchState state={displayState} placeholderUrl={placeholderUrl} /> : null}
+        {showPlaceholder ? <div className="minimal-photo-placeholder" aria-label="No usable open photo was found" style={placeholderUrl ? { backgroundImage: `url(${placeholderUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}><span aria-hidden="true">⌖</span><small style={{ position: 'absolute', bottom: 28, fontSize: '.82rem' }}>Real photo coming soon</small></div> : null}
         <div className="minimal-swipe-meta">
           <span>{categoryLabel(item.category)}</span>
           {item.distanceLabel ? <span>{item.distanceLabel}</span> : null}

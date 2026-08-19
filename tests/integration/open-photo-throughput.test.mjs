@@ -1,76 +1,12 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { createProviderRequestLimiter } from '../../lib/app/provider-request-limiter.js'
 
 async function source(path) {
   return readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 }
 
-test('provider limiter spaces request starts and respects a shared pause', async () => {
-  let now = 0
-  const limiter = createProviderRequestLimiter({
-    nowFn: () => now,
-    sleepFn: async (milliseconds) => { now += milliseconds }
-  })
-
-  const first = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 300 })
-  first()
-  const second = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 300 })
-  second()
-  assert.equal(now, 300)
-
-  limiter.defer('wikimedia', 1_000)
-  const third = await limiter.acquire('wikimedia', { maxConcurrent: 3, minIntervalMs: 300 })
-  third()
-  assert.equal(now, 1_300)
-})
-
-test('provider limiter enforces maximum concurrency', async () => {
-  const limiter = createProviderRequestLimiter()
-  const first = await limiter.acquire('kartaview', { maxConcurrent: 1 })
-  let secondStarted = false
-  const secondPromise = limiter.acquire('kartaview', { maxConcurrent: 1 }).then((release) => {
-    secondStarted = true
-    return release
-  })
-
-  await Promise.resolve()
-  assert.equal(secondStarted, false)
-  first()
-  const second = await secondPromise
-  assert.equal(secondStarted, true)
-  second()
-})
-
-test('transitional photo queue stays manual while retaining B2 repair capability', async () => {
-  const workflow = await source('.github/workflows/photo-enrichment.yml')
-  const importer = await source('scripts/import-open-location-photos.mjs')
-  const storage = await source('lib/app/open-photo-b2.js')
-
-  assert.match(workflow, /cron: '17 \* \* \* \*'/)
-  assert.match(workflow, /if: github\.event_name == 'workflow_dispatch'/)
-  assert.match(workflow, /B2_MEDIA_ENABLED/)
-  assert.match(workflow, /B2_MEDIA_APPLICATION_KEY_ID/)
-  assert.match(workflow, /Drain prioritized open-photo candidates into B2 media/)
-  assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MIN_INTERVAL_MS: '300'/)
-  assert.match(workflow, /OPEN_PHOTO_WIKIMEDIA_MAX_CONCURRENCY: '3'/)
-  assert.match(workflow, /OPEN_PHOTO_MAPILLARY_MAX_CONCURRENCY: '32'/)
-  assert.match(workflow, /OPEN_PHOTO_KARTAVIEW_MIN_INTERVAL_MS: '3600'/)
-  assert.match(workflow, /OPEN_PHOTO_LOCATION_CONCURRENCY: '100'/)
-
-  assert.match(importer, /provider: 'wikimedia-api'/)
-  assert.match(importer, /provider: 'mapillary-api'/)
-  assert.match(importer, /provider: 'kartaview-api'/)
-  assert.match(importer, /storeOpenPhotoInB2/)
-  assert.doesNotMatch(importer, /storeOpenPhotoInSupabase|open-photo-supabase/)
-  assert.match(storage, /storageBackend: 'b2'/)
-  assert.match(storage, /media\/photos\/by-sha256/)
-  assert.match(storage, /\.from\('media_objects'\)/)
-  assert.match(storage, /mediaObjectId: mediaObject\.id/)
-})
-
-test('global free-photo workers saturate provider budgets without one request per POI', async () => {
+test('global free-photo workers saturate provider budgets and direct delivery stays B2-native', async () => {
   const materializeWorkflow = await source('.github/workflows/global-photo-enrichment.yml')
   const wikimediaWorkflow = await source('.github/workflows/global-wikimedia-enrichment.yml')
   const mapillaryWorkflow = await source('.github/workflows/global-mapillary-enrichment.yml')
@@ -79,10 +15,12 @@ test('global free-photo workers saturate provider budgets without one request pe
   const mapillary = await source('scripts/global-data/build_mapillary_candidates.py')
   const kartaview = await source('scripts/global-data/build_kartaview_candidates.py')
   const materializer = await source('scripts/global-data/materialize_photo_candidates.py')
+  const delivery = await source('app/api/open-photo/[sha256]/route.js')
 
   assert.match(materializeWorkflow, /GLOBAL_PHOTO_PIPELINE_ENABLED/)
   assert.match(materializeWorkflow, /cron: '31 \* \* \* \*'/)
   assert.match(materializeWorkflow, /GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY/)
+  assert.doesNotMatch(materializeWorkflow, /timeout-minutes: 360/)
 
   assert.match(wikimediaWorkflow, /WIKIMEDIA_REQUESTS_PER_MINUTE/)
   assert.match(wikimediaWorkflow, /WIKIMEDIA_MAX_CONCURRENCY: '3'/)
@@ -92,6 +30,7 @@ test('global free-photo workers saturate provider budgets without one request pe
 
   assert.match(mapillaryWorkflow, /MAPILLARY_TILE_DAILY_LIMIT: '50000'/)
   assert.match(mapillaryWorkflow, /default: '12500'/)
+  assert.doesNotMatch(mapillaryWorkflow, /timeout-minutes: 180/)
   assert.match(mapillary, /zoom-14 vector tiles/)
   assert.match(mapillary, /DAILY_REQUEST_LIMIT = max\(1, min\(50_000/)
   assert.match(mapillary, /STATE_PREFIX/)
@@ -105,6 +44,11 @@ test('global free-photo workers saturate provider budgets without one request pe
 
   assert.match(materializer, /existing_photos/)
   assert.match(materializer, /photos\/by-sha256/)
+
+  assert.match(delivery, /canonicalStorageKey/)
+  assert.match(delivery, /media\/photos\/by-sha256/)
+  assert.match(delivery, /actualHash !== hash/)
+  assert.doesNotMatch(delivery, /from\('media_objects'\)/)
 })
 
 test('global photo materialization claims exact and MIH uniqueness before B2 upload and falls back', async () => {
@@ -130,6 +74,8 @@ test('global photo materialization claims exact and MIH uniqueness before B2 upl
   assert.match(materializer, /JOIN l ON l\.id=c\.location_id/)
   assert.match(materializer, /GLOBAL_PHOTO_LOCATION_BATCH/)
   assert.match(materializer, /average_hash/)
+  assert.match(materializer, /def object_exists\(key\):/)
+  assert.match(materializer, /if object_exists\(bootstrap_photo\):/)
 
   assert.match(registry, /global_photo_claims_content_unique/)
   assert.match(registry, /global_photo_claims_provider_asset_unique/)

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
@@ -24,6 +26,7 @@ export async function POST(request) {
     const friendId = uuid(body.friendId, 'friendId')
     const locationId = uuid(body.locationId, 'locationId')
     const note = body.note ? string(body.note, { name: 'note', max: 1000 }) : null
+    await ensureGlobalLocationReferences(createAdminClient(), [locationId])
     const shared = await supabase.rpc('send_location_to_friend_v1', {
       target_friend: friendId,
       target_location: locationId,

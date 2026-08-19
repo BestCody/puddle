@@ -4,7 +4,12 @@ import {
   createConfirmedUser,
   signInThroughUi
 } from './support.mjs'
-import { ensureRelationalFixturePlaces, fixturePlaceBySourceId } from './relational-fixture.mjs'
+import { GLOBAL_LOCATION_FIXTURES } from './global-location-fixture.mjs'
+
+const fixtureNames = GLOBAL_LOCATION_FIXTURES.map((place) => place.name)
+const galleryFixtureNames = GLOBAL_LOCATION_FIXTURES
+  .filter((place) => place.category === 'gallery')
+  .map((place) => place.name)
 
 async function createSwiper(displayName) {
   const account = await createConfirmedUser({ displayName })
@@ -16,52 +21,47 @@ async function createSwiper(displayName) {
   return account
 }
 
-async function openFilteredDeck(page, account, category = 'gallery') {
+async function openDeck(page, account, query = '') {
   await signInThroughUi(page, account.email, account.password, '/discover')
   await expect(page).toHaveURL(/\/discover$/)
-  await page.goto(`/discover?category=${encodeURIComponent(category)}`)
+  if (query) await page.goto(`/discover${query}`)
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
 }
 
-test('initial Discover renders relational Supabase places without a static catalogue request', async ({ page }) => {
-  const places = [fixturePlaceBySourceId('e2e-pass-alpha'), fixturePlaceBySourceId('e2e-pass-beta')]
-  await ensureRelationalFixturePlaces(places)
-  const account = await createSwiper('Relational Initial Swiper')
+test('initial Discover renders OpenSearch-served places without a static catalogue request', async ({ page }) => {
+  const account = await createSwiper('Global Initial Swiper')
   const staticRequests = []
 
   page.on('request', (request) => {
     if (new URL(request.url()).pathname.startsWith('/api/static-catalogue/')) staticRequests.push(request.url())
   })
 
-  await openFilteredDeck(page, account)
+  await openDeck(page, account)
 
   const title = await page.locator('.figma-swipe-card h1').innerText()
-  expect(places.map((place) => place.name)).toContain(title)
+  expect(fixtureNames).toContain(title)
   await page.waitForTimeout(300)
   expect(staticRequests).toEqual([])
 })
 
-test('passing and going back works on the relational Supabase deck', async ({ page }) => {
-  const places = [fixturePlaceBySourceId('e2e-pass-alpha'), fixturePlaceBySourceId('e2e-pass-beta')]
-  await ensureRelationalFixturePlaces(places)
-  const account = await createSwiper('Relational Pass Swiper')
-  await openFilteredDeck(page, account)
+test('passing and going back works on the OpenSearch-served deck', async ({ page }) => {
+  const account = await createSwiper('Global Pass Swiper')
+  await openDeck(page, account)
 
   const heading = page.locator('.figma-swipe-card h1')
   const firstTitle = await heading.innerText()
-  const second = places.find((place) => place.name !== firstTitle)
-  expect(second).toBeTruthy()
+  expect(fixtureNames).toContain(firstTitle)
 
-  await page.getByRole('button', { name: 'Pass' }).click()
-  await expect(heading).toHaveText(second.name)
+  await page.getByRole('button', { name: 'Pass', exact: true }).click()
+  await expect(heading).not.toHaveText(firstTitle)
+  const secondTitle = await heading.innerText()
+  expect(fixtureNames).toContain(secondTitle)
 
-  await page.getByRole('button', { name: 'Back' }).click()
+  await page.getByRole('button', { name: 'Back', exact: true }).click()
   await expect(heading).toHaveText(firstTitle)
 })
 
 test('Discover filters own location, distance, and place categories', async ({ page }) => {
-  const places = [fixturePlaceBySourceId('e2e-pass-alpha'), fixturePlaceBySourceId('e2e-pass-beta')]
-  await ensureRelationalFixturePlaces(places)
   const account = await createSwiper('Filter Preference Swiper')
 
   await signInThroughUi(page, account.email, account.password, '/account')
@@ -72,42 +72,28 @@ test('Discover filters own location, distance, and place categories', async ({ p
   await expect(page.getByText('What kinds of places do you like?')).toHaveCount(0)
 
   await page.goto('/discover')
+  await expect(page.locator('.figma-swipe-card')).toBeVisible()
+
   const filterButton = page.getByRole('button', { name: 'Open filters' })
+  await expect(filterButton).toBeVisible()
+  await filterButton.click()
+  await expect(page.getByRole('dialog', { name: 'Filters' })).toBeVisible()
+  await expect(page.getByLabel('Location')).toBeVisible()
+  await expect(page.locator('input[placeholder="Coffee, park, museum…"]')).toHaveCount(0)
 
-  if (await filterButton.isVisible().catch(() => false)) {
-    // Mobile Figma exposes the filter sheet as a visible control.
-    await filterButton.click()
-    await expect(page.getByLabel('Location')).toBeVisible()
-    await expect(page.locator('input[placeholder="Coffee, park, museum…"]')).toHaveCount(0)
+  const category = page.getByLabel('Category')
+  const optionValues = await category.locator('option').evaluateAll((options) => options.map((option) => option.value))
+  expect(optionValues).toEqual(expect.arrayContaining([
+    'cafe', 'restaurant', 'bar', 'park', 'museum', 'gallery', 'attraction',
+    'activity_venue', 'scenic_spot', 'nightlife', 'shop', 'community_space'
+  ]))
 
-    const category = page.getByLabel('Category')
-    const optionValues = await category.locator('option').evaluateAll((options) => options.map((option) => option.value))
-    expect(optionValues).toEqual(expect.arrayContaining([
-      'cafe',
-      'restaurant',
-      'bar',
-      'park',
-      'museum',
-      'gallery',
-      'attraction',
-      'activity_venue',
-      'scenic_spot',
-      'nightlife',
-      'shop',
-      'community_space'
-    ]))
+  await category.selectOption('gallery')
+  await page.getByLabel('Distance').selectOption('25')
+  await page.getByRole('button', { name: 'Apply', exact: true }).click()
 
-    await category.selectOption('gallery')
-    await page.getByLabel('Distance').selectOption('25')
-    await page.getByRole('button', { name: 'Apply' }).click()
-  } else {
-    // Desktop node 12:11 intentionally omits the filter control. The real
-    // discovery filters remain addressable through route state.
-    await page.goto('/discover?category=gallery&distance=25')
-    await expect(page).toHaveURL(/category=gallery.*distance=25|distance=25.*category=gallery/)
-  }
-
+  await expect(page.getByRole('dialog', { name: 'Filters' })).toHaveCount(0)
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
   const title = await page.locator('.figma-swipe-card h1').innerText()
-  expect(places.map((place) => place.name)).toContain(title)
+  expect(galleryFixtureNames).toContain(title)
 })

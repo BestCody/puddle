@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage } from '@/lib/auth/redirect'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
 
 function value(formData, name, max = 2000) {
   return String(formData.get(name) || '').trim().slice(0, max)
@@ -29,6 +31,12 @@ export async function recordLocationVisit(formData) {
 
   if (note.length > 500) redirect(pathWithMessage('/plans', 'error', 'Keep visit notes to 500 characters or fewer.'))
   if (status === 'planned' && rawPlannedFor && !plannedFor) redirect(pathWithMessage('/plans', 'error', 'Choose a valid planned date and time.'))
+
+  try {
+    await ensureGlobalLocationReferences(createAdminClient(), [locationId])
+  } catch {
+    redirect(pathWithMessage('/plans', 'error', 'That place is no longer available.'))
+  }
 
   const { error } = await session.supabase.from('location_visits').upsert({
     profile_id: session.user.id,

@@ -1,0 +1,43 @@
+/* Keep Discover filters usable without overlapping the authenticated account menu. */
+@media (min-width: 761px) {
+  .figma-swipe-filter-trigger {
+    top: 36px;
+    right: max(100px, calc((100% - 1000px) / 2 + 100px));
+    z-index: 65;
+    width: 78px;
+    height: 44px;
+    opacity: 1;
+    pointer-events: auto;
+    border: 2px solid #e2e2e2;
+    border-radius: 999px;
+    background: #fff;
+    color: #666;
+    box-shadow: var(--figma-card-shadow);
+    font: 700 12px/1 Manrope, Inter, sans-serif;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 760px) {
+  .figma-swipe-filter-trigger {
+    top: 34px;
+    right: 20px;
+    z-index: 65;
+    width: 72px;
+    height: 42px;
+    opacity: 1;
+    pointer-events: auto;
+    border: 2px solid #e2e2e2;
+    border-radius: 999px;
+    background: #fff;
+    color: #666;
+    box-shadow: var(--figma-card-shadow);
+    font: 700 12px/1 Manrope, Inter, sans-serif;
+    cursor: pointer;
+  }
+}
+
+.figma-swipe-filter-trigger:focus-visible {
+  outline: 3px solid var(--figma-blue);
+  outline-offset: 3px;
+}

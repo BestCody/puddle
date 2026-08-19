@@ -10,7 +10,6 @@ import { object, string, uuid } from '@/lib/security/schema'
 
 const ACTIONS = new Set(['saved', 'interested', 'dismissed', 'visited', 'undo', 'opened', 'perfect'])
 const MAX_ACTIONS = 20
-const ORDERED_FALLBACK_RPC = 'record_discovery_actions_v3'
 
 function safeContext(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { mode: 'solo', category: null, payload: {} }
@@ -42,6 +41,19 @@ function parseAction(raw, index) {
   }
 }
 
+function heatmapAdjustments(results, locations) {
+  const byId = new Map((locations || []).map((row) => [String(row.id), row]))
+  return (results || []).flatMap((result) => {
+    const delta = Number(result?.densityDelta || 0)
+    if (!Number.isInteger(delta) || delta === 0) return []
+    const row = byId.get(String(result?.locationId || ''))
+    const latitude = Number(row?.latitude)
+    const longitude = Number(row?.longitude)
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return []
+    return [{ latitude, longitude, delta }]
+  })
+}
+
 export async function POST(request) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Discovery actions are unavailable.' }, { status: 503 })
@@ -60,7 +72,7 @@ export async function POST(request) {
     }
     const actions = rawActions.map(parseAction).sort((a, b) => a.sequence - b.sequence)
     const admin = createAdminClient()
-    await ensureGlobalLocationReferences(admin, actions.map((item) => item.contentId))
+    const references = await ensureGlobalLocationReferences(admin, actions.map((item) => item.contentId))
 
     const rpcActions = actions.map((item) => ({
       eventId: item.eventId,
@@ -77,16 +89,25 @@ export async function POST(request) {
       console.warn('Discovery action batch RPC failed.', {
         code: recorded.error.code || null,
         message: String(recorded.error.message || '').slice(0, 240),
-        count: rpcActions.length,
-        orderedFallback: ORDERED_FALLBACK_RPC
+        count: rpcActions.length
       })
       return NextResponse.json({ error: 'Those choices could not be saved.' }, { status: 400 })
     }
+
+    const results = recorded.data || []
+    const density = heatmapAdjustments(results, references.locations)
     after(async () => {
-      const processed = await admin.rpc('process_discovery_context_outbox_v1', { batch_limit: 100 })
-      if (processed.error) console.warn('Discovery context outbox processing failed.', { code: processed.error.code || null, message: String(processed.error.message || '').slice(0, 240) })
+      const work = [admin.rpc('process_discovery_context_outbox_v1', { batch_limit: 100 })]
+      if (density.length) work.push(admin.rpc('adjust_location_save_density_batch_v1', { adjustments: density }))
+      const completed = await Promise.allSettled(work)
+      for (const item of completed) {
+        if (item.status === 'rejected' || item.value?.error) {
+          const error = item.status === 'rejected' ? item.reason : item.value.error
+          console.warn('Discovery post-processing failed.', { code: error?.code || null, message: String(error?.message || error || '').slice(0, 240) })
+        }
+      }
     })
-    return NextResponse.json({ ok: true, results: recorded.data || [], count: rpcActions.length })
+    return NextResponse.json({ ok: true, results, count: rpcActions.length })
   } catch (error) {
     return NextResponse.json({ error: safeSecurityError(error, 'That discovery action batch is not valid.') }, { status: error?.status || 400 })
   }
