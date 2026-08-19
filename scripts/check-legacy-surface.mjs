@@ -32,6 +32,7 @@ const retiredPaths = [
   'lib/app/google-place-discovery.js',
   'lib/app/google-place-match.js',
   'lib/app/google-place-photo-proxy.js',
+  'lib/app/matches-data.js',
   'scripts/register-location-photos.mjs',
   'scripts/enrich-open-location-photos.mjs',
   'scripts/import-open-location-photos.mjs',
@@ -118,8 +119,9 @@ for (const required of ['OpenSearch failures do not silently fail over to Postgr
 }
 
 // Derive the retired database contract directly from the migrations that performed
-// the production cutovers. Historical migrations are intentionally excluded from
-// the runtime scan; active code must never call objects these migrations dropped.
+// the production cutovers. Historical B2 snapshots may legitimately contain files
+// named after their former source tables; only executable database access patterns
+// are forbidden here.
 const retirementMigrations = [
   'supabase/migrations/10074_drop_legacy_social_rpc_compatibility.sql',
   'supabase/migrations/10075_retire_shared_deck_static_catalogue.sql',
@@ -129,16 +131,12 @@ const retirementMigrations = [
   'supabase/migrations/20260818205000_retire_catalogue_sync_region_hooks.sql',
   'supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql'
 ]
-const retiredDatabaseIdentifiers = new Set()
+const retiredDatabaseIdentifiers = new Set(['locations'])
 for (const migration of retirementMigrations) {
   const source = await read(migration)
   const drops = source.matchAll(/\bdrop\s+(?:function|table|view)\s+(?:if\s+exists\s+)?public\.([a-z][a-z0-9_]*)/gi)
   for (const match of drops) retiredDatabaseIdentifiers.add(match[1])
 }
-// `locations` is also the canonical B2 parquet dataset name, so a raw word scan
-// would be a false positive. Direct Supabase `locations` access is fenced above
-// and in check.mjs with syntax-aware patterns.
-retiredDatabaseIdentifiers.delete('locations')
 
 const activeTrackedFiles = execFileSync('git', [
   'ls-files', '-z',
@@ -151,16 +149,25 @@ const activeTrackedFiles = execFileSync('git', [
   .filter((path) => /\.(?:[cm]?js|jsx|ts|tsx|py|ya?ml|json)$/.test(path) || ['.env.example'].includes(path))
   .filter((path) => !['scripts/check.mjs', 'scripts/check-legacy-surface.mjs'].includes(path))
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const legacyHits = []
 for (const relative of activeTrackedFiles) {
   const source = await read(relative)
   for (const identifier of retiredDatabaseIdentifiers) {
-    const pattern = new RegExp(`(^|[^A-Za-z0-9_])${identifier}([^A-Za-z0-9_]|$)`)
-    if (pattern.test(source)) legacyHits.push(`${relative}: ${identifier}`)
+    const escaped = escapeRegex(identifier)
+    const patterns = [
+      new RegExp(`(?:\\.rpc|\\brpc|\\bsupabase_rpc)\\(\\s*['\"]${escaped}['\"]`),
+      new RegExp(`\\.from\\(\\s*['\"]${escaped}['\"]`),
+      new RegExp(`(?:table\\s*:\\s*|table=)['\"]?${escaped}(?:['\"]|\\b)`),
+      new RegExp(`/rest/v1/rpc/${escaped}(?:[^A-Za-z0-9_]|$)`),
+      new RegExp(`\\bpublic\\.${escaped}(?:[^A-Za-z0-9_]|$)`),
+      new RegExp(`['\"][^'\"]*\\b${escaped}\\s*(?:!|\\()[^'\"]*['\"]`)
+    ]
+    if (patterns.some((pattern) => pattern.test(source))) legacyHits.push(`${relative}: ${identifier}`)
   }
 }
 if (legacyHits.length) {
-  throw new Error(`Active runtime/config still references database objects retired by cutover migrations:\n${legacyHits.sort().join('\n')}`)
+  throw new Error(`Active runtime/config still calls database objects retired by cutover migrations:\n${[...new Set(legacyHits)].sort().join('\n')}`)
 }
 
-console.log(`Legacy surface check passed: ${retiredPaths.length} retired catalogue paths absent, ${workflowNames.length} workflows free of compatibility fallbacks, and ${activeTrackedFiles.length} active files contain none of ${retiredDatabaseIdentifiers.size} retired database identifiers.`)
+console.log(`Legacy surface check passed: ${retiredPaths.length} retired paths absent, ${workflowNames.length} workflows free of compatibility fallbacks, and ${activeTrackedFiles.length} active files make no calls to ${retiredDatabaseIdentifiers.size} retired database objects.`)
