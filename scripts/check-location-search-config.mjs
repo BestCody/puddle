@@ -45,13 +45,20 @@ for (const [name, value] of [
 }
 
 const builder = await read('scripts/global-data/build_b2_search_index.py')
-for (const flag of [
-  '--root-resolution', '--max-resolution', '--target-candidates', '--hard-candidates',
-  '--target-compressed-bytes', '--hard-compressed-bytes'
+for (const [flag, defaultSource] of [
+  ['--root-resolution', "os.getenv('GLOBAL_LOCATION_H3_ROOT_RESOLUTION', '3')"],
+  ['--max-resolution', "os.getenv('GLOBAL_LOCATION_H3_MAX_RESOLUTION', '10')"],
+  ['--target-candidates', "os.getenv('GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES', '20000')"],
+  ['--hard-candidates', "os.getenv('GLOBAL_LOCATION_SHARD_HARD_CANDIDATES', '20000')"],
+  ['--target-compressed-bytes', "os.getenv('GLOBAL_LOCATION_SHARD_TARGET_BYTES', str(2 * 1024 * 1024))"],
+  ['--hard-compressed-bytes', "os.getenv('GLOBAL_LOCATION_SHARD_HARD_BYTES', str(2 * 1024 * 1024))"]
 ]) {
   if (!builder.includes(`parser.add_argument('${flag}'`)) {
     throw new Error(`B2 search builder no longer accepts required tuning flag ${flag}.`)
   }
+  if (!builder.includes(defaultSource)) {
+    throw new Error(`Direct B2 builder default for ${flag} drifted from the production-safe shard plan.`)
+  }
 }
 
-console.log('B2 location-search build configuration is pinned consistently across manual and migration entrypoints.')
+console.log('B2 location-search build configuration is pinned consistently across direct, manual, and migration entrypoints.')
