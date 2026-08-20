@@ -10,6 +10,7 @@ import os
 import shutil
 import tempfile
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,6 +21,7 @@ import h3
 import orjson
 import zstandard as zstd
 from botocore.client import Config
+from botocore.exceptions import ClientError
 
 from location_search_common import (
     b2_source_config,
@@ -31,6 +33,8 @@ from location_search_common import (
 )
 
 HEX_BUCKETS = 4096
+CHECKPOINT_VERSION = 1
+CHECKPOINT_CONCURRENCY = 16
 
 
 def utc_now() -> str:
@@ -81,6 +85,104 @@ def apply_slug_override(document: dict, overrides: dict[str, str]) -> dict:
     if replacement:
         document['slug'] = replacement
     return document
+
+
+def is_missing_object(error: ClientError) -> bool:
+    code = str(error.response.get('Error', {}).get('Code') or '')
+    status = int(error.response.get('ResponseMetadata', {}).get('HTTPStatusCode') or 0)
+    return code in {'404', 'NoSuchKey', 'NotFound'} or status == 404
+
+
+def load_json_object(s3, bucket: str, key: str) -> dict | None:
+    try:
+        body = s3.get_object(Bucket=bucket, Key=key)['Body'].read()
+    except ClientError as error:
+        if is_missing_object(error):
+            return None
+        raise
+    return orjson.loads(body)
+
+
+def put_json_object(s3, bucket: str, key: str, value: object) -> None:
+    s3.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=orjson.dumps(value, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n',
+        ContentType='application/json',
+        CacheControl='no-store',
+    )
+
+
+def upload_file(s3, bucket: str, key: str, path: Path, content_type: str) -> None:
+    s3.upload_file(
+        str(path),
+        bucket,
+        key,
+        ExtraArgs={'ContentType': content_type, 'CacheControl': 'no-store'},
+    )
+
+
+def upload_partition_checkpoint(s3, bucket: str, prefix: str, paths: list[Path]) -> tuple[list[dict], int]:
+    records = [{'name': path.name, 'bytes': path.stat().st_size} for path in paths]
+    total_bytes = sum(int(item['bytes']) for item in records)
+
+    def upload(path: Path) -> None:
+        upload_file(s3, bucket, f'{prefix}/{path.name}', path, 'application/zstd')
+
+    completed = 0
+    with ThreadPoolExecutor(max_workers=CHECKPOINT_CONCURRENCY) as executor:
+        futures = [executor.submit(upload, path) for path in paths]
+        for future in as_completed(futures):
+            future.result()
+            completed += 1
+            if completed % 250 == 0 or completed == len(paths):
+                print(f'checkpoint_upload files={completed}/{len(paths)} bytes={total_bytes}', flush=True)
+    return records, total_bytes
+
+
+def restore_partition_checkpoint(s3, bucket: str, prefix: str, records: list[dict], root: Path) -> int:
+    shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True, exist_ok=True)
+
+    def download(record: dict) -> int:
+        name = str(record['name'])
+        expected_bytes = int(record['bytes'])
+        target = root / name
+        s3.download_file(bucket, f'{prefix}/{name}', str(target))
+        actual_bytes = target.stat().st_size
+        if actual_bytes != expected_bytes:
+            raise RuntimeError(
+                f'Checkpoint partition {name} restored with {actual_bytes} bytes; expected {expected_bytes}.'
+            )
+        return actual_bytes
+
+    restored_bytes = 0
+    completed = 0
+    with ThreadPoolExecutor(max_workers=CHECKPOINT_CONCURRENCY) as executor:
+        futures = [executor.submit(download, record) for record in records]
+        for future in as_completed(futures):
+            restored_bytes += future.result()
+            completed += 1
+            if completed % 250 == 0 or completed == len(records):
+                print(f'checkpoint_restore files={completed}/{len(records)} bytes={restored_bytes}', flush=True)
+    return restored_bytes
+
+
+def delete_prefix(s3, bucket: str, prefix: str) -> int:
+    deleted = 0
+    paginator = s3.get_paginator('list_objects_v2')
+    batch: list[dict] = []
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for item in page.get('Contents', []):
+            batch.append({'Key': item['Key']})
+            if len(batch) == 1000:
+                s3.delete_objects(Bucket=bucket, Delete={'Objects': batch, 'Quiet': True})
+                deleted += len(batch)
+                batch = []
+    if batch:
+        s3.delete_objects(Bucket=bucket, Delete={'Objects': batch, 'Quiet': True})
+        deleted += len(batch)
+    return deleted
 
 
 class ZstdPartitionSpool:
@@ -156,12 +258,12 @@ class ZstdPartitionSpool:
 
 
 class ArtifactWriter:
-    def __init__(self, s3, bucket: str, prefix: str, hashes_path: Path):
+    def __init__(self, s3, bucket: str, prefix: str, hashes_path: Path, *, append: bool = False):
         self.s3 = s3
         self.bucket = bucket
         self.prefix = prefix.rstrip('/')
         self.hashes_path = hashes_path
-        self.hashes_handle = hashes_path.open('wb')
+        self.hashes_handle = hashes_path.open('ab' if append else 'wb')
         self.count = 0
         self.compressed_bytes = 0
 
@@ -198,9 +300,14 @@ class ArtifactWriter:
         body = brotli.compress(raw, quality=quality, mode=brotli.MODE_TEXT)
         return self.put_bytes(relative, body, uncompressed_bytes=len(raw), count=count, kind=kind)
 
-    def close(self) -> None:
+    def flush(self) -> None:
         if not self.hashes_handle.closed:
             self.hashes_handle.flush()
+            os.fsync(self.hashes_handle.fileno())
+
+    def close(self) -> None:
+        if not self.hashes_handle.closed:
+            self.flush()
             self.hashes_handle.close()
 
 
@@ -281,15 +388,16 @@ def brotli_json(value, quality: int = 5) -> tuple[bytes, int]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
-    parser.add_argument('--root-resolution', type=int, default=int(os.getenv('GLOBAL_LOCATION_H3_ROOT_RESOLUTION', '5')))
+    parser.add_argument('--root-resolution', type=int, default=int(os.getenv('GLOBAL_LOCATION_H3_ROOT_RESOLUTION', '3')))
     parser.add_argument('--max-resolution', type=int, default=int(os.getenv('GLOBAL_LOCATION_H3_MAX_RESOLUTION', '10')))
-    parser.add_argument('--target-candidates', type=int, default=int(os.getenv('GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES', '6000')))
+    parser.add_argument('--target-candidates', type=int, default=int(os.getenv('GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES', '20000')))
     parser.add_argument('--hard-candidates', type=int, default=int(os.getenv('GLOBAL_LOCATION_SHARD_HARD_CANDIDATES', '20000')))
-    parser.add_argument('--target-compressed-bytes', type=int, default=int(os.getenv('GLOBAL_LOCATION_SHARD_TARGET_BYTES', str(768 * 1024))))
+    parser.add_argument('--target-compressed-bytes', type=int, default=int(os.getenv('GLOBAL_LOCATION_SHARD_TARGET_BYTES', str(2 * 1024 * 1024))))
     parser.add_argument('--hard-compressed-bytes', type=int, default=int(os.getenv('GLOBAL_LOCATION_SHARD_HARD_BYTES', str(2 * 1024 * 1024))))
     parser.add_argument('--directory-degrees', type=float, default=float(os.getenv('GLOBAL_LOCATION_DIRECTORY_DEGREES', '1')))
     parser.add_argument('--batch-size', type=int, default=int(os.getenv('GLOBAL_LOCATION_BUILD_BATCH_SIZE', '10000')))
     parser.add_argument('--work-dir', default=os.getenv('GLOBAL_LOCATION_SEARCH_WORK_DIR', ''))
+    parser.add_argument('--no-resume', action='store_true', help='Ignore persisted B2 build checkpoints and rebuild from canonical source.')
     args = parser.parse_args()
 
     root_resolution = positive_int(args.root_resolution, 0, 14)
@@ -316,14 +424,44 @@ def main() -> None:
         region_name=source.region,
         config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}, max_pool_connections=32),
     )
+
+    checkpoint_config = {
+        'checkpoint_version': CHECKPOINT_VERSION,
+        'root_resolution': root_resolution,
+        'max_resolution': max_resolution,
+        'target_candidates': target_candidates,
+        'hard_candidates': hard_candidates,
+        'target_compressed_bytes': target_bytes,
+        'hard_compressed_bytes': hard_bytes,
+        'directory_degrees': directory_degrees,
+    }
+    checkpoint_fingerprint = sha256_hex(orjson.dumps(checkpoint_config, option=orjson.OPT_SORT_KEYS))[:16]
+    checkpoint_snapshot_prefix = f'{source.data_prefix}/search/checkpoints/schema=v1/snapshot={args.snapshot}'
+    checkpoint_root = f'{checkpoint_snapshot_prefix}/config={checkpoint_fingerprint}'
+    phase1_checkpoint_prefix = f'{checkpoint_root}/phase1'
+    geo_checkpoint_prefix = f'{checkpoint_root}/geo-spool'
+
     hashes_path = work_root / 'hashes.ndjson'
-    writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path)
-    con = duckdb.connect()
-    configure_duckdb(con, source, int(os.getenv('GLOBAL_LOCATION_BUILD_THREADS', '8')))
-    if os.getenv('DUCKDB_TEMP_DIRECTORY'):
-        escaped_temp = os.getenv('DUCKDB_TEMP_DIRECTORY').replace("'", "''")
-        con.execute(f"SET temp_directory='{escaped_temp}'")
-    create_canonical_views(con, args.snapshot, source)
+    geo_spool_root = work_root / 'geo-spool'
+    phase1_manifest = None
+    geo_manifest = None
+    if not args.no_resume:
+        geo_manifest = load_json_object(s3, source.bucket, f'{geo_checkpoint_prefix}/manifest.json')
+        phase1_manifest = load_json_object(s3, source.bucket, f'{phase1_checkpoint_prefix}/manifest.json')
+
+    def valid_checkpoint(manifest: dict | None, stage: str) -> bool:
+        return bool(
+            manifest
+            and manifest.get('stage') == stage
+            and manifest.get('snapshot') == args.snapshot
+            and manifest.get('config') == checkpoint_config
+        )
+
+    resume_stage = None
+    if valid_checkpoint(geo_manifest, 'geo-spool'):
+        resume_stage = 'geo-spool'
+    elif valid_checkpoint(phase1_manifest, 'phase1'):
+        resume_stage = 'phase1'
 
     stats = {
         'location_count': 0,
@@ -338,127 +476,245 @@ def main() -> None:
         'geo_map_z0_shards': 0,
         'geo_map_z1_shards': 0,
     }
-
-    # Phase 1: external hash partition by ID and lightweight slug references.
-    id_spool_root = work_root / 'id-spool'
-    id_spool = ZstdPartitionSpool(id_spool_root, buffer_bytes=64 * 1024, max_buffers=None)
-    raw_slug_spool_root = work_root / 'slug-raw-spool'
-    raw_slug_spool = ZstdPartitionSpool(raw_slug_spool_root, buffer_bytes=32 * 1024, max_buffers=None)
-    query = canonical_query(con)
-    columns = canonical_columns(query)
-    while True:
-        rows = query.fetchmany(batch_size)
-        if not rows:
-            break
-        for values in rows:
-            document = document_from_values(columns, values)
-            identifier = str(document.get('id') or '')
-            if not identifier:
-                raise RuntimeError('Canonical search document is missing id.')
-            if str(document.get('status') or '') == 'published':
-                stats['published_count'] += 1
-                if not finite_coordinate(document.get('latitude'), -90, 90) or not finite_coordinate(document.get('longitude'), -180, 180):
-                    raise RuntimeError(f'Published location {identifier} has invalid coordinates.')
-            id_spool.write(hash_bucket(identifier), orjson.dumps(document))
-            slug = str(document.get('slug') or '').strip()
-            if slug:
-                raw_slug_spool.write(hash_bucket(slug), orjson.dumps([slug, identifier]))
-            stats['location_count'] += 1
-        print(f"hydration_spooled={stats['location_count']}", flush=True)
-    id_spool.close()
-    raw_slug_spool.close()
-    if stats['location_count'] <= 0:
-        raise RuntimeError('Canonical snapshot produced no search documents.')
-
-    # Resolve collisions before emitting any document-bearing shard. Only collision losers
-    # are retained in memory, so memory is O(number of collisions), not O(location_count).
     slug_overrides: dict[str, str] = {}
-    final_slug_spool_root = work_root / 'slug-final-spool'
-    final_slug_spool = ZstdPartitionSpool(final_slug_spool_root, buffer_bytes=32 * 1024, max_buffers=None)
-    for path in raw_slug_spool.paths():
-        groups: dict[str, set[str]] = {}
-        for line in raw_slug_spool.lines(path):
-            slug, identifier = orjson.loads(line)
-            groups.setdefault(str(slug), set()).add(str(identifier))
-        for slug, identifiers in groups.items():
-            entries = resolved_slug_entries(slug, identifiers)
-            if len(entries) > 1:
-                stats['slug_collision_groups'] += 1
-                stats['slug_collision_rewrites'] += len(entries) - 1
-                print(f'slug_collision={slug!r} ids={sorted(identifiers)}', flush=True)
-            for resolved_slug, identifier in entries:
-                if resolved_slug != slug:
-                    slug_overrides[identifier] = resolved_slug
-                final_slug_spool.write(hash_bucket(resolved_slug), orjson.dumps([resolved_slug, identifier]))
-        path.unlink()
-    shutil.rmtree(raw_slug_spool_root, ignore_errors=True)
-    final_slug_spool.close()
+    con = None
 
-    # Emit hydration shards after collision resolution so ID documents expose the same slug
-    # as slug lookup and geo search documents.
-    for path in id_spool.paths():
-        bucket = id_spool.partition(path)
-        values: dict[str, dict] = {}
-        for line in id_spool.lines(path):
-            document = apply_slug_override(orjson.loads(line), slug_overrides)
-            identifier = str(document['id'])
-            if identifier in values:
-                raise RuntimeError(f'Duplicate canonical location id {identifier}.')
-            values[identifier] = document
-        writer.put_json(f'id/{bucket}.json.br', values, count=len(values), kind='id')
-        stats['id_shards'] += 1
-        path.unlink()
-    shutil.rmtree(id_spool_root, ignore_errors=True)
+    if resume_stage == 'geo-spool':
+        assert geo_manifest is not None
+        s3.download_file(source.bucket, str(geo_manifest['hashes_key']), str(hashes_path))
+        restored_stats = load_json_object(s3, source.bucket, str(geo_manifest['stats_key']))
+        if not isinstance(restored_stats, dict):
+            raise RuntimeError('Geo checkpoint is missing stats metadata.')
+        stats.update(restored_stats)
+        records = list(geo_manifest.get('partitions') or [])
+        if not records:
+            raise RuntimeError('Geo checkpoint manifest contains no partitions.')
+        restored_bytes = restore_partition_checkpoint(
+            s3,
+            source.bucket,
+            str(geo_manifest['partitions_prefix']),
+            records,
+            geo_spool_root,
+        )
+        writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True)
+        print(
+            f"checkpoint_resumed stage=geo-spool files={len(records)} bytes={restored_bytes} "
+            f"locations={stats['location_count']}",
+            flush=True,
+        )
+    else:
+        if resume_stage == 'phase1':
+            assert phase1_manifest is not None
+            s3.download_file(source.bucket, str(phase1_manifest['hashes_key']), str(hashes_path))
+            restored_stats = load_json_object(s3, source.bucket, str(phase1_manifest['stats_key']))
+            restored_overrides = load_json_object(s3, source.bucket, str(phase1_manifest['slug_overrides_key']))
+            if not isinstance(restored_stats, dict) or not isinstance(restored_overrides, dict):
+                raise RuntimeError('Phase-1 checkpoint is missing required metadata.')
+            stats.update(restored_stats)
+            slug_overrides = {str(key): str(value) for key, value in restored_overrides.items()}
+            writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True)
+            print(
+                f"checkpoint_resumed stage=phase1 locations={stats['location_count']} "
+                f"slug_overrides={len(slug_overrides)}",
+                flush=True,
+            )
+        else:
+            writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path)
 
-    for path in final_slug_spool.paths():
-        bucket = final_slug_spool.partition(path)
-        values: dict[str, str] = {}
-        for line in final_slug_spool.lines(path):
-            slug, identifier = orjson.loads(line)
-            existing = values.get(slug)
-            if existing and existing != identifier:
-                raise RuntimeError(f'Secondary slug collision {slug!r} maps to both {existing} and {identifier}.')
-            values[slug] = identifier
-        writer.put_json(f'slug/{bucket}.json.br', values, count=len(values), kind='slug')
-        stats['slug_shards'] += 1
-        path.unlink()
-    shutil.rmtree(final_slug_spool_root, ignore_errors=True)
+        con = duckdb.connect()
+        configure_duckdb(con, source, int(os.getenv('GLOBAL_LOCATION_BUILD_THREADS', '8')))
+        if os.getenv('DUCKDB_TEMP_DIRECTORY'):
+            escaped_temp = os.getenv('DUCKDB_TEMP_DIRECTORY').replace("'", "''")
+            con.execute(f"SET temp_directory='{escaped_temp}'")
+        create_canonical_views(con, args.snapshot, source)
 
-    # Phase 2: re-stream canonical documents once for geography. This halves peak temp-disk usage versus dual full spools.
-    geo_spool_root = work_root / 'geo-spool'
+        if resume_stage != 'phase1':
+            # Phase 1: external hash partition by ID and lightweight slug references.
+            id_spool_root = work_root / 'id-spool'
+            id_spool = ZstdPartitionSpool(id_spool_root, buffer_bytes=64 * 1024, max_buffers=None)
+            raw_slug_spool_root = work_root / 'slug-raw-spool'
+            raw_slug_spool = ZstdPartitionSpool(raw_slug_spool_root, buffer_bytes=32 * 1024, max_buffers=None)
+            query = canonical_query(con)
+            columns = canonical_columns(query)
+            while True:
+                rows = query.fetchmany(batch_size)
+                if not rows:
+                    break
+                for values in rows:
+                    document = document_from_values(columns, values)
+                    identifier = str(document.get('id') or '')
+                    if not identifier:
+                        raise RuntimeError('Canonical search document is missing id.')
+                    if str(document.get('status') or '') == 'published':
+                        stats['published_count'] += 1
+                        if not finite_coordinate(document.get('latitude'), -90, 90) or not finite_coordinate(document.get('longitude'), -180, 180):
+                            raise RuntimeError(f'Published location {identifier} has invalid coordinates.')
+                    id_spool.write(hash_bucket(identifier), orjson.dumps(document))
+                    slug = str(document.get('slug') or '').strip()
+                    if slug:
+                        raw_slug_spool.write(hash_bucket(slug), orjson.dumps([slug, identifier]))
+                    stats['location_count'] += 1
+                print(f"hydration_spooled={stats['location_count']}", flush=True)
+            id_spool.close()
+            raw_slug_spool.close()
+            if stats['location_count'] <= 0:
+                raise RuntimeError('Canonical snapshot produced no search documents.')
+
+            # Resolve collisions before emitting any document-bearing shard. Only collision losers
+            # are retained in memory, so memory is O(number of collisions), not O(location_count).
+            final_slug_spool_root = work_root / 'slug-final-spool'
+            final_slug_spool = ZstdPartitionSpool(final_slug_spool_root, buffer_bytes=32 * 1024, max_buffers=None)
+            for path in raw_slug_spool.paths():
+                groups: dict[str, set[str]] = {}
+                for line in raw_slug_spool.lines(path):
+                    slug, identifier = orjson.loads(line)
+                    groups.setdefault(str(slug), set()).add(str(identifier))
+                for slug, identifiers in groups.items():
+                    entries = resolved_slug_entries(slug, identifiers)
+                    if len(entries) > 1:
+                        stats['slug_collision_groups'] += 1
+                        stats['slug_collision_rewrites'] += len(entries) - 1
+                        print(f'slug_collision={slug!r} ids={sorted(identifiers)}', flush=True)
+                    for resolved_slug, identifier in entries:
+                        if resolved_slug != slug:
+                            slug_overrides[identifier] = resolved_slug
+                        final_slug_spool.write(hash_bucket(resolved_slug), orjson.dumps([resolved_slug, identifier]))
+                path.unlink()
+            shutil.rmtree(raw_slug_spool_root, ignore_errors=True)
+            final_slug_spool.close()
+
+            # Emit hydration shards after collision resolution so ID documents expose the same slug
+            # as slug lookup and geo search documents.
+            for path in id_spool.paths():
+                bucket = id_spool.partition(path)
+                values: dict[str, dict] = {}
+                for line in id_spool.lines(path):
+                    document = apply_slug_override(orjson.loads(line), slug_overrides)
+                    identifier = str(document['id'])
+                    if identifier in values:
+                        raise RuntimeError(f'Duplicate canonical location id {identifier}.')
+                    values[identifier] = document
+                writer.put_json(f'id/{bucket}.json.br', values, count=len(values), kind='id')
+                stats['id_shards'] += 1
+                path.unlink()
+            shutil.rmtree(id_spool_root, ignore_errors=True)
+
+            for path in final_slug_spool.paths():
+                bucket = final_slug_spool.partition(path)
+                values: dict[str, str] = {}
+                for line in final_slug_spool.lines(path):
+                    slug, identifier = orjson.loads(line)
+                    existing = values.get(slug)
+                    if existing and existing != identifier:
+                        raise RuntimeError(f'Secondary slug collision {slug!r} maps to both {existing} and {identifier}.')
+                    values[slug] = identifier
+                writer.put_json(f'slug/{bucket}.json.br', values, count=len(values), kind='slug')
+                stats['slug_shards'] += 1
+                path.unlink()
+            shutil.rmtree(final_slug_spool_root, ignore_errors=True)
+
+            if not args.no_resume:
+                writer.flush()
+                phase1_hashes_key = f'{phase1_checkpoint_prefix}/hashes.ndjson'
+                phase1_stats_key = f'{phase1_checkpoint_prefix}/stats.json'
+                phase1_overrides_key = f'{phase1_checkpoint_prefix}/slug-overrides.json'
+                upload_file(s3, source.bucket, phase1_hashes_key, hashes_path, 'application/x-ndjson')
+                put_json_object(s3, source.bucket, phase1_stats_key, stats)
+                put_json_object(s3, source.bucket, phase1_overrides_key, slug_overrides)
+                put_json_object(
+                    s3,
+                    source.bucket,
+                    f'{phase1_checkpoint_prefix}/manifest.json',
+                    {
+                        'checkpoint_version': CHECKPOINT_VERSION,
+                        'stage': 'phase1',
+                        'snapshot': args.snapshot,
+                        'created_at': utc_now(),
+                        'config': checkpoint_config,
+                        'hashes_key': phase1_hashes_key,
+                        'stats_key': phase1_stats_key,
+                        'slug_overrides_key': phase1_overrides_key,
+                    },
+                )
+                print(
+                    f"checkpoint_saved stage=phase1 locations={stats['location_count']} "
+                    f"slug_overrides={len(slug_overrides)}",
+                    flush=True,
+                )
+
+        # Phase 2: re-stream canonical documents once for geography. The completed spool is
+        # persisted to B2 before finalization so a later GitHub job can resume without another
+        # 30M-row canonical scan.
+        shutil.rmtree(geo_spool_root, ignore_errors=True)
+        geo_spool = ZstdPartitionSpool(geo_spool_root, buffer_bytes=128 * 1024, max_buffers=2048)
+        query = canonical_query(con)
+        columns = canonical_columns(query)
+        processed = 0
+        while True:
+            rows = query.fetchmany(batch_size)
+            if not rows:
+                break
+            for values in rows:
+                document = apply_slug_override(document_from_values(columns, values), slug_overrides)
+                lat = document.get('latitude')
+                lon = document.get('longitude')
+                if not finite_coordinate(lat, -90, 90) or not finite_coordinate(lon, -180, 180):
+                    continue
+                lat = float(lat)
+                lon = float(lon)
+                root_cell = h3.latlng_to_cell(lat, lon, root_resolution)
+                geo_spool.write(root_cell, orjson.dumps(document))
+                stats['geo_location_count'] += 1
+                processed += 1
+            print(f'geo_spooled={processed}', flush=True)
+        geo_spool.close()
+
+        if not args.no_resume:
+            writer.flush()
+            geo_hashes_key = f'{geo_checkpoint_prefix}/hashes.ndjson'
+            geo_stats_key = f'{geo_checkpoint_prefix}/stats.json'
+            partitions_prefix = f'{geo_checkpoint_prefix}/partitions'
+            upload_file(s3, source.bucket, geo_hashes_key, hashes_path, 'application/x-ndjson')
+            put_json_object(s3, source.bucket, geo_stats_key, stats)
+            partition_paths = list(geo_spool.paths())
+            partition_records, partition_bytes = upload_partition_checkpoint(
+                s3,
+                source.bucket,
+                partitions_prefix,
+                partition_paths,
+            )
+            put_json_object(
+                s3,
+                source.bucket,
+                f'{geo_checkpoint_prefix}/manifest.json',
+                {
+                    'checkpoint_version': CHECKPOINT_VERSION,
+                    'stage': 'geo-spool',
+                    'snapshot': args.snapshot,
+                    'created_at': utc_now(),
+                    'config': checkpoint_config,
+                    'hashes_key': geo_hashes_key,
+                    'stats_key': geo_stats_key,
+                    'partitions_prefix': partitions_prefix,
+                    'partition_count': len(partition_records),
+                    'partition_bytes': partition_bytes,
+                    'partitions': partition_records,
+                },
+            )
+            print(
+                f'checkpoint_saved stage=geo-spool files={len(partition_records)} bytes={partition_bytes} '
+                f"locations={stats['geo_location_count']}",
+                flush=True,
+            )
+
+        con.close()
+        con = None
+
     geo_spool = ZstdPartitionSpool(geo_spool_root, buffer_bytes=128 * 1024, max_buffers=2048)
     map_z0: dict[tuple[int, int], list] = {}
     map_z1: dict[tuple[int, int], list] = {}
-    query = canonical_query(con)
-    columns = canonical_columns(query)
-    processed = 0
-    while True:
-        rows = query.fetchmany(batch_size)
-        if not rows:
-            break
-        for values in rows:
-            document = apply_slug_override(document_from_values(columns, values), slug_overrides)
-            lat = document.get('latitude')
-            lon = document.get('longitude')
-            if not finite_coordinate(lat, -90, 90) or not finite_coordinate(lon, -180, 180):
-                continue
-            lat = float(lat)
-            lon = float(lon)
-            root_cell = h3.latlng_to_cell(lat, lon, root_resolution)
-            geo_spool.write(root_cell, orjson.dumps(document))
-            stats['geo_location_count'] += 1
-            if str(document.get('status') or '') == 'published':
-                key0 = point_tile(lat, lon, 30.0)
-                key1 = point_tile(lat, lon, 10.0)
-                heap0 = map_z0.setdefault(key0, [])
-                heap1 = map_z1.setdefault(key1, [])
-                push_top(heap0, document, 200)
-                push_top(heap1, document, 200)
-            processed += 1
-        print(f'geo_spooled={processed}', flush=True)
-    geo_spool.close()
-
     route_spool_root = work_root / 'route-spool'
+    shutil.rmtree(route_spool_root, ignore_errors=True)
     route_spool = ZstdPartitionSpool(route_spool_root, buffer_bytes=32 * 1024, max_buffers=2048)
 
     def emit_leaf(cell: str, documents: list[dict], compressed: bytes | None = None, raw_bytes: int | None = None) -> None:
@@ -500,15 +756,31 @@ def main() -> None:
             return
         emit_leaf(cell, documents, compressed, raw_bytes)
 
-    for path in geo_spool.paths():
+    geo_paths = list(geo_spool.paths())
+    for index, path in enumerate(geo_paths, start=1):
         root_cell = geo_spool.partition(path)
         documents = [orjson.loads(line) for line in geo_spool.lines(path)]
+        for document in documents:
+            if str(document.get('status') or '') != 'published':
+                continue
+            lat = float(document['latitude'])
+            lon = float(document['longitude'])
+            key0 = point_tile(lat, lon, 30.0)
+            key1 = point_tile(lat, lon, 10.0)
+            push_top(map_z0.setdefault(key0, []), document, 200)
+            push_top(map_z1.setdefault(key1, []), document, 200)
         split_or_emit(root_cell, documents)
         path.unlink()
+        if index % 100 == 0 or index == len(geo_paths):
+            print(
+                f'geo_finalized_roots={index}/{len(geo_paths)} geo_shards={stats["geo_shards"]}',
+                flush=True,
+            )
     shutil.rmtree(geo_spool_root, ignore_errors=True)
     route_spool.close()
 
-    for path in route_spool.paths():
+    route_paths = list(route_spool.paths())
+    for index, path in enumerate(route_paths, start=1):
         partition = route_spool.partition(path)
         lat_index, lon_index = partition.split('-', 1)
         descriptors = [orjson.loads(line) for line in route_spool.lines(path)]
@@ -516,6 +788,11 @@ def main() -> None:
         writer.put_json(f'routing/{lat_index}/{lon_index}.json.br', descriptors, count=len(descriptors), kind='routing')
         stats['routing_shards'] += 1
         path.unlink()
+        if index % 250 == 0 or index == len(route_paths):
+            print(
+                f'routing_finalized={index}/{len(route_paths)} routing_shards={stats["routing_shards"]}',
+                flush=True,
+            )
     shutil.rmtree(route_spool_root, ignore_errors=True)
 
     for (lat_index, lon_index), heap in sorted(map_z0.items()):
@@ -611,7 +888,14 @@ def main() -> None:
     )
     print(orjson.dumps(candidate, option=orjson.OPT_INDENT_2).decode(), flush=True)
 
-    con.close()
+    if con is not None:
+        con.close()
+    if not args.no_resume:
+        try:
+            deleted = delete_prefix(s3, source.bucket, f'{checkpoint_snapshot_prefix}/')
+            print(f'checkpoint_cleanup deleted_objects={deleted}', flush=True)
+        except Exception as error:
+            print(f'checkpoint_cleanup_warning={type(error).__name__}:{error}', flush=True)
     if remove_work_root:
         shutil.rmtree(work_root, ignore_errors=True)
 
