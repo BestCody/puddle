@@ -164,11 +164,15 @@ jobs:
           DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
           GLOBAL_LOCATION_SEARCH_WORK_DIR: ${{ runner.temp }}/b2-search-index
           GLOBAL_LOCATION_BUILD_THREADS: ${{ vars.GLOBAL_LOCATION_BUILD_THREADS || '8' }}
-          GLOBAL_LOCATION_H3_ROOT_RESOLUTION: ${{ vars.GLOBAL_LOCATION_H3_ROOT_RESOLUTION || '5' }}
+          # Start coarse and subdivide only dense cells. Resolution 5 created far too many
+          # tiny root partitions for the worldwide corpus and dominated finalization time.
+          GLOBAL_LOCATION_H3_ROOT_RESOLUTION: ${{ vars.GLOBAL_LOCATION_H3_ROOT_RESOLUTION || '3' }}
           GLOBAL_LOCATION_H3_MAX_RESOLUTION: ${{ vars.GLOBAL_LOCATION_H3_MAX_RESOLUTION || '10' }}
-          GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES || '6000' }}
+          # Target the validated hard bounds directly to avoid needless intermediate splits
+          # and reduce Brotli compression + B2 PUT overhead. Runtime limits remain much higher.
+          GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_CANDIDATES || '20000' }}
           GLOBAL_LOCATION_SHARD_HARD_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_CANDIDATES || '20000' }}
-          GLOBAL_LOCATION_SHARD_TARGET_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_BYTES || '786432' }}
+          GLOBAL_LOCATION_SHARD_TARGET_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_BYTES || '2097152' }}
           GLOBAL_LOCATION_SHARD_HARD_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_BYTES || '2097152' }}
       - name: Assert generated search count matches canonical source manifest
         shell: bash
