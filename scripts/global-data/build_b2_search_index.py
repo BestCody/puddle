@@ -33,6 +33,8 @@ from location_search_common import (
 )
 
 HEX_BUCKETS = 4096
+# Keep version 1 so route-spool support can reuse geo-spool checkpoints written by
+# the first resumable builder. The checkpoint config fingerprint remains unchanged.
 CHECKPOINT_VERSION = 1
 CHECKPOINT_CONCURRENCY = 16
 
@@ -440,12 +442,18 @@ def main() -> None:
     checkpoint_root = f'{checkpoint_snapshot_prefix}/config={checkpoint_fingerprint}'
     phase1_checkpoint_prefix = f'{checkpoint_root}/phase1'
     geo_checkpoint_prefix = f'{checkpoint_root}/geo-spool'
+    route_checkpoint_prefix = f'{checkpoint_root}/route-spool'
 
     hashes_path = work_root / 'hashes.ndjson'
     geo_spool_root = work_root / 'geo-spool'
+    route_spool_root = work_root / 'route-spool'
     phase1_manifest = None
     geo_manifest = None
+    route_manifest = None
     if not args.no_resume:
+        # Prefer the latest durable stage. The manifest is always written last, so a
+        # partial partition upload from a timed-out job is never treated as resumable.
+        route_manifest = load_json_object(s3, source.bucket, f'{route_checkpoint_prefix}/manifest.json')
         geo_manifest = load_json_object(s3, source.bucket, f'{geo_checkpoint_prefix}/manifest.json')
         phase1_manifest = load_json_object(s3, source.bucket, f'{phase1_checkpoint_prefix}/manifest.json')
 
@@ -458,7 +466,9 @@ def main() -> None:
         )
 
     resume_stage = None
-    if valid_checkpoint(geo_manifest, 'geo-spool'):
+    if valid_checkpoint(route_manifest, 'route-spool'):
+        resume_stage = 'route-spool'
+    elif valid_checkpoint(geo_manifest, 'geo-spool'):
         resume_stage = 'geo-spool'
     elif valid_checkpoint(phase1_manifest, 'phase1'):
         resume_stage = 'phase1'
@@ -479,7 +489,30 @@ def main() -> None:
     slug_overrides: dict[str, str] = {}
     con = None
 
-    if resume_stage == 'geo-spool':
+    if resume_stage == 'route-spool':
+        assert route_manifest is not None
+        s3.download_file(source.bucket, str(route_manifest['hashes_key']), str(hashes_path))
+        restored_stats = load_json_object(s3, source.bucket, str(route_manifest['stats_key']))
+        if not isinstance(restored_stats, dict):
+            raise RuntimeError('Route checkpoint is missing stats metadata.')
+        stats.update(restored_stats)
+        records = list(route_manifest.get('partitions') or [])
+        if not records:
+            raise RuntimeError('Route checkpoint manifest contains no partitions.')
+        restored_bytes = restore_partition_checkpoint(
+            s3,
+            source.bucket,
+            str(route_manifest['partitions_prefix']),
+            records,
+            route_spool_root,
+        )
+        writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True)
+        print(
+            f"checkpoint_resumed stage=route-spool files={len(records)} bytes={restored_bytes} "
+            f"geo_shards={stats['geo_shards']}",
+            flush=True,
+        )
+    elif resume_stage == 'geo-spool':
         assert geo_manifest is not None
         s3.download_file(source.bucket, str(geo_manifest['hashes_key']), str(hashes_path))
         restored_stats = load_json_object(s3, source.bucket, str(geo_manifest['stats_key']))
@@ -710,74 +743,131 @@ def main() -> None:
         con.close()
         con = None
 
-    geo_spool = ZstdPartitionSpool(geo_spool_root, buffer_bytes=128 * 1024, max_buffers=2048)
-    map_z0: dict[tuple[int, int], list] = {}
-    map_z1: dict[tuple[int, int], list] = {}
-    route_spool_root = work_root / 'route-spool'
-    shutil.rmtree(route_spool_root, ignore_errors=True)
-    route_spool = ZstdPartitionSpool(route_spool_root, buffer_bytes=32 * 1024, max_buffers=2048)
+    # Route-spool is the next durable boundary. A route checkpoint contains the hash
+    # ledger after all geo/geo-map objects have been emitted plus every compressed routing
+    # descriptor partition. Resuming it therefore skips canonical scans *and* geo finalization.
+    if resume_stage != 'route-spool':
+        geo_spool = ZstdPartitionSpool(geo_spool_root, buffer_bytes=128 * 1024, max_buffers=2048)
+        map_z0: dict[tuple[int, int], list] = {}
+        map_z1: dict[tuple[int, int], list] = {}
+        shutil.rmtree(route_spool_root, ignore_errors=True)
+        route_spool = ZstdPartitionSpool(route_spool_root, buffer_bytes=32 * 1024, max_buffers=2048)
 
-    def emit_leaf(cell: str, documents: list[dict], compressed: bytes | None = None, raw_bytes: int | None = None) -> None:
-        nonlocal writer
-        if compressed is None:
+        def emit_leaf(cell: str, documents: list[dict], compressed: bytes | None = None, raw_bytes: int | None = None) -> None:
+            nonlocal writer
+            if compressed is None:
+                compressed, raw_bytes = brotli_json(documents)
+            if len(documents) > hard_candidates or len(compressed) > hard_bytes:
+                raise RuntimeError(f'Leaf {cell} exceeds hard shard limit at H3 resolution {h3.get_resolution(cell)}.')
+            resolution = h3.get_resolution(cell)
+            relative = f'geo/r{resolution}/{cell}.json.br'
+            record = writer.put_bytes(relative, compressed, uncompressed_bytes=int(raw_bytes or 0), count=len(documents), kind='geo')
+            stats['geo_shards'] += 1
+            bounds = cell_bounds(cell)
+            descriptor = [record['key'], cell, bounds['north'], bounds['south'], bounds['east'], bounds['west'], len(documents), len(compressed)]
+            encoded = orjson.dumps(descriptor)
+            for tile in directory_tiles(bounds, directory_degrees):
+                route_spool.write(tile, encoded)
+
+        def split_or_emit(cell: str, documents: list[dict]) -> None:
+            resolution = h3.get_resolution(cell)
+            if len(documents) > target_candidates and resolution < max_resolution:
+                children: dict[str, list[dict]] = {}
+                next_resolution = resolution + 1
+                for document in documents:
+                    child = h3.latlng_to_cell(float(document['latitude']), float(document['longitude']), next_resolution)
+                    children.setdefault(child, []).append(document)
+                for child, child_documents in children.items():
+                    split_or_emit(child, child_documents)
+                return
             compressed, raw_bytes = brotli_json(documents)
-        if len(documents) > hard_candidates or len(compressed) > hard_bytes:
-            raise RuntimeError(f'Leaf {cell} exceeds hard shard limit at H3 resolution {h3.get_resolution(cell)}.')
-        resolution = h3.get_resolution(cell)
-        relative = f'geo/r{resolution}/{cell}.json.br'
-        record = writer.put_bytes(relative, compressed, uncompressed_bytes=int(raw_bytes or 0), count=len(documents), kind='geo')
-        stats['geo_shards'] += 1
-        bounds = cell_bounds(cell)
-        descriptor = [record['key'], cell, bounds['north'], bounds['south'], bounds['east'], bounds['west'], len(documents), len(compressed)]
-        encoded = orjson.dumps(descriptor)
-        for tile in directory_tiles(bounds, directory_degrees):
-            route_spool.write(tile, encoded)
+            if len(compressed) > target_bytes and resolution < max_resolution:
+                children: dict[str, list[dict]] = {}
+                next_resolution = resolution + 1
+                for document in documents:
+                    child = h3.latlng_to_cell(float(document['latitude']), float(document['longitude']), next_resolution)
+                    children.setdefault(child, []).append(document)
+                for child, child_documents in children.items():
+                    split_or_emit(child, child_documents)
+                return
+            emit_leaf(cell, documents, compressed, raw_bytes)
 
-    def split_or_emit(cell: str, documents: list[dict]) -> None:
-        resolution = h3.get_resolution(cell)
-        if len(documents) > target_candidates and resolution < max_resolution:
-            children: dict[str, list[dict]] = {}
-            next_resolution = resolution + 1
+        geo_paths = list(geo_spool.paths())
+        for index, path in enumerate(geo_paths, start=1):
+            root_cell = geo_spool.partition(path)
+            documents = [orjson.loads(line) for line in geo_spool.lines(path)]
             for document in documents:
-                child = h3.latlng_to_cell(float(document['latitude']), float(document['longitude']), next_resolution)
-                children.setdefault(child, []).append(document)
-            for child, child_documents in children.items():
-                split_or_emit(child, child_documents)
-            return
-        compressed, raw_bytes = brotli_json(documents)
-        if len(compressed) > target_bytes and resolution < max_resolution:
-            children: dict[str, list[dict]] = {}
-            next_resolution = resolution + 1
-            for document in documents:
-                child = h3.latlng_to_cell(float(document['latitude']), float(document['longitude']), next_resolution)
-                children.setdefault(child, []).append(document)
-            for child, child_documents in children.items():
-                split_or_emit(child, child_documents)
-            return
-        emit_leaf(cell, documents, compressed, raw_bytes)
+                if str(document.get('status') or '') != 'published':
+                    continue
+                lat = float(document['latitude'])
+                lon = float(document['longitude'])
+                key0 = point_tile(lat, lon, 30.0)
+                key1 = point_tile(lat, lon, 10.0)
+                push_top(map_z0.setdefault(key0, []), document, 200)
+                push_top(map_z1.setdefault(key1, []), document, 200)
+            split_or_emit(root_cell, documents)
+            path.unlink()
+            if index % 100 == 0 or index == len(geo_paths):
+                print(
+                    f'geo_finalized_roots={index}/{len(geo_paths)} geo_shards={stats["geo_shards"]}',
+                    flush=True,
+                )
+        shutil.rmtree(geo_spool_root, ignore_errors=True)
+        route_spool.close()
 
-    geo_paths = list(geo_spool.paths())
-    for index, path in enumerate(geo_paths, start=1):
-        root_cell = geo_spool.partition(path)
-        documents = [orjson.loads(line) for line in geo_spool.lines(path)]
-        for document in documents:
-            if str(document.get('status') or '') != 'published':
-                continue
-            lat = float(document['latitude'])
-            lon = float(document['longitude'])
-            key0 = point_tile(lat, lon, 30.0)
-            key1 = point_tile(lat, lon, 10.0)
-            push_top(map_z0.setdefault(key0, []), document, 200)
-            push_top(map_z1.setdefault(key1, []), document, 200)
-        split_or_emit(root_cell, documents)
-        path.unlink()
-        if index % 100 == 0 or index == len(geo_paths):
+        # Geo-map artifacts are independent of routing finalization. Emit them before the
+        # route checkpoint so their state lives in the restored hash ledger and no in-memory
+        # top-location heaps need to be checkpointed separately.
+        for (lat_index, lon_index), heap in sorted(map_z0.items()):
+            documents = sorted_heap_documents(heap)
+            writer.put_json(f'geo-map/z0/{lat_index}/{lon_index}.json.br', documents, count=len(documents), kind='geo-map-z0')
+            stats['geo_map_z0_shards'] += 1
+        for (lat_index, lon_index), heap in sorted(map_z1.items()):
+            documents = sorted_heap_documents(heap)
+            writer.put_json(f'geo-map/z1/{lat_index}/{lon_index}.json.br', documents, count=len(documents), kind='geo-map-z1')
+            stats['geo_map_z1_shards'] += 1
+
+        if not args.no_resume:
+            writer.flush()
+            route_hashes_key = f'{route_checkpoint_prefix}/hashes.ndjson'
+            route_stats_key = f'{route_checkpoint_prefix}/stats.json'
+            route_partitions_prefix = f'{route_checkpoint_prefix}/partitions'
+            upload_file(s3, source.bucket, route_hashes_key, hashes_path, 'application/x-ndjson')
+            put_json_object(s3, source.bucket, route_stats_key, stats)
+            route_paths = list(route_spool.paths())
+            route_records, route_bytes = upload_partition_checkpoint(
+                s3,
+                source.bucket,
+                route_partitions_prefix,
+                route_paths,
+            )
+            put_json_object(
+                s3,
+                source.bucket,
+                f'{route_checkpoint_prefix}/manifest.json',
+                {
+                    'checkpoint_version': CHECKPOINT_VERSION,
+                    'stage': 'route-spool',
+                    'snapshot': args.snapshot,
+                    'created_at': utc_now(),
+                    'config': checkpoint_config,
+                    'hashes_key': route_hashes_key,
+                    'stats_key': route_stats_key,
+                    'partitions_prefix': route_partitions_prefix,
+                    'partition_count': len(route_records),
+                    'partition_bytes': route_bytes,
+                    'partitions': route_records,
+                },
+            )
             print(
-                f'geo_finalized_roots={index}/{len(geo_paths)} geo_shards={stats["geo_shards"]}',
+                f'checkpoint_saved stage=route-spool files={len(route_records)} bytes={route_bytes} '
+                f"geo_shards={stats['geo_shards']} geo_map_shards="
+                f"{stats['geo_map_z0_shards'] + stats['geo_map_z1_shards']}",
                 flush=True,
             )
-    shutil.rmtree(geo_spool_root, ignore_errors=True)
-    route_spool.close()
+    else:
+        # restore_partition_checkpoint already populated this directory.
+        route_spool = ZstdPartitionSpool(route_spool_root, buffer_bytes=32 * 1024, max_buffers=2048)
 
     route_paths = list(route_spool.paths())
     for index, path in enumerate(route_paths, start=1):
@@ -794,15 +884,6 @@ def main() -> None:
                 flush=True,
             )
     shutil.rmtree(route_spool_root, ignore_errors=True)
-
-    for (lat_index, lon_index), heap in sorted(map_z0.items()):
-        documents = sorted_heap_documents(heap)
-        writer.put_json(f'geo-map/z0/{lat_index}/{lon_index}.json.br', documents, count=len(documents), kind='geo-map-z0')
-        stats['geo_map_z0_shards'] += 1
-    for (lat_index, lon_index), heap in sorted(map_z1.items()):
-        documents = sorted_heap_documents(heap)
-        writer.put_json(f'geo-map/z1/{lat_index}/{lon_index}.json.br', documents, count=len(documents), kind='geo-map-z1')
-        stats['geo_map_z1_shards'] += 1
 
     counts = {
         **stats,
