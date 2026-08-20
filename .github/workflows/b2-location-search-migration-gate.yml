@@ -159,7 +159,49 @@ jobs:
           PY
       - name: Build immutable adaptive-H3 B2 search candidate
         if: steps.candidate.outputs.exists != 'true'
-        run: python scripts/global-data/build_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GLOBAL_LOCATION_SEARCH_WORK_DIR"
+          python scripts/global-data/build_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' &
+          build_pid=$!
+
+          heartbeat() {
+            while kill -0 "$build_pid" 2>/dev/null; do
+              timestamp="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+              elapsed="$(ps -o etimes= -p "$build_pid" 2>/dev/null | tr -d ' ' || true)"
+              cpu="$(ps -o %cpu= -p "$build_pid" 2>/dev/null | xargs || true)"
+              rss_kb="$(ps -o rss= -p "$build_pid" 2>/dev/null | tr -d ' ' || true)"
+              geo_spool_files=0
+              route_spool_files=0
+              if [ -d "$GLOBAL_LOCATION_SEARCH_WORK_DIR/geo-spool" ]; then
+                geo_spool_files="$(find "$GLOBAL_LOCATION_SEARCH_WORK_DIR/geo-spool" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')"
+              fi
+              if [ -d "$GLOBAL_LOCATION_SEARCH_WORK_DIR/route-spool" ]; then
+                route_spool_files="$(find "$GLOBAL_LOCATION_SEARCH_WORK_DIR/route-spool" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')"
+              fi
+              printf 'build_heartbeat timestamp=%s elapsed_s=%s cpu_pct=%s rss_kb=%s geo_spool_files=%s route_spool_files=%s\n' \
+                "$timestamp" "${elapsed:-unknown}" "${cpu:-unknown}" "${rss_kb:-unknown}" "$geo_spool_files" "$route_spool_files"
+              sleep 60
+            done
+          }
+
+          heartbeat &
+          heartbeat_pid=$!
+          cleanup_heartbeat() {
+            kill "$heartbeat_pid" 2>/dev/null || true
+            wait "$heartbeat_pid" 2>/dev/null || true
+          }
+          trap cleanup_heartbeat EXIT
+
+          if wait "$build_pid"; then
+            build_status=0
+          else
+            build_status=$?
+          fi
+          cleanup_heartbeat
+          trap - EXIT
+          exit "$build_status"
         env:
           DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
           GLOBAL_LOCATION_SEARCH_WORK_DIR: ${{ runner.temp }}/b2-search-index
