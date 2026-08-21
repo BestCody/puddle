@@ -18,7 +18,7 @@ function NavIcon({ type, avatarUrl }) {
 
 const items = [
   { href: '/discover', label: 'Swipe', icon: 'swipe', tone: 'blue' },
-  { href: '/map', label: 'Feed', activeLabel: 'Explore', icon: 'feed', tone: 'yellow' },
+  { href: '/map', label: 'Discover', icon: 'feed', tone: 'yellow' },
   { href: '/plans', label: 'Saved', icon: 'saved', tone: 'purple' },
   { href: '/matches', label: 'Friends', icon: 'friends', tone: 'green' },
   { href: '/membership', label: 'Pass', icon: 'pass', tone: 'pink' },
@@ -52,9 +52,14 @@ function NavItems({ mobile = false, avatarUrl = null }) {
   const pathname = usePathname()
   const router = useRouter()
   const [pendingHref, setPendingHref] = useState(null)
+  const routeActiveHref = items.find((item) => isActive(pathname, item.href))?.href ?? null
+  const activeHref = pendingHref ?? routeActiveHref
 
   useEffect(() => {
-    setPendingHref(null)
+    setPendingHref((current) => {
+      if (!current) return null
+      return isActive(pathname, current) ? null : current
+    })
   }, [pathname])
 
   function warmRoute(href) {
@@ -111,15 +116,14 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       event.ctrlKey ||
       event.shiftKey ||
       event.altKey ||
-      isActive(pathname, href)
+      href === activeHref
     ) return
     setPendingHref(href)
     beginMainContentLoading()
   }
 
   return items.map((item) => {
-    const active = pendingHref ? item.href === pendingHref : isActive(pathname, item.href)
-    const visibleLabel = active && item.activeLabel ? item.activeLabel : item.label
+    const active = item.href === activeHref
     return <Link
       className={`figma-dashboard-nav-item tone-${item.tone}${active ? ' is-active' : ''}`}
       href={item.href}
@@ -133,7 +137,7 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       key={item.href}
     >
       <span className="figma-dashboard-nav-icon"><NavIcon type={item.icon} avatarUrl={avatarUrl} /></span>
-      {mobile ? null : <span className="figma-dashboard-nav-label">{visibleLabel}</span>}
+      {mobile ? null : <span className="figma-dashboard-nav-label">{item.label}</span>}
     </Link>
   })
 }
