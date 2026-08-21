@@ -1,0 +1,452 @@
+/*
+ * Product dark mode.
+ * Neutral surfaces invert; Puddle's route colors, place photography, map tiles,
+ * success/error colors, and profile-selected accent colors intentionally remain.
+ */
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) {
+  --puddle-dark-bg: #111315;
+  --puddle-dark-surface: #1a1d20;
+  --puddle-dark-raised: #202428;
+  --puddle-dark-soft: #272b30;
+  --puddle-dark-border: #373c42;
+  --puddle-dark-border-strong: #4a5057;
+  --puddle-dark-text: #f2f4f5;
+  --puddle-dark-muted: #a1a7ad;
+  --puddle-dark-faint: #747b82;
+  --figma-bg: var(--puddle-dark-bg);
+  --figma-grey: var(--puddle-dark-muted);
+  color: var(--puddle-dark-text);
+  color-scheme: dark;
+  background: var(--puddle-dark-bg);
+}
+
+/* Shell and navigation. Route accent colors remain unchanged. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-dashboard-stage,
+  .figma-dashboard-main,
+  .figma-swipe-screen,
+  .figma-swipe-workspace,
+  .figma-friends-screen,
+  .figma-pass-screen,
+  .figma-create-post-screen,
+  .figma-settings-screen
+) {
+  background: var(--puddle-dark-bg) !important;
+  color: var(--puddle-dark-text);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-sidebar {
+  background: #15181b;
+  border-right-color: #2f3439;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-nav-item:not(.is-active) {
+  color: #a6acb2;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-nav-item:not(.is-active):hover {
+    background: #262a2f !important;
+    border-color: #3c4248 !important;
+    color: #c8cdd1 !important;
+  }
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-settings-link {
+  color: #9da3a9;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-theme-toggle {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-theme-toggle img {
+  width: 56px !important;
+  height: 56px !important;
+  display: block;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-account-menu > summary,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-account-menu .profile-menu-panel {
+  background: var(--puddle-dark-raised);
+  border-color: var(--puddle-dark-border);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-account-menu > summary i {
+  background: #e6e9eb;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-account-menu .profile-menu-panel :is(a, button) {
+  color: #dde1e4;
+}
+
+/* Shared segmented controls. The active yellow/purple/green/pink highlights are preserved. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-segment {
+  background: #191c1f !important;
+  border-color: #3b4147 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-segment > :is(a, button):not(.is-active):not(.is-ui-active) {
+  color: #aab0b5 !important;
+}
+
+/* Swipe: leave photography untouched, but move neutral chrome and the bottom readability gradient into dark mode. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-card,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .minimal-swipe-card.figma-swipe-card {
+  background: #171a1d;
+  border-color: #3b4147;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-card-photo::after {
+  background: linear-gradient(180deg, rgba(17,19,21,.01) 46%, rgba(17,19,21,.58) 68%, #111315 88%);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-card-copy :is(h1, p) {
+  color: #f7f8f8;
+  text-shadow: 0 1px 8px rgba(0,0,0,.22);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-card-meta span,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-details-button {
+  background: rgba(39,43,48,.92);
+  color: #d8dcdf;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-action > span,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-actions .minimal-swipe-action > span {
+  background: rgba(30,33,37,.96);
+  box-shadow: 0 4px 0 rgba(0,0,0,.28);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-details,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-empty {
+  background: var(--puddle-dark-raised);
+  border-color: var(--puddle-dark-border);
+  color: var(--puddle-dark-text);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-details-close,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-details-actions button,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-empty button {
+  background: var(--puddle-dark-soft);
+  border-color: var(--puddle-dark-border-strong);
+  color: #dfe3e6;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-details > p.figma-swipe-details-summary {
+  color: #d6dadd;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-details-tags span,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-details-kicker {
+  background: #30353a;
+  color: #b8bec3;
+}
+
+/* Discover / Feed. Map imagery and tiles are deliberately not filtered or recolored. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-screen"]:not([data-view="map"]) {
+  background: var(--puddle-dark-bg) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-search"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-composer"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-post"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-stream"] > div {
+  background: var(--puddle-dark-raised) !important;
+  border-color: var(--puddle-dark-border) !important;
+  color: var(--puddle-dark-text) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-search"] :is(input, button) {
+  color: #e7eaec;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-post"] > p,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-post"] h2,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-post"] strong {
+  color: var(--puddle-dark-text) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-post"] > a,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-post"] details > div {
+  background-color: #1d2024 !important;
+  border-color: #353a40 !important;
+  color: #edf0f2 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="feed-post"] details input {
+  background: #282c31;
+  border-color: #454b51;
+  color: #f0f2f3;
+}
+
+/* Saved / Plans: neutral cards darken, while purple selection/category language remains purple. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-screen"] {
+  background: var(--puddle-dark-bg) !important;
+  color: var(--puddle-dark-text) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-card"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-empty"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-search"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_detailCard"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_reviews"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_similarCard"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_planVisit"] form,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_moreCategories"] > div {
+  background: var(--puddle-dark-raised) !important;
+  border-color: var(--puddle-dark-border) !important;
+  color: var(--puddle-dark-text) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-card"] h2 a,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-empty"] a,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_detailTitle"],
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_similarCard"] > strong {
+  color: var(--puddle-dark-text) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-search"] input,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_planVisit"] input {
+  color: #eef0f2;
+  background: transparent;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-search"] button,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_planVisit"] > summary {
+  background: #23272b !important;
+  color: #edf0f2 !important;
+  border-color: #464c53 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [data-testid="saved-categories"] a:not([class*="categoryActive"]),
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) [class*="Plans_detailCategories"] a:not([class*="detailCategoryActive"]) {
+  color: #a3a9ae;
+}
+
+/* Friends: keep the green active language and outgoing bubble, darken only neutral panels. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-friends-conversations,
+  .figma-friends-chat,
+  .figma-friends-shared-place,
+  .figma-friends-shared-chat,
+  .figma-friends-search,
+  .figma-friends-search-results,
+  .figma-friends-request-card,
+  .figma-friends-composer
+) {
+  background: var(--puddle-dark-raised) !important;
+  border-color: var(--puddle-dark-border) !important;
+  color: var(--puddle-dark-text) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-friends-conversations > button {
+  color: #edf0f2;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-friends-conversations > button.is-active {
+  background: #20311f;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-friends-message:not(.is-mine) > div {
+  background: #2b3035;
+  color: #eef0f2;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-friends-chat > header {
+  border-bottom-color: #34393e;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-friends-composer :is(input, button),
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-friends-search :is(input, button),
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-friends-request-row button:not(.is-accept):not(.is-decline) {
+  background: #25292e;
+  color: #dce0e3;
+  border-color: #41474d;
+}
+
+/* Pass: keep the paid pink card exactly branded; only neutral/free/manage surfaces invert. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-pass-heading span {
+  color: #e2e5e7;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-pass-plan:not(.figma-pass-plan-paid),
+  .figma-pass-current-plan:not(.figma-pass-manage-screen.is-paid .figma-pass-current-plan),
+  .figma-pass-history,
+  .figma-pass-notice
+) {
+  background: var(--puddle-dark-raised) !important;
+  border-color: var(--puddle-dark-border) !important;
+  color: #dce0e3 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-pass-plan-state,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-pass-manage-actions button:not(.is-upgrade) {
+  background: #292e33;
+  border-color: #454b52;
+  color: #dfe3e6;
+}
+
+/* Profile: preserve the user's chosen hero color and photos; darken neutral canvas/cards/chips only. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-profile-screen {
+  background: linear-gradient(180deg, #18212b 0, #151a1f 350px, var(--puddle-dark-bg) 650px) !important;
+  color: var(--puddle-dark-text);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-profile-card,
+  .figma-profile-post-preview,
+  .figma-profile-photo-editor,
+  .figma-profile-theme-picker
+) {
+  background: var(--puddle-dark-raised) !important;
+  border-color: var(--puddle-dark-border) !important;
+  color: var(--puddle-dark-text) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-profile-avatar {
+  border-color: #1a1d20;
+  background: #25292e;
+  color: #f0f2f3;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-profile-chips span,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-profile-actions a:not(.is-follow) {
+  background: #24282d;
+  color: #eef0f2;
+  border-color: #41474d;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-profile-post-preview :is(p, strong),
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-profile-location-card > strong {
+  color: #eef0f2;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-profile-post-place {
+  border-color: #34393f;
+}
+
+/* Create post: preserve yellow action accents; darken editor, menus and authored preview chrome. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-create-post-card,
+  .figma-create-post-blur,
+  .figma-create-post-preview-place,
+  .figma-create-post-visibility,
+  .figma-create-post-add > summary,
+  .figma-create-post-add-menu,
+  .figma-create-post-add-footer,
+  .figma-create-post-map,
+  .figma-create-post-search
+) {
+  background: var(--puddle-dark-raised) !important;
+  border-color: var(--puddle-dark-border) !important;
+  color: #e7eaec !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-create-post-title input,
+  .figma-create-post-description textarea,
+  .figma-create-post-preview-copy,
+  .figma-create-post-preview-place h2,
+  .figma-create-post-preview-name
+) {
+  color: #f1f3f4 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-create-post-submit {
+  background: #202428;
+}
+
+/* Settings, including the embedded overlay document. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-window {
+  background: var(--puddle-dark-raised) !important;
+  border-color: var(--puddle-dark-border-strong) !important;
+  color: var(--puddle-dark-text) !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-local-nav {
+  border-right-color: #383e44;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-local-nav :is(strong, a),
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-section,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-row label {
+  color: var(--puddle-dark-muted);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-section header h1,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-row a {
+  color: var(--puddle-dark-text);
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-row {
+  border-color: #353a40;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-row :is(input, textarea, select),
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-notification-preferences,
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-notification-list article {
+  background: #282c31 !important;
+  border-color: #434950 !important;
+  color: #edf0f2 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-notification-list article.is-unread {
+  background: #162536 !important;
+  border-color: #4ca5f7 !important;
+}
+
+/* Settings overlay itself lives outside the themed shell visually, so the backdrop stays neutral and the frame remains opaque. */
+html:has(.figma-dashboard-shell[data-appearance="dark"]) .puddle-settings-overlay-backdrop,
+html:has(.figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-settings-overlay-backdrop {
+  background: rgba(8,10,12,.52);
+}
+
+html:has(.figma-dashboard-shell[data-appearance="dark"]) .puddle-settings-overlay-frame,
+html:has(.figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-settings-overlay-frame {
+  background: #1a1d20;
+}
+
+/* Mobile navigation should feel like the same dark surface rather than a white footer veil. */
+@media (max-width: 760px) {
+  :is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(.figma-dashboard-stage, .figma-dashboard-main) {
+    background: var(--puddle-dark-bg) !important;
+  }
+
+  :is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-mobile-nav {
+    background: linear-gradient(180deg, rgba(17,19,21,0), #111315 28%, #111315 100%);
+  }
+
+  :is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(.figma-friends-screen, .figma-pass-screen, .figma-create-post-screen) {
+    background: var(--puddle-dark-bg) !important;
+  }
+}
+
+/* System preference uses the same palette after hydration; this keeps the first paint dark too. */
+@media (prefers-color-scheme: dark) {
+  .figma-dashboard-shell[data-appearance="system"] {
+    --puddle-dark-bg: #111315;
+    --puddle-dark-surface: #1a1d20;
+    --puddle-dark-raised: #202428;
+    --puddle-dark-soft: #272b30;
+    --puddle-dark-border: #373c42;
+    --puddle-dark-border-strong: #4a5057;
+    --puddle-dark-text: #f2f4f5;
+    --puddle-dark-muted: #a1a7ad;
+    --puddle-dark-faint: #747b82;
+    --figma-bg: var(--puddle-dark-bg);
+    --figma-grey: var(--puddle-dark-muted);
+    color: var(--puddle-dark-text);
+    color-scheme: dark;
+    background: var(--puddle-dark-bg);
+  }
+}
