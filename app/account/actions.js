@@ -10,6 +10,7 @@ import { pathWithMessage } from '@/lib/auth/redirect'
 const allowedVisibility = new Set(['hidden', 'friends', 'mutuals', 'attendees', 'public'])
 const allowedAppearance = new Set(['light', 'dark', 'system'])
 const allowedProfileThemes = new Set(['red', 'yellow', 'green', 'blue', 'grey', 'purple'])
+const appearancePaths = ['/account', '/profile', '/discover', '/map', '/plans', '/matches', '/membership', '/create/post']
 
 function value(formData, key) {
   return String(formData.get(key) || '').trim()
@@ -17,6 +18,10 @@ function value(formData, key) {
 
 function checked(formData, key) {
   return formData.get(key) === 'on'
+}
+
+function revalidateAppearancePaths() {
+  for (const path of appearancePaths) revalidatePath(path)
 }
 
 async function accountClient() {
@@ -72,11 +77,27 @@ export async function updateAppearance(formData) {
     updated_at: new Date().toISOString()
   }).eq('id', user.id)
   if (error) redirect(pathWithMessage('/account?section=appearance', 'error', 'We could not save your appearance.'))
-  revalidatePath('/account')
-  revalidatePath('/profile')
-  revalidatePath('/discover')
-  revalidatePath('/map')
+  revalidateAppearancePaths()
   redirect(pathWithMessage('/account?section=appearance', 'success', 'Appearance saved.'))
+}
+
+export async function setAppearanceThemeFromLogo(theme) {
+  const appearanceTheme = String(theme || '')
+  if (appearanceTheme !== 'light' && appearanceTheme !== 'dark') return { ok: false }
+  if (!isSupabaseConfigured()) return { ok: false }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false }
+
+  const { error } = await supabase.from('profiles').update({
+    appearance_theme: appearanceTheme,
+    updated_at: new Date().toISOString()
+  }).eq('id', user.id)
+
+  if (error) return { ok: false }
+  revalidateAppearancePaths()
+  return { ok: true, appearanceTheme }
 }
 
 export async function updateNotificationPreferences(formData) {
