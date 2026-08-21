@@ -13,35 +13,43 @@
 }
 
 /*
- * Shared top segmented control. Pass is the dimensional reference for every
- * top pill: 167 × 48, 4px inset padding, fully rounded shell, centered text.
+ * Pass is the dimensional reference for every top segmented pill:
+ * 167 × 48, 4px inset padding, fully rounded shell, centered text.
  */
-.figma-instant-segment {
+.figma-dashboard-segment {
   --segment-count: 2;
   --segment-active-index: 0;
   --segment-active-bg: #858585;
-  position: relative !important;
   width: 167px !important;
   min-width: 167px !important;
   height: 48px !important;
   min-height: 48px !important;
-  display: grid !important;
-  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr)) !important;
-  align-items: center !important;
   padding: 4px !important;
   border: 2px solid #d9d9d9 !important;
   border-radius: 999px !important;
   background: #fff !important;
   box-sizing: border-box !important;
+}
+
+.figma-instant-segment {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr)) !important;
+  align-items: center !important;
   overflow: hidden;
 }
 
-.figma-instant-segment.tone-yellow { --segment-active-bg: #f2c035; }
-.figma-instant-segment.tone-purple { --segment-active-bg: #b784e4; }
-.figma-instant-segment.tone-green { --segment-active-bg: #78e152; }
-.figma-instant-segment.tone-pink { --segment-active-bg: #e73668; }
+.figma-instant-segment.tone-yellow,
+.figma-dashboard-segment[class*="MapFeed_tabs"] { --segment-active-bg: #f2c035; }
+.figma-instant-segment.tone-purple,
+.figma-dashboard-segment[class*="Plans_tabs"] { --segment-active-bg: #b784e4; }
+.figma-instant-segment.tone-green,
+.figma-friends-tabs { --segment-active-bg: #78e152; }
+.figma-instant-segment.tone-pink,
+.figma-pass-tabs { --segment-active-bg: #e73668; }
 
-.figma-instant-segment-highlight {
+.figma-instant-segment-highlight,
+.figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
   position: absolute;
   z-index: 1;
   top: 4px;
@@ -57,8 +65,20 @@
   will-change: transform;
 }
 
-.figma-instant-segment > a,
-.figma-instant-segment > button {
+.figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"] {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr)) !important;
+  align-items: center !important;
+  overflow: hidden;
+}
+
+.figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
+  content: "";
+}
+
+.figma-dashboard-segment > a,
+.figma-dashboard-segment > button {
   position: relative;
   z-index: 2;
   width: auto !important;
@@ -79,12 +99,23 @@
   box-sizing: border-box !important;
 }
 
-.figma-instant-segment > .is-active {
+.figma-dashboard-segment > .is-active,
+.figma-dashboard-segment > .is-ui-active {
   background: transparent !important;
   color: #fff !important;
   box-shadow: none !important;
 }
 
+.figma-dashboard-segment[data-segment-count="3"] > a,
+.figma-dashboard-segment[data-segment-count="3"] > button,
+.figma-instant-segment[data-count="3"] > a,
+.figma-instant-segment[data-count="3"] > button {
+  font-size: 12px !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .figma-instant-segment-highlight { transition: none; }
+  .figma-instant-segment-highlight,
+  .figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
+    transition: none;
+  }
 }
