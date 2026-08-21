@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 function indexFor(items, value) {
@@ -17,16 +17,26 @@ export function InstantSegment({
   testId = undefined
 }) {
   const [activeIndex, setActiveIndex] = useState(() => indexFor(items, activeValue))
+  const segmentRef = useRef(null)
 
   useEffect(() => {
     setActiveIndex(indexFor(items, activeValue))
   }, [activeValue, items])
+
+  useLayoutEffect(() => {
+    const segment = segmentRef.current
+    const active = segment?.querySelectorAll(':scope > a, :scope > button')?.[activeIndex]
+    if (!segment || !active) return
+    segment.style.setProperty('--segment-active-left', `${active.offsetLeft}px`)
+    segment.style.setProperty('--segment-active-width', `${active.offsetWidth}px`)
+  }, [activeIndex, items])
 
   function select(index) {
     setActiveIndex(index)
   }
 
   return <nav
+    ref={segmentRef}
     className={`figma-dashboard-segment figma-instant-segment tone-${tone}${className ? ` ${className}` : ''}`}
     aria-label={ariaLabel}
     data-testid={testId}
