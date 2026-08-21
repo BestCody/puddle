@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { PuddleLogo } from './puddle-logo'
+import { AppearanceToggleLogo } from './appearance-toggle-logo'
 import { ProductNav } from './product-nav'
 import { SettingsTrigger } from './settings-trigger'
 
@@ -21,7 +21,7 @@ function applyWidth(value) {
   document.documentElement.style.setProperty('--figma-shell-sidebar', `${value}px`)
 }
 
-export function FigmaDashboardSidebar({ avatarUrl = null }) {
+export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'light' }) {
   const [width, setWidth] = useState(EXPANDED_WIDTH)
   const drag = useRef(null)
   const concise = width === CONCISE_WIDTH
@@ -70,7 +70,7 @@ export function FigmaDashboardSidebar({ avatarUrl = null }) {
   }
 
   return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`} aria-label="Puddle sidebar" data-sidebar-width={width}>
-    <div className="figma-dashboard-sidebar-logo"><PuddleLogo compact href="/discover" variant="outline" /></div>
+    <div className="figma-dashboard-sidebar-logo"><AppearanceToggleLogo initialAppearance={initialAppearance} /></div>
     <ProductNav avatarUrl={avatarUrl} />
     <SettingsTrigger className="figma-dashboard-settings-link">Settings</SettingsTrigger>
     <div
