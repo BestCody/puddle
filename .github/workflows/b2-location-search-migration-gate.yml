@@ -125,7 +125,7 @@ jobs:
           print(f'source_manifest_key={manifest_key}')
           PY
       - id: candidate
-        name: Reuse completed immutable search candidate when present
+        name: Reuse completed validated search candidate when present
         shell: bash
         run: |
           set -euo pipefail
@@ -146,6 +146,7 @@ jobs:
           )
           required = [
               f'{data_prefix}/search/schema=v1/snapshot={snapshot}/manifest.json',
+              f'{data_prefix}/search/schema=v1/snapshot={snapshot}/validation/report.json',
               f'{data_prefix}/search/candidates/{snapshot}.json',
           ]
           exists = True
