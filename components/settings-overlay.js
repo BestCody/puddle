@@ -10,11 +10,15 @@ export function openSettingsOverlay() {
 }
 
 export function SettingsOverlay() {
+  const [enabled, setEnabled] = useState(false)
   const [open, setOpen] = useState(false)
   const [ready, setReady] = useState(false)
   const frameRef = useRef(null)
 
   useEffect(() => {
+    if (window.self !== window.top) return
+    setEnabled(true)
+
     function openOverlay() {
       setOpen(true)
       document.documentElement.classList.add('puddle-settings-overlay-open')
@@ -23,12 +27,17 @@ export function SettingsOverlay() {
       setOpen(false)
       document.documentElement.classList.remove('puddle-settings-overlay-open')
     }
+    function onKeyDown(event) {
+      if (event.key === 'Escape') closeOverlay()
+    }
 
     window.addEventListener(SETTINGS_OPEN_EVENT, openOverlay)
     window.addEventListener(SETTINGS_CLOSE_EVENT, closeOverlay)
+    window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener(SETTINGS_OPEN_EVENT, openOverlay)
       window.removeEventListener(SETTINGS_CLOSE_EVENT, closeOverlay)
+      window.removeEventListener('keydown', onKeyDown)
       document.documentElement.classList.remove('puddle-settings-overlay-open')
     }
   }, [])
@@ -45,6 +54,8 @@ export function SettingsOverlay() {
     }, { once: true })
     setReady(true)
   }
+
+  if (!enabled) return null
 
   return <div className={`puddle-settings-overlay${open ? ' is-open' : ''}`} aria-hidden={!open}>
     <button className="puddle-settings-overlay-backdrop" type="button" onClick={() => window.dispatchEvent(new Event(SETTINGS_CLOSE_EVENT))} aria-label="Close settings" />
