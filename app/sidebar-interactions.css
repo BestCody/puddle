@@ -1,8 +1,13 @@
 /* Fast interaction feedback for the authenticated sidebar. */
 @media (hover: hover) and (pointer: fine) {
   .figma-dashboard-nav-item:not(.is-active):hover {
-    background: #cfcfcf;
-    border-color: #b8b8b8;
-    color: #3f3f3f;
+    background: #d7d7d7;
+    border-color: #c4c4c4;
+    color: var(--figma-grey);
   }
+}
+
+/* Slightly lighter selected treatments while preserving each section tone. */
+.figma-dashboard-nav-item.is-active {
+  filter: brightness(1.08);
 }
