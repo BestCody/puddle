@@ -4,8 +4,8 @@
 This never weakens validation. It loads the candidate hash ledger, HEAD-checks artifacts,
 and for each missing/conflicting current object searches B2's retained object versions for
 a body whose exact compressed byte length and SHA-256 match the ledger. Dry-run is fully
-read-only and reports whether an exact historical version exists. With --apply, only an
-exact matching historical body is restored to the current key.
+read-only and reports whether every mismatch has an exact historical version. With
+--apply, only exact ledger-matching historical bodies are restored to current keys.
 """
 from __future__ import annotations
 
@@ -41,12 +41,22 @@ def main() -> None:
         help='Inspect only this exact ledger artifact key. Omit to inspect the full candidate.',
     )
     parser.add_argument('--apply', action='store_true', help='Restore exact ledger-matching historical versions.')
-    parser.add_argument('--head-workers', type=int, default=int(os.getenv('GLOBAL_LOCATION_VALIDATE_HEAD_WORKERS', '16')))
+    parser.add_argument(
+        '--head-workers',
+        type=int,
+        default=int(os.getenv('GLOBAL_LOCATION_VALIDATE_HEAD_WORKERS', '16')),
+    )
+    parser.add_argument(
+        '--history-workers',
+        type=int,
+        default=int(os.getenv('GLOBAL_LOCATION_REPAIR_HISTORY_WORKERS', '16')),
+    )
     args = parser.parse_args()
 
     source = b2_source_config()
     prefix = f'{source.data_prefix}/search/schema=v1/snapshot={args.snapshot}'
     manifest_key = f'{prefix}/manifest.json'
+    pool_connections = max(16, min(64, max(int(args.head_workers), int(args.history_workers))))
     s3 = boto3.client(
         's3',
         endpoint_url=source.endpoint_url,
@@ -55,7 +65,7 @@ def main() -> None:
         region_name=source.region,
         config=Config(
             retries={'max_attempts': 10, 'mode': 'adaptive'},
-            max_pool_connections=max(16, min(32, int(args.head_workers))),
+            max_pool_connections=pool_connections,
         ),
     )
 
@@ -101,12 +111,17 @@ def main() -> None:
         actual_sha = str((head.get('Metadata') or {}).get('sha256', '')).lower()
         if (actual_size, actual_sha) == (expected_size, expected_sha):
             return None
-        return {'record': record, 'reason': 'mismatch', 'actual_size': actual_size, 'actual_sha': actual_sha}
+        return {
+            'record': record,
+            'reason': 'mismatch',
+            'actual_size': actual_size,
+            'actual_sha': actual_sha,
+        }
 
     mismatches: list[dict] = []
-    workers = max(1, min(32, int(args.head_workers)))
+    head_workers = max(1, min(64, int(args.head_workers)))
     completed = 0
-    with ThreadPoolExecutor(max_workers=workers) as pool:
+    with ThreadPoolExecutor(max_workers=head_workers) as pool:
         futures = [pool.submit(inspect, record) for record in records]
         for future in as_completed(futures):
             result = future.result()
@@ -119,6 +134,7 @@ def main() -> None:
     mismatches.sort(key=lambda item: str(item['record']['key']))
     if not mismatches:
         print('repair_mismatches=0', flush=True)
+        print('repair_dry_run_exact_matches=0/0 missing=0', flush=True)
         return
 
     print(f'repair_mismatches={len(mismatches)}', flush=True)
@@ -132,15 +148,11 @@ def main() -> None:
             flush=True,
         )
 
-    matches: list[tuple[dict, bytes, str, str]] = []
-    for item in mismatches:
+    def find_history_match(item: dict) -> dict:
         record = item['record']
         key = str(record['key'])
         expected_size = int(record['compressed_bytes'])
         expected_sha = str(record['sha256']).lower()
-        matching_body: bytes | None = None
-        matching_version: str | None = None
-        matching_content_type = 'application/json'
         versions_seen = 0
         size_candidates = 0
 
@@ -160,40 +172,88 @@ def main() -> None:
                 body = response['Body'].read()
                 if len(body) != expected_size or sha256_hex(body) != expected_sha:
                     continue
-                matching_body = body
-                matching_version = version_id
-                matching_content_type = str(response.get('ContentType') or 'application/json')
-                break
-            if matching_body is not None:
-                break
+                return {
+                    'item': item,
+                    'matching_version': version_id,
+                    'content_type': str(response.get('ContentType') or 'application/json'),
+                    'versions_seen': versions_seen,
+                    'size_candidates': size_candidates,
+                }
 
-        if matching_body is None or matching_version is None:
-            print(
-                f'repair_history_exact_match=false key={key} versions_seen={versions_seen} '
-                f'size_candidates={size_candidates}',
-                flush=True,
-            )
-            raise RuntimeError(
-                f'No historical B2 version exactly matches ledger size/SHA for {key}; refusing to synthesize or relax validation.'
-            )
+        return {
+            'item': item,
+            'matching_version': None,
+            'content_type': None,
+            'versions_seen': versions_seen,
+            'size_candidates': size_candidates,
+        }
 
-        print(
-            f'repair_history_exact_match=true key={key} source_version={matching_version} '
-            f'versions_seen={versions_seen} size_candidates={size_candidates}',
-            flush=True,
+    matches: list[dict] = []
+    unavailable: list[dict] = []
+    history_workers = max(1, min(32, int(args.history_workers)))
+    history_completed = 0
+    with ThreadPoolExecutor(max_workers=history_workers) as pool:
+        futures = [pool.submit(find_history_match, item) for item in mismatches]
+        for future in as_completed(futures):
+            result = future.result()
+            record = result['item']['record']
+            key = str(record['key'])
+            matching_version = result['matching_version']
+            if matching_version:
+                matches.append(result)
+                print(
+                    f'repair_history_exact_match=true key={key} source_version={matching_version} '
+                    f"versions_seen={result['versions_seen']} size_candidates={result['size_candidates']}",
+                    flush=True,
+                )
+            else:
+                unavailable.append(result)
+                print(
+                    f'repair_history_exact_match=false key={key} '
+                    f"versions_seen={result['versions_seen']} size_candidates={result['size_candidates']}",
+                    flush=True,
+                )
+            history_completed += 1
+            if history_completed % 100 == 0 or history_completed == len(mismatches):
+                print(
+                    f'repair_history_checked={history_completed}/{len(mismatches)} '
+                    f'exact_matches={len(matches)} missing={len(unavailable)}',
+                    flush=True,
+                )
+
+    matches.sort(key=lambda result: str(result['item']['record']['key']))
+    unavailable.sort(key=lambda result: str(result['item']['record']['key']))
+    print(
+        f'repair_dry_run_exact_matches={len(matches)}/{len(mismatches)} missing={len(unavailable)}',
+        flush=True,
+    )
+
+    if unavailable:
+        missing_keys = [str(result['item']['record']['key']) for result in unavailable]
+        print('repair_unavailable_keys=' + json.dumps(missing_keys), flush=True)
+        raise RuntimeError(
+            f'{len(unavailable)} candidate artifacts have no historical B2 version matching the ledger; '
+            'refusing to synthesize data or relax validation.'
         )
-        matches.append((item, matching_body, matching_version, matching_content_type))
 
     if not args.apply:
-        print(f'repair_dry_run_exact_matches={len(matches)}/{len(mismatches)}', flush=True)
         return
 
     repaired = 0
-    for item, matching_body, matching_version, matching_content_type in matches:
+    for result in matches:
+        item = result['item']
         record = item['record']
         key = str(record['key'])
         expected_size = int(record['compressed_bytes'])
         expected_sha = str(record['sha256']).lower()
+        matching_version = str(result['matching_version'])
+        matching_content_type = str(result['content_type'] or 'application/json')
+
+        response = s3.get_object(Bucket=source.bucket, Key=key, VersionId=matching_version)
+        matching_body = response['Body'].read()
+        if len(matching_body) != expected_size or sha256_hex(matching_body) != expected_sha:
+            raise RuntimeError(f'Historical version changed verification result before restore: {key}')
+
         s3.put_object(
             Bucket=source.bucket,
             Key=key,
