@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { beginMainContentLoading } from './main-content-transition'
@@ -48,19 +48,30 @@ function shouldAvoidBackgroundPrefetch() {
   )
 }
 
+function isPlainLeftPointer(event) {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
+}
+
 function NavItems({ mobile = false, avatarUrl = null }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [pendingHref, setPendingHref] = useState(null)
   const routeActiveHref = items.find((item) => isActive(pathname, item.href))?.href ?? null
-  const activeHref = pendingHref ?? routeActiveHref
+  const [selectedHref, setSelectedHref] = useState(routeActiveHref)
+  const navigationIntentRef = useRef(null)
 
   useEffect(() => {
-    setPendingHref((current) => {
-      if (!current) return null
-      return isActive(pathname, current) ? null : current
-    })
-  }, [pathname])
+    if (navigationIntentRef.current) {
+      if (routeActiveHref === navigationIntentRef.current) navigationIntentRef.current = null
+      return
+    }
+    setSelectedHref(routeActiveHref)
+  }, [routeActiveHref])
+
+  function selectImmediately(event, href) {
+    if (!isPlainLeftPointer(event)) return
+    navigationIntentRef.current = href
+    setSelectedHref(href)
+  }
 
   function warmRoute(href) {
     if (isActive(pathname, href) || prefetchedRoutes.has(href)) return
@@ -116,21 +127,25 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       event.ctrlKey ||
       event.shiftKey ||
       event.altKey ||
-      href === activeHref
+      isActive(pathname, href)
     ) return
-    setPendingHref(href)
+    navigationIntentRef.current = href
+    setSelectedHref(href)
     beginMainContentLoading()
   }
 
   return items.map((item) => {
-    const active = item.href === activeHref
+    const active = item.href === selectedHref
     return <Link
       className={`figma-dashboard-nav-item tone-${item.tone}${active ? ' is-active' : ''}`}
       href={item.href}
       prefetch={false}
       onMouseEnter={() => warmRoute(item.href)}
       onFocus={() => warmRoute(item.href)}
-      onPointerDown={() => warmRoute(item.href)}
+      onPointerDown={(event) => {
+        warmRoute(item.href)
+        selectImmediately(event, item.href)
+      }}
       onClick={(event) => startNavigation(event, item.href)}
       aria-current={active ? 'page' : undefined}
       aria-label={item.label}
