@@ -21,16 +21,8 @@ function applyWidth(value) {
   document.documentElement.style.setProperty('--figma-shell-sidebar', `${value}px`)
 }
 
-function SettingsIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-}
-
 export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'light' }) {
   const [width, setWidth] = useState(EXPANDED_WIDTH)
-  const [resizing, setResizing] = useState(false)
   const drag = useRef(null)
   const concise = width === CONCISE_WIDTH
 
@@ -52,7 +44,6 @@ export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'l
     if (event.button !== 0) return
     event.preventDefault()
     drag.current = { pointerId: event.pointerId, startX: event.clientX, startWidth: width }
-    setResizing(true)
     event.currentTarget.setPointerCapture?.(event.pointerId)
   }
 
@@ -68,7 +59,6 @@ export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'l
     const state = drag.current
     if (!state || state.pointerId !== event.pointerId) return
     drag.current = null
-    setResizing(false)
     commit(width)
   }
 
@@ -79,13 +69,10 @@ export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'l
     else commit(EXPANDED_WIDTH)
   }
 
-  return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}${resizing ? ' is-resizing' : ''}`} aria-label="Puddle sidebar" data-sidebar-width={width}>
+  return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`} aria-label="Puddle sidebar" data-sidebar-width={width}>
     <div className="figma-dashboard-sidebar-logo"><AppearanceToggleLogo initialAppearance={initialAppearance} /></div>
     <ProductNav avatarUrl={avatarUrl} />
-    <SettingsTrigger className="figma-dashboard-settings-link">
-      <span className="figma-dashboard-settings-icon"><SettingsIcon /></span>
-      <span className="figma-dashboard-settings-label">Settings</span>
-    </SettingsTrigger>
+    <SettingsTrigger className="figma-dashboard-settings-link">Settings</SettingsTrigger>
     <div
       className="figma-dashboard-sidebar-resizer"
       role="separator"
