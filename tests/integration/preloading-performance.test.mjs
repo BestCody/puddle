@@ -128,6 +128,45 @@ test('Settings opens over the current page and Swipe locks only page scrolling',
   assert.doesNotMatch(targetedStyles, /touch-action:\s*none/)
 })
 
+test('Puddle logo toggles a persisted comprehensive dark mode without recoloring branded content', async () => {
+  const [layout, shell, sidebar, toggle, actions, darkStyles] = await Promise.all([
+    read('app/layout.js'),
+    read('components/product-shell.js'),
+    read('components/figma-dashboard-sidebar.js'),
+    read('components/appearance-toggle-logo.js'),
+    read('app/account/actions.js'),
+    read('app/dark-mode.css')
+  ])
+
+  assert.match(layout, /import '\.\/ui-targeted-fixes\.css'\s*\nimport '\.\/dark-mode\.css'/)
+  assert.match(layout, /colorScheme:\s*'light dark'/)
+  assert.match(shell, /data-appearance=\{appearance\}/)
+  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} \/>/)
+  assert.match(sidebar, /<AppearanceToggleLogo initialAppearance=\{initialAppearance\} \/>/)
+
+  assert.match(toggle, /shell\.dataset\.appearance = appearance/)
+  assert.match(toggle, /shell\.dataset\.resolvedAppearance = resolved/)
+  assert.match(toggle, /const nextAppearance = currentResolved === 'dark' \? 'light' : 'dark'/)
+  assert.match(toggle, /applyAppearance\(shell, nextAppearance\)[\s\S]*setAppearanceThemeFromLogo\(nextAppearance\)/)
+  assert.match(toggle, /sessionStorage\.setItem\(PENDING_KEY, nextAppearance\)/)
+  assert.match(toggle, /aria-label="Toggle light and dark mode"/)
+
+  assert.match(actions, /export async function setAppearanceThemeFromLogo\(theme\)/)
+  assert.match(actions, /appearance_theme:\s*appearanceTheme/)
+  assert.match(actions, /revalidateAppearancePaths\(\)/)
+
+  assert.match(darkStyles, /--puddle-dark-bg:\s*#111315/)
+  assert.match(darkStyles, /--puddle-dark-raised:\s*#202428/)
+  assert.match(darkStyles, /\[data-testid="feed-screen"\]:not\(\[data-view="map"\]\)/)
+  assert.match(darkStyles, /\[data-testid="saved-screen"\]/)
+  assert.match(darkStyles, /\.figma-friends-conversations/)
+  assert.match(darkStyles, /\.figma-pass-plan:not\(\.figma-pass-plan-paid\)/)
+  assert.match(darkStyles, /\.figma-profile-screen/)
+  assert.match(darkStyles, /\.figma-create-post-card/)
+  assert.match(darkStyles, /\.figma-settings-window/)
+  assert.doesNotMatch(darkStyles, /filter:\s*(?:invert|grayscale|brightness)\(/)
+})
+
 test('dashboard navigation keeps the shell mounted and scopes loading to main content', async () => {
   const [transition, nav, shell, styles, sidebarStyles, layout] = await Promise.all([
     read('components/main-content-transition.js'),
@@ -141,7 +180,7 @@ test('dashboard navigation keeps the shell mounted and scopes loading to main co
   assert.match(layout, /import '\.\/performance-loading\.css'/)
   assert.match(layout, /import '\.\/sidebar-interactions\.css'/)
   assert.match(shell, /import \{ MainContentTransition \} from '\.\/main-content-transition'/)
-  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{children\}<\/MainContentTransition><\/main>/)
+  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{children\}<\/MainContentTransition><\/main>/)
 
   assert.match(transition, /export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'/)
   assert.match(transition, /window\.dispatchEvent\(new Event\(MAIN_CONTENT_LOADING_EVENT\)\)/)
