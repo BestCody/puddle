@@ -16,7 +16,7 @@ from botocore.client import Config
 from location_search_common import b2_source_config
 from repair_b2_search_candidate_parallel import main as repair_main, unique_ledger_records
 
-BUILDER_PATH = Path(__file__).with_name("build_b2_search_index.py")
+BUILDER_PATH = Path(__file__).with_name("build_b2_search_index_continuous.py")
 REBUILD_CHECKPOINT_VERSION = 2
 
 
