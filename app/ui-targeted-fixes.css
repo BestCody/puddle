@@ -47,7 +47,7 @@
   box-sizing: border-box !important;
 }
 
-/* Undo the previous three-tab text shrink. */
+/* Preserve the normal top-pill text size instead of shrinking longer/multi-tab controls. */
 .figma-dashboard-segment[data-segment-count="3"] > a,
 .figma-dashboard-segment[data-segment-count="3"] > button,
 .figma-instant-segment[data-count="3"] > a,
@@ -127,6 +127,44 @@ button.figma-dashboard-settings-link {
 html.puddle-settings-overlay-open,
 html.puddle-settings-overlay-open body {
   overflow: hidden;
+}
+
+/* The embedded Settings route reuses the existing settings UI without its own dashboard chrome. */
+html.puddle-settings-embedded,
+html.puddle-settings-embedded body {
+  min-height: 100%;
+  overflow: auto;
+  background: #fff;
+}
+
+html.puddle-settings-embedded .figma-dashboard-sidebar,
+html.puddle-settings-embedded .figma-dashboard-mobile-nav,
+html.puddle-settings-embedded .figma-dashboard-account-menu,
+html.puddle-settings-embedded .puddle-settings-overlay {
+  display: none !important;
+}
+
+html.puddle-settings-embedded .figma-dashboard-stage {
+  min-height: 100%;
+  margin-left: 0 !important;
+  background: #fff;
+}
+
+html.puddle-settings-embedded .figma-dashboard-main,
+html.puddle-settings-embedded .figma-settings-screen {
+  min-height: 100%;
+  padding: 0 !important;
+  background: #fff;
+}
+
+html.puddle-settings-embedded .figma-settings-window {
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  min-height: 100% !important;
+  transform: none !important;
+  border: 0 !important;
+  border-radius: 25px !important;
 }
 
 /* Swipe: lock page scrolling without touching the swipe card's pointer/touch behavior. */
