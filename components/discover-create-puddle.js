@@ -63,7 +63,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       id="discover-create-puddle-form"
       aria-label="Create a puddle"
       aria-hidden={!open}
-      inert={!open ? '' : undefined}
+      inert={!open}
     >
       <input type="hidden" name="location_id" value={locationId} />
 
