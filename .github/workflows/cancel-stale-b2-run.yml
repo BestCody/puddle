@@ -14,11 +14,11 @@ jobs:
   cancel-stale-run:
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel stale pre-fix B2 migration run
+      - name: Cancel superseded B2 migration run
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          STALE_RUN_ID: '32442198416'
+          STALE_RUN_ID: '32446494259'
         shell: bash
         run: |
           set -euo pipefail
