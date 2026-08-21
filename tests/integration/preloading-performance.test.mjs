@@ -50,40 +50,76 @@ test('dashboard navigation warms routes efficiently and selects exactly one item
   assert.doesNotMatch(nav, /label: 'Feed'|activeLabel: 'Explore'/)
 })
 
-test('top pills use Pass dimensions and move their highlight before navigation completes', async () => {
-  const [segment, bridge, sidebarStyles, mapPage, plansPage, passPage, layout] = await Promise.all([
+test('top pills preserve text size, adapt to label width, and move immediately', async () => {
+  const [segment, bridge, targetedStyles, mapPage, plansPage, passPage, layout] = await Promise.all([
     read('components/instant-segment.js'),
     read('components/segment-interaction-bridge.js'),
-    read('app/sidebar-interactions.css'),
+    read('app/ui-targeted-fixes.css'),
     read('app/map/page.js'),
     read('app/plans/page.js'),
     read('app/membership/page.js'),
     read('app/layout.js')
   ])
 
-  assert.match(segment, /const \[activeIndex, setActiveIndex\] = useState/)
+  assert.match(segment, /useLayoutEffect/)
+  assert.match(segment, /active\.offsetLeft/)
+  assert.match(segment, /active\.offsetWidth/)
+  assert.match(segment, /--segment-active-left/)
+  assert.match(segment, /--segment-active-width/)
   assert.match(segment, /onPointerDown=\{\(event\) =>/)
-  assert.match(segment, /select\(index\)/)
-  assert.match(segment, /--segment-active-index': activeIndex/)
-  assert.match(segment, /figma-instant-segment-highlight/)
 
+  assert.match(bridge, /active\.offsetLeft/)
+  assert.match(bridge, /active\.offsetWidth/)
   assert.match(bridge, /document\.addEventListener\('pointerdown', onPointerDown, true\)/)
-  assert.match(bridge, /segment\.style\.setProperty\('--segment-active-index'/)
-  assert.match(bridge, /control\.classList\.toggle\('is-ui-active'/)
-  assert.match(layout, /<SegmentInteractionBridge \/>/)
+  assert.match(layout, /import '\.\/ui-targeted-fixes\.css'/)
 
-  assert.match(sidebarStyles, /width:\s*167px !important/)
-  assert.match(sidebarStyles, /height:\s*48px !important/)
-  assert.match(sidebarStyles, /padding:\s*4px !important/)
-  assert.match(sidebarStyles, /border-radius:\s*999px !important/)
-  assert.match(sidebarStyles, /place-items:\s*center !important/)
-  assert.match(sidebarStyles, /transition:\s*transform 145ms/)
-  assert.match(sidebarStyles, /translateX\(calc\(var\(--segment-active-index\) \* 100%\)\)/)
+  assert.match(targetedStyles, /width:\s*max-content !important/)
+  assert.match(targetedStyles, /min-width:\s*max-content !important/)
+  assert.match(targetedStyles, /height:\s*48px !important/)
+  assert.match(targetedStyles, /font-size:\s*16px !important/)
+  assert.doesNotMatch(targetedStyles, /width:\s*167px !important/)
+  assert.match(targetedStyles, /left 145ms/)
+  assert.match(targetedStyles, /width 145ms/)
 
   assert.match(mapPage, /\{ value: 'feed', label: 'Feed', href: '\/map' \}/)
   assert.match(mapPage, /tone="yellow"/)
   assert.match(plansPage, /tone="purple"/)
   assert.match(passPage, /tone="pink"/)
+})
+
+test('Saved cards reflow responsively without changing their card content', async () => {
+  const [plansPage, targetedStyles] = await Promise.all([
+    read('app/plans/page.js'),
+    read('app/ui-targeted-fixes.css')
+  ])
+
+  assert.match(plansPage, /data-testid="saved-grid"/)
+  assert.match(plansPage, /data-testid="saved-card"/)
+  assert.match(targetedStyles, /repeat\(auto-fit, minmax\(min\(260px, 100%\), 1fr\)\)/)
+  assert.match(targetedStyles, /\[data-testid="saved-grid"\] > \[data-testid="saved-card"\][\s\S]*width:\s*100% !important/)
+  assert.match(targetedStyles, /transform:\s*none !important/)
+})
+
+test('Settings opens over the current page and Swipe locks only page scrolling', async () => {
+  const [sidebar, shell, overlay, targetedStyles] = await Promise.all([
+    read('components/figma-dashboard-sidebar.js'),
+    read('components/product-shell.js'),
+    read('components/settings-overlay.js'),
+    read('app/ui-targeted-fixes.css')
+  ])
+
+  assert.match(sidebar, /<SettingsTrigger className="figma-dashboard-settings-link">Settings<\/SettingsTrigger>/)
+  assert.match(shell, /<SettingsOverlay \/>/)
+  assert.match(shell, /<SettingsTrigger>Settings<\/SettingsTrigger>/)
+  assert.match(overlay, /window\.self !== window\.top/)
+  assert.match(overlay, /src="\/account\?returnTo=%2Fprofile"/)
+  assert.match(overlay, /puddle-settings-overlay-open/)
+  assert.match(overlay, /contentDocument/)
+  assert.match(targetedStyles, /backdrop-filter:\s*blur\(12px\)/)
+  assert.match(targetedStyles, /html\.puddle-settings-embedded \.figma-dashboard-sidebar/)
+  assert.match(targetedStyles, /html:has\(\.figma-swipe-screen\)/)
+  assert.match(targetedStyles, /overflow:\s*hidden !important/)
+  assert.doesNotMatch(targetedStyles, /touch-action:\s*none/)
 })
 
 test('dashboard navigation keeps the shell mounted and scopes loading to main content', async () => {
