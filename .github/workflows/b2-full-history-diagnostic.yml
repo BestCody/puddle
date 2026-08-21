@@ -8,7 +8,7 @@ permissions:
   contents: read
   statuses: write
 
-# Temporary branch-only diagnostic. Performs no B2 writes.
+# Temporary branch-only diagnostic. Performs no B2 writes or restores.
 jobs:
   inspect-full-candidate:
     runs-on: ubuntu-latest
