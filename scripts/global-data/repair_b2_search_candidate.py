@@ -3,21 +3,18 @@
 from __future__ import annotations
 
 import argparse
-import os
+import hashlib
 import subprocess
 import sys
 from pathlib import Path
 
 import boto3
+import brotli
 import orjson
 from botocore.client import Config
 
-from repair_b2_search_candidate_parallel import (
-    conflict_message,
-    load_candidate_context,
-    main as repair_main,
-    validate_and_deduplicate_records,
-)
+from location_search_common import b2_source_config
+from repair_b2_search_candidate_parallel import main as repair_main, unique_ledger_records
 
 BUILDER_PATH = Path(__file__).with_name("build_b2_search_index.py")
 REBUILD_CHECKPOINT_VERSION = 2
@@ -28,6 +25,17 @@ def is_missing(error: Exception) -> bool:
     code = str((response.get("Error") or {}).get("Code") or "")
     status = int((response.get("ResponseMetadata") or {}).get("HTTPStatusCode") or 0)
     return code in {"404", "NoSuchKey", "NotFound"} or status == 404
+
+
+def make_client(source):
+    return boto3.client(
+        "s3",
+        endpoint_url=source.endpoint_url,
+        aws_access_key_id=source.key_id,
+        aws_secret_access_key=source.application_key,
+        region_name=source.region,
+        config=Config(retries={"max_attempts": 10, "mode": "adaptive"}),
+    )
 
 
 def active_snapshot(client, bucket: str, data_prefix: str) -> str | None:
@@ -46,9 +54,69 @@ def parse_entrypoint_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--snapshot", required=True)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--only-key")
+    parser.add_argument("--key")
+    parser.add_argument("--only-key", dest="key")
     args, _ = parser.parse_known_args()
     return args
+
+
+def load_candidate_records(snapshot: str):
+    """Load and checksum the authoritative candidate ledger without mutating B2."""
+    source = b2_source_config()
+    client = make_client(source)
+    prefix = f"{source.data_prefix}/search/schema=v1/snapshot={snapshot}"
+    manifest_key = f"{prefix}/manifest.json"
+    manifest = orjson.loads(
+        client.get_object(Bucket=source.bucket, Key=manifest_key)["Body"].read()
+    )
+    if int(manifest.get("schema_version", 0)) != 1 or str(manifest.get("snapshot")) != snapshot:
+        raise RuntimeError("Candidate manifest does not match requested schema/snapshot.")
+
+    validation = manifest.get("validation") or {}
+    hashes_key = str(validation.get("hashes_key") or "")
+    expected_hashes_sha = str(validation.get("hashes_sha256") or "").lower()
+    hashes_body = client.get_object(Bucket=source.bucket, Key=hashes_key)["Body"].read()
+    if hashlib.sha256(hashes_body).hexdigest() != expected_hashes_sha:
+        raise RuntimeError("Candidate hash ledger checksum does not match manifest.")
+
+    records = orjson.loads(brotli.decompress(hashes_body))
+    if not isinstance(records, list) or not records:
+        raise RuntimeError("Candidate hash ledger is empty or invalid.")
+    if len(records) != int(validation.get("artifact_count", -1)):
+        raise RuntimeError("Candidate hash ledger artifact count does not match manifest.")
+    return source, client, records
+
+
+def analyze_ledger(
+    records: list[dict],
+    *,
+    print_conflicts: bool,
+    fail_on_conflicts: bool = True,
+) -> list[dict]:
+    unique, exact_duplicates, conflicts = unique_ledger_records(records)
+    print(
+        f"repair_ledger_records={len(records)} unique_keys={len(unique)} "
+        f"exact_duplicate_records={exact_duplicates} conflicting_keys={len(conflicts)}",
+        flush=True,
+    )
+    if conflicts and print_conflicts:
+        for conflict in conflicts[:50]:
+            print(
+                "repair_ledger_conflict "
+                f"key={conflict['key']} "
+                f"first_size={conflict['first_size']} first_sha={conflict['first_sha']} "
+                f"conflicting_size={conflict['conflicting_size']} "
+                f"conflicting_sha={conflict['conflicting_sha']}",
+                flush=True,
+            )
+        if len(conflicts) > 50:
+            print(f"repair_ledger_conflicts_omitted={len(conflicts) - 50}", flush=True)
+    if conflicts and fail_on_conflicts:
+        raise RuntimeError(
+            f"Candidate hash ledger contains {len(conflicts)} destination keys with conflicting "
+            "length/SHA-256 records."
+        )
+    return unique
 
 
 def delete_prefix(client, bucket: str, prefix: str) -> int:
@@ -71,9 +139,7 @@ def delete_prefix(client, bucket: str, prefix: str) -> int:
 def initialize_rebuild_checkpoints(client, bucket: str, data_prefix: str, snapshot: str) -> None:
     """Clear legacy checkpoints exactly once, then preserve deterministic rebuild save points."""
     checkpoint_prefix = f"{data_prefix}/search/checkpoints/schema=v1/snapshot={snapshot}/"
-    marker_key = (
-        f"{checkpoint_prefix}deterministic-rebuild-v{REBUILD_CHECKPOINT_VERSION}.json"
-    )
+    marker_key = f"{checkpoint_prefix}deterministic-rebuild-v{REBUILD_CHECKPOINT_VERSION}.json"
     try:
         client.head_object(Bucket=bucket, Key=marker_key)
         print(
@@ -108,11 +174,7 @@ def initialize_rebuild_checkpoints(client, bucket: str, data_prefix: str, snapsh
 
 
 def rebuild_candidate(snapshot: str) -> None:
-    command = [
-        sys.executable,
-        str(BUILDER_PATH),
-        f"--snapshot={snapshot}",
-    ]
+    command = [sys.executable, str(BUILDER_PATH), f"--snapshot={snapshot}"]
     print(
         "repair_rebuild_start "
         f"snapshot={snapshot} reason=conflicting_ledger mode=deterministic_checkpointed_full_rebuild",
@@ -124,26 +186,17 @@ def rebuild_candidate(snapshot: str) -> None:
 
 def main() -> None:
     args = parse_entrypoint_args()
-    if not args.apply or args.only_key:
+    if not args.apply or args.key:
         repair_main()
         return
 
-    context = load_candidate_context(args.snapshot)
+    source, client, records = load_candidate_records(args.snapshot)
     try:
-        validate_and_deduplicate_records(context.records)
+        analyze_ledger(records, print_conflicts=False)
     except RuntimeError as error:
         if "conflicting length/SHA-256 records" not in str(error):
             raise
 
-        source = context.source
-        client = boto3.client(
-            "s3",
-            endpoint_url=source.endpoint_url,
-            aws_access_key_id=source.key_id,
-            aws_secret_access_key=source.application_key,
-            region_name=source.region,
-            config=Config(retries={"max_attempts": 10, "mode": "adaptive"}),
-        )
         active = active_snapshot(client, source.bucket, source.data_prefix)
         if active == args.snapshot:
             raise RuntimeError(
@@ -151,7 +204,7 @@ def main() -> None:
                 "publish a new snapshot namespace instead."
             ) from error
 
-        conflict_message(context.records)
+        analyze_ledger(records, print_conflicts=True, fail_on_conflicts=False)
         initialize_rebuild_checkpoints(
             client,
             source.bucket,
@@ -160,8 +213,8 @@ def main() -> None:
         )
         rebuild_candidate(args.snapshot)
 
-        rebuilt = load_candidate_context(args.snapshot)
-        validate_and_deduplicate_records(rebuilt.records)
+        _, _, rebuilt_records = load_candidate_records(args.snapshot)
+        analyze_ledger(rebuilt_records, print_conflicts=True)
         repair_main()
         return
 
