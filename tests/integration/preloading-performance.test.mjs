@@ -50,10 +50,11 @@ test('dashboard navigation warms routes efficiently and selects exactly one item
   assert.doesNotMatch(nav, /label: 'Feed'|activeLabel: 'Explore'/)
 })
 
-test('top pills preserve text size, adapt to label width, and move immediately', async () => {
-  const [segment, bridge, targetedStyles, mapPage, plansPage, passPage, layout] = await Promise.all([
+test('top pills size to their labels and move their highlight before navigation completes', async () => {
+  const [segment, bridge, sidebarStyles, targetedStyles, mapPage, plansPage, passPage, layout] = await Promise.all([
     read('components/instant-segment.js'),
     read('components/segment-interaction-bridge.js'),
+    read('app/sidebar-interactions.css'),
     read('app/ui-targeted-fixes.css'),
     read('app/map/page.js'),
     read('app/plans/page.js'),
@@ -101,10 +102,11 @@ test('Saved cards reflow responsively without changing their card content', asyn
 })
 
 test('Settings opens over the current page and Swipe locks only page scrolling', async () => {
-  const [sidebar, shell, overlay, targetedStyles] = await Promise.all([
+  const [sidebar, shell, overlay, accountPage, targetedStyles] = await Promise.all([
     read('components/figma-dashboard-sidebar.js'),
     read('components/product-shell.js'),
     read('components/settings-overlay.js'),
+    read('app/account/page.js'),
     read('app/ui-targeted-fixes.css')
   ])
 
@@ -112,11 +114,15 @@ test('Settings opens over the current page and Swipe locks only page scrolling',
   assert.match(shell, /<SettingsOverlay \/>/)
   assert.match(shell, /<SettingsTrigger>Settings<\/SettingsTrigger>/)
   assert.match(overlay, /window\.self !== window\.top/)
-  assert.match(overlay, /src="\/account\?returnTo=%2Fprofile"/)
+  assert.match(overlay, /src="\/account\?embedded=1&returnTo=%2Fprofile"/)
   assert.match(overlay, /puddle-settings-overlay-open/)
   assert.match(overlay, /contentDocument/)
+  assert.match(accountPage, /const embedded = params\?\.embedded === '1'/)
+  assert.match(accountPage, /settingsOverlay=\{!embedded\}/)
+  assert.match(accountPage, /figma-settings-screen\$\{embedded \? ' is-embedded' : ''\}/)
   assert.match(targetedStyles, /backdrop-filter:\s*blur\(12px\)/)
-  assert.match(targetedStyles, /html\.puddle-settings-embedded \.figma-dashboard-sidebar/)
+  assert.match(targetedStyles, /body:has\(\.figma-settings-screen\.is-embedded\) \.figma-dashboard-sidebar/)
+  assert.match(targetedStyles, /\.puddle-settings-overlay-frame[\s\S]*opacity:\s*1/)
   assert.match(targetedStyles, /html:has\(\.figma-swipe-screen\)/)
   assert.match(targetedStyles, /overflow:\s*hidden !important/)
   assert.doesNotMatch(targetedStyles, /touch-action:\s*none/)
