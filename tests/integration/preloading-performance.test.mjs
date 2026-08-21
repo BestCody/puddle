@@ -29,26 +29,61 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   assert.match(preloader, /image\.srcset = source\.srcSet/)
 })
 
-test('dashboard navigation warms routes efficiently and keeps exactly one selected item', async () => {
+test('dashboard navigation warms routes efficiently and selects exactly one item immediately', async () => {
   const nav = await read('components/product-nav.js')
 
+  assert.match(nav, /useEffect, useRef, useState/)
   assert.match(nav, /usePathname, useRouter/)
   assert.match(nav, /prefetch=\{false\}/)
   assert.match(nav, /router\.prefetch\(href/)
   assert.match(nav, /onMouseEnter=\{\(\) => warmRoute\(item\.href\)\}/)
   assert.match(nav, /onFocus=\{\(\) => warmRoute\(item\.href\)\}/)
-  assert.match(nav, /onPointerDown=\{\(\) => warmRoute\(item\.href\)\}/)
-  assert.match(nav, /prefetchedRoutes\.has\(href\)/)
   assert.match(nav, /connection\?\.saveData/)
-  assert.match(nav, /const \[pendingHref, setPendingHref\] = useState\(null\)/)
-  assert.match(nav, /const routeActiveHref = items\.find\(\(item\) => isActive\(pathname, item\.href\)\)\?\.href \?\? null/)
-  assert.match(nav, /const activeHref = pendingHref \?\? routeActiveHref/)
-  assert.match(nav, /setPendingHref\(href\)[\s\S]*beginMainContentLoading\(\)/)
-  assert.match(nav, /const active = item\.href === activeHref/)
-  assert.match(nav, /setPendingHref\(\(current\) =>/)
-  assert.match(nav, /return isActive\(pathname, current\) \? null : current/)
+  assert.match(nav, /const \[selectedHref, setSelectedHref\] = useState\(routeActiveHref\)/)
+  assert.match(nav, /const navigationIntentRef = useRef\(null\)/)
+  assert.match(nav, /function selectImmediately\(event, href\)[\s\S]*setSelectedHref\(href\)/)
+  assert.match(nav, /onPointerDown=\{\(event\) => \{[\s\S]*selectImmediately\(event, item\.href\)/)
+  assert.match(nav, /setSelectedHref\(href\)[\s\S]*beginMainContentLoading\(\)/)
+  assert.match(nav, /const active = item\.href === selectedHref/)
+  assert.doesNotMatch(nav, /pendingHref|setPendingHref/)
   assert.match(nav, /\{ href: '\/map', label: 'Discover'/)
   assert.doesNotMatch(nav, /label: 'Feed'|activeLabel: 'Explore'/)
+})
+
+test('top pills use Pass dimensions and move their highlight before navigation completes', async () => {
+  const [segment, bridge, sidebarStyles, mapPage, plansPage, passPage, layout] = await Promise.all([
+    read('components/instant-segment.js'),
+    read('components/segment-interaction-bridge.js'),
+    read('app/sidebar-interactions.css'),
+    read('app/map/page.js'),
+    read('app/plans/page.js'),
+    read('app/membership/page.js'),
+    read('app/layout.js')
+  ])
+
+  assert.match(segment, /const \[activeIndex, setActiveIndex\] = useState/)
+  assert.match(segment, /onPointerDown=\{\(event\) =>/)
+  assert.match(segment, /select\(index\)/)
+  assert.match(segment, /--segment-active-index': activeIndex/)
+  assert.match(segment, /figma-instant-segment-highlight/)
+
+  assert.match(bridge, /document\.addEventListener\('pointerdown', onPointerDown, true\)/)
+  assert.match(bridge, /segment\.style\.setProperty\('--segment-active-index'/)
+  assert.match(bridge, /control\.classList\.toggle\('is-ui-active'/)
+  assert.match(layout, /<SegmentInteractionBridge \/>/)
+
+  assert.match(sidebarStyles, /width:\s*167px !important/)
+  assert.match(sidebarStyles, /height:\s*48px !important/)
+  assert.match(sidebarStyles, /padding:\s*4px !important/)
+  assert.match(sidebarStyles, /border-radius:\s*999px !important/)
+  assert.match(sidebarStyles, /place-items:\s*center !important/)
+  assert.match(sidebarStyles, /transition:\s*transform 145ms/)
+  assert.match(sidebarStyles, /translateX\(calc\(var\(--segment-active-index\) \* 100%\)\)/)
+
+  assert.match(mapPage, /\{ value: 'feed', label: 'Feed', href: '\/map' \}/)
+  assert.match(mapPage, /tone="yellow"/)
+  assert.match(plansPage, /tone="purple"/)
+  assert.match(passPage, /tone="pink"/)
 })
 
 test('dashboard navigation keeps the shell mounted and scopes loading to main content', async () => {
@@ -82,7 +117,6 @@ test('dashboard navigation keeps the shell mounted and scopes loading to main co
   assert.match(sidebarStyles, /border-color:\s*#c4c4c4/)
   assert.match(sidebarStyles, /color:\s*var\(--figma-grey\)/)
   assert.match(sidebarStyles, /\.figma-dashboard-nav-item\.is-active[\s\S]*filter:\s*brightness\(1\.08\)/)
-  assert.doesNotMatch(sidebarStyles, /transform:/)
 
   assert.match(styles, /\.puddle-main-transition\.is-loading \.puddle-main-transition-content/)
   assert.match(styles, /\.puddle-main-transition-loader/)
