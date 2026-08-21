@@ -4,7 +4,9 @@
 Validation is never weakened. The candidate hash ledger remains authoritative. Current
 objects are HEAD-checked, historical B2 versions are accepted only when both compressed
 byte length and SHA-256 exactly match the ledger, and restored current objects are
-HEAD-verified immediately after PUT. Independent restores use bounded parallelism.
+verified again after all parallel PUTs complete. Ledger destination keys are normalized
+before any mutation: exact duplicate records are de-duplicated, while conflicting records
+for the same key are a hard failure.
 """
 from __future__ import annotations
 
@@ -30,6 +32,53 @@ def is_missing(error: ClientError) -> bool:
     code = str(error.response.get("Error", {}).get("Code") or "")
     status = int(error.response.get("ResponseMetadata", {}).get("HTTPStatusCode") or 0)
     return code in {"404", "NoSuchKey", "NotFound"} or status == 404
+
+
+def record_identity(record: dict) -> tuple[str, int, str]:
+    key = str(record.get("key") or "")
+    if not key:
+        raise RuntimeError("Candidate hash ledger contains an artifact with no key.")
+    try:
+        expected_size = int(record["compressed_bytes"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise RuntimeError(f"Candidate hash ledger contains an invalid compressed byte length: {key}") from error
+    expected_sha = str(record.get("sha256") or "").lower()
+    if expected_size < 0:
+        raise RuntimeError(f"Candidate hash ledger contains a negative compressed byte length: {key}")
+    if len(expected_sha) != 64 or any(char not in "0123456789abcdef" for char in expected_sha):
+        raise RuntimeError(f"Candidate hash ledger contains an invalid SHA-256: {key}")
+    return key, expected_size, expected_sha
+
+
+def unique_ledger_records(records: list[dict]) -> tuple[list[dict], int, list[dict]]:
+    """Return one record per destination key and surface impossible ledger conflicts."""
+    unique: dict[str, dict] = {}
+    exact_duplicates = 0
+    conflicts: list[dict] = []
+
+    for record in records:
+        key, expected_size, expected_sha = record_identity(record)
+        existing = unique.get(key)
+        if existing is None:
+            unique[key] = record
+            continue
+
+        _, existing_size, existing_sha = record_identity(existing)
+        if (existing_size, existing_sha) == (expected_size, expected_sha):
+            exact_duplicates += 1
+            continue
+
+        conflicts.append(
+            {
+                "key": key,
+                "first_size": existing_size,
+                "first_sha": existing_sha,
+                "conflicting_size": expected_size,
+                "conflicting_sha": expected_sha,
+            }
+        )
+
+    return list(unique.values()), exact_duplicates, conflicts
 
 
 def main() -> None:
@@ -99,9 +148,32 @@ def main() -> None:
     if sha256_hex(hashes_body) != expected_hashes_sha:
         raise RuntimeError("Candidate hash ledger checksum does not match manifest.")
 
-    records = json.loads(brotli.decompress(hashes_body))
-    if len(records) != int(validation.get("artifact_count", -1)) or not records:
+    raw_records = json.loads(brotli.decompress(hashes_body))
+    if len(raw_records) != int(validation.get("artifact_count", -1)) or not raw_records:
         raise RuntimeError("Candidate hash ledger artifact count does not match manifest.")
+
+    records, exact_duplicates, conflicts = unique_ledger_records(raw_records)
+    print(
+        f"repair_ledger_records={len(raw_records)} unique_keys={len(records)} "
+        f"exact_duplicate_records={exact_duplicates} conflicting_keys={len(conflicts)}",
+        flush=True,
+    )
+    if conflicts:
+        for conflict in conflicts[:50]:
+            print(
+                "repair_ledger_conflict "
+                f"key={conflict['key']} "
+                f"first_size={conflict['first_size']} first_sha={conflict['first_sha']} "
+                f"conflicting_size={conflict['conflicting_size']} "
+                f"conflicting_sha={conflict['conflicting_sha']}",
+                flush=True,
+            )
+        if len(conflicts) > 50:
+            print(f"repair_ledger_conflicts_omitted={len(conflicts) - 50}", flush=True)
+        raise RuntimeError(
+            f"Candidate hash ledger contains {len(conflicts)} destination keys with conflicting "
+            "length/SHA-256 records; refusing to inspect or mutate B2."
+        )
 
     if args.key:
         requested_key = str(args.key)
@@ -111,9 +183,7 @@ def main() -> None:
         print(f"repair_target_key={requested_key}", flush=True)
 
     def inspect(record: dict) -> dict | None:
-        key = str(record["key"])
-        expected_size = int(record["compressed_bytes"])
-        expected_sha = str(record["sha256"]).lower()
+        key, expected_size, expected_sha = record_identity(record)
         try:
             head = s3.head_object(Bucket=source.bucket, Key=key)
         except ClientError as error:
@@ -136,6 +206,96 @@ def main() -> None:
             "actual_sha": actual_sha,
         }
 
+    def final_verify(repaired_records: list[dict]) -> None:
+        # Re-read the bytes of every artifact we restored. This catches same-size corruption
+        # or stale/misleading metadata, and is intentionally done after every PUT has finished.
+        deep_failures: list[dict] = []
+
+        def verify_repaired_body(record: dict) -> dict | None:
+            key, expected_size, expected_sha = record_identity(record)
+            body = get_bytes(key)
+            actual_size = len(body)
+            actual_sha = sha256_hex(body)
+            if (actual_size, actual_sha) == (expected_size, expected_sha):
+                return None
+            return {
+                "record": record,
+                "actual_size": actual_size,
+                "actual_sha": actual_sha,
+            }
+
+        deep_completed = 0
+        if repaired_records:
+            with ThreadPoolExecutor(max_workers=restore_workers) as pool:
+                futures = [pool.submit(verify_repaired_body, record) for record in repaired_records]
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result is not None:
+                        deep_failures.append(result)
+                    deep_completed += 1
+                    if deep_completed % 25 == 0 or deep_completed == len(repaired_records):
+                        print(
+                            f"repair_final_deep_checked={deep_completed}/{len(repaired_records)} "
+                            f"mismatches={len(deep_failures)}",
+                            flush=True,
+                        )
+        else:
+            print("repair_final_deep_checked=0/0 mismatches=0", flush=True)
+
+        if deep_failures:
+            deep_failures.sort(key=lambda item: str(item["record"]["key"]))
+            for item in deep_failures[:50]:
+                record = item["record"]
+                print(
+                    "repair_final_deep_mismatch "
+                    f"key={record['key']} expected_size={record['compressed_bytes']} "
+                    f"expected_sha={record['sha256']} actual_size={item['actual_size']} "
+                    f"actual_sha={item['actual_sha']}",
+                    flush=True,
+                )
+            raise RuntimeError(
+                f"{len(deep_failures)} restored artifacts changed or failed exact byte verification "
+                "after the parallel restore completed."
+            )
+
+        # HEAD every unique candidate key last, immediately before declaring repair success.
+        final_mismatches: list[dict] = []
+        final_completed = 0
+        with ThreadPoolExecutor(max_workers=head_workers) as pool:
+            futures = [pool.submit(inspect, record) for record in records]
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    final_mismatches.append(result)
+                final_completed += 1
+                if final_completed % 1000 == 0 or final_completed == len(records):
+                    print(
+                        f"repair_final_head_checked={final_completed}/{len(records)} "
+                        f"mismatches={len(final_mismatches)}",
+                        flush=True,
+                    )
+
+        if final_mismatches:
+            final_mismatches.sort(key=lambda item: str(item["record"]["key"]))
+            for item in final_mismatches[:50]:
+                record = item["record"]
+                print(
+                    "repair_final_head_mismatch "
+                    f"key={record['key']} reason={item['reason']} "
+                    f"expected_size={record['compressed_bytes']} expected_sha={record['sha256']} "
+                    f"actual_size={item['actual_size']} actual_sha={item['actual_sha'] or 'missing'}",
+                    flush=True,
+                )
+            raise RuntimeError(
+                f"{len(final_mismatches)} candidate artifacts do not match the ledger after repair; "
+                "refusing to report repair_complete."
+            )
+
+        print(
+            f"repair_final_verified_keys={len(records)} repaired_hashes={len(repaired_records)}",
+            flush=True,
+        )
+
     mismatches: list[dict] = []
     completed = 0
     with ThreadPoolExecutor(max_workers=head_workers) as pool:
@@ -155,6 +315,9 @@ def main() -> None:
     if not mismatches:
         print("repair_mismatches=0", flush=True)
         print("repair_dry_run_exact_matches=0/0 missing=0", flush=True)
+        if args.apply:
+            final_verify([])
+            print("repair_complete=0", flush=True)
         return
 
     print(f"repair_mismatches={len(mismatches)}", flush=True)
@@ -170,9 +333,7 @@ def main() -> None:
 
     def find_history_match(item: dict) -> dict:
         record = item["record"]
-        key = str(record["key"])
-        expected_size = int(record["compressed_bytes"])
-        expected_sha = str(record["sha256"]).lower()
+        key, expected_size, expected_sha = record_identity(record)
         versions_seen = 0
         size_candidates = 0
 
@@ -258,12 +419,10 @@ def main() -> None:
     if not args.apply:
         return
 
-    def restore(result: dict) -> tuple[str, str]:
+    def restore(result: dict) -> tuple[str, str, dict]:
         item = result["item"]
         record = item["record"]
-        key = str(record["key"])
-        expected_size = int(record["compressed_bytes"])
-        expected_sha = str(record["sha256"]).lower()
+        key, expected_size, expected_sha = record_identity(record)
         matching_version = str(result["matching_version"])
         matching_content_type = str(result["content_type"] or "application/json")
 
@@ -285,14 +444,16 @@ def main() -> None:
         actual_sha = str((head.get("Metadata") or {}).get("sha256", "")).lower()
         if (actual_size, actual_sha) != (expected_size, expected_sha):
             raise RuntimeError(f"Restored object did not verify after PUT: {key}")
-        return key, matching_version
+        return key, matching_version, record
 
     repaired = 0
+    repaired_records: list[dict] = []
     print(f"repair_restore_workers={restore_workers}", flush=True)
     with ThreadPoolExecutor(max_workers=restore_workers) as pool:
         futures = [pool.submit(restore, result) for result in matches]
         for future in as_completed(futures):
-            key, matching_version = future.result()
+            key, matching_version, record = future.result()
+            repaired_records.append(record)
             repaired += 1
             if repaired % 25 == 0 or repaired == len(matches):
                 print(
@@ -300,6 +461,8 @@ def main() -> None:
                     flush=True,
                 )
 
+    repaired_records.sort(key=lambda record: str(record["key"]))
+    final_verify(repaired_records)
     print(f"repair_complete={repaired}", flush=True)
 
 
