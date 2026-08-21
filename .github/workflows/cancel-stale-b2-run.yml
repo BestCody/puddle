@@ -18,7 +18,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          STALE_RUN_ID: '32457522847'
+          STALE_RUN_ID: '32459685963'
         shell: bash
         run: |
           set -euo pipefail
