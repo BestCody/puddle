@@ -163,7 +163,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$GLOBAL_LOCATION_SEARCH_WORK_DIR"
-          python scripts/global-data/build_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' &
+          python scripts/global-data/build_b2_search_index_exact_resume.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' &
           build_pid=$!
 
           heartbeat() {
