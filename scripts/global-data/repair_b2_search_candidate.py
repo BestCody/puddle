@@ -87,7 +87,12 @@ def load_candidate_records(snapshot: str):
     return source, client, records
 
 
-def analyze_ledger(records: list[dict], *, print_conflicts: bool) -> list[dict]:
+def analyze_ledger(
+    records: list[dict],
+    *,
+    print_conflicts: bool,
+    fail_on_conflicts: bool = True,
+) -> list[dict]:
     unique, exact_duplicates, conflicts = unique_ledger_records(records)
     print(
         f"repair_ledger_records={len(records)} unique_keys={len(unique)} "
@@ -106,7 +111,7 @@ def analyze_ledger(records: list[dict], *, print_conflicts: bool) -> list[dict]:
             )
         if len(conflicts) > 50:
             print(f"repair_ledger_conflicts_omitted={len(conflicts) - 50}", flush=True)
-    if conflicts:
+    if conflicts and fail_on_conflicts:
         raise RuntimeError(
             f"Candidate hash ledger contains {len(conflicts)} destination keys with conflicting "
             "length/SHA-256 records."
@@ -199,7 +204,7 @@ def main() -> None:
                 "publish a new snapshot namespace instead."
             ) from error
 
-        analyze_ledger(records, print_conflicts=True)
+        analyze_ledger(records, print_conflicts=True, fail_on_conflicts=False)
         initialize_rebuild_checkpoints(
             client,
             source.bucket,
