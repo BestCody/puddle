@@ -1,0 +1,8 @@
+/* Fast interaction feedback for the authenticated sidebar. */
+@media (hover: hover) and (pointer: fine) {
+  .figma-dashboard-nav-item:not(.is-active):hover {
+    background: #cfcfcf;
+    border-color: #b8b8b8;
+    color: #3f3f3f;
+  }
+}
