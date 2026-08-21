@@ -29,7 +29,7 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   assert.match(preloader, /image\.srcset = source\.srcSet/)
 })
 
-test('dashboard navigation warms routes efficiently and responds immediately to clicks', async () => {
+test('dashboard navigation warms routes efficiently and keeps exactly one selected item', async () => {
   const nav = await read('components/product-nav.js')
 
   assert.match(nav, /usePathname, useRouter/)
@@ -41,9 +41,14 @@ test('dashboard navigation warms routes efficiently and responds immediately to 
   assert.match(nav, /prefetchedRoutes\.has\(href\)/)
   assert.match(nav, /connection\?\.saveData/)
   assert.match(nav, /const \[pendingHref, setPendingHref\] = useState\(null\)/)
+  assert.match(nav, /const routeActiveHref = items\.find\(\(item\) => isActive\(pathname, item\.href\)\)\?\.href \?\? null/)
+  assert.match(nav, /const activeHref = pendingHref \?\? routeActiveHref/)
   assert.match(nav, /setPendingHref\(href\)[\s\S]*beginMainContentLoading\(\)/)
-  assert.match(nav, /pendingHref \? item\.href === pendingHref : isActive\(pathname, item\.href\)/)
-  assert.match(nav, /setPendingHref\(null\)/)
+  assert.match(nav, /const active = item\.href === activeHref/)
+  assert.match(nav, /setPendingHref\(\(current\) =>/)
+  assert.match(nav, /return isActive\(pathname, current\) \? null : current/)
+  assert.match(nav, /\{ href: '\/map', label: 'Discover'/)
+  assert.doesNotMatch(nav, /label: 'Feed'|activeLabel: 'Explore'/)
 })
 
 test('dashboard navigation keeps the shell mounted and scopes loading to main content', async () => {
@@ -73,8 +78,10 @@ test('dashboard navigation keeps the shell mounted and scopes loading to main co
   assert.match(nav, /onClick=\{\(event\) => startNavigation\(event, item\.href\)\}/)
 
   assert.match(sidebarStyles, /\.figma-dashboard-nav-item:not\(\.is-active\):hover/)
-  assert.match(sidebarStyles, /background:\s*#cfcfcf/)
-  assert.match(sidebarStyles, /border-color:\s*#b8b8b8/)
+  assert.match(sidebarStyles, /background:\s*#d7d7d7/)
+  assert.match(sidebarStyles, /border-color:\s*#c4c4c4/)
+  assert.match(sidebarStyles, /color:\s*var\(--figma-grey\)/)
+  assert.match(sidebarStyles, /\.figma-dashboard-nav-item\.is-active[\s\S]*filter:\s*brightness\(1\.08\)/)
   assert.doesNotMatch(sidebarStyles, /transform:/)
 
   assert.match(styles, /\.puddle-main-transition\.is-loading \.puddle-main-transition-content/)
