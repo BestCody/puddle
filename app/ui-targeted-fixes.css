@@ -116,11 +116,6 @@ button.figma-dashboard-settings-link {
   border-radius: 25px;
   background: #fff;
   box-shadow: 0 18px 60px rgba(0, 0, 0, .16);
-  opacity: 0;
-  transition: opacity 80ms ease;
-}
-
-.puddle-settings-overlay-frame.is-ready {
   opacity: 1;
 }
 
@@ -129,35 +124,35 @@ html.puddle-settings-overlay-open body {
   overflow: hidden;
 }
 
-/* The embedded Settings route reuses the existing settings UI without its own dashboard chrome. */
-html.puddle-settings-embedded,
-html.puddle-settings-embedded body {
+/* Embedded Settings route: show the existing Settings window only, without duplicate dashboard chrome. */
+html:has(.figma-settings-screen.is-embedded),
+body:has(.figma-settings-screen.is-embedded) {
   min-height: 100%;
   overflow: auto;
   background: #fff;
 }
 
-html.puddle-settings-embedded .figma-dashboard-sidebar,
-html.puddle-settings-embedded .figma-dashboard-mobile-nav,
-html.puddle-settings-embedded .figma-dashboard-account-menu,
-html.puddle-settings-embedded .puddle-settings-overlay {
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-sidebar,
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-mobile-nav,
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-account-menu,
+body:has(.figma-settings-screen.is-embedded) .puddle-settings-overlay {
   display: none !important;
 }
 
-html.puddle-settings-embedded .figma-dashboard-stage {
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-stage {
   min-height: 100%;
   margin-left: 0 !important;
   background: #fff;
 }
 
-html.puddle-settings-embedded .figma-dashboard-main,
-html.puddle-settings-embedded .figma-settings-screen {
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-main,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-screen.is-embedded {
   min-height: 100%;
   padding: 0 !important;
   background: #fff;
 }
 
-html.puddle-settings-embedded .figma-settings-window {
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window {
   top: 0 !important;
   left: 0 !important;
   width: 100% !important;
@@ -189,7 +184,6 @@ body:has(.figma-swipe-screen) {
 
 @media (prefers-reduced-motion: reduce) {
   .puddle-settings-overlay,
-  .puddle-settings-overlay-frame,
   .figma-instant-segment-highlight,
   .figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
     transition: none !important;
