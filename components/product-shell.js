@@ -3,13 +3,15 @@ import { ProductNav } from './product-nav'
 import { FigmaDashboardSidebar } from './figma-dashboard-sidebar'
 import { PassNotificationAlerts } from './pass-notification-alerts'
 import { MainContentTransition } from './main-content-transition'
+import { SettingsOverlay } from './settings-overlay'
+import { SettingsTrigger } from './settings-trigger'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
 import { SERVER_LATENCY_BUDGET_MS, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
 
 const BUILTIN_PRIVILEGED_ROLES = new Set(['admin', 'moderator', 'support', 'finance'])
 
-export async function ProductShell({ user, profile, children }) {
+export async function ProductShell({ user, profile, children, settingsOverlay = true }) {
   let supabase = null
   async function database() {
     if (!supabase) supabase = await createClient()
@@ -80,7 +82,7 @@ export async function ProductShell({ user, profile, children }) {
           <Link href="/profile">Profile</Link>
           <Link href="/membership">Pass</Link>
           <Link href="/account?section=notifications&returnTo=%2Fdiscover">Notifications{unreadNotifications ? ` (${unreadNotifications})` : ''}</Link>
-          <Link href="/account?returnTo=%2Fdiscover">Settings</Link>
+          <SettingsTrigger>Settings</SettingsTrigger>
           {showAdmin ? <Link href="/admin">Admin</Link> : null}
           <form action={signOut}><button type="submit">Sign out</button></form>
         </div>
@@ -89,5 +91,6 @@ export async function ProductShell({ user, profile, children }) {
     </div>
 
     <ProductNav mobile avatarUrl={avatarUrl} />
+    {settingsOverlay ? <SettingsOverlay /> : null}
   </div>
 }
