@@ -5,6 +5,7 @@ import { setAppearanceThemeFromLogo } from '@/app/account/actions'
 
 const PENDING_KEY = 'puddle:appearance-pending'
 const EXPLICIT_THEMES = new Set(['light', 'dark'])
+const buttonStyle = { width: 56, height: 56, display: 'grid', placeItems: 'center', padding: 0, border: 0, background: 'transparent', cursor: 'pointer' }
 
 function resolveAppearance(value) {
   if (value === 'dark') return 'dark'
@@ -63,6 +64,7 @@ export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
     ref={buttonRef}
     type="button"
     className="puddle-logo puddle-logo-theme-toggle"
+    style={buttonStyle}
     aria-label="Toggle light and dark mode"
     title="Toggle light and dark mode"
     onClick={toggleAppearance}
