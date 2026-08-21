@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { beginMainContentLoading } from './main-content-transition'
@@ -51,6 +51,11 @@ function shouldAvoidBackgroundPrefetch() {
 function NavItems({ mobile = false, avatarUrl = null }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [pendingHref, setPendingHref] = useState(null)
+
+  useEffect(() => {
+    setPendingHref(null)
+  }, [pathname])
 
   function warmRoute(href) {
     if (isActive(pathname, href) || prefetchedRoutes.has(href)) return
@@ -108,11 +113,12 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       event.altKey ||
       isActive(pathname, href)
     ) return
+    setPendingHref(href)
     beginMainContentLoading()
   }
 
   return items.map((item) => {
-    const active = isActive(pathname, item.href)
+    const active = pendingHref ? item.href === pendingHref : isActive(pathname, item.href)
     const visibleLabel = active && item.activeLabel ? item.activeLabel : item.label
     return <Link
       className={`figma-dashboard-nav-item tone-${item.tone}${active ? ' is-active' : ''}`}
