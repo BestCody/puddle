@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
+import { InstantSegment } from '@/components/instant-segment'
 import { LocationMap } from '@/components/location-map'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
@@ -106,10 +107,17 @@ function FeedPost({ post }) {
 function FeedTop({ view, query }) {
   return <header className={styles.header} data-testid="feed-header">
     <Link className={styles.back} href="/discover" aria-label="Back to Swipe">‹</Link>
-    <nav className={styles.tabs} aria-label="Discover or map" data-testid="feed-tabs">
-      <Link className={`${styles.tab} ${view === 'feed' ? styles.tabActive : ''}`} href="/map">Discover</Link>
-      <Link className={`${styles.tab} ${view === 'map' ? styles.tabActive : ''}`} href="/map?view=map">Map</Link>
-    </nav>
+    <InstantSegment
+      className={styles.tabs}
+      tone="yellow"
+      activeValue={view}
+      ariaLabel="Feed or map"
+      testId="feed-tabs"
+      items={[
+        { value: 'feed', label: 'Feed', href: '/map' },
+        { value: 'map', label: 'Map', href: '/map?view=map' }
+      ]}
+    />
     {view === 'feed' ? <form className={styles.search} action="/map" method="get" data-testid="feed-search">
       <label><input aria-label="Search puddle" type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
       <button type="submit" aria-label="Search">⌕</button>
