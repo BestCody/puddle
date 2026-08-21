@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
+import { InstantSegment } from '@/components/instant-segment'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getMembershipSnapshot } from '@/lib/app/membership-data'
 import { openMembershipPortal, startTinderCheckout } from './actions'
@@ -17,10 +18,16 @@ function periodLabel(value) {
 }
 
 function PassTabs({ view }) {
-  return <nav className="figma-dashboard-segment figma-pass-tabs" aria-label="Pass sections">
-    <Link className={view === 'plans' ? 'is-active' : ''} href="/membership">Plans</Link>
-    <Link className={view === 'manage' ? 'is-active' : ''} href="/membership?view=manage">Manage</Link>
-  </nav>
+  return <InstantSegment
+    className="figma-pass-tabs"
+    tone="pink"
+    activeValue={view}
+    ariaLabel="Pass sections"
+    items={[
+      { value: 'plans', label: 'Plans', href: '/membership' },
+      { value: 'manage', label: 'Manage', href: '/membership?view=manage' }
+    ]}
+  />
 }
 
 function PlansView({ snapshot }) {
@@ -71,7 +78,7 @@ function ManageView({ snapshot }) {
       {snapshot.active ? <>
         <strong>Transaction History</strong>
         <div className="figma-pass-history-row"><span>{periodEnd || 'Current period'}</span><span><b>Active</b> Puddle Pass</span></div>
-        <form action={openMembershipPortal}><button type="submit">See All</button></form>
+        <form action={openMembershipPortal}><button>See All</button></form>
       </> : <p>No transaction history</p>}
     </article>
   </section>
