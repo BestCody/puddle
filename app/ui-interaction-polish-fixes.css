@@ -1,0 +1,72 @@
+/* Edge-case corrections kept separate so the final responsive layer stays easy to audit. */
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-main {
+  overflow: visible !important;
+}
+
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .figma-settings-window,
+  .figma-settings-window.is-expanded {
+    grid-template-rows: auto minmax(0, 1fr) !important;
+  }
+
+  .figma-settings-detail,
+  .figma-settings-window.is-expanded .figma-settings-detail,
+  body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* Keep the new composer readable when the persisted dashboard appearance is dark. */
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-create-trigger,
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-create-form,
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-create-close,
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-create-submit,
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-create-place select {
+  background-color: #202020;
+  border-color: #3d3d3d;
+  color: #f4f4f4;
+}
+
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-create-title input,
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-create-description textarea {
+  color: #f4f4f4;
+}
+
+@media (prefers-color-scheme: dark) {
+  .figma-dashboard-shell[data-appearance='system'] .puddle-discover-create-trigger,
+  .figma-dashboard-shell[data-appearance='system'] .puddle-discover-create-form,
+  .figma-dashboard-shell[data-appearance='system'] .puddle-discover-create-close,
+  .figma-dashboard-shell[data-appearance='system'] .puddle-discover-create-submit,
+  .figma-dashboard-shell[data-appearance='system'] .puddle-discover-create-place select {
+    background-color: #202020;
+    border-color: #3d3d3d;
+    color: #f4f4f4;
+  }
+
+  .figma-dashboard-shell[data-appearance='system'] .puddle-discover-create-title input,
+  .figma-dashboard-shell[data-appearance='system'] .puddle-discover-create-description textarea {
+    color: #f4f4f4;
+  }
+}
