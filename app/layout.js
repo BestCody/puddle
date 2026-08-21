@@ -53,7 +53,10 @@ import './discover-controls.css'
 import './sidebar-interactions.css'
 import './ui-targeted-fixes.css'
 import './dark-mode.css'
+import './ui-interaction-polish.css'
+import './ui-interaction-polish-fixes.css'
 import { SegmentInteractionBridge } from '@/components/segment-interaction-bridge'
+import { SettingsScrollBridge } from '@/components/settings-scroll-bridge'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
@@ -83,6 +86,7 @@ export default function RootLayout({ children }) {
     <body>
       {children}
       <SegmentInteractionBridge />
+      <SettingsScrollBridge />
       <ServiceWorkerCleanup />
       {vercelTelemetryEnabled ? <><SpeedInsights /><Analytics /></> : null}
     </body>
