@@ -257,6 +257,7 @@ FROM loc l
 LEFT JOIN slug_collision_winners sc ON sc.slug=cast(l.slug AS VARCHAR)
 LEFT JOIN photos p ON p.location_id=l.id
 LEFT JOIN google g ON g.location_id=l.id
+ORDER BY cast(l.id AS VARCHAR)
 """
 
 
