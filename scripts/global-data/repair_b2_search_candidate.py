@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -180,7 +181,30 @@ def rebuild_candidate(snapshot: str) -> None:
         f"snapshot={snapshot} reason=conflicting_ledger mode=deterministic_checkpointed_full_rebuild",
         flush=True,
     )
-    subprocess.run(command, check=True)
+
+    child = subprocess.Popen(command)
+    previous_handlers: dict[int, object] = {}
+
+    def forward_cancel(signum, _frame) -> None:
+        if child.poll() is None:
+            print(
+                f"repair_rebuild_forward_cancel signal={signum} pid={child.pid}",
+                flush=True,
+            )
+            child.send_signal(signum)
+
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        previous_handlers[signum] = signal.getsignal(signum)
+        signal.signal(signum, forward_cancel)
+
+    try:
+        return_code = child.wait()
+    finally:
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
+
+    if return_code != 0:
+        raise subprocess.CalledProcessError(return_code, command)
     print(f"repair_rebuild_complete snapshot={snapshot}", flush=True)
 
 
