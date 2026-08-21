@@ -1,0 +1,72 @@
+"use client"
+
+import { useLayoutEffect, useRef, useTransition } from 'react'
+import { setAppearanceThemeFromLogo } from '@/app/account/actions'
+
+const PENDING_KEY = 'puddle:appearance-pending'
+const EXPLICIT_THEMES = new Set(['light', 'dark'])
+
+function resolveAppearance(value) {
+  if (value === 'dark') return 'dark'
+  if (value === 'system' && typeof window !== 'undefined') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+  return 'light'
+}
+
+function applyAppearance(shell, appearance) {
+  if (!shell) return
+  const resolved = resolveAppearance(appearance)
+  shell.dataset.appearance = appearance
+  shell.dataset.resolvedAppearance = resolved
+  shell.classList.toggle('is-dark', resolved === 'dark')
+}
+
+export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
+  const buttonRef = useRef(null)
+  const [, startTransition] = useTransition()
+
+  useLayoutEffect(() => {
+    const shell = buttonRef.current?.closest('.figma-dashboard-shell')
+    if (!shell) return undefined
+
+    const pending = window.sessionStorage.getItem(PENDING_KEY)
+    const appearance = EXPLICIT_THEMES.has(pending) ? pending : initialAppearance
+    applyAppearance(shell, appearance)
+
+    if (appearance !== 'system') return undefined
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const syncSystemAppearance = () => applyAppearance(shell, 'system')
+    media.addEventListener?.('change', syncSystemAppearance)
+    return () => media.removeEventListener?.('change', syncSystemAppearance)
+  }, [initialAppearance])
+
+  function toggleAppearance() {
+    const shell = buttonRef.current?.closest('.figma-dashboard-shell')
+    if (!shell) return
+
+    const previousAppearance = shell.dataset.appearance || initialAppearance
+    const currentResolved = shell.dataset.resolvedAppearance || resolveAppearance(previousAppearance)
+    const nextAppearance = currentResolved === 'dark' ? 'light' : 'dark'
+
+    applyAppearance(shell, nextAppearance)
+    window.sessionStorage.setItem(PENDING_KEY, nextAppearance)
+
+    startTransition(async () => {
+      const result = await setAppearanceThemeFromLogo(nextAppearance)
+      window.sessionStorage.removeItem(PENDING_KEY)
+      if (!result?.ok) applyAppearance(shell, previousAppearance)
+    })
+  }
+
+  return <button
+    ref={buttonRef}
+    type="button"
+    className="puddle-logo puddle-logo-theme-toggle"
+    aria-label="Toggle light and dark mode"
+    title="Toggle light and dark mode"
+    onClick={toggleAppearance}
+  >
+    <img src="/puddle-mark-outline.svg" alt="" width="44" height="44" />
+  </button>
+}
