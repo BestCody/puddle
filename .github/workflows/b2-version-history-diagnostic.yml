@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
 
+# Temporary PR-only diagnostic. It performs no B2 writes.
 jobs:
   inspect-failed-b2-object:
     if: github.head_ref == 'b2-candidate-consistency-recovery-v2'
