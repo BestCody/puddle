@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ProductNav } from './product-nav'
 import { FigmaDashboardSidebar } from './figma-dashboard-sidebar'
 import { PassNotificationAlerts } from './pass-notification-alerts'
+import { MainContentTransition } from './main-content-transition'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
 import { SERVER_LATENCY_BUDGET_MS, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
@@ -84,7 +85,7 @@ export async function ProductShell({ user, profile, children }) {
           <form action={signOut}><button type="submit">Sign out</button></form>
         </div>
       </details>
-      <main className="figma-dashboard-main">{children}</main>
+      <main className="figma-dashboard-main"><MainContentTransition>{children}</MainContentTransition></main>
     </div>
 
     <ProductNav mobile avatarUrl={avatarUrl} />
