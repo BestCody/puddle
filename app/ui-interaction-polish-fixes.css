@@ -22,6 +22,43 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded 
   margin: 0 !important;
 }
 
+/* Settings must always be one continuous vertical form. A selected nav item only scrolls to a section; it never hides sibling sections. */
+.figma-settings-window .figma-settings-detail,
+.figma-settings-window.is-expanded .figma-settings-detail {
+  display: block !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.figma-settings-window .figma-settings-section,
+.figma-settings-window.is-expanded .figma-settings-section,
+.figma-settings-window #profile,
+.figma-settings-window #security,
+.figma-settings-window #appearance,
+.figma-settings-window #notifications,
+.figma-settings-window #sessions,
+.figma-settings-window #billing,
+.figma-settings-window #account {
+  display: block !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  box-sizing: border-box;
+}
+
+.figma-settings-window .figma-settings-section {
+  padding: 42px 44px 42px 61px !important;
+}
+
+.figma-settings-window .figma-settings-section:first-of-type {
+  padding-top: 112px !important;
+}
+
+.figma-settings-window .figma-settings-section + .figma-settings-section {
+  border-top: 1px solid #ededed;
+}
+
 @media (max-width: 760px) {
   .figma-settings-window,
   .figma-settings-window.is-expanded {
@@ -35,6 +72,14 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded 
     min-height: 0 !important;
     max-height: 100% !important;
     overflow-y: auto !important;
+  }
+
+  .figma-settings-window .figma-settings-section {
+    padding: 30px 20px !important;
+  }
+
+  .figma-settings-window .figma-settings-section:first-of-type {
+    padding-top: 30px !important;
   }
 }
 
