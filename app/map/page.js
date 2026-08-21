@@ -10,7 +10,7 @@ import styles from './MapFeed.module.css'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
-  title: 'Feed and map',
+  title: 'Discover and map',
   description: 'Browse Puddle posts and explore Puddle locations on the map.'
 }
 
@@ -106,8 +106,8 @@ function FeedPost({ post }) {
 function FeedTop({ view, query }) {
   return <header className={styles.header} data-testid="feed-header">
     <Link className={styles.back} href="/discover" aria-label="Back to Swipe">‹</Link>
-    <nav className={styles.tabs} aria-label="Feed or map" data-testid="feed-tabs">
-      <Link className={`${styles.tab} ${view === 'feed' ? styles.tabActive : ''}`} href="/map">Feed</Link>
+    <nav className={styles.tabs} aria-label="Discover or map" data-testid="feed-tabs">
+      <Link className={`${styles.tab} ${view === 'feed' ? styles.tabActive : ''}`} href="/map">Discover</Link>
       <Link className={`${styles.tab} ${view === 'map' ? styles.tabActive : ''}`} href="/map?view=map">Map</Link>
     </nav>
     {view === 'feed' ? <form className={styles.search} action="/map" method="get" data-testid="feed-search">
@@ -157,12 +157,12 @@ export default async function LocationMapPage({ searchParams }) {
         <FeedTop view={view} query={params?.q} />
 
         {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} /> : <>
-          <section className={styles.stream} aria-label="Puddle feed" data-testid="feed-stream">
+          <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
             {feed.items.length ? feed.items.map((post) => <FeedPost post={post} key={post.id} />) : <div className={styles.empty}>
               <strong>{query ? 'No puddles match that search on this page.' : 'No one has posted a puddle yet.'}</strong>
               {moreHref ? <Link href={moreHref}>Search older puddles</Link> : <Link href="/create/post">Create the first one</Link>}
             </div>}
-            {moreHref && feed.items.length ? <nav aria-label="Feed pagination"><Link href={moreHref}>More puddles</Link></nav> : null}
+            {moreHref && feed.items.length ? <nav aria-label="Discover pagination"><Link href={moreHref}>More puddles</Link></nav> : null}
           </section>
 
           <Link className={styles.composer} href="/create/post" data-testid="feed-composer">
