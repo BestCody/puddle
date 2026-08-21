@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { beginMainContentLoading } from './main-content-transition'
 
 function NavIcon({ type, avatarUrl }) {
   if (type === 'swipe') return <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="6" width="12" height="20" rx="3"/><path d="M13 10h6M6 11l-4 5 4 5M26 11l4 5-4 5"/></svg>
@@ -45,6 +46,19 @@ function NavItems({ mobile = false, avatarUrl = null }) {
     })
   }
 
+  function startNavigation(event, href) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      isActive(pathname, href)
+    ) return
+    beginMainContentLoading()
+  }
+
   return items.map((item) => {
     const active = isActive(pathname, item.href)
     const visibleLabel = active && item.activeLabel ? item.activeLabel : item.label
@@ -55,6 +69,7 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       onMouseEnter={() => warmRoute(item.href)}
       onFocus={() => warmRoute(item.href)}
       onPointerDown={() => warmRoute(item.href)}
+      onClick={(event) => startNavigation(event, item.href)}
       aria-current={active ? 'page' : undefined}
       aria-label={item.label}
       key={item.href}
