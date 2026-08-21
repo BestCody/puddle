@@ -41,24 +41,30 @@ test('dashboard navigation prefetches only after user intent', async () => {
   assert.match(nav, /prefetchedRoutes\.has\(href\)/)
 })
 
-test('all primary dashboard destinations expose route-specific loading skeletons', async () => {
-  const variants = ['discover', 'map', 'plans', 'matches', 'membership', 'profile']
-  const [component, styles, layout, ...loaders] = await Promise.all([
-    read('components/product-route-loading.js'),
+test('dashboard navigation keeps the shell mounted and scopes loading to main content', async () => {
+  const [transition, nav, shell, styles, layout] = await Promise.all([
+    read('components/main-content-transition.js'),
+    read('components/product-nav.js'),
+    read('components/product-shell.js'),
     read('app/performance-loading.css'),
-    read('app/layout.js'),
-    ...variants.map((variant) => read(`app/${variant}/loading.js`))
+    read('app/layout.js')
   ])
 
   assert.match(layout, /import '\.\/performance-loading\.css'/)
-  assert.match(component, /product-route-loading-shell/)
-  assert.match(styles, /\.product-route-loading-discover/)
-  assert.match(styles, /\.product-route-loading-map/)
-  assert.match(styles, /\.product-route-loading-list/)
-  assert.match(styles, /\.product-route-loading-membership/)
-  assert.match(styles, /\.product-route-loading-profile/)
+  assert.match(shell, /import \{ MainContentTransition \} from '\.\/main-content-transition'/)
+  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{children\}<\/MainContentTransition><\/main>/)
 
-  variants.forEach((variant, index) => {
-    assert.match(loaders[index], new RegExp(`variant=\\"${variant}\\"`))
-  })
+  assert.match(transition, /export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'/)
+  assert.match(transition, /window\.dispatchEvent\(new Event\(MAIN_CONTENT_LOADING_EVENT\)\)/)
+  assert.match(transition, /setLoading\(false\)/)
+  assert.match(transition, /puddle-main-transition-loader/)
+  assert.match(transition, /puddle-main-spinner/)
+
+  assert.match(nav, /beginMainContentLoading\(\)/)
+  assert.match(nav, /onClick=\{\(event\) => startNavigation\(event, item\.href\)\}/)
+
+  assert.match(styles, /\.puddle-main-transition\.is-loading \.puddle-main-transition-content/)
+  assert.match(styles, /\.puddle-main-transition-loader/)
+  assert.match(styles, /\.puddle-main-spinner/)
+  assert.doesNotMatch(styles, /\.product-route-loading-/)
 })
