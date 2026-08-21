@@ -49,7 +49,8 @@ const nextConfig = {
       { source: '/landing.css', headers: landingAssetCache },
       { source: '/app.js', headers: landingAssetCache },
       { source: '/:path*', headers: securityHeaders },
-      { source: '/landing-demo/:path*', headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }] }
+      { source: '/landing-demo/:path*', headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }] },
+      { source: '/account', headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }] }
     ]
   },
   async redirects() { return [{ source: '/index.html', destination: '/', permanent: true }] },
