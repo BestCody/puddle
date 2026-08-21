@@ -1,0 +1,346 @@
+/* Final responsive stability layer for the authenticated dashboard. Keep component visuals intact and only correct layout/theme mechanics. */
+
+/* The stage always owns exactly the viewport space left by the sidebar. */
+.figma-dashboard-stage {
+  width: calc(100% - var(--figma-shell-sidebar));
+  max-width: calc(100% - var(--figma-shell-sidebar));
+  min-width: 0;
+  box-sizing: border-box;
+  transition: margin-left 220ms cubic-bezier(.2,.8,.2,1), width 220ms cubic-bezier(.2,.8,.2,1), max-width 220ms cubic-bezier(.2,.8,.2,1);
+}
+
+.figma-dashboard-main,
+.figma-dashboard-main > *,
+.figma-dashboard-main > * > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.figma-dashboard-sidebar {
+  transition: width 220ms cubic-bezier(.2,.8,.2,1), border-color 140ms ease, background-color 140ms ease;
+}
+
+.figma-dashboard-sidebar.is-resizing,
+.figma-dashboard-sidebar.is-resizing ~ .figma-dashboard-stage {
+  transition: none !important;
+}
+
+/* Sidebar icons and logo keep their intended physical size while only the rail changes width. */
+.figma-dashboard-sidebar-logo,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+  width: 56px !important;
+  height: 56px !important;
+}
+
+.figma-dashboard-sidebar-logo .puddle-logo,
+.figma-dashboard-sidebar-logo .puddle-logo-theme-toggle,
+.figma-dashboard-sidebar-logo a,
+.figma-dashboard-sidebar-logo img,
+.figma-dashboard-sidebar-logo svg,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo-theme-toggle,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+}
+
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+  left: 23px !important;
+}
+
+.figma-dashboard-nav-icon,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-nav-icon {
+  width: 29px !important;
+  height: 29px !important;
+  flex: 0 0 29px !important;
+}
+
+.figma-dashboard-nav-icon svg,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-nav-icon svg {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+.figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
+  left: 21px !important;
+  width: 60px !important;
+}
+
+.figma-dashboard-settings-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.figma-dashboard-settings-icon {
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  display: none;
+  place-items: center;
+}
+
+.figma-dashboard-settings-icon svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
+  left: 21px !important;
+  bottom: 36px;
+  width: 60px;
+  height: 56px;
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border-radius: 20px;
+  text-align: center;
+}
+
+.figma-dashboard-sidebar.is-concise .figma-dashboard-settings-icon { display: grid; }
+.figma-dashboard-sidebar.is-concise .figma-dashboard-settings-label { display: none; }
+
+/* Swipe has one intentional fixed-size card experience. Center the card group without stretching it. */
+.figma-swipe-screen,
+.figma-swipe-workspace {
+  width: 100%;
+  min-height: 100dvh !important;
+  height: 100dvh;
+  max-width: 100%;
+}
+
+.figma-swipe-card-stage {
+  top: 50% !important;
+  left: 50% !important;
+  width: min(400px, calc(100% - 96px)) !important;
+  height: min(560px, calc(100dvh - 210px)) !important;
+  max-width: 400px;
+  max-height: 560px;
+  transform: translate(-50%, -56%) !important;
+}
+
+.figma-swipe-card,
+.minimal-swipe-card.figma-swipe-card {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.figma-swipe-actions,
+.minimal-swipe-actions.figma-swipe-actions {
+  top: calc(50% + min(280px, calc((100dvh - 210px) / 2)) - 10px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+.figma-swipe-status {
+  top: calc(50% + min(280px, calc((100dvh - 210px) / 2)) + 88px) !important;
+}
+
+/* Filters is the only control in the Swipe header area. */
+.figma-swipe-filter-trigger {
+  top: 36px;
+  right: clamp(18px, 3vw, 41px);
+  width: auto !important;
+  min-width: 84px;
+  height: 44px;
+  padding: 0 18px;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  border: 2px solid #dedede;
+  border-radius: 999px;
+  background: #fff;
+  color: #666;
+  box-shadow: var(--figma-card-shadow);
+  font: 800 14px/1 Manrope, Inter, sans-serif;
+  cursor: pointer;
+}
+
+/* Settings remains a single scroll surface, with clearer separation between major sections. */
+.figma-settings-window .figma-settings-section + .figma-settings-section,
+.figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
+  padding-top: 72px !important;
+  margin-top: 18px;
+  border-top: 1px solid #e7e7e7;
+}
+
+.figma-settings-window .figma-settings-section + .figma-settings-section header,
+.figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section header {
+  margin-bottom: 42px;
+}
+
+/* Dark mode: neutral controls must never retain stale light surfaces. */
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-swipe-filter-trigger,
+  .puddle-discover-create-trigger,
+  .puddle-discover-create-form,
+  .puddle-discover-create-close,
+  .puddle-discover-create-submit,
+  .puddle-discover-create-place select,
+  a[href="/create/post"],
+  button[data-testid="write-post"]
+) {
+  background-color: #202428 !important;
+  border-color: #3d4349 !important;
+  color: #eef1f3 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-settings-window .figma-settings-section + .figma-settings-section,
+  .figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section
+) {
+  border-top-color: #353a40 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-settings-local-nav a[data-active="true"] {
+  color: #f2f4f5 !important;
+}
+
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
+  .figma-dashboard-account-menu .profile-menu-panel,
+  .figma-notification-list article,
+  .figma-notification-preferences,
+  .figma-settings-row input,
+  .figma-settings-row textarea,
+  .figma-settings-row select
+) {
+  box-shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .figma-dashboard-shell[data-appearance="system"] :is(
+    .figma-swipe-filter-trigger,
+    .puddle-discover-create-trigger,
+    .puddle-discover-create-form,
+    .puddle-discover-create-close,
+    .puddle-discover-create-submit,
+    .puddle-discover-create-place select,
+    a[href="/create/post"],
+    button[data-testid="write-post"]
+  ) {
+    background-color: #202428 !important;
+    border-color: #3d4349 !important;
+    color: #eef1f3 !important;
+  }
+}
+
+/* The auto-condensed desktop state uses the same geometry as the user-condensed state. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  .figma-dashboard-stage {
+    margin-left: 102px !important;
+    width: calc(100% - 102px) !important;
+    max-width: calc(100% - 102px) !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo {
+    left: 23px !important;
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo-theme-toggle,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo svg {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav {
+    left: 21px !important;
+    width: 60px !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-link {
+    left: 21px !important;
+    width: 60px;
+    height: 56px;
+    display: grid !important;
+    place-items: center;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-icon { display: grid !important; }
+  .figma-dashboard-sidebar .figma-dashboard-settings-label { display: none !important; }
+}
+
+@media (max-width: 760px) {
+  .figma-dashboard-stage {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .figma-swipe-screen,
+  .figma-swipe-workspace {
+    min-height: calc(100dvh - 104px) !important;
+    height: calc(100dvh - 104px);
+    overflow: hidden !important;
+  }
+
+  .figma-swipe-card-stage {
+    top: 50% !important;
+    width: min(325px, calc(100vw - 44px)) !important;
+    height: min(544px, calc(100dvh - 260px)) !important;
+    transform: translate(-50%, -54%) !important;
+  }
+
+  .figma-swipe-actions,
+  .minimal-swipe-actions.figma-swipe-actions {
+    top: auto !important;
+    bottom: 18px !important;
+  }
+
+  .figma-swipe-status {
+    top: auto !important;
+    bottom: 2px !important;
+  }
+
+  .figma-swipe-filter-trigger {
+    top: 24px;
+    right: 16px;
+    min-width: 76px;
+    height: 40px;
+    padding-inline: 15px;
+  }
+
+  .figma-settings-window .figma-settings-section + .figma-settings-section,
+  .figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
+    padding-top: 48px !important;
+    margin-top: 12px;
+  }
+}
+
+@media (max-height: 700px) and (min-width: 761px) {
+  .figma-swipe-card-stage {
+    height: min(510px, calc(100dvh - 170px)) !important;
+    width: min(364px, calc(100% - 96px)) !important;
+  }
+
+  .figma-swipe-actions,
+  .minimal-swipe-actions.figma-swipe-actions {
+    top: auto !important;
+    bottom: 18px !important;
+  }
+
+  .figma-swipe-status {
+    top: auto !important;
+    bottom: 2px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figma-dashboard-sidebar,
+  .figma-dashboard-stage {
+    transition: none !important;
+  }
+}
