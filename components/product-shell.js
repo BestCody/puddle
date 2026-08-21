@@ -72,7 +72,7 @@ export async function ProductShell({ user, profile, children, settingsOverlay = 
 
   return <div className="figma-dashboard-shell" data-appearance={appearance}>
     <PassNotificationAlerts enabled={passActive} profileId={user.id} />
-    <FigmaDashboardSidebar avatarUrl={avatarUrl} />
+    <FigmaDashboardSidebar avatarUrl={avatarUrl} initialAppearance={appearance} />
 
     <div className="figma-dashboard-stage">
       <details className="figma-dashboard-account-menu">
