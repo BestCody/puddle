@@ -125,7 +125,7 @@ jobs:
           print(f'source_manifest_key={manifest_key}')
           PY
       - id: candidate
-        name: Reuse completed validated search candidate when present
+        name: Reuse completed search candidate when present
         shell: bash
         run: |
           set -euo pipefail
@@ -144,9 +144,10 @@ jobs:
               region_name=os.environ.get('B2_DATA_S3_REGION') or 'us-east-005',
               config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
           )
+          # manifest + candidate pointer are written only after the expensive builder finishes.
+          # A missing validation report means "resume at validation", not "rebuild 30M rows".
           required = [
               f'{data_prefix}/search/schema=v1/snapshot={snapshot}/manifest.json',
-              f'{data_prefix}/search/schema=v1/snapshot={snapshot}/validation/report.json',
               f'{data_prefix}/search/candidates/{snapshot}.json',
           ]
           exists = True
@@ -217,6 +218,8 @@ jobs:
           GLOBAL_LOCATION_SHARD_HARD_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_CANDIDATES || '20000' }}
           GLOBAL_LOCATION_SHARD_TARGET_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_BYTES || '2097152' }}
           GLOBAL_LOCATION_SHARD_HARD_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_BYTES || '2097152' }}
+      - name: Repair candidate from exact historical B2 versions
+        run: python scripts/global-data/repair_b2_search_candidate.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --apply
       - name: Assert generated search count matches canonical source manifest
         shell: bash
         run: |
@@ -291,6 +294,13 @@ jobs:
             radius: radius.diagnostics
           }, null, 2))
           NODE
+      - name: Cleanup migration checkpoints after full gate success
+        shell: bash
+        run: |
+          set -uo pipefail
+          if ! python scripts/global-data/cleanup_b2_search_checkpoints.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'; then
+            echo '::warning::B2 migration succeeded but checkpoint cleanup failed; retaining checkpoints is safe.'
+          fi
       - name: Publish migration final status
         if: always()
         env:
