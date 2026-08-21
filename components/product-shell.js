@@ -1,8 +1,11 @@
+import Link from 'next/link'
 import { ProductNav } from './product-nav'
 import { FigmaDashboardSidebar } from './figma-dashboard-sidebar'
 import { PassNotificationAlerts } from './pass-notification-alerts'
 import { MainContentTransition } from './main-content-transition'
 import { SettingsOverlay } from './settings-overlay'
+import { SettingsTrigger } from './settings-trigger'
+import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
 import { SERVER_LATENCY_BUDGET_MS, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
 
@@ -72,6 +75,18 @@ export async function ProductShell({ user, profile, children, settingsOverlay = 
     <FigmaDashboardSidebar avatarUrl={avatarUrl} initialAppearance={appearance} />
 
     <div className="figma-dashboard-stage">
+      <details className="figma-dashboard-account-menu">
+        <summary aria-label="Open profile menu"><span aria-hidden="true"><i /><i /><i /></span></summary>
+        <div className="profile-menu-panel">
+          <strong>{profile?.display_name || 'Puddle person'}</strong>
+          <Link href="/profile">Profile</Link>
+          <Link href="/membership">Pass</Link>
+          <Link href="/account?section=notifications&returnTo=%2Fdiscover">Notifications{unreadNotifications ? ` (${unreadNotifications})` : ''}</Link>
+          <SettingsTrigger>Settings</SettingsTrigger>
+          {showAdmin ? <Link href="/admin">Admin</Link> : null}
+          <form action={signOut}><button type="submit">Sign out</button></form>
+        </div>
+      </details>
       <main className="figma-dashboard-main"><MainContentTransition>{children}</MainContentTransition></main>
     </div>
 
