@@ -20,8 +20,9 @@ function safeReturnTo(value) {
   return dashboardReturnPaths.has(path) ? value : '/profile'
 }
 
-function settingsHref(section, returnTo) {
-  return `/account?section=${encodeURIComponent(section)}&returnTo=${encodeURIComponent(returnTo)}`
+function settingsHref(section, returnTo, embedded = false) {
+  const prefix = embedded ? '/account?embedded=1&' : '/account?'
+  return `${prefix}section=${encodeURIComponent(section)}&returnTo=${encodeURIComponent(returnTo)}`
 }
 
 function notificationHref(value) {
@@ -36,7 +37,8 @@ function notificationTime(value) {
 
 export default async function AccountPage({ searchParams }) {
   const params = await searchParams
-  const selectedSection = settingsSections.has(params?.section) ? params.section : null
+  const embedded = params?.embedded === '1'
+  const selectedSection = settingsSections.has(params?.section) ? params.section : embedded ? 'profile' : null
   const returnTo = safeReturnTo(params?.returnTo)
   const { user, profile, supabase } = await requireUser({ onboarding: true })
   const sessionExpiry = user.aud ? 'Managed securely by Supabase Auth' : 'Active'
@@ -61,20 +63,20 @@ export default async function AccountPage({ searchParams }) {
   const unread = notifications.filter((item) => !item.read_at).length
   const windowClass = `figma-settings-window${selectedSection ? ` is-expanded section-${selectedSection}` : ' section-index'}`
 
-  return <ProductShell user={user} profile={profile}>
-    <div className="figma-settings-screen">
+  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded}>
+    <div className={`figma-settings-screen${embedded ? ' is-embedded' : ''}`}>
       <section className={windowClass} aria-label="Settings">
         <Link className="figma-settings-close" href={returnTo} aria-label="Close settings">×</Link>
         <aside className="figma-settings-local-nav">
           <strong>Settings</strong>
           <nav>
-            <Link href={settingsHref('profile', returnTo)}>Profile</Link>
-            <Link href={settingsHref('security', returnTo)}>Email / Password</Link>
-            <Link href={settingsHref('appearance', returnTo)}>Appearance</Link>
-            <Link href={settingsHref('notifications', returnTo)}>Notifications{unread ? ` (${unread})` : ''}</Link>
-            <Link href={settingsHref('sessions', returnTo)}>Sessions</Link>
-            <Link href={settingsHref('billing', returnTo)}>Billing</Link>
-            <Link href={settingsHref('account', returnTo)}>Account</Link>
+            <Link href={settingsHref('profile', returnTo, embedded)}>Profile</Link>
+            <Link href={settingsHref('security', returnTo, embedded)}>Email / Password</Link>
+            <Link href={settingsHref('appearance', returnTo, embedded)}>Appearance</Link>
+            <Link href={settingsHref('notifications', returnTo, embedded)}>Notifications{unread ? ` (${unread})` : ''}</Link>
+            <Link href={settingsHref('sessions', returnTo, embedded)}>Sessions</Link>
+            <Link href={settingsHref('billing', returnTo, embedded)}>Billing</Link>
+            <Link href={settingsHref('account', returnTo, embedded)}>Account</Link>
           </nav>
         </aside>
 
