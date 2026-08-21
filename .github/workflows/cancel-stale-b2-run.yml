@@ -1,0 +1,65 @@
+name: Cancel stale B2 migration run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/cancel-stale-b2-run-trigger'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel-stale-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel stale pre-fix B2 migration run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          STALE_RUN_ID: '32442198416'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, time, urllib.error, urllib.request
+
+          repo = os.environ['REPOSITORY']
+          run_id = os.environ['STALE_RUN_ID']
+          token = os.environ['GH_TOKEN']
+          headers = {
+              'Authorization': f'Bearer {token}',
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+          }
+
+          status_url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}'
+          cancel_url = f'{status_url}/cancel'
+
+          with urllib.request.urlopen(urllib.request.Request(status_url, headers=headers), timeout=30) as response:
+              run = json.load(response)
+          print(f"stale_run_before status={run['status']} conclusion={run.get('conclusion')}")
+
+          if run['status'] not in ('completed',):
+              req = urllib.request.Request(cancel_url, data=b'', method='POST', headers=headers)
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      print(f'cancel_status={response.status}')
+              except urllib.error.HTTPError as exc:
+                  if exc.code != 409:
+                      raise
+                  print('cancel_status=409 already finishing')
+
+          for _ in range(60):
+              with urllib.request.urlopen(urllib.request.Request(status_url, headers=headers), timeout=30) as response:
+                  run = json.load(response)
+              print(f"stale_run_poll status={run['status']} conclusion={run.get('conclusion')}")
+              if run['status'] == 'completed':
+                  if run.get('conclusion') not in ('cancelled', 'failure', 'success'):
+                      raise SystemExit(f"Unexpected stale run conclusion: {run.get('conclusion')}")
+                  break
+              time.sleep(2)
+          else:
+              raise SystemExit('Stale B2 run did not stop after cancellation request.')
+          PY
