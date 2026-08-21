@@ -12,7 +12,6 @@ export function openSettingsOverlay() {
 export function SettingsOverlay() {
   const [enabled, setEnabled] = useState(false)
   const [open, setOpen] = useState(false)
-  const [ready, setReady] = useState(false)
   const frameRef = useRef(null)
 
   useEffect(() => {
@@ -46,13 +45,11 @@ export function SettingsOverlay() {
     const frame = frameRef.current
     const doc = frame?.contentDocument
     if (!doc) return
-    doc.documentElement.classList.add('puddle-settings-embedded')
     const close = doc.querySelector('.figma-settings-close')
     close?.addEventListener('click', (event) => {
       event.preventDefault()
       window.dispatchEvent(new Event(SETTINGS_CLOSE_EVENT))
-    }, { once: true })
-    setReady(true)
+    })
   }
 
   if (!enabled) return null
@@ -61,8 +58,8 @@ export function SettingsOverlay() {
     <button className="puddle-settings-overlay-backdrop" type="button" onClick={() => window.dispatchEvent(new Event(SETTINGS_CLOSE_EVENT))} aria-label="Close settings" />
     <iframe
       ref={frameRef}
-      className={`puddle-settings-overlay-frame${ready ? ' is-ready' : ''}`}
-      src="/account?returnTo=%2Fprofile"
+      className="puddle-settings-overlay-frame"
+      src="/account?embedded=1&returnTo=%2Fprofile"
       title="Settings"
       onLoad={prepareFrame}
     />
