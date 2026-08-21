@@ -1,0 +1,567 @@
+/* Final interaction/layout layer. Keep visual ownership in existing screen styles and only fix shared mechanics. */
+
+:where(.figma-dashboard-shell, .figma-dashboard-stage, .figma-dashboard-main) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.figma-dashboard-shell,
+.figma-dashboard-stage,
+.figma-dashboard-main {
+  min-height: 100dvh;
+}
+
+.figma-dashboard-main {
+  overflow-x: clip;
+}
+
+/* Every existing button keeps its exact box. Hover feedback is paint-only, never sizing/spacing. */
+:where(button:not(:disabled), summary, [role="button"], .figma-dashboard-nav-item, .secondary-button, .primary-button, .danger-button) {
+  transition-property: filter, background-color, border-color, box-shadow, opacity;
+  transition-duration: 140ms;
+  transition-timing-function: ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(button:not(:disabled), summary, [role="button"], .figma-dashboard-nav-item, .secondary-button, .primary-button, .danger-button):hover {
+    filter: brightness(.955) saturate(1.02);
+  }
+}
+
+/* Settings modal: true backdrop blur plus a restrained physical outline. */
+.puddle-settings-overlay-backdrop {
+  background: rgba(20, 20, 20, .08) !important;
+  backdrop-filter: blur(14px) saturate(.96) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(.96) !important;
+}
+
+.puddle-settings-overlay-frame {
+  overflow: hidden;
+  border: 1px solid rgba(28, 28, 28, .22) !important;
+  box-sizing: border-box;
+}
+
+/* Settings is one scroll surface. The local sidebar remains fixed while only the detail column scrolls. */
+.figma-settings-window,
+.figma-settings-window.is-expanded {
+  height: min(760px, calc(100dvh - 130px)) !important;
+  min-height: min(603px, calc(100dvh - 130px)) !important;
+  max-height: calc(100dvh - 48px);
+  overflow: hidden !important;
+}
+
+.figma-settings-local-nav,
+.figma-settings-window.is-expanded .figma-settings-local-nav {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden;
+}
+
+.figma-settings-local-nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding-left: 14px;
+  color: #858585;
+  font-weight: 600 !important;
+  transition: color 140ms ease, font-weight 140ms ease, filter 140ms ease;
+}
+
+.figma-settings-local-nav a[data-active="true"] {
+  color: #111;
+  font-weight: 800 !important;
+}
+
+.figma-settings-local-nav a[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.figma-settings-detail,
+.figma-settings-window.is-expanded .figma-settings-detail {
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+.figma-settings-window.is-expanded .figma-settings-section,
+.figma-settings-window.is-expanded #profile,
+.figma-settings-window.is-expanded #security,
+.figma-settings-window.is-expanded #appearance,
+.figma-settings-window.is-expanded #notifications,
+.figma-settings-window.is-expanded #sessions,
+.figma-settings-window.is-expanded #billing,
+.figma-settings-window.is-expanded #account {
+  min-height: 0 !important;
+  scroll-margin-top: 12px;
+}
+
+.figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
+  padding-top: 42px !important;
+  border-top: 1px solid #ededed;
+}
+
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
+body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
+/* Discover composer uses the same viewport anchor as the Saved floating control. */
+.puddle-discover-create-dock,
+[data-testid="saved-search"] {
+  left: calc(var(--figma-shell-sidebar) + (100vw - var(--figma-shell-sidebar)) / 2) !important;
+  transform: translateX(-50%) !important;
+}
+
+.puddle-discover-create-dock {
+  position: fixed;
+  z-index: 75;
+  bottom: 44px;
+  width: min(420px, calc(100vw - var(--figma-shell-sidebar) - 48px));
+  height: 52px;
+  transform-origin: bottom center;
+  transition:
+    width 420ms cubic-bezier(.16, 1.22, .3, 1),
+    height 420ms cubic-bezier(.16, 1.22, .3, 1);
+}
+
+.puddle-discover-create-dock.is-open {
+  width: min(697px, calc(100vw - var(--figma-shell-sidebar) - 64px));
+  height: min(406px, calc(100dvh - 92px));
+}
+
+.puddle-discover-create-trigger,
+.puddle-discover-create-form {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.puddle-discover-create-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 5px;
+  border: 2px solid #e6e6e6;
+  border-radius: 25px;
+  background: rgba(255, 255, 255, .97);
+  color: #b0b0b0;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .10);
+  cursor: pointer;
+  font: 600 16px/1 Manrope, sans-serif;
+  text-align: left;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 150ms ease,
+    transform 300ms cubic-bezier(.16, 1.16, .3, 1),
+    filter 140ms ease;
+}
+
+.puddle-discover-create-dock.is-open .puddle-discover-create-trigger {
+  opacity: 0;
+  transform: scale(.96);
+  pointer-events: none;
+}
+
+.puddle-discover-create-avatar {
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #ececec center/cover no-repeat;
+  color: #555;
+  font: 800 11px/1 Manrope, sans-serif;
+}
+
+.puddle-discover-create-placeholder {
+  flex: 1;
+  min-width: 0;
+}
+
+.puddle-discover-create-arrow,
+.puddle-discover-create-submit {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid #f2c035;
+  border-radius: 50%;
+  background: #fff;
+  color: #e3a800;
+  font: 800 22px/1 Manrope, sans-serif;
+  box-sizing: border-box;
+}
+
+.puddle-discover-create-form {
+  display: grid;
+  grid-template-rows: auto auto minmax(92px, 1fr) auto;
+  gap: 10px;
+  overflow: auto;
+  padding: 14px 18px 18px;
+  border: 2.5px solid #e6e6e6;
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .10), 0 18px 48px rgba(0, 0, 0, .10);
+  opacity: 0;
+  transform: translateY(10px) scale(.965);
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    transform 420ms cubic-bezier(.16, 1.22, .3, 1);
+}
+
+.puddle-discover-create-dock.is-open .puddle-discover-create-form {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.puddle-discover-create-header {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.puddle-discover-create-visibility {
+  min-width: 0;
+  height: 33px;
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  margin: 0 0 0 auto;
+  border: 1.5px solid #d9d9d9;
+  border-radius: 999px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.puddle-discover-create-visibility label {
+  position: relative;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.puddle-discover-create-visibility input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.puddle-discover-create-visibility span {
+  height: 25px;
+  display: grid;
+  place-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #858585;
+  font: 700 10.9px/1 Manrope, sans-serif;
+  white-space: nowrap;
+}
+
+.puddle-discover-create-visibility input:checked + span {
+  background: #f2c035;
+  color: #111;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, .10);
+}
+
+.puddle-discover-create-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1.5px solid #e2e2e2;
+  border-radius: 50%;
+  background: #fff;
+  color: #858585;
+  cursor: pointer;
+  font: 500 22px/1 Manrope, sans-serif;
+}
+
+.puddle-discover-create-submit {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
+  cursor: pointer;
+}
+
+.puddle-discover-create-submit:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.puddle-discover-create-title,
+.puddle-discover-create-description,
+.puddle-discover-create-place {
+  min-width: 0;
+  display: block;
+}
+
+.puddle-discover-create-title input,
+.puddle-discover-create-description textarea {
+  width: 100%;
+  padding: 0 2px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: #000;
+  font-family: Manrope, sans-serif;
+  box-sizing: border-box;
+}
+
+.puddle-discover-create-title input {
+  height: 50px;
+  font-size: clamp(34px, 4.2vw, 47px);
+  font-weight: 700;
+  line-height: .98;
+  letter-spacing: .02em;
+}
+
+.puddle-discover-create-description textarea {
+  height: 100%;
+  min-height: 92px;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.puddle-discover-create-title input::placeholder,
+.puddle-discover-create-description textarea::placeholder {
+  color: #b7b7b7;
+  opacity: 1;
+}
+
+.puddle-discover-create-footer {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+
+.puddle-discover-create-place {
+  flex: 1;
+}
+
+.puddle-discover-create-place > span,
+.puddle-discover-create-footer > small {
+  display: block;
+  margin-bottom: 5px;
+  color: #858585;
+  font: 700 10px/1.2 var(--figma-mono);
+}
+
+.puddle-discover-create-place select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1.5px solid #dedede;
+  border-radius: 14px;
+  background: #fff;
+  color: #111;
+  font: 700 13px/1.2 Manrope, sans-serif;
+}
+
+.puddle-discover-create-footer > small {
+  max-width: 180px;
+  margin: 0 0 10px;
+}
+
+/* Browser zoom reduces the CSS viewport. Condense the existing sidebar before content starts clipping. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  .figma-dashboard-shell {
+    --figma-shell-sidebar: 102px;
+  }
+
+  .figma-dashboard-sidebar {
+    width: 102px !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo {
+    top: 201px;
+    left: 37px;
+    width: 43px;
+    height: 43px;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo svg {
+    width: 43px !important;
+    height: 43px !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav {
+    left: 29px;
+    width: 60px;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav-item {
+    width: 60px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav-label,
+  .figma-dashboard-sidebar .figma-dashboard-settings-link,
+  .figma-dashboard-sidebar-resizer {
+    display: none !important;
+  }
+
+  [data-testid="feed-header"] {
+    grid-template-columns: minmax(0, 1fr) auto minmax(48px, 1fr) !important;
+  }
+
+  [data-testid="feed-search"] {
+    width: 46px !important;
+    justify-content: center;
+    padding-inline: 0 !important;
+  }
+
+  [data-testid="feed-search"] label {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .puddle-settings-overlay-frame {
+    width: calc(100vw - 20px) !important;
+    height: calc(100dvh - 20px) !important;
+    border-radius: 22px;
+  }
+
+  .figma-settings-window,
+  .figma-settings-window.is-expanded {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .figma-settings-local-nav,
+  .figma-settings-window.is-expanded .figma-settings-local-nav {
+    height: auto !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .figma-settings-local-nav nav {
+    display: flex !important;
+    gap: 16px !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .figma-settings-local-nav nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .figma-settings-detail,
+  .figma-settings-window.is-expanded .figma-settings-detail {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .puddle-discover-create-dock,
+  [data-testid="saved-search"] {
+    left: 50% !important;
+  }
+
+  .puddle-discover-create-dock {
+    bottom: 112px;
+    width: calc(100vw - 52px);
+  }
+
+  .puddle-discover-create-dock.is-open {
+    width: calc(100vw - 34px);
+    height: min(410px, calc(100dvh - 142px));
+  }
+
+  .puddle-discover-create-form {
+    padding: 13px 14px 15px;
+    border-radius: 22px;
+  }
+
+  .puddle-discover-create-title input {
+    font-size: clamp(32px, 10vw, 43px);
+  }
+
+  .puddle-discover-create-description textarea {
+    font-size: 17px;
+  }
+
+  .puddle-discover-create-visibility span {
+    padding-inline: 8px;
+  }
+}
+
+@media (max-width: 430px) {
+  .puddle-discover-create-header {
+    gap: 6px;
+  }
+
+  .puddle-discover-create-visibility span {
+    padding-inline: 6px;
+    font-size: 9.8px;
+  }
+
+  .puddle-discover-create-close {
+    width: 31px;
+    height: 31px;
+    flex-basis: 31px;
+  }
+
+  .puddle-discover-create-submit {
+    width: 35px;
+    height: 35px;
+    flex-basis: 35px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, summary, [role="button"], .figma-dashboard-nav-item),
+  .puddle-discover-create-dock,
+  .puddle-discover-create-trigger,
+  .puddle-discover-create-form {
+    transition: none !important;
+  }
+
+  .figma-settings-detail {
+    scroll-behavior: auto !important;
+  }
+}
