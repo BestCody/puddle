@@ -20,7 +20,7 @@ import orjson
 from botocore.exceptions import ClientError
 
 
-BUILDER_PATH = Path(__file__).with_name('build_b2_search_index.py')
+BUILDER_PATH = Path(__file__).with_name('build_b2_search_index_continuous.py')
 ns = runpy.run_path(str(BUILDER_PATH), run_name='puddle_b2_search_builder')
 ArtifactWriter = ns['ArtifactWriter']
 CHECKPOINT_CONCURRENCY = int(ns['CHECKPOINT_CONCURRENCY'])
