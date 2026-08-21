@@ -52,6 +52,7 @@ import './figma-dashboard-flow.css'
 import './discover-controls.css'
 import './sidebar-interactions.css'
 import './ui-targeted-fixes.css'
+import './dark-mode.css'
 import { SegmentInteractionBridge } from '@/components/segment-interaction-bridge'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -67,7 +68,7 @@ export const metadata = {
 
 export const viewport = {
   themeColor: '#4ca5f7',
-  colorScheme: 'light'
+  colorScheme: 'light dark'
 }
 
 export default function RootLayout({ children }) {
