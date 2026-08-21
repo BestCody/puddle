@@ -51,6 +51,7 @@ import './figma-dashboard-fidelity.css'
 import './figma-dashboard-flow.css'
 import './discover-controls.css'
 import './sidebar-interactions.css'
+import { SegmentInteractionBridge } from '@/components/segment-interaction-bridge'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
@@ -79,6 +80,7 @@ export default function RootLayout({ children }) {
     </head>
     <body>
       {children}
+      <SegmentInteractionBridge />
       <ServiceWorkerCleanup />
       {vercelTelemetryEnabled ? <><SpeedInsights /><Analytics /></> : null}
     </body>
