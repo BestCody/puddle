@@ -1,17 +1,15 @@
 name: Read-only B2 version history diagnostic
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
+  push:
+    branches: [b2-candidate-consistency-recovery-v2]
 
 permissions:
   contents: read
 
-# Temporary PR-only diagnostic. It performs no B2 writes.
+# Temporary branch-only diagnostic. It performs no B2 writes.
 jobs:
   inspect-failed-b2-object:
-    if: github.head_ref == 'b2-candidate-consistency-recovery-v2'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
