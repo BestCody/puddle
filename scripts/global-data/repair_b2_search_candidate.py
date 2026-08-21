@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Repair an immutable B2 search candidate from exact historical object versions.
+"""Inspect or repair an immutable B2 search candidate from exact historical versions.
 
-This never weakens validation. It loads the candidate hash ledger, HEAD-checks every
-artifact, and for each missing/conflicting current object searches B2's retained object
-versions for a body whose exact compressed byte length and SHA-256 match the ledger.
-With --apply, only an exact matching historical body is restored to the current key.
+This never weakens validation. It loads the candidate hash ledger, HEAD-checks artifacts,
+and for each missing/conflicting current object searches B2's retained object versions for
+a body whose exact compressed byte length and SHA-256 match the ledger. Dry-run is fully
+read-only and reports whether an exact historical version exists. With --apply, only an
+exact matching historical body is restored to the current key.
 """
 from __future__ import annotations
 
@@ -35,6 +36,10 @@ def is_missing(error: ClientError) -> bool:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--snapshot', required=True)
+    parser.add_argument(
+        '--key',
+        help='Inspect only this exact ledger artifact key. Omit to inspect the full candidate.',
+    )
     parser.add_argument('--apply', action='store_true', help='Restore exact ledger-matching historical versions.')
     parser.add_argument('--head-workers', type=int, default=int(os.getenv('GLOBAL_LOCATION_VALIDATE_HEAD_WORKERS', '16')))
     args = parser.parse_args()
@@ -74,6 +79,13 @@ def main() -> None:
     records = json.loads(brotli.decompress(hashes_body))
     if len(records) != int(validation.get('artifact_count', -1)) or not records:
         raise RuntimeError('Candidate hash ledger artifact count does not match manifest.')
+
+    if args.key:
+        requested_key = str(args.key)
+        records = [record for record in records if str(record.get('key') or '') == requested_key]
+        if not records:
+            raise RuntimeError(f'Artifact key is not present in candidate ledger: {requested_key}')
+        print(f'repair_target_key={requested_key}', flush=True)
 
     def inspect(record: dict) -> dict | None:
         key = str(record['key'])
@@ -120,10 +132,7 @@ def main() -> None:
             flush=True,
         )
 
-    if not args.apply:
-        raise RuntimeError('Candidate has mismatched artifacts; rerun with --apply to restore exact historical versions.')
-
-    repaired = 0
+    matches: list[tuple[dict, bytes, str, str]] = []
     for item in mismatches:
         record = item['record']
         key = str(record['key'])
@@ -132,12 +141,18 @@ def main() -> None:
         matching_body: bytes | None = None
         matching_version: str | None = None
         matching_content_type = 'application/json'
+        versions_seen = 0
+        size_candidates = 0
 
         paginator = s3.get_paginator('list_object_versions')
         for page in paginator.paginate(Bucket=source.bucket, Prefix=key):
             for version in page.get('Versions', []):
-                if str(version.get('Key') or '') != key or int(version.get('Size') or -1) != expected_size:
+                if str(version.get('Key') or '') != key:
                     continue
+                versions_seen += 1
+                if int(version.get('Size') or -1) != expected_size:
+                    continue
+                size_candidates += 1
                 version_id = str(version.get('VersionId') or '')
                 if not version_id:
                     continue
@@ -152,11 +167,33 @@ def main() -> None:
             if matching_body is not None:
                 break
 
-        if matching_body is None:
+        if matching_body is None or matching_version is None:
+            print(
+                f'repair_history_exact_match=false key={key} versions_seen={versions_seen} '
+                f'size_candidates={size_candidates}',
+                flush=True,
+            )
             raise RuntimeError(
                 f'No historical B2 version exactly matches ledger size/SHA for {key}; refusing to synthesize or relax validation.'
             )
 
+        print(
+            f'repair_history_exact_match=true key={key} source_version={matching_version} '
+            f'versions_seen={versions_seen} size_candidates={size_candidates}',
+            flush=True,
+        )
+        matches.append((item, matching_body, matching_version, matching_content_type))
+
+    if not args.apply:
+        print(f'repair_dry_run_exact_matches={len(matches)}/{len(mismatches)}', flush=True)
+        return
+
+    repaired = 0
+    for item, matching_body, matching_version, matching_content_type in matches:
+        record = item['record']
+        key = str(record['key'])
+        expected_size = int(record['compressed_bytes'])
+        expected_sha = str(record['sha256']).lower()
         s3.put_object(
             Bucket=source.bucket,
             Key=key,
@@ -171,7 +208,7 @@ def main() -> None:
         if (actual_size, actual_sha) != (expected_size, expected_sha):
             raise RuntimeError(f'Restored object did not verify after PUT: {key}')
         repaired += 1
-        print(f'repair_restored={repaired}/{len(mismatches)} key={key} source_version={matching_version}', flush=True)
+        print(f'repair_restored={repaired}/{len(matches)} key={key} source_version={matching_version}', flush=True)
 
     print(f'repair_complete={repaired}', flush=True)
 
