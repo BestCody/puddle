@@ -29,7 +29,7 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   assert.match(preloader, /image\.srcset = source\.srcSet/)
 })
 
-test('dashboard navigation prefetches only after user intent', async () => {
+test('dashboard navigation warms routes efficiently and responds immediately to clicks', async () => {
   const nav = await read('components/product-nav.js')
 
   assert.match(nav, /usePathname, useRouter/)
@@ -39,29 +39,43 @@ test('dashboard navigation prefetches only after user intent', async () => {
   assert.match(nav, /onFocus=\{\(\) => warmRoute\(item\.href\)\}/)
   assert.match(nav, /onPointerDown=\{\(\) => warmRoute\(item\.href\)\}/)
   assert.match(nav, /prefetchedRoutes\.has\(href\)/)
+  assert.match(nav, /connection\?\.saveData/)
+  assert.match(nav, /const \[pendingHref, setPendingHref\] = useState\(null\)/)
+  assert.match(nav, /setPendingHref\(href\)[\s\S]*beginMainContentLoading\(\)/)
+  assert.match(nav, /pendingHref \? item\.href === pendingHref : isActive\(pathname, item\.href\)/)
+  assert.match(nav, /setPendingHref\(null\)/)
 })
 
 test('dashboard navigation keeps the shell mounted and scopes loading to main content', async () => {
-  const [transition, nav, shell, styles, layout] = await Promise.all([
+  const [transition, nav, shell, styles, sidebarStyles, layout] = await Promise.all([
     read('components/main-content-transition.js'),
     read('components/product-nav.js'),
     read('components/product-shell.js'),
     read('app/performance-loading.css'),
+    read('app/sidebar-interactions.css'),
     read('app/layout.js')
   ])
 
   assert.match(layout, /import '\.\/performance-loading\.css'/)
+  assert.match(layout, /import '\.\/sidebar-interactions\.css'/)
   assert.match(shell, /import \{ MainContentTransition \} from '\.\/main-content-transition'/)
   assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{children\}<\/MainContentTransition><\/main>/)
 
   assert.match(transition, /export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'/)
   assert.match(transition, /window\.dispatchEvent\(new Event\(MAIN_CONTENT_LOADING_EVENT\)\)/)
+  assert.match(transition, /function startLoading\(\) \{\s*setLoading\(true\)\s*\}/)
   assert.match(transition, /setLoading\(false\)/)
+  assert.doesNotMatch(transition, /SPINNER_DELAY_MS|setTimeout|useRef/)
   assert.match(transition, /puddle-main-transition-loader/)
   assert.match(transition, /puddle-main-spinner/)
 
   assert.match(nav, /beginMainContentLoading\(\)/)
   assert.match(nav, /onClick=\{\(event\) => startNavigation\(event, item\.href\)\}/)
+
+  assert.match(sidebarStyles, /\.figma-dashboard-nav-item:not\(\.is-active\):hover/)
+  assert.match(sidebarStyles, /background:\s*#cfcfcf/)
+  assert.match(sidebarStyles, /border-color:\s*#b8b8b8/)
+  assert.doesNotMatch(sidebarStyles, /transform:/)
 
   assert.match(styles, /\.puddle-main-transition\.is-loading \.puddle-main-transition-content/)
   assert.match(styles, /\.puddle-main-transition-loader/)
