@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
+import { InstantSegment } from '@/components/instant-segment'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import styles from './Plans.module.css'
@@ -113,10 +114,17 @@ export default async function PlansPage({ searchParams }) {
     return <div className={styles.screen} data-testid="saved-screen" data-tab={active}>
       <AuthMessage searchParams={params} />
       <header className={styles.topbar}>
-        <nav className={`figma-dashboard-segment ${styles.tabs}`} aria-label="Saved and plans" data-testid="saved-tabs">
-          <Link className={active === 'saved' ? styles.active : undefined} href="/plans?tab=saved">Saved</Link>
-          <Link className={active === 'planned' ? styles.active : undefined} href="/plans?tab=planned">Plans</Link>
-        </nav>
+        <InstantSegment
+          className={styles.tabs}
+          tone="purple"
+          activeValue={active === 'planned' ? 'planned' : 'saved'}
+          ariaLabel="Saved and plans"
+          testId="saved-tabs"
+          items={[
+            { value: 'saved', label: 'Saved', href: '/plans?tab=saved' },
+            { value: 'planned', label: 'Plans', href: '/plans?tab=planned' }
+          ]}
+        />
       </header>
 
       {active === 'saved' ? <div className={styles.categoryBand}>
