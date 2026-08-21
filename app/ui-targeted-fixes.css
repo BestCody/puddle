@@ -1,0 +1,159 @@
+/* Targeted overrides for responsive Saved cards, dynamic top pills, Settings overlay, and Swipe scroll lock. */
+
+/* Saved: let the existing cards reflow to the space actually available. */
+[data-testid="saved-grid"] {
+  width: calc(100% - 46px) !important;
+  margin-left: 23px !important;
+  margin-right: 23px !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)) !important;
+}
+
+[data-testid="saved-grid"] > [data-testid="saved-card"] {
+  width: 100% !important;
+  max-width: none !important;
+  transform: none !important;
+}
+
+/* Top pills: keep the existing height/text treatment, but size each option to its label. */
+.figma-dashboard-segment {
+  width: max-content !important;
+  min-width: 0 !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 4px !important;
+  border-radius: 999px !important;
+  box-sizing: border-box !important;
+}
+
+.figma-instant-segment,
+.figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"] {
+  position: relative !important;
+  display: inline-flex !important;
+  grid-template-columns: none !important;
+  align-items: center !important;
+  overflow: hidden;
+}
+
+.figma-dashboard-segment > a,
+.figma-dashboard-segment > button {
+  width: auto !important;
+  min-width: max-content !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+}
+
+/* Undo the previous three-tab text shrink. */
+.figma-dashboard-segment[data-segment-count="3"] > a,
+.figma-dashboard-segment[data-segment-count="3"] > button,
+.figma-instant-segment[data-count="3"] > a,
+.figma-instant-segment[data-count="3"] > button {
+  font-size: 16px !important;
+}
+
+.figma-instant-segment-highlight,
+.figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
+  left: var(--segment-active-left, 4px) !important;
+  width: var(--segment-active-width, 0px) !important;
+  transform: none !important;
+  transition:
+    left 145ms cubic-bezier(.2,.8,.2,1),
+    width 145ms cubic-bezier(.2,.8,.2,1) !important;
+  will-change: left, width;
+}
+
+/* Settings: triggers keep their existing visual treatment while behaving like buttons. */
+button.figma-dashboard-settings-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.puddle-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease, visibility 0s linear 120ms;
+}
+
+.puddle-settings-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 120ms ease;
+}
+
+.puddle-settings-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(246, 246, 246, .38);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: default;
+}
+
+.puddle-settings-overlay-frame {
+  position: relative;
+  z-index: 1;
+  width: min(1068px, calc(100vw - 70px));
+  height: min(760px, calc(100vh - 48px));
+  border: 0;
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .16);
+  opacity: 0;
+  transition: opacity 80ms ease;
+}
+
+.puddle-settings-overlay-frame.is-ready {
+  opacity: 1;
+}
+
+html.puddle-settings-overlay-open,
+html.puddle-settings-overlay-open body {
+  overflow: hidden;
+}
+
+/* Swipe: lock page scrolling without touching the swipe card's pointer/touch behavior. */
+html:has(.figma-swipe-screen),
+body:has(.figma-swipe-screen) {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+@media (max-width: 760px) {
+  [data-testid="saved-grid"] {
+    width: calc(100% - 24px) !important;
+    margin-left: 12px !important;
+    margin-right: 12px !important;
+  }
+
+  .puddle-settings-overlay-frame {
+    width: calc(100vw - 24px);
+    height: calc(100vh - 24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puddle-settings-overlay,
+  .puddle-settings-overlay-frame,
+  .figma-instant-segment-highlight,
+  .figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
+    transition: none !important;
+  }
+}
