@@ -21,11 +21,6 @@
   transition: width 220ms cubic-bezier(.2,.8,.2,1), border-color 140ms ease, background-color 140ms ease;
 }
 
-.figma-dashboard-sidebar.is-resizing,
-.figma-dashboard-sidebar.is-resizing ~ .figma-dashboard-stage {
-  transition: none !important;
-}
-
 /* Sidebar icons and logo keep their intended physical size while only the rail changes width. */
 .figma-dashboard-sidebar-logo,
 .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
@@ -77,24 +72,6 @@
   gap: 9px;
 }
 
-.figma-dashboard-settings-icon {
-  width: 29px;
-  height: 29px;
-  flex: 0 0 29px;
-  display: none;
-  place-items: center;
-}
-
-.figma-dashboard-settings-icon svg {
-  width: 27px;
-  height: 27px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
   left: 21px !important;
   bottom: 36px;
@@ -104,11 +81,20 @@
   place-items: center;
   padding: 0 !important;
   border-radius: 20px;
-  text-align: center;
+  overflow: hidden;
+  color: transparent !important;
+  font-size: 0 !important;
 }
 
-.figma-dashboard-sidebar.is-concise .figma-dashboard-settings-icon { display: grid; }
-.figma-dashboard-sidebar.is-concise .figma-dashboard-settings-label { display: none; }
+.figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link::before {
+  content: "";
+  width: 27px;
+  height: 27px;
+  display: block;
+  background-color: var(--figma-sidebar-text, #747474);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 
 /* Swipe has one intentional fixed-size card experience. Center the card group without stretching it. */
 .figma-swipe-screen,
@@ -137,13 +123,13 @@
 
 .figma-swipe-actions,
 .minimal-swipe-actions.figma-swipe-actions {
-  top: calc(50% + min(280px, calc((100dvh - 210px) / 2)) - 10px) !important;
+  top: calc(50% + min(280px, calc(50dvh - 105px)) - 10px) !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
 }
 
 .figma-swipe-status {
-  top: calc(50% + min(280px, calc((100dvh - 210px) / 2)) + 88px) !important;
+  top: calc(50% + min(280px, calc(50dvh - 105px)) + 88px) !important;
 }
 
 /* Filters is the only control in the Swipe header area. */
@@ -206,7 +192,6 @@
 }
 
 :is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) :is(
-  .figma-dashboard-account-menu .profile-menu-panel,
   .figma-notification-list article,
   .figma-notification-preferences,
   .figma-settings-row input,
@@ -267,10 +252,20 @@
     height: 56px;
     display: grid !important;
     place-items: center;
+    overflow: hidden;
+    color: transparent !important;
+    font-size: 0 !important;
   }
 
-  .figma-dashboard-sidebar .figma-dashboard-settings-icon { display: grid !important; }
-  .figma-dashboard-sidebar .figma-dashboard-settings-label { display: none !important; }
+  .figma-dashboard-sidebar .figma-dashboard-settings-link::before {
+    content: "";
+    width: 27px;
+    height: 27px;
+    display: block;
+    background-color: var(--figma-sidebar-text, #747474);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
 }
 
 @media (max-width: 760px) {
