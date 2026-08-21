@@ -32,6 +32,46 @@ def json_bytes(value) -> bytes:
     return (json.dumps(value, indent=2, sort_keys=True) + '\n').encode()
 
 
+def record_identity(record: dict) -> tuple[str, int, str]:
+    key = str(record.get('key') or '')
+    if not key:
+        raise RuntimeError('Hash ledger contains an artifact with no key.')
+    try:
+        expected_size = int(record['compressed_bytes'])
+    except (KeyError, TypeError, ValueError) as error:
+        raise RuntimeError(f'Hash ledger contains an invalid compressed byte length: {key}') from error
+    expected_sha = str(record.get('sha256') or '').lower()
+    if expected_size < 0:
+        raise RuntimeError(f'Hash ledger contains a negative compressed byte length: {key}')
+    if len(expected_sha) != 64 or any(char not in '0123456789abcdef' for char in expected_sha):
+        raise RuntimeError(f'Hash ledger contains an invalid SHA-256: {key}')
+    return key, expected_size, expected_sha
+
+
+def unique_ledger_records(records: list[dict]) -> tuple[list[dict], int, list[dict]]:
+    unique: dict[str, dict] = {}
+    exact_duplicates = 0
+    conflicts: list[dict] = []
+    for record in records:
+        key, expected_size, expected_sha = record_identity(record)
+        existing = unique.get(key)
+        if existing is None:
+            unique[key] = record
+            continue
+        _, existing_size, existing_sha = record_identity(existing)
+        if (existing_size, existing_sha) == (expected_size, expected_sha):
+            exact_duplicates += 1
+            continue
+        conflicts.append({
+            'key': key,
+            'first_size': existing_size,
+            'first_sha': existing_sha,
+            'conflicting_size': expected_size,
+            'conflicting_sha': expected_sha,
+        })
+    return list(unique.values()), exact_duplicates, conflicts
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--snapshot', required=True)
@@ -81,20 +121,42 @@ def main() -> None:
     hashes_body = get_bytes(validation['hashes_key'])
     if sha256_hex(hashes_body) != validation.get('hashes_sha256'):
         raise RuntimeError('Hash ledger checksum does not match manifest.')
-    records = json.loads(brotli.decompress(hashes_body))
-    if len(records) != int(validation.get('artifact_count', -1)):
+    raw_records = json.loads(brotli.decompress(hashes_body))
+    if len(raw_records) != int(validation.get('artifact_count', -1)):
         raise RuntimeError('Hash ledger artifact count does not match manifest.')
-    if not records:
+    if not raw_records:
         raise RuntimeError('Hash ledger is empty.')
 
-    # HEAD every immutable artifact. The builder stores its locally computed SHA-256 as immutable B2 metadata;
+    records, exact_duplicates, conflicts = unique_ledger_records(raw_records)
+    print(
+        f'ledger_records={len(raw_records)} unique_keys={len(records)} '
+        f'exact_duplicate_records={exact_duplicates} conflicting_keys={len(conflicts)}',
+        flush=True,
+    )
+    if conflicts:
+        for conflict in conflicts[:50]:
+            print(
+                'ledger_conflict '
+                f"key={conflict['key']} "
+                f"first_size={conflict['first_size']} first_sha={conflict['first_sha']} "
+                f"conflicting_size={conflict['conflicting_size']} conflicting_sha={conflict['conflicting_sha']}",
+                flush=True,
+            )
+        if len(conflicts) > 50:
+            print(f'ledger_conflicts_omitted={len(conflicts) - 50}', flush=True)
+        raise RuntimeError(
+            f'Hash ledger contains {len(conflicts)} destination keys with conflicting length/SHA-256 records.'
+        )
+
+    # HEAD every unique immutable artifact. The builder stores its locally computed SHA-256 as immutable B2 metadata;
     # this verifies object presence, byte length, and checksum metadata without downloading the entire index again.
     def verify_head(record: dict) -> None:
-        head = s3.head_object(Bucket=source.bucket, Key=record['key'])
-        if int(head.get('ContentLength', -1)) != int(record['compressed_bytes']):
-            raise RuntimeError(f"Length mismatch for {record['key']}.")
-        if str((head.get('Metadata') or {}).get('sha256', '')).lower() != str(record['sha256']).lower():
-            raise RuntimeError(f"SHA-256 metadata mismatch for {record['key']}.")
+        key, expected_size, expected_sha = record_identity(record)
+        head = s3.head_object(Bucket=source.bucket, Key=key)
+        if int(head.get('ContentLength', -1)) != expected_size:
+            raise RuntimeError(f'Length mismatch for {key}.')
+        if str((head.get('Metadata') or {}).get('sha256', '')).lower() != expected_sha:
+            raise RuntimeError(f'SHA-256 metadata mismatch for {key}.')
 
     workers = max(1, min(32, int(args.head_workers)))
     for start in range(0, len(records), 1000):
@@ -106,7 +168,7 @@ def main() -> None:
     sample_count = max(1, min(len(records), int(args.deep_hash_samples)))
     samples = sorted(records, key=lambda record: hashlib.sha256(record['key'].encode()).digest())[:sample_count]
     for record in samples:
-        if sha256_hex(get_bytes(record['key'])) != record['sha256']:
+        if sha256_hex(get_bytes(record['key'])) != str(record['sha256']).lower():
             raise RuntimeError(f"Deep checksum mismatch for {record['key']}.")
 
     id_records = [record for record in records if record.get('kind') == 'id']
@@ -142,11 +204,14 @@ def main() -> None:
         'validated_at': utc_now(),
         'location_count': manifest['location_count'],
         'published_count': manifest['published_count'],
-        'artifact_count': len(records),
+        'artifact_count': len(raw_records),
+        'unique_artifact_keys': len(records),
+        'exact_duplicate_ledger_records': exact_duplicates,
         'deep_hash_samples': sample_count,
         'checks': {
             'manifest': True,
             'counts': True,
+            'ledger_key_consistency': True,
             'artifact_presence_length_sha256_metadata': True,
             'deep_hash_sample': True,
             'id_lookup': True,
