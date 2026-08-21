@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { InstantSegment } from '@/components/instant-segment'
 import { LocationMap } from '@/components/location-map'
+import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
 import { getSocialFeedSnapshot } from '@/lib/app/social-feed-data'
@@ -173,13 +174,17 @@ export default async function LocationMapPage({ searchParams }) {
             {moreHref && feed.items.length ? <nav aria-label="Discover pagination"><Link href={moreHref}>More puddles</Link></nav> : null}
           </section>
 
-          <Link className={styles.composer} href="/create/post" data-testid="feed-composer">
-            <span className={styles.avatar} style={feed.self.avatar_url ? { backgroundImage: `url(${feed.self.avatar_url})` } : undefined}>
-              {feed.self.avatar_url ? null : initials(feed.self.display_name)}
-            </span>
-            <span className={styles.composerText}>Create a puddle...</span>
-            <b className={styles.composerSubmit}>↑</b>
-          </Link>
+          <DiscoverCreatePuddle
+            avatarUrl={feed.self.avatar_url}
+            displayName={feed.self.display_name || 'Puddle person'}
+            points={mapSnapshot.points.map((point) => ({
+              id: point.id,
+              title: point.title,
+              city: point.city,
+              neighborhood: point.neighborhood,
+              category: point.category
+            }))}
+          />
         </>}
       </div>
     </>
