@@ -1,96 +1,170 @@
 #!/usr/bin/env python3
-"""Compatibility entrypoint for exact B2 candidate recovery.
-
-A structurally conflicting candidate ledger cannot be repaired by choosing one historical
-version arbitrarily. For a full ``--apply`` repair of an unactivated candidate, regenerate
-the candidate once from the authoritative canonical snapshot with deterministic ordering,
-then rerun the strict exact-version repair/verification path. Active candidates are never
-rebuilt in place.
-"""
+"""Repair a B2 search candidate, rebuilding a corrupt unactivated ledger when needed."""
 from __future__ import annotations
 
 import argparse
-import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import boto3
+import orjson
 from botocore.client import Config
-from botocore.exceptions import ClientError
 
-from location_search_common import b2_source_config
-from repair_b2_search_candidate_parallel import main as repair_main
+from repair_b2_search_candidate_parallel import (
+    conflict_message,
+    load_candidate_context,
+    main as repair_main,
+    validate_and_deduplicate_records,
+)
+
+BUILDER_PATH = Path(__file__).with_name("build_b2_search_index.py")
+REBUILD_CHECKPOINT_VERSION = 2
 
 
-def _is_missing(error: ClientError) -> bool:
-    code = str(error.response.get("Error", {}).get("Code") or "")
-    status = int(error.response.get("ResponseMetadata", {}).get("HTTPStatusCode") or 0)
+def is_missing(error: Exception) -> bool:
+    response = getattr(error, "response", {}) or {}
+    code = str((response.get("Error") or {}).get("Code") or "")
+    status = int((response.get("ResponseMetadata") or {}).get("HTTPStatusCode") or 0)
     return code in {"404", "NoSuchKey", "NotFound"} or status == 404
 
 
-def _candidate_is_active(snapshot: str) -> bool:
-    source = b2_source_config()
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=source.endpoint_url,
-        aws_access_key_id=source.key_id,
-        aws_secret_access_key=source.application_key,
-        region_name=source.region,
-        config=Config(retries={"max_attempts": 10, "mode": "adaptive"}),
-    )
-    active_key = f"{source.data_prefix}/search/active.json"
+def active_snapshot(client, bucket: str, data_prefix: str) -> str | None:
+    key = f"{data_prefix}/search/active.json"
     try:
-        body = s3.get_object(Bucket=source.bucket, Key=active_key)["Body"].read()
-    except ClientError as error:
-        if _is_missing(error):
-            return False
+        body = client.get_object(Bucket=bucket, Key=key)["Body"].read()
+    except Exception as error:
+        if is_missing(error):
+            return None
         raise
-    active = json.loads(body)
-    return str(active.get("snapshot") or "") == snapshot
+    pointer = orjson.loads(body)
+    return str(pointer.get("snapshot") or "").strip() or None
+
+
+def parse_entrypoint_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--snapshot", required=True)
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--only-key")
+    args, _ = parser.parse_known_args()
+    return args
+
+
+def delete_prefix(client, bucket: str, prefix: str) -> int:
+    deleted = 0
+    batch: list[dict] = []
+    paginator = client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for item in page.get("Contents", []):
+            batch.append({"Key": item["Key"]})
+            if len(batch) == 1000:
+                client.delete_objects(Bucket=bucket, Delete={"Objects": batch, "Quiet": True})
+                deleted += len(batch)
+                batch = []
+    if batch:
+        client.delete_objects(Bucket=bucket, Delete={"Objects": batch, "Quiet": True})
+        deleted += len(batch)
+    return deleted
+
+
+def initialize_rebuild_checkpoints(client, bucket: str, data_prefix: str, snapshot: str) -> None:
+    """Clear legacy checkpoints exactly once, then preserve deterministic rebuild save points."""
+    checkpoint_prefix = f"{data_prefix}/search/checkpoints/schema=v1/snapshot={snapshot}/"
+    marker_key = (
+        f"{checkpoint_prefix}deterministic-rebuild-v{REBUILD_CHECKPOINT_VERSION}.json"
+    )
+    try:
+        client.head_object(Bucket=bucket, Key=marker_key)
+        print(
+            "repair_rebuild_checkpoint_resume "
+            f"snapshot={snapshot} marker={marker_key}",
+            flush=True,
+        )
+        return
+    except Exception as error:
+        if not is_missing(error):
+            raise
+
+    deleted = delete_prefix(client, bucket, checkpoint_prefix)
+    marker = {
+        "schema_version": 1,
+        "rebuild_checkpoint_version": REBUILD_CHECKPOINT_VERSION,
+        "snapshot": snapshot,
+        "purpose": "deterministic-conflicting-ledger-rebuild",
+    }
+    client.put_object(
+        Bucket=bucket,
+        Key=marker_key,
+        Body=orjson.dumps(marker, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b"\n",
+        ContentType="application/json",
+        CacheControl="no-store",
+    )
+    print(
+        "repair_rebuild_checkpoint_initialized "
+        f"snapshot={snapshot} deleted_legacy_objects={deleted} marker={marker_key}",
+        flush=True,
+    )
+
+
+def rebuild_candidate(snapshot: str) -> None:
+    command = [
+        sys.executable,
+        str(BUILDER_PATH),
+        f"--snapshot={snapshot}",
+    ]
+    print(
+        "repair_rebuild_start "
+        f"snapshot={snapshot} reason=conflicting_ledger mode=deterministic_checkpointed_full_rebuild",
+        flush=True,
+    )
+    subprocess.run(command, check=True)
+    print(f"repair_rebuild_complete snapshot={snapshot}", flush=True)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--snapshot", required=True)
-    parser.add_argument("--key")
-    parser.add_argument("--apply", action="store_true")
-    args, _ = parser.parse_known_args()
-
-    try:
+    args = parse_entrypoint_args()
+    if not args.apply or args.only_key:
         repair_main()
         return
+
+    context = load_candidate_context(args.snapshot)
+    try:
+        validate_and_deduplicate_records(context.records)
     except RuntimeError as error:
-        message = str(error)
-        conflicting_ledger = (
-            "Candidate hash ledger contains" in message
-            and "destination keys with conflicting length/SHA-256 records" in message
-        )
-        if not conflicting_ledger or not args.apply or args.key:
+        if "conflicting length/SHA-256 records" not in str(error):
             raise
 
-    if _candidate_is_active(args.snapshot):
-        raise RuntimeError(
-            f"Refusing to rebuild conflicting candidate snapshot {args.snapshot} in place because it is active."
+        source = context.source
+        client = boto3.client(
+            "s3",
+            endpoint_url=source.endpoint_url,
+            aws_access_key_id=source.key_id,
+            aws_secret_access_key=source.application_key,
+            region_name=source.region,
+            config=Config(retries={"max_attempts": 10, "mode": "adaptive"}),
         )
+        active = active_snapshot(client, source.bucket, source.data_prefix)
+        if active == args.snapshot:
+            raise RuntimeError(
+                f"Refusing to rebuild active B2 search snapshot {args.snapshot}; "
+                "publish a new snapshot namespace instead."
+            ) from error
 
-    builder = Path(__file__).with_name("build_b2_search_index.py")
-    print(
-        f"repair_conflicting_ledger_rebuild=true snapshot={args.snapshot} "
-        "reason=ledger_conflicts candidate_active=false",
-        flush=True,
-    )
-    subprocess.run(
-        [sys.executable, str(builder), "--snapshot", args.snapshot, "--no-resume"],
-        check=True,
-    )
-    print(
-        f"repair_conflicting_ledger_rebuild_completed=true snapshot={args.snapshot}",
-        flush=True,
-    )
+        conflict_message(context.records)
+        initialize_rebuild_checkpoints(
+            client,
+            source.bucket,
+            source.data_prefix,
+            args.snapshot,
+        )
+        rebuild_candidate(args.snapshot)
 
-    # The rebuild must produce a structurally valid ledger. Run the unchanged strict repair
-    # path again; any remaining conflict or object mismatch is a hard failure.
+        rebuilt = load_candidate_context(args.snapshot)
+        validate_and_deduplicate_records(rebuilt.records)
+        repair_main()
+        return
+
     repair_main()
 
 
