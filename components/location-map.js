@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 const TILE_SIZE = 256
 const MIN_ZOOM = 3
 const MAX_ZOOM = 18
+const MARKER_OVERSCAN = 72
+const CATALOGUE_CACHE_LIMIT = 24
 
 function clamp(value, min, max) { return Math.min(max, Math.max(min, value)) }
 function normalizeLongitude(value) { return ((((Number(value) + 180) % 360) + 360) % 360) - 180 }
@@ -45,6 +47,10 @@ function viewportBounds(center, zoom, viewport) {
     east: bottomRight.longitude
   }
 }
+function viewportCacheKey(bounds, zoom) {
+  const precision = zoom < 8 ? 2 : zoom < 12 ? 3 : 4
+  return [zoom, bounds.north, bounds.south, bounds.west, bounds.east].map((value, index) => index ? Number(value).toFixed(precision) : value).join(':')
+}
 function stateLabel(state) {
   if (state === 'matched') return 'Match'
   if (state === 'planned') return 'Planned'
@@ -58,6 +64,13 @@ function primaryState(point) {
   return 'catalogue'
 }
 function directionsUrl(point) { return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${point.latitude},${point.longitude}`)}` }
+function clusterCellSize(zoom) {
+  if (zoom < 7) return 128
+  if (zoom < 9) return 104
+  if (zoom < 11) return 82
+  if (zoom < 13) return 62
+  return 0
+}
 
 function MapTileLayer({ center, zoom, viewport }) {
   const projectedCenter = project(center.latitude, center.longitude, zoom)
@@ -92,6 +105,9 @@ function PointCard({ point }) {
 export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, selectingForPost = false }) {
   const mapRef = useRef(null)
   const dragRef = useRef(null)
+  const panFrameRef = useRef(0)
+  const pendingCenterRef = useRef(null)
+  const catalogueCacheRef = useRef(new Map())
   const [viewport, setViewport] = useState({ width: 900, height: 620 })
   const [center, setCenter] = useState(initialCenter || { latitude: 43.6532, longitude: -79.3832 })
   const [zoom, setZoom] = useState(initialPoints.length <= 1 ? 14 : 12)
@@ -109,11 +125,21 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => () => {
+    if (panFrameRef.current) window.cancelAnimationFrame(panFrameRef.current)
+  }, [])
+
   useEffect(() => {
     if (!loadCatalogue || filter !== 'all') return undefined
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
       const bounds = viewportBounds(center, zoom, viewport)
+      const cacheKey = viewportCacheKey(bounds, zoom)
+      const cached = catalogueCacheRef.current.get(cacheKey)
+      if (cached) {
+        setCataloguePoints(cached)
+        return
+      }
       const params = new URLSearchParams({
         north: bounds.north.toFixed(6), south: bounds.south.toFixed(6),
         west: bounds.west.toFixed(6), east: bounds.east.toFixed(6), zoom: String(zoom)
@@ -122,12 +148,15 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         const response = await fetch(`/api/map/viewport?${params}`, { cache: 'no-store', signal: controller.signal })
         if (!response.ok) throw new Error(`Map viewport returned ${response.status}`)
         const payload = await response.json()
-        const next = Array.isArray(payload?.points) ? payload.points : []
-        setCataloguePoints(next.map((point) => selectingForPost ? { ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` } : point))
+        const next = (Array.isArray(payload?.points) ? payload.points : []).map((point) => selectingForPost ? { ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` } : point)
+        const cache = catalogueCacheRef.current
+        cache.set(cacheKey, next)
+        if (cache.size > CATALOGUE_CACHE_LIMIT) cache.delete(cache.keys().next().value)
+        setCataloguePoints(next)
       } catch (error) {
         if (error?.name !== 'AbortError') console.warn('Could not refresh visible Puddle locations.', { message: error?.message || 'unknown error' })
       }
-    }, 280)
+    }, 220)
     return () => { window.clearTimeout(timer); controller.abort() }
   }, [center.latitude, center.longitude, filter, loadCatalogue, selectingForPost, viewport.height, viewport.width, zoom])
 
@@ -171,12 +200,49 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const projectedCenter = project(center.latitude, center.longitude, zoom)
   const maxHeat = Math.max(1, ...visibleHeatmap.map((point) => Number(point.save_count) || 0))
 
+  const visiblePointItems = useMemo(() => points.map((point) => {
+    const projected = project(point.latitude, point.longitude, zoom)
+    return {
+      point,
+      x: projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2,
+      y: projected.y - projectedCenter.y + viewport.height / 2
+    }
+  }).filter((item) => item.x >= -MARKER_OVERSCAN && item.x <= viewport.width + MARKER_OVERSCAN && item.y >= -MARKER_OVERSCAN && item.y <= viewport.height + MARKER_OVERSCAN), [points, projectedCenter.x, projectedCenter.y, viewport.height, viewport.width, zoom])
+
+  const markerGroups = useMemo(() => {
+    const cellSize = clusterCellSize(zoom)
+    if (!cellSize) return visiblePointItems.map((item) => ({ type: 'point', ...item }))
+    const cells = new Map()
+    for (const item of visiblePointItems) {
+      const key = `${Math.floor(item.x / cellSize)}:${Math.floor(item.y / cellSize)}`
+      const cell = cells.get(key) || []
+      cell.push(item)
+      cells.set(key, cell)
+    }
+    return [...cells.entries()].map(([key, items]) => {
+      if (items.length === 1 && zoom >= 11) return { type: 'point', ...items[0] }
+      return {
+        type: 'cluster',
+        key,
+        count: items.length,
+        x: items.reduce((sum, item) => sum + item.x, 0) / items.length,
+        y: items.reduce((sum, item) => sum + item.y, 0) / items.length,
+        latitude: items.reduce((sum, item) => sum + Number(item.point.latitude), 0) / items.length,
+        longitude: items.reduce((sum, item) => sum + Number(item.point.longitude), 0) / items.length
+      }
+    })
+  }, [visiblePointItems, zoom])
+
   function changeFilter(next) {
     setFilter(next)
     const first = next === 'all' ? allPoints[0] : allPoints.find((point) => point.states.includes(next))
     if (first) { setSelectedId(first.id); setCenter({ latitude: first.latitude, longitude: first.longitude }) }
   }
   function selectPoint(point) { setSelectedId(point.id); setCenter({ latitude: point.latitude, longitude: point.longitude }) }
+  function openCluster(cluster) {
+    setCenter({ latitude: cluster.latitude, longitude: cluster.longitude })
+    setZoom((value) => clamp(value + (value < 9 ? 2 : 1), MIN_ZOOM, MAX_ZOOM))
+  }
   function pointerDown(event) {
     if (event.button !== 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -185,10 +251,21 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   function pointerMove(event) {
     const drag = dragRef.current
     if (!drag) return
-    const next = unproject(drag.center.x - (event.clientX - drag.x), drag.center.y - (event.clientY - drag.y), zoom)
-    setCenter(next)
+    pendingCenterRef.current = unproject(drag.center.x - (event.clientX - drag.x), drag.center.y - (event.clientY - drag.y), zoom)
+    if (panFrameRef.current) return
+    panFrameRef.current = window.requestAnimationFrame(() => {
+      panFrameRef.current = 0
+      if (pendingCenterRef.current) setCenter(pendingCenterRef.current)
+    })
   }
-  function pointerUp(event) { dragRef.current = null; try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {} }
+  function pointerUp(event) {
+    dragRef.current = null
+    if (pendingCenterRef.current) {
+      setCenter(pendingCenterRef.current)
+      pendingCenterRef.current = null
+    }
+    try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
+  }
   function wheel(event) { event.preventDefault(); setZoom((value) => clamp(value + (event.deltaY < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM)) }
   function locate() {
     if (!navigator.geolocation) return
@@ -214,17 +291,16 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
           const size = Math.round(34 + ratio * 74)
           return <span className="location-map-heat" title={`${point.name}: ${point.save_count} saves`} style={{ width: `${size}px`, height: `${size}px`, opacity: .2 + ratio * .5, transform: `translate3d(${x}px,${y}px,0) translate(-50%,-50%)` }} key={point.id}><b>{point.save_count}</b></span>
         })}</div> : null}
-        <div className="location-map-markers">{points.map((point) => {
-          const projected = project(point.latitude, point.longitude, zoom)
-          const x = projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2
-          const y = projected.y - projectedCenter.y + viewport.height / 2
+        <div className="location-map-markers">{markerGroups.map((item) => {
+          if (item.type === 'cluster') return <button type="button" className="location-map-cluster" style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { event.stopPropagation(); openCluster(item) }} aria-label={`${item.count} locations. Zoom in to explore.`} key={`cluster:${zoom}:${item.key}`}><span>{item.count}</span></button>
+          const point = item.point
           const primary = primaryState(point)
-          return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${x}px,${y}px,0)` }} onClick={(event) => { event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span>{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? '•' : '♥'}</span></button>
+          return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span>{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? '•' : '♥'}</span></button>
         })}</div>
         <div className="location-map-zoom"><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
         <a className="location-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onPointerDown={(event) => event.stopPropagation()}>© OpenStreetMap contributors</a>
       </section>
-      <aside className="location-map-side"><PointCard point={selected} /><div className="location-map-list">{points.map((point) => {
+      <aside className="location-map-side"><PointCard point={selected} /><div className="location-map-list">{visiblePointItems.map(({ point }) => {
         const primary = primaryState(point)
         return <button type="button" className={selectedId === point.id ? 'is-active' : ''} onClick={() => selectPoint(point)} key={point.id}><span className={`is-${primary}`} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>
       })}</div></aside>
