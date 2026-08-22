@@ -1,0 +1,195 @@
+/* Follow-up UI fixes: shared control geometry, light-mode checkboxes, sidebar tuning,
+ * Settings divider cleanup, and compact Profile stats. Keep this last in the cascade.
+ */
+
+/* Shared root cause: fixed-size icon controls must never be flex/grid-squeezed into distorted shapes. */
+:where(
+  .figma-dashboard-nav-icon,
+  .figma-dashboard-avatar,
+  .figma-dashboard-account-menu > summary,
+  .figma-settings-close,
+  .minimal-filter-sheet header button,
+  .figma-swipe-details-close,
+  .figma-swipe-details-button,
+  .puddle-discover-create-close,
+  .puddle-discover-create-arrow,
+  .puddle-discover-create-submit
+) {
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+:where(
+  .figma-dashboard-account-menu > summary,
+  .figma-settings-close,
+  .minimal-filter-sheet header button,
+  .figma-swipe-details-close,
+  .figma-swipe-details-button,
+  .puddle-discover-create-close,
+  .puddle-discover-create-arrow,
+  .puddle-discover-create-submit
+) {
+  aspect-ratio: 1 / 1;
+}
+
+:where(.figma-dashboard-nav-icon svg, .figma-swipe-action svg, .minimal-swipe-action svg) {
+  flex: none !important;
+  transform: none;
+}
+
+/* Light mode checkboxes: use a stable native accent instead of browser-black glyphs. */
+.minimal-filter-check input[type='checkbox'],
+.figma-settings-window input[type='checkbox'] {
+  accent-color: #4ca5f7 !important;
+  color-scheme: light !important;
+}
+
+.minimal-filter-check input[type='checkbox']:disabled,
+.figma-settings-window input[type='checkbox']:disabled {
+  opacity: .45;
+}
+
+.figma-dashboard-shell[data-appearance='dark'] .minimal-filter-check input[type='checkbox'],
+.figma-dashboard-shell[data-resolved-appearance='dark'] .minimal-filter-check input[type='checkbox'],
+.figma-dashboard-shell[data-appearance='dark'] .figma-settings-window input[type='checkbox'],
+.figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-window input[type='checkbox'] {
+  accent-color: #79bdf9 !important;
+  color-scheme: dark !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .figma-dashboard-shell[data-appearance='system'] .minimal-filter-check input[type='checkbox'],
+  .figma-dashboard-shell[data-appearance='system'] .figma-settings-window input[type='checkbox'] {
+    accent-color: #79bdf9 !important;
+    color-scheme: dark !important;
+  }
+}
+
+/* Sidebar: nudge the logo down and Settings up without changing horizontal alignment. */
+@media (min-width: 761px) {
+  .figma-dashboard-sidebar-logo,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    top: clamp(32px, calc(50dvh - 258px), 198px) !important;
+  }
+
+  .figma-dashboard-settings-link,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
+    top: auto !important;
+    bottom: clamp(32px, 5dvh, 48px) !important;
+    color: #9a9a9a !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link::before {
+    color: inherit !important;
+  }
+}
+
+/* Settings: a single divider between major sections only. */
+.figma-settings-window .figma-settings-section + .figma-settings-section,
+.figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
+  border-top: 1px solid #ededed !important;
+}
+
+.figma-settings-window .figma-settings-row,
+.figma-settings-window.is-expanded .figma-settings-row,
+.figma-settings-window .figma-settings-row:last-of-type,
+.figma-settings-window.is-expanded .figma-settings-row:last-of-type {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+}
+
+.figma-dashboard-shell[data-appearance='dark'] .figma-settings-window .figma-settings-section + .figma-settings-section,
+.figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-window .figma-settings-section + .figma-settings-section {
+  border-top-color: #353a40 !important;
+}
+
+/* Compact Profile stats: dedicated small-card layout rather than squeezed inline text. */
+.figma-profile-counts {
+  width: min(520px, 100%) !important;
+  margin: 18px auto 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  color: inherit !important;
+}
+
+.figma-profile-stat {
+  min-width: 0 !important;
+  min-height: 58px;
+  display: grid !important;
+  grid-template-columns: 22px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto !important;
+  align-items: center;
+  column-gap: 7px;
+  row-gap: 2px;
+  padding: 8px 9px !important;
+  border: 1.5px solid rgba(255,255,255,.72);
+  border-radius: 16px;
+  background: rgba(255,255,255,.88);
+  color: #33485c;
+  box-shadow: 0 2px 0 rgba(0,0,0,.06);
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.figma-profile-stat i {
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(76,165,247,.12);
+  color: #4ca5f7;
+  font: 700 13px/1 Manrope, sans-serif;
+  font-style: normal;
+}
+
+.figma-profile-stat strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #111;
+  font: 800 clamp(14px, 1.6vw, 18px)/1 Manrope, sans-serif;
+}
+
+.figma-profile-stat small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #758fa7;
+  font: 700 clamp(8px, .9vw, 10px)/1 var(--figma-mono);
+}
+
+.figma-profile-stat.is-puddles i { color: #c39400; background: rgba(242,192,53,.16); }
+.figma-profile-stat.is-locations i { color: #287ecb; background: rgba(76,165,247,.14); }
+.figma-profile-stat.is-saves i { color: #8d5eb7; background: rgba(183,132,228,.14); }
+.figma-profile-stat.is-friends i { color: #4caf28; background: rgba(120,225,82,.14); }
+
+@media (max-width: 760px) {
+  .figma-profile-counts {
+    width: min(360px, 100%) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .figma-profile-stat {
+    min-height: 54px;
+    padding: 7px 8px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .figma-profile-stat {
+    grid-template-columns: 19px minmax(0, 1fr) !important;
+    column-gap: 5px;
+  }
+
+  .figma-profile-stat i {
+    width: 19px;
+    height: 19px;
+    font-size: 11px;
+  }
+}
