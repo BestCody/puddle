@@ -1,29 +1,29 @@
 /* Screenshot-driven alignment follow-up. Keep this as the final cascade layer. */
 
 @media (min-width: 761px) {
-  /* Restore the authored sidebar width, but keep the centered navigation stack more compact vertically. */
+  /* Keep the centered navigation stack compact both vertically and horizontally. */
   .figma-dashboard-sidebar {
     min-height: 832px !important;
   }
 
   .figma-dashboard-sidebar.is-concise {
-    width: 102px !important;
+    width: 92px !important;
   }
 
   .figma-dashboard-nav,
   .figma-dashboard-sidebar.is-expanded .figma-dashboard-nav {
     top: 50% !important;
-    left: 20px !important;
-    width: 241px !important;
+    left: 16px !important;
+    width: 217px !important;
     gap: 2px !important;
     transform: translateY(-50%) !important;
   }
 
   .figma-dashboard-nav-item {
-    width: 241px !important;
+    width: 217px !important;
     height: 50px !important;
-    gap: 9px !important;
-    padding: 0 13px 0 23px !important;
+    gap: 8px !important;
+    padding: 0 12px 0 20px !important;
     border-radius: 18px !important;
     font-size: 17px !important;
   }
@@ -47,7 +47,7 @@
   .figma-dashboard-sidebar-logo,
   .figma-dashboard-sidebar.is-expanded .figma-dashboard-sidebar-logo {
     top: calc(50% - 223px) !important;
-    left: 34px !important;
+    left: 31px !important;
     width: 50px !important;
     height: 50px !important;
   }
@@ -60,23 +60,28 @@
     height: 50px !important;
   }
 
+  .figma-dashboard-settings-link,
+  .figma-dashboard-sidebar.is-expanded .figma-dashboard-settings-link {
+    left: 42px !important;
+  }
+
   .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
     top: 50% !important;
-    left: 29px !important;
-    width: 60px !important;
+    left: 19px !important;
+    width: 54px !important;
     gap: 2px !important;
     transform: translateY(-50%) !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
-    width: 60px !important;
+    width: 54px !important;
     height: 50px !important;
     padding: 0 !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
     top: calc(50% - 210px) !important;
-    left: 37px !important;
+    left: 27px !important;
     width: 39px !important;
     height: 39px !important;
   }

@@ -6,9 +6,9 @@ import { ProductNav } from './product-nav'
 import { SettingsTrigger } from './settings-trigger'
 
 const STORAGE_KEY = 'puddle:figma-dashboard-sidebar-width'
-const EXPANDED_WIDTH = 280
-const CONCISE_WIDTH = 102
-const EXPANDED_THRESHOLD = 190
+const EXPANDED_WIDTH = 252
+const CONCISE_WIDTH = 92
+const EXPANDED_THRESHOLD = 171
 
 function snapWidth(value) {
   if (value === null || value === undefined || value === '') return EXPANDED_WIDTH
