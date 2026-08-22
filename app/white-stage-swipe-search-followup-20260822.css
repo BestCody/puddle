@@ -1,0 +1,98 @@
+/* Targeted follow-up for stage color, Swipe relationship, and Saved/Discover search alignment. */
+
+/* Light mode uses the same white canvas on both sides of the dashboard. */
+.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-dashboard-stage,
+.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-dashboard-main,
+.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-swipe-screen,
+.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-swipe-workspace,
+.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-friends-screen,
+.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) [data-testid='saved-screen'],
+.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) [data-testid='feed-screen'][data-view='feed'] {
+  background: #fff !important;
+}
+
+/* Saved uses the same three-column topbar relationship as Discover.
+   The search button stays attached to its right-side slot as the viewport changes. */
+[data-testid='saved-screen'] > header:first-of-type {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  align-items: start !important;
+  justify-items: stretch !important;
+  padding-inline: clamp(18px, 3vw, 34px) !important;
+  box-sizing: border-box !important;
+}
+
+[data-testid='saved-screen'] > header:first-of-type .figma-dashboard-segment {
+  grid-column: 2 !important;
+  justify-self: center !important;
+}
+
+.puddle-saved-search-trigger {
+  position: static !important;
+  inset: auto !important;
+  grid-column: 3 !important;
+  justify-self: end !important;
+  align-self: start !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+/* Search opens in the upper portion of the content stage, not vertical center. */
+.puddle-search-overlay,
+.puddle-discover-search-overlay {
+  place-items: start center !important;
+  align-items: start !important;
+  justify-items: center !important;
+  padding-top: clamp(76px, 11dvh, 116px) !important;
+}
+
+/* Keep the Discover composer underneath the universal search backdrop so it blurs too. */
+.puddle-discover-create-dock {
+  z-index: 100 !important;
+}
+
+.puddle-discover-search-overlay,
+.puddle-search-overlay {
+  z-index: 900 !important;
+}
+
+/* Mobile Swipe: card and action dock derive from the same responsive width token.
+   This keeps them centered as one visual stack instead of independently sizing each row. */
+@media (max-width: 760px) {
+  .figma-swipe-workspace {
+    --puddle-swipe-card-width: min(325px, calc(100vw - 40px), calc((100dvh - 250px) * 325 / 544));
+    --puddle-swipe-action-width: min(288px, var(--puddle-swipe-card-width));
+    justify-items: center !important;
+  }
+
+  .figma-swipe-card-stage {
+    width: var(--puddle-swipe-card-width) !important;
+    max-width: var(--puddle-swipe-card-width) !important;
+    justify-self: center !important;
+    margin-inline: auto !important;
+  }
+
+  .figma-swipe-actions,
+  .minimal-swipe-actions.figma-swipe-actions {
+    width: var(--puddle-swipe-action-width) !important;
+    max-width: var(--puddle-swipe-card-width) !important;
+    justify-self: center !important;
+    margin-inline: auto !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .figma-swipe-action,
+  .figma-swipe-actions .minimal-swipe-action {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  [data-testid='saved-screen'] > header:first-of-type {
+    padding-inline: 14px !important;
+  }
+
+  .puddle-search-overlay,
+  .puddle-discover-search-overlay {
+    padding-top: max(70px, 10dvh) !important;
+  }
+}
