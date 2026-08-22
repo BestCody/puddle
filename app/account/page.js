@@ -73,7 +73,7 @@ export default async function AccountPage({ searchParams }) {
   const windowClass = `figma-settings-window${selectedSection ? ` is-expanded section-${selectedSection}` : ' section-index'}${mobileFlow ? ' is-mobile-flow-window' : ''}`
   const mobileBackHref = selectedSection ? mobileSettingsIndexHref(returnTo) : returnTo
 
-  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded && !mobileFlow}>
+  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded}>
     <div className={`figma-settings-screen${embedded ? ' is-embedded' : ''}${mobileFlow ? ' is-mobile-flow' : ''}${mobileFlow && !selectedSection ? ' is-mobile-index' : ''}`}>
       <section className={windowClass} aria-label="Settings">
         {mobileFlow ? <Link className="figma-settings-mobile-back" href={mobileBackHref} aria-label={selectedSection ? 'Back to Settings' : 'Back to Profile'}>‹ <span>Back</span></Link> : <Link className="figma-settings-close" href={returnTo} aria-label="Close settings">×</Link>}
