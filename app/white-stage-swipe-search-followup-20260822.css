@@ -56,6 +56,59 @@
   z-index: 900 !important;
 }
 
+/* Desktop Swipe follows the same composition as mobile: card first, centered actions directly below it. */
+@media (min-width: 761px) {
+  .figma-swipe-workspace {
+    --puddle-swipe-card-width: 360px;
+    --puddle-swipe-card-height: 504px;
+    --puddle-swipe-actions-width: 279px;
+    display: grid !important;
+    grid-template-rows: var(--puddle-swipe-card-height) auto auto !important;
+    justify-items: center !important;
+    align-content: start !important;
+    row-gap: 18px !important;
+    padding-top: 90px !important;
+    box-sizing: border-box !important;
+  }
+
+  .figma-swipe-card-stage {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    width: var(--puddle-swipe-card-width) !important;
+    height: var(--puddle-swipe-card-height) !important;
+    margin: 0 !important;
+    transform: none !important;
+    justify-self: center !important;
+  }
+
+  .figma-swipe-actions,
+  .minimal-swipe-actions.figma-swipe-actions {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    width: var(--puddle-swipe-actions-width) !important;
+    margin: 0 auto !important;
+    transform: none !important;
+    justify-self: center !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .figma-swipe-status {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    justify-self: center !important;
+    text-align: center !important;
+  }
+}
+
 /* Mobile Swipe: card and action dock derive from the same responsive width token.
    This keeps them centered as one visual stack instead of independently sizing each row. */
 @media (max-width: 760px) {
