@@ -20,9 +20,17 @@ function safeReturnTo(value) {
   return dashboardReturnPaths.has(path) ? value : '/profile'
 }
 
-function settingsHref(section, returnTo, embedded = false) {
-  const prefix = embedded ? '/account?embedded=1&' : '/account?'
-  return `${prefix}section=${encodeURIComponent(section)}&returnTo=${encodeURIComponent(returnTo)}`
+function settingsHref(section, returnTo, { embedded = false, mobile = false } = {}) {
+  const params = new URLSearchParams()
+  if (embedded) params.set('embedded', '1')
+  if (mobile) params.set('mobile', '1')
+  params.set('section', section)
+  params.set('returnTo', returnTo)
+  return `/account?${params.toString()}`
+}
+
+function mobileSettingsIndexHref(returnTo) {
+  return `/account?mobile=1&returnTo=${encodeURIComponent(returnTo)}`
 }
 
 function notificationHref(value) {
@@ -38,6 +46,7 @@ function notificationTime(value) {
 export default async function AccountPage({ searchParams }) {
   const params = await searchParams
   const embedded = params?.embedded === '1'
+  const mobileFlow = params?.mobile === '1'
   const selectedSection = settingsSections.has(params?.section) ? params.section : embedded ? 'profile' : null
   const returnTo = safeReturnTo(params?.returnTo)
   const { user, profile, supabase } = await requireUser({ onboarding: true })
@@ -61,22 +70,23 @@ export default async function AccountPage({ searchParams }) {
     timezone: profile?.timezone || 'America/Toronto'
   }
   const unread = notifications.filter((item) => !item.read_at).length
-  const windowClass = `figma-settings-window${selectedSection ? ` is-expanded section-${selectedSection}` : ' section-index'}`
+  const windowClass = `figma-settings-window${selectedSection ? ` is-expanded section-${selectedSection}` : ' section-index'}${mobileFlow ? ' is-mobile-flow-window' : ''}`
+  const mobileBackHref = selectedSection ? mobileSettingsIndexHref(returnTo) : returnTo
 
-  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded}>
-    <div className={`figma-settings-screen${embedded ? ' is-embedded' : ''}`}>
+  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded && !mobileFlow}>
+    <div className={`figma-settings-screen${embedded ? ' is-embedded' : ''}${mobileFlow ? ' is-mobile-flow' : ''}${mobileFlow && !selectedSection ? ' is-mobile-index' : ''}`}>
       <section className={windowClass} aria-label="Settings">
-        <Link className="figma-settings-close" href={returnTo} aria-label="Close settings">×</Link>
+        {mobileFlow ? <Link className="figma-settings-mobile-back" href={mobileBackHref} aria-label={selectedSection ? 'Back to Settings' : 'Back to Profile'}>‹ <span>Back</span></Link> : <Link className="figma-settings-close" href={returnTo} aria-label="Close settings">×</Link>}
         <aside className="figma-settings-local-nav">
           <strong>Settings</strong>
           <nav>
-            <Link href={settingsHref('profile', returnTo, embedded)}>Profile</Link>
-            <Link href={settingsHref('security', returnTo, embedded)}>Email / Password</Link>
-            <Link href={settingsHref('appearance', returnTo, embedded)}>Appearance</Link>
-            <Link href={settingsHref('notifications', returnTo, embedded)}>Notifications{unread ? ` (${unread})` : ''}</Link>
-            <Link href={settingsHref('sessions', returnTo, embedded)}>Sessions</Link>
-            <Link href={settingsHref('billing', returnTo, embedded)}>Billing</Link>
-            <Link href={settingsHref('account', returnTo, embedded)}>Account</Link>
+            <Link href={settingsHref('profile', returnTo, { embedded, mobile: mobileFlow })}>Profile</Link>
+            <Link href={settingsHref('security', returnTo, { embedded, mobile: mobileFlow })}>Email / Password</Link>
+            <Link href={settingsHref('appearance', returnTo, { embedded, mobile: mobileFlow })}>Appearance</Link>
+            <Link href={settingsHref('notifications', returnTo, { embedded, mobile: mobileFlow })}>Notifications{unread ? ` (${unread})` : ''}</Link>
+            <Link href={settingsHref('sessions', returnTo, { embedded, mobile: mobileFlow })}>Sessions</Link>
+            <Link href={settingsHref('billing', returnTo, { embedded, mobile: mobileFlow })}>Billing</Link>
+            <Link href={settingsHref('account', returnTo, { embedded, mobile: mobileFlow })}>Account</Link>
           </nav>
         </aside>
 
