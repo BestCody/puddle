@@ -119,7 +119,6 @@ export function DiscoveryFilterSheet({ filters, categories = [], onChange, onApp
               <strong>{result.city}</strong><span>{[result.region, result.country].filter(Boolean).join(', ')}</span>
             </button>)}
           </div> : null}
-          {filters.locationLabel ? <div className="location-selected"><span>Selected location</span><strong>{filters.locationLabel}</strong></div> : null}
           <p className="location-picker-message" aria-live="polite">{locationMessage}</p>
         </div>
 

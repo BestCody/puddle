@@ -143,7 +143,7 @@ export default async function AccountPage({ searchParams }) {
 
           <section className="figma-settings-section" id="billing">
             <header><small>Billing</small><h1>Billing</h1></header>
-            <div className="figma-settings-row"><label>Puddle Pass</label><Link href="/membership?view=manage">Manage billing</Link></div>
+            <div className="figma-settings-row"><label>Puddle Pass</label><Link href="/membership" target="_top">View Plans</Link></div>
           </section>
 
           <section className="figma-settings-section" id="account">
