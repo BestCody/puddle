@@ -102,6 +102,10 @@ export default async function ProfilePage({ searchParams }) {
     const saves = saveRows.map((item) => ({ ...item, locations: locations.get(String(item.location_id)) || null }))
     const visiblePosts = posts.filter((post) => post.locations?.status === 'published')
     const visibleSaves = saves.filter((item) => item.locations?.status === 'published')
+    const locationCount = new Set([
+      ...visiblePosts.map((post) => post.location_id),
+      ...visibleSaves.map((item) => item.location_id)
+    ].map(String).filter(Boolean)).size
     const recentPost = visiblePosts[0] || null
     const recentLocation = recentPost?.locations || null
     const recentCover = recentLocation?.cover_path || null
@@ -131,7 +135,12 @@ export default async function ProfilePage({ searchParams }) {
         <div className="figma-profile-identity">
           <h1>{displayName}</h1>
           <small>@{username}</small>
-          <div className="figma-profile-counts" aria-label="Profile counts"><span>{friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}</span><span>{visibleSaves.length} {visibleSaves.length === 1 ? 'Save' : 'Saves'}</span></div>
+          <div className="figma-profile-counts" aria-label="Profile stats">
+            <span className="figma-profile-stat is-puddles"><i aria-hidden="true">●</i><strong>{visiblePosts.length}</strong><small>Puddles</small></span>
+            <span className="figma-profile-stat is-locations"><i aria-hidden="true">⌖</i><strong>{locationCount}</strong><small>Locations</small></span>
+            <span className="figma-profile-stat is-saves"><i aria-hidden="true">◇</i><strong>{visibleSaves.length}</strong><small>Saves</small></span>
+            <span className="figma-profile-stat is-friends"><i aria-hidden="true">○</i><strong>{friends.length}</strong><small>Friends</small></span>
+          </div>
           <div className="figma-profile-chips" aria-label="Favorite categories">
             {chips.map((value) => <span key={value}>{value}</span>)}
             <Link href="/account?section=profile&returnTo=%2Fprofile" aria-label="Edit favorite categories">+</Link>
