@@ -1,7 +1,7 @@
 "use client"
 
-function UndoIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 7-5 5 5 5"/><path d="M5 12h12"/></svg>
+function MessageIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h15v10h-9l-4.5 3v-3H4.5v-10Z"/></svg>
 }
 function PassIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -9,15 +9,15 @@ function PassIcon() {
 function SaveIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.6c0 5-8.8 10.4-8.8 10.4S3.2 13.6 3.2 8.6A4.6 4.6 0 0 1 12 6.7a4.6 4.6 0 0 1 8.8 1.9Z"/></svg>
 }
-function PerfectIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg>
+function PostIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15" rx="3"/><path d="M8 12h8M12 8v8"/></svg>
 }
 
 const actions = [
-  { key: 'undo', label: 'Back', Icon: UndoIcon },
+  { key: 'undo', label: 'Message', Icon: MessageIcon },
   { key: 'pass', label: 'Pass', Icon: PassIcon },
   { key: 'save', label: 'Save', Icon: SaveIcon },
-  { key: 'perfect', label: 'Star', Icon: PerfectIcon }
+  { key: 'perfect', label: 'Post', Icon: PostIcon }
 ]
 
 export function SwipeActionDock({ onUndo, onPass, onSave, onPerfect, canUndo, busy }) {
