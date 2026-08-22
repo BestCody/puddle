@@ -3,7 +3,26 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function DiscoverSearchOverlay({ initialQuery = '' }) {
+function buildSearchHref(route, fixedParams, query) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(fixedParams || {})) {
+    if (value !== null && value !== undefined && value !== '') params.set(key, String(value))
+  }
+  const value = query.trim()
+  if (value) params.set('q', value)
+  const search = params.toString()
+  return search ? `${route}?${search}` : route
+}
+
+export function PuddleSearchOverlay({
+  initialQuery = '',
+  route = '/map',
+  fixedParams = {},
+  placeholder = 'Search Puddles',
+  triggerLabel = 'Search Puddles',
+  triggerClassName = '',
+  testId = 'feed-search'
+}) {
   const router = useRouter()
   const inputRef = useRef(null)
   const timerRef = useRef(null)
@@ -31,33 +50,51 @@ export function DiscoverSearchOverlay({ initialQuery = '' }) {
     if (timerRef.current) window.clearTimeout(timerRef.current)
   }, [])
 
+  function navigate(next) {
+    router.replace(buildSearchHref(route, fixedParams, next), { scroll: false })
+  }
+
   function update(next) {
     setQuery(next)
     if (timerRef.current) window.clearTimeout(timerRef.current)
-    timerRef.current = window.setTimeout(() => {
-      const value = next.trim()
-      router.replace(value ? `/map?q=${encodeURIComponent(value)}` : '/map', { scroll: false })
-    }, 260)
+    timerRef.current = window.setTimeout(() => navigate(next), 260)
   }
 
   function submit(event) {
     event.preventDefault()
     if (timerRef.current) window.clearTimeout(timerRef.current)
-    const value = query.trim()
-    router.replace(value ? `/map?q=${encodeURIComponent(value)}` : '/map', { scroll: false })
+    navigate(query)
   }
 
+  const triggerClass = ['puddle-discover-search-trigger', 'puddle-search-trigger', triggerClassName].filter(Boolean).join(' ')
+
   return <>
-    <button className="puddle-discover-search-trigger" type="button" onClick={() => setOpen(true)} data-testid="feed-search" aria-haspopup="dialog" aria-expanded={open}>
-      <span>Search Puddles</span><b aria-hidden="true">⌕</b>
+    <button className={triggerClass} type="button" onClick={() => setOpen(true)} data-testid={testId} aria-haspopup="dialog" aria-expanded={open}>
+      <span>{triggerLabel}</span><b aria-hidden="true">⌕</b>
     </button>
-    <div className={`puddle-discover-search-overlay${open ? ' is-open' : ''}`} aria-hidden={!open}>
-      <button className="puddle-discover-search-backdrop" type="button" onClick={() => setOpen(false)} aria-label="Close search" />
-      <form className="puddle-discover-search-dialog" role="search" onSubmit={submit}>
+    <div className={`puddle-discover-search-overlay puddle-search-overlay${open ? ' is-open' : ''}`} aria-hidden={!open}>
+      <button className="puddle-discover-search-backdrop puddle-universal-backdrop" type="button" onClick={() => setOpen(false)} aria-label="Close search" />
+      <form className="puddle-discover-search-dialog puddle-search-dialog" role="search" onSubmit={submit}>
         <span aria-hidden="true">⌕</span>
-        <input ref={inputRef} type="search" value={query} onChange={(event) => update(event.target.value)} placeholder="Search Puddles" aria-label="Search Puddles" autoComplete="off" />
+        <input ref={inputRef} type="search" value={query} onChange={(event) => update(event.target.value)} placeholder={placeholder} aria-label={placeholder} autoComplete="off" />
         {query ? <button type="button" onClick={() => update('')} aria-label="Clear search">×</button> : null}
       </form>
     </div>
   </>
+}
+
+export function DiscoverSearchOverlay({ initialQuery = '' }) {
+  return <PuddleSearchOverlay initialQuery={initialQuery} />
+}
+
+export function SavedSearchOverlay({ initialQuery = '', category = 'all' }) {
+  return <PuddleSearchOverlay
+    initialQuery={initialQuery}
+    route="/plans"
+    fixedParams={{ tab: 'saved', ...(category !== 'all' ? { category } : {}) }}
+    placeholder="Search Saved"
+    triggerLabel="Search Saved"
+    triggerClassName="puddle-saved-search-trigger"
+    testId="saved-search"
+  />
 }
