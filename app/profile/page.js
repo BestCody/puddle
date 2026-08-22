@@ -119,7 +119,7 @@ export default async function ProfilePage({ searchParams }) {
         {customizing ? <div className="figma-profile-theme-picker" aria-label="Profile banner color">
           {Object.entries(themes).map(([name, color]) => <form action={updateProfileTheme} key={name}><input type="hidden" name="profile_theme" value={name} /><button className={name === themeName ? 'is-selected' : ''} type="submit" style={{ background: color }} aria-label={`${name} banner`}>{name === themeName ? '✓' : ''}</button></form>)}
           <Link className="figma-profile-customize-done" href="/profile" aria-label="Done customizing">✓</Link>
-        </div> : <Link className="figma-profile-edit" href="/profile?customize=1">Edit</Link>}
+        </div> : <div className="figma-profile-top-actions"><Link className="figma-profile-edit" href="/profile?customize=1">Edit</Link><Link className="figma-profile-settings-mobile" href="/account?mobile=1&returnTo=%2Fprofile">Settings</Link></div>}
 
         <details className="figma-profile-avatar-editor">
           <summary aria-label="Change profile photo">
