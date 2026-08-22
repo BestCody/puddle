@@ -1,7 +1,7 @@
 /* Screenshot-driven alignment follow-up. Keep this as the final cascade layer. */
 
 @media (min-width: 761px) {
-  /* Restore the authored sidebar geometry, then vertically center the navigation group. */
+  /* Restore the authored sidebar width, but keep the centered navigation stack more compact vertically. */
   .figma-dashboard-sidebar {
     min-height: 832px !important;
   }
@@ -15,77 +15,78 @@
     top: 50% !important;
     left: 20px !important;
     width: 241px !important;
-    gap: 4px !important;
+    gap: 2px !important;
     transform: translateY(-50%) !important;
   }
 
   .figma-dashboard-nav-item {
     width: 241px !important;
-    height: 56px !important;
+    height: 50px !important;
     gap: 9px !important;
     padding: 0 13px 0 23px !important;
-    border-radius: 20px !important;
+    border-radius: 18px !important;
     font-size: 17px !important;
   }
 
   .figma-dashboard-nav-icon {
-    width: 29px !important;
-    height: 29px !important;
-    flex-basis: 29px !important;
+    width: 26px !important;
+    height: 26px !important;
+    flex-basis: 26px !important;
   }
 
   .figma-dashboard-nav-icon svg {
-    width: 28px !important;
-    height: 28px !important;
+    width: 25px !important;
+    height: 25px !important;
   }
 
   .figma-dashboard-avatar {
-    width: 28px !important;
-    height: 28px !important;
+    width: 25px !important;
+    height: 25px !important;
   }
 
   .figma-dashboard-sidebar-logo,
   .figma-dashboard-sidebar.is-expanded .figma-dashboard-sidebar-logo {
-    top: calc(50% - 260px) !important;
+    top: calc(50% - 223px) !important;
     left: 34px !important;
-    width: 56px !important;
-    height: 56px !important;
+    width: 50px !important;
+    height: 50px !important;
   }
 
   .figma-dashboard-sidebar-logo .puddle-logo,
   .figma-dashboard-sidebar-logo a,
   .figma-dashboard-sidebar-logo img,
   .figma-dashboard-sidebar-logo svg {
-    width: 56px !important;
-    height: 56px !important;
+    width: 50px !important;
+    height: 50px !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
     top: 50% !important;
     left: 29px !important;
     width: 60px !important;
+    gap: 2px !important;
     transform: translateY(-50%) !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
     width: 60px !important;
-    height: 56px !important;
+    height: 50px !important;
     padding: 0 !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
-    top: calc(50% - 250px) !important;
+    top: calc(50% - 210px) !important;
     left: 37px !important;
-    width: 43px !important;
-    height: 43px !important;
+    width: 39px !important;
+    height: 39px !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
-    width: 43px !important;
-    height: 43px !important;
+    width: 39px !important;
+    height: 39px !important;
   }
 
   /* Messages: remove the extra relative offset that pushed the panels far below the pill. */
@@ -124,10 +125,10 @@
 
   .figma-dashboard-sidebar-logo,
   .figma-dashboard-sidebar.is-expanded .figma-dashboard-sidebar-logo {
-    top: max(24px, calc(50% - 250px)) !important;
+    top: max(20px, calc(50% - 223px)) !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
-    top: max(24px, calc(50% - 240px)) !important;
+    top: max(20px, calc(50% - 210px)) !important;
   }
 }
