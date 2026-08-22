@@ -1,0 +1,133 @@
+/* Screenshot-driven alignment follow-up. Keep this as the final cascade layer. */
+
+@media (min-width: 761px) {
+  /* Restore the authored sidebar geometry, then vertically center the navigation group. */
+  .figma-dashboard-sidebar {
+    min-height: 832px !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise {
+    width: 102px !important;
+  }
+
+  .figma-dashboard-nav,
+  .figma-dashboard-sidebar.is-expanded .figma-dashboard-nav {
+    top: 50% !important;
+    left: 20px !important;
+    width: 241px !important;
+    gap: 4px !important;
+    transform: translateY(-50%) !important;
+  }
+
+  .figma-dashboard-nav-item {
+    width: 241px !important;
+    height: 56px !important;
+    gap: 9px !important;
+    padding: 0 13px 0 23px !important;
+    border-radius: 20px !important;
+    font-size: 17px !important;
+  }
+
+  .figma-dashboard-nav-icon {
+    width: 29px !important;
+    height: 29px !important;
+    flex-basis: 29px !important;
+  }
+
+  .figma-dashboard-nav-icon svg {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .figma-dashboard-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .figma-dashboard-sidebar-logo,
+  .figma-dashboard-sidebar.is-expanded .figma-dashboard-sidebar-logo {
+    top: calc(50% - 260px) !important;
+    left: 34px !important;
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar-logo svg {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
+    top: 50% !important;
+    left: 29px !important;
+    width: 60px !important;
+    transform: translateY(-50%) !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
+    width: 60px !important;
+    height: 56px !important;
+    padding: 0 !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    top: calc(50% - 250px) !important;
+    left: 37px !important;
+    width: 43px !important;
+    height: 43px !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+    width: 43px !important;
+    height: 43px !important;
+  }
+
+  /* Messages: remove the extra relative offset that pushed the panels far below the pill. */
+  .figma-friends-screen.is-messages .figma-friends-message-layout {
+    top: auto !important;
+    bottom: auto !important;
+    height: calc(100dvh - 126px) !important;
+    min-height: 620px !important;
+    margin-top: 0 !important;
+  }
+
+  /* Saved search stays top-right, but belongs visually to the top pill instead of the far edge. */
+  .puddle-saved-search-trigger {
+    top: 34px !important;
+    right: max(28px, calc(50% - 300px)) !important;
+  }
+
+  /* Swipe should be centered in the whole right-side stage, not the older 1000px inner cap. */
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-dashboard-main {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+  }
+
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-workspace {
+    width: 100% !important;
+    justify-items: center !important;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 761px) {
+  .figma-dashboard-nav,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
+    top: 50% !important;
+  }
+
+  .figma-dashboard-sidebar-logo,
+  .figma-dashboard-sidebar.is-expanded .figma-dashboard-sidebar-logo {
+    top: max(24px, calc(50% - 250px)) !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    top: max(24px, calc(50% - 240px)) !important;
+  }
+}
