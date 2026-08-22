@@ -53,16 +53,16 @@ export function SettingsScrollBridge() {
 
       function updateFromScroll() {
         frame = 0
-        const marker = container.scrollTop + Math.min(180, Math.max(72, container.clientHeight * .28))
+        const containerRect = container.getBoundingClientRect()
+        const markerY = containerRect.top + Math.min(220, Math.max(96, container.clientHeight * .34))
         let visible = sections[0]
 
         for (const section of sections) {
-          if (section.offsetTop <= marker) visible = section
+          const rect = section.getBoundingClientRect()
+          if (rect.top <= markerY) visible = section
           else break
         }
 
-        const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 8
-        if (atBottom) visible = sections[sections.length - 1]
         setActive(visible.id)
       }
 
@@ -89,6 +89,7 @@ export function SettingsScrollBridge() {
 
       for (const item of links) item.link.addEventListener('click', onClick)
       container.addEventListener('scroll', onScroll, { passive: true })
+      window.addEventListener('resize', onScroll, { passive: true })
 
       const requested = new URLSearchParams(window.location.search).get('section')
       const initial = SECTION_IDS.includes(requested) ? requested : SECTION_IDS[0]
@@ -102,6 +103,7 @@ export function SettingsScrollBridge() {
       detach = () => {
         if (frame) window.cancelAnimationFrame(frame)
         container.removeEventListener('scroll', onScroll)
+        window.removeEventListener('resize', onScroll)
         for (const item of links) item.link.removeEventListener('click', onClick)
       }
     }
