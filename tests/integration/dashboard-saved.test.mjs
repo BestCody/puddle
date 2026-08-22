@@ -5,12 +5,13 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('rebuilt Figma dashboard shell keeps the authored expanded and concise sidebar states accessible', async () => {
-  const [shell, sidebar, nav, styles, densityStyles, layout] = await Promise.all([
+  const [shell, sidebar, nav, styles, densityStyles, finalStyles, layout] = await Promise.all([
     read('components/product-shell.js'),
     read('components/figma-dashboard-sidebar.js'),
     read('components/product-nav.js'),
     read('app/figma-dashboard-rebuild.css'),
     read('app/responsive-density-20260822.css'),
+    read('app/sidebar-layout-followup-20260822.css'),
     read('app/layout.js')
   ])
 
@@ -21,8 +22,8 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
   assert.doesNotMatch(shell, /ResizableProductSidebar/)
 
   assert.match(sidebar, /puddle:figma-dashboard-sidebar-width/)
-  assert.match(sidebar, /const EXPANDED_WIDTH = 252/)
-  assert.match(sidebar, /const CONCISE_WIDTH = 92/)
+  assert.match(sidebar, /const EXPANDED_WIDTH = 280/)
+  assert.match(sidebar, /const CONCISE_WIDTH = 102/)
   assert.match(sidebar, /--figma-shell-sidebar/)
   assert.match(sidebar, /role="separator"/)
   assert.match(sidebar, /ArrowLeft/)
@@ -41,8 +42,11 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
   assert.match(styles, /width: 241px/)
   assert.match(styles, /height: 56px/)
   assert.match(densityStyles, /\.figma-dashboard-sidebar\.is-concise\s*\{[\s\S]*width:\s*92px !important/)
-  assert.match(densityStyles, /\.figma-dashboard-nav-item\s*\{[\s\S]*width:\s*217px !important[\s\S]*height:\s*50px !important/)
+  assert.match(finalStyles, /\.figma-dashboard-sidebar\.is-concise\s*\{[\s\S]*width:\s*102px !important/)
+  assert.match(finalStyles, /\.figma-dashboard-nav-item\s*\{[\s\S]*width:\s*241px !important[\s\S]*height:\s*56px !important/)
+  assert.match(finalStyles, /\.figma-dashboard-nav,[\s\S]*top:\s*50% !important[\s\S]*transform:\s*translateY\(-50%\) !important/)
   assert.match(layout, /import '\.\/responsive-density-20260822\.css'/)
+  assert.match(layout, /import '\.\/sidebar-layout-followup-20260822\.css'/)
 })
 
 test('saved places hydrate canonical metadata from OpenSearch while Supabase pages relationship state', async () => {
