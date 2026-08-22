@@ -6,7 +6,7 @@ function directControls(segment) {
   return Array.from(segment.children).filter((child) => child.matches('a, button'))
 }
 
-function setActive(segment, index) {
+function setActive(segment, index, { optimistic = false } = {}) {
   const controls = directControls(segment)
   if (!controls.length) return
   const boundedIndex = Math.max(0, Math.min(index, controls.length - 1))
@@ -18,7 +18,13 @@ function setActive(segment, index) {
   segment.style.setProperty('--segment-active-left', `${active.offsetLeft}px`)
   segment.style.setProperty('--segment-active-width', `${active.offsetWidth}px`)
   controls.forEach((control, controlIndex) => {
-    control.classList.toggle('is-ui-active', controlIndex === boundedIndex)
+    const selected = controlIndex === boundedIndex
+    control.classList.toggle('is-ui-active', selected)
+    if (optimistic && segment.classList.contains('figma-friends-tabs')) {
+      control.classList.toggle('is-active', selected)
+      if (selected) control.setAttribute('aria-current', 'page')
+      else control.removeAttribute('aria-current')
+    }
   })
 }
 
@@ -47,7 +53,7 @@ export function SegmentInteractionBridge() {
       if (!segment || segment.classList.contains('figma-instant-segment')) return
       const controls = directControls(segment)
       const index = controls.indexOf(control)
-      if (index >= 0) setActive(segment, index)
+      if (index >= 0) setActive(segment, index, { optimistic: true })
     }
 
     function onResize() {

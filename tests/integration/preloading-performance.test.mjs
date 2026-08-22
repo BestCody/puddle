@@ -82,7 +82,7 @@ test('top pills size to their labels and move their highlight before navigation 
   assert.match(targetedStyles, /left 145ms/)
   assert.match(targetedStyles, /width 145ms/)
 
-  assert.match(mapPage, /\{ value: 'feed', label: 'Feed', href: '\/map' \}/)
+  assert.match(mapPage, /\{ value: 'feed', label: 'Posts', href: '\/map' \}/)
   assert.match(mapPage, /tone="yellow"/)
   assert.match(plansPage, /tone="purple"/)
   assert.match(passPage, /tone="pink"/)

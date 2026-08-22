@@ -20,6 +20,13 @@ export function SettingsScrollBridge() {
 
     function wireSettings() {
       scheduled = false
+      if (document.querySelector('.figma-settings-screen.is-mobile-flow')) {
+        detach()
+        activeContainer = null
+        detach = () => {}
+        return
+      }
+
       const container = document.querySelector('.figma-settings-detail')
       if (container === activeContainer) return
 

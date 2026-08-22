@@ -1,0 +1,351 @@
+/* Final targeted layer for shared Profile, mobile Settings, Discover search, and map clustering. */
+
+/* Profile keeps one markup/design on every viewport. Only placement adapts. */
+.figma-profile-top-actions { display: contents; }
+.figma-profile-settings-mobile { display: none; }
+
+/* Discover search stays compact until intentionally opened. */
+.puddle-discover-search-trigger {
+  grid-column: 3;
+  justify-self: end;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 2px solid #d9d9d9 !important;
+  border-radius: 999px !important;
+  background: #fff !important;
+  color: #555 !important;
+  box-shadow: 0 2px 0 rgba(0,0,0,.08);
+  cursor: pointer;
+  box-sizing: border-box !important;
+}
+.puddle-discover-search-trigger > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.puddle-discover-search-trigger > b { font: 700 20px/1 Manrope, sans-serif; }
+
+.puddle-discover-search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: start center;
+  padding: max(92px, 14dvh) 14px 24px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .2s ease, visibility 0s linear .2s;
+}
+.puddle-discover-search-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+.puddle-discover-search-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(245,247,249,.28);
+  -webkit-backdrop-filter: blur(16px) saturate(1.05);
+  backdrop-filter: blur(16px) saturate(1.05);
+  cursor: default;
+}
+.puddle-discover-search-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(560px, calc(100vw - 28px));
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr) 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 16px;
+  border: 1.5px solid rgba(30,30,30,.13);
+  border-radius: 999px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 20px 65px rgba(0,0,0,.16), 0 4px 16px rgba(0,0,0,.08);
+  box-sizing: border-box;
+  transform: translateY(-18px) scale(.88);
+  clip-path: inset(0 44% 0 44% round 999px);
+  transition: transform .32s cubic-bezier(.2,.9,.25,1.18), clip-path .34s cubic-bezier(.2,.9,.25,1), opacity .2s ease;
+  opacity: 0;
+}
+.puddle-discover-search-overlay.is-open .puddle-discover-search-dialog {
+  transform: translateY(0) scale(1);
+  clip-path: inset(0 0 0 0 round 999px);
+  opacity: 1;
+}
+.puddle-discover-search-dialog > span { color: #777; font: 700 21px/1 Manrope, sans-serif; }
+.puddle-discover-search-dialog input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111;
+  font: 650 18px/1.2 Manrope, sans-serif;
+}
+.puddle-discover-search-dialog input::placeholder { color: #aaa; }
+.puddle-discover-search-dialog button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #777;
+  font: 500 23px/1 Manrope, sans-serif;
+  cursor: pointer;
+}
+
+/* Density clusters replace piles of individual markers while zoomed out. */
+.location-map-cluster {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 3px solid rgba(255,255,255,.92);
+  border-radius: 50%;
+  background: rgba(76,165,247,.9);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  cursor: pointer;
+  will-change: transform;
+}
+.location-map-cluster > span { font: 800 13px/1 Manrope, sans-serif; }
+.location-map-cluster:hover { box-shadow: 0 5px 18px rgba(0,0,0,.23); }
+
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-search-trigger,
+.figma-dashboard-shell[data-resolved-appearance='dark'] .puddle-discover-search-trigger,
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-search-dialog,
+.figma-dashboard-shell[data-resolved-appearance='dark'] .puddle-discover-search-dialog {
+  background: #202428 !important;
+  border-color: #3d4349 !important;
+  color: #eef1f3 !important;
+}
+.figma-dashboard-shell[data-appearance='dark'] .puddle-discover-search-dialog input,
+.figma-dashboard-shell[data-resolved-appearance='dark'] .puddle-discover-search-dialog input { color: #f4f6f7; }
+
+@media (max-width: 760px) {
+  /* Edit + Settings are sibling actions inside the same Profile hero. */
+  .figma-profile-top-actions {
+    position: absolute;
+    z-index: 12;
+    top: 13px;
+    right: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .figma-profile-top-actions .figma-profile-edit,
+  .figma-profile-settings-mobile {
+    position: static !important;
+    inset: auto !important;
+    width: 80px !important;
+    min-width: 80px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+    border: 2px solid rgba(255,255,255,.72) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.92) !important;
+    color: var(--profile-theme, #4ca5f7) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    font: 800 15px/1 Manrope, sans-serif !important;
+    text-decoration: none !important;
+    box-sizing: border-box !important;
+  }
+  .figma-profile-settings-mobile { display: grid; }
+
+  /* Mobile Settings is a true full-screen navigation flow, not the desktop iframe/window. */
+  body:has(.figma-settings-screen.is-mobile-flow) .figma-dashboard-sidebar,
+  body:has(.figma-settings-screen.is-mobile-flow) .figma-dashboard-mobile-nav,
+  body:has(.figma-settings-screen.is-mobile-flow) .figma-dashboard-account-menu {
+    display: none !important;
+  }
+  body:has(.figma-settings-screen.is-mobile-flow) .figma-dashboard-stage,
+  body:has(.figma-settings-screen.is-mobile-flow) .figma-dashboard-main {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .figma-settings-screen.is-mobile-flow {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    min-height: 100dvh !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #f6f6f6 !important;
+  }
+  .figma-settings-screen.is-mobile-flow .figma-settings-window,
+  .figma-settings-screen.is-mobile-flow .figma-settings-window.is-expanded {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #f6f6f6 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  .figma-settings-mobile-back {
+    position: fixed;
+    z-index: 30;
+    top: max(14px, env(safe-area-inset-top));
+    left: 14px;
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 12px 0 8px;
+    border: 1.5px solid #dedede;
+    border-radius: 999px;
+    background: rgba(255,255,255,.94);
+    color: #4ca5f7;
+    text-decoration: none;
+    font: 800 14px/1 Manrope, sans-serif;
+    box-shadow: 0 2px 0 rgba(0,0,0,.06);
+  }
+  .figma-settings-mobile-back::first-letter { font-size: 25px; }
+  .figma-settings-screen.is-mobile-flow .figma-settings-local-nav {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    padding: calc(82px + env(safe-area-inset-top)) 18px 40px !important;
+    overflow: auto !important;
+    background: #f6f6f6 !important;
+    box-sizing: border-box !important;
+  }
+  .figma-settings-screen.is-mobile-flow .figma-settings-local-nav > strong {
+    display: block !important;
+    margin: 0 4px 22px !important;
+    color: #111 !important;
+    font: 800 31px/1 Manrope, sans-serif !important;
+  }
+  .figma-settings-screen.is-mobile-flow .figma-settings-local-nav nav {
+    position: relative !important;
+    inset: auto !important;
+    display: grid !important;
+    gap: 9px !important;
+    margin: 0 !important;
+  }
+  .figma-settings-screen.is-mobile-flow .figma-settings-local-nav nav a {
+    position: relative;
+    min-height: 58px;
+    display: flex !important;
+    align-items: center;
+    padding: 0 44px 0 17px !important;
+    border: 1.5px solid #e3e3e3 !important;
+    border-radius: 17px !important;
+    background: #fff !important;
+    color: #252525 !important;
+    text-decoration: none;
+    font: 750 16px/1.15 Manrope, sans-serif !important;
+    box-shadow: 0 2px 0 rgba(0,0,0,.045);
+  }
+  .figma-settings-screen.is-mobile-flow .figma-settings-local-nav nav a::after {
+    content: '›';
+    position: absolute;
+    right: 17px;
+    top: 50%;
+    transform: translateY(-51%);
+    color: #aaa;
+    font: 500 27px/1 Manrope, sans-serif;
+  }
+  .figma-settings-screen.is-mobile-index .figma-settings-detail { display: none !important; }
+  .figma-settings-screen.is-mobile-flow:not(.is-mobile-index) .figma-settings-local-nav { display: none !important; }
+  .figma-settings-screen.is-mobile-flow:not(.is-mobile-index) .figma-settings-detail {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    display: block !important;
+    overflow-y: auto !important;
+    padding: calc(82px + env(safe-area-inset-top)) 18px calc(40px + env(safe-area-inset-bottom)) !important;
+    background: #f6f6f6 !important;
+    box-sizing: border-box !important;
+  }
+  .figma-settings-screen.is-mobile-flow:not(.is-mobile-index) .figma-settings-section {
+    display: none !important;
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    transform: none !important;
+  }
+  .figma-settings-screen.is-mobile-flow .section-profile #profile,
+  .figma-settings-screen.is-mobile-flow .section-security #security,
+  .figma-settings-screen.is-mobile-flow .section-appearance #appearance,
+  .figma-settings-screen.is-mobile-flow .section-notifications #notifications,
+  .figma-settings-screen.is-mobile-flow .section-sessions #sessions,
+  .figma-settings-screen.is-mobile-flow .section-billing #billing,
+  .figma-settings-screen.is-mobile-flow .section-account #account {
+    display: block !important;
+  }
+  .figma-settings-screen.is-mobile-flow .figma-settings-section > header {
+    margin: 0 0 24px !important;
+  }
+  .figma-settings-screen.is-mobile-flow .figma-settings-section > header small { display: none !important; }
+  .figma-settings-screen.is-mobile-flow .figma-settings-section > header h1 {
+    margin: 0 !important;
+    font-size: 31px !important;
+  }
+  .figma-settings-screen.is-mobile-flow .figma-settings-row {
+    min-width: 0 !important;
+    margin-bottom: 12px !important;
+    padding: 15px !important;
+    border: 1.5px solid #e3e3e3 !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+  }
+
+  .puddle-discover-search-trigger {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    height: 40px !important;
+  }
+  .puddle-discover-search-overlay { padding-top: max(76px, 12dvh); }
+  .puddle-discover-search-dialog {
+    min-height: 54px;
+    grid-template-columns: 26px minmax(0,1fr) 32px;
+    padding-left: 14px;
+  }
+  .puddle-discover-search-dialog input { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puddle-discover-search-overlay,
+  .puddle-discover-search-dialog { transition: none !important; }
+}

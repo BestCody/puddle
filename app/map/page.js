@@ -3,6 +3,7 @@ import { AuthMessage } from '@/components/auth-message'
 import { InstantSegment } from '@/components/instant-segment'
 import { LocationMap } from '@/components/location-map'
 import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
+import { DiscoverSearchOverlay } from '@/components/discover-search-overlay'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
 import { getSocialFeedSnapshot } from '@/lib/app/social-feed-data'
@@ -112,17 +113,14 @@ function FeedTop({ view, query }) {
       className={styles.tabs}
       tone="yellow"
       activeValue={view}
-      ariaLabel="Feed or map"
+      ariaLabel="Posts or map"
       testId="feed-tabs"
       items={[
-        { value: 'feed', label: 'Feed', href: '/map' },
+        { value: 'feed', label: 'Posts', href: '/map' },
         { value: 'map', label: 'Map', href: '/map?view=map' }
       ]}
     />
-    {view === 'feed' ? <form className={styles.search} action="/map" method="get" data-testid="feed-search">
-      <label><input aria-label="Search puddle" type="search" name="q" defaultValue={query || ''} placeholder="Search puddle" /></label>
-      <button type="submit" aria-label="Search">⌕</button>
-    </form> : <span aria-hidden="true" />}
+    {view === 'feed' ? <DiscoverSearchOverlay initialQuery={query || ''} /> : <span aria-hidden="true" />}
   </header>
 }
 
