@@ -156,7 +156,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       } catch (error) {
         if (error?.name !== 'AbortError') console.warn('Could not refresh visible Puddle locations.', { message: error?.message || 'unknown error' })
       }
-    }, 220)
+    }, 280)
     return () => { window.clearTimeout(timer); controller.abort() }
   }, [center.latitude, center.longitude, filter, loadCatalogue, selectingForPost, viewport.height, viewport.width, zoom])
 
