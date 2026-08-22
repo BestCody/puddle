@@ -5,11 +5,13 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('rebuilt Figma dashboard shell keeps the authored expanded and concise sidebar states accessible', async () => {
-  const [shell, sidebar, nav, styles] = await Promise.all([
+  const [shell, sidebar, nav, styles, densityStyles, layout] = await Promise.all([
     read('components/product-shell.js'),
     read('components/figma-dashboard-sidebar.js'),
     read('components/product-nav.js'),
-    read('app/figma-dashboard-rebuild.css')
+    read('app/figma-dashboard-rebuild.css'),
+    read('app/responsive-density-20260822.css'),
+    read('app/layout.js')
   ])
 
   assert.match(shell, /FigmaDashboardSidebar/)
@@ -19,8 +21,8 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
   assert.doesNotMatch(shell, /ResizableProductSidebar/)
 
   assert.match(sidebar, /puddle:figma-dashboard-sidebar-width/)
-  assert.match(sidebar, /const EXPANDED_WIDTH = 280/)
-  assert.match(sidebar, /const CONCISE_WIDTH = 102/)
+  assert.match(sidebar, /const EXPANDED_WIDTH = 252/)
+  assert.match(sidebar, /const CONCISE_WIDTH = 92/)
   assert.match(sidebar, /--figma-shell-sidebar/)
   assert.match(sidebar, /role="separator"/)
   assert.match(sidebar, /ArrowLeft/)
@@ -38,6 +40,9 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
   assert.match(styles, /\.figma-dashboard-nav-item\s*\{/)
   assert.match(styles, /width: 241px/)
   assert.match(styles, /height: 56px/)
+  assert.match(densityStyles, /\.figma-dashboard-sidebar\.is-concise\s*\{[\s\S]*width:\s*92px !important/)
+  assert.match(densityStyles, /\.figma-dashboard-nav-item\s*\{[\s\S]*width:\s*217px !important[\s\S]*height:\s*50px !important/)
+  assert.match(layout, /import '\.\/responsive-density-20260822\.css'/)
 })
 
 test('saved places hydrate canonical metadata from OpenSearch while Supabase pages relationship state', async () => {
@@ -63,6 +68,7 @@ test('saved places hydrate canonical metadata from OpenSearch while Supabase pag
   assert.match(plans, /function foldersFor\(items\)/)
   assert.match(plans, /const folders = new Map\(\)/)
   assert.match(plans, /SavedCategoryRail/)
+  assert.match(plans, /SavedSearchOverlay/)
   assert.match(plans, /className=\{styles\.categories\}/)
   assert.match(plans, /className=\{styles\.placeCard\} data-testid="saved-card"/)
   assert.match(plans, /className=\{styles\.placeGrid\}/)
@@ -71,6 +77,7 @@ test('saved places hydrate canonical metadata from OpenSearch while Supabase pag
   assert.match(plans, /data-testid="saved-next-page"/)
   assert.match(plans, /data-testid="saved-screen"/)
   assert.doesNotMatch(plans, /figma-saved-/)
+  assert.doesNotMatch(plans, /className=\{styles\.floatingSearch\}/)
 
   assert.match(styles, /\.placeGrid\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 297px\)\)/s)
   assert.match(styles, /\.placeCard\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*156px minmax\(0, 1fr\)/s)

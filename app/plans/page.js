@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { InstantSegment } from '@/components/instant-segment'
+import { SavedSearchOverlay } from '@/components/discover-search-overlay'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import styles from './Plans.module.css'
@@ -125,6 +126,7 @@ export default async function PlansPage({ searchParams }) {
             { value: 'planned', label: 'Plans', href: '/plans?tab=planned' }
           ]}
         />
+        {active === 'saved' ? <SavedSearchOverlay initialQuery={query} category={selectedCategory} /> : null}
       </header>
 
       {active === 'saved' ? <div className={styles.categoryBand}>
@@ -143,13 +145,6 @@ export default async function PlansPage({ searchParams }) {
           cursor: page.pagination.nextCursor
         })}>{active === 'past' ? 'Older history' : active === 'planned' ? 'More plans' : 'More saved places'}</Link>
       </div> : null}
-
-      {active === 'saved' ? <form className={styles.floatingSearch} action="/plans" method="get" data-testid="saved-search">
-        <input type="hidden" name="tab" value="saved" />
-        {selectedCategory !== 'all' ? <input type="hidden" name="category" value={selectedCategory} /> : null}
-        <label><input aria-label="Search saved puddles" type="search" name="q" defaultValue={query} placeholder="Search a saved puddle..." /></label>
-        <button type="submit" aria-label="Search saved puddles">↑</button>
-      </form> : null}
 
       <footer className={styles.historyLink}>{active === 'past' ? <Link href="/plans">Back to Saved</Link> : <Link href="/plans?tab=past">History</Link>}</footer>
     </div>

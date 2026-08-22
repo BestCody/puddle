@@ -95,7 +95,7 @@ export function DiscoveryFilterSheet({ filters, categories = [], onChange, onApp
   }
 
   return (
-    <div className="minimal-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <div className="minimal-details-backdrop puddle-universal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="minimal-filter-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title">
         <header><h2 id="filter-title">Filters</h2><button type="button" onClick={onClose} aria-label="Close filters">×</button></header>
 
