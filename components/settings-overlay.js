@@ -55,7 +55,7 @@ export function SettingsOverlay() {
   if (!enabled) return null
 
   return <div className={`puddle-settings-overlay${open ? ' is-open' : ''}`} aria-hidden={!open}>
-    <button className="puddle-settings-overlay-backdrop" type="button" onClick={() => window.dispatchEvent(new Event(SETTINGS_CLOSE_EVENT))} aria-label="Close settings" />
+    <button className="puddle-settings-overlay-backdrop puddle-universal-backdrop" type="button" onClick={() => window.dispatchEvent(new Event(SETTINGS_CLOSE_EVENT))} aria-label="Close settings" />
     <iframe
       ref={frameRef}
       className="puddle-settings-overlay-frame"
