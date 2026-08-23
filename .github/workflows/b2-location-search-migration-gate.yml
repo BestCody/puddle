@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - '.github/b2-location-search-migration-trigger'
-      - '.github/workflows/b2-location-search-migration-gate.yml'
   workflow_dispatch:
 
 permissions:
@@ -41,12 +40,6 @@ jobs:
       GLOBAL_LOCATION_MAX_COMPRESSED_BYTES: '16777216'
       GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
       GLOBAL_LOCATION_FETCH_CONCURRENCY: '8'
-      GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '12000'
-      GLOBAL_LOCATION_PLANNER_ID: v2-c4000-b524288
-      GLOBAL_LOCATION_PLANNER_TARGET_CANDIDATES: '4000'
-      GLOBAL_LOCATION_PLANNER_TARGET_BYTES: '524288'
-      GLOBAL_LOCATION_PLANNER_WORKERS: '16'
-
     steps:
       - name: Publish migration pending status
         env:
@@ -61,7 +54,7 @@ jobs:
           body = json.dumps({
               'state': 'pending',
               'context': 'B2 search migration gate',
-              'description': 'Validating B2 base index and bounded planner overlay',
+              'description': 'Building and validating immutable B2 search snapshot',
               'target_url': os.environ['STATUS_URL'],
           }).encode()
           request = urllib.request.Request(url, data=body, method='POST', headers={
@@ -73,24 +66,18 @@ jobs:
           with urllib.request.urlopen(request, timeout=30) as response:
               print(response.status)
           PY
-
       - uses: actions/checkout@v6
-
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
-
       - name: Install search build dependencies
         run: python -m pip install --disable-pip-version-check duckdb boto3 'h3>=4,<5' brotli orjson zstandard
-
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund
-
       - id: snapshot
         name: Resolve newest completed canonical normalized B2 snapshot
         shell: bash
@@ -121,21 +108,24 @@ jobs:
                   if match:
                       candidates.add(match.group(1))
 
+          completed = []
           for snapshot in sorted(candidates, reverse=True):
               manifest_key = f'{data_prefix}/normalized/schema=v1/snapshot={snapshot}/manifest.json'
               try:
                   client.head_object(Bucket=bucket, Key=manifest_key)
               except Exception:
                   continue
-              print(f'snapshot={snapshot}')
-              print(f'source_manifest_key={manifest_key}')
+              completed.append((snapshot, manifest_key))
               break
-          else:
-              raise SystemExit(f'No completed canonical normalized snapshots found below s3://{bucket}/{prefix}')
-          PY
 
+          if not completed:
+              raise SystemExit(f'No completed canonical normalized snapshots found below s3://{bucket}/{prefix}')
+          snapshot, manifest_key = completed[0]
+          print(f'snapshot={snapshot}')
+          print(f'source_manifest_key={manifest_key}')
+          PY
       - id: candidate
-        name: Reuse completed base search candidate when present
+        name: Reuse completed search candidate when present
         shell: bash
         run: |
           set -euo pipefail
@@ -154,22 +144,66 @@ jobs:
               region_name=os.environ.get('B2_DATA_S3_REGION') or 'us-east-005',
               config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
           )
+          # manifest + candidate pointer are written only after the expensive builder finishes.
+          # A missing validation report means "resume at validation", not "rebuild 30M rows".
           required = [
               f'{data_prefix}/search/schema=v1/snapshot={snapshot}/manifest.json',
               f'{data_prefix}/search/candidates/{snapshot}.json',
           ]
           exists = True
-          for object_key in required:
+          for key in required:
               try:
-                  client.head_object(Bucket=bucket, Key=object_key)
+                  client.head_object(Bucket=bucket, Key=key)
               except Exception:
                   exists = False
                   break
           print(f'exists={str(exists).lower()}')
           PY
-
-      - name: Build immutable adaptive-H3 B2 base candidate
+      - name: Build immutable adaptive-H3 B2 search candidate
         if: steps.candidate.outputs.exists != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GLOBAL_LOCATION_SEARCH_WORK_DIR"
+          python scripts/global-data/build_b2_search_index_exact_resume.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' &
+          build_pid=$!
+
+          heartbeat() {
+            while kill -0 "$build_pid" 2>/dev/null; do
+              timestamp="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+              elapsed="$(ps -o etimes= -p "$build_pid" 2>/dev/null | tr -d ' ' || true)"
+              cpu="$(ps -o %cpu= -p "$build_pid" 2>/dev/null | xargs || true)"
+              rss_kb="$(ps -o rss= -p "$build_pid" 2>/dev/null | tr -d ' ' || true)"
+              geo_spool_files=0
+              route_spool_files=0
+              if [ -d "$GLOBAL_LOCATION_SEARCH_WORK_DIR/geo-spool" ]; then
+                geo_spool_files="$(find "$GLOBAL_LOCATION_SEARCH_WORK_DIR/geo-spool" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')"
+              fi
+              if [ -d "$GLOBAL_LOCATION_SEARCH_WORK_DIR/route-spool" ]; then
+                route_spool_files="$(find "$GLOBAL_LOCATION_SEARCH_WORK_DIR/route-spool" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')"
+              fi
+              printf 'build_heartbeat timestamp=%s elapsed_s=%s cpu_pct=%s rss_kb=%s geo_spool_files=%s route_spool_files=%s\n' \
+                "$timestamp" "${elapsed:-unknown}" "${cpu:-unknown}" "${rss_kb:-unknown}" "$geo_spool_files" "$route_spool_files"
+              sleep 60
+            done
+          }
+
+          heartbeat &
+          heartbeat_pid=$!
+          cleanup_heartbeat() {
+            kill "$heartbeat_pid" 2>/dev/null || true
+            wait "$heartbeat_pid" 2>/dev/null || true
+          }
+          trap cleanup_heartbeat EXIT
+
+          if wait "$build_pid"; then
+            build_status=0
+          else
+            build_status=$?
+          fi
+          cleanup_heartbeat
+          trap - EXIT
+          exit "$build_status"
         env:
           DUCKDB_TEMP_DIRECTORY: ${{ runner.temp }}/duckdb
           GLOBAL_LOCATION_SEARCH_WORK_DIR: ${{ runner.temp }}/b2-search-index
@@ -180,11 +214,8 @@ jobs:
           GLOBAL_LOCATION_SHARD_HARD_CANDIDATES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_CANDIDATES || '20000' }}
           GLOBAL_LOCATION_SHARD_TARGET_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_TARGET_BYTES || '2097152' }}
           GLOBAL_LOCATION_SHARD_HARD_BYTES: ${{ vars.GLOBAL_LOCATION_SHARD_HARD_BYTES || '2097152' }}
-        run: python scripts/global-data/build_b2_search_index_exact_resume.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'
-
-      - name: Repair base candidate from exact historical B2 versions
+      - name: Repair candidate from exact historical B2 versions
         run: python scripts/global-data/repair_b2_search_candidate.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --apply
-
       - name: Assert generated search count matches canonical source manifest
         shell: bash
         run: |
@@ -205,8 +236,8 @@ jobs:
               region_name=os.environ.get('B2_DATA_S3_REGION') or 'us-east-005',
               config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
           )
-          def load(object_key):
-              return json.loads(client.get_object(Bucket=os.environ['B2_DATA_BUCKET_NAME'], Key=object_key)['Body'].read())
+          def load(key):
+              return json.loads(client.get_object(Bucket=os.environ['B2_DATA_BUCKET_NAME'], Key=key)['Body'].read())
           source = load(source_manifest_key)
           search = load(search_manifest_key)
           expected = int(source.get('locationRows', -1))
@@ -217,41 +248,14 @@ jobs:
               raise SystemExit(f'Search location_count={actual} does not match canonical locationRows={expected}')
           print(f'canonical_count_match={actual}')
           PY
-
-      - name: Validate base candidate artifacts and canonical counts
+      - name: Validate candidate artifacts and canonical counts
         run: python scripts/global-data/validate_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'
-
-      - name: Build or reuse tight-bounds microshard planner overlay
-        run: >-
-          python scripts/global-data/build_b2_search_planner_overlay.py
-          --snapshot='${{ steps.snapshot.outputs.snapshot }}'
-          --target-candidates="$GLOBAL_LOCATION_PLANNER_TARGET_CANDIDATES"
-          --target-compressed-bytes="$GLOBAL_LOCATION_PLANNER_TARGET_BYTES"
-          --workers="$GLOBAL_LOCATION_PLANNER_WORKERS"
-
-      - name: Validate planner overlay artifacts and routing
-        run: >-
-          python scripts/global-data/validate_b2_search_planner_overlay.py
-          --snapshot='${{ steps.snapshot.outputs.snapshot }}'
-          --planner-id="$GLOBAL_LOCATION_PLANNER_ID"
-
-      - name: Compare bounded planner candidate against live OpenSearch before activation
-        env:
-          GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/candidates/${{ steps.snapshot.outputs.snapshot }}-v2-c4000-b524288.json
+      - name: Compare candidate against live OpenSearch before activation
         run: node scripts/global-data/compare_location_search_backends.mjs
-
-      - name: Atomically activate only the validated parity-passing planner
-        run: >-
-          python scripts/global-data/validate_b2_search_planner_overlay.py
-          --snapshot='${{ steps.snapshot.outputs.snapshot }}'
-          --planner-id="$GLOBAL_LOCATION_PLANNER_ID"
-          --activate
-
-      - name: Compare active B2 planner against live OpenSearch
         env:
-          GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
-        run: node scripts/global-data/compare_location_search_backends.mjs
-
+          GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/candidates/${{ steps.snapshot.outputs.snapshot }}.json
+      - name: Atomically activate only the validated parity-passing candidate
+        run: python scripts/global-data/validate_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --activate
       - name: Smoke active B2 radius, viewport, ID and slug paths
         shell: bash
         run: |
@@ -270,10 +274,10 @@ jobs:
           if (!viewport.candidates.length) throw new Error('Active B2 Toronto viewport returned zero locations.')
           const sample = viewport.candidates.find((row) => row?.id && row?.slug)
           if (!sample) throw new Error('Active B2 viewport had no hydratable sample.')
-          const hydrated = await getGlobalLocationsByIds([sample.id])
-          if (String(hydrated[0]?.id || '') !== String(sample.id)) throw new Error('Active B2 ID hydration failed.')
-          const bySlug = await getGlobalLocationBySlug(sample.slug)
-          if (String(bySlug?.id || '') !== String(sample.id)) throw new Error('Active B2 slug hydration failed.')
+          const ids = await getGlobalLocationsByIds([sample.id])
+          if (String(ids[0]?.id || '') !== String(sample.id)) throw new Error('Active B2 ID hydration failed.')
+          const slug = await getGlobalLocationBySlug(sample.slug)
+          if (String(slug?.id || '') !== String(sample.id)) throw new Error('Active B2 slug hydration failed.')
           const radius = await searchGlobalLocations({
             latitude: 43.6532, longitude: -79.3832, distanceKm: 25,
             filters: {}, candidateLimit: 20
@@ -286,7 +290,6 @@ jobs:
             radius: radius.diagnostics
           }, null, 2))
           NODE
-
       - name: Cleanup migration checkpoints after full gate success
         shell: bash
         run: |
@@ -294,7 +297,6 @@ jobs:
           if ! python scripts/global-data/cleanup_b2_search_checkpoints.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'; then
             echo '::warning::B2 migration succeeded but checkpoint cleanup failed; retaining checkpoints is safe.'
           fi
-
       - name: Publish migration final status
         if: always()
         env:
@@ -311,7 +313,7 @@ jobs:
           body = json.dumps({
               'state': state,
               'context': 'B2 search migration gate',
-              'description': 'B2 bounded planner gate passed' if state == 'success' else 'B2 bounded planner gate failed',
+              'description': 'B2 search snapshot gate passed' if state == 'success' else 'B2 search snapshot gate failed',
               'target_url': os.environ['STATUS_URL'],
           }).encode()
           request = urllib.request.Request(url, data=body, method='POST', headers={
