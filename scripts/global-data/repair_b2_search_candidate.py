@@ -120,6 +120,63 @@ def analyze_ledger(
     return unique
 
 
+def normalize_rebuilt_ledger(source, client, snapshot: str, records: list[dict]) -> list[dict]:
+    """Collapse checkpoint history to the final write for each artifact key.
+
+    A resumed rebuild can append multiple records for a destination that was rewritten in a
+    later attempt. B2 contains the final write, so the authoritative ledger must describe that
+    final object exactly once. This is allowed only for the unactivated snapshot guarded by main().
+    """
+    seen: set[str] = set()
+    final_reverse: list[dict] = []
+    for record in reversed(records):
+        key = str(record.get("key") or "")
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        final_reverse.append(record)
+    final_records = list(reversed(final_reverse))
+    if len(final_records) == len(records):
+        return records
+
+    prefix = f"{source.data_prefix}/search/schema=v1/snapshot={snapshot}"
+    manifest_key = f"{prefix}/manifest.json"
+    manifest = orjson.loads(client.get_object(Bucket=source.bucket, Key=manifest_key)["Body"].read())
+    validation = manifest.get("validation") or {}
+    hashes_key = str(validation.get("hashes_key") or f"{prefix}/validation/hashes.json.br")
+    hashes_raw = orjson.dumps(final_records)
+    hashes_body = brotli.compress(hashes_raw, quality=5, mode=brotli.MODE_TEXT)
+    hashes_sha = hashlib.sha256(hashes_body).hexdigest()
+
+    client.put_object(
+        Bucket=source.bucket,
+        Key=hashes_key,
+        Body=hashes_body,
+        ContentType="application/json",
+        CacheControl="public,max-age=31536000,immutable",
+        Metadata={"sha256": hashes_sha},
+    )
+    validation["hashes_key"] = hashes_key
+    validation["hashes_sha256"] = hashes_sha
+    validation["artifact_count"] = len(final_records)
+    manifest["validation"] = validation
+    manifest_raw = orjson.dumps(manifest, option=orjson.OPT_INDENT_2) + b"\n"
+    client.put_object(
+        Bucket=source.bucket,
+        Key=manifest_key,
+        Body=manifest_raw,
+        ContentType="application/json",
+        CacheControl="public,max-age=31536000,immutable",
+        Metadata={"sha256": hashlib.sha256(manifest_raw).hexdigest()},
+    )
+    print(
+        f"repair_ledger_normalized records={len(records)} final_records={len(final_records)} "
+        f"removed_history={len(records) - len(final_records)}",
+        flush=True,
+    )
+    return final_records
+
+
 def delete_prefix(client, bucket: str, prefix: str) -> int:
     deleted = 0
     batch: list[dict] = []
@@ -237,7 +294,8 @@ def main() -> None:
         )
         rebuild_candidate(args.snapshot)
 
-        _, _, rebuilt_records = load_candidate_records(args.snapshot)
+        source, client, rebuilt_records = load_candidate_records(args.snapshot)
+        rebuilt_records = normalize_rebuilt_ledger(source, client, args.snapshot, rebuilt_records)
         analyze_ledger(rebuilt_records, print_conflicts=True)
         repair_main()
         return
