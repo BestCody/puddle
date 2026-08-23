@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/b2-location-search-planner-v2-trigger'
+      - '.github/workflows/b2-location-search-planner-v2-gate.yml'
   workflow_dispatch:
 
 permissions:
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   build-validate-parity-activate:
-    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
       PYTHONUNBUFFERED: '1'
