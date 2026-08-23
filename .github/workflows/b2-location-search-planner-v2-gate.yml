@@ -13,7 +13,7 @@ permissions:
   statuses: write
 
 concurrency:
-  group: b2-location-search-production-migration
+  group: b2-location-search-planner-v2-production
   cancel-in-progress: false
 
 jobs:
