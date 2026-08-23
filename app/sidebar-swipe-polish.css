@@ -1,5 +1,35 @@
 /* Latest-main-safe polish for exact main-panel centering and responsive sidebar behavior. */
 
+/* Restore card copy to a stable bottom-up flow so title + address never depend on fixed y coordinates. */
+.figma-swipe-card-copy {
+  top: auto !important;
+  bottom: 18px !important;
+  height: auto !important;
+  display: grid !important;
+  align-content: end !important;
+  gap: 6px !important;
+}
+
+.figma-swipe-card-copy h1 {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  line-height: .98 !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+.figma-swipe-card-copy p {
+  position: static !important;
+  inset: auto !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  line-height: 1.15 !important;
+  overflow-wrap: anywhere !important;
+}
+
 @media (min-width: 761px) {
   /*
    * The stage is a normal block after the fixed sidebar. `width:auto` makes it
@@ -19,7 +49,7 @@
     min-width: 0 !important;
   }
 
-  /* Sidebar hover feedback is immediate. */
+  /* Sidebar hover feedback is immediate, borderless, and intentionally subtle. */
   @media (hover: hover) and (pointer: fine) {
     .figma-dashboard-nav-item:not(.is-active) {
       transition: none !important;
@@ -28,8 +58,9 @@
     }
 
     .figma-dashboard-nav-item:not(.is-active):hover {
-      background: #d7d7d7 !important;
-      border-color: #c4c4c4 !important;
+      background: #f2f2f2 !important;
+      border-color: transparent !important;
+      box-shadow: none !important;
       color: var(--figma-grey) !important;
     }
   }
@@ -57,11 +88,13 @@
   }
 
   /*
-   * Treat the card, four-button dock, and status as one responsive stack.
-   * The workspace is 100% of the real main panel, so justify-items:center is
-   * the mathematical horizontal center of that panel at every width/zoom.
+   * Card, four-button dock, and status all use this one grid column. The card
+   * stage now matches the actual 360px density card instead of wrapping a
+   * 360px card inside a 400px stage, which was the source of the 20px drift.
    */
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-workspace {
+    --puddle-swipe-card-width: 360px;
+    --puddle-swipe-actions-width: 279px;
     width: 100% !important;
     min-width: 0 !important;
     min-height: 100dvh !important;
@@ -79,6 +112,7 @@
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
   .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions,
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
+    grid-column: 1 !important;
     position: relative !important;
     inset: auto !important;
     top: auto !important;
@@ -91,12 +125,23 @@
   }
 
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage {
-    width: min(400px, calc(100% - 48px)) !important;
+    width: min(var(--puddle-swipe-card-width), calc(100% - 48px)) !important;
+    height: auto !important;
+    aspect-ratio: 5 / 7 !important;
+  }
+
+  /* The visual card fills the centered stage exactly, so it cannot drift inside it. */
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage > .figma-swipe-card,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage > .minimal-swipe-card.figma-swipe-card {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
   }
 
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
   .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions {
-    width: min(310px, calc(100% - 48px)) !important;
+    width: min(var(--puddle-swipe-actions-width), calc(100% - 48px)) !important;
   }
 
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
@@ -105,7 +150,23 @@
     text-align: center !important;
   }
 
-  /* Smaller expanded Puddle mark without changing the newer appearance-toggle behavior. */
+  /* Preserve the current dense desktop typography while keeping title/address in normal flow. */
+  .figma-swipe-card-copy {
+    left: 16px !important;
+    right: 66px !important;
+    bottom: 18px !important;
+  }
+
+  .figma-swipe-card-copy h1 {
+    font-size: 36px !important;
+    letter-spacing: -1.8px !important;
+  }
+
+  .figma-swipe-card-copy p {
+    font-size: 12.2px !important;
+  }
+
+  /* Smaller expanded Puddle mark without changing the appearance-toggle behavior. */
   .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo {
     left: 31px !important;
     width: 44px !important;
@@ -129,15 +190,35 @@
     left: 50% !important;
     width: 38px !important;
     height: 38px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: visible !important;
     transform: translateX(-50%) !important;
   }
 
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle {
     width: 38px !important;
     height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    aspect-ratio: 1 / 1 !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
@@ -174,7 +255,18 @@
     place-items: center !important;
     transform: translateX(-50%) !important;
     padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
     font-size: initial !important;
+  }
+
+  /* Retire the old pseudo-icon. The current Settings gear is real SVG markup. */
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link::before,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link::after {
+    content: none !important;
+    display: none !important;
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-label {
@@ -207,6 +299,24 @@
   }
 }
 
+/* Mobile keeps the same title/address flow without disturbing the existing responsive card sizing. */
+@media (max-width: 760px) {
+  .figma-swipe-card-copy {
+    top: auto !important;
+    left: clamp(11px, 4vw, 15px) !important;
+    right: clamp(54px, 15vw, 60px) !important;
+    bottom: clamp(12px, 2.2dvh, 17px) !important;
+    height: auto !important;
+    gap: 5px !important;
+  }
+
+  .figma-swipe-card-copy p {
+    position: static !important;
+    inset: auto !important;
+    margin: 0 !important;
+  }
+}
+
 /* Match the JavaScript auto-concise breakpoint before hydration so resizing never flashes or collapses incorrectly. */
 @media (min-width: 761px) and (max-width: 1050px) {
   .figma-dashboard-sidebar {
@@ -222,15 +332,29 @@
     left: 50% !important;
     width: 38px !important;
     height: 38px !important;
+    display: grid !important;
+    place-items: center !important;
     transform: translateX(-50%) !important;
   }
 
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo,
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo a,
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img,
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo svg {
+  .figma-dashboard-sidebar .puddle-logo-theme-toggle {
     width: 38px !important;
     height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    aspect-ratio: 1 / 1 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .figma-dashboard-sidebar .puddle-logo-theme-toggle img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block !important;
   }
 
   .figma-dashboard-sidebar .figma-dashboard-nav {
@@ -253,7 +377,16 @@
     place-items: center !important;
     transform: translateX(-50%) !important;
     padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
     font-size: initial !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-link::before,
+  .figma-dashboard-sidebar .figma-dashboard-settings-link::after {
+    content: none !important;
+    display: none !important;
   }
 
   .figma-dashboard-sidebar .figma-dashboard-settings-label,
