@@ -110,7 +110,7 @@ test('Settings opens over the current page and Swipe locks only page scrolling',
     read('app/ui-targeted-fixes.css')
   ])
 
-  assert.match(sidebar, /<SettingsTrigger className="figma-dashboard-settings-link">Settings<\/SettingsTrigger>/)
+  assert.match(sidebar, /<SettingsTrigger className="figma-dashboard-settings-link">[\s\S]*figma-dashboard-settings-label">Settings<\/span>[\s\S]*<\/SettingsTrigger>/)
   assert.match(shell, /<SettingsOverlay \/>/)
   assert.match(shell, /<SettingsTrigger>Settings<\/SettingsTrigger>/)
   assert.match(overlay, /window\.self !== window\.top/)
