@@ -1,14 +1,69 @@
-/* Latest-main-safe polish for swipe centering and responsive sidebar behavior. */
+/* Latest-main-safe polish for exact main-panel centering and responsive sidebar behavior. */
 
 @media (min-width: 761px) {
   /*
+   * The stage is a normal block after the fixed sidebar. `width:auto` makes it
+   * fill the real remaining containing width, excluding scrollbar width.
+   * This is the panel geometry every centered child should inherit.
+   */
+  .figma-dashboard-stage {
+    margin-left: var(--figma-shell-sidebar) !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .figma-dashboard-main,
+  .puddle-main-transition {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Sidebar hover feedback is immediate. */
+  @media (hover: hover) and (pointer: fine) {
+    .figma-dashboard-nav-item:not(.is-active) {
+      transition: none !important;
+      transition-delay: 0s !important;
+      animation-delay: 0s !important;
+    }
+
+    .figma-dashboard-nav-item:not(.is-active):hover {
+      background: #d7d7d7 !important;
+      border-color: #c4c4c4 !important;
+      color: var(--figma-grey) !important;
+    }
+  }
+
+  /*
+   * During navigation, the transition box becomes exactly one main-panel
+   * viewport tall. The loader fills that box and CSS Grid centers it in both
+   * axes, with no viewport x-offsets or guessed coordinates.
+   */
+  .puddle-main-transition.is-loading {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  .puddle-main-transition.is-loading .puddle-main-transition-loader {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+  }
+
+  /*
    * Treat the card, four-button dock, and status as one responsive stack.
-   * Older alignment CSS positioned each piece independently with fixed viewport
-   * coordinates, which allowed the gap below the card to drift as the viewport
-   * changed. This final layer restores one shared layout flow.
+   * The workspace is 100% of the real main panel, so justify-items:center is
+   * the mathematical horizontal center of that panel at every width/zoom.
    */
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-workspace {
     width: 100% !important;
+    min-width: 0 !important;
     min-height: 100dvh !important;
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
@@ -32,21 +87,21 @@
     bottom: auto !important;
     transform: none !important;
     justify-self: center !important;
-    margin: 0 auto !important;
+    margin: 0 !important;
   }
 
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage {
-    width: min(400px, calc(100vw - var(--figma-shell-sidebar) - 48px)) !important;
+    width: min(400px, calc(100% - 48px)) !important;
   }
 
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
   .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions {
-    width: min(310px, calc(100vw - var(--figma-shell-sidebar) - 48px)) !important;
+    width: min(310px, calc(100% - 48px)) !important;
   }
 
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
     width: max-content !important;
-    max-width: calc(100vw - var(--figma-shell-sidebar) - 48px) !important;
+    max-width: calc(100% - 48px) !important;
     text-align: center !important;
   }
 
@@ -160,7 +215,7 @@
 
   .figma-dashboard-stage {
     margin-left: 92px !important;
-    width: calc(100vw - 92px) !important;
+    width: auto !important;
   }
 
   .figma-dashboard-sidebar .figma-dashboard-sidebar-logo {
