@@ -147,7 +147,9 @@ for (const [name, latitude, longitude, distanceKm] of cases) {
 }
 
 // Date-line behavior is a correctness gate even when the sampled region has no catalogue rows.
-const dateLine = { north: 20, south: -20, west: 170, east: -170, zoom: 7 }
+// Keep the viewport intentionally bounded so the parity test exercises date-line wrapping without
+// exceeding the same compressed-byte safety budget enforced in production.
+const dateLine = { north: 5, south: -5, west: 178, east: -178, zoom: 7 }
 const [oldViewport, nextViewport] = await Promise.all([
   searchGlobalLocationsInViewport(dateLine, { env: openSearchEnv }),
   searchGlobalLocationsInViewport(dateLine, { env: b2Env })
