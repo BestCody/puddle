@@ -47,6 +47,7 @@ function br(value) {
 function fixtureFetch() {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const geoKey = `${prefix}/geo/r5/852b9b7bfffffff.json.br`
+  const outsideRadiusKey = `${prefix}/geo/r8/outside-radius-corner.json.br`
   const geoBody = br([tower, cafe])
   const objects = new Map([
     ['data/search/active.json', Buffer.from(JSON.stringify({ schema_version: 1, snapshot: '2026-08-19', manifest_key: `${prefix}/manifest.json` }))],
@@ -58,7 +59,12 @@ function fixtureFetch() {
         z1: { tile_degrees: 10, prefix: `${prefix}/geo-map/z1` }
       }
     }))],
-    [`${prefix}/routing/133/100.json.br`, br([[geoKey, '852b9b7bfffffff', 44, 43, -79, -80, 2, geoBody.length]])],
+    [`${prefix}/routing/133/100.json.br`, br([
+      [geoKey, '852b9b7bfffffff', 44, 43, -79, -80, 2, geoBody.length],
+      // This shard overlaps the radius bounding square but its entire bounding box is outside
+      // the 25 km circle. If the planner includes it, the synthetic byte budget is exceeded.
+      [outsideRadiusKey, '882b9b000000001', 43.87, 43.84, -79.12, -79.18, 5000, 4 * 1024 * 1024]
+    ])],
     [geoKey, geoBody],
     [`${prefix}/id/60c.json.br`, br({ 'loc-1': tower })],
     [`${prefix}/slug/e79.json.br`, br({ 'cn-tower': 'loc-1' })]
