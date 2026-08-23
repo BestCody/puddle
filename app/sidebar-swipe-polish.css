@@ -1,0 +1,185 @@
+/* Latest-main-safe polish for swipe centering and responsive sidebar behavior. */
+
+@media (min-width: 761px) {
+  /* Keep the swipe card and its four action buttons on one shared center axis. */
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
+    left: var(--figma-shell-sidebar) !important;
+    right: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions {
+    width: min(310px, calc(100vw - var(--figma-shell-sidebar) - 48px)) !important;
+  }
+
+  /* Smaller expanded Puddle mark without changing the newer appearance-toggle behavior. */
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo {
+    left: 31px !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo svg {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* Manual concise mode stays perfectly centered even while the width is changing. */
+  .figma-dashboard-sidebar.is-concise {
+    width: var(--figma-shell-sidebar) !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    left: 50% !important;
+    width: 38px !important;
+    height: 38px !important;
+    transform: translateX(-50%) !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
+    left: 50% !important;
+    width: 54px !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
+    width: 54px !important;
+    padding-inline: 0 !important;
+    justify-content: center !important;
+  }
+
+  .figma-dashboard-settings-link {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px;
+  }
+
+  .figma-dashboard-settings-icon {
+    display: none;
+  }
+
+  .figma-dashboard-settings-label {
+    display: inline;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
+    left: 50% !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: grid !important;
+    place-items: center !important;
+    transform: translateX(-50%) !important;
+    padding: 0 !important;
+    font-size: initial !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-label {
+    display: none !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-icon {
+    width: 27px;
+    height: 27px;
+    display: grid !important;
+    place-items: center;
+  }
+
+  .figma-dashboard-settings-icon svg {
+    width: 27px;
+    height: 27px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+/* Match the JavaScript auto-concise breakpoint before hydration so resizing never flashes or collapses incorrectly. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  .figma-dashboard-sidebar {
+    width: 92px !important;
+  }
+
+  .figma-dashboard-stage {
+    margin-left: 92px !important;
+    width: calc(100vw - 92px) !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo {
+    left: 50% !important;
+    width: 38px !important;
+    height: 38px !important;
+    transform: translateX(-50%) !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo svg {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav {
+    left: 50% !important;
+    width: 54px !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav-item {
+    width: 54px !important;
+    padding-inline: 0 !important;
+    justify-content: center !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-link {
+    left: 50% !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: grid !important;
+    place-items: center !important;
+    transform: translateX(-50%) !important;
+    padding: 0 !important;
+    font-size: initial !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-label,
+  .figma-dashboard-sidebar .figma-dashboard-nav-label {
+    display: none !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-icon {
+    width: 27px;
+    height: 27px;
+    display: grid !important;
+    place-items: center;
+  }
+
+  .figma-dashboard-sidebar-resizer {
+    display: none !important;
+  }
+
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
+    left: 92px !important;
+  }
+}
