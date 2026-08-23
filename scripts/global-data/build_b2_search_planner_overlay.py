@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
-"""Build a query-planner overlay from an already validated B2 search candidate.
-
-The overlay reuses hydration/coarse-map artifacts, tightens every geo descriptor to
-actual document bounds, and microshards only oversized geo leaves. It never
-rewrites the base candidate's immutable geo objects.
-"""
+"""Build a bounded B2 query-planner overlay with resumable checkpoints."""
 from __future__ import annotations
 
 import argparse
 import hashlib
-import math
 import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -17,191 +11,31 @@ from datetime import datetime, timezone
 
 import boto3
 import brotli
-import h3
 import orjson
 from botocore.client import Config
 from botocore.exceptions import ClientError
 
+from b2_planner_checkpoint import GracefulCheckpointCancel, PlannerCheckpointStore
+from b2_planner_overlay_common import (
+    DEFAULT_CHECKPOINT_GEO_BATCH,
+    DEFAULT_CHECKPOINT_ROUTE_BATCH,
+    DEFAULT_TARGET_BYTES,
+    DEFAULT_TARGET_CANDIDATES,
+    PLANNER_CHECKPOINT_VERSION,
+    PLANNER_VERSION,
+    directory_tiles,
+    document_bounds,
+    is_missing,
+    record_identity,
+    sha256_hex,
+    split_documents,
+    unique_records,
+)
 from location_search_common import b2_source_config
-
-PLANNER_VERSION = 2
-DEFAULT_TARGET_CANDIDATES = 4000
-DEFAULT_TARGET_BYTES = 512 * 1024
-MAX_H3_RESOLUTION = 15
-MAX_RUNTIME_OBJECT_BYTES = 16 * 1024 * 1024
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def sha256_hex(body: bytes) -> str:
-    return hashlib.sha256(body).hexdigest()
-
-
-def is_missing(error: ClientError) -> bool:
-    code = str(error.response.get("Error", {}).get("Code") or "")
-    status = int(error.response.get("ResponseMetadata", {}).get("HTTPStatusCode") or 0)
-    return code in {"404", "NoSuchKey", "NotFound"} or status == 404
-
-
-def minimal_longitude_bounds(longitudes: list[float]) -> tuple[float, float]:
-    west = min(longitudes)
-    east = max(longitudes)
-    if east - west <= 180:
-        return west, east
-    shifted = [value if value >= 0 else value + 360 for value in longitudes]
-    west_shifted = min(shifted)
-    east_shifted = max(shifted)
-
-    def wrap(value: float) -> float:
-        return value - 360 if value > 180 else value
-
-    return wrap(west_shifted), wrap(east_shifted)
-
-
-def document_bounds(documents: list[dict]) -> dict:
-    if not documents:
-        raise RuntimeError("Planner cannot route an empty geo shard.")
-    latitudes: list[float] = []
-    longitudes: list[float] = []
-    for document in documents:
-        try:
-            latitude = float(document["latitude"])
-            longitude = float(document["longitude"])
-        except (KeyError, TypeError, ValueError) as error:
-            raise RuntimeError(f"Geo document {document.get('id')} has invalid coordinates.") from error
-        if not math.isfinite(latitude) or not -90 <= latitude <= 90:
-            raise RuntimeError(f"Geo document {document.get('id')} has invalid latitude.")
-        if not math.isfinite(longitude) or not -180 <= longitude <= 180:
-            raise RuntimeError(f"Geo document {document.get('id')} has invalid longitude.")
-        latitudes.append(latitude)
-        longitudes.append(longitude)
-    west, east = minimal_longitude_bounds(longitudes)
-    return {
-        "north": max(latitudes),
-        "south": min(latitudes),
-        "east": east,
-        "west": west,
-    }
-
-
-def longitude_ranges(west: float, east: float):
-    return [(west, east)] if west <= east else [(west, 180.0), (-180.0, east)]
-
-
-def directory_tiles(bounds: dict, degrees: float):
-    lat_count = int(math.ceil(180 / degrees))
-    lon_count = int(math.ceil(360 / degrees))
-    south = max(0, min(lat_count - 1, int(math.floor((max(-90, bounds["south"]) + 90) / degrees))))
-    north_value = min(89.999999, bounds["north"])
-    north = max(0, min(lat_count - 1, int(math.floor((north_value + 90) / degrees))))
-    for west, east in longitude_ranges(bounds["west"], bounds["east"]):
-        west_index = max(0, min(lon_count - 1, int(math.floor((west + 180) / degrees))))
-        east_value = min(179.999999, east)
-        east_index = max(0, min(lon_count - 1, int(math.floor((east_value + 180) / degrees))))
-        for lat_index in range(south, north + 1):
-            for lon_index in range(west_index, east_index + 1):
-                yield lat_index, lon_index
-
-
-def ordered_documents(documents: list[dict]) -> list[dict]:
-    return sorted(documents, key=lambda item: str(item.get("id") or ""))
-
-
-def brotli_json(documents: list[dict]) -> tuple[list[dict], bytes, int]:
-    ordered = ordered_documents(documents)
-    raw = orjson.dumps(ordered)
-    body = brotli.compress(raw, quality=5, mode=brotli.MODE_TEXT)
-    return ordered, body, len(raw)
-
-
-def record_identity(record: dict) -> tuple[str, int, str]:
-    key = str(record.get("key") or "")
-    if not key:
-        raise RuntimeError("Hash ledger contains an artifact with no key.")
-    try:
-        compressed_bytes = int(record["compressed_bytes"])
-    except (KeyError, TypeError, ValueError) as error:
-        raise RuntimeError(f"Hash ledger has an invalid byte length for {key}.") from error
-    digest = str(record.get("sha256") or "").lower()
-    if compressed_bytes < 0 or len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
-        raise RuntimeError(f"Hash ledger has invalid integrity metadata for {key}.")
-    return key, compressed_bytes, digest
-
-
-def unique_records(records: list[dict]) -> list[dict]:
-    by_key: dict[str, dict] = {}
-    for record in records:
-        key, compressed_bytes, digest = record_identity(record)
-        existing = by_key.get(key)
-        if existing is None:
-            by_key[key] = record
-            continue
-        _, existing_bytes, existing_digest = record_identity(existing)
-        if (existing_bytes, existing_digest) != (compressed_bytes, digest):
-            raise RuntimeError(f"Hash ledger has conflicting records for {key}.")
-    return list(by_key.values())
-
-
-def split_documents(
-    source_cell: str,
-    documents: list[dict],
-    *,
-    target_candidates: int,
-    target_bytes: int,
-) -> list[tuple[str, list[dict], bytes, int]]:
-    leaves: list[tuple[str, list[dict], bytes, int]] = []
-
-    def recurse(cell: str, values: list[dict], suffix: str = "") -> None:
-        ordered, body, raw_bytes = brotli_json(values)
-        if len(ordered) <= target_candidates and len(body) <= target_bytes:
-            leaves.append((f"{cell}{suffix}", ordered, body, raw_bytes))
-            return
-
-        resolution = h3.get_resolution(cell)
-        if resolution < MAX_H3_RESOLUTION:
-            next_resolution = resolution + 1
-            groups: dict[str, list[dict]] = defaultdict(list)
-            for document in ordered:
-                child = h3.latlng_to_cell(
-                    float(document["latitude"]),
-                    float(document["longitude"]),
-                    next_resolution,
-                )
-                groups[child].append(document)
-            # Moving down a single-child chain is still useful because a later
-            # resolution can separate a very dense parent cell.
-            if groups:
-                for child in sorted(groups):
-                    recurse(child, groups[child], suffix)
-                return
-
-        # Pathological same-coordinate clusters can remain in one H3 cell even at
-        # resolution 15. Split deterministically so no runtime object or planner
-        # leaf has to exceed the target merely because geometry cannot separate it.
-        if len(ordered) <= 1:
-            if len(body) > MAX_RUNTIME_OBJECT_BYTES:
-                raise RuntimeError(
-                    f"Single location {ordered[0].get('id')} produces a {len(body)}-byte geo object."
-                )
-            leaves.append((f"{cell}{suffix}", ordered, body, raw_bytes))
-            return
-
-        latitudes = [float(item["latitude"]) for item in ordered]
-        longitudes = [float(item["longitude"]) for item in ordered]
-        lat_span = max(latitudes) - min(latitudes)
-        lon_span = max(longitudes) - min(longitudes)
-        if lat_span >= lon_span:
-            ordered.sort(key=lambda item: (float(item["latitude"]), float(item["longitude"]), str(item.get("id") or "")))
-        else:
-            ordered.sort(key=lambda item: (float(item["longitude"]), float(item["latitude"]), str(item.get("id") or "")))
-        midpoint = len(ordered) // 2
-        recurse(cell, ordered[:midpoint], suffix + "a")
-        recurse(cell, ordered[midpoint:], suffix + "b")
-
-    recurse(source_cell, documents)
-    return leaves
 
 
 def main() -> None:
@@ -210,30 +44,61 @@ def main() -> None:
     parser.add_argument(
         "--target-candidates",
         type=int,
-        default=int(os.getenv("GLOBAL_LOCATION_PLANNER_TARGET_CANDIDATES", str(DEFAULT_TARGET_CANDIDATES))),
+        default=int(
+            os.getenv(
+                "GLOBAL_LOCATION_PLANNER_TARGET_CANDIDATES",
+                str(DEFAULT_TARGET_CANDIDATES),
+            )
+        ),
     )
     parser.add_argument(
         "--target-compressed-bytes",
         type=int,
-        default=int(os.getenv("GLOBAL_LOCATION_PLANNER_TARGET_BYTES", str(DEFAULT_TARGET_BYTES))),
+        default=int(
+            os.getenv("GLOBAL_LOCATION_PLANNER_TARGET_BYTES", str(DEFAULT_TARGET_BYTES))
+        ),
     )
     parser.add_argument(
         "--workers",
         type=int,
         default=int(os.getenv("GLOBAL_LOCATION_PLANNER_WORKERS", "16")),
     )
+    parser.add_argument(
+        "--checkpoint-geo-batch",
+        type=int,
+        default=int(
+            os.getenv(
+                "GLOBAL_LOCATION_PLANNER_CHECKPOINT_GEO_BATCH",
+                str(DEFAULT_CHECKPOINT_GEO_BATCH),
+            )
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-route-batch",
+        type=int,
+        default=int(
+            os.getenv(
+                "GLOBAL_LOCATION_PLANNER_CHECKPOINT_ROUTE_BATCH",
+                str(DEFAULT_CHECKPOINT_ROUTE_BATCH),
+            )
+        ),
+    )
     args = parser.parse_args()
 
     target_candidates = max(500, min(20_000, int(args.target_candidates)))
     target_bytes = max(128 * 1024, min(2 * 1024 * 1024, int(args.target_compressed_bytes)))
     workers = max(1, min(32, int(args.workers)))
+    geo_batch_size = max(1, min(128, int(args.checkpoint_geo_batch)))
+    route_batch_size = max(1, min(1000, int(args.checkpoint_route_batch)))
     planner_id = f"v{PLANNER_VERSION}-c{target_candidates}-b{target_bytes}"
 
     source = b2_source_config()
     base_prefix = f"{source.data_prefix}/search/schema=v1/snapshot={args.snapshot}"
     base_manifest_key = f"{base_prefix}/manifest.json"
     planner_manifest_key = f"{base_prefix}/manifest-{planner_id}.json"
-    planner_candidate_key = f"{source.data_prefix}/search/candidates/{args.snapshot}-{planner_id}.json"
+    planner_candidate_key = (
+        f"{source.data_prefix}/search/candidates/{args.snapshot}-{planner_id}.json"
+    )
     planner_geo_prefix = f"{base_prefix}/geo-{planner_id}"
     planner_route_prefix = f"{base_prefix}/routing-{planner_id}"
     planner_counts_key = f"{base_prefix}/validation/counts-{planner_id}.json.br"
@@ -375,9 +240,49 @@ def main() -> None:
     ]
     base_counts_body = get_bytes(str(validation["counts_key"]))
     base_counts = orjson.loads(brotli.decompress(base_counts_body))
-    directory_degrees = float(((base_manifest.get("geo") or {}).get("directory") or {}).get("tile_degrees") or 1)
+    directory_degrees = float(
+        ((base_manifest.get("geo") or {}).get("directory") or {}).get("tile_degrees")
+        or 1
+    )
     if not 0.25 <= directory_degrees <= 5:
         raise RuntimeError(f"Invalid base routing tile size {directory_degrees}.")
+
+    source_geo_fingerprint = sha256_hex(
+        orjson.dumps([record_identity(record) for record in geo_records])
+    )
+    checkpoint_config = {
+        "checkpoint_version": PLANNER_CHECKPOINT_VERSION,
+        "planner_id": planner_id,
+        "snapshot": args.snapshot,
+        "base_manifest_sha256": base_manifest_sha,
+        "source_geo_fingerprint": source_geo_fingerprint,
+        "source_geo_shards": len(geo_records),
+        "target_candidates": target_candidates,
+        "target_compressed_bytes": target_bytes,
+        "directory_degrees": directory_degrees,
+        "geo_batch_size": geo_batch_size,
+        "route_batch_size": route_batch_size,
+    }
+    checkpoint_config_hash = sha256_hex(
+        orjson.dumps(checkpoint_config, option=orjson.OPT_SORT_KEYS)
+    )[:16]
+    checkpoint_root = (
+        f"{source.data_prefix}/search/checkpoints/schema=v1/snapshot={args.snapshot}/"
+        f"planner-v2/config={checkpoint_config_hash}"
+    )
+    checkpoint = PlannerCheckpointStore(
+        s3=s3,
+        bucket=source.bucket,
+        root=checkpoint_root,
+        config_hash=checkpoint_config_hash,
+        planner_id=planner_id,
+        snapshot=args.snapshot,
+        geo_batch_size=geo_batch_size,
+        route_batch_size=route_batch_size,
+        total_geo_items=len(geo_records),
+    )
+    cancel = GracefulCheckpointCancel(checkpoint_root)
+    cancel.install()
 
     routes: dict[tuple[int, int], list] = defaultdict(list)
     active_geo_records: list[dict] = []
@@ -387,6 +292,32 @@ def main() -> None:
     source_compressed_bytes = 0
     active_compressed_bytes = 0
 
+    def apply_geo_result(result: dict) -> None:
+        nonlocal reused_geo_shards
+        nonlocal split_source_geo_shards
+        nonlocal produced_microshards
+        nonlocal source_compressed_bytes
+        nonlocal active_compressed_bytes
+
+        source_compressed_bytes += int(result["source_bytes"])
+        if bool(result["reused"]):
+            reused_geo_shards += 1
+        else:
+            split_source_geo_shards += 1
+            produced_microshards += len(result["records"])
+        for record in result["records"]:
+            active_geo_records.append(record)
+            active_compressed_bytes += int(record["compressed_bytes"])
+        for descriptor in result["descriptors"]:
+            bounds = {
+                "north": float(descriptor[2]),
+                "south": float(descriptor[3]),
+                "east": float(descriptor[4]),
+                "west": float(descriptor[5]),
+            }
+            for tile in directory_tiles(bounds, directory_degrees):
+                routes[tile].append(descriptor)
+
     def process_geo(record: dict):
         key, expected_size, expected_sha = record_identity(record)
         body = get_bytes(key)
@@ -394,7 +325,9 @@ def main() -> None:
             raise RuntimeError(f"Base geo shard integrity mismatch while planning: {key}")
         documents = orjson.loads(brotli.decompress(body))
         if not isinstance(documents, list) or not documents:
-            raise RuntimeError(f"Base geo shard does not decode to a non-empty list: {key}")
+            raise RuntimeError(
+                f"Base geo shard does not decode to a non-empty list: {key}"
+            )
         expected_count = record.get("count")
         if expected_count is not None and int(expected_count) != len(documents):
             raise RuntimeError(f"Base geo shard count mismatch: {key}")
@@ -402,21 +335,21 @@ def main() -> None:
         source_cell = key.rsplit("/", 1)[-1].removesuffix(".json.br")
         tight_bounds = document_bounds(documents)
         if len(documents) <= target_candidates and len(body) <= target_bytes:
-            descriptor = [
-                key,
-                source_cell,
-                tight_bounds["north"],
-                tight_bounds["south"],
-                tight_bounds["east"],
-                tight_bounds["west"],
-                len(documents),
-                len(body),
-            ]
             return {
+                "source_key": key,
                 "source_bytes": len(body),
                 "reused": True,
                 "records": [record],
-                "descriptors": [descriptor],
+                "descriptors": [[
+                    key,
+                    source_cell,
+                    tight_bounds["north"],
+                    tight_bounds["south"],
+                    tight_bounds["east"],
+                    tight_bounds["west"],
+                    len(documents),
+                    len(body),
+                ]],
             }
 
         leaves = split_documents(
@@ -429,8 +362,7 @@ def main() -> None:
         output_records: list[dict] = []
         descriptors: list[list] = []
         for index, (label, leaf_documents, leaf_body, raw_bytes) in enumerate(leaves):
-            relative = f"{token}/{index:04d}.json.br"
-            leaf_key = f"{planner_geo_prefix}/{relative}"
+            leaf_key = f"{planner_geo_prefix}/{token}/{index:04d}.json.br"
             leaf_record = put_immutable(
                 leaf_key,
                 leaf_body,
@@ -440,75 +372,252 @@ def main() -> None:
             )
             bounds = document_bounds(leaf_documents)
             output_records.append(leaf_record)
-            descriptors.append(
-                [
-                    leaf_key,
-                    f"{label}:{index}",
-                    bounds["north"],
-                    bounds["south"],
-                    bounds["east"],
-                    bounds["west"],
-                    len(leaf_documents),
-                    len(leaf_body),
-                ]
-            )
+            descriptors.append([
+                leaf_key,
+                f"{label}:{index}",
+                bounds["north"],
+                bounds["south"],
+                bounds["east"],
+                bounds["west"],
+                len(leaf_documents),
+                len(leaf_body),
+            ])
         return {
+            "source_key": key,
             "source_bytes": len(body),
             "reused": False,
             "records": output_records,
             "descriptors": descriptors,
         }
 
-    processed = 0
-    for start in range(0, len(geo_records), workers * 8):
-        batch = geo_records[start : start + workers * 8]
+    state = checkpoint.load_state()
+    if state is None:
+        state = checkpoint.save_state(
+            stage="geo",
+            next_geo_index=0,
+            next_route_index=0,
+            total_route_items=None,
+        )
+        print(
+            f"planner_checkpoint_initialized root={checkpoint_root} "
+            f"geo_batch={geo_batch_size} route_batch={route_batch_size}",
+            flush=True,
+        )
+    else:
+        print(
+            "planner_checkpoint_resumed "
+            f"root={checkpoint_root} stage={state.get('stage')} "
+            f"geo={state.get('next_geo_index', 0)}/{len(geo_records)} "
+            f"route={state.get('next_route_index', 0)}/{state.get('total_route_items')}",
+            flush=True,
+        )
+
+    stage = str(state.get("stage") or "geo")
+    if stage not in {"geo", "routing", "finalize", "complete"}:
+        raise RuntimeError(f"Unsupported planner checkpoint stage {stage!r}.")
+
+    routing_plan: list[list] = []
+
+    if stage == "geo":
+        next_geo_index = int(state.get("next_geo_index") or 0)
+        if not 0 <= next_geo_index <= len(geo_records):
+            raise RuntimeError("Planner geo checkpoint cursor is outside the source ledger.")
+        if next_geo_index % geo_batch_size and next_geo_index != len(geo_records):
+            raise RuntimeError("Planner geo checkpoint cursor is not on a safe batch boundary.")
+
+        restore_start = 0
+        while restore_start < next_geo_index:
+            restore_end = min(restore_start + geo_batch_size, len(geo_records))
+            pack_key = checkpoint.geo_pack_key(restore_start, restore_end)
+            pack = checkpoint.get(pack_key)
+            if int(pack.get("start", -1)) != restore_start or int(pack.get("end", -1)) != restore_end:
+                raise RuntimeError(f"Planner geo checkpoint pack cursor mismatch: {pack_key}")
+            results = pack.get("results") or []
+            expected_source_keys = [
+                str(record["key"]) for record in geo_records[restore_start:restore_end]
+            ]
+            actual_source_keys = [str(result.get("source_key") or "") for result in results]
+            if actual_source_keys != expected_source_keys:
+                raise RuntimeError(f"Planner geo checkpoint pack source order mismatch: {pack_key}")
+            for result in results:
+                apply_geo_result(result)
+            restore_start = restore_end
+            if restore_start % (geo_batch_size * 10) == 0 or restore_start == next_geo_index:
+                print(
+                    f"planner_checkpoint_restore stage=geo geo={restore_start}/{next_geo_index}",
+                    flush=True,
+                )
+
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(process_geo, record) for record in batch]
-            for future in as_completed(futures):
-                result = future.result()
-                processed += 1
-                source_compressed_bytes += int(result["source_bytes"])
-                if result["reused"]:
-                    reused_geo_shards += 1
-                else:
-                    split_source_geo_shards += 1
-                    produced_microshards += len(result["records"])
-                for record in result["records"]:
-                    active_geo_records.append(record)
-                    active_compressed_bytes += int(record["compressed_bytes"])
-                for descriptor in result["descriptors"]:
-                    bounds = {
-                        "north": float(descriptor[2]),
-                        "south": float(descriptor[3]),
-                        "east": float(descriptor[4]),
-                        "west": float(descriptor[5]),
-                    }
-                    for tile in directory_tiles(bounds, directory_degrees):
-                        routes[tile].append(descriptor)
-                if processed % 250 == 0 or processed == len(geo_records):
-                    print(
-                        "planner_geo_processed="
-                        f"{processed}/{len(geo_records)} reused={reused_geo_shards} "
-                        f"split_sources={split_source_geo_shards} active_geo={len(active_geo_records)}",
-                        flush=True,
-                    )
+            start = next_geo_index
+            while start < len(geo_records):
+                end = min(start + geo_batch_size, len(geo_records))
+                futures = [
+                    executor.submit(process_geo, record) for record in geo_records[start:end]
+                ]
+                results = [future.result() for future in as_completed(futures)]
+                results.sort(key=lambda item: str(item["source_key"]))
+                checkpoint.put_immutable(
+                    checkpoint.geo_pack_key(start, end),
+                    {"start": start, "end": end, "results": results},
+                )
+                for result in results:
+                    apply_geo_result(result)
+                start = end
+                state = checkpoint.save_state(
+                    stage="geo",
+                    next_geo_index=start,
+                    next_route_index=0,
+                    total_route_items=None,
+                )
+                print(
+                    "planner_checkpoint_saved stage=geo "
+                    f"geo={start}/{len(geo_records)} reused={reused_geo_shards} "
+                    f"split_sources={split_source_geo_shards} active_geo={len(active_geo_records)}",
+                    flush=True,
+                )
+                cancel.exit_if_requested("geo", start, len(geo_records))
+
+        active_geo_records.sort(key=lambda record: str(record["key"]))
+        for (lat_index, lon_index), descriptors in sorted(routes.items()):
+            descriptors.sort(key=lambda item: str(item[0]))
+            routing_plan.append([lat_index, lon_index, descriptors])
+        checkpoint.put_immutable(
+            checkpoint.geo_summary_key,
+            {
+                "active_geo_records": active_geo_records,
+                "routing_plan": routing_plan,
+                "reused_geo_shards": reused_geo_shards,
+                "split_source_geo_shards": split_source_geo_shards,
+                "produced_microshards": produced_microshards,
+                "source_compressed_bytes": source_compressed_bytes,
+                "active_compressed_bytes": active_compressed_bytes,
+            },
+        )
+        state = checkpoint.save_state(
+            stage="routing",
+            next_geo_index=len(geo_records),
+            next_route_index=0,
+            total_route_items=len(routing_plan),
+        )
+        stage = "routing"
+        print(
+            f"planner_checkpoint_saved stage=routing geo={len(geo_records)}/{len(geo_records)} "
+            f"route=0/{len(routing_plan)}",
+            flush=True,
+        )
+        cancel.exit_if_requested("routing", 0, len(routing_plan))
+    else:
+        geo_summary = checkpoint.get(checkpoint.geo_summary_key)
+        active_geo_records = list(geo_summary.get("active_geo_records") or [])
+        routing_plan = list(geo_summary.get("routing_plan") or [])
+        reused_geo_shards = int(geo_summary.get("reused_geo_shards") or 0)
+        split_source_geo_shards = int(geo_summary.get("split_source_geo_shards") or 0)
+        produced_microshards = int(geo_summary.get("produced_microshards") or 0)
+        source_compressed_bytes = int(geo_summary.get("source_compressed_bytes") or 0)
+        active_compressed_bytes = int(geo_summary.get("active_compressed_bytes") or 0)
+        if not active_geo_records or not routing_plan:
+            raise RuntimeError("Planner geo summary checkpoint is empty or invalid.")
+        print(
+            f"planner_checkpoint_restore stage={stage} geo_summary=true "
+            f"active_geo={len(active_geo_records)} routes={len(routing_plan)}",
+            flush=True,
+        )
 
     route_records: list[dict] = []
-    for index, ((lat_index, lon_index), descriptors) in enumerate(sorted(routes.items()), start=1):
-        descriptors.sort(key=lambda item: str(item[0]))
-        raw = orjson.dumps(descriptors)
-        body = brotli.compress(raw, quality=5, mode=brotli.MODE_TEXT)
-        key = f"{planner_route_prefix}/{lat_index}/{lon_index}.json.br"
-        record = put_immutable(
-            key,
-            body,
-            kind="routing",
-            count=len(descriptors),
-            uncompressed_bytes=len(raw),
+
+    if stage == "routing":
+        next_route_index = int(state.get("next_route_index") or 0)
+        if not 0 <= next_route_index <= len(routing_plan):
+            raise RuntimeError("Planner routing checkpoint cursor is outside the route plan.")
+        if next_route_index % route_batch_size and next_route_index != len(routing_plan):
+            raise RuntimeError("Planner routing checkpoint cursor is not on a safe batch boundary.")
+
+        restore_start = 0
+        while restore_start < next_route_index:
+            restore_end = min(restore_start + route_batch_size, len(routing_plan))
+            pack_key = checkpoint.route_pack_key(restore_start, restore_end)
+            pack = checkpoint.get(pack_key)
+            if int(pack.get("start", -1)) != restore_start or int(pack.get("end", -1)) != restore_end:
+                raise RuntimeError(f"Planner routing checkpoint pack cursor mismatch: {pack_key}")
+            records = pack.get("records") or []
+            expected_route_keys = [
+                f"{planner_route_prefix}/{lat_index}/{lon_index}.json.br"
+                for lat_index, lon_index, _descriptors in routing_plan[restore_start:restore_end]
+            ]
+            actual_route_keys = [str(record.get("key") or "") for record in records]
+            if actual_route_keys != expected_route_keys:
+                raise RuntimeError(f"Planner routing checkpoint pack order mismatch: {pack_key}")
+            route_records.extend(records)
+            restore_start = restore_end
+            if restore_start % (route_batch_size * 10) == 0 or restore_start == next_route_index:
+                print(
+                    f"planner_checkpoint_restore stage=routing route={restore_start}/{next_route_index}",
+                    flush=True,
+                )
+
+        start = next_route_index
+        while start < len(routing_plan):
+            end = min(start + route_batch_size, len(routing_plan))
+            batch_records: list[dict] = []
+            for lat_index, lon_index, descriptors in routing_plan[start:end]:
+                raw = orjson.dumps(descriptors)
+                body = brotli.compress(raw, quality=5, mode=brotli.MODE_TEXT)
+                key = f"{planner_route_prefix}/{lat_index}/{lon_index}.json.br"
+                batch_records.append(
+                    put_immutable(
+                        key,
+                        body,
+                        kind="routing",
+                        count=len(descriptors),
+                        uncompressed_bytes=len(raw),
+                    )
+                )
+            checkpoint.put_immutable(
+                checkpoint.route_pack_key(start, end),
+                {"start": start, "end": end, "records": batch_records},
+            )
+            route_records.extend(batch_records)
+            start = end
+            state = checkpoint.save_state(
+                stage="routing",
+                next_geo_index=len(geo_records),
+                next_route_index=start,
+                total_route_items=len(routing_plan),
+            )
+            print(
+                f"planner_checkpoint_saved stage=routing route={start}/{len(routing_plan)}",
+                flush=True,
+            )
+            cancel.exit_if_requested("routing", start, len(routing_plan))
+
+        route_records.sort(key=lambda record: str(record["key"]))
+        checkpoint.put_immutable(
+            checkpoint.route_summary_key,
+            {"route_records": route_records},
         )
-        route_records.append(record)
-        if index % 250 == 0 or index == len(routes):
-            print(f"planner_routing_written={index}/{len(routes)}", flush=True)
+        state = checkpoint.save_state(
+            stage="finalize",
+            next_geo_index=len(geo_records),
+            next_route_index=len(routing_plan),
+            total_route_items=len(routing_plan),
+        )
+        stage = "finalize"
+        print(
+            f"planner_checkpoint_saved stage=finalize route={len(routing_plan)}/{len(routing_plan)}",
+            flush=True,
+        )
+        cancel.exit_if_requested("finalize", len(routing_plan), len(routing_plan))
+    else:
+        route_summary = checkpoint.get(checkpoint.route_summary_key)
+        route_records = list(route_summary.get("route_records") or [])
+        if not route_records:
+            raise RuntimeError("Planner route summary checkpoint is empty or invalid.")
+        print(
+            f"planner_checkpoint_restore stage={stage} route_summary=true "
+            f"routing_shards={len(route_records)}",
+            flush=True,
+        )
 
     counts = dict(base_counts)
     counts["geo_shards"] = len(active_geo_records)
@@ -557,6 +666,7 @@ def main() -> None:
         "new_microshards": produced_microshards,
         "source_geo_compressed_bytes": source_compressed_bytes,
         "active_geo_compressed_bytes": active_compressed_bytes,
+        "checkpoint_version": PLANNER_CHECKPOINT_VERSION,
     }
     manifest["shard_counts"] = dict(base_manifest.get("shard_counts") or {})
     manifest["shard_counts"]["geo_shards"] = len(active_geo_records)
@@ -601,15 +711,23 @@ def main() -> None:
         ContentType="application/json",
         CacheControl="no-store",
     )
+    checkpoint.save_state(
+        stage="complete",
+        next_geo_index=len(geo_records),
+        next_route_index=len(routing_plan),
+        total_route_items=len(routing_plan),
+    )
 
     print(
         "planner_overlay_complete=true "
         f"planner_id={planner_id} source_geo_shards={len(geo_records)} "
         f"active_geo_shards={len(active_geo_records)} routing_shards={len(route_records)} "
-        f"manifest_key={planner_manifest_key} candidate_key={planner_candidate_key}",
+        f"manifest_key={planner_manifest_key} candidate_key={planner_candidate_key} "
+        f"checkpoint_root={checkpoint_root}",
         flush=True,
     )
     print(orjson.dumps(candidate, option=orjson.OPT_INDENT_2).decode(), flush=True)
+    cancel.restore()
 
 
 if __name__ == "__main__":
