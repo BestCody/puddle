@@ -8,7 +8,7 @@ import {
 
 const base = { ...process.env }
 const openSearchEnv = { ...base, GLOBAL_LOCATION_SEARCH_BACKEND: 'opensearch' }
-const b2Env = { ...base, GLOBAL_LOCATION_SEARCH_BACKEND: 'b2' }
+const b2Env = { ...base, GLOBAL_LOCATION_SEARCH_BACKEND: 'b2', GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '15000' }
 const candidateLimit = Math.max(20, Math.min(200, Number(base.GLOBAL_LOCATION_PARITY_CANDIDATE_LIMIT || 100)))
 const hydrationFloor = Math.max(0.5, Math.min(1, Number(base.GLOBAL_LOCATION_PARITY_HYDRATION_FLOOR || 0.95)))
 
