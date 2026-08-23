@@ -22,6 +22,14 @@ function applyWidth(value) {
   document.documentElement.style.setProperty('--figma-shell-sidebar', `${value}px`)
 }
 
+function SettingsIcon() {
+  return <svg viewBox="0 0 32 32" aria-hidden="true">
+    <circle cx="16" cy="16" r="4" />
+    <path d="M16 4.5v3M16 24.5v3M4.5 16h3M24.5 16h3M7.9 7.9l2.1 2.1M22 22l2.1 2.1M24.1 7.9 22 10M10 22l-2.1 2.1" />
+    <circle cx="16" cy="16" r="9" />
+  </svg>
+}
+
 export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'light' }) {
   const [width, setWidth] = useState(EXPANDED_WIDTH)
   const [autoConcise, setAutoConcise] = useState(false)
@@ -88,7 +96,10 @@ export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'l
   return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`} aria-label="Puddle sidebar" data-sidebar-width={effectiveWidth}>
     <div className="figma-dashboard-sidebar-logo"><AppearanceToggleLogo initialAppearance={initialAppearance} /></div>
     <ProductNav avatarUrl={avatarUrl} />
-    <SettingsTrigger className="figma-dashboard-settings-link">Settings</SettingsTrigger>
+    <SettingsTrigger className="figma-dashboard-settings-link">
+      <span className="figma-dashboard-settings-icon"><SettingsIcon /></span>
+      <span className="figma-dashboard-settings-label">Settings</span>
+    </SettingsTrigger>
     <div
       className="figma-dashboard-sidebar-resizer"
       role="separator"
