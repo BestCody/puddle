@@ -6,14 +6,23 @@ import argparse
 import hashlib
 import json
 import os
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from pathlib import Path
 
 import boto3
 import brotli
 from botocore.client import Config
 
 from location_search_common import b2_source_config
+
+PLANNER_BUILDER_PATH = Path(__file__).with_name('build_b2_search_planner_overlay.py')
+PLANNER_VALIDATOR_PATH = Path(__file__).with_name('validate_b2_search_planner_overlay.py')
+PLANNER_VERSION = 2
+DEFAULT_PLANNER_TARGET_CANDIDATES = 4000
+DEFAULT_PLANNER_TARGET_BYTES = 512 * 1024
 
 
 def utc_now() -> str:
@@ -70,6 +79,87 @@ def unique_ledger_records(records: list[dict]) -> tuple[list[dict], int, list[di
             'conflicting_sha': expected_sha,
         })
     return list(unique.values()), exact_duplicates, conflicts
+
+
+def planner_configuration() -> tuple[int, int, int, str]:
+    target_candidates = max(
+        500,
+        min(
+            20_000,
+            int(os.getenv('GLOBAL_LOCATION_PLANNER_TARGET_CANDIDATES', str(DEFAULT_PLANNER_TARGET_CANDIDATES))),
+        ),
+    )
+    target_bytes = max(
+        128 * 1024,
+        min(
+            2 * 1024 * 1024,
+            int(os.getenv('GLOBAL_LOCATION_PLANNER_TARGET_BYTES', str(DEFAULT_PLANNER_TARGET_BYTES))),
+        ),
+    )
+    workers = max(1, min(32, int(os.getenv('GLOBAL_LOCATION_PLANNER_WORKERS', '16'))))
+    planner_id = f'v{PLANNER_VERSION}-c{target_candidates}-b{target_bytes}'
+    explicit_id = str(os.getenv('GLOBAL_LOCATION_PLANNER_ID') or '').strip()
+    if explicit_id and explicit_id != planner_id:
+        raise RuntimeError(
+            f'GLOBAL_LOCATION_PLANNER_ID={explicit_id!r} does not match normalized planner configuration {planner_id!r}.'
+        )
+    return target_candidates, target_bytes, workers, planner_id
+
+
+def prepare_planner_candidate(snapshot: str, source, s3) -> tuple[str, str, str]:
+    """Build/reuse and validate the bounded planner, then promote its candidate alias for parity."""
+    target_candidates, target_bytes, workers, planner_id = planner_configuration()
+    build_command = [
+        sys.executable,
+        str(PLANNER_BUILDER_PATH),
+        f'--snapshot={snapshot}',
+        f'--target-candidates={target_candidates}',
+        f'--target-compressed-bytes={target_bytes}',
+        f'--workers={workers}',
+    ]
+    print(
+        f'planner_prepare_start snapshot={snapshot} planner_id={planner_id} '
+        f'target_candidates={target_candidates} target_bytes={target_bytes}',
+        flush=True,
+    )
+    subprocess.run(build_command, check=True)
+    subprocess.run(
+        [
+            sys.executable,
+            str(PLANNER_VALIDATOR_PATH),
+            f'--snapshot={snapshot}',
+            f'--planner-id={planner_id}',
+        ],
+        check=True,
+    )
+
+    planner_candidate_key = f'{source.data_prefix}/search/candidates/{snapshot}-{planner_id}.json'
+    alias_key = f'{source.data_prefix}/search/candidates/{snapshot}.json'
+    candidate_body = s3.get_object(Bucket=source.bucket, Key=planner_candidate_key)['Body'].read()
+    candidate = json.loads(candidate_body)
+    expected_manifest_key = f'{source.data_prefix}/search/schema=v1/snapshot={snapshot}/manifest-{planner_id}.json'
+    if str(candidate.get('snapshot') or '') != snapshot:
+        raise RuntimeError('Planner candidate pointer snapshot does not match requested snapshot.')
+    if str(candidate.get('planner_id') or '') != planner_id:
+        raise RuntimeError('Planner candidate pointer id does not match validated planner id.')
+    if str(candidate.get('manifest_key') or '') != expected_manifest_key:
+        raise RuntimeError('Planner candidate pointer manifest does not match validated planner manifest.')
+
+    # This mutable candidate alias is what the existing migration parity step consumes.
+    # The immutable base manifest remains untouched and can still be validated independently.
+    s3.put_object(
+        Bucket=source.bucket,
+        Key=alias_key,
+        Body=candidate_body,
+        ContentType='application/json',
+        CacheControl='no-store',
+    )
+    print(
+        f'planner_candidate_promoted snapshot={snapshot} planner_id={planner_id} '
+        f'candidate_key={planner_candidate_key} alias_key={alias_key}',
+        flush=True,
+    )
+    return planner_id, planner_candidate_key, alias_key
 
 
 def main() -> None:
@@ -222,37 +312,82 @@ def main() -> None:
     report_key = f'{prefix}/validation/report.json'
     s3.put_object(Bucket=source.bucket, Key=report_key, Body=json_bytes(report), ContentType='application/json', CacheControl='no-store')
 
-    if args.activate:
-        active_key = f'{source.data_prefix}/search/active.json'
-        previous = None
-        try:
-            previous = json.loads(get_bytes(active_key))
-        except s3.exceptions.NoSuchKey:
-            previous = None
-        except Exception as error:
-            code = getattr(error, 'response', {}).get('Error', {}).get('Code')
-            if code not in {'NoSuchKey', '404', 'NotFound'}:
-                raise
-        activated = {
-            'schema_version': 1,
-            'snapshot': args.snapshot,
-            'manifest_key': manifest_key,
-            'activated_at': utc_now(),
-            'validation_report_key': report_key,
-        }
-        if previous:
-            history_stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-            history = {'previous': previous, 'replacement': activated}
-            s3.put_object(
-                Bucket=source.bucket,
-                Key=f'{source.data_prefix}/search/history/{history_stamp}.json',
-                Body=json_bytes(history), ContentType='application/json',
-                CacheControl='public,max-age=31536000,immutable',
-            )
-        # Single-object replacement is the only mutable operation in the search namespace.
-        s3.put_object(Bucket=source.bucket, Key=active_key, Body=json_bytes(activated), ContentType='application/json', CacheControl='no-store')
+    if not args.activate:
+        planner_id, planner_candidate_key, candidate_alias_key = prepare_planner_candidate(args.snapshot, source, s3)
+        report['planner_id'] = planner_id
+        report['planner_candidate_key'] = planner_candidate_key
+        report['candidate_alias_key'] = candidate_alias_key
+        report['checks']['planner_overlay'] = True
+        s3.put_object(Bucket=source.bucket, Key=report_key, Body=json_bytes(report), ContentType='application/json', CacheControl='no-store')
+        print(json.dumps(report, indent=2, sort_keys=True), flush=True)
+        return
+
+    # Activation follows the exact candidate pointer that already passed the workflow parity gate.
+    # If it names a planner overlay, delegate to the strict planner validator/activator instead of
+    # silently switching active.json back to the coarse base manifest.
+    candidate_alias_key = f'{source.data_prefix}/search/candidates/{args.snapshot}.json'
+    candidate = get_json(candidate_alias_key)
+    candidate_planner_id = str(candidate.get('planner_id') or '').strip()
+    candidate_manifest_key = str(candidate.get('manifest_key') or '').strip()
+    if candidate_planner_id:
+        expected_prefix = f'{prefix}/manifest-'
+        if str(candidate.get('snapshot') or '') != args.snapshot:
+            raise RuntimeError('Parity-passing candidate pointer snapshot changed before activation.')
+        if not candidate_manifest_key.startswith(expected_prefix) or not candidate_manifest_key.endswith('.json'):
+            raise RuntimeError('Parity-passing planner candidate points outside the snapshot planner namespace.')
+        print(
+            f'planner_activation_delegate snapshot={args.snapshot} planner_id={candidate_planner_id} '
+            f'manifest_key={candidate_manifest_key}',
+            flush=True,
+        )
+        subprocess.run(
+            [
+                sys.executable,
+                str(PLANNER_VALIDATOR_PATH),
+                f'--snapshot={args.snapshot}',
+                f'--planner-id={candidate_planner_id}',
+                f'--manifest-key={candidate_manifest_key}',
+                '--activate',
+            ],
+            check=True,
+        )
         report['activated'] = True
-        report['active_key'] = active_key
+        report['active_key'] = f'{source.data_prefix}/search/active.json'
+        report['planner_id'] = candidate_planner_id
+        report['activated_manifest_key'] = candidate_manifest_key
+        print(json.dumps(report, indent=2, sort_keys=True), flush=True)
+        return
+
+    active_key = f'{source.data_prefix}/search/active.json'
+    previous = None
+    try:
+        previous = json.loads(get_bytes(active_key))
+    except s3.exceptions.NoSuchKey:
+        previous = None
+    except Exception as error:
+        code = getattr(error, 'response', {}).get('Error', {}).get('Code')
+        if code not in {'NoSuchKey', '404', 'NotFound'}:
+            raise
+    activated = {
+        'schema_version': 1,
+        'snapshot': args.snapshot,
+        'manifest_key': manifest_key,
+        'activated_at': utc_now(),
+        'validation_report_key': report_key,
+    }
+    if previous:
+        history_stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+        history = {'previous': previous, 'replacement': activated}
+        s3.put_object(
+            Bucket=source.bucket,
+            Key=f'{source.data_prefix}/search/history/{history_stamp}.json',
+            Body=json_bytes(history), ContentType='application/json',
+            CacheControl='public,max-age=31536000,immutable',
+        )
+    # Single-object replacement is the only mutable operation in the search namespace.
+    s3.put_object(Bucket=source.bucket, Key=active_key, Body=json_bytes(activated), ContentType='application/json', CacheControl='no-store')
+    report['activated'] = True
+    report['active_key'] = active_key
 
     print(json.dumps(report, indent=2, sort_keys=True), flush=True)
 
