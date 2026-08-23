@@ -8,7 +8,15 @@ import {
 
 const base = { ...process.env }
 const openSearchEnv = { ...base, GLOBAL_LOCATION_SEARCH_BACKEND: 'opensearch' }
-const b2Env = { ...base, GLOBAL_LOCATION_SEARCH_BACKEND: 'b2', GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '15000' }
+// The workflow historically pins fetch concurrency to 8 for conservative smoke coverage,
+// while the B2 runtime default is 16. Run parity at the production default so the comparison
+// measures normal B2 behavior without raising the 15s deadline or any query safety budget.
+const b2Env = {
+  ...base,
+  GLOBAL_LOCATION_SEARCH_BACKEND: 'b2',
+  GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '15000',
+  GLOBAL_LOCATION_FETCH_CONCURRENCY: '16'
+}
 const candidateLimit = Math.max(20, Math.min(200, Number(base.GLOBAL_LOCATION_PARITY_CANDIDATE_LIMIT || 100)))
 const hydrationFloor = Math.max(0.5, Math.min(1, Number(base.GLOBAL_LOCATION_PARITY_HYDRATION_FLOOR || 0.95)))
 
