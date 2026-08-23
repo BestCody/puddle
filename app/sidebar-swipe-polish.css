@@ -1,0 +1,175 @@
+/* Final layout polish for the swipe workspace and responsive Figma sidebar. */
+
+@media (min-width: 761px) {
+  /* Keep the swipe card, action dock, and status on one shared center axis. */
+  .figma-swipe-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: center !important;
+  }
+  .figma-swipe-card-stage,
+  .figma-swipe-actions,
+  .figma-swipe-status {
+    grid-column: 1;
+    justify-self: center !important;
+    margin-inline: auto !important;
+  }
+  .figma-swipe-card-stage,
+  .figma-swipe-actions {
+    position: relative !important;
+    inset: auto !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+  }
+  .figma-swipe-actions {
+    width: min(310px, 100%) !important;
+  }
+  .figma-swipe-status {
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    text-align: center;
+  }
+
+  /* Slightly smaller brand mark in the expanded sidebar. */
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo {
+    left: 36px;
+    width: 44px;
+    height: 44px;
+  }
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo svg {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* Manual concise mode uses the live sidebar width while dragging, then snaps. */
+  .figma-dashboard-sidebar.is-concise {
+    width: var(--figma-shell-sidebar) !important;
+  }
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    left: 50% !important;
+    width: 38px;
+    height: 38px;
+    transform: translateX(-50%);
+  }
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
+    left: 50% !important;
+    width: 60px;
+    transform: translateX(-50%);
+  }
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
+    width: 60px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-label {
+    display: none;
+  }
+
+  .figma-dashboard-settings-link {
+    display: flex;
+    align-items: center;
+  }
+  .figma-dashboard-settings-icon {
+    display: none;
+  }
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
+    left: 50% !important;
+    bottom: 28px;
+    top: auto !important;
+    width: 44px;
+    height: 44px;
+    display: grid !important;
+    place-items: center;
+    transform: translateX(-50%);
+    border-radius: 14px;
+  }
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-label {
+    display: none;
+  }
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-icon {
+    width: 27px;
+    height: 27px;
+    display: grid;
+    place-items: center;
+  }
+  .figma-dashboard-settings-icon svg {
+    width: 27px;
+    height: 27px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+/* Before React hydrates, use the same concise geometry at the automatic desktop breakpoint. */
+@media (min-width: 761px) and (max-width: 1180px) {
+  .figma-dashboard-sidebar {
+    width: 102px !important;
+  }
+  .figma-dashboard-stage {
+    margin-left: 102px !important;
+  }
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo {
+    left: 50% !important;
+    width: 38px !important;
+    height: 38px !important;
+    transform: translateX(-50%);
+  }
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo svg {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  .figma-dashboard-sidebar .figma-dashboard-nav {
+    left: 50% !important;
+    width: 60px !important;
+    transform: translateX(-50%);
+  }
+  .figma-dashboard-sidebar .figma-dashboard-nav-item {
+    width: 60px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+  .figma-dashboard-sidebar .figma-dashboard-nav-label,
+  .figma-dashboard-sidebar .figma-dashboard-settings-label {
+    display: none !important;
+  }
+  .figma-dashboard-sidebar .figma-dashboard-settings-link {
+    left: 50% !important;
+    bottom: 28px !important;
+    top: auto !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: grid !important;
+    place-items: center;
+    transform: translateX(-50%);
+    border-radius: 14px;
+  }
+  .figma-dashboard-sidebar .figma-dashboard-settings-icon {
+    width: 27px;
+    height: 27px;
+    display: grid !important;
+    place-items: center;
+  }
+  .figma-dashboard-sidebar-resizer {
+    display: none;
+  }
+}
