@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Build a compact immutable text-search projection from the active packed B2 geo objects.
+"""Build compact immutable text-search sidecars from the active packed B2 geo objects.
 
-This is a serving-only derivative. It never rebuilds the canonical/base index. Each
-physical geo object receives a deterministic Zstd-compressed positional projection,
-then a candidate marker is published. Production activation is a separate operation
-so parity can gate the ready marker.
+This is a serving-only derivative: it never rebuilds the canonical/base index. Each
+physical geo object gets a small search core plus bounded detail chunks. Detail
+chunks are written first and the core object is written last, so existence of the
+immutable core is also the per-pack completion marker. Candidate publication and
+production activation remain separate so OpenSearch parity can gate the ready marker.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import math
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -25,6 +27,7 @@ from location_search_common import b2_source_config
 
 PROJECTION_VERSION = 1
 DEFAULT_WORKERS = 16
+DEFAULT_DETAIL_CHUNK_SIZE = 512
 ASCII_NON_ALNUM = re.compile(r'[^a-z0-9]+')
 ASCII_WHITESPACE = re.compile(r'\s+')
 
@@ -70,7 +73,35 @@ def compact_photo(document: dict):
     ]
 
 
-def project_document(document: dict) -> list:
+def core_document(document: dict) -> list:
+    aliases = document.get('aliases') if isinstance(document.get('aliases'), list) else []
+    return [
+        document.get('id'),
+        document.get('name'),
+        aliases,
+        document.get('category'),
+        document.get('latitude'),
+        document.get('longitude'),
+        document.get('city'),
+        document.get('neighborhood'),
+        document.get('address'),
+        document.get('price_level'),
+        document.get('amenities') if isinstance(document.get('amenities'), list) else [],
+        bool(document.get('accessible')),
+        float(document.get('quality_score') or 0),
+        float(document.get('popularity_score') or 0),
+        (document.get('primary_photo') or {}).get('content_hash') if isinstance(document.get('primary_photo'), dict) else None,
+        document.get('status'),
+        ascii_normalized(document.get('name')),
+        normalized_aliases(aliases),
+        ascii_normalized(document.get('category')),
+        ascii_normalized(document.get('city')),
+        ascii_normalized(document.get('neighborhood')),
+        ascii_normalized(document.get('address')),
+    ]
+
+
+def detail_document(document: dict) -> list:
     aliases = document.get('aliases') if isinstance(document.get('aliases'), list) else []
     return [
         document.get('id'),
@@ -112,12 +143,6 @@ def project_document(document: dict) -> list:
         document.get('status'),
         document.get('updated_at'),
         compact_photo(document),
-        ascii_normalized(document.get('name')),
-        normalized_aliases(aliases),
-        ascii_normalized(document.get('category')),
-        ascii_normalized(document.get('city')),
-        ascii_normalized(document.get('neighborhood')),
-        ascii_normalized(document.get('address')),
     ]
 
 
@@ -126,6 +151,7 @@ def main() -> None:
     parser.add_argument('--manifest-key', required=True)
     parser.add_argument('--planner-id', required=True)
     parser.add_argument('--workers', type=int, default=int(os.getenv('GLOBAL_LOCATION_PLANNER_WORKERS', str(DEFAULT_WORKERS))))
+    parser.add_argument('--detail-chunk-size', type=int, default=int(os.getenv('GLOBAL_LOCATION_TEXT_DETAIL_CHUNK_SIZE', str(DEFAULT_DETAIL_CHUNK_SIZE))))
     parser.add_argument('--activate-only', action='store_true')
     args = parser.parse_args()
 
@@ -134,6 +160,7 @@ def main() -> None:
     if not manifest_key or not re.fullmatch(r'[A-Za-z0-9._-]+', planner_id):
         raise RuntimeError('A valid manifest key and planner id are required.')
     workers = max(1, min(32, int(args.workers)))
+    detail_chunk_size = max(64, min(2048, int(args.detail_chunk_size)))
 
     source = b2_source_config()
     s3 = boto3.client(
@@ -147,6 +174,28 @@ def main() -> None:
 
     def get_bytes(key: str) -> bytes:
         return s3.get_object(Bucket=source.bucket, Key=key)['Body'].read()
+
+    def put_immutable(key: str, body: bytes, metadata: dict[str, str]) -> None:
+        digest = sha256_hex(body)
+        expected_metadata = {**metadata, 'sha256': digest}
+        try:
+            head = s3.head_object(Bucket=source.bucket, Key=key)
+        except ClientError as error:
+            if not is_missing(error):
+                raise
+        else:
+            actual_metadata = {str(k).lower(): str(v) for k, v in (head.get('Metadata') or {}).items()}
+            if int(head.get('ContentLength') or -1) != len(body) or any(actual_metadata.get(k.lower()) != str(v) for k, v in expected_metadata.items()):
+                raise RuntimeError(f'Immutable text projection artifact differs: {key}')
+            return
+        s3.put_object(
+            Bucket=source.bucket,
+            Key=key,
+            Body=body,
+            ContentType='application/zstd',
+            CacheControl='public,max-age=31536000,immutable',
+            Metadata=expected_metadata,
+        )
 
     manifest_body = get_bytes(manifest_key)
     manifest_sha = sha256_hex(manifest_body)
@@ -172,6 +221,7 @@ def main() -> None:
             or str(candidate.get('source_manifest_key') or '') != manifest_key
             or str(candidate.get('source_manifest_sha256') or '') != manifest_sha
             or str(candidate.get('planner_id') or '') != planner_id
+            or int(candidate.get('detail_chunk_size') or 0) < 64
         ):
             raise RuntimeError('Text projection candidate does not match the requested active manifest.')
         ready_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
@@ -212,9 +262,14 @@ def main() -> None:
     if not geo_records:
         raise RuntimeError('Source manifest contains no physical geo objects.')
 
-    def projection_key(source_key: str) -> str:
-        digest = hashlib.sha256(source_key.encode()).hexdigest()
-        return f'{projection_base}/objects/{digest}.json.zst'
+    def digest_for(source_key: str) -> str:
+        return hashlib.sha256(source_key.encode()).hexdigest()
+
+    def core_key(source_key: str) -> str:
+        return f'{projection_base}/core/{digest_for(source_key)}.json.zst'
+
+    def detail_key(source_key: str, chunk_index: int) -> str:
+        return f'{projection_base}/detail/{digest_for(source_key)}/{chunk_index:05d}.json.zst'
 
     def process(record: dict) -> dict:
         source_key = str(record.get('key') or '')
@@ -222,10 +277,12 @@ def main() -> None:
         expected_count = int(record.get('count') or 0)
         if not source_key or not source_sha or expected_count < 0:
             raise RuntimeError(f'Invalid geo hash-ledger record: {record!r}')
-        target_key = projection_key(source_key)
+        target_core_key = core_key(source_key)
 
+        # Core is uploaded only after every detail chunk. Therefore a matching core is
+        # a durable completion marker for this entire physical pack.
         try:
-            head = s3.head_object(Bucket=source.bucket, Key=target_key)
+            head = s3.head_object(Bucket=source.bucket, Key=target_core_key)
         except ClientError as error:
             if not is_missing(error):
                 raise
@@ -235,11 +292,14 @@ def main() -> None:
                 str(metadata.get('source-sha256') or '').lower() != source_sha
                 or int(metadata.get('projection-version') or 0) != PROJECTION_VERSION
                 or int(metadata.get('count') or -1) != expected_count
+                or int(metadata.get('detail-chunk-size') or 0) != detail_chunk_size
             ):
-                raise RuntimeError(f'Existing immutable text projection metadata differs: {target_key}')
+                raise RuntimeError(f'Existing immutable text projection metadata differs: {target_core_key}')
             return {
                 'source_bytes': int(record.get('compressed_bytes') or 0),
-                'projection_bytes': int(head.get('ContentLength') or 0),
+                'core_bytes': int(head.get('ContentLength') or 0),
+                'detail_bytes': int(metadata.get('detail-bytes') or 0),
+                'detail_objects': int(metadata.get('detail-objects') or math.ceil(expected_count / detail_chunk_size)),
                 'rows': expected_count,
                 'reused': 1,
             }
@@ -250,33 +310,58 @@ def main() -> None:
         documents = orjson.loads(brotli.decompress(body))
         if not isinstance(documents, list) or len(documents) != expected_count:
             raise RuntimeError(f'Source geo object count mismatch: {source_key}')
-        rows = [project_document(document) for document in documents]
-        raw = orjson.dumps([PROJECTION_VERSION, rows])
-        projected = zstd.ZstdCompressor(level=6).compress(raw)
-        projected_sha = sha256_hex(projected)
-        s3.put_object(
-            Bucket=source.bucket,
-            Key=target_key,
-            Body=projected,
-            ContentType='application/zstd',
-            CacheControl='public,max-age=31536000,immutable',
-            Metadata={
-                'sha256': projected_sha,
+
+        compressor = zstd.ZstdCompressor(level=6)
+        detail_bytes = 0
+        detail_objects = 0
+        for start in range(0, len(documents), detail_chunk_size):
+            chunk_index = start // detail_chunk_size
+            detail_rows = [detail_document(document) for document in documents[start:start + detail_chunk_size]]
+            raw = orjson.dumps([PROJECTION_VERSION, start, detail_rows])
+            compressed = compressor.compress(raw)
+            put_immutable(
+                detail_key(source_key, chunk_index),
+                compressed,
+                {
+                    'source-sha256': source_sha,
+                    'projection-version': str(PROJECTION_VERSION),
+                    'start': str(start),
+                    'count': str(len(detail_rows)),
+                    'uncompressed-bytes': str(len(raw)),
+                },
+            )
+            detail_bytes += len(compressed)
+            detail_objects += 1
+
+        core_rows = [core_document(document) for document in documents]
+        core_raw = orjson.dumps([PROJECTION_VERSION, core_rows])
+        core_body = compressor.compress(core_raw)
+        put_immutable(
+            target_core_key,
+            core_body,
+            {
                 'source-sha256': source_sha,
                 'projection-version': str(PROJECTION_VERSION),
                 'count': str(expected_count),
-                'uncompressed-bytes': str(len(raw)),
+                'detail-chunk-size': str(detail_chunk_size),
+                'detail-objects': str(detail_objects),
+                'detail-bytes': str(detail_bytes),
+                'uncompressed-bytes': str(len(core_raw)),
             },
         )
         return {
             'source_bytes': int(record.get('compressed_bytes') or len(body)),
-            'projection_bytes': len(projected),
-            'rows': len(rows),
+            'core_bytes': len(core_body),
+            'detail_bytes': detail_bytes,
+            'detail_objects': detail_objects,
+            'rows': len(documents),
             'reused': 0,
         }
 
     source_bytes = 0
-    projection_bytes = 0
+    core_bytes = 0
+    detail_bytes = 0
+    detail_objects = 0
     location_rows = 0
     reused = 0
     completed = 0
@@ -285,14 +370,16 @@ def main() -> None:
         for future in as_completed(futures):
             result = future.result()
             source_bytes += int(result['source_bytes'])
-            projection_bytes += int(result['projection_bytes'])
+            core_bytes += int(result['core_bytes'])
+            detail_bytes += int(result['detail_bytes'])
+            detail_objects += int(result['detail_objects'])
             location_rows += int(result['rows'])
             reused += int(result['reused'])
             completed += 1
             if completed % 100 == 0 or completed == len(geo_records):
                 print(
                     f'text_projection_progress objects={completed}/{len(geo_records)} rows={location_rows} '
-                    f'source_bytes={source_bytes} projection_bytes={projection_bytes} reused={reused}',
+                    f'source_bytes={source_bytes} core_bytes={core_bytes} detail_bytes={detail_bytes} reused={reused}',
                     flush=True,
                 )
 
@@ -308,10 +395,13 @@ def main() -> None:
         'planner_id': planner_id,
         'snapshot': manifest.get('snapshot') or manifest.get('source_snapshot'),
         'object_count': len(geo_records),
+        'detail_object_count': detail_objects,
+        'detail_chunk_size': detail_chunk_size,
         'location_rows': location_rows,
         'source_compressed_bytes': source_bytes,
-        'projection_compressed_bytes': projection_bytes,
-        'compression_ratio': round(projection_bytes / source_bytes, 6) if source_bytes else None,
+        'core_compressed_bytes': core_bytes,
+        'detail_compressed_bytes': detail_bytes,
+        'core_compression_ratio': round(core_bytes / source_bytes, 6) if source_bytes else None,
     }
     candidate_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
     s3.put_object(
@@ -323,7 +413,7 @@ def main() -> None:
     )
     print(
         f'text_projection_complete=true candidate_key={candidate_key} objects={len(geo_records)} rows={location_rows} '
-        f'source_bytes={source_bytes} projection_bytes={projection_bytes} ratio={candidate["compression_ratio"]}',
+        f'source_bytes={source_bytes} core_bytes={core_bytes} detail_bytes={detail_bytes} core_ratio={candidate["core_compression_ratio"]}',
         flush=True,
     )
     print(orjson.dumps(candidate, option=orjson.OPT_INDENT_2).decode(), flush=True)
