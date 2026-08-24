@@ -13,7 +13,6 @@ import hashlib
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
 
 import boto3
 import brotli
@@ -28,10 +27,6 @@ PROJECTION_VERSION = 1
 DEFAULT_WORKERS = 16
 ASCII_NON_ALNUM = re.compile(r'[^a-z0-9]+')
 ASCII_WHITESPACE = re.compile(r'\s+')
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def sha256_hex(body: bytes) -> str:
@@ -217,8 +212,6 @@ def main() -> None:
     if not geo_records:
         raise RuntimeError('Source manifest contains no physical geo objects.')
 
-    compressor = zstd.ZstdCompressor(level=6, threads=0)
-
     def projection_key(source_key: str) -> str:
         digest = hashlib.sha256(source_key.encode()).hexdigest()
         return f'{projection_base}/objects/{digest}.json.zst'
@@ -259,7 +252,7 @@ def main() -> None:
             raise RuntimeError(f'Source geo object count mismatch: {source_key}')
         rows = [project_document(document) for document in documents]
         raw = orjson.dumps([PROJECTION_VERSION, rows])
-        projected = compressor.compress(raw)
+        projected = zstd.ZstdCompressor(level=6).compress(raw)
         projected_sha = sha256_hex(projected)
         s3.put_object(
             Bucket=source.bucket,
@@ -319,7 +312,6 @@ def main() -> None:
         'source_compressed_bytes': source_bytes,
         'projection_compressed_bytes': projection_bytes,
         'compression_ratio': round(projection_bytes / source_bytes, 6) if source_bytes else None,
-        'built_at': utc_now(),
     }
     candidate_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
     s3.put_object(
