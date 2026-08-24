@@ -52,9 +52,9 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
 
 test('saved places hydrate canonical metadata and open details as a same-page shared-element morph', async () => {
   const [plans, data, styles, layout, cutover, morphBridge, morphStyles, morphApi] = await Promise.all([
-    read('app/plans/page.js'),
+    read('app/(product)/plans/page.js'),
     read('lib/app/location-plans-data.js'),
-    read('app/plans/Plans.module.css'),
+    read('app/(product)/plans/Plans.module.css'),
     read('app/layout.js'),
     read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql'),
     read('components/saved-location-morph-bridge.js'),
