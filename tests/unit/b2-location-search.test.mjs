@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { brotliCompressSync } from 'node:zlib'
+import { brotliCompressSync, zstdCompressSync } from 'node:zlib'
 import {
   getB2GlobalLocationBySlug,
   getB2GlobalLocationsByIds,
@@ -13,7 +13,8 @@ import {
   haversineDistanceMeters
 } from '../../lib/app/location-search-shards.js'
 import { clearB2SearchAuthorizationCache } from '../../lib/app/b2-search-object-store.js'
-import { prepareTextQuery, scoreTextMatch } from '../../lib/app/location-search-ranking.js'
+import { clearTextProjectionCaches, textProjectionObjectKey } from '../../lib/app/b2-text-search-projection.js'
+import { normalizeSearchText, prepareTextQuery, scoreTextMatch } from '../../lib/app/location-search-ranking.js'
 
 const env = {
   B2_DATA_APPLICATION_KEY_ID: 'key-id',
@@ -25,7 +26,8 @@ const env = {
   GLOBAL_LOCATION_MAX_SHARDS: '32',
   GLOBAL_LOCATION_MAX_COMPRESSED_BYTES: String(4 * 1024 * 1024),
   GLOBAL_LOCATION_MAX_CANDIDATES: '10000',
-  GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '5000'
+  GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '5000',
+  GLOBAL_LOCATION_TEXT_PROJECTION: '1'
 }
 
 const tower = {
@@ -44,22 +46,45 @@ function br(value) {
   return brotliCompressSync(Buffer.from(JSON.stringify(value)))
 }
 
-function fixtureFetch() {
+function projectionRow(document) {
+  const aliases = Array.isArray(document.aliases) ? document.aliases : []
+  const photo = document.primary_photo?.content_hash
+    ? [document.primary_photo.content_hash, document.primary_photo.provider, document.primary_photo.attribution, document.primary_photo.attribution_url, document.primary_photo.license, document.primary_photo.width, document.primary_photo.height]
+    : null
+  return [
+    document.id, document.slug, document.name, aliases, document.summary, document.description,
+    document.category, document.subcategory, document.latitude, document.longitude, document.country,
+    document.country_code, document.region, document.region_code, document.city, document.neighborhood,
+    document.postal_code, document.address, document.timezone, Boolean(document.timezone_verified),
+    document.opening_hours || {}, document.price_level, document.amenities || [], document.accessibility || {},
+    Boolean(document.accessible), document.website_url, document.phone_public, document.brand_id, document.brand_name,
+    document.source_parent_place_id, document.duplicate_group_key, document.catalogue_group_key,
+    Number(document.quality_score || 0), Number(document.popularity_score || 0), document.google_place_id,
+    document.google_place_match_score, document.status, document.updated_at, photo,
+    normalizeSearchText(document.name), aliases.map(normalizeSearchText), normalizeSearchText(document.category),
+    normalizeSearchText(document.city), normalizeSearchText(document.neighborhood), normalizeSearchText(document.address)
+  ]
+}
+
+function fixtureFetch({ textProjection = false, requests = [] } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
+  const manifestKey = `${prefix}/manifest.json`
   const geoKey = `${prefix}/geo/r5/852b9b7bfffffff.json.br`
   const outsideRadiusKey = `${prefix}/geo/r8/outside-radius-corner.json.br`
   const denseViewportKey = `${prefix}/geo/r8/dense-viewport-edge.json.br`
   const geoBody = br([tower, cafe])
+  const manifest = {
+    schema_version: 1, snapshot: '2026-08-19', source_snapshot: '2026-08-19', prefix,
+    planner: { id: 'fixture-planner' },
+    geo: { directory: { tile_degrees: 1, prefix: `${prefix}/routing` } },
+    geo_map: {
+      z0: { tile_degrees: 30, prefix: `${prefix}/geo-map/z0` },
+      z1: { tile_degrees: 10, prefix: `${prefix}/geo-map/z1` }
+    }
+  }
   const objects = new Map([
-    ['data/search/active.json', Buffer.from(JSON.stringify({ schema_version: 1, snapshot: '2026-08-19', manifest_key: `${prefix}/manifest.json` }))],
-    [`${prefix}/manifest.json`, Buffer.from(JSON.stringify({
-      schema_version: 1, snapshot: '2026-08-19', source_snapshot: '2026-08-19', prefix,
-      geo: { directory: { tile_degrees: 1, prefix: `${prefix}/routing` } },
-      geo_map: {
-        z0: { tile_degrees: 30, prefix: `${prefix}/geo-map/z0` },
-        z1: { tile_degrees: 10, prefix: `${prefix}/geo-map/z1` }
-      }
-    }))],
+    ['data/search/active.json', Buffer.from(JSON.stringify({ schema_version: 1, snapshot: '2026-08-19', manifest_key: manifestKey }))],
+    [manifestKey, Buffer.from(JSON.stringify(manifest))],
     [`${prefix}/routing/133/100.json.br`, br([
       [geoKey, '852b9b7bfffffff', 44, 43, -79, -80, 2, geoBody.length],
       // This shard overlaps the radius bounding square but its entire bounding box is outside
@@ -74,6 +99,20 @@ function fixtureFetch() {
     [`${prefix}/id/60c.json.br`, br({ 'loc-1': tower })],
     [`${prefix}/slug/e79.json.br`, br({ 'cn-tower': 'loc-1' })]
   ])
+
+  if (textProjection) {
+    const readyKey = `${prefix}/text-projection-v1/fixture-planner/ready.json`
+    objects.set(readyKey, Buffer.from(JSON.stringify({
+      schema_version: 1,
+      projection_version: 1,
+      source_manifest_key: manifestKey,
+      planner_id: 'fixture-planner'
+    })))
+    objects.set(
+      textProjectionObjectKey(manifest, geoKey),
+      zstdCompressSync(Buffer.from(JSON.stringify([1, [projectionRow(tower), projectionRow(cafe)]])))
+    )
+  }
 
   return async (url) => {
     const value = String(url)
@@ -91,6 +130,7 @@ function fixtureFetch() {
     const index = value.indexOf(marker)
     if (index < 0) return new Response('', { status: 404 })
     const key = value.slice(index + marker.length).split('/').map(decodeURIComponent).join('/')
+    requests.push(key)
     const body = objects.get(key)
     return body ? new Response(body, { status: 200, headers: { 'content-length': String(body.length) } }) : new Response('', { status: 404 })
   }
@@ -99,6 +139,7 @@ function fixtureFetch() {
 function reset() {
   clearLocationSearchCaches()
   clearB2SearchAuthorizationCache()
+  clearTextProjectionCaches()
 }
 
 test('bounded fuzzy scoring accepts a two-edit place-name typo', () => {
@@ -126,6 +167,21 @@ test('B2 radius search routes, filters, fuzzily matches, and ranks candidates', 
   assert.equal(result.index, 'b2:2026-08-19')
   assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
   assert.equal(result.diagnostics.shards, 1)
+  assert.equal(result.diagnostics.textProjection, false)
+})
+
+test('B2 text radius search uses compact projection without fetching the full geo object', async () => {
+  reset()
+  const requests = []
+  const result = await searchB2GlobalLocations({
+    latitude: 43.65, longitude: -79.39, distanceKm: 25,
+    filters: { q: 'cn towr', category: 'landmark' }, candidateLimit: 20
+  }, { env, fetchFn: fixtureFetch({ textProjection: true, requests }) })
+  assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
+  assert.equal(result.diagnostics.textProjection, true)
+  assert.equal(result.diagnostics.textProjectionFallback, false)
+  assert.equal(requests.some((key) => key.endsWith('/geo/r5/852b9b7bfffffff.json.br')), false)
+  assert.equal(result.candidates[0].primary_photo.content_hash, tower.primary_photo.content_hash)
 })
 
 test('B2 viewport uses exact bounds at normal zoom', async () => {
