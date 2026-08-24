@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPuddlePost } from '@/app/create/post/actions'
+import { createPuddlePost } from '@/app/(product)/create/post/actions'
 
 function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
