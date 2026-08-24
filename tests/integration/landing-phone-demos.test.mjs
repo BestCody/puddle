@@ -74,7 +74,7 @@ test('product shell fixes keep compact menu bars and icon-only narrow sidebar', 
   const [sidebar, polish, profile] = await Promise.all([
     read('components/resizable-product-sidebar.js'),
     read('app/product-polish.css'),
-    read('app/profile/page.js')
+    read('app/(product)/profile/page.js')
   ])
 
   assert.match(sidebar, /LABEL_MIN_WIDTH = 196/)
