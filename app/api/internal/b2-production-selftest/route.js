@@ -25,22 +25,30 @@ function compactSearch(result) {
 async function textSearchOptions(url) {
   const projection = url.searchParams.get('projection') || ''
   const prune = url.searchParams.get('prune') || ''
-  if (!projection && !prune) return {}
+  const postings = url.searchParams.get('postings') || ''
+  if (!projection && !prune && !postings) return {}
   if (projection && projection !== 'candidate') throw new Error('Unknown text projection self-test mode.')
   if (prune && prune !== 'candidate') throw new Error('Unknown text-prune self-test mode.')
+  if (postings && postings !== 'candidate') throw new Error('Unknown text-postings self-test mode.')
   const { manifest } = await getActiveSearchManifest()
   const prefix = String(manifest?.prefix || '').replace(/\/+$/, '')
   const plannerId = String(manifest?.planner?.id || '')
   if (!prefix || !/^[A-Za-z0-9._-]+$/.test(plannerId)) throw new Error('Active B2 planner cannot resolve a text acceleration candidate.')
   const env = { ...process.env }
-  // Both flags together exercise the exact serving path production uses once both
-  // candidates activate: prune the plan first, serve scoring from compact cores.
+  // All flags together exercise the exact serving path production uses once all
+  // candidates activate: prune the plan, intersect prefix postings, hydrate winners.
   if (projection) env.GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY = `${prefix}/text-projection-v1/${plannerId}/candidate.json`
   if (prune) {
     env.GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY = `${prefix}/text-prune-v1/${plannerId}/candidate.json`
-    if (!projection) env.GLOBAL_LOCATION_TEXT_PROJECTION = '0'
+    if (!projection && !postings) env.GLOBAL_LOCATION_TEXT_PROJECTION = '0'
   }
-  return { env, projection, prune }
+  if (postings) {
+    // The postings serving path proves completeness with the pruner's per-pack
+    // maxima, so its candidate mode activates both markers together.
+    env.GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY = `${prefix}/text-postings-v1/${plannerId}/candidate.json`
+    env.GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY = `${prefix}/text-prune-v1/${plannerId}/candidate.json`
+  }
+  return { env, projection, prune, postings }
 }
 
 export async function GET(request) {
@@ -53,7 +61,7 @@ export async function GET(request) {
   const started = Date.now()
   try {
     if (name === 'text') {
-      const { env: candidateEnv, projection, prune } = await textSearchOptions(url)
+      const { env: candidateEnv, projection, prune, postings } = await textSearchOptions(url)
       const result = await searchB2GlobalLocations({
         latitude: 51.5074,
         longitude: -0.1278,
@@ -70,6 +78,9 @@ export async function GET(request) {
       }
       if (ok && projection === 'candidate') {
         ok = diagnostics.textProjection === true
+      }
+      if (ok && postings === 'candidate') {
+        ok = diagnostics.textMode === 'postings' || diagnostics.textMode === 'core-scan-rerun'
       }
       return Response.json({ ok, case: name, durationMs: Date.now() - started, result: compactSearch(result) }, { status: ok ? 200 : 503 })
     }
