@@ -361,7 +361,7 @@
 
 @media (max-width: 1050px) and (min-width: 761px) {
   .saved-inline-detail-layer {
-    inset-left: 92px;
+    left: 92px;
   }
 }
 
