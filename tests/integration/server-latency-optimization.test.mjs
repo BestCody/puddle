@@ -50,7 +50,7 @@ test('Partial caching is limited to cookie-free published public location data',
     read('lib/app/public-location-cache.js'),
     read('lib/supabase/public.js'),
     read('app/places/[slug]/page.js'),
-    read('app/discover/page.js')
+    read('app/(product)/discover/page.js')
   ])
   assert.doesNotMatch(config, /cacheComponents:\s*true/)
   assert.match(cache, /unstable_cache/)
