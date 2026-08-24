@@ -13,7 +13,9 @@ import argparse
 import hashlib
 import math
 import os
+import random
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import boto3
@@ -40,6 +42,29 @@ def is_missing(error: ClientError) -> bool:
     code = str(error.response.get('Error', {}).get('Code') or '')
     status = int(error.response.get('ResponseMetadata', {}).get('HTTPStatusCode') or 0)
     return code in {'404', 'NoSuchKey', 'NotFound'} or status == 404
+
+
+TRANSIENT_CODES = {'500', '502', '503', '504', 'SlowDown', 'InternalError', 'RequestTimeout', 'ThrottlingException'}
+
+
+def is_transient(error: BaseException) -> bool:
+    if isinstance(error, ClientError):
+        code = str(error.response.get('Error', {}).get('Code') or '')
+        status = str(error.response.get('ResponseMetadata', {}).get('HTTPStatusCode') or '')
+        return code in TRANSIENT_CODES or status in TRANSIENT_CODES
+    return isinstance(error, (ConnectionError, TimeoutError))
+
+
+def retry_s3(action, attempts: int = 8):
+    delay = 0.5
+    for attempt in range(attempts):
+        try:
+            return action()
+        except BaseException as error:
+            if attempt == attempts - 1 or not is_transient(error):
+                raise
+            time.sleep(delay + random.random() * delay)
+            delay = min(10.0, delay * 2)
 
 
 def ascii_normalized(value) -> str | None:
@@ -173,13 +198,22 @@ def main() -> None:
     )
 
     def get_bytes(key: str) -> bytes:
-        return s3.get_object(Bucket=source.bucket, Key=key)['Body'].read()
+        return retry_s3(lambda: s3.get_object(Bucket=source.bucket, Key=key)['Body'].read())
+
+    def head_object(key: str):
+        return retry_s3(lambda: s3.head_object(Bucket=source.bucket, Key=key))
+
+    def put_object(key: str, body: bytes, content_type: str, cache_control: str, metadata: dict[str, str]):
+        return retry_s3(lambda: s3.put_object(
+            Bucket=source.bucket, Key=key, Body=body, ContentType=content_type,
+            CacheControl=cache_control, Metadata=metadata or None,
+        ))
 
     def put_immutable(key: str, body: bytes, metadata: dict[str, str]) -> None:
         digest = sha256_hex(body)
         expected_metadata = {**metadata, 'sha256': digest}
         try:
-            head = s3.head_object(Bucket=source.bucket, Key=key)
+            head = head_object(key)
         except ClientError as error:
             if not is_missing(error):
                 raise
@@ -188,14 +222,7 @@ def main() -> None:
             if int(head.get('ContentLength') or -1) != len(body) or any(actual_metadata.get(k.lower()) != str(v) for k, v in expected_metadata.items()):
                 raise RuntimeError(f'Immutable text projection artifact differs: {key}')
             return
-        s3.put_object(
-            Bucket=source.bucket,
-            Key=key,
-            Body=body,
-            ContentType='application/zstd',
-            CacheControl='public,max-age=31536000,immutable',
-            Metadata=expected_metadata,
-        )
+        put_object(key, body, 'application/zstd', 'public,max-age=31536000,immutable', expected_metadata)
 
     manifest_body = get_bytes(manifest_key)
     manifest_sha = sha256_hex(manifest_body)
@@ -227,18 +254,11 @@ def main() -> None:
         ready_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
         digest = sha256_hex(ready_body)
         try:
-            head = s3.head_object(Bucket=source.bucket, Key=ready_key)
+            head = head_object(ready_key)
         except ClientError as error:
             if not is_missing(error):
                 raise
-            s3.put_object(
-                Bucket=source.bucket,
-                Key=ready_key,
-                Body=ready_body,
-                ContentType='application/json',
-                CacheControl='public,max-age=31536000,immutable',
-                Metadata={'sha256': digest},
-            )
+            put_object(ready_key, ready_body, 'application/json', 'public,max-age=31536000,immutable', {'sha256': digest})
         else:
             existing = get_bytes(ready_key)
             if existing != ready_body or str((head.get('Metadata') or {}).get('sha256') or '').lower() != digest:
@@ -282,7 +302,7 @@ def main() -> None:
         # Core is uploaded only after every detail chunk. Therefore a matching core is
         # a durable completion marker for this entire physical pack.
         try:
-            head = s3.head_object(Bucket=source.bucket, Key=target_core_key)
+            head = head_object(target_core_key)
         except ClientError as error:
             if not is_missing(error):
                 raise
@@ -410,13 +430,7 @@ def main() -> None:
         'core_compression_ratio': round(core_bytes / source_bytes, 6) if source_bytes else None,
     }
     candidate_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
-    s3.put_object(
-        Bucket=source.bucket,
-        Key=candidate_key,
-        Body=candidate_body,
-        ContentType='application/json',
-        CacheControl='no-store',
-    )
+    put_object(candidate_key, candidate_body, 'application/json', 'no-store', {})
     print(
         f'text_projection_complete=true candidate_key={candidate_key} objects={len(geo_records)} rows={location_rows} '
         f'source_bytes={source_bytes} core_bytes={core_bytes} detail_bytes={detail_bytes} core_ratio={candidate["core_compression_ratio"]}',
@@ -431,3 +445,4 @@ if __name__ == '__main__':
     except BaseException as error:
         print(f'BUILDER_ERROR={type(error).__name__}: {error}', flush=True)
         raise
+

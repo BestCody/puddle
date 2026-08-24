@@ -45,7 +45,7 @@ jobs:
       GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
       GLOBAL_LOCATION_FETCH_CONCURRENCY: '16'
       GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '12000'
-      GLOBAL_LOCATION_TEXT_PRUNE_WORKERS: '32'
+      GLOBAL_LOCATION_TEXT_PRUNE_WORKERS: '16'
 
     steps:
       - uses: actions/checkout@v6
@@ -135,3 +135,5 @@ jobs:
             tail -n 14 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
             exit "$code"
           fi
+
+
