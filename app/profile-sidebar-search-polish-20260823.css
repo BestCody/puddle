@@ -1,0 +1,292 @@
+/* Targeted Aug 23 polish: sidebar icon weight, profile alignment, search icon scale,
+   concise logo geometry, and responsive parity for the single shared Profile DOM. */
+
+/* Slightly bolder sidebar line icons without changing their boxes or alignment. */
+@media (min-width: 761px) {
+  .figma-dashboard-sidebar .figma-dashboard-nav-icon svg,
+  .figma-dashboard-sidebar .figma-dashboard-settings-icon svg {
+    stroke-width: 1.95 !important;
+  }
+}
+
+/* The profile count group has only two values. Keep the group itself centered,
+   instead of letting older four-column grid rules reserve two empty columns. */
+.figma-profile-counts {
+  width: max-content !important;
+  max-width: 100% !important;
+  margin: 17px auto 0 !important;
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(24px, 3vw, 34px) !important;
+}
+
+.figma-profile-counts > span {
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  white-space: nowrap !important;
+}
+
+/* Saved and Discover share this search component. Enlarge only the glyph,
+   preserving the authored button/container dimensions. */
+.puddle-search-trigger > b,
+.puddle-search-dialog > span {
+  width: 24px !important;
+  height: 24px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+}
+
+/* Condensed sidebar logo: one square geometry for container, button, and image.
+   Centering is based on the real concise sidebar width, never a guessed x offset. */
+@media (min-width: 761px) {
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    left: 50% !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    transform: translateX(-50%) !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: visible !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    aspect-ratio: 1 / 1 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle img,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img {
+    width: 34px !important;
+    max-width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    max-height: 34px !important;
+    min-height: 34px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block !important;
+  }
+
+  /* Settings is intentionally mobile-only in Profile. */
+  .figma-profile-settings-mobile {
+    display: none !important;
+  }
+}
+
+/* Match the pre-hydration auto-concise state so the logo never jumps during resize. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo {
+    left: 50% !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    transform: translateX(-50%) !important;
+    display: grid !important;
+    place-items: center !important;
+  }
+
+  .figma-dashboard-sidebar .puddle-logo-theme-toggle,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    aspect-ratio: 1 / 1 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+  }
+
+  .figma-dashboard-sidebar .puddle-logo-theme-toggle img,
+  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img {
+    width: 34px !important;
+    max-width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    max-height: 34px !important;
+    min-height: 34px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block !important;
+  }
+}
+
+/* Mobile Profile keeps the exact same sections/components as desktop.
+   Only geometry, spacing, and control sizing adapt to the smaller viewport. */
+@media (max-width: 760px) {
+  .figma-profile-screen {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: clip !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 128px !important;
+    box-sizing: border-box !important;
+  }
+
+  .figma-profile-hero {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-inline: auto !important;
+  }
+
+  .figma-profile-top-actions {
+    position: absolute !important;
+    z-index: 10 !important;
+    top: 12px !important;
+    right: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+
+  .figma-profile-top-actions .figma-profile-edit,
+  .figma-profile-top-actions .figma-profile-settings-mobile {
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    min-width: 76px !important;
+    height: 38px !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 13px !important;
+    border: 2px solid rgba(255,255,255,.72) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.94) !important;
+    color: #111 !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+    font: 700 clamp(12px, 3.6vw, 14px)/1 var(--figma-mono) !important;
+    text-decoration: none !important;
+  }
+
+  .figma-profile-settings-mobile {
+    display: grid !important;
+  }
+
+  .figma-profile-identity {
+    width: calc(100% - 24px) !important;
+    max-width: 620px !important;
+    min-width: 0 !important;
+  }
+
+  .figma-profile-identity h1 {
+    max-width: 100% !important;
+    font-size: clamp(30px, 9vw, 36px) !important;
+    line-height: 1.08 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .figma-profile-identity > small {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .figma-profile-counts {
+    margin-top: 14px !important;
+    gap: clamp(22px, 7vw, 32px) !important;
+  }
+
+  .figma-profile-chips {
+    width: min(100%, 390px) !important;
+    max-width: 100% !important;
+    margin: 18px auto 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .figma-profile-chips span,
+  .figma-profile-chips > a {
+    min-width: 0 !important;
+    height: 33px !important;
+    padding-inline: 11px !important;
+    font-size: clamp(12px, 3.4vw, 15px) !important;
+    box-sizing: border-box !important;
+  }
+
+  .figma-profile-chips > a {
+    width: 34px !important;
+    min-width: 34px !important;
+    padding: 0 !important;
+  }
+
+  .figma-profile-actions {
+    width: min(100%, 360px) !important;
+    max-width: 100% !important;
+    margin: 18px auto 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .figma-profile-actions a {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 44px !important;
+    padding-inline: 10px !important;
+    font-size: clamp(13px, 3.8vw, 17px) !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+  }
+
+  .figma-profile-cards {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  .figma-profile-card-column {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  .figma-profile-card {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .figma-profile-post-preview {
+    width: calc(100% - 30px) !important;
+    max-width: none !important;
+    margin-left: 15px !important;
+    margin-right: 15px !important;
+  }
+}
