@@ -2,9 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { AuthMessage } from '@/components/auth-message'
 import { LocationMap } from '@/components/location-map'
+import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getPublicLocation } from '@/lib/app/public-content'
 import { getLocationPlansSnapshot } from '@/lib/app/location-plans-data'
+import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 import { deletePlaceReview, planPlaceVisit, shareSavedPlace, togglePinnedPlace, toggleSavedPlace, upsertPlaceReview } from './actions'
 import styles from '../Plans.module.css'
 
@@ -100,6 +102,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
     const folders = [...new Set((plansSnapshot?.saved || []).map(folderKey).filter(Boolean))]
     const primaryFolders = folders.slice(0, 2)
     const overflowFolders = folders.slice(2)
+    const transitionNames = savedLocationTransitionNames(location.id)
 
     const mapPoint = Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude)) ? [{
       id: location.id,
@@ -122,10 +125,11 @@ export default async function SavedPlacePage({ params, searchParams }) {
     const placeLabel = location.city || location.neighborhood || categoryLabel(location.kind)
 
     return <div className={styles.detailScreen} data-figma-node="38:223" data-testid="saved-detail-screen">
+      <SavedLocationMorphBridge detailLocationId={location.id} />
       <AuthMessage searchParams={query} />
 
       <header className={styles.detailTopbar}>
-        <Link className={styles.detailBack} href="/plans" aria-label="Back to Saved">‹</Link>
+        <a className={styles.detailBack} href="/plans" aria-label="Back to Saved" data-saved-morph-back>‹</a>
         <nav className={`figma-dashboard-segment ${styles.tabs} ${styles.detailTabs}`} aria-label="Saved and plans" data-testid="saved-detail-tabs">
           <Link className={styles.active} href="/plans">Saved</Link>
           <Link href="/plans?tab=planned">Plans</Link>
@@ -143,10 +147,10 @@ export default async function SavedPlacePage({ params, searchParams }) {
         </nav>
       </div>
 
-      <article className={styles.detailCard} data-testid="saved-detail-card">
+      <article className={styles.detailCard} data-testid="saved-detail-card" style={{ viewTransitionName: transitionNames.card }}>
         <div className={styles.detailLeft}>
           <section className={styles.detailMedia} aria-label={`${location.name} photo`} data-testid="saved-detail-media">
-            <div className={styles.detailHero} style={gallery[0] ? { backgroundImage: `url(${gallery[0]})` } : undefined} />
+            <div className={styles.detailHero} style={{ ...(gallery[0] ? { backgroundImage: `url(${gallery[0]})` } : {}), viewTransitionName: transitionNames.photo }} />
           </section>
 
           <div className={styles.detailActions} aria-label="Saved place actions">
@@ -158,8 +162,8 @@ export default async function SavedPlacePage({ params, searchParams }) {
             <form action={toggleSavedPlace}><HiddenLocation location={location} slug={slug} /><button className={styles.unsaveButton} type="submit">{isSaved ? 'Unsave' : 'Save'}</button></form>
           </div>
 
-          <h1 className={styles.detailTitle}>{location.name}</h1>
-          <div className={styles.detailMeta} aria-label="Place details">
+          <h1 className={styles.detailTitle} style={{ viewTransitionName: transitionNames.title }}>{location.name}</h1>
+          <div className={styles.detailMeta} aria-label="Place details" style={{ viewTransitionName: transitionNames.meta }}>
             <span className={styles.cityMeta}>{placeLabel}</span>
             <span className={styles.priceMeta}>Price varies</span>
             <span className={styles.localMeta}>Local spot</span>
