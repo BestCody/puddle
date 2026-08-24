@@ -45,6 +45,7 @@ class PlannerCheckpointStore:
         self.state_key = f"{self.root}/state.json"
         self.geo_summary_key = f"{self.root}/geo-summary.json.br"
         self.route_summary_key = f"{self.root}/route-summary.json.br"
+        self.geo_resume_latest_key = f"{self.root}/geo-resume/latest.json"
 
     def _get_bytes(self, key: str) -> bytes:
         return self.s3.get_object(Bucket=self.bucket, Key=key)["Body"].read()
@@ -136,6 +137,130 @@ class PlannerCheckpointStore:
 
     def route_pack_key(self, start: int, end: int) -> str:
         return f"{self.root}/route-packs/{start:08d}-{end:08d}.json.br"
+
+    def geo_resume_snapshot_key(self, next_geo_index: int) -> str:
+        return f"{self.root}/geo-resume/snapshots/{int(next_geo_index):08d}.json.br"
+
+    def save_geo_resume_snapshot(self, payload: dict) -> dict:
+        """Persist one materialized geo-stage resume snapshot and atomically publish its pointer."""
+        next_geo_index = int(payload.get("next_geo_index") or 0)
+        if next_geo_index <= 0 or next_geo_index > self.total_geo_items:
+            raise RuntimeError("Geo resume snapshot cursor is outside the group list.")
+        if next_geo_index % self.geo_batch_size and next_geo_index != self.total_geo_items:
+            raise RuntimeError("Geo resume snapshot cursor is not on a safe batch boundary.")
+
+        body_payload = dict(payload)
+        body_payload.update(
+            {
+                "schema_version": 1,
+                "checkpoint_version": PLANNER_CHECKPOINT_VERSION,
+                "config_hash": self.config_hash,
+                "planner_id": self.planner_id,
+                "snapshot": self.snapshot,
+                "stage": "geo",
+                "next_geo_index": next_geo_index,
+                "total_geo_items": self.total_geo_items,
+                "geo_batch_size": self.geo_batch_size,
+            }
+        )
+        key = self.geo_resume_snapshot_key(next_geo_index)
+        body = self._body(body_payload)
+        digest = sha256_hex(body)
+
+        exists = False
+        try:
+            head = self.s3.head_object(Bucket=self.bucket, Key=key)
+        except ClientError as error:
+            if not is_missing(error):
+                raise
+        else:
+            exists = True
+            actual_size = int(head.get("ContentLength", -1))
+            actual_sha = str((head.get("Metadata") or {}).get("sha256", "")).lower()
+            if actual_size != len(body) or actual_sha != digest:
+                raise RuntimeError(f"Geo resume snapshot differs from existing object {key}.")
+        if not exists:
+            self.s3.put_object(
+                Bucket=self.bucket,
+                Key=key,
+                Body=body,
+                ContentType="application/json",
+                ContentEncoding="br",
+                CacheControl="no-store",
+                Metadata={"sha256": digest},
+            )
+
+        pointer = {
+            "schema_version": 1,
+            "checkpoint_version": PLANNER_CHECKPOINT_VERSION,
+            "config_hash": self.config_hash,
+            "planner_id": self.planner_id,
+            "snapshot": self.snapshot,
+            "stage": "geo",
+            "next_geo_index": next_geo_index,
+            "key": key,
+            "sha256": digest,
+            "updated_at": utc_now(),
+        }
+        self.s3.put_object(
+            Bucket=self.bucket,
+            Key=self.geo_resume_latest_key,
+            Body=orjson.dumps(pointer, option=orjson.OPT_INDENT_2) + b"\n",
+            ContentType="application/json",
+            CacheControl="no-store",
+        )
+        return pointer
+
+    def load_latest_geo_resume(self, *, max_next_geo_index: int) -> dict | None:
+        """Load the newest compatible materialized geo snapshot not ahead of durable state."""
+        try:
+            pointer = orjson.loads(self._get_bytes(self.geo_resume_latest_key))
+        except ClientError as error:
+            if is_missing(error):
+                return None
+            raise
+
+        if int(pointer.get("checkpoint_version", 0)) != PLANNER_CHECKPOINT_VERSION:
+            return None
+        if str(pointer.get("config_hash") or "") != self.config_hash:
+            return None
+        if str(pointer.get("planner_id") or "") != self.planner_id:
+            return None
+        if str(pointer.get("snapshot") or "") != self.snapshot:
+            return None
+        if str(pointer.get("stage") or "") != "geo":
+            return None
+
+        next_geo_index = int(pointer.get("next_geo_index") or 0)
+        if next_geo_index <= 0 or next_geo_index > int(max_next_geo_index):
+            return None
+        if next_geo_index > self.total_geo_items:
+            return None
+        if next_geo_index % self.geo_batch_size and next_geo_index != self.total_geo_items:
+            return None
+
+        key = str(pointer.get("key") or "")
+        expected_sha = str(pointer.get("sha256") or "").lower()
+        if not key or not expected_sha:
+            return None
+        body = self._get_bytes(key)
+        if sha256_hex(body) != expected_sha:
+            raise RuntimeError(f"Geo resume snapshot SHA-256 mismatch for {key}.")
+        payload = orjson.loads(brotli.decompress(body))
+
+        if int(payload.get("checkpoint_version", 0)) != PLANNER_CHECKPOINT_VERSION:
+            raise RuntimeError("Geo resume snapshot checkpoint version mismatch.")
+        if str(payload.get("config_hash") or "") != self.config_hash:
+            raise RuntimeError("Geo resume snapshot configuration hash mismatch.")
+        if str(payload.get("planner_id") or "") != self.planner_id:
+            raise RuntimeError("Geo resume snapshot planner id mismatch.")
+        if str(payload.get("snapshot") or "") != self.snapshot:
+            raise RuntimeError("Geo resume snapshot source snapshot mismatch.")
+        if str(payload.get("stage") or "") != "geo":
+            raise RuntimeError("Geo resume snapshot stage mismatch.")
+        if int(payload.get("next_geo_index") or -1) != next_geo_index:
+            raise RuntimeError("Geo resume snapshot cursor mismatch.")
+        return payload
 
 
 class GracefulCheckpointCancel:
