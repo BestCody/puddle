@@ -1,0 +1,44 @@
+/* Saved card -> detail shared-element transition.
+   Geometry comes from the browser's real source/destination layout, never hardcoded offsets. */
+
+@view-transition {
+  navigation: auto;
+}
+
+/* Keep unrelated page chrome from doing a generic crossfade. Only named Saved elements morph. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-group(*) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(.2, .86, .24, 1.06);
+}
+
+::view-transition-image-pair(*) {
+  isolation: auto;
+}
+
+::view-transition-old(*),
+::view-transition-new(*) {
+  mix-blend-mode: normal;
+  backface-visibility: hidden;
+}
+
+/* The shared card/photo/title/meta snapshots stay crisp while scaling between layouts. */
+[data-saved-morph-card],
+[data-saved-morph-photo],
+[data-saved-morph-title],
+[data-saved-morph-meta],
+[data-testid='saved-detail-card'],
+[data-testid='saved-detail-media'] {
+  transform-origin: center center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*) {
+    animation-duration: 1ms;
+    animation-timing-function: linear;
+  }
+}
