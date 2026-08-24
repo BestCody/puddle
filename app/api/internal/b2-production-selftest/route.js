@@ -33,10 +33,12 @@ async function textSearchOptions(url) {
   const plannerId = String(manifest?.planner?.id || '')
   if (!prefix || !/^[A-Za-z0-9._-]+$/.test(plannerId)) throw new Error('Active B2 planner cannot resolve a text acceleration candidate.')
   const env = { ...process.env }
+  // Both flags together exercise the exact serving path production uses once both
+  // candidates activate: prune the plan first, serve scoring from compact cores.
   if (projection) env.GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY = `${prefix}/text-projection-v1/${plannerId}/candidate.json`
   if (prune) {
     env.GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY = `${prefix}/text-prune-v1/${plannerId}/candidate.json`
-    env.GLOBAL_LOCATION_TEXT_PROJECTION = '0'
+    if (!projection) env.GLOBAL_LOCATION_TEXT_PROJECTION = '0'
   }
   return { env, projection, prune }
 }
