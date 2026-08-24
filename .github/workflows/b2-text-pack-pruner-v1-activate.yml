@@ -1,0 +1,99 @@
+name: Activate B2 text pack pruner v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/b2-text-pack-pruner-v1-activate-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b2-text-pack-pruner-v1-production-activation
+  cancel-in-progress: false
+
+jobs:
+  activate-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PYTHONUNBUFFERED: '1'
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
+      B2_DATA_PREFIX: data
+      GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
+      GLOBAL_LOCATION_SEARCH_INDEX: locations-active
+      OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
+      OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+      OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
+      GLOBAL_LOCATION_MAX_RADIUS_KM: '100'
+      GLOBAL_LOCATION_MAX_DIRECTORY_TILES: '64'
+      GLOBAL_LOCATION_MAX_SHARDS: '128'
+      GLOBAL_LOCATION_MAX_OBJECT_BYTES: '16777216'
+      GLOBAL_LOCATION_MAX_DECODED_OBJECT_BYTES: '67108864'
+      GLOBAL_LOCATION_MAX_COMPRESSED_BYTES: '16777216'
+      GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
+      GLOBAL_LOCATION_FETCH_CONCURRENCY: '16'
+      GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '12000'
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install activation dependencies
+        run: python -m pip install --disable-pip-version-check boto3 brotli orjson zstandard
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
+
+      - id: active
+        name: Resolve active packed B2 planner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          import boto3
+          from botocore.client import Config
+          client = boto3.client(
+              's3',
+              endpoint_url=os.environ['B2_DATA_S3_ENDPOINT'],
+              aws_access_key_id=os.environ['B2_DATA_APPLICATION_KEY_ID'],
+              aws_secret_access_key=os.environ['B2_DATA_APPLICATION_KEY'],
+              region_name=os.environ.get('B2_DATA_S3_REGION') or 'us-east-005',
+              config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
+          )
+          bucket = os.environ['B2_DATA_BUCKET_NAME']
+          active_key = f"{os.environ.get('B2_DATA_PREFIX', 'data').strip('/')}/search/active.json"
+          active = json.loads(client.get_object(Bucket=bucket, Key=active_key)['Body'].read())
+          manifest_key = str(active.get('manifest_key') or '').strip()
+          manifest = json.loads(client.get_object(Bucket=bucket, Key=manifest_key)['Body'].read())
+          planner_id = str((manifest.get('planner') or {}).get('id') or '').strip()
+          if not manifest_key or not planner_id:
+              raise SystemExit('Active B2 planner could not be resolved.')
+          print(f'manifest_key={manifest_key}')
+          print(f'planner_id={planner_id}')
+          PY
+
+      - name: Activate parity and production-latency verified pruner
+        run: >-
+          python scripts/global-data/build_b2_text_pack_pruner.py
+          --manifest-key='${{ steps.active.outputs.manifest_key }}'
+          --planner-id='${{ steps.active.outputs.planner_id }}'
+          --activate-only
+
+      - name: Smoke active pruner against live OpenSearch
+        env:
+          GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
+          GLOBAL_LOCATION_TEXT_PROJECTION: '0'
+        run: node scripts/global-data/compare_location_search_backends.mjs
