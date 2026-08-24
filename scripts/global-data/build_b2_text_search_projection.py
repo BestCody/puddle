@@ -204,10 +204,15 @@ def main() -> None:
         return retry_s3(lambda: s3.head_object(Bucket=source.bucket, Key=key))
 
     def put_object(key: str, body: bytes, content_type: str, cache_control: str, metadata: dict[str, str]):
-        return retry_s3(lambda: s3.put_object(
-            Bucket=source.bucket, Key=key, Body=body, ContentType=content_type,
-            CacheControl=cache_control, Metadata=metadata or None,
-        ))
+        def action():
+            kwargs = {
+                'Bucket': source.bucket, 'Key': key, 'Body': body,
+                'ContentType': content_type, 'CacheControl': cache_control,
+            }
+            if metadata:
+                kwargs['Metadata'] = metadata
+            return s3.put_object(**kwargs)
+        return retry_s3(action)
 
     def put_immutable(key: str, body: bytes, metadata: dict[str, str]) -> None:
         digest = sha256_hex(body)
