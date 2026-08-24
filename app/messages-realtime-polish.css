@@ -1,0 +1,263 @@
+/* Messages-only layout + interaction polish. Shared/Add stay on their existing rules. */
+.figma-friends-pass-wrapper:has(> .figma-friends-screen.is-messages) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.figma-friends-screen.is-messages {
+  height: 100dvh;
+  min-height: 0;
+  max-height: 100dvh;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.figma-friends-screen.is-messages .figma-friends-message-layout {
+  top: 102px;
+  bottom: 22px;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.figma-friends-screen.is-messages .figma-friends-conversations {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.figma-friends-screen.is-messages .figma-friends-chat {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.figma-friends-screen.is-messages .figma-friends-messages {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* Minimal attachment / place affordance. */
+.figma-friends-screen.is-messages .figma-friends-composer-menu.is-attachment {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.figma-friends-screen.is-messages .figma-friends-composer-menu.is-attachment > summary {
+  width: 32px !important;
+  height: 32px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #777 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  list-style: none;
+  font: 500 25px/1 Manrope, sans-serif !important;
+  transition: background .16s ease, color .16s ease, transform .12s ease;
+}
+
+.figma-friends-screen.is-messages .figma-friends-composer-menu.is-attachment > summary::-webkit-details-marker {
+  display: none;
+}
+
+.figma-friends-screen.is-messages .figma-friends-composer-menu.is-attachment > summary:hover {
+  background: #f2f2f2 !important;
+  color: #222 !important;
+}
+
+.figma-friends-screen.is-messages .figma-friends-composer-menu.is-attachment > summary:active {
+  transform: scale(.93);
+}
+
+.figma-message-place-picker {
+  position: absolute !important;
+  z-index: 60;
+  left: -4px !important;
+  bottom: 46px !important;
+  width: min(320px, calc(100vw - 52px)) !important;
+  max-height: 290px;
+  overflow-y: auto;
+  display: grid !important;
+  gap: 4px;
+  padding: 10px !important;
+  border: 1px solid rgba(0,0,0,.10) !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,.96) !important;
+  box-shadow: 0 16px 45px rgba(0,0,0,.14) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-sizing: border-box;
+}
+
+.figma-message-place-picker > strong {
+  padding: 4px 6px 8px;
+  color: #777;
+  font: 800 11px/1 Manrope, sans-serif;
+  letter-spacing: .01em;
+}
+
+.figma-message-place-picker > button {
+  width: 100% !important;
+  min-height: 48px !important;
+  height: auto !important;
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) !important;
+  gap: 4px;
+  justify-items: start;
+  padding: 9px 10px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  color: #111 !important;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+.figma-message-place-picker > button:hover {
+  background: #f4f4f4 !important;
+}
+
+.figma-message-place-picker > button:active {
+  background: #ededed !important;
+  transform: scale(.99);
+}
+
+.figma-message-place-picker > button span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 13px/1.15 Manrope, sans-serif;
+}
+
+.figma-message-place-picker > button small,
+.figma-message-place-picker > p {
+  margin: 0;
+  color: #999;
+  font: 600 10px/1.2 Manrope, sans-serif;
+}
+
+/* Shared send-action language, based on the provided outlined up-arrow reference. */
+.puddle-send-action {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  flex: 0 0 36px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 2px solid #78e152 !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  color: #58c92e !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .12s ease, box-shadow .16s ease;
+}
+
+.puddle-send-action::before {
+  content: "↑";
+  display: block;
+  transform: translateY(-1px);
+  font: 900 21px/1 Manrope, sans-serif;
+}
+
+.puddle-send-action:hover:not(:disabled) {
+  background: #f3ffef !important;
+  box-shadow: 0 2px 8px rgba(88,201,46,.16) !important;
+  transform: translateY(-1px);
+}
+
+.puddle-send-action:active:not(:disabled) {
+  transform: scale(.94);
+}
+
+.puddle-send-action:focus-visible {
+  outline: 3px solid rgba(120,225,82,.24) !important;
+  outline-offset: 2px;
+}
+
+.puddle-send-action:disabled {
+  border-color: #dedede !important;
+  background: #f8f8f8 !important;
+  color: #b8b8b8 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puddle-send-action,
+  .figma-friends-screen.is-messages .figma-friends-composer-menu.is-attachment > summary {
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .figma-friends-pass-wrapper:has(> .figma-friends-screen.is-messages),
+  .figma-friends-screen.is-messages {
+    height: 100svh;
+    min-height: 0;
+    max-height: 100svh;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .figma-friends-screen.is-messages .figma-friends-message-layout {
+    top: 82px;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    height: auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(112px, 27%) minmax(0, 1fr);
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .figma-friends-screen.is-messages .figma-friends-conversations {
+    max-height: none;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .figma-friends-screen.is-messages .figma-friends-chat {
+    min-height: 0;
+    height: auto;
+  }
+
+  .figma-friends-screen.is-messages .figma-friends-messages {
+    min-height: 0;
+  }
+
+  .figma-message-place-picker {
+    width: min(300px, calc(100vw - 32px)) !important;
+    max-height: 240px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .figma-message-place-picker {
+    border-color: rgba(255,255,255,.12) !important;
+    background: rgba(30,30,30,.96) !important;
+  }
+  .figma-message-place-picker > button { color: #f5f5f5 !important; }
+  .figma-message-place-picker > button:hover { background: #292929 !important; }
+  .figma-message-place-picker > button:active { background: #333 !important; }
+  .puddle-send-action { background: #171717 !important; }
+  .puddle-send-action:hover:not(:disabled) { background: #20301b !important; }
+  .puddle-send-action:disabled { background: #222 !important; border-color: #444 !important; color: #777 !important; }
+}
