@@ -1,0 +1,35 @@
+name: Refresh B2 runtime cache lockfile
+
+on:
+  push:
+    branches:
+      - agent/b2-runtime-cache-final
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/b2-runtime-cache-final
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Refresh package lock only
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit refreshed lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package-lock.json
+          git commit -m "Refresh lockfile for Vercel Runtime Cache"
+          git push origin HEAD:agent/b2-runtime-cache-final
