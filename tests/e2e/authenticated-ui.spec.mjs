@@ -146,7 +146,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
 
   await page.goto('/account')
   await expect(page.locator('.figma-settings-window')).toBeVisible()
-  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
+  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await attachRender(page, testInfo, 'settings-default')
   await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
   await expect(page.locator('#profile')).toBeVisible()
