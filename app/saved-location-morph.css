@@ -1,11 +1,6 @@
-/* Saved card -> detail shared-element transition.
-   Geometry comes from the browser's real source/destination layout, never hardcoded offsets. */
+/* Saved card -> in-page detail morph.
+   The browser measures the real source/destination rectangles. No route change and no guessed offsets. */
 
-@view-transition {
-  navigation: auto;
-}
-
-/* Keep unrelated page chrome from doing a generic crossfade. Only named Saved elements morph. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -26,14 +21,389 @@
   backface-visibility: hidden;
 }
 
-/* The shared card/photo/title/meta snapshots stay crisp while scaling between layouts. */
 [data-saved-morph-card],
 [data-saved-morph-photo],
 [data-saved-morph-title],
 [data-saved-morph-meta],
-[data-testid='saved-detail-card'],
-[data-testid='saved-detail-media'] {
+.saved-inline-detail-card,
+.saved-inline-detail-hero,
+.saved-inline-detail-card > h1,
+.saved-inline-detail-meta {
   transform-origin: center center;
+}
+
+.saved-inline-detail-layer {
+  position: fixed;
+  z-index: 1250;
+  inset: 0 0 0 var(--figma-shell-sidebar, 252px);
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 3.5vw, 42px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.saved-inline-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(246, 246, 246, .76);
+  -webkit-backdrop-filter: blur(13px) saturate(.96);
+  backdrop-filter: blur(13px) saturate(.96);
+  cursor: default;
+}
+
+.saved-inline-detail-card {
+  position: relative;
+  z-index: 1;
+  width: min(962px, 100%);
+  max-height: min(820px, calc(100dvh - 48px));
+  min-height: min(680px, calc(100dvh - 48px));
+  display: grid;
+  grid-template-columns: minmax(0, 1.43fr) minmax(290px, 1fr);
+  gap: 20px;
+  overflow: auto;
+  padding: 16px 22px 24px 16px;
+  border: 2.5px solid #e5e5e5;
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 18px 55px rgba(0,0,0,.14);
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+}
+
+.saved-inline-detail-close {
+  position: absolute;
+  z-index: 8;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0 0 2px;
+  border: 1.5px solid rgba(0,0,0,.12);
+  border-radius: 50%;
+  background: rgba(255,255,255,.94);
+  color: #6f6f6f;
+  font: 400 25px/1 Manrope, sans-serif;
+  cursor: pointer;
+}
+
+.saved-inline-detail-main,
+.saved-inline-detail-side {
+  min-width: 0;
+}
+
+.saved-inline-detail-hero {
+  width: 100%;
+  height: 263px;
+  overflow: hidden;
+  border: 2px solid #dedede;
+  border-radius: 25px;
+  background: #f0f0f0 center/cover no-repeat;
+  box-sizing: border-box;
+}
+
+.saved-inline-detail-actions {
+  position: relative;
+  z-index: 5;
+  min-height: 39px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -22px 0 0 12px;
+}
+
+.saved-inline-detail-actions > button,
+.saved-inline-detail-actions > details > summary {
+  min-width: 72px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+  border: 2px solid #c4c4c4;
+  border-radius: 999px;
+  background: #f2f2f2;
+  color: #111;
+  box-sizing: border-box;
+  font: 800 13px/1 Manrope, sans-serif;
+  cursor: pointer;
+}
+
+.saved-inline-detail-actions > button.is-primary {
+  border-color: #9162bb;
+  background: #b784e4;
+  color: #fff;
+}
+
+.saved-inline-detail-actions > button:disabled,
+.saved-inline-detail-actions > details button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.saved-inline-detail-actions > details {
+  position: relative;
+}
+
+.saved-inline-detail-actions > details > summary {
+  list-style: none;
+}
+
+.saved-inline-detail-actions > details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.saved-inline-detail-actions > details > div {
+  position: absolute;
+  z-index: 20;
+  top: 46px;
+  left: 0;
+  min-width: 190px;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1.5px solid #e4e4e4;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(0,0,0,.12);
+}
+
+.saved-inline-detail-actions > details > div button {
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-inline-detail-main > h1 {
+  margin: 24px 6px 0;
+  color: #000;
+  font: 800 clamp(44px, 5.2vw, 64px)/.98 Manrope, sans-serif;
+  letter-spacing: -3px;
+  overflow-wrap: anywhere;
+}
+
+.saved-inline-detail-meta {
+  margin: 12px 7px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  color: #858585;
+  font: 800 13px/1.2 var(--figma-mono);
+}
+
+.saved-inline-detail-message {
+  margin: 14px 7px 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: #f4eef9;
+  color: #69438a;
+  font: 700 12px/1.3 Manrope, sans-serif;
+}
+
+.saved-inline-detail-plan,
+.saved-inline-detail-reviews,
+.saved-inline-detail-summary,
+.saved-inline-detail-similar {
+  margin-top: 24px;
+}
+
+.saved-inline-detail-plan,
+.saved-inline-detail-reviews {
+  padding: 18px;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 20px;
+  background: #fafafa;
+}
+
+.saved-inline-detail-plan h2,
+.saved-inline-detail-reviews h2,
+.saved-inline-detail-similar h2 {
+  margin: 0 0 12px;
+  font: 800 19px/1.15 Manrope, sans-serif;
+}
+
+.saved-inline-detail-plan form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.saved-inline-detail-plan input,
+.saved-inline-detail-reviews select,
+.saved-inline-detail-reviews textarea {
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1.5px solid #d9d9d9;
+  border-radius: 10px;
+  background: #fff;
+  color: #222;
+  box-sizing: border-box;
+  font: 600 13px/1.25 Manrope, sans-serif;
+}
+
+.saved-inline-detail-plan button,
+.saved-inline-detail-reviews button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #b784e4;
+  color: #fff;
+  font: 800 12px/1 Manrope, sans-serif;
+  cursor: pointer;
+}
+
+.saved-inline-detail-reviews form {
+  display: grid;
+  gap: 8px;
+}
+
+.saved-inline-detail-reviews textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.saved-inline-detail-reviews form > div {
+  display: flex;
+  gap: 8px;
+}
+
+.saved-inline-detail-reviews form > div button:last-child:not(:first-child) {
+  background: #ececec;
+  color: #555;
+}
+
+.saved-inline-detail-review-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.saved-inline-detail-review-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e5e5;
+  font: 600 13px/1.35 Manrope, sans-serif;
+}
+
+.saved-inline-detail-review-list article p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #666;
+}
+
+.saved-inline-detail-side {
+  padding-top: 0;
+}
+
+.saved-inline-detail-map {
+  width: 100%;
+  height: 410px;
+  overflow: hidden;
+  border: 2px solid #dedede;
+  border-radius: 25px;
+  background: #f1f1f1;
+}
+
+.saved-inline-detail-map .location-map-workspace {
+  min-height: 100%;
+  height: 100%;
+}
+
+.saved-inline-detail-summary {
+  color: #666;
+  font: 600 13px/1.5 Manrope, sans-serif;
+}
+
+.saved-inline-detail-similar {
+  display: grid;
+  gap: 9px;
+}
+
+.saved-inline-detail-similar > a {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 7px;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 14px;
+  color: #111;
+  text-decoration: none;
+}
+
+.saved-inline-detail-similar > a > span {
+  width: 64px;
+  height: 48px;
+  border-radius: 10px;
+  background: #eee center/cover no-repeat;
+}
+
+.saved-inline-detail-similar > a strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 13px/1.2 Manrope, sans-serif;
+}
+
+@media (max-width: 1050px) and (min-width: 761px) {
+  .saved-inline-detail-layer {
+    inset-left: 92px;
+  }
+}
+
+@media (max-width: 760px) {
+  .saved-inline-detail-layer {
+    inset: 0;
+    padding: 10px 10px 84px;
+    align-items: end;
+  }
+
+  .saved-inline-detail-card {
+    width: 100%;
+    max-height: calc(100dvh - 94px);
+    min-height: min(680px, calc(100dvh - 94px));
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding: 10px 10px 26px;
+    border-radius: 24px;
+  }
+
+  .saved-inline-detail-close {
+    top: 18px;
+    right: 18px;
+  }
+
+  .saved-inline-detail-hero {
+    height: clamp(205px, 35dvh, 290px);
+  }
+
+  .saved-inline-detail-main > h1 {
+    margin-top: 20px;
+    font-size: clamp(36px, 10vw, 50px);
+    letter-spacing: -2px;
+  }
+
+  .saved-inline-detail-plan form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .saved-inline-detail-map {
+    height: 330px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
