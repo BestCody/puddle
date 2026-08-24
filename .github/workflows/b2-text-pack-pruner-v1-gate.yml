@@ -100,11 +100,22 @@ jobs:
           PY
 
       - name: Build or reuse text-prune candidate
-        run: >-
-          python scripts/global-data/build_b2_text_pack_pruner.py
-          --manifest-key='${{ steps.active.outputs.manifest_key }}'
-          --planner-id='${{ steps.active.outputs.planner_id }}'
-          --workers="$GLOBAL_LOCATION_TEXT_PRUNE_WORKERS"
+        shell: bash
+        run: |
+          set -o pipefail
+          logfile="$(mktemp)"
+          set +e
+          python scripts/global-data/build_b2_text_pack_pruner.py \
+            --manifest-key='${{ steps.active.outputs.manifest_key }}' \
+            --planner-id='${{ steps.active.outputs.planner_id }}' \
+            --workers="$GLOBAL_LOCATION_TEXT_PRUNE_WORKERS" 2>&1 | tee "$logfile"
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            echo "::error::pruner builder failed exit=$code; last output lines follow"
+            tail -n 30 "$logfile" | cut -c1-300 | while IFS= read -r line; do echo "::error::$line"; done
+            exit "$code"
+          fi
 
       - name: Compare candidate pruner against live OpenSearch
         env:
