@@ -69,9 +69,11 @@ import './mobile-settings-post-polish-20260823.css'
 import './desktop-settings-reference-20260823.css'
 import './saved-location-morph.css'
 import './saved-location-mobile-stability-20260823.css'
+import './messages-realtime-polish.css'
 import { SegmentInteractionBridge } from '@/components/segment-interaction-bridge'
 import { SettingsScrollBridge } from '@/components/settings-scroll-bridge'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
+import { SendActionStyleBridge } from '@/components/send-action-style-bridge'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 
@@ -102,6 +104,7 @@ export default function RootLayout({ children }) {
       <SegmentInteractionBridge />
       <SettingsScrollBridge />
       <ServiceWorkerCleanup />
+      <SendActionStyleBridge />
       {vercelTelemetryEnabled ? <><SpeedInsights /><Analytics /></> : null}
     </body>
   </html>
