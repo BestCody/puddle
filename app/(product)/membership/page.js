@@ -85,9 +85,12 @@ function ManageView({ snapshot }) {
 }
 
 export default async function MembershipPage({ searchParams }) {
+  const paramsPromise = Promise.resolve(searchParams)
   return renderProductPage(async (session) => {
-    const snapshot = await getMembershipSnapshot(session)
-    const params = await searchParams
+    const [snapshot, params] = await Promise.all([
+      getMembershipSnapshot(session),
+      paramsPromise
+    ])
     const view = params?.view === 'manage' ? 'manage' : 'plans'
     const checkoutNotice = params?.checkout === 'success'
       ? 'Payment received. Your Pass will unlock as soon as Stripe confirms the subscription.'

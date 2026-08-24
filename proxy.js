@@ -6,6 +6,7 @@ import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
 import { SERVER_LATENCY_BUDGET_MS, appendServerTiming, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
 
 const protectedPrefixes = ['/dashboard','/discover','/matches','/global-matches','/membership','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals','/admin']
+const productRoutePrefixes = ['/discover','/map','/plans','/matches','/membership','/profile','/global-matches','/create']
 const authOnlyPaths = ['/signin','/signup','/forgot-password']
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
 const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
@@ -28,6 +29,7 @@ function carriesCookies(source, target) {
 function secured(response, context) { return applySecurityHeaders(response, context) }
 function forbidden(request, nonce, message = 'Cross-site request blocked.') { return secured(NextResponse.json({ error: message }, { status: 403 }), { request, nonce }) }
 function hasSupabaseAuthCookie(request) { return request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(?:\.\d+)?$/i.test(name)) }
+function matchesPrefix(pathname, prefixes) { return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) }
 function requiresModerationGate(pathname) {
   return pathname.startsWith('/api/') && !moderationExemptApiPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
@@ -55,6 +57,8 @@ export async function proxy(request) {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('x-request-id', request.headers.get('x-request-id') || request.headers.get('cf-ray') || crypto.randomUUID())
+  requestHeaders.delete('x-puddle-product-route')
+  if (matchesPrefix(pathname, productRoutePrefixes)) requestHeaders.set('x-puddle-product-route', '1')
 
   if (request.method === 'OPTIONS' && pathname.startsWith('/api/')) {
     const origin = request.headers.get('origin')
@@ -96,7 +100,7 @@ export async function proxy(request) {
     return secured(cachePolicy(response, pathname), { request, nonce })
   }
 
-  const isProtected = protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+  const isProtected = matchesPrefix(pathname, protectedPrefixes)
   const isAuthOnly = authOnlyPaths.includes(pathname)
   const hasAuthFailure = request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('auth_error')
   const moderationGate = requiresModerationGate(pathname)

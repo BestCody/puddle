@@ -26,9 +26,6 @@ const items = [
 ]
 
 const prefetchedRoutes = new Set()
-const BACKGROUND_PREFETCH_DELAY_MS = 500
-const BACKGROUND_PREFETCH_GAP_MS = 180
-let backgroundWarmupStarted = false
 
 function isActive(pathname, href) {
   if (href === '/plans') return pathname === '/plans' || pathname.startsWith('/plans/')
@@ -36,16 +33,6 @@ function isActive(pathname, href) {
   if (href === '/membership') return pathname === '/membership' || pathname.startsWith('/global-matches')
   if (href === '/map') return pathname === '/map' || pathname.startsWith('/create/post')
   return pathname === href || pathname.startsWith(`${href}/`)
-}
-
-function shouldAvoidBackgroundPrefetch() {
-  if (typeof navigator === 'undefined') return true
-  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
-  return Boolean(
-    connection?.saveData ||
-    connection?.effectiveType === 'slow-2g' ||
-    connection?.effectiveType === '2g'
-  )
 }
 
 function isPlainLeftPointer(event) {
@@ -80,44 +67,6 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       onInvalidate: () => prefetchedRoutes.delete(href)
     })
   }
-
-  useEffect(() => {
-    if (backgroundWarmupStarted || shouldAvoidBackgroundPrefetch()) return
-    backgroundWarmupStarted = true
-
-    const queue = items
-      .map((item) => item.href)
-      .filter((href) => !isActive(pathname, href) && !prefetchedRoutes.has(href))
-    let cancelled = false
-    let timerId = null
-    let idleId = null
-
-    function scheduleIdle(callback) {
-      if ('requestIdleCallback' in window) {
-        idleId = window.requestIdleCallback(callback, { timeout: 1200 })
-      } else {
-        timerId = window.setTimeout(callback, 0)
-      }
-    }
-
-    function warmNext() {
-      if (cancelled) return
-      const href = queue.shift()
-      if (!href) return
-      warmRoute(href)
-      if (!queue.length) return
-      timerId = window.setTimeout(() => scheduleIdle(warmNext), BACKGROUND_PREFETCH_GAP_MS)
-    }
-
-    timerId = window.setTimeout(() => scheduleIdle(warmNext), BACKGROUND_PREFETCH_DELAY_MS)
-
-    return () => {
-      cancelled = true
-      if (timerId !== null) window.clearTimeout(timerId)
-      if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId)
-      if (queue.length) backgroundWarmupStarted = false
-    }
-  }, [pathname, router])
 
   function startNavigation(event, href) {
     if (
