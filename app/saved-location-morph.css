@@ -41,6 +41,7 @@
   padding: clamp(18px, 3.5vw, 42px);
   box-sizing: border-box;
   overflow: hidden;
+  contain: layout paint;
 }
 
 .saved-inline-detail-backdrop {
@@ -60,8 +61,9 @@
   position: relative;
   z-index: 1;
   width: min(962px, 100%);
-  max-height: min(820px, calc(100dvh - 48px));
-  min-height: min(680px, calc(100dvh - 48px));
+  height: min(820px, calc(100dvh - 48px));
+  min-height: 0;
+  max-height: none;
   display: grid;
   grid-template-columns: minmax(0, 1.43fr) minmax(290px, 1fr);
   gap: 20px;
@@ -73,6 +75,7 @@
   box-shadow: 0 18px 55px rgba(0,0,0,.14);
   box-sizing: border-box;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .saved-inline-detail-close {
@@ -210,14 +213,14 @@
 }
 
 .saved-inline-detail-plan,
-.saved-inline-detail-reviews,
+.saved-inline-detail-posts,
 .saved-inline-detail-summary,
 .saved-inline-detail-similar {
   margin-top: 24px;
 }
 
 .saved-inline-detail-plan,
-.saved-inline-detail-reviews {
+.saved-inline-detail-posts {
   padding: 18px;
   border: 1.5px solid #e8e8e8;
   border-radius: 20px;
@@ -225,7 +228,7 @@
 }
 
 .saved-inline-detail-plan h2,
-.saved-inline-detail-reviews h2,
+.saved-inline-detail-posts h2,
 .saved-inline-detail-similar h2 {
   margin: 0 0 12px;
   font: 800 19px/1.15 Manrope, sans-serif;
@@ -237,9 +240,7 @@
   gap: 8px;
 }
 
-.saved-inline-detail-plan input,
-.saved-inline-detail-reviews select,
-.saved-inline-detail-reviews textarea {
+.saved-inline-detail-plan input {
   min-width: 0;
   min-height: 38px;
   padding: 8px 10px;
@@ -251,8 +252,7 @@
   font: 600 13px/1.25 Manrope, sans-serif;
 }
 
-.saved-inline-detail-plan button,
-.saved-inline-detail-reviews button {
+.saved-inline-detail-plan button {
   min-height: 38px;
   padding: 0 14px;
   border: 0;
@@ -263,45 +263,146 @@
   cursor: pointer;
 }
 
-.saved-inline-detail-reviews form {
-  display: grid;
-  gap: 8px;
-}
-
-.saved-inline-detail-reviews textarea {
-  min-height: 72px;
-  resize: vertical;
-}
-
-.saved-inline-detail-reviews form > div {
+.saved-inline-detail-posts-heading {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.saved-inline-detail-posts-heading h2 {
+  margin: 0;
+}
+
+.saved-inline-detail-posts-heading > a {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #b784e4;
+  color: #fff;
+  font: 800 11px/1 Manrope, sans-serif;
+  text-decoration: none;
+}
+
+.saved-inline-detail-post-list {
+  display: grid;
+  gap: 9px;
+}
+
+.saved-inline-detail-post {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #e7e7e7;
+  border-radius: 14px;
+  background: #fff;
+  color: #111;
+  text-decoration: none;
+}
+
+.saved-inline-detail-post-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #ececec center/cover no-repeat;
+  color: #666;
+  font: 800 11px/1 Manrope, sans-serif;
+}
+
+.saved-inline-detail-post-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.saved-inline-detail-post-copy > span {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
   gap: 8px;
 }
 
-.saved-inline-detail-reviews form > div button:last-child:not(:first-child) {
-  background: #ececec;
-  color: #555;
+.saved-inline-detail-post-copy strong,
+.saved-inline-detail-post-copy b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.saved-inline-detail-review-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
+.saved-inline-detail-post-copy strong {
+  font: 800 12px/1.2 Manrope, sans-serif;
 }
 
-.saved-inline-detail-review-list article {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 10px;
-  padding-top: 10px;
-  border-top: 1px solid #e5e5e5;
-  font: 600 13px/1.35 Manrope, sans-serif;
+.saved-inline-detail-post-copy small {
+  flex: none;
+  color: #999;
+  font: 700 10px/1 Manrope, sans-serif;
 }
 
-.saved-inline-detail-review-list article p {
-  grid-column: 1 / -1;
+.saved-inline-detail-post-copy b {
+  font: 800 13px/1.25 Manrope, sans-serif;
+}
+
+.saved-inline-detail-post-copy p {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
   color: #666;
+  font: 600 12px/1.4 Manrope, sans-serif;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.saved-inline-detail-post-empty {
+  min-height: 88px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  color: #888;
+  text-align: center;
+  font: 600 12px/1.3 Manrope, sans-serif;
+}
+
+.saved-inline-detail-post-empty strong {
+  color: #444;
+  font-size: 13px;
+}
+
+.saved-inline-detail-post-loading,
+.saved-inline-detail-map-loading {
+  position: relative;
+  overflow: hidden;
+  background: #f1f1f1;
+}
+
+.saved-inline-detail-post-loading {
+  height: 88px;
+  border-radius: 14px;
+}
+
+.saved-inline-detail-post-loading::after,
+.saved-inline-detail-map-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+  animation: saved-inline-shimmer 1.2s linear infinite;
+}
+
+@keyframes saved-inline-shimmer {
+  to { transform: translateX(100%); }
 }
 
 .saved-inline-detail-side {
@@ -315,11 +416,43 @@
   border: 2px solid #dedede;
   border-radius: 25px;
   background: #f1f1f1;
+  contain: layout paint;
 }
 
-.saved-inline-detail-map .location-map-workspace {
-  min-height: 100%;
-  height: 100%;
+.saved-inline-detail-map > *,
+.saved-inline-detail-map .location-map-workspace,
+.saved-inline-detail-map .location-map-layout,
+.saved-inline-detail-map .location-map-canvas,
+.saved-inline-detail-map .saved-inline-detail-map-loading,
+.saved-inline-detail-map .saved-inline-detail-map-empty {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Saved detail needs a map, not the full Map product UI. */
+.saved-inline-detail-map .location-map-toolbar,
+.saved-inline-detail-map .location-map-side,
+.saved-inline-detail-map .location-map-zoom {
+  display: none !important;
+}
+
+.saved-inline-detail-map .location-map-layout {
+  display: block !important;
+  grid-template-columns: 1fr !important;
+}
+
+.saved-inline-detail-map .location-map-canvas {
+  position: relative !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+}
+
+.saved-inline-detail-map .location-map-attribution {
+  display: block !important;
+  z-index: 50 !important;
 }
 
 .saved-inline-detail-summary {
@@ -370,16 +503,19 @@
     inset: 0;
     padding: 10px 10px 84px;
     align-items: end;
+    contain: layout paint;
   }
 
   .saved-inline-detail-card {
     width: 100%;
-    max-height: calc(100dvh - 94px);
-    min-height: min(680px, calc(100dvh - 94px));
+    height: calc(100dvh - 94px);
+    min-height: 0;
+    max-height: none;
     grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     padding: 10px 10px 26px;
     border-radius: 24px;
+    scrollbar-gutter: auto;
   }
 
   .saved-inline-detail-close {
@@ -402,7 +538,16 @@
   }
 
   .saved-inline-detail-map {
-    height: 330px;
+    height: min(330px, 42dvh);
+  }
+
+  .saved-inline-detail-post {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .saved-inline-detail-post-avatar {
+    width: 34px;
+    height: 34px;
   }
 }
 
@@ -410,5 +555,10 @@
   ::view-transition-group(*) {
     animation-duration: 1ms;
     animation-timing-function: linear;
+  }
+
+  .saved-inline-detail-post-loading::after,
+  .saved-inline-detail-map-loading::after {
+    animation: none;
   }
 }
