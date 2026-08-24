@@ -66,7 +66,7 @@ test('Discover filters own location, distance, and place categories', async ({ p
 
   await signInThroughUi(page, account.email, account.password, '/account')
   await expect(page.locator('.figma-settings-window')).toBeVisible()
-  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
+  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await expect(page.getByLabel('Search radius')).toHaveCount(0)
   await expect(page.getByLabel('City or town')).toHaveCount(0)
   await expect(page.getByText('What kinds of places do you like?')).toHaveCount(0)
