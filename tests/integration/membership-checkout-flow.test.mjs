@@ -5,7 +5,7 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('membership upgrade goes directly from the Pass card to Stripe checkout', async () => {
-  const membership = await read('app/membership/page.js')
+  const membership = await read('app/(product)/membership/page.js')
 
   assert.match(membership, /startTinderCheckout/)
   assert.match(membership, /form action=\{startTinderCheckout\}/)
@@ -14,7 +14,7 @@ test('membership upgrade goes directly from the Pass card to Stripe checkout', a
 })
 
 test('legacy Puddle checkout never collects raw payment credentials', async () => {
-  const checkout = await read('app/membership/checkout/page.js')
+  const checkout = await read('app/(product)/membership/checkout/page.js')
 
   assert.doesNotMatch(checkout, /Card number/i)
   assert.doesNotMatch(checkout, /\bCVC\b/i)
@@ -24,7 +24,7 @@ test('legacy Puddle checkout never collects raw payment credentials', async () =
 })
 
 test('checkout preserves entitlement and environment guards before payment', async () => {
-  const checkout = await read('app/membership/checkout/page.js')
+  const checkout = await read('app/(product)/membership/checkout/page.js')
 
   assert.match(checkout, /if \(snapshot\.active\) redirect\('\/global-matches'\)/)
   assert.match(checkout, /if \(!snapshot\.adult\)/)
