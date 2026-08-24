@@ -37,28 +37,41 @@ function mergeById(current, incoming, key = 'id') {
   return [...merged.values()]
 }
 
+function conversationList(snapshot, selected) {
+  const base = selected && !snapshot.conversations.some((item) => item.conversation_id === selected.conversation_id)
+    ? [selected, ...snapshot.conversations]
+    : [...snapshot.conversations]
+  const friendIds = new Set(base.map((item) => item.friend_id).filter(Boolean))
+  const waiting = (snapshot.friends || []).filter((friend) => !friendIds.has(friend.id)).map((friend) => ({
+    conversation_id: null,
+    friend_id: friend.id,
+    display_name: friend.display_name,
+    username: friend.username,
+    avatar_path: friend.avatar_path,
+    last_message: null,
+    unread_count: 0,
+    is_friend_placeholder: true
+  }))
+  return [...base, ...waiting]
+}
+
 function MessagesView({ client, snapshot }) {
   const router = useRouter()
   const selected = snapshot.selectedConversation
-  const initialConversations = selected && !snapshot.conversations.some((item) => item.conversation_id === selected.conversation_id)
-    ? [selected, ...snapshot.conversations]
-    : snapshot.conversations
-  const [conversations, setConversations] = useState(initialConversations)
+  const [conversations, setConversations] = useState(() => conversationList(snapshot, selected))
   const [conversationsHasMore, setConversationsHasMore] = useState(Boolean(snapshot.conversationsHasMore))
   const [messages, setMessages] = useState(snapshot.messages || [])
   const [messagesHasMore, setMessagesHasMore] = useState(Boolean(snapshot.messagesHasMore))
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [paging, setPaging] = useState(false)
+  const [openingFriendId, setOpeningFriendId] = useState(null)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    const next = selected && !snapshot.conversations.some((item) => item.conversation_id === selected.conversation_id)
-      ? [selected, ...snapshot.conversations]
-      : snapshot.conversations
-    setConversations(next)
+    setConversations(conversationList(snapshot, selected))
     setConversationsHasMore(Boolean(snapshot.conversationsHasMore))
-  }, [snapshot.conversations, snapshot.conversationsHasMore, selected?.conversation_id])
+  }, [snapshot.conversations, snapshot.friends, snapshot.conversationsHasMore, selected?.conversation_id])
   useEffect(() => {
     setMessages(snapshot.messages || [])
     setMessagesHasMore(Boolean(snapshot.messagesHasMore))
@@ -67,6 +80,24 @@ function MessagesView({ client, snapshot }) {
     if (!selected?.conversation_id) return
     client.rpc('social_mark_conversation_read_v1', { target: selected.conversation_id, last_message: null }).catch(() => {})
   }, [client, selected?.conversation_id])
+
+  async function openConversation(conversation) {
+    if (conversation.conversation_id) {
+      router.push(`/matches?tab=messages&conversation=${encodeURIComponent(conversation.conversation_id)}`)
+      return
+    }
+    if (!conversation.friend_id || openingFriendId) return
+    setOpeningFriendId(conversation.friend_id)
+    setMessage('')
+    const { data, error } = await client.rpc('social_open_direct_conversation_v1', { target: conversation.friend_id })
+    setOpeningFriendId(null)
+    if (error || !data) {
+      setMessage('Could not open that conversation.')
+      return
+    }
+    router.push(`/matches?tab=messages&conversation=${encodeURIComponent(data)}`)
+    router.refresh()
+  }
 
   async function reloadMessages() {
     if (!selected) return
@@ -99,8 +130,8 @@ function MessagesView({ client, snapshot }) {
 
   async function loadMoreConversations() {
     if (!conversationsHasMore || paging || !conversations.length) return
-    const cursor = conversations[conversations.length - 1]
-    if (!cursor?.sort_at) return setConversationsHasMore(false)
+    const cursor = [...conversations].reverse().find((item) => item.sort_at && item.conversation_id)
+    if (!cursor) return setConversationsHasMore(false)
     setPaging(true)
     const { data, error } = await client.rpc('social_conversations_v2', {
       before_sort_at: cursor.sort_at,
@@ -108,7 +139,13 @@ function MessagesView({ client, snapshot }) {
       result_limit: 30
     })
     if (!error) {
-      setConversations((current) => mergeById(current, data || [], 'conversation_id'))
+      setConversations((current) => {
+        const placeholders = current.filter((item) => item.is_friend_placeholder)
+        const real = current.filter((item) => !item.is_friend_placeholder)
+        const merged = mergeById(real, data || [], 'conversation_id')
+        const friendIds = new Set(merged.map((item) => item.friend_id).filter(Boolean))
+        return [...merged, ...placeholders.filter((item) => !friendIds.has(item.friend_id))]
+      })
       setConversationsHasMore((data || []).length === 30)
     }
     setPaging(false)
@@ -141,13 +178,14 @@ function MessagesView({ client, snapshot }) {
   return <div className="figma-friends-message-layout">
     <aside className="figma-friends-conversations" aria-label="Conversations">
       {conversations.length ? conversations.map((conversation) => <button
-        className={selected?.conversation_id === conversation.conversation_id ? 'is-active' : ''}
+        className={selected?.conversation_id && selected.conversation_id === conversation.conversation_id ? 'is-active' : ''}
         type="button"
-        onClick={() => router.push(`/matches?tab=messages&conversation=${encodeURIComponent(conversation.conversation_id)}`)}
-        key={conversation.conversation_id}
+        onClick={() => openConversation(conversation)}
+        disabled={openingFriendId === conversation.friend_id}
+        key={conversation.conversation_id || `friend:${conversation.friend_id}`}
       >
         <Avatar client={client} person={{ display_name: conversation.display_name, avatar_path: conversation.avatar_path }} />
-        <span><strong>{conversation.display_name || conversation.username || 'Friend'}</strong><small>{conversation.last_message || 'Start a conversation'}</small></span>
+        <span><strong>{conversation.display_name || conversation.username || 'Friend'}</strong><small>{conversation.last_message || (openingFriendId === conversation.friend_id ? 'Opening…' : 'Start a conversation')}</small></span>
         {conversation.unread_count > 0 ? <b>{conversation.unread_count}</b> : null}
       </button>) : <div className="figma-friends-conversation-empty">No conversations yet</div>}
       {conversationsHasMore ? <button type="button" onClick={loadMoreConversations} disabled={paging}>Load more conversations</button> : null}
