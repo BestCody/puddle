@@ -4,6 +4,7 @@ import {
   searchB2GlobalLocations,
   searchB2GlobalLocationsInViewport
 } from '@/lib/app/b2-location-search'
+import { getActiveSearchManifest } from '@/lib/app/location-search-shards'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -20,12 +21,29 @@ function compactSearch(result) {
   }
 }
 
+async function textSearchOptions(url) {
+  const projection = url.searchParams.get('projection') || ''
+  if (!projection) return {}
+  if (projection !== 'candidate') throw new Error('Unknown text projection self-test mode.')
+  const { manifest } = await getActiveSearchManifest()
+  const prefix = String(manifest?.prefix || '').replace(/\/+$/, '')
+  const plannerId = String(manifest?.planner?.id || '')
+  if (!prefix || !/^[A-Za-z0-9._-]+$/.test(plannerId)) throw new Error('Active B2 planner cannot resolve a text projection candidate.')
+  return {
+    env: {
+      ...process.env,
+      GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: `${prefix}/text-projection-v1/${plannerId}/candidate.json`
+    }
+  }
+}
+
 export async function GET(request) {
   if (process.env.VERCEL_ENV !== 'production') {
     return Response.json({ error: 'Not found.' }, { status: 404 })
   }
 
-  const name = new URL(request.url).searchParams.get('case') || ''
+  const url = new URL(request.url)
+  const name = url.searchParams.get('case') || ''
   if (!CASES.has(name)) {
     return Response.json({ error: 'Unknown self-test case.' }, { status: 400 })
   }
@@ -33,13 +51,14 @@ export async function GET(request) {
   const started = Date.now()
   try {
     if (name === 'text') {
+      const options = await textSearchOptions(url)
       const result = await searchB2GlobalLocations({
         latitude: 51.5074,
         longitude: -0.1278,
         distanceKm: 25,
         filters: { q: 'JOE & THE JUICE' },
         candidateLimit: 20
-      })
+      }, options)
       const ok = result.backend === 'b2' && result.candidates.length > 0
       return Response.json({ ok, case: name, durationMs: Date.now() - started, result: compactSearch(result) }, { status: ok ? 200 : 503 })
     }
