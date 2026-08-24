@@ -152,6 +152,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
   const [message, setMessage] = useState('')
   const sourceCardRef = useRef(null)
   const requestRef = useRef(0)
+  const needsRefreshRef = useRef(false)
 
   useEffect(() => {
     if (detailLocationId) return undefined
@@ -180,6 +181,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
       const names = applyNames(card)
       if (!names) return
       sourceCardRef.current = card
+      needsRefreshRef.current = false
       setMessage('')
       setDetail(null)
       requestRef.current += 1
@@ -225,6 +227,10 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
       commitClose()
       clearNames(card)
     }
+    if (needsRefreshRef.current) {
+      needsRefreshRef.current = false
+      router.refresh()
+    }
   }
 
   async function performAction(action, extra = {}) {
@@ -241,7 +247,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
       if (!response.ok) throw new Error(payload?.error || 'That action could not be completed.')
       setDetail(payload)
       setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : action === 'delete_review' ? 'Review deleted.' : 'Saved.')
-      if (['toggle_saved', 'toggle_pinned', 'plan'].includes(action)) router.refresh()
+      if (['toggle_saved', 'toggle_pinned', 'plan'].includes(action)) needsRefreshRef.current = true
     } catch (error) {
       setMessage(error?.message || 'That action could not be completed.')
     } finally {
