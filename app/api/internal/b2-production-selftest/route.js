@@ -38,7 +38,7 @@ async function textSearchOptions(url) {
     env.GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY = `${prefix}/text-prune-v1/${plannerId}/candidate.json`
     env.GLOBAL_LOCATION_TEXT_PROJECTION = '0'
   }
-  return { env }
+  return { env, projection, prune }
 }
 
 export async function GET(request) {
@@ -51,14 +51,14 @@ export async function GET(request) {
   const started = Date.now()
   try {
     if (name === 'text') {
-      const options = await textSearchOptions(url)
+      const { env: candidateEnv, projection, prune } = await textSearchOptions(url)
       const result = await searchB2GlobalLocations({
         latitude: 51.5074,
         longitude: -0.1278,
         distanceKm: 25,
         filters: { q: 'JOE & THE JUICE' },
         candidateLimit: 20
-      }, options)
+      }, { env: candidateEnv })
       const diagnostics = result.diagnostics || {}
       let ok = result.backend === 'b2' && result.candidates.length > 0
       if (ok && prune === 'candidate') {
