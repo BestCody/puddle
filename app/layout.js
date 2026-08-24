@@ -74,7 +74,6 @@ import './messages-stable-compat.css'
 import { SegmentInteractionBridge } from '@/components/segment-interaction-bridge'
 import { SettingsScrollBridge } from '@/components/settings-scroll-bridge'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
-import { SendActionStyleBridge } from '@/components/send-action-style-bridge'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 
@@ -105,7 +104,6 @@ export default function RootLayout({ children }) {
       <SegmentInteractionBridge />
       <SettingsScrollBridge />
       <ServiceWorkerCleanup />
-      <SendActionStyleBridge />
       {vercelTelemetryEnabled ? <><SpeedInsights /><Analytics /></> : null}
     </body>
   </html>
