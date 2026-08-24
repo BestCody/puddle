@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8
 
 test('solo swipe delivery keeps actions durable until acknowledgement and scoped to one profile', async () => {
   const source = await read('components/date-swipe-workspace-v2.js')
-  const page = await read('app/discover/page.js')
+  const page = await read('app/(product)/discover/page.js')
   assert.match(source, /puddle:pending-discovery-actions:v1/)
   assert.match(source, /actionStorageKey\(profileId\)/)
   assert.match(source, /const entries = actionBuffer\.current\.slice\(0, ACTION_BATCH_SIZE\)/)
