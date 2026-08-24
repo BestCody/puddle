@@ -4,7 +4,7 @@ import { SubmitButton } from '@/components/submit-button'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getCreatorOptions } from '@/lib/app/creator-data'
 import { getPublicLocation } from '@/lib/app/public-content'
-import { submitLocationClaim } from '@/app/create/actions'
+import { submitLocationClaim } from '@/app/(product)/create/actions'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Claim location', robots: { index: false, follow: false } }
