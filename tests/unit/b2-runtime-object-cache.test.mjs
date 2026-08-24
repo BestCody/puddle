@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  b2RuntimeObjectCacheChunkCount,
   b2RuntimeObjectCacheEnabled,
   b2RuntimeObjectCacheKey,
   b2RuntimeObjectCachePolicy
@@ -11,7 +12,8 @@ const env = {
   GLOBAL_LOCATION_RUNTIME_CACHE: '1',
   GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: 'data/search/active.json',
   GLOBAL_LOCATION_RUNTIME_CACHE_ACTIVE_TTL_SECONDS: '30',
-  GLOBAL_LOCATION_RUNTIME_CACHE_IMMUTABLE_TTL_SECONDS: '2592000'
+  GLOBAL_LOCATION_RUNTIME_CACHE_IMMUTABLE_TTL_SECONDS: '2592000',
+  GLOBAL_LOCATION_RUNTIME_CACHE_MAX_RAW_BYTES: '1400000'
 }
 
 test('regional B2 cache is limited to the real production fetch path', () => {
@@ -29,6 +31,13 @@ test('active pointer gets a short TTL while snapshot objects are immutable-cache
   )
   assert.equal(b2RuntimeObjectCachePolicy('media/example.jpg', env), null)
   assert.equal(b2RuntimeObjectCachePolicy('data/search/candidates/2026-08-17.json', env), null)
+})
+
+test('runtime cache chunks packed objects that exceed one cache item', () => {
+  assert.equal(b2RuntimeObjectCacheChunkCount(500_000, env), 1)
+  assert.equal(b2RuntimeObjectCacheChunkCount(1_572_864, env), 2)
+  assert.equal(b2RuntimeObjectCacheChunkCount(16 * 1024 * 1024, env), 12)
+  assert.equal(b2RuntimeObjectCacheChunkCount(16 * 1024 * 1024 + 1, env), 0)
 })
 
 test('runtime cache keys are deterministic fixed-width hashes', () => {
