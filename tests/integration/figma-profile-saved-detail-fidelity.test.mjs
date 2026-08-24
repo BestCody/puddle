@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8
 
 test('Profile follows Figma 40:347 with centered identity and a flow-driven two-column card grid', async () => {
   const [page, baseStyles, fidelity, flow, layout] = await Promise.all([
-    read('app/profile/page.js'),
+    read('app/(product)/profile/page.js'),
     read('app/figma-dashboard-profile.css'),
     read('app/figma-dashboard-fidelity.css'),
     read('app/figma-dashboard-flow.css'),
@@ -59,8 +59,8 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
 
 test('Saved Place Open preserves Figma 38:223 relationships through scoped structural layout', async () => {
   const [page, styles, layout] = await Promise.all([
-    read('app/plans/[slug]/page.js'),
-    read('app/plans/Plans.module.css'),
+    read('app/(product)/plans/[slug]/page.js'),
+    read('app/(product)/plans/Plans.module.css'),
     read('app/layout.js')
   ])
 
