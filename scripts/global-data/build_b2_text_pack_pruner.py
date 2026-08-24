@@ -252,7 +252,6 @@ def main() -> None:
         raise RuntimeError('Source manifest must contain physical geo and routing objects.')
 
     projection_base = f'{prefix}/text-projection-v1/{planner_id}'
-    decompressor = zstd.ZstdDecompressor()
 
     def projection_core_key(source_key: str) -> str:
         return f'{projection_base}/core/{hashlib.sha256(source_key.encode()).hexdigest()}.json.zst'
@@ -261,6 +260,9 @@ def main() -> None:
         return f'{base}/routes/{hashlib.sha256(route_key.encode()).hexdigest()}.json.zst'
 
     def process_geo(record: dict):
+        # zstd contexts hold mutable C state; sharing one across ThreadPoolExecutor
+        # workers segfaults. Every worker creates its own instances.
+        decompressor = zstd.ZstdDecompressor()
         source_key = str(record.get('key') or '')
         source_sha = str(record.get('sha256') or '').lower()
         expected_count = int(record.get('count') or 0)
@@ -298,12 +300,12 @@ def main() -> None:
             if completed % 100 == 0 or completed == len(geo_records):
                 print(f'text_prune_signature_progress objects={completed}/{len(geo_records)} reused_projection_cores={reused_cores}', flush=True)
 
-    compressor = zstd.ZstdCompressor(level=9)
     sidecar_compressed_bytes = 0
     sidecar_raw_bytes = 0
     completed_routes = 0
 
     def process_route(record: dict) -> tuple[int, int]:
+        compressor = zstd.ZstdCompressor(level=9)
         route_key = str(record.get('key') or '')
         route_sha = str(record.get('sha256') or '').lower()
         body = get_bytes(route_key)
