@@ -167,7 +167,7 @@ test('Puddle logo toggles a persisted comprehensive dark mode without recoloring
   assert.doesNotMatch(darkStyles, /filter:\s*(?:invert|grayscale|brightness)\(/)
 })
 
-test('dashboard navigation keeps the shell mounted and scopes loading to main content', async () => {
+test('dashboard navigation keeps the shell mounted, preserves UI, and shows loading immediately', async () => {
   const [transition, nav, shell, styles, sidebarStyles, layout] = await Promise.all([
     read('components/main-content-transition.js'),
     read('components/product-nav.js'),
@@ -184,9 +184,8 @@ test('dashboard navigation keeps the shell mounted and scopes loading to main co
 
   assert.match(transition, /export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'/)
   assert.match(transition, /window\.dispatchEvent\(new Event\(MAIN_CONTENT_LOADING_EVENT\)\)/)
-  assert.match(transition, /const SPINNER_DELAY_MS = 140/)
-  assert.match(transition, /function startLoading\(\) \{[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*setLoading\(true\)[\s\S]*\}, SPINNER_DELAY_MS\)/)
-  assert.match(transition, /window\.clearTimeout\(/)
+  assert.match(transition, /function startLoading\(\) \{\s*setLoading\(true\)\s*\}/)
+  assert.doesNotMatch(transition, /SPINNER_DELAY_MS|setTimeout|clearTimeout/)
   assert.match(transition, /setLoading\(false\)/)
   assert.match(transition, /puddle-main-transition-loader/)
   assert.match(transition, /puddle-main-spinner/)
