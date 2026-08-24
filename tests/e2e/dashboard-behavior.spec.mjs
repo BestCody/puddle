@@ -56,8 +56,20 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   for (const href of ['/discover', '/map', '/plans', '/matches', '/membership', '/profile']) {
     await expect(nav.locator(`a[href="${href}"]`)).toBeVisible()
   }
-  await expect(sidebar.locator('.figma-dashboard-settings-link')).toHaveText('Settings')
-  await expect(sidebar.locator('.figma-dashboard-settings-link')).toHaveAttribute('href', /\/account\?returnTo=/)
+  const settingsTrigger = sidebar.locator('.figma-dashboard-settings-link')
+  await expect(settingsTrigger).toHaveText('Settings')
+  await expect(settingsTrigger).toHaveAttribute('type', 'button')
+  const discoverUrl = page.url()
+  await settingsTrigger.click()
+  const settingsOverlay = page.locator('.puddle-settings-overlay')
+  await expect(settingsOverlay).toHaveClass(/is-open/)
+  await expect(settingsOverlay).toHaveAttribute('aria-hidden', 'false')
+  await expect(settingsOverlay.locator('iframe[title="Settings"]')).toBeVisible()
+  expect(page.url()).toBe(discoverUrl)
+  await page.getByRole('button', { name: 'Close settings' }).click()
+  await expect(settingsOverlay).not.toHaveClass(/is-open/)
+  await expect(settingsOverlay).toHaveAttribute('aria-hidden', 'true')
+  expect(page.url()).toBe(discoverUrl)
 
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
   for (const name of ['Back', 'Pass', 'Save', 'Star']) {
@@ -155,7 +167,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const settingsClose = page.getByRole('link', { name: 'Close settings' })
   await expect(settingsClose).toBeVisible()
   await expect(settingsClose).toHaveAttribute('href', '/profile')
-  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
+  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
   await expect(page.locator('#profile')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible()
