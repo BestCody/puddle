@@ -372,4 +372,8 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except BaseException as error:
+        print(f'BUILDER_ERROR={type(error).__name__}: {error}', flush=True)
+        raise
