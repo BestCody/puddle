@@ -41,6 +41,24 @@ function placeLabel(location) {
   return location?.address_public || location?.city || location?.neighborhood || String(location?.kind || 'Saved place').replaceAll('_', ' ')
 }
 
+function timeLabel(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
+}
+
+function initials(name) {
+  return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
+}
+
 function mapPoint(location, state) {
   const latitude = Number(location?.latitude)
   const longitude = Number(location?.longitude)
@@ -76,8 +94,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, names, onClose, o
   const image = location.cover_url || location.gallery?.[0]?.url || preview.image || null
   const point = mapPoint(location, detail?.state)
   const center = point.length ? { latitude: point[0].latitude, longitude: point[0].longitude } : null
-  const reviews = detail?.reviews || []
-  const myReview = detail?.myReview || null
+  const posts = detail?.posts || []
 
   return <div className="saved-inline-detail-layer" role="dialog" aria-modal="true" aria-label={`${location.name} details`}>
     <button className="saved-inline-detail-backdrop" type="button" aria-label="Close saved details" onClick={onClose} />
@@ -118,25 +135,27 @@ function SamePageSavedDetail({ preview, detail, busy, message, names, onClose, o
           </form>
         </section>
 
-        <section className="saved-inline-detail-reviews">
-          <h2>Reviews{detail?.averageRating ? ` · ${Number(detail.averageRating).toFixed(1)} / 5 (${reviews.length})` : ''}</h2>
-          <form onSubmit={(event) => {
-            event.preventDefault()
-            const form = new FormData(event.currentTarget)
-            onAction('upsert_review', { rating: Number(form.get('rating')), body: form.get('body') })
-          }}>
-            <select name="rating" defaultValue={String(myReview?.rating || 5)} aria-label="Your rating">
-              <option value="5">5 — Excellent</option><option value="4">4 — Great</option><option value="3">3 — Good</option><option value="2">2 — Fair</option><option value="1">1 — Poor</option>
-            </select>
-            <textarea name="body" maxLength="2000" defaultValue={myReview?.body || ''} placeholder="Share what you thought..." />
-            <div><button type="submit" disabled={!detail || busy}>{myReview ? 'Update review' : 'Post review'}</button>{myReview ? <button type="button" disabled={busy} onClick={() => onAction('delete_review')}>Delete</button> : null}</div>
-          </form>
-          <div className="saved-inline-detail-review-list">{reviews.map((review) => <article key={review.id}><strong>{review.display_name || review.username || 'Puddle person'}</strong><span>{'★'.repeat(Number(review.rating || 0))}</span>{review.body ? <p>{review.body}</p> : null}</article>)}</div>
+        <section className="saved-inline-detail-posts">
+          <div className="saved-inline-detail-posts-heading">
+            <h2>Posts</h2>
+            <a href={`/create/post?location=${encodeURIComponent(location.id)}`}>Create post</a>
+          </div>
+          {detail ? posts.length ? <div className="saved-inline-detail-post-list">{posts.map((post) => {
+            const authorName = post.author?.display_name || post.author?.username || 'Puddle person'
+            return <a className="saved-inline-detail-post" href={`/map#post-${post.id}`} key={post.id}>
+              <span className="saved-inline-detail-post-avatar" style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>{post.author_avatar_url ? null : initials(authorName)}</span>
+              <span className="saved-inline-detail-post-copy">
+                <span><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
+                {post.title ? <b>{post.title}</b> : null}
+                {post.body ? <p>{post.body}</p> : null}
+              </span>
+            </a>
+          })}</div> : <div className="saved-inline-detail-post-empty"><strong>No posts here yet.</strong><span>Be the first person to post about this place.</span></div> : <div className="saved-inline-detail-post-loading" aria-label="Loading posts" />}
         </section>
       </div>
 
       <aside className="saved-inline-detail-side">
-        <div className="saved-inline-detail-map">{point.length ? <LocationMap initialPoints={point} initialCenter={center} /> : <div>Map unavailable</div>}</div>
+        <div className="saved-inline-detail-map">{detail && point.length ? <LocationMap initialPoints={point} initialCenter={center} /> : detail ? <div className="saved-inline-detail-map-empty">Map unavailable</div> : <div className="saved-inline-detail-map-loading" />}</div>
         {location.summary || location.description ? <p className="saved-inline-detail-summary">{location.summary || location.description}</p> : null}
         {detail?.similar?.length ? <div className="saved-inline-detail-similar"><h2>Similar splashes</h2>{detail.similar.map((item) => <a href={item.content_kind === 'event' ? `/events/${item.slug}` : `/plans/${item.slug}`} key={`${item.content_kind || 'place'}:${item.id}`}><span style={item.cover_url ? { backgroundImage: `url(${item.cover_url})` } : undefined} /><strong>{item.title || item.name || 'Puddle'}</strong></a>)}</div> : null}
       </aside>
@@ -153,6 +172,8 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
   const sourceCardRef = useRef(null)
   const requestRef = useRef(0)
   const needsRefreshRef = useRef(false)
+  const transitionReadyRef = useRef(false)
+  const pendingDetailRef = useRef(null)
 
   useEffect(() => {
     if (detailLocationId) return undefined
@@ -162,13 +183,15 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
         const response = await fetch(`/api/saved-location/${encodeURIComponent(nextPreview.slug)}`, { cache: 'no-store' })
         const payload = await response.json()
         if (!response.ok) throw new Error(payload?.error || 'Could not load Saved details.')
-        if (requestRef.current === requestId) setDetail(payload)
+        if (requestRef.current !== requestId) return
+        if (transitionReadyRef.current) setDetail(payload)
+        else pendingDetailRef.current = payload
       } catch (error) {
         if (requestRef.current === requestId) setMessage(error?.message || 'Could not load Saved details.')
       }
     }
 
-    function openFromLink(link) {
+    async function openFromLink(link) {
       const card = link.closest('[data-saved-morph-card]')
       if (!card || !card.dataset.savedMorphSlug) return
       const nextPreview = {
@@ -182,6 +205,8 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
       if (!names) return
       sourceCardRef.current = card
       needsRefreshRef.current = false
+      transitionReadyRef.current = false
+      pendingDetailRef.current = null
       setMessage('')
       setDetail(null)
       requestRef.current += 1
@@ -192,8 +217,25 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
         flushSync(() => setPreview({ ...nextPreview, names }))
       }
       const transition = document.startViewTransition ? document.startViewTransition(commitOpen) : null
-      if (!transition) commitOpen()
+      if (!transition) {
+        commitOpen()
+        transitionReadyRef.current = true
+      }
       loadDetail(nextPreview, requestId)
+      if (transition) {
+        try { await transition.finished } catch {}
+        if (requestRef.current !== requestId) return
+        transitionReadyRef.current = true
+        if (pendingDetailRef.current) {
+          const payload = pendingDetailRef.current
+          pendingDetailRef.current = null
+          setDetail(payload)
+        }
+      } else if (pendingDetailRef.current) {
+        const payload = pendingDetailRef.current
+        pendingDetailRef.current = null
+        setDetail(payload)
+      }
     }
 
     function onClick(event) {
@@ -210,6 +252,8 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
   async function close() {
     if (!preview) return
     requestRef.current += 1
+    transitionReadyRef.current = false
+    pendingDetailRef.current = null
     const card = sourceCardRef.current
     const commitClose = () => {
       flushSync(() => {
@@ -246,7 +290,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
       const payload = await response.json()
       if (!response.ok) throw new Error(payload?.error || 'That action could not be completed.')
       setDetail(payload)
-      setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : action === 'delete_review' ? 'Review deleted.' : 'Saved.')
+      setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : 'Saved.')
       if (['toggle_saved', 'toggle_pinned', 'plan'].includes(action)) needsRefreshRef.current = true
     } catch (error) {
       setMessage(error?.message || 'That action could not be completed.')
