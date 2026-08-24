@@ -245,6 +245,7 @@ def main() -> None:
             or str(candidate.get('source_manifest_sha256') or '') != manifest_sha
             or str(candidate.get('planner_id') or '') != planner_id
             or int(candidate.get('prefix_length') or 0) != PREFIX_LENGTH
+            or int(candidate.get('detail_chunk_size') or 0) < 64
         ):
             raise RuntimeError('Text postings candidate does not match the requested active manifest.')
         ready_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
@@ -344,6 +345,16 @@ def main() -> None:
         put_immutable(target_key, compressed, {'count': str(expected_count)})
         return {'rows': expected_count, 'bytes': len(compressed), 'reused': 0}
 
+    # Detail chunks live in the projection derivative; postings row order mirrors
+    # the core payload, so hydration needs the projection's chunk size.
+    projection_candidate_body = get_optional_bytes(f'{projection_base}/candidate.json')
+    if projection_candidate_body is None:
+        raise RuntimeError('Projection candidate must be built before text postings.')
+    projection_candidate = orjson.loads(projection_candidate_body)
+    detail_chunk_size = int(projection_candidate.get('detail_chunk_size') or 0)
+    if detail_chunk_size < 64:
+        raise RuntimeError('Projection candidate does not carry a valid detail_chunk_size.')
+
     total_rows = 0
     total_bytes = 0
     reused = 0
@@ -371,6 +382,7 @@ def main() -> None:
         'planner_id': planner_id,
         'snapshot': manifest.get('snapshot') or manifest.get('source_snapshot'),
         'prefix_length': PREFIX_LENGTH,
+        'detail_chunk_size': detail_chunk_size,
         'object_count': len(geo_records),
         'location_rows': total_rows,
         'postings_compressed_bytes': total_bytes,
