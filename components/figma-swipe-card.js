@@ -128,10 +128,12 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   }
 
   const photoStyle = !optimizedMainPhoto && (mainPhoto || placeholder) ? { backgroundImage: `url(${mainPhoto || placeholder})` } : undefined
+  const locationId = item.location_id || item.content_id || item.id || ''
 
   return <>
     <article
       className={`figma-swipe-card${dragging ? ' is-dragging' : ''}`}
+      data-location-id={locationId || undefined}
       style={{ transform: `translateX(${dragX}px) rotate(${dragX / 30}deg)` }}
       onPointerDown={pointerDown}
       onPointerMove={pointerMove}
