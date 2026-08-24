@@ -59,7 +59,16 @@ export async function GET(request) {
         filters: { q: 'JOE & THE JUICE' },
         candidateLimit: 20
       }, options)
-      const ok = result.backend === 'b2' && result.candidates.length > 0
+      const diagnostics = result.diagnostics || {}
+      let ok = result.backend === 'b2' && result.candidates.length > 0
+      if (ok && prune === 'candidate') {
+        // Candidate modes must prove the accelerator served the request; a silent
+        // unaccelerated success would make the production signal meaningless.
+        ok = diagnostics.textPrune === true
+      }
+      if (ok && projection === 'candidate') {
+        ok = diagnostics.textProjection === true
+      }
       return Response.json({ ok, case: name, durationMs: Date.now() - started, result: compactSearch(result) }, { status: ok ? 200 : 503 })
     }
 

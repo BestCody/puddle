@@ -202,8 +202,27 @@ test('B2 dense text radius search uses compact core and hydrates winner detail',
   assert.equal(result.candidates[0]?.slug, 'cn-tower')
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'abc')
   assert.equal(result.diagnostics.textProjection, true)
-  assert.equal(result.diagnostics.textProjectionFallback, false)
+  assert.equal(result.diagnostics.textPruneRerun, false)
   assert.equal(result.diagnostics.decodedCandidates, 2)
+})
+
+test('B2 text search fails loudly when an activated projection core is missing', async () => {
+  reset()
+  const { fetchFn, projectionCandidateKey } = fixtureFetch()
+  const brokenFetch = async (url, init) => {
+    if (String(url).includes('/core/')) return new Response('', { status: 404 })
+    return fetchFn(url, init)
+  }
+  await assert.rejects(
+    () => searchB2GlobalLocations({
+      latitude: 43.65, longitude: -79.39, distanceKm: 25,
+      filters: { q: 'cn towr' }, candidateLimit: 20
+    }, {
+      env: { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey },
+      fetchFn: brokenFetch
+    }),
+    /core is missing/
+  )
 })
 
 test('B2 viewport uses exact bounds at normal zoom', async () => {
