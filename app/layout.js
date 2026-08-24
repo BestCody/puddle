@@ -80,7 +80,7 @@ export const metadata = {
   description: 'Discover places, save favorites, and find somewhere worth going together.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   applicationName: 'Puddle',
-  icons: { icon: '/puddle-mark.svg' }
+  icons: { icon: '/puddle-tab-icon.svg' }
 }
 
 export const viewport = {
