@@ -1,0 +1,100 @@
+name: Sync B2 data runtime auth
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-b2-data-runtime-auth.yml'
+      - 'supabase/migrations/20260824153017_b2_data_runtime_vault.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-b2-data-runtime-auth
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_ID: ${{ secrets.B2_DATA_BUCKET_ID }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+    steps:
+      - name: Validate required secret presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$SUPABASE_SECRET_KEY"
+          test -n "$B2_DATA_APPLICATION_KEY_ID"
+          test -n "$B2_DATA_APPLICATION_KEY"
+          test -n "$B2_DATA_BUCKET_NAME"
+
+      - name: Verify private B2 read access and store encrypted runtime copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const required = [
+            'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_KEY',
+            'B2_DATA_APPLICATION_KEY_ID', 'B2_DATA_APPLICATION_KEY', 'B2_DATA_BUCKET_NAME'
+          ]
+          for (const name of required) if (!process.env[name]) throw new Error(`${name} is not configured.`)
+
+          const authorization = `Basic ${Buffer.from(`${process.env.B2_DATA_APPLICATION_KEY_ID}:${process.env.B2_DATA_APPLICATION_KEY}`).toString('base64')}`
+          const b2Response = await fetch('https://api.backblazeb2.com/b2api/v4/b2_authorize_account', {
+            headers: { Authorization: authorization, Accept: 'application/json' },
+            redirect: 'error',
+            signal: AbortSignal.timeout(10_000)
+          })
+          if (!b2Response.ok) throw new Error(`B2 credential verification failed with HTTP ${b2Response.status}.`)
+          const b2 = await b2Response.json()
+          const storage = b2?.apiInfo?.storageApi
+          const buckets = Array.isArray(storage?.allowed?.buckets) ? storage.allowed.buckets : []
+          const capabilities = new Set(storage?.allowed?.capabilities || [])
+          const namePrefix = String(storage?.allowed?.namePrefix || '')
+          if (!storage?.downloadUrl || !b2?.authorizationToken) throw new Error('B2 authorization did not return a download endpoint.')
+          if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 data key lacks readFiles capability.')
+          if (namePrefix && !'data/'.startsWith(namePrefix) && !namePrefix.startsWith('data/')) {
+            throw new Error(`B2 data key name-prefix restriction ${JSON.stringify(namePrefix)} does not permit the data/ namespace.`)
+          }
+          if (buckets.length && !buckets.some((bucket) => {
+            const idMatches = !process.env.B2_DATA_BUCKET_ID || bucket?.id === process.env.B2_DATA_BUCKET_ID
+            return idMatches && bucket?.name === process.env.B2_DATA_BUCKET_NAME
+          })) {
+            throw new Error('B2 data key is not authorized for the configured production bucket.')
+          }
+
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
+          const serviceKey = process.env.SUPABASE_SECRET_KEY
+          const vaultResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/set_b2_data_runtime_auth`, {
+            method: 'POST',
+            headers: {
+              apikey: serviceKey,
+              Authorization: `Bearer ${serviceKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json'
+            },
+            body: JSON.stringify({
+              p_key_id: process.env.B2_DATA_APPLICATION_KEY_ID,
+              p_application_key: process.env.B2_DATA_APPLICATION_KEY,
+              p_bucket_id: process.env.B2_DATA_BUCKET_ID || '',
+              p_bucket_name: process.env.B2_DATA_BUCKET_NAME
+            }),
+            redirect: 'error',
+            signal: AbortSignal.timeout(10_000)
+          })
+          if (!vaultResponse.ok) {
+            const message = await vaultResponse.text().catch(() => '')
+            throw new Error(`Supabase Vault B2 data sync failed with HTTP ${vaultResponse.status}${message ? `: ${message.slice(0, 200)}` : ''}.`)
+          }
+
+          console.log('Private B2 data credentials verified and encrypted runtime auth synchronized to Supabase Vault.')
+          NODE
