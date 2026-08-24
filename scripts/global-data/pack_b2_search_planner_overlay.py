@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import argparse
 import os
-from collections import defaultdict
+import threading
+from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
@@ -38,8 +39,73 @@ from b2_planner_overlay_common import (
 from location_search_common import b2_source_config
 
 
+DEFAULT_RESUME_SNAPSHOT_GROUPS = 512
+MAX_RESTORE_WORKERS = 16
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+class AsyncGeoResumeSnapshotWriter:
+    """Best-effort single-flight writer for materialized geo resume snapshots."""
+
+    def __init__(self, checkpoint: PlannerCheckpointStore) -> None:
+        self.checkpoint = checkpoint
+        self._thread: threading.Thread | None = None
+        self._error: BaseException | None = None
+        self._last_submitted_cursor = 0
+        self._last_completed_cursor = 0
+
+    @property
+    def last_submitted_cursor(self) -> int:
+        return self._last_submitted_cursor
+
+    def _reap(self) -> None:
+        thread = self._thread
+        if thread is None or thread.is_alive():
+            return
+        thread.join()
+        self._thread = None
+        if self._error is not None:
+            print(
+                f"planner_pack_resume_snapshot_warning error={self._error!r} fallback=delta_replay",
+                flush=True,
+            )
+            self._error = None
+
+    def submit(self, payload: dict) -> bool:
+        self._reap()
+        if self._thread is not None:
+            return False
+        cursor = int(payload["next_geo_index"])
+        self._last_submitted_cursor = cursor
+
+        def run() -> None:
+            try:
+                pointer = self.checkpoint.save_geo_resume_snapshot(payload)
+                self._last_completed_cursor = int(pointer["next_geo_index"])
+                print(
+                    f"planner_pack_resume_snapshot_saved groups={self._last_completed_cursor} "
+                    f"key={pointer['key']}",
+                    flush=True,
+                )
+            except BaseException as error:  # best-effort optimization; deltas remain authoritative
+                self._error = error
+
+        self._thread = threading.Thread(
+            target=run,
+            name=f"planner-geo-resume-{cursor}",
+            daemon=True,
+        )
+        self._thread.start()
+        return True
+
+    def flush(self) -> None:
+        thread = self._thread
+        if thread is not None:
+            thread.join()
+        self._reap()
 
 
 def main() -> None:
@@ -52,6 +118,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=int(os.getenv("GLOBAL_LOCATION_PLANNER_WORKERS", "16")))
     parser.add_argument("--checkpoint-geo-batch", type=int, default=int(os.getenv("GLOBAL_LOCATION_PLANNER_CHECKPOINT_GEO_BATCH", str(DEFAULT_CHECKPOINT_GEO_BATCH))))
     parser.add_argument("--checkpoint-route-batch", type=int, default=int(os.getenv("GLOBAL_LOCATION_PLANNER_CHECKPOINT_ROUTE_BATCH", str(DEFAULT_CHECKPOINT_ROUTE_BATCH))))
+    parser.add_argument("--resume-snapshot-groups", type=int, default=int(os.getenv("GLOBAL_LOCATION_PLANNER_RESUME_SNAPSHOT_GROUPS", str(DEFAULT_RESUME_SNAPSHOT_GROUPS))))
     args = parser.parse_args()
 
     source_planner_id = str(args.source_planner_id).strip()
@@ -66,6 +133,11 @@ def main() -> None:
     workers = max(1, min(32, int(args.workers)))
     geo_batch_size = max(1, min(128, int(args.checkpoint_geo_batch)))
     route_batch_size = max(1, min(1000, int(args.checkpoint_route_batch)))
+    requested_resume_snapshot_groups = max(geo_batch_size, int(args.resume_snapshot_groups))
+    resume_snapshot_groups = (
+        (requested_resume_snapshot_groups + geo_batch_size - 1) // geo_batch_size
+    ) * geo_batch_size
+    restore_workers = max(1, min(MAX_RESTORE_WORKERS, workers))
 
     source = b2_source_config()
     base_prefix = f"{source.data_prefix}/search/schema=v1/snapshot={args.snapshot}"
@@ -179,6 +251,8 @@ def main() -> None:
     groups = [(group_id, sorted(records, key=lambda item: str(item["key"]))) for group_id, records in sorted(grouped.items())]
 
     source_geo_fingerprint = sha256_hex(orjson.dumps([record_identity(record) for record in source_geo_records]))
+    # Keep this config exactly tied to planner-output semantics. Resume snapshot cadence is
+    # intentionally excluded so existing delta checkpoints remain compatible.
     checkpoint_config = {
         "checkpoint_version": PLANNER_CHECKPOINT_VERSION,
         "planner_id": planner_id,
@@ -199,15 +273,22 @@ def main() -> None:
     checkpoint = PlannerCheckpointStore(s3=s3, bucket=source.bucket, root=checkpoint_root, config_hash=checkpoint_config_hash, planner_id=planner_id, snapshot=args.snapshot, geo_batch_size=geo_batch_size, route_batch_size=route_batch_size, total_geo_items=len(groups))
     cancel = GracefulCheckpointCancel(checkpoint_root)
     cancel.install()
+    resume_snapshot_writer = AsyncGeoResumeSnapshotWriter(checkpoint)
 
     routes: dict[tuple[int, int], list] = defaultdict(list)
     active_geo_records: list[dict] = []
+    routing_descriptors: list[list] = []
     reused_source_objects = 0
     packed_source_groups = 0
     produced_pack_objects = 0
     source_compressed_bytes = 0
     active_compressed_bytes = 0
     routing_leaf_descriptors = 0
+
+    def add_descriptor(descriptor: list) -> None:
+        bounds = {"north": float(descriptor[2]), "south": float(descriptor[3]), "east": float(descriptor[4]), "west": float(descriptor[5])}
+        for tile in directory_tiles(bounds, directory_degrees):
+            routes[tile].append(descriptor)
 
     def apply_group_result(result: dict) -> None:
         nonlocal reused_source_objects, packed_source_groups, produced_pack_objects, source_compressed_bytes, active_compressed_bytes, routing_leaf_descriptors
@@ -220,9 +301,37 @@ def main() -> None:
             active_compressed_bytes += int(record["compressed_bytes"])
         for descriptor in result["descriptors"]:
             routing_leaf_descriptors += 1
-            bounds = {"north": float(descriptor[2]), "south": float(descriptor[3]), "east": float(descriptor[4]), "west": float(descriptor[5])}
-            for tile in directory_tiles(bounds, directory_degrees):
-                routes[tile].append(descriptor)
+            routing_descriptors.append(descriptor)
+            add_descriptor(descriptor)
+
+    def geo_resume_payload(next_geo_index: int) -> dict:
+        return {
+            "next_geo_index": int(next_geo_index),
+            "active_geo_records": list(active_geo_records),
+            "routing_descriptors": list(routing_descriptors),
+            "reused_source_objects": reused_source_objects,
+            "packed_source_groups": packed_source_groups,
+            "produced_pack_objects": produced_pack_objects,
+            "source_compressed_bytes": source_compressed_bytes,
+            "active_compressed_bytes": active_compressed_bytes,
+            "routing_leaf_descriptors": routing_leaf_descriptors,
+        }
+
+    def queue_geo_resume_snapshot(next_geo_index: int, *, force: bool = False) -> None:
+        due = force or next_geo_index == len(groups) or next_geo_index % resume_snapshot_groups == 0
+        if not due or next_geo_index <= 0:
+            return
+        queued = resume_snapshot_writer.submit(geo_resume_payload(next_geo_index))
+        if queued:
+            print(
+                f"planner_pack_resume_snapshot_queued groups={next_geo_index}/{len(groups)} interval={resume_snapshot_groups}",
+                flush=True,
+            )
+        else:
+            print(
+                f"planner_pack_resume_snapshot_skipped groups={next_geo_index}/{len(groups)} reason=writer_busy",
+                flush=True,
+            )
 
     def process_group(item: tuple[str, list[dict]]) -> dict:
         group_id, records = item
@@ -313,20 +422,59 @@ def main() -> None:
             raise RuntimeError("Packed planner geo checkpoint cursor is not on a safe batch boundary.")
 
         restore_start = 0
-        while restore_start < next_geo_index:
-            restore_end = min(restore_start + geo_batch_size, len(groups))
-            pack_key = checkpoint.geo_pack_key(restore_start, restore_end)
-            checkpoint_pack = checkpoint.get(pack_key)
-            results = checkpoint_pack.get("results") or []
-            expected_ids = [group_id for group_id, _records in groups[restore_start:restore_end]]
-            actual_ids = [str(result.get("group_id") or "") for result in results]
-            if int(checkpoint_pack.get("start", -1)) != restore_start or int(checkpoint_pack.get("end", -1)) != restore_end or actual_ids != expected_ids:
-                raise RuntimeError(f"Packed planner checkpoint mismatch: {pack_key}")
-            for result in results:
-                apply_group_result(result)
-            restore_start = restore_end
-            if restore_start % (geo_batch_size * 10) == 0 or restore_start == next_geo_index:
-                print(f"planner_pack_checkpoint_restore stage=geo groups={restore_start}/{next_geo_index}", flush=True)
+        resume_snapshot = checkpoint.load_latest_geo_resume(max_next_geo_index=next_geo_index)
+        if resume_snapshot is not None:
+            restore_start = int(resume_snapshot["next_geo_index"])
+            active_geo_records = list(resume_snapshot.get("active_geo_records") or [])
+            routing_descriptors = list(resume_snapshot.get("routing_descriptors") or [])
+            reused_source_objects = int(resume_snapshot.get("reused_source_objects") or 0)
+            packed_source_groups = int(resume_snapshot.get("packed_source_groups") or 0)
+            produced_pack_objects = int(resume_snapshot.get("produced_pack_objects") or 0)
+            source_compressed_bytes = int(resume_snapshot.get("source_compressed_bytes") or 0)
+            active_compressed_bytes = int(resume_snapshot.get("active_compressed_bytes") or 0)
+            routing_leaf_descriptors = int(resume_snapshot.get("routing_leaf_descriptors") or 0)
+            if routing_leaf_descriptors != len(routing_descriptors):
+                raise RuntimeError("Geo resume snapshot routing descriptor count mismatch.")
+            for descriptor in routing_descriptors:
+                add_descriptor(descriptor)
+            print(
+                f"planner_pack_resume_snapshot_restored groups={restore_start}/{next_geo_index} "
+                f"active_geo={len(active_geo_records)} descriptors={len(routing_descriptors)}",
+                flush=True,
+            )
+
+        restore_ranges: deque[tuple[int, int, str]] = deque()
+        cursor = restore_start
+        while cursor < next_geo_index:
+            restore_end = min(cursor + geo_batch_size, len(groups))
+            restore_ranges.append((cursor, restore_end, checkpoint.geo_pack_key(cursor, restore_end)))
+            cursor = restore_end
+
+        if restore_ranges:
+            worker_count = min(restore_workers, len(restore_ranges))
+            with ThreadPoolExecutor(max_workers=worker_count) as restore_executor:
+                pending: deque[tuple[int, int, str, object]] = deque()
+
+                def fill_geo_restore_window() -> None:
+                    while restore_ranges and len(pending) < worker_count * 2:
+                        start_index, end_index, key = restore_ranges.popleft()
+                        pending.append((start_index, end_index, key, restore_executor.submit(checkpoint.get, key)))
+
+                fill_geo_restore_window()
+                while pending:
+                    start_index, end_index, pack_key, future = pending.popleft()
+                    checkpoint_pack = future.result()
+                    results = checkpoint_pack.get("results") or []
+                    expected_ids = [group_id for group_id, _records in groups[start_index:end_index]]
+                    actual_ids = [str(result.get("group_id") or "") for result in results]
+                    if int(checkpoint_pack.get("start", -1)) != start_index or int(checkpoint_pack.get("end", -1)) != end_index or actual_ids != expected_ids:
+                        raise RuntimeError(f"Packed planner checkpoint mismatch: {pack_key}")
+                    for result in results:
+                        apply_group_result(result)
+                    restore_start = end_index
+                    fill_geo_restore_window()
+                    if restore_start % (geo_batch_size * 10) == 0 or restore_start == next_geo_index:
+                        print(f"planner_pack_checkpoint_restore stage=geo groups={restore_start}/{next_geo_index} parallel={worker_count}", flush=True)
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
             start = next_geo_index
@@ -342,7 +490,14 @@ def main() -> None:
                 start = end
                 state = checkpoint.save_state(stage="geo", next_geo_index=start, next_route_index=0, total_route_items=None)
                 print(f"planner_pack_checkpoint_saved stage=geo groups={start}/{len(groups)} active_geo={len(active_geo_records)} packs={produced_pack_objects} reused={reused_source_objects}", flush=True)
+                queue_geo_resume_snapshot(start)
                 cancel.exit_if_requested("geo", start, len(groups))
+
+        # Ensure the final geo cursor has a materialized snapshot before switching stages.
+        resume_snapshot_writer.flush()
+        if resume_snapshot_writer.last_submitted_cursor != len(groups):
+            queue_geo_resume_snapshot(len(groups), force=True)
+            resume_snapshot_writer.flush()
 
         active_geo_records.sort(key=lambda record: str(record["key"]))
         for (lat_index, lon_index), descriptors in sorted(routes.items()):
@@ -375,20 +530,37 @@ def main() -> None:
         if next_route_index % route_batch_size and next_route_index != len(routing_plan):
             raise RuntimeError("Packed planner routing checkpoint cursor is not on a safe batch boundary.")
 
-        restore_start = 0
-        while restore_start < next_route_index:
-            restore_end = min(restore_start + route_batch_size, len(routing_plan))
-            pack_key = checkpoint.route_pack_key(restore_start, restore_end)
-            checkpoint_pack = checkpoint.get(pack_key)
-            records = checkpoint_pack.get("records") or []
-            expected_route_keys = [f"{planner_route_prefix}/{lat_index}/{lon_index}.json.br" for lat_index, lon_index, _descriptors in routing_plan[restore_start:restore_end]]
-            actual_route_keys = [str(record.get("key") or "") for record in records]
-            if int(checkpoint_pack.get("start", -1)) != restore_start or int(checkpoint_pack.get("end", -1)) != restore_end or actual_route_keys != expected_route_keys:
-                raise RuntimeError(f"Packed planner routing checkpoint mismatch: {pack_key}")
-            route_records.extend(records)
-            restore_start = restore_end
-            if restore_start % (route_batch_size * 10) == 0 or restore_start == next_route_index:
-                print(f"planner_pack_checkpoint_restore stage=routing route={restore_start}/{next_route_index}", flush=True)
+        route_restore_ranges: deque[tuple[int, int, str]] = deque()
+        cursor = 0
+        while cursor < next_route_index:
+            restore_end = min(cursor + route_batch_size, len(routing_plan))
+            route_restore_ranges.append((cursor, restore_end, checkpoint.route_pack_key(cursor, restore_end)))
+            cursor = restore_end
+
+        if route_restore_ranges:
+            worker_count = min(restore_workers, len(route_restore_ranges))
+            with ThreadPoolExecutor(max_workers=worker_count) as restore_executor:
+                pending: deque[tuple[int, int, str, object]] = deque()
+
+                def fill_route_restore_window() -> None:
+                    while route_restore_ranges and len(pending) < worker_count * 2:
+                        start_index, end_index, key = route_restore_ranges.popleft()
+                        pending.append((start_index, end_index, key, restore_executor.submit(checkpoint.get, key)))
+
+                fill_route_restore_window()
+                while pending:
+                    start_index, end_index, pack_key, future = pending.popleft()
+                    checkpoint_pack = future.result()
+                    records = checkpoint_pack.get("records") or []
+                    expected_route_keys = [f"{planner_route_prefix}/{lat_index}/{lon_index}.json.br" for lat_index, lon_index, _descriptors in routing_plan[start_index:end_index]]
+                    actual_route_keys = [str(record.get("key") or "") for record in records]
+                    if int(checkpoint_pack.get("start", -1)) != start_index or int(checkpoint_pack.get("end", -1)) != end_index or actual_route_keys != expected_route_keys:
+                        raise RuntimeError(f"Packed planner routing checkpoint mismatch: {pack_key}")
+                    route_records.extend(records)
+                    cursor = end_index
+                    fill_route_restore_window()
+                    if cursor % (route_batch_size * 10) == 0 or cursor == next_route_index:
+                        print(f"planner_pack_checkpoint_restore stage=routing route={cursor}/{next_route_index} parallel={worker_count}", flush=True)
 
         start = next_route_index
         while start < len(routing_plan):
