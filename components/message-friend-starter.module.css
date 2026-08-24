@@ -1,8 +1,8 @@
 .root {
   position: absolute;
   z-index: 42;
-  top: 108px;
-  left: 44px;
+  top: 39px;
+  right: 28px;
 }
 
 .trigger {
@@ -33,8 +33,10 @@
 }
 
 .picker {
+  position: absolute;
+  top: 48px;
+  right: 0;
   width: min(340px, calc(100vw - 32px));
-  margin-top: 8px;
   overflow: hidden;
   border: 1.5px solid #dedede;
   border-radius: 20px;
@@ -98,13 +100,24 @@
 
 @media (max-width: 760px) {
   .root {
-    position: relative;
-    top: auto;
-    left: auto;
-    z-index: 44;
-    width: calc(100% - 24px);
-    margin: 86px auto 10px;
+    top: 27px;
+    right: 12px;
   }
-  .trigger { width: 100%; justify-content: space-between; box-sizing: border-box; }
-  .picker { width: 100%; }
+
+  .trigger {
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .trigger > span { display: none; }
+  .trigger b { width: 26px; height: 26px; }
+
+  .picker {
+    top: 50px;
+    right: 0;
+    width: min(340px, calc(100vw - 24px));
+  }
 }
