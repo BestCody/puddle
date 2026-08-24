@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'
@@ -25,26 +25,19 @@ function Spinner() {
 
 export function MainContentTransition({ children }) {
   const pathname = usePathname()
-  const timerRef = useRef(null)
   const [loading, setLoading] = useState(false)
 
-  function clearLoadingTimer() {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-  }
-
   useEffect(() => {
-    clearLoadingTimer()
     setLoading(false)
   }, [pathname])
 
   useEffect(() => {
+    let timer = null
+
     function startLoading() {
-      clearLoadingTimer()
-      timerRef.current = window.setTimeout(() => {
-        timerRef.current = null
+      if (timer !== null) window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        timer = null
         setLoading(true)
       }, SPINNER_DELAY_MS)
     }
@@ -52,7 +45,7 @@ export function MainContentTransition({ children }) {
     window.addEventListener(MAIN_CONTENT_LOADING_EVENT, startLoading)
     return () => {
       window.removeEventListener(MAIN_CONTENT_LOADING_EVENT, startLoading)
-      clearLoadingTimer()
+      if (timer !== null) window.clearTimeout(timer)
     }
   }, [])
 
