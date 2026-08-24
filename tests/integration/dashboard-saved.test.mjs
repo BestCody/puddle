@@ -50,15 +50,16 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
   assert.match(layout, /import '\.\/sidebar-layout-followup-20260822\.css'/)
 })
 
-test('saved places hydrate canonical metadata from OpenSearch while Supabase pages relationship state', async () => {
-  const [plans, data, styles, layout, cutover, morphBridge, morphStyles] = await Promise.all([
+test('saved places hydrate canonical metadata and open details as a same-page shared-element morph', async () => {
+  const [plans, data, styles, layout, cutover, morphBridge, morphStyles, morphApi] = await Promise.all([
     read('app/plans/page.js'),
     read('lib/app/location-plans-data.js'),
     read('app/plans/Plans.module.css'),
     read('app/layout.js'),
     read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql'),
     read('components/saved-location-morph-bridge.js'),
-    read('app/saved-location-morph.css')
+    read('app/saved-location-morph.css'),
+    read('app/api/saved-location/[slug]/route.js')
   ])
 
   assert.match(data, /LOCATION_HISTORY_PAGE_SIZE = 24/)
@@ -79,6 +80,8 @@ test('saved places hydrate canonical metadata from OpenSearch while Supabase pag
   assert.match(plans, /className=\{styles\.categories\}/)
   assert.match(plans, /className=\{styles\.placeCard\}[\s\S]*data-testid="saved-card"/)
   assert.match(plans, /data-saved-morph-card/)
+  assert.match(plans, /data-saved-morph-slug/)
+  assert.match(plans, /data-saved-morph-image/)
   assert.match(plans, /data-saved-morph-photo/)
   assert.match(plans, /data-saved-morph-title/)
   assert.match(plans, /data-saved-morph-meta/)
@@ -91,9 +94,18 @@ test('saved places hydrate canonical metadata from OpenSearch while Supabase pag
   assert.doesNotMatch(plans, /figma-saved-/)
   assert.doesNotMatch(plans, /className=\{styles\.floatingSearch\}/)
 
-  assert.match(morphBridge, /viewTransitionName/)
-  assert.match(morphBridge, /sessionStorage\.setItem\(STORAGE_KEY, key\)/)
-  assert.match(morphStyles, /@view-transition/)
+  assert.match(morphBridge, /document\.startViewTransition/)
+  assert.match(morphBridge, /event\.preventDefault\(\)/)
+  assert.match(morphBridge, /flushSync/)
+  assert.match(morphBridge, /saved-inline-detail-layer/)
+  assert.match(morphBridge, /fetch\(`\/api\/saved-location\/\$\{encodeURIComponent\(nextPreview\.slug\)\}`/)
+  assert.match(morphBridge, /needsRefreshRef/)
+  assert.doesNotMatch(morphBridge, /window\.location\.assign/)
+  assert.doesNotMatch(morphBridge, /history\.back\(\)/)
+  assert.doesNotMatch(morphStyles, /@view-transition\s*\{[\s\S]*navigation:\s*auto/)
+  assert.match(morphStyles, /\.saved-inline-detail-card/)
+  assert.match(morphApi, /export async function GET/)
+  assert.match(morphApi, /export async function POST/)
   assert.match(layout, /import '\.\/saved-location-morph\.css'/)
 
   assert.match(styles, /\.placeGrid\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 297px\)\)/s)
