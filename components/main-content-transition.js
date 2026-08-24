@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'
-const SPINNER_DELAY_MS = 140
 
 export function beginMainContentLoading() {
   if (typeof window !== 'undefined') {
@@ -32,21 +31,12 @@ export function MainContentTransition({ children }) {
   }, [pathname])
 
   useEffect(() => {
-    let timer = null
-
     function startLoading() {
-      if (timer !== null) window.clearTimeout(timer)
-      timer = window.setTimeout(() => {
-        timer = null
-        setLoading(true)
-      }, SPINNER_DELAY_MS)
+      setLoading(true)
     }
 
     window.addEventListener(MAIN_CONTENT_LOADING_EVENT, startLoading)
-    return () => {
-      window.removeEventListener(MAIN_CONTENT_LOADING_EVENT, startLoading)
-      if (timer !== null) window.clearTimeout(timer)
-    }
+    return () => window.removeEventListener(MAIN_CONTENT_LOADING_EVENT, startLoading)
   }, [])
 
   return (
