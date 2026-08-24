@@ -51,12 +51,14 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
 })
 
 test('saved places hydrate canonical metadata from OpenSearch while Supabase pages relationship state', async () => {
-  const [plans, data, styles, layout, cutover] = await Promise.all([
+  const [plans, data, styles, layout, cutover, morphBridge, morphStyles] = await Promise.all([
     read('app/plans/page.js'),
     read('lib/app/location-plans-data.js'),
     read('app/plans/Plans.module.css'),
     read('app/layout.js'),
-    read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql')
+    read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql'),
+    read('components/saved-location-morph-bridge.js'),
+    read('app/saved-location-morph.css')
   ])
 
   assert.match(data, /LOCATION_HISTORY_PAGE_SIZE = 24/)
@@ -75,7 +77,12 @@ test('saved places hydrate canonical metadata from OpenSearch while Supabase pag
   assert.match(plans, /SavedCategoryRail/)
   assert.match(plans, /SavedSearchOverlay/)
   assert.match(plans, /className=\{styles\.categories\}/)
-  assert.match(plans, /className=\{styles\.placeCard\} data-testid="saved-card"/)
+  assert.match(plans, /className=\{styles\.placeCard\}[\s\S]*data-testid="saved-card"/)
+  assert.match(plans, /data-saved-morph-card/)
+  assert.match(plans, /data-saved-morph-photo/)
+  assert.match(plans, /data-saved-morph-title/)
+  assert.match(plans, /data-saved-morph-meta/)
+  assert.match(plans, /<SavedLocationMorphBridge \/>/)
   assert.match(plans, /className=\{styles\.placeGrid\}/)
   assert.match(plans, /className=\{styles\.perfectPick\}>★ Perfect Pick<\/b>/)
   assert.match(plans, /getLocationPlansPage\(session/)
@@ -83,6 +90,11 @@ test('saved places hydrate canonical metadata from OpenSearch while Supabase pag
   assert.match(plans, /data-testid="saved-screen"/)
   assert.doesNotMatch(plans, /figma-saved-/)
   assert.doesNotMatch(plans, /className=\{styles\.floatingSearch\}/)
+
+  assert.match(morphBridge, /viewTransitionName/)
+  assert.match(morphBridge, /sessionStorage\.setItem\(STORAGE_KEY, key\)/)
+  assert.match(morphStyles, /@view-transition/)
+  assert.match(layout, /import '\.\/saved-location-morph\.css'/)
 
   assert.match(styles, /\.placeGrid\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 297px\)\)/s)
   assert.match(styles, /\.placeCard\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*156px minmax\(0, 1fr\)/s)
