@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Puddle smile icon">
+  <defs>
+    <radialGradient id="soft-blue" cx="48%" cy="86%" r="48%">
+      <stop offset="0" stop-color="#bfe8ff" stop-opacity=".9"/>
+      <stop offset=".48" stop-color="#dfeeff" stop-opacity=".52"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="soft-purple" cx="22%" cy="92%" r="34%">
+      <stop offset="0" stop-color="#c9b7ff" stop-opacity=".88"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="soft-green" cx="68%" cy="88%" r="34%">
+      <stop offset="0" stop-color="#c8ffd9" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="bubble-clip">
+      <path d="M127 34C76 34 44 69 44 111c0 31 15 48 39 57-7 16-17 29-30 41 27 1 48-6 65-21 11 3 21 3 32 3 40 0 64-28 64-78 0-46-36-79-87-79Z"/>
+    </clipPath>
+  </defs>
+  <path d="M127 34C76 34 44 69 44 111c0 31 15 48 39 57-7 16-17 29-30 41 27 1 48-6 65-21 11 3 21 3 32 3 40 0 64-28 64-78 0-46-36-79-87-79Z" fill="#fff" stroke="#171214" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <g clip-path="url(#bubble-clip)">
+    <rect x="28" y="127" width="190" height="98" fill="url(#soft-blue)"/>
+    <rect x="28" y="142" width="120" height="90" fill="url(#soft-purple)"/>
+    <rect x="104" y="138" width="114" height="86" fill="url(#soft-green)"/>
+  </g>
+  <circle cx="98" cy="116" r="10.5" fill="#171214"/>
+  <circle cx="154" cy="116" r="10.5" fill="#171214"/>
+  <path d="M101 143c15 16 34 17 49 0" fill="none" stroke="#171214" stroke-width="9" stroke-linecap="round"/>
+</svg>
