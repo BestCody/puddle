@@ -74,6 +74,10 @@ function SavedCard({ item, session, active }) {
     data-testid="saved-card"
     data-saved-morph-card={morphable ? '' : undefined}
     data-saved-morph-key={morphable ? item.location_id : undefined}
+    data-saved-morph-slug={morphable ? item.slug : undefined}
+    data-saved-morph-title={morphable ? item.title : undefined}
+    data-saved-morph-meta-text={morphable ? primaryMeta : undefined}
+    data-saved-morph-image={morphable && image ? image : undefined}
   >
     {photo}
     <div className={styles.placeCopy}>
