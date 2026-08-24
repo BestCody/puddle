@@ -23,18 +23,23 @@ function compactSearch(result) {
 
 async function textSearchOptions(url) {
   const projection = url.searchParams.get('projection') || ''
-  if (!projection) return {}
-  if (projection !== 'candidate') throw new Error('Unknown text projection self-test mode.')
+  const prune = url.searchParams.get('prune') || ''
+  if (!projection && !prune) return {}
+  if (projection && projection !== 'candidate') throw new Error('Unknown text projection self-test mode.')
+  if (prune && prune !== 'candidate') throw new Error('Unknown text-prune self-test mode.')
   const { manifest } = await getActiveSearchManifest()
   const prefix = String(manifest?.prefix || '').replace(/\/+$/, '')
   const plannerId = String(manifest?.planner?.id || '')
-  if (!prefix || !/^[A-Za-z0-9._-]+$/.test(plannerId)) throw new Error('Active B2 planner cannot resolve a text projection candidate.')
-  return {
-    env: {
-      ...process.env,
-      GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: `${prefix}/text-projection-v1/${plannerId}/candidate.json`
-    }
+  if (!prefix || !/^[A-Za-z0-9._-]+$/.test(plannerId)) throw new Error('Active B2 planner cannot resolve a text acceleration candidate.')
+  const env = { ...process.env }
+  if (projection) env.GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY = `${prefix}/text-projection-v1/${plannerId}/candidate.json`
+  if (prune) {
+    env.GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY = `${prefix}/text-prune-v1/${plannerId}/candidate.json`
+    // Measure the pack pruner independently. Production may later layer the compact
+    // projection on top, but the pruning gate must be fast even without it.
+    env.GLOBAL_LOCATION_TEXT_PROJECTION = '0'
   }
+  return { env }
 }
 
 export async function GET(request) {
