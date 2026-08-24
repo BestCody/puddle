@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
+import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
+import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { createPuddlePost } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -22,8 +24,44 @@ function categoryLabel(value) {
   return String(value || 'Park').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+function pointFromGlobalLocation(location) {
+  if (!location) return null
+  const category = location.category || location.kind || 'location'
+  const photoHash = location.primary_photo && typeof location.primary_photo === 'object'
+    ? location.primary_photo.content_hash
+    : null
+  return {
+    id: location.id,
+    location_id: location.id,
+    title: location.name,
+    summary: location.summary || location.description || `A ${String(category).replaceAll('_', ' ')} in ${location.neighborhood || location.city || 'your area'}.`,
+    category,
+    neighborhood: location.neighborhood || null,
+    city: location.city || null,
+    latitude: Number(location.latitude),
+    longitude: Number(location.longitude),
+    href: location.slug ? `/plans/${location.slug}` : null,
+    photo_url: openPhotoUrlForHash(photoHash),
+    states: [],
+    match: null,
+    plan: null
+  }
+}
+
+async function requestedSwipePoint(session, requestedLocation) {
+  if (!requestedLocation) return null
+  try {
+    const rows = await getGlobalLocationsByIds([requestedLocation], { traceId: session.traceId || null })
+    const location = rows?.[0]
+    if (!location || location.status !== 'published') return null
+    return pointFromGlobalLocation(location)
+  } catch {
+    return null
+  }
+}
+
 function CreatePostPreview({ avatar, name, point }) {
-  const title = point?.title || 'Choose a saved place'
+  const title = point?.title || 'Choose a place'
   const category = categoryLabel(point?.category)
   const location = point?.city || point?.neighborhood || 'Your Puddle'
   const copy = point?.summary || 'Pick a place below, add a title and description, then publish it to your feed.'
@@ -57,9 +95,15 @@ export default async function CreatePostPage({ searchParams }) {
   return renderProductPage(async (session) => {
     const avatar = profilePhotoUrl(session, session.profile?.avatar_path)
     const name = session.profile?.display_name || 'Puddle person'
-    const snapshot = await getLocationMapSnapshot(session)
     const requestedLocation = typeof params?.location === 'string' ? params.location : null
-    const selectedPoint = snapshot.points.find((point) => point.id === requestedLocation) || snapshot.points[0] || null
+    const [snapshot, directPoint] = await Promise.all([
+      getLocationMapSnapshot(session),
+      requestedSwipePoint(session, requestedLocation)
+    ])
+    const selectedPoint = snapshot.points.find((point) => point.id === requestedLocation) || directPoint || snapshot.points[0] || null
+    const selectablePoints = directPoint && !snapshot.points.some((point) => point.id === directPoint.id)
+      ? [directPoint, ...snapshot.points]
+      : snapshot.points
 
     return <div className="figma-create-post-screen" data-figma-node="25:79">
       <AuthMessage searchParams={params} />
@@ -93,14 +137,14 @@ export default async function CreatePostPage({ searchParams }) {
           <details className="figma-create-post-add">
             <summary aria-label="Open add menu">＋</summary>
             <div className="figma-create-post-add-menu">
-              <strong>Attach a saved place</strong>
-              {snapshot.points.length ? <div className="figma-create-post-location-options">
-                {snapshot.points.slice(0, 12).map((point) => <Link
+              <strong>Attach a place</strong>
+              {selectablePoints.length ? <div className="figma-create-post-location-options">
+                {selectablePoints.slice(0, 12).map((point) => <Link
                   className={selectedPoint?.id === point.id ? 'is-selected' : ''}
                   href={`/create/post?location=${encodeURIComponent(point.id)}`}
                   key={point.id}
                 ><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
-              </div> : <p>Save a place first, then come back to create a puddle.</p>}
+              </div> : <p>Choose a place from Swipe, Saved, or the map.</p>}
             </div>
             <div className="figma-create-post-add-footer"><span>{selectedPoint ? selectedPoint.title : 'No place selected'}</span></div>
           </details>
@@ -108,7 +152,7 @@ export default async function CreatePostPage({ searchParams }) {
         </form>
       </section>
 
-      {!selectedPoint ? <div className="figma-create-post-empty"><strong>You need a saved place before you can post.</strong><Link href="/discover">Start swiping</Link></div> : null}
+      {!selectedPoint ? <div className="figma-create-post-empty"><strong>Choose a place before you post.</strong><Link href="/discover">Start swiping</Link></div> : null}
     </div>
   })
 }
