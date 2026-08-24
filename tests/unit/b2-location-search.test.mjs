@@ -48,6 +48,7 @@ function fixtureFetch() {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const geoKey = `${prefix}/geo/r5/852b9b7bfffffff.json.br`
   const outsideRadiusKey = `${prefix}/geo/r8/outside-radius-corner.json.br`
+  const denseViewportKey = `${prefix}/geo/r8/dense-viewport-edge.json.br`
   const geoBody = br([tower, cafe])
   const objects = new Map([
     ['data/search/active.json', Buffer.from(JSON.stringify({ schema_version: 1, snapshot: '2026-08-19', manifest_key: `${prefix}/manifest.json` }))],
@@ -63,9 +64,13 @@ function fixtureFetch() {
       [geoKey, '852b9b7bfffffff', 44, 43, -79, -80, 2, geoBody.length],
       // This shard overlaps the radius bounding square but its entire bounding box is outside
       // the 25 km circle. If the planner includes it, the synthetic byte budget is exceeded.
-      [outsideRadiusKey, '882b9b000000001', 43.87, 43.84, -79.12, -79.18, 5000, 4 * 1024 * 1024]
+      [outsideRadiusKey, '882b9b000000001', 43.87, 43.84, -79.12, -79.18, 5000, 4 * 1024 * 1024],
+      // A dense viewport-only shard that causes a normal-zoom viewport to exceed the fine-plan
+      // byte budget, forcing the bounded coarse-map fallback.
+      [denseViewportKey, '882b9b000000002', 43.79, 43.75, -79.55, -79.59, 9000, 4 * 1024 * 1024]
     ])],
     [geoKey, geoBody],
+    [`${prefix}/geo-map/z1/13/10.json.br`, br([tower, cafe])],
     [`${prefix}/id/60c.json.br`, br({ 'loc-1': tower })],
     [`${prefix}/slug/e79.json.br`, br({ 'cn-tower': 'loc-1' })]
   ])
@@ -126,9 +131,21 @@ test('B2 radius search routes, filters, fuzzily matches, and ranks candidates', 
 test('B2 viewport uses exact bounds at normal zoom', async () => {
   reset()
   const result = await searchB2GlobalLocationsInViewport({
+    north: 43.74, south: 43.5, west: -79.6, east: -79.2, zoom: 11
+  }, { env, fetchFn: fixtureFetch() })
+  assert.deepEqual(new Set(result.candidates.map((row) => row.id)), new Set(['loc-1', 'loc-2']))
+  assert.equal(result.diagnostics.coarseFallback, undefined)
+})
+
+test('dense normal-zoom B2 viewport falls back to bounded coarse map instead of failing budget', async () => {
+  reset()
+  const result = await searchB2GlobalLocationsInViewport({
     north: 43.8, south: 43.5, west: -79.6, east: -79.2, zoom: 11
   }, { env, fetchFn: fixtureFetch() })
   assert.deepEqual(new Set(result.candidates.map((row) => row.id)), new Set(['loc-1', 'loc-2']))
+  assert.equal(result.diagnostics.coarse, true)
+  assert.equal(result.diagnostics.coarseFallback, true)
+  assert.equal(result.diagnostics.decodedCandidates, 2)
 })
 
 test('B2 ID and slug hydration use deterministic hash buckets', async () => {
