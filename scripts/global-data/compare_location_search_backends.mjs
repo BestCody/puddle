@@ -8,18 +8,9 @@ import {
 
 const base = { ...process.env }
 const openSearchEnv = { ...base, GLOBAL_LOCATION_SEARCH_BACKEND: 'opensearch' }
-// The workflow historically pins fetch concurrency to 8 for conservative smoke coverage,
-// while the B2 runtime default is 16. Run parity at the production default so the comparison
-// measures normal B2 behavior without raising the 15s deadline or byte/candidate safety budgets.
-// The planner overlay can legitimately split a bounded query into more than 128 small objects;
-// allow up to 256 shards here while retaining the stricter compressed-byte, candidate and timeout caps.
-const b2Env = {
-  ...base,
-  GLOBAL_LOCATION_SEARCH_BACKEND: 'b2',
-  GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '15000',
-  GLOBAL_LOCATION_FETCH_CONCURRENCY: '16',
-  GLOBAL_LOCATION_MAX_SHARDS: '256'
-}
+// Parity must exercise exactly the same B2 query budgets as production. Do not
+// raise max shards, bytes, candidates, timeout, or concurrency only for the gate.
+const b2Env = { ...base, GLOBAL_LOCATION_SEARCH_BACKEND: 'b2' }
 const candidateLimit = Math.max(20, Math.min(200, Number(base.GLOBAL_LOCATION_PARITY_CANDIDATE_LIMIT || 100)))
 const hydrationFloor = Math.max(0.5, Math.min(1, Number(base.GLOBAL_LOCATION_PARITY_HYDRATION_FLOOR || 0.95)))
 
