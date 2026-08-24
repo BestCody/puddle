@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { requestLocationPublication, saveLocationDraft, transitionLocationStatus } from '@/app/create/actions'
+import { requestLocationPublication, saveLocationDraft, transitionLocationStatus } from '@/app/(product)/create/actions'
 import { csrfFetch } from '@/lib/security/csrf-client'
 import { accessibilityValue, contactValue, listText } from './editor-shared'
 import { GeocodeFields } from './geocode-fields'
