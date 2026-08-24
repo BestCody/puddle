@@ -8,6 +8,7 @@ import { getActiveSearchManifest } from '@/lib/app/location-search-shards'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+export const preferredRegion = 'iad1'
 
 const TOKYO_ID = 'ebf09b82-67e6-5b11-8672-44cc628e359d'
 const CASES = new Set(['text', 'filter', 'id', 'slug', 'viewport'])
@@ -35,23 +36,17 @@ async function textSearchOptions(url) {
   if (projection) env.GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY = `${prefix}/text-projection-v1/${plannerId}/candidate.json`
   if (prune) {
     env.GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY = `${prefix}/text-prune-v1/${plannerId}/candidate.json`
-    // Measure the pack pruner independently. Production may later layer the compact
-    // projection on top, but the pruning gate must be fast even without it.
     env.GLOBAL_LOCATION_TEXT_PROJECTION = '0'
   }
   return { env }
 }
 
 export async function GET(request) {
-  if (process.env.VERCEL_ENV !== 'production') {
-    return Response.json({ error: 'Not found.' }, { status: 404 })
-  }
+  if (process.env.VERCEL_ENV !== 'production') return Response.json({ error: 'Not found.' }, { status: 404 })
 
   const url = new URL(request.url)
   const name = url.searchParams.get('case') || ''
-  if (!CASES.has(name)) {
-    return Response.json({ error: 'Unknown self-test case.' }, { status: 400 })
-  }
+  if (!CASES.has(name)) return Response.json({ error: 'Unknown self-test case.' }, { status: 400 })
 
   const started = Date.now()
   try {
