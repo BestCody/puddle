@@ -184,9 +184,11 @@ test('dashboard navigation keeps the shell mounted and scopes loading to main co
 
   assert.match(transition, /export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'/)
   assert.match(transition, /window\.dispatchEvent\(new Event\(MAIN_CONTENT_LOADING_EVENT\)\)/)
-  assert.match(transition, /function startLoading\(\) \{\s*setLoading\(true\)\s*\}/)
-  assert.match(transition, /setLoading\(false\)/)
-  assert.doesNotMatch(transition, /SPINNER_DELAY_MS|setTimeout|useRef/)
+  assert.match(transition, /const SPINNER_DELAY_MS = 140/)
+  assert.match(transition, /const timerRef = useRef\(null\)/)
+  assert.match(transition, /function startLoading\(\) \{[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*setLoading\(true\)[\s\S]*\}, SPINNER_DELAY_MS\)[\s\S]*\}/)
+  assert.match(transition, /window\.clearTimeout\(timerRef\.current\)/)
+  assert.match(transition, /clearLoadingTimer\(\)[\s\S]*setLoading\(false\)/)
   assert.match(transition, /puddle-main-transition-loader/)
   assert.match(transition, /puddle-main-spinner/)
 
