@@ -60,10 +60,11 @@ jobs:
           const buckets = Array.isArray(storage?.allowed?.buckets) ? storage.allowed.buckets : []
           const capabilities = new Set(storage?.allowed?.capabilities || [])
           const namePrefix = String(storage?.allowed?.namePrefix || '')
+          const requiredPrefix = 'data/search/'
           if (!storage?.downloadUrl || !b2?.authorizationToken) throw new Error('B2 authorization did not return a download endpoint.')
           if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 data key lacks readFiles capability.')
-          if (namePrefix && !'data/'.startsWith(namePrefix) && !namePrefix.startsWith('data/')) {
-            throw new Error(`B2 data key name-prefix restriction ${JSON.stringify(namePrefix)} does not permit the data/ namespace.`)
+          if (namePrefix && !requiredPrefix.startsWith(namePrefix) && !namePrefix.startsWith(requiredPrefix)) {
+            throw new Error(`B2 data key name-prefix restriction ${JSON.stringify(namePrefix)} does not permit the ${requiredPrefix} namespace.`)
           }
           if (buckets.length && !buckets.some((bucket) => {
             const idMatches = !process.env.B2_DATA_BUCKET_ID || bucket?.id === process.env.B2_DATA_BUCKET_ID
