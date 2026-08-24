@@ -1,0 +1,378 @@
+/* Desktop Settings reference polish, Aug 23.
+   Reuses Puddle's existing sections, scroll tracking, overlay, and actions.
+   Mobile Settings is intentionally untouched. */
+
+@media (min-width: 761px) {
+  /* Reference-like blurred desktop backdrop and compact floating window. */
+  .puddle-settings-overlay-backdrop {
+    background: rgba(238, 241, 244, .30) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(.92) !important;
+    backdrop-filter: blur(18px) saturate(.92) !important;
+  }
+
+  .puddle-settings-overlay-frame {
+    width: min(1120px, calc(100vw - 96px)) !important;
+    height: min(720px, calc(100dvh - 84px)) !important;
+    border: 1px solid rgba(26, 31, 36, .10) !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    box-shadow: 0 28px 86px rgba(14, 20, 26, .20) !important;
+  }
+
+  /* Direct desktop /account and embedded Settings use the same window geometry. */
+  .figma-settings-screen:not(.is-mobile-flow) {
+    min-height: 100dvh !important;
+    padding: clamp(38px, 5dvh, 58px) 28px !important;
+    background: #f4f6f8 !important;
+    box-sizing: border-box !important;
+  }
+
+  .figma-settings-screen.is-embedded:not(.is-mobile-flow) {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-window,
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-window.is-expanded {
+    position: relative !important;
+    inset: auto !important;
+    left: auto !important;
+    top: auto !important;
+    width: min(1120px, calc(100% - 24px)) !important;
+    height: min(720px, calc(100dvh - 84px)) !important;
+    min-height: 620px !important;
+    max-height: 720px !important;
+    margin: 0 auto !important;
+    display: grid !important;
+    grid-template-columns: 190px minmax(0, 1fr) !important;
+    border: 1px solid #e4e7ea !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    box-shadow: 0 18px 54px rgba(26, 31, 36, .10) !important;
+    transform: none !important;
+    overflow: hidden !important;
+  }
+
+  .figma-settings-screen.is-embedded:not(.is-mobile-flow) .figma-settings-window,
+  .figma-settings-screen.is-embedded:not(.is-mobile-flow) .figma-settings-window.is-expanded {
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    border: 0 !important;
+    border-radius: 18px !important;
+    box-shadow: none !important;
+  }
+
+  /* Left navigation follows the reference's quiet setup rail. */
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav,
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-window.is-expanded .figma-settings-local-nav {
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    padding: 32px 14px 26px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border: 0 !important;
+    border-right: 1px solid #e6e9ec !important;
+    background: #fafbfc !important;
+    color: #727980 !important;
+    box-sizing: border-box !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav > strong {
+    margin: 0 10px 20px !important;
+    color: #8b9299 !important;
+    font: 800 11px/1 var(--figma-mono) !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav nav {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    display: grid !important;
+    align-content: start !important;
+    gap: 5px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav a {
+    position: relative !important;
+    width: 100% !important;
+    min-height: 42px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 13px 0 31px !important;
+    border: 0 !important;
+    border-radius: 11px !important;
+    background: transparent !important;
+    color: #626970 !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+    font: 700 13.5px/1.2 Manrope, Inter, sans-serif !important;
+    text-decoration: none !important;
+    transition: none !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav a::before {
+    content: '' !important;
+    position: absolute !important;
+    left: 13px !important;
+    top: 50% !important;
+    width: 7px !important;
+    height: 7px !important;
+    transform: translateY(-50%) !important;
+    border: 1.5px solid currentColor !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    opacity: .72 !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav a:hover {
+    background: #f0f2f4 !important;
+    color: #262b30 !important;
+    filter: none !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav a[data-active='true'] {
+    background: #e9edf0 !important;
+    color: #20252a !important;
+    font-weight: 800 !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav a[data-active='true']::before {
+    background: currentColor !important;
+    opacity: 1 !important;
+  }
+
+  /* Reference-style close control lives in the top-right of the content pane. */
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-close {
+    position: absolute !important;
+    z-index: 20 !important;
+    top: 19px !important;
+    right: 20px !important;
+    width: 34px !important;
+    height: 34px !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #f7f8f9 !important;
+    color: #969da4 !important;
+    font: 300 24px/1 Manrope, sans-serif !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-close:hover {
+    background: #eceff1 !important;
+    color: #42484e !important;
+    filter: none !important;
+  }
+
+  /* One scrollable content pane, preserving the current section-scroll behavior. */
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-detail,
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-window.is-expanded .figma-settings-detail {
+    position: relative !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 64px !important;
+    display: block !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scrollbar-gutter: stable !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-section,
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-window.is-expanded .figma-settings-section {
+    position: relative !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 34px 38px 42px !important;
+    border: 0 !important;
+    color: #4e555c !important;
+    box-sizing: border-box !important;
+    scroll-margin-top: 16px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-section:first-of-type {
+    padding-top: 30px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-section + .figma-settings-section {
+    margin-top: 0 !important;
+    padding-top: 42px !important;
+    border-top: 1px solid #eceff1 !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-section > header {
+    margin: 0 46px 26px 0 !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-section > header small {
+    display: none !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-section > header h1 {
+    margin: 0 !important;
+    color: #22272c !important;
+    font: 800 21px/1.15 Manrope, Inter, sans-serif !important;
+    letter-spacing: -.35px !important;
+  }
+
+  /* Inputs/rows become restrained application-setting rows rather than large form bands. */
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row {
+    min-height: 62px !important;
+    display: grid !important;
+    grid-template-columns: 170px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 16px !important;
+    padding: 10px 14px !important;
+    border: 1px solid #eceff1 !important;
+    border-bottom: 0 !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+    font-size: 13.5px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row:first-of-type {
+    border-top-left-radius: 13px !important;
+    border-top-right-radius: 13px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row:last-of-type {
+    border-bottom: 1px solid #eceff1 !important;
+    border-bottom-left-radius: 13px !important;
+    border-bottom-right-radius: 13px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row.is-tall {
+    min-height: 106px !important;
+    padding-block: 14px !important;
+    align-items: start !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row label {
+    color: #727980 !important;
+    font: 700 12.5px/1.2 Manrope, Inter, sans-serif !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row input,
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row textarea,
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row select {
+    width: 100% !important;
+    min-height: 38px !important;
+    padding: 8px 11px !important;
+    border: 1px solid #dfe3e6 !important;
+    border-radius: 10px !important;
+    background: #fafbfc !important;
+    color: #22272c !important;
+    box-shadow: none !important;
+    font: 600 13.5px/1.25 Manrope, Inter, sans-serif !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row textarea {
+    min-height: 76px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row a {
+    color: #252b31 !important;
+    font-size: 12.5px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-submit {
+    margin-top: 18px !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-submit button {
+    min-width: 122px !important;
+    min-height: 38px !important;
+    padding: 0 16px !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+  }
+
+  /* Keep dense settings subcomponents aligned with the new content rhythm. */
+  .figma-settings-screen:not(.is-mobile-flow) .figma-notification-preferences {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px 16px !important;
+    padding: 4px 0 12px !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-notification-list article {
+    border-color: #e7eaed !important;
+    border-radius: 11px !important;
+    background: #fafbfc !important;
+    box-shadow: none !important;
+  }
+
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-warning {
+    color: #777e85 !important;
+    font-size: 13px !important;
+  }
+
+  /* Dark mode preserves structure while adapting the reference palette. */
+  .figma-dashboard-shell[data-appearance='dark'] .puddle-settings-overlay-frame,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .puddle-settings-overlay-frame {
+    border-color: #343a40 !important;
+    background: #181b1e !important;
+  }
+
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-window,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-window,
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-detail,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-detail,
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen.is-embedded:not(.is-mobile-flow),
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen.is-embedded:not(.is-mobile-flow) {
+    background: #181b1e !important;
+  }
+
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-local-nav {
+    border-color: #32383e !important;
+    background: #1d2125 !important;
+  }
+
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-section > header h1,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-section > header h1 {
+    color: #f1f3f4 !important;
+  }
+
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row {
+    border-color: #31373c !important;
+    background: #1d2125 !important;
+  }
+
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row input,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row input,
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row textarea,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row textarea,
+  .figma-dashboard-shell[data-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row select,
+  .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row select {
+    border-color: #394047 !important;
+    background: #23282d !important;
+    color: #f1f3f4 !important;
+  }
+}
