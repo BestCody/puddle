@@ -116,7 +116,7 @@ jobs:
           set -e
           if [ "$code" -ne 0 ]; then
             echo "::error::projection builder failed exit=$code; last output lines follow"
-            tail -n 30 "$logfile" | cut -c1-300 | while IFS= read -r line; do echo "::error::$line"; done
+            tail -n 14 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
             exit "$code"
           fi
 
@@ -124,4 +124,16 @@ jobs:
         env:
           GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
           GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: ${{ steps.active.outputs.prefix }}/text-projection-v1/${{ steps.active.outputs.planner_id }}/candidate.json
-        run: node scripts/global-data/compare_location_search_backends.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          logfile="$(mktemp)"
+          set +e
+          node scripts/global-data/compare_location_search_backends.mjs 2>&1 | tee "$logfile"
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            echo "::error::projection parity compare failed exit=$code; last output lines follow"
+            tail -n 14 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
+            exit "$code"
+          fi
