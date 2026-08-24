@@ -156,3 +156,4 @@ jobs:
             tail -n 6 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
             exit "$code"
           fi
+

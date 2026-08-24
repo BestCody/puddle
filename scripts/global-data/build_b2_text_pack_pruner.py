@@ -12,7 +12,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import random
 import re
+import time
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -41,6 +43,29 @@ def is_missing(error: ClientError) -> bool:
     code = str(error.response.get('Error', {}).get('Code') or '')
     status = int(error.response.get('ResponseMetadata', {}).get('HTTPStatusCode') or 0)
     return code in {'404', 'NoSuchKey', 'NotFound'} or status == 404
+
+
+TRANSIENT_CODES = {'500', '502', '503', '504', 'SlowDown', 'InternalError', 'RequestTimeout', 'ThrottlingException'}
+
+
+def is_transient(error: BaseException) -> bool:
+    if isinstance(error, ClientError):
+        code = str(error.response.get('Error', {}).get('Code') or '')
+        status = str(error.response.get('ResponseMetadata', {}).get('HTTPStatusCode') or '')
+        return code in TRANSIENT_CODES or status in TRANSIENT_CODES
+    return isinstance(error, (ConnectionError, TimeoutError))
+
+
+def retry_s3(action, attempts: int = 8):
+    delay = 0.5
+    for attempt in range(attempts):
+        try:
+            return action()
+        except BaseException as error:
+            if attempt == attempts - 1 or not is_transient(error):
+                raise
+            time.sleep(delay + random.random() * delay)
+            delay = min(10.0, delay * 2)
 
 
 def normalized_tokens(value) -> list[str]:
@@ -172,7 +197,10 @@ def main() -> None:
     )
 
     def get_bytes(key: str) -> bytes:
-        return s3.get_object(Bucket=source.bucket, Key=key)['Body'].read()
+        return retry_s3(lambda: s3.get_object(Bucket=source.bucket, Key=key)['Body'].read())
+
+    def head_object(key: str):
+        return retry_s3(lambda: s3.head_object(Bucket=source.bucket, Key=key))
 
     def get_optional_bytes(key: str) -> bytes | None:
         try:
@@ -186,7 +214,7 @@ def main() -> None:
         digest = sha256_hex(body)
         expected = {**metadata, 'sha256': digest}
         try:
-            head = s3.head_object(Bucket=source.bucket, Key=key)
+            head = head_object(key)
         except ClientError as error:
             if not is_missing(error):
                 raise
@@ -195,14 +223,14 @@ def main() -> None:
             if int(head.get('ContentLength') or -1) != len(body) or any(actual.get(k.lower()) != str(v) for k, v in expected.items()):
                 raise RuntimeError(f'Immutable text-prune artifact differs: {key}')
             return
-        s3.put_object(
+        retry_s3(lambda: s3.put_object(
             Bucket=source.bucket,
             Key=key,
             Body=body,
             ContentType=content_type,
             CacheControl='public,max-age=31536000,immutable',
             Metadata=expected,
-        )
+        ))
 
     manifest_body = get_bytes(manifest_key)
     manifest_sha = sha256_hex(manifest_body)
@@ -362,7 +390,7 @@ def main() -> None:
         'sidecar_compressed_bytes': sidecar_compressed_bytes,
     }
     candidate_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
-    s3.put_object(Bucket=source.bucket, Key=candidate_key, Body=candidate_body, ContentType='application/json', CacheControl='no-store')
+    retry_s3(lambda: s3.put_object(Bucket=source.bucket, Key=candidate_key, Body=candidate_body, ContentType='application/json', CacheControl='no-store'))
     print(
         f'text_prune_complete=true candidate_key={candidate_key} physical_packs={len(geo_records)} routes={len(route_records)} '
         f'sidecar_compressed_bytes={sidecar_compressed_bytes} reused_projection_cores={reused_cores}',
