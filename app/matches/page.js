@@ -1,4 +1,5 @@
 import { FigmaSocialHub } from '@/components/figma-social-hub'
+import { MessageFriendStarter } from '@/components/message-friend-starter'
 import { PassMessageSearch } from '@/components/pass-message-search'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getSocialHubSnapshot } from '@/lib/app/social-hub-data'
@@ -15,6 +16,7 @@ export default async function FriendsPage({ searchParams }) {
   return renderProductPage(async (session) => {
     const snapshot = await getSocialHubSnapshot(session, conversationId)
     return <div className="figma-friends-pass-wrapper">
+      {tab === 'messages' ? <MessageFriendStarter friends={snapshot.friends} /> : null}
       {tab === 'add' ? <PassMessageSearch enabled={snapshot.passActive} /> : null}
       <FigmaSocialHub initialSnapshot={snapshot} initialTab={tab} />
     </div>
