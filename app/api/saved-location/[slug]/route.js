@@ -13,6 +13,13 @@ function clean(value, max = 1000) {
   return String(value || '').trim().slice(0, max)
 }
 
+function mediaUrl(supabase, path) {
+  const value = String(path || '').trim()
+  if (!value) return null
+  if (value.startsWith('/') || /^https?:\/\//i.test(value)) return value
+  return supabase.storage.from('puddle-public-media').getPublicUrl(value).data.publicUrl
+}
+
 async function requireApiUser() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,7 +31,7 @@ async function detailPayload(supabase, user, slug) {
   if (!result?.location) return null
   const { location, similar = [] } = result
 
-  const [savedResult, friendsResult, reviewsResult, visitResult] = await Promise.all([
+  const [savedResult, friendsResult, visitResult, postsResult] = await Promise.all([
     supabase
       .from('user_content_states')
       .select('location_id,pinned_at')
@@ -33,21 +40,32 @@ async function detailPayload(supabase, user, slug) {
       .eq('state', 'saved')
       .maybeSingle(),
     supabase.rpc('social_friends_v2'),
-    supabase.rpc('location_reviews_v1', { target_location: location.id }),
     supabase
       .from('location_visits')
       .select('planned_for,note,status')
       .eq('profile_id', user.id)
       .eq('location_id', location.id)
       .eq('status', 'planned')
-      .maybeSingle()
+      .maybeSingle(),
+    supabase
+      .from('social_posts')
+      .select('id,author_id,location_id,title,body,visibility,created_at,profiles!social_posts_author_id_fkey(display_name,username,avatar_path)')
+      .eq('location_id', location.id)
+      .order('created_at', { ascending: false })
+      .limit(12)
   ])
 
-  const reviews = reviewsResult.data || []
-  const myReview = reviews.find((review) => review.author_id === user.id) || null
-  const averageRating = reviews.length
-    ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
-    : null
+  const posts = (postsResult.data || []).map((post) => ({
+    id: post.id,
+    title: post.title,
+    body: post.body,
+    created_at: post.created_at,
+    author: post.profiles ? {
+      display_name: post.profiles.display_name,
+      username: post.profiles.username
+    } : null,
+    author_avatar_url: mediaUrl(supabase, post.profiles?.avatar_path)
+  }))
 
   return {
     location,
@@ -58,9 +76,7 @@ async function detailPayload(supabase, user, slug) {
       planned: visitResult.data || null
     },
     friends: friendsResult.data || [],
-    reviews,
-    myReview,
-    averageRating
+    posts
   }
 }
 
@@ -166,18 +182,6 @@ export async function POST(request, context) {
       })
       if (mutationError) return error('We could not share that place.')
       revalidatePath('/matches')
-    } else if (action === 'upsert_review') {
-      const rating = Number(input.rating)
-      if (!Number.isInteger(rating) || rating < 1 || rating > 5) return error('Choose a rating from 1 to 5.')
-      const { error: mutationError } = await supabase.rpc('upsert_location_review_v1', {
-        target_location: location.id,
-        review_rating: rating,
-        review_body: clean(input.body, 2000)
-      })
-      if (mutationError) return error('We could not save your review.')
-    } else if (action === 'delete_review') {
-      const { data, error: mutationError } = await supabase.rpc('delete_location_review_v1', { target_location: location.id })
-      if (mutationError || !data) return error('We could not remove your review.')
     } else {
       return error('Unknown Saved action.', 404)
     }
