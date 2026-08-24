@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const TOKYO_ID = 'ebf09b82-67e6-5b11-8672-44cc628e359d'
-const TOKYO_SLUG = 'mikkeller-tokyo'
 const CASES = new Set(['text', 'filter', 'id', 'slug', 'viewport'])
 
 function compactSearch(result) {
@@ -64,9 +63,11 @@ export async function GET(request) {
     }
 
     if (name === 'slug') {
-      const row = await getB2GlobalLocationBySlug(TOKYO_SLUG)
-      const ok = String(row?.id || '') === TOKYO_ID && String(row?.slug || '') === TOKYO_SLUG
-      return Response.json({ ok, case: name, durationMs: Date.now() - started, matched: Boolean(row) }, { status: ok ? 200 : 503 })
+      const sourceRows = await getB2GlobalLocationsByIds([TOKYO_ID])
+      const source = sourceRows[0] || null
+      const row = source?.slug ? await getB2GlobalLocationBySlug(source.slug) : null
+      const ok = Boolean(source?.slug) && String(row?.id || '') === TOKYO_ID && String(row?.slug || '') === String(source.slug)
+      return Response.json({ ok, case: name, durationMs: Date.now() - started, matched: Boolean(row), hasSlug: Boolean(source?.slug) }, { status: ok ? 200 : 503 })
     }
 
     const result = await searchB2GlobalLocationsInViewport({
