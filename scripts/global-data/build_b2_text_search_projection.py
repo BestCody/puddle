@@ -383,9 +383,15 @@ def main() -> None:
                     flush=True,
                 )
 
+    # The projection universe is exactly the physical geo packs in the hash ledger.
+    # manifest.location_count additionally covers locations that only exist in the
+    # coarse geo-map tiles, so it is intentionally not the denominator here.
+    expected_geo_rows = sum(int(record.get('count') or 0) for record in geo_records)
+    if location_rows != expected_geo_rows:
+        raise RuntimeError(f'Text projection row count {location_rows} does not match ledger geo row count {expected_geo_rows}.')
     expected_locations = int(manifest.get('location_count') or 0)
-    if expected_locations and location_rows != expected_locations:
-        raise RuntimeError(f'Text projection row count {location_rows} does not match manifest location_count {expected_locations}.')
+    if expected_locations and location_rows > expected_locations:
+        raise RuntimeError(f'Text projection row count {location_rows} exceeds manifest location_count {expected_locations}.')
 
     candidate = {
         'schema_version': 1,
