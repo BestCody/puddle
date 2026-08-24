@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { InstantSegment } from '@/components/instant-segment'
 import { SavedSearchOverlay } from '@/components/discover-search-overlay'
+import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import styles from './Plans.module.css'
@@ -52,15 +53,32 @@ function SavedCard({ item, session, active }) {
   const participants = item.participants?.length ? item.participants.join(', ') : null
   const primaryMeta = active === 'planned' ? participants || item.city || categoryLabel(item.category) : item.city || categoryLabel(item.category)
   const secondaryMeta = active === 'planned' && item.planned_for ? dateLabel(item.planned_for) : null
+  const morphable = active === 'saved' && Boolean(item.slug)
 
-  return <article className={styles.placeCard} data-testid="saved-card">
-    <Link className={styles.placePhoto} href={detail} style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
-      {!image ? <span aria-hidden="true">Puddle</span> : null}
-      {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
-    </Link>
+  const photo = morphable
+    ? <a className={styles.placePhoto} href={detail} data-saved-morph-link data-saved-morph-photo style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
+        {!image ? <span aria-hidden="true">Puddle</span> : null}
+        {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
+      </a>
+    : <Link className={styles.placePhoto} href={detail} style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
+        {!image ? <span aria-hidden="true">Puddle</span> : null}
+        {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
+      </Link>
+
+  const title = morphable
+    ? <a href={detail} data-saved-morph-link>{item.title}</a>
+    : <Link href={detail}>{item.title}</Link>
+
+  return <article
+    className={styles.placeCard}
+    data-testid="saved-card"
+    data-saved-morph-card={morphable ? '' : undefined}
+    data-saved-morph-key={morphable ? item.location_id : undefined}
+  >
+    {photo}
     <div className={styles.placeCopy}>
-      <h2><Link href={detail}>{item.title}</Link></h2>
-      <div className={styles.placeMeta}><small>{primaryMeta}</small>{secondaryMeta ? <span>{secondaryMeta}</span> : null}</div>
+      <h2 data-saved-morph-title={morphable ? '' : undefined}>{title}</h2>
+      <div className={styles.placeMeta} data-saved-morph-meta={morphable ? '' : undefined}><small>{primaryMeta}</small>{secondaryMeta ? <span>{secondaryMeta}</span> : null}</div>
     </div>
   </article>
 }
@@ -113,6 +131,7 @@ export default async function PlansPage({ searchParams }) {
     const visible = items
 
     return <div className={styles.screen} data-testid="saved-screen" data-tab={active}>
+      <SavedLocationMorphBridge />
       <AuthMessage searchParams={params} />
       <header className={styles.topbar}>
         <InstantSegment
