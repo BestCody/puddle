@@ -91,7 +91,10 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       prefetch={false}
       onMouseEnter={() => warmRoute(item.href)}
       onFocus={() => warmRoute(item.href)}
-      onPointerDown={(event) => selectImmediately(event, item.href)}
+      onPointerDown={(event) => {
+        warmRoute(item.href)
+        selectImmediately(event, item.href)
+      }}
       onClick={(event) => startNavigation(event, item.href)}
       aria-current={active ? 'page' : undefined}
       aria-label={item.label}
