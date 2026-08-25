@@ -47,6 +47,18 @@ test('Hot API routes own the account-state gate when proxy moderation is skipped
   }
 })
 
+test('Public catalogue reads share short-lived immutable search results across users', async () => {
+  const [discovery, map] = await Promise.all([
+    read('lib/app/discovery-global.js'),
+    read('app/api/map/viewport/route.js')
+  ])
+  for (const source of [discovery, map]) {
+    assert.match(source, /unstable_cache/)
+    assert.match(source, /revalidate: 30/)
+    assert.match(source, /tags: \['global-location-search'\]/)
+  }
+})
+
 test('Dashboard shell uses one trusted bootstrap RPC', async () => {
   const [shell, migration] = await Promise.all([
     read('components/product-shell.js'),
