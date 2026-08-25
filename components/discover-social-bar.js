@@ -36,9 +36,7 @@ function SendSheet({ client, item, friends, onClose, onSent }) {
       body: JSON.stringify({
         friendId: friend.id,
         locationId: item.content_id,
-        note: note.trim() || null,
-        staticCatalogueEphemeral: item.static_catalogue_ephemeral === true,
-        staticRef: item.static_ref || null
+        note: note.trim() || null
       })
     })
     const result = await response.json().catch(() => ({}))

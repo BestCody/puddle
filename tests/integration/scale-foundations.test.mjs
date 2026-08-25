@@ -15,7 +15,7 @@ test('saved, plans, and history use bounded keyset pages instead of lifetime hyd
   assert.match(data, /LOCATION_HISTORY_MAX_PAGE_SIZE = 40/)
   for (const rpc of ['location_saved_page_v1', 'location_planned_page_v1', 'location_history_page_v1']) {
     assert.match(data, new RegExp(rpc))
-    assert.match(migration, new RegExp(`create or replace function public\.${rpc}`))
+    assert.match(migration, new RegExp(String.raw`create or replace function public\.${rpc}`))
   }
   assert.doesNotMatch(data, /\.from\('user_content_states'\)/)
   assert.doesNotMatch(data, /\.from\('location_visits'\)/)

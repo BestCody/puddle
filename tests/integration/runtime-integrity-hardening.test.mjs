@@ -50,12 +50,13 @@ test('discovery retries are filtered by receipt before side effects run', async 
 })
 
 test('discovery cards use canonical B2 photo URLs without a relational catalogue fallback', async () => {
-  const card = await read('components/minimal-swipe-card.js')
+  const card = await read('components/figma-swipe-card.js')
   const discovery = await read('lib/app/discovery.js')
   const global = await read('lib/app/discovery-global.js')
   const photo = await read('lib/media/open-photo-url.js')
 
-  assert.doesNotMatch(card, /usePrivateB2Asset|private_b2_asset|mainPhotoPending/)
+  assert.doesNotMatch(card, /usePrivateB2Asset|private_b2_asset|mainPhotoPending|GooglePlacePhoto|GoogleServerPlace/)
+  assert.match(card, /figma-swipe-card-photo-empty/)
   assert.match(global, /primary_photo/)
   assert.match(photo, /\/api\/open-photo\//)
   assert.doesNotMatch(discovery, /getRelationalDiscoveryFeed|discovery-relational|from\(['"]locations['"]\)/)

@@ -8,7 +8,6 @@ import { getActiveSearchManifest } from '@/lib/app/location-search-shards'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-export const preferredRegion = 'iad1'
 
 const TOKYO_ID = 'ebf09b82-67e6-5b11-8672-44cc628e359d'
 const CASES = new Set(['text', 'filter', 'id', 'slug', 'viewport'])

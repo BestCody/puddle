@@ -16,10 +16,7 @@ function primaryPhotoUrls(item) {
 }
 
 export function preferredDiscoveryPhotoUrl(item) {
-  const candidates = [
-    ...primaryPhotoUrls(item),
-    item?.category_placeholder_url
-  ]
+  const candidates = primaryPhotoUrls(item)
   return candidates.find((value) => typeof value === 'string' && value.trim()) || null
 }
 

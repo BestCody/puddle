@@ -7,6 +7,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8
 test('Vercel compute is pinned beside the Supabase us-west-2 database', async () => {
   const vercel = JSON.parse(await read('vercel.json'))
   assert.deepEqual(vercel.regions, ['pdx1'])
+  assert.doesNotMatch(await read('app/api/internal/b2-production-selftest/route.js'), /preferredRegion/)
 })
 
 test('Proxy verifies claims and only loads moderation profile state when required', async () => {
@@ -21,7 +22,18 @@ test('Proxy verifies claims and only loads moderation profile state when require
   assert.match(session, /if \(!loadProfileState\)/)
 })
 
-test('Dashboard shell uses one trusted bootstrap RPC with parallel fallback', async () => {
+test('Hot read APIs reuse verified claims instead of making a second auth-user request', async () => {
+  const [discovery, map] = await Promise.all([
+    read('app/api/discovery/route.js'),
+    read('app/api/map/viewport/route.js')
+  ])
+  for (const source of [discovery, map]) {
+    assert.match(source, /auth\.getClaims\(\)/)
+    assert.doesNotMatch(source, /auth\.getUser\(\)/)
+  }
+})
+
+test('Dashboard shell uses one trusted bootstrap RPC', async () => {
   const [shell, migration] = await Promise.all([
     read('components/product-shell.js'),
     read('supabase/migrations/10060_latency_optimization.sql')
@@ -29,7 +41,7 @@ test('Dashboard shell uses one trusted bootstrap RPC with parallel fallback', as
   assert.match(shell, /rpc\('dashboard_bootstrap_v1'\)/)
   assert.doesNotMatch(shell, /known_privileged:/)
   assert.doesNotMatch(migration, /known_privileged/)
-  // Fallback removal: the bootstrap RPC is the single source; failures propagate.
+  // The bootstrap RPC is the single source; failures propagate.
   assert.doesNotMatch(shell, /Promise\.all\(/)
   assert.doesNotMatch(shell, /parallel_fallback/)
   assert.match(shell, /dashboard_bootstrap/)
@@ -75,6 +87,7 @@ test('Partial caching is limited to cookie-free published public location data',
   assert.match(cache, /unstable_cache/)
   assert.match(cache, /revalidate:\s*300/)
   assert.match(cache, /tags:\s*\['public-locations'\]/)
+  assert.match(cache, /const \[overlay, similarPlaces\] = await Promise\.all\(/)
   assert.doesNotMatch(cache, /cookies\(|headers\(/)
   assert.match(publicClient, /persistSession: false/)
   assert.match(place, /getCachedPublicLocation/)
@@ -82,7 +95,7 @@ test('Partial caching is limited to cookie-free published public location data',
   assert.match(discover, /dynamic = 'force-dynamic'/)
 })
 
-test('Swipe uses Next Image for optimized first-party media while Google fallback remains isolated', async () => {
+test('Swipe uses only optimized canonical first-party media', async () => {
   const [card, config, preloader] = await Promise.all([
     read('components/figma-swipe-card.js'),
     read('next.config.mjs'),
@@ -91,13 +104,21 @@ test('Swipe uses Next Image for optimized first-party media while Google fallbac
   assert.match(card, /import Image from 'next\/image'/)
   assert.match(card, /<Image src=\{optimizedMainPhoto\}/)
   assert.match(card, /preload/)
-  assert.match(card, /GoogleServerPlacePhoto/)
-  assert.match(card, /GooglePlacePhotoFallback/)
+  assert.doesNotMatch(card, /GoogleServerPlacePhoto|GooglePlacePhotoFallback|google_photo_proxy_url|google_client_lookup/)
+  assert.match(card, /figma-swipe-card-photo-empty/)
   assert.match(config, /NEXT_PUBLIC_SUPABASE_URL/)
   assert.match(config, /\/storage\/v1\/object\/\*\*/)
   assert.doesNotMatch(config, /cegoqtvajwajczbofpep\.supabase\.co/)
   assert.match(preloader, /getImageProps/)
   assert.match(preloader, /image\.srcset = source\.srcSet/)
+})
+
+test('Discovery coalesces concurrent seen-history reads per authenticated user', async () => {
+  const discovery = await read('lib/app/discovery-global.js')
+  assert.match(discovery, /const seenLocationInFlight = new Map\(\)/)
+  assert.match(discovery, /seenLocationInFlight\.get\(userId\)/)
+  assert.match(discovery, /seenLocationInFlight\.set\(userId, request\)/)
+  assert.match(discovery, /seenLocationInFlight\.delete\(userId\)/)
 })
 
 test('Server latency budgets emit structured metrics without user identifiers', async () => {
