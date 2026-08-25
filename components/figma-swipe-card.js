@@ -2,8 +2,6 @@
 
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { GooglePlacePhotoFallback } from '@/components/google-place-photo-fallback'
-import { GoogleServerPlacePhoto } from '@/components/google-server-place-photo'
 import { DISCOVERY_IMAGE_SIZES, canOptimizeDiscoveryImage } from '@/lib/media/discovery-image'
 
 const labels = {
@@ -71,20 +69,6 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   const photoUrls = useMemo(() => photos(item), [item])
   const mainPhoto = photoUrls[0] || null
   const optimizedMainPhoto = mainPhoto && canOptimizeDiscoveryImage(mainPhoto) ? mainPhoto : null
-  const placeholder = item.category_placeholder_url || null
-  const googleServerUrl = !mainPhoto ? item.google_photo_proxy_url : null
-  const googleLookup = useMemo(() => !mainPhoto && !googleServerUrl && item.google_client_lookup ? {
-    allowed: true,
-    name: item.title || item.name,
-    city: item.city,
-    region: item.region,
-    country: item.country,
-    countryCode: item.country_code || item.countryCode,
-    addressPublic: item.address_public || item.addressPublic,
-    latitude: item.latitude,
-    longitude: item.longitude,
-    minimumScore: item.google_lookup_min_score
-  } : null, [item, mainPhoto, googleServerUrl])
 
   async function choose(action) {
     if (busy || choiceInFlight.current) return
@@ -127,7 +111,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
     else setDragX(0)
   }
 
-  const photoStyle = !optimizedMainPhoto && (mainPhoto || placeholder) ? { backgroundImage: `url(${mainPhoto || placeholder})` } : undefined
+  const photoStyle = !optimizedMainPhoto && mainPhoto ? { backgroundImage: `url(${mainPhoto})` } : undefined
   const locationId = item.location_id || item.content_id || item.id || ''
 
   return <>
@@ -149,8 +133,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
     >
       <div className="figma-swipe-card-photo" style={photoStyle}>
         {optimizedMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload /> : null}
-        {!mainPhoto && googleServerUrl ? <GoogleServerPlacePhoto title={item.title} url={googleServerUrl} placeholderUrl={placeholder} /> : null}
-        {!mainPhoto && !googleServerUrl && googleLookup ? <GooglePlacePhotoFallback title={item.title} placeId={null} lookup={googleLookup} placeholderUrl={placeholder} /> : null}
+        {!mainPhoto ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo is available">Photo unavailable</div> : null}
       </div>
       <div className="figma-swipe-card-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
       <div className="figma-swipe-card-copy"><h1>{item.title}</h1><p>{addressLabel(item)}</p></div>

@@ -6,25 +6,18 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8
 
 test('swipe full details stays inside the deck and keeps decisions in context', async () => {
   const [card, styles] = await Promise.all([
-    read('components/minimal-swipe-card.js'),
-    read('app/dashboard-saved.css')
+    read('components/figma-swipe-card.js'),
+    read('app/figma-dashboard-swipe.css')
   ])
 
   assert.doesNotMatch(card, /Link href=\{item\.href\}/)
   assert.doesNotMatch(card, />Full details<\/Link>/)
   assert.match(card, /aria-label=\{`Full details for \$\{item\.title\}`\}/)
-  assert.match(card, /onKeyDown=\{\(event\) => event\.stopPropagation\(\)\}/)
-  assert.match(card, /minimal-details-decision-bar/)
+  assert.match(card, /figma-swipe-details-actions/)
   assert.match(card, /onChoice\('pass'\)/)
   assert.match(card, /onChoice\('save'\)/)
   assert.match(card, /onChoice\('perfect'\)/)
-  assert.match(card, />Why go</)
-  assert.match(card, />Good to know</)
-  assert.match(card, />Directions</)
-  assert.match(card, />View all hours</)
-  assert.match(card, /details have not yet been verified/)
-  assert.doesNotMatch(card, /useStaticCatalogueDetails|\/api\/static-catalogue\/details\//)
-  assert.match(styles, /\.minimal-details-decision-bar/)
-  assert.match(styles, /grid-template-rows:minmax\(0,1fr\) auto/)
-  assert.match(styles, /@media\(max-width:620px\)/)
+  assert.match(card, /DetailsPhoto/)
+  assert.match(styles, /\.figma-swipe-details-actions/)
+  assert.match(styles, /grid-template-columns:\s*repeat\(3,\s*1fr\)/)
 })

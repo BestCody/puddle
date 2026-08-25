@@ -9,10 +9,23 @@ function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
 }
 
+function safeImageUrl(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+  if (raw.startsWith('/') || raw.startsWith('blob:')) return raw
+  try {
+    const parsed = new URL(raw)
+    return parsed.protocol === 'https:' ? parsed.toString() : null
+  } catch {
+    return null
+  }
+}
+
 function publicMediaUrl(client, path) {
   if (!path) return null
-  if (String(path).startsWith('/') || String(path).startsWith('http')) return path
-  return client.storage.from('puddle-public-media').getPublicUrl(path).data.publicUrl
+  const directUrl = safeImageUrl(path)
+  if (directUrl) return directUrl
+  return safeImageUrl(client.storage.from('puddle-public-media').getPublicUrl(path).data.publicUrl)
 }
 
 function deviceId() {
@@ -123,7 +136,7 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
 
   return <div className="profile-photo-editor">
     <span className="social-avatar is-large" style={{ overflow: 'hidden' }}>
-      {shownUrl ? <img src={shownUrl} alt="Profile preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
+      {shownUrl ? <img src={safeImageUrl(shownUrl) || undefined} alt="Profile preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
     </span>
     <div>
       <div className="profile-photo-actions">

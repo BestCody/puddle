@@ -289,6 +289,15 @@
   height: 100%;
   object-fit: cover;
 }
+.figma-swipe-card-photo-empty {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #f1f1f1, #d9d9d9);
+  color: #686868;
+  font: 600 14px/1 var(--figma-mono);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
 .figma-swipe-card-meta {
   position: absolute;
   z-index: 3;
