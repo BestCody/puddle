@@ -5,7 +5,7 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('Pass page keeps the six advertised feature promises', async () => {
-  const membership = await read('app/membership/page.js')
+  const membership = await read('app/(product)/membership/page.js')
   for (const feature of ['Heatmap', 'Pass badge', 'Create your location', 'Message anyone', 'See who saved', 'Notification alerts']) {
     assert.match(membership, new RegExp(`>${feature}<`))
   }
@@ -27,8 +27,8 @@ test('Pass heatmap uses incremental density tiles and viewport requests', async 
 })
 
 test('creating a location is Pass-gated in the page, action, and database policy', async () => {
-  const page = await read('app/create/place/page.js')
-  const actions = await read('app/create/actions.js')
+  const page = await read('app/(product)/create/place/page.js')
+  const actions = await read('app/(product)/create/actions.js')
   const migration = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
 
   assert.match(page, /membership\.active \? <LocationEditor/)
@@ -73,7 +73,7 @@ test('Pass notification alerts are realtime, permission-gated, and activate imme
 })
 
 test('Profile identity stays faithful to Figma instead of injecting a Pass badge beside the name', async () => {
-  const profile = await read('app/profile/page.js')
+  const profile = await read('app/(product)/profile/page.js')
   assert.match(profile, /data-figma-node="40:347"/)
   assert.doesNotMatch(profile, /figma-profile-pass-badge/)
   assert.doesNotMatch(profile, /figma-profile-name-row/)

@@ -13,7 +13,7 @@ async function openDesktop(page, path) {
   await assertNoHorizontalOverflow(page)
 }
 
-async function expectCenteredDashboardCanvas(page) {
+async function expectDashboardMainFillsStage(page) {
   const geometry = await page.evaluate(() => {
     const stage = document.querySelector('.figma-dashboard-stage')?.getBoundingClientRect()
     const main = document.querySelector('.figma-dashboard-main')?.getBoundingClientRect()
@@ -21,6 +21,7 @@ async function expectCenteredDashboardCanvas(page) {
     return {
       stageLeft: stage.left,
       stageRight: stage.right,
+      stageWidth: stage.width,
       mainLeft: main.left,
       mainRight: main.right,
       mainWidth: main.width
@@ -30,7 +31,7 @@ async function expectCenteredDashboardCanvas(page) {
   const leftGutter = geometry.mainLeft - geometry.stageLeft
   const rightGutter = geometry.stageRight - geometry.mainRight
   expect(Math.abs(leftGutter - rightGutter)).toBeLessThanOrEqual(2)
-  expect(geometry.mainWidth).toBeLessThanOrEqual(1001)
+  expect(Math.abs(geometry.mainWidth - geometry.stageWidth)).toBeLessThanOrEqual(2)
 }
 
 test('authenticated desktop dashboard keeps navigation and core product behavior usable', async ({ page }, testInfo) => {
@@ -56,27 +57,51 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   for (const href of ['/discover', '/map', '/plans', '/matches', '/membership', '/profile']) {
     await expect(nav.locator(`a[href="${href}"]`)).toBeVisible()
   }
-  await expect(sidebar.locator('.figma-dashboard-settings-link')).toHaveText('Settings')
-  await expect(sidebar.locator('.figma-dashboard-settings-link')).toHaveAttribute('href', /\/account\?returnTo=/)
+  const settingsTrigger = sidebar.locator('.figma-dashboard-settings-link')
+  await expect(settingsTrigger).toHaveText('Settings')
+  await expect(settingsTrigger).toHaveAttribute('type', 'button')
+  const discoverUrl = page.url()
+  await settingsTrigger.click()
+  const settingsOverlay = page.locator('.puddle-settings-overlay')
+  await expect(settingsOverlay).toHaveClass(/is-open/)
+  await expect(settingsOverlay).toHaveAttribute('aria-hidden', 'false')
+  await expect(settingsOverlay.locator('iframe[title="Settings"]')).toBeVisible()
+  expect(page.url()).toBe(discoverUrl)
+  await page.keyboard.press('Escape')
+  await expect(settingsOverlay).not.toHaveClass(/is-open/)
+  await expect(settingsOverlay).toHaveAttribute('aria-hidden', 'true')
+  expect(page.url()).toBe(discoverUrl)
 
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
-  for (const name of ['Back', 'Pass', 'Save', 'Star']) {
-    await expect(page.getByRole('button', { name })).toBeVisible()
+  const undo = page.getByRole('button', { name: 'Message', exact: true })
+  await expect(undo).toBeVisible()
+  await expect(undo).toBeDisabled()
+  for (const name of ['Pass', 'Save', 'Post']) {
+    await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
   }
   await page.getByRole('button', { name: 'Open details' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.getByRole('button', { name: 'Close details' }).click()
-  await expect(page.locator('.figma-dashboard-account-menu summary')).toBeVisible()
+  await expect(settingsTrigger).toBeVisible()
+  await expect(page.locator('.figma-dashboard-account-menu summary')).toBeHidden()
   await assertNoHorizontalOverflow(page)
 
   await openDesktop(page, '/map')
   const feedTabs = page.getByTestId('feed-tabs')
-  await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
+  await expect(feedTabs.getByRole('link', { name: 'Posts', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
   const feedSearch = page.getByTestId('feed-search')
   await expect(feedSearch).toBeVisible()
-  await expect(feedSearch.getByRole('searchbox', { name: 'Search puddle' })).toHaveAttribute('placeholder', 'Search puddle')
-  await expect(page.getByText('Search Puddle', { exact: true })).toHaveCount(0)
+  await expect(feedSearch).toContainText('Search Puddles')
+  await expect(feedSearch).toHaveAttribute('aria-haspopup', 'dialog')
+  await expect(feedSearch).toHaveAttribute('aria-expanded', 'false')
+  await feedSearch.click()
+  const feedSearchbox = page.getByRole('searchbox', { name: 'Search Puddles' })
+  await expect(feedSearchbox).toBeVisible()
+  await expect(feedSearchbox).toHaveAttribute('placeholder', 'Search Puddles')
+  await expect(feedSearch).toHaveAttribute('aria-expanded', 'true')
+  await page.keyboard.press('Escape')
+  await expect(feedSearch).toHaveAttribute('aria-expanded', 'false')
 
   const feedHeader = await page.getByTestId('feed-header').boundingBox()
   const feedStream = await page.getByTestId('feed-stream').boundingBox()
@@ -155,24 +180,25 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const settingsClose = page.getByRole('link', { name: 'Close settings' })
   await expect(settingsClose).toBeVisible()
   await expect(settingsClose).toHaveAttribute('href', '/profile')
-  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
+  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
   await expect(page.locator('#profile')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Close settings' })).toBeVisible()
   await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Billing', exact: true }).click()
   await expect(page.locator('#billing')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Manage billing' })).toHaveAttribute('href', '/membership?view=manage')
+  await expect(page.getByRole('link', { name: 'View plans' })).toHaveAttribute('href', '/membership')
   await page.getByRole('link', { name: 'Close settings' }).click()
   await expect(page).toHaveURL(/\/profile$/)
 
-  /* Wide monitors should add balanced whitespace around the authored 1000px
-     Figma canvas instead of pinning the dashboard composition to the sidebar. */
+  /* Wide monitors use the full stage for the dashboard shell. Individual
+     route content is centered/constrained inside that stage and is covered by
+     the route-specific assertions above. */
   await page.setViewportSize({ width: 1600, height: 900 })
   for (const route of ['/discover', '/map', '/plans', '/matches', '/membership', '/profile', '/account', '/create/post']) {
     await page.goto(route)
     await page.waitForLoadState('networkidle')
-    await expectCenteredDashboardCanvas(page)
+    await expectDashboardMainFillsStage(page)
     await assertNoHorizontalOverflow(page)
   }
 })

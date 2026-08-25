@@ -24,7 +24,7 @@ test('Friends Pass Profile and Settings own page geometry through Grid and flow'
 
 test('Create Post preserves Figma overlap using Grid instead of page x/y coordinates', async () => {
   const [page, flow, layout] = await Promise.all([
-    read('app/create/post/page.js'),
+    read('app/(product)/create/post/page.js'),
     read('app/figma-dashboard-flow.css'),
     read('app/layout.js')
   ])

@@ -29,7 +29,7 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   assert.match(preloader, /image\.srcset = source\.srcSet/)
 })
 
-test('dashboard navigation warms routes efficiently and selects exactly one item immediately', async () => {
+test('dashboard navigation warms only intent-targeted routes and selects exactly one item immediately', async () => {
   const nav = await read('components/product-nav.js')
 
   assert.match(nav, /useEffect, useRef, useState/)
@@ -38,7 +38,8 @@ test('dashboard navigation warms routes efficiently and selects exactly one item
   assert.match(nav, /router\.prefetch\(href/)
   assert.match(nav, /onMouseEnter=\{\(\) => warmRoute\(item\.href\)\}/)
   assert.match(nav, /onFocus=\{\(\) => warmRoute\(item\.href\)\}/)
-  assert.match(nav, /connection\?\.saveData/)
+  assert.match(nav, /onPointerDown=\{\(event\) => \{[\s\S]*warmRoute\(item\.href\)/)
+  assert.doesNotMatch(nav, /BACKGROUND_PREFETCH|backgroundWarmupStarted|requestIdleCallback|connection\?\.saveData/)
   assert.match(nav, /const \[selectedHref, setSelectedHref\] = useState\(routeActiveHref\)/)
   assert.match(nav, /const navigationIntentRef = useRef\(null\)/)
   assert.match(nav, /function selectImmediately\(event, href\)[\s\S]*setSelectedHref\(href\)/)
@@ -56,9 +57,9 @@ test('top pills size to their labels and move their highlight before navigation 
     read('components/segment-interaction-bridge.js'),
     read('app/sidebar-interactions.css'),
     read('app/ui-targeted-fixes.css'),
-    read('app/map/page.js'),
-    read('app/plans/page.js'),
-    read('app/membership/page.js'),
+    read('app/(product)/map/page.js'),
+    read('app/(product)/plans/page.js'),
+    read('app/(product)/membership/page.js'),
     read('app/layout.js')
   ])
 
@@ -90,7 +91,7 @@ test('top pills size to their labels and move their highlight before navigation 
 
 test('Saved cards reflow responsively without changing their card content', async () => {
   const [plansPage, targetedStyles] = await Promise.all([
-    read('app/plans/page.js'),
+    read('app/(product)/plans/page.js'),
     read('app/ui-targeted-fixes.css')
   ])
 
@@ -168,19 +169,24 @@ test('Puddle logo toggles a persisted comprehensive dark mode without recoloring
 })
 
 test('dashboard navigation keeps the shell mounted, preserves UI, and shows loading immediately', async () => {
-  const [transition, nav, shell, styles, sidebarStyles, layout] = await Promise.all([
+  const [transition, nav, shell, styles, sidebarStyles, layout, productLayout, productLoading] = await Promise.all([
     read('components/main-content-transition.js'),
     read('components/product-nav.js'),
     read('components/product-shell.js'),
     read('app/performance-loading.css'),
     read('app/sidebar-interactions.css'),
-    read('app/layout.js')
+    read('app/layout.js'),
+    read('app/(product)/layout.js'),
+    read('app/(product)/loading.js')
   ])
 
   assert.match(layout, /import '\.\/performance-loading\.css'/)
   assert.match(layout, /import '\.\/sidebar-interactions\.css'/)
+  assert.match(productLayout, /export default async function ProductLayout/)
+  assert.match(productLayout, /<ProductShell user=\{session\.user\} profile=\{session\.profile\}>\{children\}<\/ProductShell>/)
+  assert.match(productLoading, /puddle-main-transition-loader/)
   assert.match(shell, /import \{ MainContentTransition \} from '\.\/main-content-transition'/)
-  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{children\}<\/MainContentTransition><\/main>/)
+  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{content\}<\/MainContentTransition><\/main>/)
 
   assert.match(transition, /export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'/)
   assert.match(transition, /window\.dispatchEvent\(new Event\(MAIN_CONTENT_LOADING_EVENT\)\)/)

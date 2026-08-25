@@ -57,13 +57,16 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await signInThroughUi(page, account.email, account.password)
   await expect(page).toHaveURL(/\/discover$/)
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
-  for (const name of ['Back', 'Pass', 'Save', 'Star']) await expect(page.getByRole('button', { name })).toBeVisible()
+  const undo = page.getByRole('button', { name: 'Message', exact: true })
+  await expect(undo).toBeVisible()
+  await expect(undo).toBeDisabled()
+  for (const name of ['Pass', 'Save', 'Post']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
 
   if (testInfo.project.name === 'desktop-chromium') {
     const desktopSidebar = page.locator('.figma-dashboard-sidebar')
     await expect(desktopSidebar).toBeVisible()
-    await expect(page.locator('.figma-dashboard-account-menu summary')).toBeVisible()
-    await expect(page.locator('.figma-dashboard-account-menu summary i')).toHaveCount(3)
+    await expect(desktopSidebar.locator('.figma-dashboard-settings-link')).toBeVisible()
+    await expect(page.locator('.figma-dashboard-account-menu summary')).toBeHidden()
     await expect(desktopSidebar.locator('.figma-dashboard-nav-item')).toHaveCount(6)
   } else {
     await expect(page.locator('.figma-dashboard-sidebar')).toBeHidden()
@@ -79,7 +82,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
 
   await page.goto('/map')
   const feedTabs = page.getByTestId('feed-tabs')
-  await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
+  await expect(feedTabs.getByRole('link', { name: 'Posts', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
   await assertFeedStructure(page)
   await assertRouteHealth(page)
@@ -146,14 +149,18 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
 
   await page.goto('/account')
   await expect(page.locator('.figma-settings-window')).toBeVisible()
-  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
+  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await attachRender(page, testInfo, 'settings-default')
-  await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
+  }
   await expect(page.locator('#profile')).toBeVisible()
   await attachRender(page, testInfo, 'settings-profile')
-  await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Billing', exact: true }).click()
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Billing', exact: true }).click()
+  }
   await expect(page.locator('#billing')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Manage billing' })).toHaveAttribute('href', '/membership?view=manage')
+  await expect(page.getByRole('link', { name: 'View plans' })).toHaveAttribute('href', '/membership')
   await assertRouteHealth(page)
 
   await page.goto('/profile')

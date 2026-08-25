@@ -12,7 +12,7 @@ test('map catalogue loading is viewport-bounded through the selected global sear
     read('app/api/map/viewport/route.js'),
     read('components/location-map.js'),
     read('lib/app/location-map-data.js'),
-    read('app/map/page.js')
+    read('app/(product)/map/page.js')
   ])
 
   assert.match(facadeSource, /GLOBAL_LOCATION_SEARCH_BACKEND/)

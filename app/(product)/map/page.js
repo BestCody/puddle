@@ -151,8 +151,11 @@ export default async function LocationMapPage({ searchParams }) {
   const beforePostId = typeof params?.beforeId === 'string' ? params.beforeId : null
 
   return renderProductPage(async (session) => {
-    const mapSnapshot = await getLocationMapSnapshot(session)
-    const feed = view === 'feed' ? await getSocialFeedSnapshot(session, query, { beforeCreatedAt, beforePostId }) : null
+    const mapPromise = getLocationMapSnapshot(session)
+    const feedPromise = view === 'feed'
+      ? getSocialFeedSnapshot(session, query, { beforeCreatedAt, beforePostId })
+      : Promise.resolve(null)
+    const [mapSnapshot, feed] = await Promise.all([mapPromise, feedPromise])
     const mapPoints = selectingForPost
       ? mapSnapshot.points.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
       : mapSnapshot.points

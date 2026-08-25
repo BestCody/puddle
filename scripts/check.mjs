@@ -9,7 +9,7 @@ const read = (path) => readFile(join(root, path), 'utf8')
 const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
   'public/landing.html','public/styles.css','public/landing.css','public/app.js','public/puddle-mark.svg',
-  'app/layout.js','app/discover/page.js','app/map/page.js','app/matches/page.js','app/profile/page.js','app/plans/page.js','app/plans/[slug]/page.js',
+  'app/layout.js','app/(product)/layout.js','app/(product)/loading.js','app/(product)/discover/page.js','app/(product)/map/page.js','app/(product)/matches/page.js','app/(product)/profile/page.js','app/(product)/plans/page.js','app/(product)/plans/[slug]/page.js',
   'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js',
   'components/product-nav.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js','components/google-place-photo-fallback.js',
   'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js',
@@ -121,7 +121,7 @@ for (const marker of ['canonicalStorageKey','media/photos/by-sha256/','actualHas
 }
 if (openPhoto.includes("from('media_objects')")) throw new Error('Canonical B2 photo delivery still depends on Supabase media registration')
 
-const createActions = await read('app/create/actions.js')
+const createActions = await read('app/(product)/create/actions.js')
 if (!createActions.includes("from('location_submissions')")) throw new Error('Place authoring is not isolated to location_submissions')
 if (createActions.includes("from('locations')")) throw new Error('Place authoring still writes the global catalogue table')
 

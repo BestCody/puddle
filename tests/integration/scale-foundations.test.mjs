@@ -7,7 +7,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8
 test('saved, plans, and history use bounded keyset pages instead of lifetime hydration', async () => {
   const [data, page, migration] = await Promise.all([
     read('lib/app/location-plans-data.js'),
-    read('app/plans/page.js'),
+    read('app/(product)/plans/page.js'),
     read('supabase/migrations/10070_location_history_single_photo.sql')
   ])
 

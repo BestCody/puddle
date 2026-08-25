@@ -44,11 +44,14 @@ test('initial Discover renders OpenSearch-served places without a static catalog
   expect(staticRequests).toEqual([])
 })
 
-test('passing and going back works on the OpenSearch-served deck', async ({ page }) => {
+test('passing and undoing works on the OpenSearch-served deck', async ({ page }) => {
   const account = await createSwiper('Global Pass Swiper')
   await openDeck(page, account)
 
   const heading = page.locator('.figma-swipe-card h1')
+  const undo = page.getByRole('button', { name: 'Message', exact: true })
+  await expect(undo).toBeDisabled()
+
   const firstTitle = await heading.innerText()
   expect(fixtureNames).toContain(firstTitle)
 
@@ -56,8 +59,9 @@ test('passing and going back works on the OpenSearch-served deck', async ({ page
   await expect(heading).not.toHaveText(firstTitle)
   const secondTitle = await heading.innerText()
   expect(fixtureNames).toContain(secondTitle)
+  await expect(undo).toBeEnabled()
 
-  await page.getByRole('button', { name: 'Back', exact: true }).click()
+  await undo.click()
   await expect(heading).toHaveText(firstTitle)
 })
 
@@ -66,7 +70,7 @@ test('Discover filters own location, distance, and place categories', async ({ p
 
   await signInThroughUi(page, account.email, account.password, '/account')
   await expect(page.locator('.figma-settings-window')).toBeVisible()
-  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
+  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await expect(page.getByLabel('Search radius')).toHaveCount(0)
   await expect(page.getByLabel('City or town')).toHaveCount(0)
   await expect(page.getByText('What kinds of places do you like?')).toHaveCount(0)

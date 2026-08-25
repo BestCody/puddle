@@ -22,6 +22,7 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       E2E_BASE_URL: http://localhost:3000
+      GLOBAL_LOCATION_SEARCH_BACKEND: opensearch
       GLOBAL_LOCATION_SEARCH_URL: http://127.0.0.1:39200
       GLOBAL_LOCATION_SEARCH_INDEX: e2e-locations-active
     steps:

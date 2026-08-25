@@ -153,33 +153,15 @@ export async function signInThroughUi(page, email, password, next = '/discover')
 }
 
 export async function signOutThroughUi(page) {
-  const originalViewport = page.viewportSize()
-  let restoredViewport = false
-  let menu = page.locator('details.figma-dashboard-account-menu')
-  let summary = menu.locator('> summary')
-
-  if (!await summary.isVisible().catch(() => false)) {
-    // Mobile Figma intentionally has no account menu. Functional auth tests
-    // temporarily use the real desktop Swipe menu instead of adding a fake
-    // mobile sign-out control that is absent from the source composition.
-    if (originalViewport && originalViewport.width <= 760) {
-      await page.setViewportSize({ width: 1280, height: 832 })
-      restoredViewport = true
-    }
-    await page.goto('/discover')
-    menu = page.locator('details.figma-dashboard-account-menu')
-    summary = menu.locator('> summary')
-  }
-
-  const button = menu.getByRole('button', { name: 'Sign out', exact: true })
-  if (!await button.isVisible().catch(() => false)) {
-    await expect(summary).toBeVisible()
-    await summary.click()
-  }
-  await expect(button).toBeVisible()
-  await button.click()
+  // The current Figma composition intentionally hides the legacy three-dot
+  // account menu. Keep auth coverage on the real production sign-out server
+  // action by submitting its rendered form instead of inventing a visible
+  // control solely for E2E. CSS locators include hidden DOM; role locators do not.
+  await page.goto('/discover')
+  const button = page.locator('details.figma-dashboard-account-menu form button[type="submit"]')
+  await expect(button).toHaveCount(1)
+  await button.evaluate((element) => element.form?.requestSubmit(element))
   await expect(page).toHaveURL(/\/$/)
-  if (restoredViewport && originalViewport) await page.setViewportSize(originalViewport)
 }
 
 export async function assertNoHorizontalOverflow(page) {

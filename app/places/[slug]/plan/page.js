@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { AuthMessage } from '@/components/auth-message'
-import { recordLocationVisit } from '@/app/plans/actions'
+import { recordLocationVisit } from '@/app/(product)/plans/actions'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getGlobalLocationBySlug } from '@/lib/app/global-location-search'
 
