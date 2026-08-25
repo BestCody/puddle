@@ -18,41 +18,19 @@ async function loadDashboardBootstrap(user, profile) {
   let unreadNotifications = 0
   let passActive = false
   const bootstrapStartedAt = latencyStart()
-  let bootstrapMode = 'rpc'
 
-  try {
-    const client = await createClient()
-    const { data, error } = await client.rpc('dashboard_bootstrap_v1')
-    if (error) throw error
-    showAdmin = Boolean(data?.show_admin)
-    unreadNotifications = Number(data?.unread_notifications || 0)
-    passActive = Boolean(data?.pass_active)
-  } catch {
-    bootstrapMode = 'parallel_fallback'
-    try {
-      const client = await createClient()
-      const adminPromise = knownPrivileged
-        ? Promise.resolve({ data: { allowed: true }, error: null })
-        : client.rpc('privileged_access_v1', { required_roles: [] })
-      const notificationPromise = client
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('profile_id', user.id)
-        .is('read_at', null)
-      const passPromise = client.rpc('puddle_tinder_active_v1')
-      const [adminResult, notificationResult, passResult] = await Promise.all([
-        adminPromise,
-        notificationPromise,
-        passPromise
-      ])
-      showAdmin = knownPrivileged || Boolean(adminResult?.data?.allowed)
-      unreadNotifications = Number(notificationResult?.count || 0)
-      passActive = Boolean(passResult?.data)
-    } catch {}
-  }
+  // No fallback path: the bootstrap RPC is the single source. If it fails the
+  // error propagates so the failure is visible instead of silently degrading
+  // into a slower three-query mode.
+  const client = await createClient()
+  const { data, error } = await client.rpc('dashboard_bootstrap_v1')
+  if (error) throw error
+  showAdmin = Boolean(data?.show_admin)
+  unreadNotifications = Number(data?.unread_notifications || 0)
+  passActive = Boolean(data?.pass_active)
 
   const bootstrapMs = elapsedMs(bootstrapStartedAt)
-  recordServerLatency('dashboard_bootstrap', bootstrapMs, SERVER_LATENCY_BUDGET_MS.dashboardBootstrap, { mode: bootstrapMode })
+  recordServerLatency('dashboard_bootstrap', bootstrapMs, SERVER_LATENCY_BUDGET_MS.dashboardBootstrap, { mode: 'rpc' })
   return { showAdmin, unreadNotifications, passActive }
 }
 

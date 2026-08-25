@@ -100,12 +100,7 @@ test('global discovery failures are isolated from the relational database', asyn
   const discovery = await read('lib/app/discovery.js')
   const env = await read('.env.example')
 
-  assert.match(discovery, /FAILURE_THRESHOLD = 3/)
-  assert.match(discovery, /CIRCUIT_COOLDOWN_MS = 60_000/)
-  assert.match(discovery, /global-location-stale-cache/)
-  assert.match(discovery, /global-location-degraded/)
-  assert.match(discovery, /markCached/)
-  assert.match(discovery, /return emptyDegradedFeed\(session, filters, reason\)/)
+  assert.doesNotMatch(discovery, /FAILURE_THRESHOLD|CIRCUIT_COOLDOWN_MS|global-location-stale-cache|global-location-degraded|emptyDegradedFeed|markCached/)
   assert.match(discovery, /getGlobalDiscoveryFeed/)
   assert.doesNotMatch(discovery, /getRelationalDiscoveryFeed|discovery-relational|from\(['"]locations['"]\)/)
 

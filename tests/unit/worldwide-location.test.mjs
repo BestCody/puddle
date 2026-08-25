@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import { normalizeGeocodingResult } from '../../lib/app/geocoding.js'
 import { convertJsonSequenceToJsonLines, normalizeJsonSequenceLine } from '../../lib/app/json-sequence.js'
-import { buildGlobalLocationSearchBody, normalizeGlobalLocationViewport } from '../../lib/app/global-location-search.js'
+import { normalizeGlobalLocationViewport } from '../../lib/app/global-location-search.js'
 import { profileLocationFromForm } from '../../lib/app/profile-location.js'
 
 test('normalizes a worldwide geocoding result', () => {
@@ -81,20 +81,6 @@ test('streams and combines GeoJSON text sequences into JSON Lines', async () => 
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
-})
-
-test('builds a worldwide OpenSearch query around a non-North-American city', () => {
-  const body = buildGlobalLocationSearchBody({
-    latitude: 35.6762,
-    longitude: 139.6503,
-    distanceKm: 25,
-    filters: { category: 'cafe' },
-    candidateLimit: 20
-  })
-  const filters = body.query.function_score.query.bool.filter
-  assert.ok(filters.some((entry) => entry.geo_distance?.location?.lat === 35.6762 && entry.geo_distance?.location?.lon === 139.6503))
-  assert.ok(filters.some((entry) => entry.term?.category === 'cafe'))
-  assert.equal(body.size, 20)
 })
 
 test('accepts a viewport that crosses the international date line', () => {

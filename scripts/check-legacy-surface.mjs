@@ -109,12 +109,15 @@ for (const stale of [
 ]) {
   if (readme.includes(stale)) throw new Error(`README restored stale architecture statement: ${stale}`)
 }
-for (const required of ['OpenSearch `locations-active`','/api/open-photo/<sha256>','docs/system-architecture.md']) {
+for (const required of ['B2-only global location serving','/api/open-photo/<sha256>','docs/system-architecture.md']) {
   if (!readme.includes(required)) throw new Error(`README is missing canonical architecture marker: ${required}`)
+for (const retired of ['OpenSearch `locations-active`','opensearch-location-search.js','GLOBAL_LOCATION_SEARCH_BACKEND']) {
+  if (readme.includes(retired)) throw new Error(`README restored retired OpenSearch architecture: ${retired}`)
+}
 }
 
 const architecture = await read('docs/system-architecture.md')
-for (const required of ['OpenSearch failures do not silently fail over to Postgres','Supabase Storage is not an approved open-photo byte store']) {
+for (const required of ['B2 serving failures fail closed and never fall back to Postgres','Supabase Storage is not an approved open-photo byte store']) {
   if (!architecture.includes(required)) throw new Error(`System architecture is missing invariant: ${required}`)
 }
 

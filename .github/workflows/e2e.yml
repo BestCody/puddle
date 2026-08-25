@@ -22,9 +22,6 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       E2E_BASE_URL: http://localhost:3000
-      GLOBAL_LOCATION_SEARCH_BACKEND: opensearch
-      GLOBAL_LOCATION_SEARCH_URL: http://127.0.0.1:39200
-      GLOBAL_LOCATION_SEARCH_INDEX: e2e-locations-active
     steps:
       - uses: actions/checkout@v6
       - name: Publish E2E pending status
@@ -91,21 +88,7 @@ jobs:
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> "$GITHUB_ENV"
           echo "MAILPIT_URL=$INBUCKET_URL" >> "$GITHUB_ENV"
       - name: Run current product browser tests
-        run: |
-          node tests/e2e/global-location-search-stub.mjs > /tmp/puddle-e2e-opensearch.log 2>&1 &
-          search_pid=$!
-          trap 'kill "$search_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:39200/health >/dev/null; then
-              break
-            fi
-            if [ "$attempt" = 30 ]; then
-              cat /tmp/puddle-e2e-opensearch.log
-              exit 1
-            fi
-            sleep 0.2
-          done
-          npm run e2e:test
+        run: npm run e2e:test
       - name: Upload browser diagnostics
         if: always()
         uses: actions/upload-artifact@v7

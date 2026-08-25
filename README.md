@@ -17,8 +17,7 @@ location preferences
 Current capabilities include:
 
 - Supabase authentication, onboarding, account settings, relational product data, and social state
-- global location discovery through OpenSearch when `GLOBAL_LOCATION_SEARCH_ENABLED=true`
-- relational Supabase discovery as an explicit serving mode when global serving is disabled; OpenSearch incidents never silently fail over into Postgres
+- global location discovery served exclusively from immutable Backblaze B2 search shards (packed planner + compact text projection + prefix postings)
 - image-rich place cards with licensed open photos and Google Places fallback
 - Pass, Save, Perfect Pick, details, filters, undo, and continuous nearby-place refill
 - Friends, friend requests, direct messages, rich shared-place messages, and places in common
@@ -26,7 +25,7 @@ Current capabilities include:
 - optional Tinder-tier worldwide adult connections under the separate global-matches flow
 - location contribution, editing, media moderation, reports, and security administration
 
-The active browser path does not depend on the retired shared pair/group deck system, static catalogue, R2 media runtime, or Supabase Storage for canonical open-location photos.
+The active browser path does not depend on the retired shared pair/group deck system, static catalogue, R2 media runtime, OpenSearch, or Supabase Storage for canonical open-location photos.
 
 ## Production architecture
 
@@ -37,15 +36,16 @@ Browser
     → product APIs and pages
 
 Discovery
-  → global mode: OpenSearch `locations-active`
-  → relational mode: Supabase/Postgres
+  → B2-only global location serving: data/search/active.json
+    → packed planner routing tiles → immutable geo packs
+    → compact text projection cores/details + prefix postings
+  → serving failures fail closed; no Postgres/OpenSearch fallback
 
 Global data build
   → Overture + Foursquare bulk sources
   → normalized/resolved Parquet in Backblaze B2
   → existing Puddle metadata/photo overlays
-  → validated blue/green OpenSearch index
-  → atomic `locations-active` alias switch
+  → packed planner manifests with validated hash ledgers
 
 Approved open-location photos
   → Wikimedia / Mapillary / KartaView
