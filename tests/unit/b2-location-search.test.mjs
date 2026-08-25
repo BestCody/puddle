@@ -15,6 +15,7 @@ import {
 } from '../../lib/app/location-search-shards.js'
 import { clearB2SearchAuthorizationCache } from '../../lib/app/b2-search-object-store.js'
 import { clearTextProjectionCaches } from '../../lib/app/b2-text-search-projection.js'
+import { queryPrefixCodes } from '../../lib/app/b2-text-postings.js'
 import { normalizeSearchText, prepareTextQuery, scoreTextMatch } from '../../lib/app/location-search-ranking.js'
 
 const env = {
@@ -162,6 +163,13 @@ function reset() {
 test('bounded fuzzy scoring accepts a two-edit place-name typo', () => {
   const score = scoreTextMatch(tower, prepareTextQuery('cn towr'))
   assert.ok(score > 0)
+})
+
+test('postings prefix codes index exactly three characters per token', () => {
+  const codes = queryPrefixCodes(prepareTextQuery('JOE & THE JUICE'))
+  // joe=12172, the=24880, jui=12392 under the builder's 36-char alphabet.
+  assert.deepEqual(codes, [12172, 24880, 12392])
+  assert.equal(queryPrefixCodes(prepareTextQuery('jo')), null)
 })
 
 test('directory routing handles date-line viewports without scanning the world', () => {
