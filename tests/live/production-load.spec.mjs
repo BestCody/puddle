@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 const BENCHMARK_ORIGIN = 'https://puddle-gch8ozxsf-bestcodys-projects.vercel.app'
+const ACCESS_URL = 'https://puddle-gch8ozxsf-bestcodys-projects.vercel.app/?_vercel_share=j2stenNAk5Q8oEQc4fNVmYwqqjrzolch'
 
 const TARGETS = [
   { label: 'Discover', path: '/map' },
@@ -34,6 +35,8 @@ async function createDisposableAccount(page) {
   const email = `puddle-nav-bench-old-${suffix}@example.com`
   const password = `NavBench-${suffix}-A9!`
   const username = `nav_${suffix}`.slice(0, 24)
+
+  await page.goto(ACCESS_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 })
 
   await page.route('**/api/location/search?**', async (route) => {
     await route.fulfill({
