@@ -57,7 +57,7 @@ function SavedCard({ item, session, active }) {
   const morphable = active === 'saved' && Boolean(item.slug)
 
   const photo = morphable
-    ? <a className={styles.placePhoto} href={detail} data-saved-morph-link style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
+    ? <a className={styles.placePhoto} href={detail} data-saved-morph-link data-saved-morph-photo style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
         {!image ? <span aria-hidden="true">Puddle</span> : null}
         {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
       </a>
@@ -78,11 +78,12 @@ function SavedCard({ item, session, active }) {
     data-saved-morph-slug={morphable ? item.slug : undefined}
     data-saved-morph-title={morphable ? item.title : undefined}
     data-saved-morph-meta-text={morphable ? primaryMeta : undefined}
+    data-saved-morph-image={morphable && image ? image : undefined}
   >
     {photo}
     <div className={styles.placeCopy}>
-      <h2>{title}</h2>
-      <div className={styles.placeMeta}><small>{primaryMeta}</small>{secondaryMeta ? <span>{secondaryMeta}</span> : null}</div>
+      <h2 data-saved-morph-title={morphable ? '' : undefined}>{title}</h2>
+      <div className={styles.placeMeta} data-saved-morph-meta={morphable ? '' : undefined}><small>{primaryMeta}</small>{secondaryMeta ? <span>{secondaryMeta}</span> : null}</div>
     </div>
   </article>
 }
