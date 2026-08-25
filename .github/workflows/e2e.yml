@@ -115,7 +115,13 @@ jobs:
           if [ "$code" -ne 0 ]; then
             # Surface failing spec/test titles as annotations so failures are
             # diagnosable without authenticated log access.
-            grep -E "✖|›.*spec\.mjs" "$logfile" | tail -n 12 | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
+            grep -E "✖|✘|›.*spec\.mjs" "$logfile" | tail -n 10 | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
+            # Startup/timeout-style failures print no ✖ lines; dump the tail so
+            # the root cause (webServer, build, or boot crash) is still visible.
+            if ! grep -qE "✖|✘" "$logfile"; then
+              echo "::error::no test failures recorded; dumping tail (startup/webServer failure?)"
+              tail -n 20 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
+            fi
             exit "$code"
           fi
       - name: Upload browser diagnostics
