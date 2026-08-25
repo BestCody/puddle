@@ -87,7 +87,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
 
   await openDesktop(page, '/map')
   const feedTabs = page.getByTestId('feed-tabs')
-  await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
+  await expect(feedTabs.getByRole('link', { name: 'Posts', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
   const feedSearch = page.getByTestId('feed-search')
   await expect(feedSearch).toBeVisible()
