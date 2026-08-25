@@ -25,13 +25,12 @@ jobs:
     timeout-minutes: 360
     env:
       PYTHONUNBUFFERED: '1'
-      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
-      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
-      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME }}
-      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
-      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: puddle-assets
+      B2_DATA_S3_ENDPOINT: https://s3.us-east-005.backblazeb2.com
+      B2_DATA_S3_REGION: us-east-005
       B2_DATA_PREFIX: data
-      GLOBAL_LOCATION_SEARCH_INDEX: locations-active
       GLOBAL_LOCATION_MAX_RADIUS_KM: '100'
       GLOBAL_LOCATION_MAX_DIRECTORY_TILES: '64'
       GLOBAL_LOCATION_MAX_SHARDS: '128'
@@ -123,4 +122,3 @@ jobs:
           GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v2/${{ steps.active.outputs.planner_id }}/candidate.json
         shell: bash
         run: node scripts/global-data/report_search_serving_modes.mjs
-
