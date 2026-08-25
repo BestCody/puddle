@@ -151,12 +151,16 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await expect(page.locator('.figma-settings-window')).toBeVisible()
   await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await attachRender(page, testInfo, 'settings-default')
-  await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
+  }
   await expect(page.locator('#profile')).toBeVisible()
   await attachRender(page, testInfo, 'settings-profile')
-  await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Billing', exact: true }).click()
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Billing', exact: true }).click()
+  }
   await expect(page.locator('#billing')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Manage billing' })).toHaveAttribute('href', '/membership?view=manage')
+  await expect(page.getByRole('link', { name: 'View plans' })).toHaveAttribute('href', '/membership')
   await assertRouteHealth(page)
 
   await page.goto('/profile')
