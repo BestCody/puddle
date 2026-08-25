@@ -28,9 +28,9 @@ jobs:
       GLOBAL_LOCATION_MAX_DECODED_OBJECT_BYTES: '67108864'
       GLOBAL_LOCATION_MAX_COMPRESSED_BYTES: '16777216'
       GLOBAL_LOCATION_MAX_CANDIDATES: '150000'
-      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
-      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
-      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME }}
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
