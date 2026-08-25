@@ -82,7 +82,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
 
   await page.goto('/map')
   const feedTabs = page.getByTestId('feed-tabs')
-  await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
+  await expect(feedTabs.getByRole('link', { name: 'Posts', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
   await assertFeedStructure(page)
   await assertRouteHealth(page)
