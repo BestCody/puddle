@@ -71,7 +71,7 @@ test('Pass saver listing is keyset-paged and its headline count is incrementally
   assert.match(bounds, /from public\.location_save_counts c/)
 })
 
-test('social feed uses exact keyset pages, indexed top-N comments, and lazy friend hydration', async () => {
+test('social feed uses bounded RLS keyset pages, indexed comment previews, and lazy friend hydration', async () => {
   const feed = await read('lib/app/social-feed-data.js')
   const page = await read('app/(product)/map/page.js')
   const share = await read('app/(product)/map/feed-share-menu.js')
@@ -80,10 +80,13 @@ test('social feed uses exact keyset pages, indexed top-N comments, and lazy frie
   const bounds = await read('supabase/migrations/10069_scalability_work_bounds.sql')
 
   assert.match(feed, /DEFAULT_PAGE_SIZE = 25/)
-  assert.match(feed, /social_feed_post_ids_v2/)
-  assert.match(feed, /social_comment_previews_v2/)
-  assert.match(feed, /per_post: 3/)
-  assert.doesNotMatch(feed, /social_friends_v1/)
+  assert.match(feed, /\.from\('social_posts'\)[\s\S]*\.select\('id,created_at'\)/)
+  assert.match(feed, /\.order\('created_at', \{ ascending: false \}\)[\s\S]*\.order\('id', \{ ascending: false \}\)/)
+  assert.match(feed, /pageSize \+ 1/)
+  assert.match(feed, /\.from\('social_comments'\)/)
+  assert.match(feed, /Math\.min\(Math\.max\(postIds\.length \* 6, 18\), 150\)/)
+  assert.match(feed, /if \(list\.length < 3\)/)
+  assert.doesNotMatch(feed, /social_feed_post_ids_v2|social_comment_previews_v2|social_friends_v1/)
   assert.match(feed, /nextBeforeCreatedAt/)
   assert.match(feed, /nextBeforePostId/)
   assert.match(page, /More puddles/)
