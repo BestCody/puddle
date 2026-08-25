@@ -21,16 +21,22 @@ async function expectCenteredDashboardCanvas(page) {
     return {
       stageLeft: stage.left,
       stageRight: stage.right,
+      stageWidth: stage.width,
       mainLeft: main.left,
       mainRight: main.right,
-      mainWidth: main.width
+      mainWidth: main.width,
+      isSwipe: Boolean(document.querySelector('.figma-swipe-screen'))
     }
   })
   expect(geometry).not.toBeNull()
   const leftGutter = geometry.mainLeft - geometry.stageLeft
   const rightGutter = geometry.stageRight - geometry.mainRight
   expect(Math.abs(leftGutter - rightGutter)).toBeLessThanOrEqual(2)
-  expect(geometry.mainWidth).toBeLessThanOrEqual(1001)
+  if (geometry.isSwipe) {
+    expect(Math.abs(geometry.mainWidth - geometry.stageWidth)).toBeLessThanOrEqual(2)
+  } else {
+    expect(geometry.mainWidth).toBeLessThanOrEqual(1001)
+  }
 }
 
 test('authenticated desktop dashboard keeps navigation and core product behavior usable', async ({ page }, testInfo) => {
@@ -190,8 +196,9 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await page.getByRole('link', { name: 'Close settings' }).click()
   await expect(page).toHaveURL(/\/profile$/)
 
-  /* Wide monitors should add balanced whitespace around the authored 1000px
-     Figma canvas instead of pinning the dashboard composition to the sidebar. */
+  /* Wide monitors keep dashboard canvases centered. Swipe intentionally uses
+     the full right-side stage; other authored dashboard canvases retain the
+     older ~1000px cap. */
   await page.setViewportSize({ width: 1600, height: 900 })
   for (const route of ['/discover', '/map', '/plans', '/matches', '/membership', '/profile', '/account', '/create/post']) {
     await page.goto(route)
