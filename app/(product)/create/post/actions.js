@@ -11,6 +11,10 @@ function text(formData, key, max) {
   return String(formData.get(key) || '').trim().slice(0, max)
 }
 
+function feedMessage(kind, message, extra = {}) {
+  return pathWithMessage('/map', kind, message, { compose: '1', ...extra })
+}
+
 export async function createPuddlePost(formData) {
   const session = await requireUser({ onboarding: true })
   const title = text(formData, 'title', 80)
@@ -18,13 +22,13 @@ export async function createPuddlePost(formData) {
   const locationId = text(formData, 'location_id', 80)
   const visibility = text(formData, 'visibility', 20) === 'friends' ? 'friends' : 'public'
 
-  if (!title) redirect(pathWithMessage('/create/post', 'error', 'Add a title before publishing.'))
-  if (!locationId) redirect(pathWithMessage('/create/post', 'error', 'Choose a saved place for this puddle.'))
+  if (!title) redirect(feedMessage('error', 'Add a title before publishing.'))
+  if (!locationId) redirect(feedMessage('error', 'Choose a saved place for this puddle.'))
 
   try {
     await ensureGlobalLocationReferences(createAdminClient(), [locationId])
   } catch {
-    redirect(pathWithMessage('/create/post', 'error', 'That place is not available to post.'))
+    redirect(feedMessage('error', 'That place is not available to post.', { location: locationId }))
   }
 
   const { error } = await session.supabase.from('social_posts').insert({
@@ -34,7 +38,7 @@ export async function createPuddlePost(formData) {
     body,
     visibility
   })
-  if (error) redirect(pathWithMessage(`/create/post?location=${encodeURIComponent(locationId)}`, 'error', 'We could not publish that puddle. Please try again.'))
+  if (error) redirect(feedMessage('error', 'We could not publish that puddle. Please try again.', { location: locationId }))
 
   revalidatePath('/map')
   revalidatePath('/profile')
