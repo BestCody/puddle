@@ -47,7 +47,7 @@ test('private B2 stays behind same-origin open-photo URLs', async () => {
   const nextConfig = await read('next.config.mjs')
   const deliveryUrl = await read('lib/media/open-photo-url.js')
   const openPhotoRoute = await read('app/api/open-photo/[sha256]/route.js')
-  const globalDoc = await read('scripts/global-data/index_opensearch.py')
+  const globalDoc = await read('scripts/global-data/build_b2_search_index.py')
 
   assert.doesNotMatch(nextConfig, /B2_MEDIA_PUBLIC_BASE_URL|B2_DOWNLOAD_BASE_URL|media\.puddle\.app/)
   assert.match(deliveryUrl, /\/api\/open-photo\//)

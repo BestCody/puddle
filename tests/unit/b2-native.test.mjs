@@ -20,26 +20,41 @@ test('B2 config requires credentials and a bucket without a public delivery URL'
   assert.equal(isB2Configured('B2_DATA', env), false)
 })
 
-test('B2 data and media configs retain historical credential-name fallbacks during scoped-key rollout', () => {
+test('B2 data and media configs ignore legacy generic credential names', () => {
   const env = {
     B2_KEY_ID: 'legacy-id',
     B2_APPLICATION_KEY: 'legacy-secret',
+    B2_BUCKET_ID: 'legacy-bucket-id',
     B2_BUCKET: 'puddle-assets'
   }
 
   assert.deepEqual(b2ConfigFromEnv('B2_DATA', env), {
-    keyId: 'legacy-id', applicationKey: 'legacy-secret', bucketId: '', bucketName: 'puddle-assets'
+    keyId: '', applicationKey: '', bucketId: '', bucketName: ''
   })
   assert.deepEqual(b2ConfigFromEnv('B2_MEDIA', env), {
-    keyId: 'legacy-id', applicationKey: 'legacy-secret', bucketId: '', bucketName: 'puddle-assets'
+    keyId: '', applicationKey: '', bucketId: '', bucketName: ''
   })
-  assert.equal(isB2Configured('B2_DATA', env), true)
-  assert.equal(isB2Configured('B2_MEDIA', env), true)
+  assert.equal(isB2Configured('B2_DATA', env), false)
+  assert.equal(isB2Configured('B2_MEDIA', env), false)
 })
 
-test('scoped B2 variables take precedence over credential-name fallbacks', () => {
+test('B2 config ignores the scoped KEY_ID compatibility alias', () => {
+  const env = {
+    B2_DATA_KEY_ID: 'legacy-scoped-id',
+    B2_DATA_APPLICATION_KEY: 'data-secret',
+    B2_DATA_BUCKET_NAME: 'puddle-data'
+  }
+
+  assert.deepEqual(b2ConfigFromEnv('B2_DATA', env), {
+    keyId: '', applicationKey: 'data-secret', bucketId: '', bucketName: 'puddle-data'
+  })
+  assert.equal(isB2Configured('B2_DATA', env), false)
+})
+
+test('B2 config reads only canonical scoped variables', () => {
   const env = {
     B2_KEY_ID: 'legacy-id', B2_APPLICATION_KEY: 'legacy-secret', B2_BUCKET: 'puddle-assets',
+    B2_DATA_KEY_ID: 'legacy-scoped-id',
     B2_DATA_APPLICATION_KEY_ID: 'data-id', B2_DATA_APPLICATION_KEY: 'data-secret', B2_DATA_BUCKET_NAME: 'puddle-data'
   }
   const config = b2ConfigFromEnv('B2_DATA', env)

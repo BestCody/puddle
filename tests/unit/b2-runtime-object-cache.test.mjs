@@ -16,8 +16,10 @@ const env = {
   GLOBAL_LOCATION_RUNTIME_CACHE_MAX_RAW_BYTES: '1400000'
 }
 
-test('regional B2 cache is limited to the real production fetch path', () => {
+test('regional B2 cache defaults on for the real production fetch path', () => {
   assert.equal(b2RuntimeObjectCacheEnabled({ env, fetchFn: globalThis.fetch }), true)
+  const { GLOBAL_LOCATION_RUNTIME_CACHE: _flag, ...defaultEnv } = env
+  assert.equal(b2RuntimeObjectCacheEnabled({ env: defaultEnv, fetchFn: globalThis.fetch }), true)
   assert.equal(b2RuntimeObjectCacheEnabled({ env: { ...env, VERCEL_ENV: 'preview' }, fetchFn: globalThis.fetch }), false)
   assert.equal(b2RuntimeObjectCacheEnabled({ env, fetchFn: async () => new Response() }), false)
   assert.equal(b2RuntimeObjectCacheEnabled({ env: { ...env, GLOBAL_LOCATION_RUNTIME_CACHE: '0' }, fetchFn: globalThis.fetch }), false)

@@ -3,6 +3,7 @@ import { AuthMessage } from '@/components/auth-message'
 import { InstantSegment } from '@/components/instant-segment'
 import { SavedSearchOverlay } from '@/components/discover-search-overlay'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
+import { SavedLightweightGrid } from '@/components/saved-lightweight-grid'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import styles from './Plans.module.css'
@@ -121,16 +122,18 @@ export default async function PlansPage({ searchParams }) {
   const requestedCategory = typeof params?.category === 'string' ? params.category : 'all'
   const query = typeof params?.q === 'string' ? params.q.trim() : ''
   const cursor = typeof params?.cursor === 'string' ? params.cursor : null
+  const lightweightSaved = active === 'saved' && requestedCategory === 'all' && !query
 
   return renderProductPage(async (session) => {
     const page = await getLocationPlansPage(session, {
       tab: active,
       cursor,
       category: active === 'saved' ? requestedCategory : null,
-      query: active === 'saved' ? query : ''
+      query: active === 'saved' ? query : '',
+      lightweightSaved
     })
     const items = page.items
-    const folders = foldersFor(items)
+    const folders = lightweightSaved ? [] : foldersFor(items)
     const selectedCategory = active === 'saved' ? requestedCategory : 'all'
     const visible = items
 
@@ -156,17 +159,15 @@ export default async function PlansPage({ searchParams }) {
         <SavedCategoryRail folders={folders} selectedCategory={selectedCategory} />
       </div> : <div className={styles.planBand}><h1 className={styles.planHeading}>Plans</h1></div>}
 
-      {visible.length ? <section className={styles.placeGrid} aria-label={active === 'saved' ? 'Saved places' : active === 'planned' ? 'Plans' : 'History'} data-testid="saved-grid">
-        {visible.map((item) => <SavedCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}
-      </section> : <div className={styles.empty} data-testid="saved-empty"><strong>{active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong><Link href="/discover">Start swiping</Link></div>}
+      {visible.length ? lightweightSaved
+        ? <SavedLightweightGrid items={visible} className={styles.placeGrid} cardClassName={styles.placeCard} photoClassName={styles.placePhoto} copyClassName={styles.placeCopy} metaClassName={styles.placeMeta} perfectPickClassName={styles.perfectPick} />
+        : <section className={styles.placeGrid} aria-label={active === 'saved' ? 'Saved places' : active === 'planned' ? 'Plans' : 'History'} data-testid="saved-grid">
+            {visible.map((item) => <SavedCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}
+          </section>
+        : <div className={styles.empty} data-testid="saved-empty"><strong>{active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong><Link href="/discover">Start swiping</Link></div>}
 
       {page.pagination.hasMore ? <div className={styles.historyLink}>
-        <Link data-testid="saved-next-page" href={nextPageHref({
-          active,
-          category: selectedCategory,
-          query,
-          cursor: page.pagination.nextCursor
-        })}>{active === 'past' ? 'Older history' : active === 'planned' ? 'More plans' : 'More saved places'}</Link>
+        <Link data-testid="saved-next-page" href={nextPageHref({ active, category: selectedCategory, query, cursor: page.pagination.nextCursor })}>{active === 'past' ? 'Older history' : active === 'planned' ? 'More plans' : 'More saved places'}</Link>
       </div> : null}
 
       <footer className={styles.historyLink}>{active === 'past' ? <Link href="/plans">Back to Saved</Link> : <Link href="/plans?tab=past">History</Link>}</footer>

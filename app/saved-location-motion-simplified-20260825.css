@@ -1,0 +1,63 @@
+/* Keep Saved expansion readable: one quick, calm transition instead of a springy multi-part effect. */
+::view-transition-group(*) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(.2,.72,.2,1);
+}
+
+.saved-inline-detail-layer {
+  animation: saved-detail-layer-in 160ms ease-out both;
+}
+
+.saved-inline-detail-card {
+  animation: saved-detail-card-in 220ms cubic-bezier(.2,.72,.2,1) both;
+}
+
+.saved-lightweight-title,
+.saved-lightweight-meta {
+  display: inline-block;
+  animation: saved-lightweight-text-in 220ms ease-out both;
+  animation-delay: var(--saved-title-delay, 0ms);
+}
+
+.saved-lightweight-title-skeleton,
+.saved-lightweight-meta-skeleton {
+  display: inline-block;
+  border-radius: 999px;
+  background: rgba(120,120,120,.14);
+}
+
+.saved-lightweight-title-skeleton {
+  width: min(9.5rem, 72%);
+  height: .88em;
+}
+
+.saved-lightweight-meta-skeleton {
+  width: 5.8rem;
+  height: .72em;
+}
+
+@keyframes saved-detail-layer-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes saved-detail-card-in {
+  from { opacity: .94; transform: scale(.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes saved-lightweight-text-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  .saved-inline-detail-layer,
+  .saved-inline-detail-card,
+  .saved-lightweight-title,
+  .saved-lightweight-meta {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}

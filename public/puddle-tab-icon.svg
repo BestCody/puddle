@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Puddle smile icon">
+<!-- Redeploy trigger: 2026-08-25 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="30 22 198 198" role="img" aria-label="Puddle smile icon">
   <defs>
     <radialGradient id="soft-blue" cx="48%" cy="86%" r="48%">
       <stop offset="0" stop-color="#bfe8ff" stop-opacity=".9"/>
