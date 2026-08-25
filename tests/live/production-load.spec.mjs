@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+const BENCHMARK_ORIGIN = 'https://puddle-gch8ozxsf-bestcodys-projects.vercel.app'
+
 const TARGETS = [
   { label: 'Discover', path: '/map' },
   { label: 'Saved', path: '/plans' },
@@ -13,7 +15,7 @@ const ROUNDS = 4
 
 async function deleteDisposableAccount(page) {
   try {
-    await page.goto('/account', { waitUntil: 'domcontentloaded', timeout: 30_000 })
+    await page.goto(`${BENCHMARK_ORIGIN}/account`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
     if (!/\/account(?:\?|$)/.test(page.url())) return
     const confirmation = page.getByLabel('Confirmation')
     if (!(await confirmation.isVisible().catch(() => false))) return
@@ -29,7 +31,7 @@ async function deleteDisposableAccount(page) {
 
 async function createDisposableAccount(page) {
   const suffix = `${Date.now().toString(36)}${crypto.randomUUID().replaceAll('-', '').slice(0, 8)}`
-  const email = `puddle-nav-bench-${suffix}@example.com`
+  const email = `puddle-nav-bench-old-${suffix}@example.com`
   const password = `NavBench-${suffix}-A9!`
   const username = `nav_${suffix}`.slice(0, 24)
 
@@ -53,8 +55,8 @@ async function createDisposableAccount(page) {
     })
   })
 
-  await page.goto('/signup')
-  await page.getByLabel('Display name').fill('Puddle Navigation Benchmark')
+  await page.goto(`${BENCHMARK_ORIGIN}/signup`)
+  await page.getByLabel('Display name').fill('Puddle Navigation Benchmark Old')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('checkbox', { name: /confirm the information I/i }).check()
@@ -136,6 +138,7 @@ test('measure authenticated production client navigation latency', async ({ page
 
     console.info(JSON.stringify({
       event: 'puddle_navigation_benchmark_summary',
+      benchmark_origin: BENCHMARK_ORIGIN,
       rounds: ROUNDS,
       transitions: samples.length,
       url: summarize(urlValues),
