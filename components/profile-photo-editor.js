@@ -1,5 +1,6 @@
 "use client"
 
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -47,6 +48,7 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const shownUrl = preview || savedUrl
+  const safeShownUrl = safeImageUrl(shownUrl)
 
   useEffect(() => {
     if (!preview) setSavedUrl(publicMediaUrl(client, currentPath))
@@ -136,7 +138,7 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
 
   return <div className="profile-photo-editor">
     <span className="social-avatar is-large" style={{ overflow: 'hidden' }}>
-      {shownUrl ? <img src={safeImageUrl(shownUrl) || undefined} alt="Profile preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
+      {safeShownUrl ? <Image src={safeShownUrl} alt="Profile preview" width={96} height={96} unoptimized={safeShownUrl.startsWith('blob:')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
     </span>
     <div>
       <div className="profile-photo-actions">
