@@ -102,6 +102,8 @@ jobs:
             fi
             if [ "$attempt" = 30 ]; then
               cat /tmp/puddle-e2e-b2-stub.log
+              echo "::error::B2 emulator failed health check; log tail:"
+              tail -n 15 /tmp/puddle-e2e-b2-stub.log | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
               exit 1
             fi
             sleep 0.2
