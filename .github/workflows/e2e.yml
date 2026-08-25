@@ -106,7 +106,18 @@ jobs:
             fi
             sleep 0.2
           done
-          npm run e2e:test
+          set -o pipefail
+          logfile="$(mktemp)"
+          set +e
+          npm run e2e:test 2>&1 | tee "$logfile"
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            # Surface failing spec/test titles as annotations so failures are
+            # diagnosable without authenticated log access.
+            grep -E "✖|›.*spec\.mjs" "$logfile" | tail -n 12 | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
+            exit "$code"
+          fi
       - name: Upload browser diagnostics
         if: always()
         uses: actions/upload-artifact@v7
