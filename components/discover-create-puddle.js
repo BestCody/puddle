@@ -12,15 +12,27 @@ function placeLabel(point) {
 }
 
 export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle person', points = [] }) {
-  const safePoints = useMemo(() => Array.isArray(points) ? points.filter((point) => point?.id) : [], [points])
+  const initialPoints = useMemo(() => Array.isArray(points) ? points.filter((point) => point?.id) : [], [points])
+  const [savedPoints, setSavedPoints] = useState(initialPoints)
+  const [savedPointsLoaded, setSavedPointsLoaded] = useState(Boolean(initialPoints.length))
+  const [savedPointsLoading, setSavedPointsLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [locationId, setLocationId] = useState(safePoints[0]?.id || '')
+  const [locationId, setLocationId] = useState(initialPoints[0]?.id || '')
   const dockRef = useRef(null)
   const titleRef = useRef(null)
 
   useEffect(() => {
+    if (initialPoints.length) {
+      setSavedPoints(initialPoints)
+      setSavedPointsLoaded(true)
+      setLocationId((current) => current || initialPoints[0]?.id || '')
+    }
+  }, [initialPoints])
+
+  useEffect(() => {
     if (!open) return undefined
 
+    let active = true
     const frame = window.requestAnimationFrame(() => titleRef.current?.focus())
     const closeOutside = (event) => {
       if (!dockRef.current?.contains(event.target)) setOpen(false)
@@ -29,14 +41,36 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       if (event.key === 'Escape') setOpen(false)
     }
 
+    async function loadSavedPoints() {
+      if (savedPointsLoaded || savedPointsLoading) return
+      setSavedPointsLoading(true)
+      try {
+        const response = await fetch('/api/saved-location-options', { cache: 'no-store' })
+        const payload = response.ok ? await response.json() : null
+        if (!active) return
+        const items = Array.isArray(payload?.items) ? payload.items.filter((point) => point?.id) : []
+        setSavedPoints(items)
+        setLocationId((current) => current || items[0]?.id || '')
+      } catch {
+        if (active) setSavedPoints([])
+      } finally {
+        if (active) {
+          setSavedPointsLoaded(true)
+          setSavedPointsLoading(false)
+        }
+      }
+    }
+
+    loadSavedPoints()
     document.addEventListener('pointerdown', closeOutside, true)
     window.addEventListener('keydown', closeOnEscape)
     return () => {
+      active = false
       window.cancelAnimationFrame(frame)
       document.removeEventListener('pointerdown', closeOutside, true)
       window.removeEventListener('keydown', closeOnEscape)
     }
-  }, [open])
+  }, [open, savedPointsLoaded, savedPointsLoading])
 
   return <div
     className={`puddle-discover-create-dock${open ? ' is-open' : ''}`}
@@ -91,11 +125,11 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       <div className="puddle-discover-create-footer">
         <label className="puddle-discover-create-place">
           <span>Saved place</span>
-          <select value={locationId} onChange={(event) => setLocationId(event.target.value)} disabled={!safePoints.length} tabIndex={open ? 0 : -1}>
-            {safePoints.length ? safePoints.map((point) => <option value={point.id} key={point.id}>{point.title} · {placeLabel(point)}</option>) : <option value="">Save a place first</option>}
+          <select value={locationId} onChange={(event) => setLocationId(event.target.value)} disabled={!savedPoints.length} tabIndex={open ? 0 : -1}>
+            {savedPoints.length ? savedPoints.map((point) => <option value={point.id} key={point.id}>{point.title} · {placeLabel(point)}</option>) : <option value="">Save a place first</option>}
           </select>
         </label>
-        {!safePoints.length ? <small>Save a place before publishing a puddle.</small> : null}
+        {!savedPoints.length ? <small>Save a place before publishing a puddle.</small> : null}
       </div>
     </form>
   </div>
