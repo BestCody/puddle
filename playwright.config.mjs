@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const baseURL = process.env.E2E_BASE_URL || 'http://localhost:3000'
 const serverCommand = process.env.CI
-  ? 'npm run build && npm run start -- --hostname localhost'
+  ? 'npm run build && B2_AUTHORIZE_ENDPOINT="$E2E_B2_AUTHORIZE_ENDPOINT" npm run start -- --hostname localhost'
   : 'npm run dev -- --hostname localhost'
 const runtimeEnv = {
   ...process.env,
@@ -10,6 +10,8 @@ const runtimeEnv = {
   NEXT_PUBLIC_GOOGLE_PLACES_UI_KIT_ENABLED: 'true',
   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'e2e-google-browser-key'
 }
+
+delete runtimeEnv.B2_AUTHORIZE_ENDPOINT
 
 export default defineConfig({
   testDir: './tests/e2e',
