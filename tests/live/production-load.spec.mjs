@@ -1,3 +1,4 @@
+// Benchmark trigger only: no production-load behavior changed.
 import { expect, test } from '@playwright/test'
 
 const STAGES = [5, 10, 20]
