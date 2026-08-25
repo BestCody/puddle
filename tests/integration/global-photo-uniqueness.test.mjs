@@ -12,7 +12,6 @@ test('existing B2 photos are reconciled once and retired identities cannot resur
   const materializer = await source('scripts/global-data/materialize_photo_candidates.py')
   const canonicalSearch = await source('scripts/global-data/location_search_common.py')
   const b2Indexer = await source('scripts/global-data/build_b2_search_index.py')
-  const openSearchIndexer = await source('scripts/global-data/index_opensearch.py')
   const registration = await source('supabase/migrations/10079_reconcile_existing_global_photo_claims.sql')
   const retirement = await source('supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql')
 
@@ -46,14 +45,11 @@ test('existing B2 photos are reconciled once and retired identities cannot resur
   assert.match(materializer, /if object_exists\(bootstrap_photo\):/)
   assert.doesNotMatch(materializer, /prefix_exists\(bootstrap_photo\.rsplit/)
 
-  // Search backends must consume one shared canonical projection so photo retirement semantics cannot drift.
+  // B2 serving consumes the shared canonical projection so photo retirement semantics cannot drift.
   assert.match(canonicalSearch, /photo_exclusion_glob/)
   assert.match(canonicalSearch, /photo_union_raw/)
   assert.match(canonicalSearch, /x\.location_id=cast\(p\.location_id AS VARCHAR\)/)
   assert.match(canonicalSearch, /x\.content_hash=lower\(cast\(p\.content_hash AS VARCHAR\)\)/)
   assert.match(b2Indexer, /canonical_query/)
   assert.match(b2Indexer, /document_from_values/)
-  assert.match(openSearchIndexer, /canonical_query/)
-  assert.match(openSearchIndexer, /document_from_values/)
-  assert.doesNotMatch(openSearchIndexer, /CREATE OR REPLACE TEMP VIEW photo_union_raw/)
 })
