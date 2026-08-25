@@ -43,10 +43,12 @@ jobs:
       B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
       B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
       B2_DATA_PREFIX: data
-      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_MEDIA_APPLICATION_KEY_ID }}
-      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_MEDIA_APPLICATION_KEY }}
-      B2_MEDIA_BUCKET_NAME: ${{ vars.B2_MEDIA_BUCKET_NAME }}
-      B2_MEDIA_S3_ENDPOINT: ${{ secrets.B2_MEDIA_S3_ENDPOINT }}
+      # Reuse the existing restricted B2 key for media until separately scoped
+      # media credentials are provisioned.
+      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_MEDIA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_MEDIA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
       B2_MEDIA_OPEN_PHOTO_PREFIX: ${{ vars.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256' }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}

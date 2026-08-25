@@ -1,5 +1,6 @@
--- Keep the private Backblaze B2 media runtime credential encrypted in Supabase Vault.
--- Only service_role can set or read this credential through these RPCs.
+-- Existing media runtime credentials may be restricted by bucket name without
+-- exposing a bucket ID. Keep the bucket ID when supplied, but allow the same
+-- safe name-scoped configuration already supported by the data runtime.
 
 create or replace function public.set_b2_media_runtime_auth(
   p_key_id text,
@@ -55,26 +56,7 @@ begin
 end;
 $$;
 
-create or replace function public.get_b2_media_runtime_auth()
-returns jsonb
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select decrypted_secret::jsonb
-    from vault.decrypted_secrets
-   where name = 'puddle_b2_media_runtime_auth'
-   order by updated_at desc
-   limit 1;
-$$;
-
 revoke all on function public.set_b2_media_runtime_auth(text, text, text, text) from public;
 revoke all on function public.set_b2_media_runtime_auth(text, text, text, text) from anon;
 revoke all on function public.set_b2_media_runtime_auth(text, text, text, text) from authenticated;
 grant execute on function public.set_b2_media_runtime_auth(text, text, text, text) to service_role;
-
-revoke all on function public.get_b2_media_runtime_auth() from public;
-revoke all on function public.get_b2_media_runtime_auth() from anon;
-revoke all on function public.get_b2_media_runtime_auth() from authenticated;
-grant execute on function public.get_b2_media_runtime_auth() to service_role;
