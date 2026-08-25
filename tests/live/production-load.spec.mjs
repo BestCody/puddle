@@ -78,16 +78,21 @@ async function createDisposableAccount(page) {
   await page.getByRole('checkbox', { name: 'Parks & gardens' }).check()
   await page.getByRole('button', { name: 'Build my date deck →' }).click()
   await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 30_000 })
-  return { email, password }
 }
 
-async function signInOldDeployment(page, email, password) {
+async function moveSessionToOldDeployment(page) {
+  const sourceCookies = await page.context().cookies(NEW_ORIGIN)
+  const authCookies = sourceCookies.filter((cookie) => cookie.name.startsWith('sb-'))
+  expect(authCookies.length, 'Supabase auth cookies to clone').toBeGreaterThan(0)
+
   await page.goto(OLD_ACCESS_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-  await page.goto(`${OLD_ORIGIN}/signin?next=%2Fdiscover`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-  await page.getByLabel('Email').first().fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await page.context().addCookies(authCookies.map((cookie) => {
+    const { domain, path, ...rest } = cookie
+    return { ...rest, url: OLD_ORIGIN }
+  }))
+  await page.goto(`${OLD_ORIGIN}/discover`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
   await page.waitForURL((url) => url.origin === OLD_ORIGIN && url.pathname === '/discover', { timeout: 30_000 })
+  await expect(page.getByRole('link', { name: 'Discover', exact: true })).toBeVisible()
 }
 
 async function deleteDisposableAccount(page) {
@@ -148,10 +153,10 @@ test('compare pre-PR and merged authenticated navigation on one production accou
   test.setTimeout(240_000)
   let accountCreated = false
   try {
-    const credentials = await createDisposableAccount(page)
+    await createDisposableAccount(page)
     accountCreated = true
     const current = await measureNavigation(page, NEW_ORIGIN, 'new')
-    await signInOldDeployment(page, credentials.email, credentials.password)
+    await moveSessionToOldDeployment(page)
     const old = await measureNavigation(page, OLD_ORIGIN, 'old')
     console.info(JSON.stringify({
       event: 'puddle_navigation_old_vs_new',
