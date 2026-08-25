@@ -58,7 +58,7 @@ test('global detail serving fails closed instead of falling back to Postgres', a
   assert.doesNotMatch(publicLocation, /from\(['"]locations['"]\)|loadRelationalPublicLocation|useGlobal/)
 })
 
-test('production SLO observations and trace IDs cover Vercel, Supabase, and OpenSearch', async () => {
+test('production SLO observations and trace IDs cover Vercel, Supabase, and B2', async () => {
   const [metrics, discovery, map, instrumentation, docs] = await Promise.all([
     read('lib/performance/server-latency.js'),
     read('app/api/discovery/route.js'),
@@ -71,10 +71,10 @@ test('production SLO observations and trace IDs cover Vercel, Supabase, and Open
   assert.match(metrics, /puddle_slo_observation/)
   assert.match(metrics, /createTraceId/)
   assert.match(discovery, /x-puddle-trace-id/)
-  assert.match(discovery, /service: 'opensearch'/)
+  assert.match(discovery, /service: 'b2'/)
   assert.match(discovery, /service: 'supabase'/)
   assert.match(map, /x-puddle-trace-id/)
-  assert.match(map, /service: 'opensearch'/)
+  assert.match(map, /service: 'b2'/)
   assert.match(instrumentation, /onRequestError/)
   assert.match(docs, /Request SLOs/)
   assert.match(docs, /Dependency SLOs/)

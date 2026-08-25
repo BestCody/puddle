@@ -15,7 +15,7 @@ const required = [
   'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js',
   'lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/app/location-moderation-overlay.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
   'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/location_search_common.py','scripts/global-data/build_b2_search_index.py','scripts/global-data/validate_b2_search_index.py','scripts/global-data/index_opensearch.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/materialize_photo_candidates.py',
-  '.github/workflows/global-location-data.yml','.github/workflows/b2-location-search-smoke.yml','.github/workflows/location-search-parity.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
+  '.github/workflows/global-location-data.yml','.github/workflows/b2-location-search-smoke.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/global-kartaview-enrichment.yml',
   'supabase/migrations/20260818204500_lazy_location_refs_cutover.sql','supabase/migrations/20260818204600_location_relational_overlays.sql','supabase/migrations/20260818204700_opensearch_heatmap_and_actions.sql','supabase/migrations/20260818204800_remove_remaining_location_catalogue_coupling.sql',
   'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs'
 ]
@@ -43,8 +43,8 @@ for (const path of removed) {
 }
 
 const syntaxFiles = [
-  'next.config.mjs','proxy.js','instrumentation.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/opensearch-location-search.js','lib/app/global-location-reference.js','lib/app/location-moderation-overlay.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
-  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs','scripts/global-data/compare_location_search_backends.mjs',
+  'next.config.mjs','proxy.js','instrumentation.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js','lib/app/location-moderation-overlay.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs',
   'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
@@ -62,10 +62,10 @@ for (const requiredScript of ['b2:upload-tree','global:overture:mirror','global:
 }
 
 const env = await read('.env.example')
-for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','OPEN_PHOTO_SUPABASE_BUCKET','GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK']) {
+for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','OPEN_PHOTO_SUPABASE_BUCKET','GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK','GLOBAL_LOCATION_SEARCH_BACKEND=','OPENSEARCH_USERNAME','OPENSEARCH_PASSWORD','OPENSEARCH_BEARER_TOKEN','GLOBAL_LOCATION_SEARCH_URL']) {
   if (env.includes(forbidden)) throw new Error(`Legacy environment setting remains: ${forbidden}`)
 }
-for (const requiredEnv of ['GLOBAL_LOCATION_SEARCH_BACKEND','GLOBAL_LOCATION_SEARCH_MANIFEST_KEY','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
+for (const requiredEnv of ['GLOBAL_LOCATION_SEARCH_MANIFEST_KEY','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
   if (!env.includes(requiredEnv)) throw new Error(`Environment example is missing ${requiredEnv}`)
 }
 
@@ -83,7 +83,8 @@ for (const marker of ['global-location-serving','searchGlobalLocations','global-
   if (!globalDiscovery.includes(marker)) throw new Error(`Global discovery is missing ${marker}`)
 }
 const globalSearch = await read('lib/app/global-location-search.js')
-for (const marker of ['GLOBAL_LOCATION_SEARCH_BACKEND','searchB2GlobalLocations','searchB2GlobalLocationsInViewport','getB2GlobalLocationBySlug','getB2GlobalLocationsByIds']) {
+for (const marker of ['searchB2GlobalLocations','searchB2GlobalLocationsInViewport','getB2GlobalLocationBySlug','getB2GlobalLocationsByIds']) {
+if (globalSearch.includes('opensearch')) throw new Error('Global location-search facade still references retired OpenSearch')
   if (!globalSearch.includes(marker)) throw new Error(`Global location-search facade is missing ${marker}`)
 }
 const b2Search = await read('lib/app/b2-location-search.js')

@@ -31,11 +31,7 @@ jobs:
       B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
       B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
       B2_DATA_PREFIX: data
-      GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
       GLOBAL_LOCATION_SEARCH_INDEX: locations-active
-      OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
-      OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
-      OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
       GLOBAL_LOCATION_MAX_RADIUS_KM: '100'
       GLOBAL_LOCATION_MAX_DIRECTORY_TILES: '64'
       GLOBAL_LOCATION_MAX_SHARDS: '128'
@@ -116,24 +112,3 @@ jobs:
             tail -n 14 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
             exit "$code"
           fi
-
-      - name: Compare candidate pruner against live OpenSearch
-        env:
-          GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
-          GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY: ${{ steps.active.outputs.prefix }}/text-prune-v1/${{ steps.active.outputs.planner_id }}/candidate.json
-          GLOBAL_LOCATION_TEXT_PROJECTION: '0'
-        shell: bash
-        run: |
-          set -o pipefail
-          logfile="$(mktemp)"
-          set +e
-          node scripts/global-data/compare_location_search_backends.mjs 2>&1 | tee "$logfile"
-          code=$?
-          set -e
-          if [ "$code" -ne 0 ]; then
-            echo "::error::pruner parity compare failed exit=$code; last output lines follow"
-            tail -n 14 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
-            exit "$code"
-          fi
-
-

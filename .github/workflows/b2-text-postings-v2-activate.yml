@@ -26,11 +26,7 @@ jobs:
       B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT || secrets.B2_S3_ENDPOINT }}
       B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION || secrets.B2_REGION || 'us-east-005' }}
       B2_DATA_PREFIX: data
-      GLOBAL_LOCATION_SEARCH_URL: ${{ secrets.OPENSEARCH_URL }}
       GLOBAL_LOCATION_SEARCH_INDEX: locations-active
-      OPENSEARCH_USERNAME: ${{ secrets.OPENSEARCH_USERNAME }}
-      OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
-      OPENSEARCH_BEARER_TOKEN: ${{ secrets.OPENSEARCH_BEARER_TOKEN }}
       GLOBAL_LOCATION_MAX_RADIUS_KM: '100'
       GLOBAL_LOCATION_MAX_DIRECTORY_TILES: '64'
       GLOBAL_LOCATION_MAX_SHARDS: '128'
@@ -94,13 +90,12 @@ jobs:
           --planner-id='${{ steps.active.outputs.planner_id }}'
           --activate-only
 
-      - name: Smoke active accelerators against live OpenSearch
+      - name: Smoke active accelerators serving modes
         env:
           GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
-          GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY: ${{ steps.active.outputs.prefix }}/text-prune-v1/${{ steps.active.outputs.planner_id }}/candidate.json
-          GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: ${{ steps.active.outputs.prefix }}/text-projection-v1/${{ steps.active.outputs.planner_id }}/candidate.json
-          GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v2/${{ steps.active.outputs.planner_id }}/candidate.json
+          GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY: ${{ steps.active.outputs.prefix }}/text-prune-v1/${{ steps.active.outputs.planner_id }}/ready.json
+          GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: ${{ steps.active.outputs.prefix }}/text-projection-v1/${{ steps.active.outputs.planner_id }}/ready.json
+          GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v2/${{ steps.active.outputs.planner_id }}/ready.json
         shell: bash
         run: node scripts/global-data/report_search_serving_modes.mjs
-
 
