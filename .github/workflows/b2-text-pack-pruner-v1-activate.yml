@@ -75,10 +75,12 @@ jobs:
           manifest_key = str(active.get('manifest_key') or '').strip()
           manifest = json.loads(client.get_object(Bucket=bucket, Key=manifest_key)['Body'].read())
           planner_id = str((manifest.get('planner') or {}).get('id') or '').strip()
-          if not manifest_key or not planner_id:
+          prefix = str(manifest.get('prefix') or '').strip().rstrip('/')
+          if not manifest_key or not planner_id or not prefix:
               raise SystemExit('Active B2 planner could not be resolved.')
           print(f'manifest_key={manifest_key}')
           print(f'planner_id={planner_id}')
+          print(f'prefix={prefix}')
           PY
 
       - name: Activate parity and production-latency verified pruner
