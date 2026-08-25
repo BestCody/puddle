@@ -1,7 +1,6 @@
 import http from 'node:http'
 import { createHash } from 'node:crypto'
 import { brotliCompressSync } from 'node:zlib'
-import { pathToFileURL } from 'node:url'
 
 const DEFAULT_PORT = Number(process.env.E2E_GLOBAL_SEARCH_PORT || 39200)
 const DEFAULT_BUCKET = process.env.B2_DATA_BUCKET_NAME || 'puddle-e2e-assets'
@@ -202,8 +201,9 @@ export function createB2E2EStub({
   }
 }
 
-// Bin mode: run directly to keep a listener alive for Playwright runs.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Standalone listener mode is opted into explicitly (used by e2e.yml); importing
+// this module never starts a server.
+if (process.env.B2_STUB_STANDALONE === '1') {
   const { GLOBAL_LOCATION_FIXTURES } = await import('./global-location-fixture.mjs')
   const documents = GLOBAL_LOCATION_FIXTURES.map((place) => ({
     ...place,

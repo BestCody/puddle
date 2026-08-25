@@ -93,7 +93,7 @@ jobs:
           echo "B2_DATA_BUCKET_NAME=puddle-e2e-assets" >> "$GITHUB_ENV"
       - name: Start local B2 serving emulator
         run: |
-          node tests/e2e/global-location-b2-stub.mjs > /tmp/puddle-e2e-b2-stub.log 2>&1 &
+          B2_STUB_STANDALONE=1 node tests/e2e/global-location-b2-stub.mjs > /tmp/puddle-e2e-b2-stub.log 2>&1 &
           stub_pid=$!
           trap 'kill "$stub_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
