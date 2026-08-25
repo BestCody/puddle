@@ -39,16 +39,19 @@ async function authenticatedSession(traceId) {
     return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   }
   const user = { id: userId }
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id,birth_date,interests,latitude,longitude,city,region,country,country_code,timezone,location_label,search_radius_km')
+    .select('id,birth_date,interests,latitude,longitude,city,region,country,country_code,timezone,location_label,search_radius_km,suspended_at,banned_at')
     .eq('id', user.id)
     .maybeSingle()
   recordServerLatency('supabase.discoverySession', elapsedMs(supabaseStarted), SERVER_LATENCY_BUDGET_MS.pageSession, {
-    trace_id: traceId,
-    service: 'supabase',
-    operation: 'discoverySession'
+    trace_id: traceId, service: 'supabase', operation: 'discoverySession',
+    failed: Boolean(profileError)
   })
+  if (profileError) return { error: NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }) }
+  if (profile?.suspended_at || profile?.banned_at) {
+    return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
+  }
   return { session: { supabase, user, profile: profile || {}, traceId } }
 }
 

@@ -30,6 +30,19 @@ async function requireUser(traceId) {
     failed: Boolean(claimsError || !userId)
   })
   if (!userId) return { error: NextResponse.json({ error: 'Sign in to browse map locations.' }, { status: 401 }) }
+  const profileStarted = latencyStart()
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('suspended_at,banned_at')
+    .eq('id', userId)
+    .maybeSingle()
+  recordServerLatency('supabase.mapProfile', elapsedMs(profileStarted), SERVER_LATENCY_BUDGET_MS.pageSession, {
+    trace_id: traceId, service: 'supabase', operation: 'mapProfile', failed: Boolean(profileError)
+  })
+  if (profileError) return { error: NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }) }
+  if (profile?.suspended_at || profile?.banned_at) {
+    return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
+  }
   return { user: { id: userId }, supabase }
 }
 
