@@ -44,14 +44,22 @@ test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-pla
   assert.doesNotMatch(migration, /security definer/i)
 })
 
-test('Social feed hot path uses existing RLS tables instead of missing RPC contracts', async () => {
-  const feed = await read('lib/app/social-feed-data.js')
+test('Social feed avoids the missing feed-key RPC and restores indexed per-post comment previews', async () => {
+  const [feed, restore] = await Promise.all([
+    read('lib/app/social-feed-data.js'),
+    read('supabase/migrations/20260825024000_restore_social_feed_hot_path.sql')
+  ])
   assert.match(feed, /\.from\('social_posts'\)[\s\S]*\.select\('id,created_at'\)/)
   assert.match(feed, /\.order\('created_at', \{ ascending: false \}\)[\s\S]*\.order\('id', \{ ascending: false \}\)/)
   assert.match(feed, /social_feed_post_keys/)
-  assert.match(feed, /\.from\('social_comments'\)/)
-  assert.match(feed, /social_comment_previews/)
-  assert.doesNotMatch(feed, /social_feed_post_ids_v2|social_comment_previews_v2/)
+  assert.doesNotMatch(feed, /rpc\('social_feed_post_ids_v2'/)
+  assert.match(feed, /rpc\('social_comment_previews_v2'/)
+  assert.match(feed, /social_comment_previews_fallback/)
+  assert.match(restore, /social_posts_feed_keyset_idx/)
+  assert.match(restore, /social_comments_post_preview_idx/)
+  assert.match(restore, /create or replace function public\.social_comment_previews_v2/)
+  assert.match(restore, /cross join lateral/)
+  assert.match(restore, /security invoker/i)
 })
 
 test('Partial caching is limited to cookie-free published public location data', async () => {
