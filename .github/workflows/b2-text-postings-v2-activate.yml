@@ -1,17 +1,17 @@
-name: Activate B2 text postings v1
+name: Activate B2 text postings v2
 
 on:
   push:
     branches: [main]
     paths:
-      - '.github/b2-text-postings-v1-activate-trigger'
+      - '.github/b2-text-postings-v2-activate-trigger'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: b2-text-postings-v1-production-activation
+  group: b2-text-postings-v2-production-activation
   cancel-in-progress: false
 
 jobs:
@@ -99,6 +99,8 @@ jobs:
           GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
           GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY: ${{ steps.active.outputs.prefix }}/text-prune-v1/${{ steps.active.outputs.planner_id }}/candidate.json
           GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: ${{ steps.active.outputs.prefix }}/text-projection-v1/${{ steps.active.outputs.planner_id }}/candidate.json
-          GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v1/${{ steps.active.outputs.planner_id }}/candidate.json
+          GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v2/${{ steps.active.outputs.planner_id }}/candidate.json
         shell: bash
         run: node scripts/global-data/report_search_serving_modes.mjs
+
+

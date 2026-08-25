@@ -1,4 +1,4 @@
-name: Build and gate B2 text postings v1
+name: Build and gate B2 text postings v2
 
 on:
   push:
@@ -9,14 +9,14 @@ on:
       - 'lib/app/location-search-ranking.js'
       - 'scripts/global-data/build_b2_text_postings.py'
       - 'app/api/internal/b2-production-selftest/route.js'
-      - '.github/workflows/b2-text-postings-v1-gate.yml'
+      - '.github/workflows/b2-text-postings-v2-gate.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: b2-text-postings-v1-production-candidate
+  group: b2-text-postings-v2-production-candidate
   cancel-in-progress: false
 
 jobs:
@@ -124,7 +124,7 @@ jobs:
           GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
           GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY: ${{ steps.active.outputs.prefix }}/text-prune-v1/${{ steps.active.outputs.planner_id }}/candidate.json
           GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: ${{ steps.active.outputs.prefix }}/text-projection-v1/${{ steps.active.outputs.planner_id }}/candidate.json
-          GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v1/${{ steps.active.outputs.planner_id }}/candidate.json
+          GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v2/${{ steps.active.outputs.planner_id }}/candidate.json
         shell: bash
         run: |
           set -o pipefail
@@ -144,6 +144,8 @@ jobs:
           GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: data/search/active.json
           GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY: ${{ steps.active.outputs.prefix }}/text-prune-v1/${{ steps.active.outputs.planner_id }}/candidate.json
           GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: ${{ steps.active.outputs.prefix }}/text-projection-v1/${{ steps.active.outputs.planner_id }}/candidate.json
-          GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v1/${{ steps.active.outputs.planner_id }}/candidate.json
+          GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY: ${{ steps.active.outputs.prefix }}/text-postings-v2/${{ steps.active.outputs.planner_id }}/candidate.json
         shell: bash
         run: node scripts/global-data/report_search_serving_modes.mjs
+
+
