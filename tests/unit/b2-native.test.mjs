@@ -38,9 +38,23 @@ test('B2 data and media configs ignore legacy generic credential names', () => {
   assert.equal(isB2Configured('B2_MEDIA', env), false)
 })
 
-test('B2 config reads only scoped variables', () => {
+test('B2 config ignores the scoped KEY_ID compatibility alias', () => {
+  const env = {
+    B2_DATA_KEY_ID: 'legacy-scoped-id',
+    B2_DATA_APPLICATION_KEY: 'data-secret',
+    B2_DATA_BUCKET_NAME: 'puddle-data'
+  }
+
+  assert.deepEqual(b2ConfigFromEnv('B2_DATA', env), {
+    keyId: '', applicationKey: 'data-secret', bucketId: '', bucketName: 'puddle-data'
+  })
+  assert.equal(isB2Configured('B2_DATA', env), false)
+})
+
+test('B2 config reads only canonical scoped variables', () => {
   const env = {
     B2_KEY_ID: 'legacy-id', B2_APPLICATION_KEY: 'legacy-secret', B2_BUCKET: 'puddle-assets',
+    B2_DATA_KEY_ID: 'legacy-scoped-id',
     B2_DATA_APPLICATION_KEY_ID: 'data-id', B2_DATA_APPLICATION_KEY: 'data-secret', B2_DATA_BUCKET_NAME: 'puddle-data'
   }
   const config = b2ConfigFromEnv('B2_DATA', env)
