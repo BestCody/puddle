@@ -21,7 +21,6 @@ function compactSearch(result) {
     diagnostics: result.diagnostics
   }
 }
-
 async function textSearchOptions(url) {
   const projection = url.searchParams.get('projection') || ''
   const prune = url.searchParams.get('prune') || ''
@@ -50,7 +49,6 @@ async function textSearchOptions(url) {
   }
   return { env, projection, prune, postings }
 }
-
 export async function GET(request) {
   if (process.env.VERCEL_ENV !== 'production') return Response.json({ error: 'Not found.' }, { status: 404 })
 

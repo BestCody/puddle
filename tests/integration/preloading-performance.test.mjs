@@ -29,7 +29,7 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   assert.match(preloader, /image\.srcset = source\.srcSet/)
 })
 
-test('dashboard navigation warms only intent-targeted routes and selects exactly one item immediately', async () => {
+test('dashboard navigation warms intent targets plus at most two bounded idle hints', async () => {
   const nav = await read('components/product-nav.js')
 
   assert.match(nav, /useEffect, useRef, useState/)
@@ -39,7 +39,13 @@ test('dashboard navigation warms only intent-targeted routes and selects exactly
   assert.match(nav, /onMouseEnter=\{\(\) => warmRoute\(item\.href\)\}/)
   assert.match(nav, /onFocus=\{\(\) => warmRoute\(item\.href\)\}/)
   assert.match(nav, /onPointerDown=\{\(event\) => \{[\s\S]*warmRoute\(item\.href\)/)
-  assert.doesNotMatch(nav, /BACKGROUND_PREFETCH|backgroundWarmupStarted|requestIdleCallback|connection\?\.saveData/)
+  assert.match(nav, /const IDLE_ROUTE_HINTS = \{/)
+  assert.match(nav, /const IDLE_PREFETCH_DELAY_MS = 900/)
+  assert.match(nav, /\.slice\(0, 2\)/)
+  assert.match(nav, /requestIdleCallback/)
+  assert.match(nav, /connection\?\.saveData/)
+  assert.match(nav, /effectiveType === 'slow-2g'/)
+  assert.doesNotMatch(nav, /backgroundWarmupStarted|items\s*\.map\(\(item\) => item\.href\)/)
   assert.match(nav, /const \[selectedHref, setSelectedHref\] = useState\(routeActiveHref\)/)
   assert.match(nav, /const navigationIntentRef = useRef\(null\)/)
   assert.match(nav, /function selectImmediately\(event, href\)[\s\S]*setSelectedHref\(href\)/)
@@ -85,6 +91,9 @@ test('top pills size to their labels and move their highlight before navigation 
 
   assert.match(mapPage, /\{ value: 'feed', label: 'Posts', href: '\/map' \}/)
   assert.match(mapPage, /tone="yellow"/)
+  assert.match(mapPage, /<Suspense fallback=\{<StreamPlaceholder label="Loading posts" \/>\}>/)
+  assert.match(mapPage, /<Suspense fallback=\{<StreamPlaceholder label="Loading map" \/>\}>/)
+  assert.doesNotMatch(mapPage, /await Promise\.all\(\[mapPromise, feedPromise\]\)/)
   assert.match(plansPage, /tone="purple"/)
   assert.match(passPage, /tone="pink"/)
 })
@@ -168,11 +177,12 @@ test('Puddle logo toggles a persisted comprehensive dark mode without recoloring
   assert.doesNotMatch(darkStyles, /filter:\s*(?:invert|grayscale|brightness)\(/)
 })
 
-test('dashboard navigation keeps the shell mounted, preserves UI, and shows loading immediately', async () => {
-  const [transition, nav, shell, styles, sidebarStyles, layout, productLayout, productLoading] = await Promise.all([
+test('dashboard navigation keeps the shell mounted, preserves UI, and streams route content after auth', async () => {
+  const [transition, nav, shell, renderPage, styles, sidebarStyles, layout, productLayout, productLoading] = await Promise.all([
     read('components/main-content-transition.js'),
     read('components/product-nav.js'),
     read('components/product-shell.js'),
+    read('lib/app/render-product-page.js'),
     read('app/performance-loading.css'),
     read('app/sidebar-interactions.css'),
     read('app/layout.js'),
@@ -187,6 +197,12 @@ test('dashboard navigation keeps the shell mounted, preserves UI, and shows load
   assert.match(productLoading, /puddle-main-transition-loader/)
   assert.match(shell, /import \{ MainContentTransition \} from '\.\/main-content-transition'/)
   assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{content\}<\/MainContentTransition><\/main>/)
+
+  assert.match(renderPage, /import \{ Suspense \} from 'react'/)
+  assert.match(renderPage, /function PersistentRouteFallback\(\)/)
+  assert.match(renderPage, /<Suspense fallback=\{<PersistentRouteFallback \/>\}>/)
+  assert.match(renderPage, /<AwaitRouteContent contentPromise=\{contentPromise\} \/>/)
+  assert.doesNotMatch(renderPage, /usesPersistentProductShell\(\)\) return contentPromise/)
 
   assert.match(transition, /export const MAIN_CONTENT_LOADING_EVENT = 'puddle:main-content-loading'/)
   assert.match(transition, /window\.dispatchEvent\(new Event\(MAIN_CONTENT_LOADING_EVENT\)\)/)

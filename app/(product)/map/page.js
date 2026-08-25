@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { InstantSegment } from '@/components/instant-segment'
@@ -105,6 +106,53 @@ function nextFeedHref(query, pagination) {
   return `/map?${params.toString()}`
 }
 
+function StreamPlaceholder({ label }) {
+  return <div className={styles.empty} role="status" aria-label={label}><strong>Loading…</strong></div>
+}
+
+async function MapScreenSlot({ mapPromise, selectingForPost }) {
+  const mapSnapshot = await mapPromise
+  const mapPoints = selectingForPost
+    ? mapSnapshot.points.map((point) => ({ ...point, href: `/map?compose=1&location=${encodeURIComponent(point.id)}` }))
+    : mapSnapshot.points
+  return <MapScreen
+    points={mapPoints}
+    center={mapSnapshot.center}
+    heatmap={mapSnapshot.heatmap}
+    passActive={mapSnapshot.passActive}
+    selectingForPost={selectingForPost}
+  />
+}
+
+async function FeedStreamSlot({ feedPromise, query }) {
+  const feed = await feedPromise
+  const moreHref = nextFeedHref(query, feed.pagination)
+  return <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
+    {feed.items.length ? feed.items.map((post) => <FeedPost post={post} key={post.id} />) : <div className={styles.empty}>
+      <strong>{query ? 'No puddles match that search on this page.' : 'No one has posted a puddle yet.'}</strong>
+      {moreHref ? <Link href={moreHref}>Search older puddles</Link> : <Link href="/map?compose=1">Create the first one</Link>}
+    </div>}
+    {moreHref && feed.items.length ? <nav aria-label="Discover pagination"><Link href={moreHref}>More puddles</Link></nav> : null}
+  </section>
+}
+
+async function CreatePuddleSlot({ feedPromise, mapPromise, initialOpen, requestedLocation }) {
+  const [feed, mapSnapshot] = await Promise.all([feedPromise, mapPromise])
+  return <DiscoverCreatePuddle
+    avatarUrl={feed.self.avatar_url}
+    displayName={feed.self.display_name || 'Puddle person'}
+    initialOpen={initialOpen}
+    requestedLocation={requestedLocation}
+    points={mapSnapshot.points.map((point) => ({
+      id: point.id,
+      title: point.title,
+      city: point.city,
+      neighborhood: point.neighborhood,
+      category: point.category
+    }))}
+  />
+}
+
 export default async function LocationMapPage({ searchParams }) {
   const params = await searchParams
   const view = params?.view === 'map' ? 'map' : 'feed'
@@ -116,23 +164,29 @@ export default async function LocationMapPage({ searchParams }) {
   const requestedLocation = typeof params?.location === 'string' ? params.location : ''
 
   return renderProductPage(async (session) => {
-    const [mapSnapshot, feed] = await Promise.all([
-      view === 'map' ? getLocationMapSnapshot(session) : Promise.resolve(null),
-      view === 'feed' ? getSocialFeedSnapshot(session, query, { beforeCreatedAt, beforePostId }) : Promise.resolve(null)
-    ])
-    const mapPoints = selectingForPost && mapSnapshot ? mapSnapshot.points.map((point) => ({ ...point, href: `/map?compose=1&location=${encodeURIComponent(point.id)}` })) : mapSnapshot?.points || []
-    const moreHref = feed ? nextFeedHref(query, feed.pagination) : null
+    const mapPromise = getLocationMapSnapshot(session)
+    const feedPromise = view === 'feed'
+      ? getSocialFeedSnapshot(session, query, { beforeCreatedAt, beforePostId })
+      : Promise.resolve(null)
 
     return <>
       <AuthMessage searchParams={params} />
       <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-view={view}>
         <FeedTop view={view} query={params?.q} />
-        {view === 'map' ? <MapScreen points={mapPoints} center={mapSnapshot.center} heatmap={mapSnapshot.heatmap} passActive={mapSnapshot.passActive} selectingForPost={selectingForPost} /> : <>
-          <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
-            {feed.items.length ? feed.items.map((post) => <FeedPost post={post} key={post.id} />) : <div className={styles.empty}><strong>{query ? 'No puddles match that search on this page.' : 'No one has posted a puddle yet.'}</strong>{moreHref ? <Link href={moreHref}>Search older puddles</Link> : <Link href="/map?compose=1">Create the first one</Link>}</div>}
-            {moreHref && feed.items.length ? <nav aria-label="Discover pagination"><Link href={moreHref}>More puddles</Link></nav> : null}
-          </section>
-          <DiscoverCreatePuddle avatarUrl={feed.self.avatar_url} displayName={feed.self.display_name || 'Puddle person'} initialOpen={initialComposerOpen} requestedLocation={requestedLocation} />
+        {view === 'map' ? <Suspense fallback={<StreamPlaceholder label="Loading map" />}>
+          <MapScreenSlot mapPromise={mapPromise} selectingForPost={selectingForPost} />
+        </Suspense> : <>
+          <Suspense fallback={<StreamPlaceholder label="Loading posts" />}>
+            <FeedStreamSlot feedPromise={feedPromise} query={query} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <CreatePuddleSlot
+              feedPromise={feedPromise}
+              mapPromise={mapPromise}
+              initialOpen={initialComposerOpen}
+              requestedLocation={requestedLocation}
+            />
+          </Suspense>
         </>}
       </div>
     </>
