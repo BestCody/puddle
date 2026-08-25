@@ -45,7 +45,7 @@ async function textSearchOptions(url) {
   if (postings) {
     // The postings serving path proves completeness with the pruner's per-pack
     // maxima, so its candidate mode activates both markers together.
-    env.GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY = `${prefix}/text-postings-v1/${plannerId}/candidate.json`
+    env.GLOBAL_LOCATION_TEXT_POSTINGS_READY_KEY = `${prefix}/text-postings-v2/${plannerId}/candidate.json`
     env.GLOBAL_LOCATION_TEXT_PRUNE_READY_KEY = `${prefix}/text-prune-v1/${plannerId}/candidate.json`
   }
   return { env, projection, prune, postings }
@@ -130,3 +130,4 @@ export async function GET(request) {
     }, { status: 503 })
   }
 }
+

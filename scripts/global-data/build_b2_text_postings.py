@@ -34,7 +34,7 @@ from botocore.exceptions import ClientError
 
 from location_search_common import b2_source_config
 
-POSTINGS_VERSION = 1
+POSTINGS_VERSION = 2
 PREFIX_LENGTH = 3
 ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
 ALPHABET_INDEX = {char: index for index, char in enumerate(ALPHABET)}
@@ -246,6 +246,7 @@ def main() -> None:
             or str(candidate.get('planner_id') or '') != planner_id
             or int(candidate.get('prefix_length') or 0) != PREFIX_LENGTH
             or int(candidate.get('detail_chunk_size') or 0) < 64
+            or int(candidate.get('physical_pack_count') or 0) <= 0
         ):
             raise RuntimeError('Text postings candidate does not match the requested active manifest.')
         ready_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
@@ -267,7 +268,7 @@ def main() -> None:
             existing = get_bytes(ready_key)
             if existing != ready_body or str((head.get('Metadata') or {}).get('sha256') or '').lower() != digest:
                 raise RuntimeError(f'Immutable text-postings ready marker differs: {ready_key}')
-        print(f'text_postings_activated=true ready_key={ready_key} objects={candidate.get("object_count")}', flush=True)
+        print(f'text_postings_activated=true ready_key={ready_key} tiles={candidate.get("route_object_count")}', flush=True)
         return
 
     validation = manifest.get('validation') or {}
@@ -292,9 +293,6 @@ def main() -> None:
     def core_key(source_key: str) -> str:
         return f'{projection_base}/core/{digest_for(source_key)}.json.zst'
 
-    def postings_key(source_key: str) -> str:
-        return f'{base}/packs/{digest_for(source_key)}.json.zst'
-
     thread_local = {}
 
     def context_for_thread():
@@ -306,29 +304,46 @@ def main() -> None:
             thread_local[ident] = value
         return value
 
-    def process(record: dict) -> dict:
-        decompressor, compressor = context_for_thread()
-        source_key = str(record.get('key') or '')
-        expected_count = int(record.get('count') or 0)
-        if not source_key or expected_count < 0:
-            raise RuntimeError(f'Invalid geo hash-ledger record: {record!r}')
-        target_key = postings_key(source_key)
+    validation = manifest.get('validation') or {}
+    hashes_key = str(validation.get('hashes_key') or '')
+    hashes_sha = str(validation.get('hashes_sha256') or '').lower()
+    if not hashes_key or not hashes_sha:
+        raise RuntimeError('Source manifest does not provide a validated hash ledger.')
+    hashes_body = get_bytes(hashes_key)
+    if sha256_hex(hashes_body) != hashes_sha:
+        raise RuntimeError('Source manifest hash ledger checksum mismatch.')
+    records = orjson.loads(brotli.decompress(hashes_body))
+    geo_records = sorted(
+        (record for record in records if isinstance(record, dict) and record.get('kind') == 'geo'),
+        key=lambda record: str(record.get('key') or ''),
+    )
+    if not geo_records:
+        raise RuntimeError('Source manifest contains no physical geo objects.')
+    route_records = sorted(
+        (record for record in records if isinstance(record, dict) and record.get('kind') == 'routing'),
+        key=lambda record: str(record.get('key') or ''),
+    )
+    if not route_records:
+        raise RuntimeError('Source manifest contains no routing objects.')
 
-        try:
-            head = head_object(target_key)
-        except ClientError as error:
-            if not is_missing(error):
-                raise
-        else:
-            metadata = head.get('Metadata') or {}
-            if int(metadata.get('count') or -1) != expected_count:
-                raise RuntimeError(f'Existing immutable text-postings metadata differs: {target_key}')
-            return {
-                'rows': expected_count,
-                'bytes': int(head.get('ContentLength') or 0),
-                'reused': 1,
-            }
+    def core_key(source_key: str) -> str:
+        return f'{projection_base}/core/{digest_for(source_key)}.json.zst'
 
+    def tile_key(route_key: str) -> str:
+        return f'{base}/tiles/{digest_for(route_key)}.json.zst'
+
+    # Per-pack compressed postings, computed exactly once and reused for every
+    # routing tile that contains the pack. Compressed bytes keep resident memory
+    # around half a GiB for the full catalogue.
+    pack_postings_bytes: dict[str, bytes] = {}
+    pack_counts: dict[str, int] = {}
+    pack_lock = threading.Lock()
+
+    def pack_postings_payload(source_key: str, expected_count: int, decompressor, compressor) -> bytes:
+        with pack_lock:
+            cached = pack_postings_bytes.get(source_key)
+        if cached is not None:
+            return cached
         core_body = get_optional_bytes(core_key(source_key))
         if core_body is None:
             # Postings depend on projection cores; the projection candidate gate
@@ -340,10 +355,69 @@ def main() -> None:
         if len(payload[1]) != expected_count:
             raise RuntimeError(f'Projection core row count mismatch: {source_key}')
         postings = pack_postings(payload[1])
-        raw = orjson.dumps(postings)
-        compressed = compressor.compress(raw)
-        put_immutable(target_key, compressed, {'count': str(expected_count)})
-        return {'rows': expected_count, 'bytes': len(compressed), 'reused': 0}
+        compressed = compressor.compress(orjson.dumps(postings))
+        with pack_lock:
+            existing = pack_postings_bytes.get(source_key)
+            if existing is None:
+                pack_postings_bytes[source_key] = compressed
+                pack_counts[source_key] = expected_count
+                existing = compressed
+            else:
+                expected_count = pack_counts[source_key]
+        return existing
+
+    def process_route_tile(record: dict) -> dict:
+        decompressor, compressor = context_for_thread()
+        route_key = str(record.get('key') or '')
+        route_sha = str(record.get('sha256') or '').lower()
+        if not route_key or not route_sha:
+            raise RuntimeError(f'Invalid routing record: {record!r}')
+        target_key = tile_key(route_key)
+
+        try:
+            head = head_object(target_key)
+        except ClientError as error:
+            if not is_missing(error):
+                raise
+        else:
+            metadata = head.get('Metadata') or {}
+            if str(metadata.get('route-sha256') or '') != route_sha:
+                raise RuntimeError(f'Existing immutable text-postings tile differs: {target_key}')
+            return {
+                'bytes': int(head.get('ContentLength') or 0),
+                'reused': 1,
+                'members': int(metadata.get('pack-count') or 0),
+            }
+
+        body = get_bytes(route_key)
+        if sha256_hex(body) != route_sha:
+            raise RuntimeError(f'Routing object checksum mismatch: {route_key}')
+        descriptors = orjson.loads(brotli.decompress(body))
+        if not isinstance(descriptors, list):
+            raise RuntimeError(f'Routing object is not an array: {route_key}')
+        member_keys = sorted({str(descriptor[0]) for descriptor in descriptors if isinstance(descriptor, list) and descriptor and descriptor[0]})
+        counts_by_key = {str(r.get('key') or ''): int(r.get('count') or 0) for r in geo_records}
+
+        packs_payload = []
+        total_members = 0
+        for member_key in member_keys:
+            expected_count = counts_by_key.get(member_key)
+            if expected_count is None:
+                raise RuntimeError(f'Routing object references an unknown physical pack: {member_key}')
+            compressed = pack_postings_payload(member_key, expected_count, decompressor, compressor)
+            entries = orjson.loads(decompressor.decompress(compressed))
+            if not isinstance(entries, list) or len(entries) < 2 or int(entries[0]) != POSTINGS_VERSION:
+                raise RuntimeError(f'Cached postings payload is invalid: {member_key}')
+            packs_payload.append([member_key, entries[1]])
+            total_members += 1
+
+        raw = orjson.dumps([POSTINGS_VERSION, packs_payload])
+        compressed_tile = compressor.compress(raw)
+        put_immutable(target_key, compressed_tile, {
+            'route-sha256': route_sha,
+            'pack-count': str(total_members),
+        })
+        return {'bytes': len(compressed_tile), 'reused': 0, 'members': total_members}
 
     # Detail chunks live in the projection derivative; postings row order mirrors
     # the core payload, so hydration needs the projection's chunk size.
@@ -355,24 +429,30 @@ def main() -> None:
     if detail_chunk_size < 64:
         raise RuntimeError('Projection candidate does not carry a valid detail_chunk_size.')
 
-    total_rows = 0
     total_bytes = 0
     reused = 0
     completed = 0
+    total_members = 0
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(process, record) for record in geo_records]
+        futures = [executor.submit(process_route_tile, record) for record in route_records]
         for future in as_completed(futures):
             result = future.result()
-            total_rows += int(result['rows'])
             total_bytes += int(result['bytes'])
             reused += int(result['reused'])
+            total_members += int(result['members'])
             completed += 1
-            if completed % 500 == 0 or completed == len(geo_records):
+            if completed % 500 == 0 or completed == len(route_records):
                 print(
-                    f'text_postings_progress objects={completed}/{len(geo_records)} rows={total_rows} '
-                    f"bytes={total_bytes} reused={reused}",
+                    f'text_postings_progress tiles={completed}/{len(route_records)} '
+                    f"bytes={total_bytes} reused={reused} members={total_members}",
                     flush=True,
                 )
+
+    if len(pack_postings_bytes) != len(geo_records):
+        raise RuntimeError(
+            f'Text postings covered {len(pack_postings_bytes)} of {len(geo_records)} physical packs; '
+            'every pack must appear in at least one routing tile.'
+        )
 
     candidate = {
         'schema_version': 1,
@@ -383,15 +463,16 @@ def main() -> None:
         'snapshot': manifest.get('snapshot') or manifest.get('source_snapshot'),
         'prefix_length': PREFIX_LENGTH,
         'detail_chunk_size': detail_chunk_size,
-        'object_count': len(geo_records),
-        'location_rows': total_rows,
-        'postings_compressed_bytes': total_bytes,
-        'reused_objects': reused,
+        'layout': 'routing-tile-bundles',
+        'route_object_count': len(route_records),
+        'physical_pack_count': len(geo_records),
+        'tile_compressed_bytes': total_bytes,
+        'reused_tiles': reused,
     }
     candidate_body = orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b'\n'
     retry_s3(lambda: s3.put_object(Bucket=source.bucket, Key=candidate_key, Body=candidate_body, ContentType='application/json', CacheControl='no-store'))
     print(
-        f'text_postings_complete=true candidate_key={candidate_key} objects={len(geo_records)} rows={total_rows} bytes={total_bytes}',
+        f'text_postings_complete=true candidate_key={candidate_key} tiles={len(route_records)} packs={len(geo_records)} bytes={total_bytes}',
         flush=True,
     )
     print(orjson.dumps(candidate, option=orjson.OPT_INDENT_2).decode(), flush=True)
