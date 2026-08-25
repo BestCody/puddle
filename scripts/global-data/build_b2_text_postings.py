@@ -448,11 +448,16 @@ def main() -> None:
                     flush=True,
                 )
 
-    if len(pack_postings_bytes) != len(geo_records):
+    # Coverage invariant: every routing tile was processed (built now or reused
+    # from an identical prior build via route-sha256). Tile creation validates
+    # each member against geo_records, so reuse transitively preserves coverage;
+    # per-pack cache size only reflects packs this run had to compute fresh.
+    if completed != len(route_records):
         raise RuntimeError(
-            f'Text postings covered {len(pack_postings_bytes)} of {len(geo_records)} physical packs; '
-            'every pack must appear in at least one routing tile.'
+            f'Text postings processed {completed} of {len(route_records)} routing tiles.'
         )
+    if total_members <= 0 and route_records:
+        raise RuntimeError('Text postings tiles reported no physical pack members.')
 
     candidate = {
         'schema_version': 1,

@@ -87,8 +87,26 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> "$GITHUB_ENV"
           echo "MAILPIT_URL=$INBUCKET_URL" >> "$GITHUB_ENV"
-      - name: Run current product browser tests
-        run: npm run e2e:test
+          echo "B2_AUTHORIZE_ENDPOINT=http://127.0.0.1:39200" >> "$GITHUB_ENV"
+          echo "B2_DATA_APPLICATION_KEY_ID=e2e-key-id" >> "$GITHUB_ENV"
+          echo "B2_DATA_APPLICATION_KEY=e2e-application-key" >> "$GITHUB_ENV"
+          echo "B2_DATA_BUCKET_NAME=puddle-e2e-assets" >> "$GITHUB_ENV"
+      - name: Start local B2 serving emulator
+        run: |
+          node tests/e2e/global-location-b2-stub.mjs > /tmp/puddle-e2e-b2-stub.log 2>&1 &
+          stub_pid=$!
+          trap 'kill "$stub_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:39200/health >/dev/null; then
+              break
+            fi
+            if [ "$attempt" = 30 ]; then
+              cat /tmp/puddle-e2e-b2-stub.log
+              exit 1
+            fi
+            sleep 0.2
+          done
+          npm run e2e:test
       - name: Upload browser diagnostics
         if: always()
         uses: actions/upload-artifact@v7
