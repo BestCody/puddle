@@ -13,7 +13,7 @@ async function openDesktop(page, path) {
   await assertNoHorizontalOverflow(page)
 }
 
-async function expectCenteredDashboardCanvas(page) {
+async function expectDashboardMainFillsStage(page) {
   const geometry = await page.evaluate(() => {
     const stage = document.querySelector('.figma-dashboard-stage')?.getBoundingClientRect()
     const main = document.querySelector('.figma-dashboard-main')?.getBoundingClientRect()
@@ -24,19 +24,14 @@ async function expectCenteredDashboardCanvas(page) {
       stageWidth: stage.width,
       mainLeft: main.left,
       mainRight: main.right,
-      mainWidth: main.width,
-      isSwipe: Boolean(document.querySelector('.figma-swipe-screen'))
+      mainWidth: main.width
     }
   })
   expect(geometry).not.toBeNull()
   const leftGutter = geometry.mainLeft - geometry.stageLeft
   const rightGutter = geometry.stageRight - geometry.mainRight
   expect(Math.abs(leftGutter - rightGutter)).toBeLessThanOrEqual(2)
-  if (geometry.isSwipe) {
-    expect(Math.abs(geometry.mainWidth - geometry.stageWidth)).toBeLessThanOrEqual(2)
-  } else {
-    expect(geometry.mainWidth).toBeLessThanOrEqual(1001)
-  }
+  expect(Math.abs(geometry.mainWidth - geometry.stageWidth)).toBeLessThanOrEqual(2)
 }
 
 test('authenticated desktop dashboard keeps navigation and core product behavior usable', async ({ page }, testInfo) => {
@@ -196,14 +191,14 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await page.getByRole('link', { name: 'Close settings' }).click()
   await expect(page).toHaveURL(/\/profile$/)
 
-  /* Wide monitors keep dashboard canvases centered. Swipe intentionally uses
-     the full right-side stage; other authored dashboard canvases retain the
-     older ~1000px cap. */
+  /* Wide monitors use the full stage for the dashboard shell. Individual
+     route content is centered/constrained inside that stage and is covered by
+     the route-specific assertions above. */
   await page.setViewportSize({ width: 1600, height: 900 })
   for (const route of ['/discover', '/map', '/plans', '/matches', '/membership', '/profile', '/account', '/create/post']) {
     await page.goto(route)
     await page.waitForLoadState('networkidle')
-    await expectCenteredDashboardCanvas(page)
+    await expectDashboardMainFillsStage(page)
     await assertNoHorizontalOverflow(page)
   }
 })
