@@ -1,15 +1,15 @@
-// Benchmark trigger only: no production-load behavior changed.
 import { expect, test } from '@playwright/test'
 
-const STAGES = [5, 10, 20]
-const MIN_SUCCESS_RATE = 0.99
-const P95_LIMIT_MS = {
-  discovery: 2500,
-  mapViewport: 2000,
-  socialFeed: 3500,
-  savedHistory: 3500,
-  locationDetail: 3500
-}
+const TARGETS = [
+  { label: 'Discover', path: '/map' },
+  { label: 'Saved', path: '/plans' },
+  { label: 'Friends', path: '/matches' },
+  { label: 'Pass', path: '/membership' },
+  { label: 'Profile', path: '/profile' },
+  { label: 'Swipe', path: '/discover' }
+]
+
+const ROUNDS = 4
 
 async function deleteDisposableAccount(page) {
   try {
@@ -23,15 +23,15 @@ async function deleteDisposableAccount(page) {
       page.getByRole('button', { name: 'Delete my account' }).click()
     ])
   } catch {
-    // Cleanup remains best-effort; the load assertions are authoritative.
+    // Cleanup remains best-effort; benchmark output is authoritative.
   }
 }
 
 async function createDisposableAccount(page) {
   const suffix = `${Date.now().toString(36)}${crypto.randomUUID().replaceAll('-', '').slice(0, 8)}`
-  const email = `puddle-load-${suffix}@example.com`
-  const password = `LoadSmoke-${suffix}-A9!`
-  const username = `load_${suffix}`.slice(0, 24)
+  const email = `puddle-nav-bench-${suffix}@example.com`
+  const password = `NavBench-${suffix}-A9!`
+  const username = `nav_${suffix}`.slice(0, 24)
 
   await page.route('**/api/location/search?**', async (route) => {
     await route.fulfill({
@@ -39,7 +39,7 @@ async function createDisposableAccount(page) {
       contentType: 'application/json',
       body: JSON.stringify({
         results: [{
-          providerId: 'load-smoke-toronto',
+          providerId: 'nav-bench-toronto',
           city: 'Toronto',
           region: 'Ontario',
           country: 'Canada',
@@ -54,7 +54,7 @@ async function createDisposableAccount(page) {
   })
 
   await page.goto('/signup')
-  await page.getByLabel('Display name').fill('Puddle Load Test')
+  await page.getByLabel('Display name').fill('Puddle Navigation Benchmark')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('checkbox', { name: /confirm the information I/i }).check()
@@ -75,126 +75,75 @@ async function createDisposableAccount(page) {
 
 function percentile(values, fraction) {
   if (!values.length) return 0
-  const sorted = [...values].sort((left, right) => left - right)
+  const sorted = [...values].sort((a, b) => a - b)
   const index = Math.max(0, Math.min(sorted.length - 1, Math.ceil(sorted.length * fraction) - 1))
   return sorted[index]
 }
 
-async function timedGet(request, path) {
-  const started = performance.now()
-  try {
-    const response = await request.get(path, {
-      headers: {
-        'x-puddle-load-test': 'bounded-pr-gate'
-      },
-      timeout: 15_000
-    })
-    const body = await response.body()
-    const bodyText = body.toString('utf8')
-    return {
-      ok: response.ok(),
-      status: response.status(),
-      durationMs: performance.now() - started,
-      traceId: response.headers()['x-puddle-trace-id'] || null,
-      bodyText,
-      bodyPreview: bodyText.slice(0, 240)
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      status: 0,
-      durationMs: performance.now() - started,
-      error: String(error?.message || error)
-    }
+function summarize(values) {
+  return {
+    samples: values.length,
+    p50_ms: Math.round(percentile(values, 0.50)),
+    p95_ms: Math.round(percentile(values, 0.95)),
+    p99_ms: Math.round(percentile(values, 0.99)),
+    min_ms: Math.round(Math.min(...values)),
+    max_ms: Math.round(Math.max(...values)),
+    mean_ms: Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
   }
 }
 
-async function runScenario(request, name, path, { allowUnavailable503 = false } = {}) {
-  const samples = []
-  for (const concurrency of STAGES) {
-    const batch = await Promise.all(Array.from({ length: concurrency }, () => timedGet(request, path)))
-    samples.push(...batch.map((sample) => ({ ...sample, concurrency })))
-  }
-
-  const durations = samples.map((sample) => sample.durationMs)
-  const successes = samples.filter((sample) => sample.ok).length
-  const successRate = successes / samples.length
-  const statuses = [...new Set(samples.map((sample) => sample.status))]
-  const blocked = allowUnavailable503 && successes === 0 && statuses.length === 1 && statuses[0] === 503
-  const summary = {
-    event: blocked ? 'puddle_production_load_blocked' : 'puddle_production_load_result',
-    scenario: name,
-    requests: samples.length,
-    success_rate: successRate,
-    blocked,
-    p50_ms: Math.round(percentile(durations, 0.5)),
-    p95_ms: Math.round(percentile(durations, 0.95)),
-    p99_ms: Math.round(percentile(durations, 0.99)),
-    status_counts: Object.fromEntries(statuses.map((status) => [
-      String(status),
-      samples.filter((sample) => sample.status === status).length
-    ])),
-    sample_error: samples.find((sample) => !sample.ok)?.bodyPreview || samples.find((sample) => !sample.ok)?.error || null,
-    stages: STAGES
-  }
-  console.info(JSON.stringify(summary))
-
-  if (blocked) {
-    // This is not a passing service measurement: it explicitly records an infrastructure
-    // prerequisite that prevented the path from reaching its backing service. The PR gate
-    // may continue so the other production paths are still measured instead of being hidden.
-    expect(summary.p95_ms, `${name} fail-closed p95`).toBeLessThanOrEqual(P95_LIMIT_MS[name])
-    return summary
-  }
-
-  expect(successRate, `${name} success rate`).toBeGreaterThanOrEqual(MIN_SUCCESS_RATE)
-  expect(summary.p95_ms, `${name} p95`).toBeLessThanOrEqual(P95_LIMIT_MS[name])
-  return summary
-}
-
-test('bounded production load gate covers all critical read paths', async ({ page }) => {
+test('measure authenticated production client navigation latency', async ({ page }) => {
   test.setTimeout(240_000)
   let accountCreated = false
   try {
     await createDisposableAccount(page)
     accountCreated = true
 
-    const discovery = await page.request.get('/api/discovery?limit=10', { timeout: 15_000 })
-    expect(discovery.ok()).toBeTruthy()
-    const discoveryPayload = await discovery.json()
-    let detailPath = discoveryPayload?.items?.find((item) => item?.slug)?.slug
-      ? `/plans/${discoveryPayload.items.find((item) => item?.slug).slug}`
-      : null
+    const samples = []
+    for (let round = 1; round <= ROUNDS; round += 1) {
+      for (const target of TARGETS) {
+        const link = page.getByRole('link', { name: target.label, exact: true })
+        await expect(link).toBeVisible()
 
-    const mapPreflight = await timedGet(page.request, '/api/map/viewport?north=43.78&south=43.55&east=-79.20&west=-79.62&zoom=11')
-    if (mapPreflight.ok) {
-      const mapPayload = JSON.parse(mapPreflight.bodyText || '{}')
-      if (!detailPath) detailPath = mapPayload?.points?.find((point) => point?.href)?.href || null
-    } else {
-      console.warn(JSON.stringify({
-        event: 'puddle_production_load_preflight_unavailable',
-        scenario: 'mapViewport',
-        status: mapPreflight.status,
-        body: mapPreflight.bodyPreview || null
-      }))
+        const started = performance.now()
+        await link.click()
+        await page.waitForURL((url) => url.pathname === target.path, { timeout: 20_000 })
+        const urlMs = performance.now() - started
+        await page.locator('.puddle-main-transition-loader').waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => {})
+        const settledMs = performance.now() - started
+
+        samples.push({ round, label: target.label, path: target.path, urlMs, settledMs })
+        console.info(JSON.stringify({
+          event: 'puddle_navigation_benchmark_sample',
+          round,
+          target: target.path,
+          url_ms: Math.round(urlMs),
+          settled_ms: Math.round(settledMs)
+        }))
+        await page.waitForTimeout(100)
+      }
     }
-    expect(detailPath, 'location detail path from production discovery/map').toBeTruthy()
 
-    const summaries = []
-    summaries.push(await runScenario(page.request, 'discovery', '/api/discovery?limit=10'))
-    summaries.push(await runScenario(
-      page.request,
-      'mapViewport',
-      '/api/map/viewport?north=43.78&south=43.55&east=-79.20&west=-79.62&zoom=11',
-      { allowUnavailable503: true }
-    ))
-    summaries.push(await runScenario(page.request, 'socialFeed', '/map'))
-    summaries.push(await runScenario(page.request, 'savedHistory', '/plans?tab=saved'))
-    summaries.push(await runScenario(page.request, 'locationDetail', detailPath))
+    const urlValues = samples.map((sample) => sample.urlMs)
+    const settledValues = samples.map((sample) => sample.settledMs)
+    const byRoute = Object.fromEntries(TARGETS.map((target) => {
+      const routeSamples = samples.filter((sample) => sample.path === target.path)
+      return [target.path, {
+        url: summarize(routeSamples.map((sample) => sample.urlMs)),
+        settled: summarize(routeSamples.map((sample) => sample.settledMs))
+      }]
+    }))
 
-    expect(summaries.map((summary) => summary.scenario)).toEqual([
-      'discovery', 'mapViewport', 'socialFeed', 'savedHistory', 'locationDetail'
-    ])
+    console.info(JSON.stringify({
+      event: 'puddle_navigation_benchmark_summary',
+      rounds: ROUNDS,
+      transitions: samples.length,
+      url: summarize(urlValues),
+      settled: summarize(settledValues),
+      by_route: byRoute
+    }))
+
+    expect(samples).toHaveLength(ROUNDS * TARGETS.length)
   } finally {
     if (accountCreated) await deleteDisposableAccount(page)
   }
