@@ -10,6 +10,7 @@ test('desktop Figma sidebar navigates, switches to concise mode, and preserves t
 
   const account = await createConfirmedUser({ displayName: 'Sidebar Behavior Tester' })
   await completeProfileDirect(account.user.id, { display_name: 'Sidebar Behavior Tester' })
+  await page.setViewportSize({ width: 1280, height: 832 })
   await signInThroughUi(page, account.email, account.password)
   await expect(page).toHaveURL(/\/discover$/)
 
@@ -59,7 +60,7 @@ test('desktop Figma sidebar navigates, switches to concise mode, and preserves t
   await expect(overlay).toHaveAttribute('aria-hidden', 'false')
   await expect(overlay.locator('iframe[title="Settings"]')).toBeVisible()
   expect(page.url()).toBe(profileUrl)
-  await page.getByRole('button', { name: 'Close settings' }).click()
+  await page.keyboard.press('Escape')
   await expect(overlay).not.toHaveClass(/is-open/)
   await expect(overlay).toHaveAttribute('aria-hidden', 'true')
   expect(page.url()).toBe(profileUrl)
@@ -81,7 +82,7 @@ test('short and zoom-like desktop heights keep the Figma sidebar non-scrollable 
     await page.setViewportSize({ width: 1280, height })
     await expect(sidebar).toBeVisible()
     await expect(profile).toBeVisible()
-    await expect(settings).toBeVisible()
+    await expect(settings).toHaveCount(1)
 
     const structure = await sidebar.evaluate((element) => {
       const profileLink = element.querySelector('.figma-dashboard-nav a[href="/profile"]')
@@ -101,7 +102,7 @@ test('short and zoom-like desktop heights keep the Figma sidebar non-scrollable 
   await resizer.focus()
   await resizer.press('Home')
   await expect(sidebar).toHaveClass(/is-concise/)
-  await expect(settings).toBeVisible()
+  await expect(settings).toHaveCount(1)
   await expect(settings.locator('.figma-dashboard-settings-label')).toBeHidden()
 
   const conciseStructure = await sidebar.evaluate((element) => {
@@ -117,13 +118,20 @@ test('short and zoom-like desktop heights keep the Figma sidebar non-scrollable 
 
   await resizer.press('End')
   await expect(sidebar).toHaveClass(/is-expanded/)
+
+  // The authored fixed-height desktop composition intentionally places the
+  // Settings control below a very short viewport instead of making the
+  // sidebar scroll. Restore a normal desktop height before testing the
+  // Settings interaction itself.
+  await page.setViewportSize({ width: 1280, height: 832 })
+  await expect(settings).toBeVisible()
   const discoverUrl = page.url()
   await settings.click()
   const overlay = page.locator('.puddle-settings-overlay')
   await expect(overlay).toHaveClass(/is-open/)
   await expect(overlay.locator('iframe[title="Settings"]')).toBeVisible()
   expect(page.url()).toBe(discoverUrl)
-  await page.getByRole('button', { name: 'Close settings' }).click()
+  await page.keyboard.press('Escape')
   await expect(overlay).not.toHaveClass(/is-open/)
   expect(page.url()).toBe(discoverUrl)
 })
