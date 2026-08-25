@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
 
 function initials(name) {
@@ -12,22 +11,19 @@ function placeLabel(point) {
   return point?.city || point?.neighborhood || String(point?.category || 'Saved place').replaceAll('_', ' ')
 }
 
-export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle person', points = [] }) {
-  const searchParams = useSearchParams()
-  const requestedLocation = searchParams.get('location') || ''
-  const shouldOpenFromRoute = searchParams.get('compose') === '1'
+export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle person', points = [], initialOpen = false, requestedLocation = '' }) {
   const initialPoints = useMemo(() => Array.isArray(points) ? points.filter((point) => point?.id) : [], [points])
   const [savedPoints, setSavedPoints] = useState(initialPoints)
   const [savedPointsLoaded, setSavedPointsLoaded] = useState(Boolean(initialPoints.length))
   const [savedPointsLoading, setSavedPointsLoading] = useState(false)
-  const [open, setOpen] = useState(shouldOpenFromRoute)
+  const [open, setOpen] = useState(Boolean(initialOpen))
   const [locationId, setLocationId] = useState(requestedLocation || initialPoints[0]?.id || '')
   const dockRef = useRef(null)
   const titleRef = useRef(null)
 
   useEffect(() => {
-    if (shouldOpenFromRoute) setOpen(true)
-  }, [shouldOpenFromRoute])
+    if (initialOpen) setOpen(true)
+  }, [initialOpen])
 
   useEffect(() => {
     if (requestedLocation) setLocationId(requestedLocation)
@@ -43,8 +39,6 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
 
   useEffect(() => {
     if (!open) return undefined
-
-    let active = true
     const frame = window.requestAnimationFrame(() => titleRef.current?.focus())
     const closeOutside = (event) => {
       if (!dockRef.current?.contains(event.target)) setOpen(false)
@@ -52,10 +46,21 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
     const closeOnEscape = (event) => {
       if (event.key === 'Escape') setOpen(false)
     }
+    document.addEventListener('pointerdown', closeOutside, true)
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.removeEventListener('pointerdown', closeOutside, true)
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open || savedPointsLoaded) return undefined
+    let active = true
+    setSavedPointsLoading(true)
 
     async function loadSavedPoints() {
-      if (savedPointsLoaded || savedPointsLoading) return
-      setSavedPointsLoading(true)
       try {
         const query = requestedLocation ? `?ids=${encodeURIComponent(requestedLocation)}` : ''
         const response = await fetch(`/api/saved-location-options${query}`, { cache: 'no-store' })
@@ -75,49 +80,20 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
     }
 
     loadSavedPoints()
-    document.addEventListener('pointerdown', closeOutside, true)
-    window.addEventListener('keydown', closeOnEscape)
-    return () => {
-      active = false
-      window.cancelAnimationFrame(frame)
-      document.removeEventListener('pointerdown', closeOutside, true)
-      window.removeEventListener('keydown', closeOnEscape)
-    }
-  }, [open, requestedLocation, savedPointsLoaded, savedPointsLoading])
+    return () => { active = false }
+  }, [open, requestedLocation, savedPointsLoaded])
 
-  return <div
-    className={`puddle-discover-create-dock${open ? ' is-open' : ''}`}
-    data-testid="feed-composer"
-    ref={dockRef}
-  >
-    <button
-      className="puddle-discover-create-trigger"
-      type="button"
-      aria-expanded={open}
-      aria-controls="discover-create-puddle-form"
-      onClick={() => setOpen(true)}
-    >
-      <span className="puddle-discover-create-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>
-        {avatarUrl ? null : initials(displayName)}
-      </span>
+  return <div className={`puddle-discover-create-dock${open ? ' is-open' : ''}`} data-testid="feed-composer" ref={dockRef}>
+    <button className="puddle-discover-create-trigger" type="button" aria-expanded={open} aria-controls="discover-create-puddle-form" onClick={() => setOpen(true)}>
+      <span className="puddle-discover-create-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? null : initials(displayName)}</span>
       <span className="puddle-discover-create-placeholder">Create a puddle...</span>
       <b className="puddle-discover-create-arrow" aria-hidden="true">↑</b>
     </button>
 
-    <form
-      action={createPuddlePost}
-      className="puddle-discover-create-form"
-      id="discover-create-puddle-form"
-      aria-label="Create a puddle"
-      aria-hidden={!open}
-      inert={!open}
-    >
+    <form action={createPuddlePost} className="puddle-discover-create-form" id="discover-create-puddle-form" aria-label="Create a puddle" aria-hidden={!open} inert={!open}>
       <input type="hidden" name="location_id" value={locationId} />
-
       <header className="puddle-discover-create-header">
-        <span className="puddle-discover-create-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>
-          {avatarUrl ? null : initials(displayName)}
-        </span>
+        <span className="puddle-discover-create-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? null : initials(displayName)}</span>
         <fieldset className="puddle-discover-create-visibility" aria-label="Post visibility">
           <label><input type="radio" name="visibility" value="public" defaultChecked /><span>Public</span></label>
           <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>
@@ -125,16 +101,8 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
         <button className="puddle-discover-create-close" type="button" onClick={() => setOpen(false)} aria-label="Close create puddle">×</button>
         <button className="puddle-discover-create-submit" type="submit" disabled={!locationId} aria-label="Publish puddle">↑</button>
       </header>
-
-      <label className="puddle-discover-create-title">
-        <span className="sr-only">Title</span>
-        <input ref={titleRef} name="title" maxLength="80" required placeholder="Title" tabIndex={open ? 0 : -1} />
-      </label>
-      <label className="puddle-discover-create-description">
-        <span className="sr-only">Description</span>
-        <textarea name="description" maxLength="1000" placeholder="Description" tabIndex={open ? 0 : -1} />
-      </label>
-
+      <label className="puddle-discover-create-title"><span className="sr-only">Title</span><input ref={titleRef} name="title" maxLength="80" required placeholder="Title" tabIndex={open ? 0 : -1} /></label>
+      <label className="puddle-discover-create-description"><span className="sr-only">Description</span><textarea name="description" maxLength="1000" placeholder="Description" tabIndex={open ? 0 : -1} /></label>
       <div className="puddle-discover-create-footer">
         <label className="puddle-discover-create-place">
           <span>Saved place</span>
@@ -142,7 +110,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
             {savedPoints.length ? savedPoints.map((point) => <option value={point.id} key={point.id}>{point.title} · {placeLabel(point)}</option>) : <option value="">Save a place first</option>}
           </select>
         </label>
-        {!savedPoints.length ? <small>Save a place before publishing a puddle.</small> : null}
+        {savedPointsLoading ? <small>Loading saved places...</small> : !savedPoints.length ? <small>Save a place before publishing a puddle.</small> : null}
       </div>
     </form>
   </div>
