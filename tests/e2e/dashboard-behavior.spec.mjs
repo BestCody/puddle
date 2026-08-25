@@ -66,19 +66,23 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(settingsOverlay).toHaveAttribute('aria-hidden', 'false')
   await expect(settingsOverlay.locator('iframe[title="Settings"]')).toBeVisible()
   expect(page.url()).toBe(discoverUrl)
-  await page.getByRole('button', { name: 'Close settings' }).click()
+  await page.keyboard.press('Escape')
   await expect(settingsOverlay).not.toHaveClass(/is-open/)
   await expect(settingsOverlay).toHaveAttribute('aria-hidden', 'true')
   expect(page.url()).toBe(discoverUrl)
 
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
-  for (const name of ['Back', 'Pass', 'Save', 'Star']) {
-    await expect(page.getByRole('button', { name })).toBeVisible()
+  const undo = page.getByRole('button', { name: 'Message', exact: true })
+  await expect(undo).toBeVisible()
+  await expect(undo).toBeDisabled()
+  for (const name of ['Pass', 'Save', 'Post']) {
+    await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
   }
   await page.getByRole('button', { name: 'Open details' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.getByRole('button', { name: 'Close details' }).click()
-  await expect(page.locator('.figma-dashboard-account-menu summary')).toBeVisible()
+  await expect(settingsTrigger).toBeVisible()
+  await expect(page.locator('.figma-dashboard-account-menu summary')).toBeHidden()
   await assertNoHorizontalOverflow(page)
 
   await openDesktop(page, '/map')
