@@ -57,13 +57,16 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await signInThroughUi(page, account.email, account.password)
   await expect(page).toHaveURL(/\/discover$/)
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
-  for (const name of ['Back', 'Pass', 'Save', 'Star']) await expect(page.getByRole('button', { name })).toBeVisible()
+  const undo = page.getByRole('button', { name: 'Message', exact: true })
+  await expect(undo).toBeVisible()
+  await expect(undo).toBeDisabled()
+  for (const name of ['Pass', 'Save', 'Post']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
 
   if (testInfo.project.name === 'desktop-chromium') {
     const desktopSidebar = page.locator('.figma-dashboard-sidebar')
     await expect(desktopSidebar).toBeVisible()
-    await expect(page.locator('.figma-dashboard-account-menu summary')).toBeVisible()
-    await expect(page.locator('.figma-dashboard-account-menu summary i')).toHaveCount(3)
+    await expect(desktopSidebar.locator('.figma-dashboard-settings-link')).toBeVisible()
+    await expect(page.locator('.figma-dashboard-account-menu summary')).toBeHidden()
     await expect(desktopSidebar.locator('.figma-dashboard-nav-item')).toHaveCount(6)
   } else {
     await expect(page.locator('.figma-dashboard-sidebar')).toBeHidden()
