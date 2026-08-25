@@ -52,7 +52,7 @@ async function assertResponsiveFlow(page, width, height, mode) {
     }
   })
 
-  const targetWidth = Math.min(width, mode === 'desktop' ? 1281 : 704)
+  const targetWidth = Math.min(width, mode === 'desktop' ? 1440 : 704)
   assert(Math.abs(metrics.stageWidth - targetWidth) < 1.1, `${mode} stage width ${metrics.stageWidth} does not match ${targetWidth}`)
   assert(Math.abs(metrics.left - metrics.right) < 1.1, `${mode} stage is not centered at ${width}x${height}`)
   assert(metrics.scrollWidth <= metrics.viewportWidth, `${mode} page horizontally overflows at ${width}x${height}`)

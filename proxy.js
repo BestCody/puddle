@@ -21,6 +21,9 @@ const moderationExemptApiPrefixes = [
   '/api/location-photos',
   '/api/billing/webhook'
 ]
+// These exact read routes perform their own claims and account-state checks so
+// the proxy does not serialize a second claims/profile round trip ahead of them.
+const moderationExemptApiPaths = new Set(['/api/discovery', '/api/map/viewport'])
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
@@ -31,7 +34,7 @@ function forbidden(request, nonce, message = 'Cross-site request blocked.') { re
 function hasSupabaseAuthCookie(request) { return request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(?:\.\d+)?$/i.test(name)) }
 function matchesPrefix(pathname, prefixes) { return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) }
 function requiresModerationGate(pathname) {
-  return pathname.startsWith('/api/') && !moderationExemptApiPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+  return pathname.startsWith('/api/') && !moderationExemptApiPaths.has(pathname) && !moderationExemptApiPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 function cachePolicy(response, pathname, privateResponse = false) {
   if (privateResponse) { response.headers.set('Cache-Control', 'private, no-store'); return response }

@@ -33,6 +33,20 @@ test('Hot read APIs reuse verified claims instead of making a second auth-user r
   }
 })
 
+test('Hot API routes own the account-state gate when proxy moderation is skipped', async () => {
+  const [proxy, discovery, map] = await Promise.all([
+    read('proxy.js'),
+    read('app/api/discovery/route.js'),
+    read('app/api/map/viewport/route.js')
+  ])
+  assert.match(proxy, /moderationExemptApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport'\]\)/)
+  for (const source of [discovery, map]) {
+    assert.match(source, /suspended_at,banned_at/)
+    assert.match(source, /Account status could not be verified/)
+    assert.match(source, /This account is suspended|This account is banned/)
+  }
+})
+
 test('Dashboard shell uses one trusted bootstrap RPC', async () => {
   const [shell, migration] = await Promise.all([
     read('components/product-shell.js'),
@@ -119,6 +133,8 @@ test('Discovery coalesces concurrent seen-history reads per authenticated user',
   assert.match(discovery, /seenLocationInFlight\.get\(userId\)/)
   assert.match(discovery, /seenLocationInFlight\.set\(userId, request\)/)
   assert.match(discovery, /seenLocationInFlight\.delete\(userId\)/)
+  assert.match(discovery, /Promise\.all\(\[seenPromise, searchPromise\]\)/)
+  assert.match(discovery, /const refill = await searchGlobalLocations/)
 })
 
 test('Server latency budgets emit structured metrics without user identifiers', async () => {
