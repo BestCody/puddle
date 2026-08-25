@@ -26,6 +26,16 @@ const items = [
 ]
 
 const prefetchedRoutes = new Set()
+const IDLE_PREFETCH_DELAY_MS = 900
+const IDLE_PREFETCH_GAP_MS = 650
+const IDLE_ROUTE_HINTS = {
+  '/discover': ['/map', '/plans'],
+  '/map': ['/discover', '/plans'],
+  '/plans': ['/map', '/matches'],
+  '/matches': ['/plans', '/membership'],
+  '/membership': ['/profile', '/matches'],
+  '/profile': ['/discover', '/plans']
+}
 
 function isActive(pathname, href) {
   if (href === '/plans') return pathname === '/plans' || pathname.startsWith('/plans/')
@@ -37,6 +47,17 @@ function isActive(pathname, href) {
 
 function isPlainLeftPointer(event) {
   return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
+}
+
+function shouldAvoidIdlePrefetch() {
+  if (typeof navigator === 'undefined') return true
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+  return Boolean(
+    document.visibilityState === 'hidden' ||
+    connection?.saveData ||
+    connection?.effectiveType === 'slow-2g' ||
+    connection?.effectiveType === '2g'
+  )
 }
 
 function NavItems({ mobile = false, avatarUrl = null }) {
@@ -67,6 +88,41 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       onInvalidate: () => prefetchedRoutes.delete(href)
     })
   }
+
+  useEffect(() => {
+    if (!routeActiveHref || shouldAvoidIdlePrefetch()) return
+    const hints = (IDLE_ROUTE_HINTS[routeActiveHref] || [])
+      .filter((href) => !isActive(pathname, href) && !prefetchedRoutes.has(href))
+      .slice(0, 2)
+    if (!hints.length) return
+
+    let cancelled = false
+    let timerId = null
+    let idleId = null
+
+    function scheduleIdle(callback) {
+      if ('requestIdleCallback' in window) {
+        idleId = window.requestIdleCallback(callback, { timeout: 1500 })
+      } else {
+        timerId = window.setTimeout(callback, 120)
+      }
+    }
+
+    function warmHint(index) {
+      if (cancelled || index >= hints.length || shouldAvoidIdlePrefetch()) return
+      warmRoute(hints[index])
+      if (index + 1 < hints.length) {
+        timerId = window.setTimeout(() => scheduleIdle(() => warmHint(index + 1)), IDLE_PREFETCH_GAP_MS)
+      }
+    }
+
+    timerId = window.setTimeout(() => scheduleIdle(() => warmHint(0)), IDLE_PREFETCH_DELAY_MS)
+    return () => {
+      cancelled = true
+      if (timerId !== null) window.clearTimeout(timerId)
+      if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId)
+    }
+  }, [pathname, routeActiveHref, router])
 
   function startNavigation(event, href) {
     if (
