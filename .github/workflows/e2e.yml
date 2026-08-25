@@ -111,7 +111,24 @@ jobs:
             cat /tmp/puddle-e2e-b2-stub.log | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          npm run e2e:test
+          set -o pipefail
+          logfile="$(mktemp)"
+          set +e
+          npm run e2e:test 2>&1 | tee "$logfile"
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            # Surface failing spec/test titles as annotations so failures are
+            # diagnosable without authenticated log access.
+            grep -E "✖|✘|›.*spec\.mjs" "$logfile" | tail -n 10 | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
+            # Startup/timeout-style failures print no ✖ lines; dump the tail so
+            # the root cause (webServer, build, or boot crash) is still visible.
+            if ! grep -qE "✖|✘" "$logfile"; then
+              echo "::error::no per-test failures recorded; dumping tail (startup/webServer failure?)"
+              tail -n 20 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
+            fi
+            exit "$code"
+          fi
       - name: Upload browser diagnostics
         if: always()
         uses: actions/upload-artifact@v7
