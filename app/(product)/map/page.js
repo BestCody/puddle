@@ -43,13 +43,10 @@ function timeLabel(value) {
 function FeedPhotos({ post, href }) {
   const photos = post.photo_urls || []
   const count = photos.length
-
   return <div className={styles.photos} aria-label={`${post.location.name} photos`}>
     <Link href={href} className={`${styles.photo} ${styles.photoMain}`} style={photos[0] ? { backgroundImage: `url(${photos[0]})` } : undefined} aria-label={`Open ${post.location.name}`} />
     <Link href={href} className={styles.photo} style={photos[1] ? { backgroundImage: `url(${photos[1]})` } : undefined} aria-label={`Open ${post.location.name} photo 2`} />
-    <Link href={href} className={styles.photo} style={photos[2] ? { backgroundImage: `url(${photos[2]})` } : undefined} aria-label={`Open ${post.location.name} photo 3`}>
-      {count > 3 ? `+${count - 2}` : null}
-    </Link>
+    <Link href={href} className={styles.photo} style={photos[2] ? { backgroundImage: `url(${photos[2]})` } : undefined} aria-label={`Open ${post.location.name} photo 3`}>{count > 3 ? `+${count - 2}` : null}</Link>
   </div>
 }
 
@@ -58,50 +55,28 @@ function FeedPost({ post }) {
   const location = post.location
   const href = `/plans/${location.slug}`
   const authorName = author.display_name || author.username || 'Puddle person'
-
   return <article className={styles.post} id={`post-${post.id}`} data-testid="feed-post" aria-label={post.title || `Puddle at ${location.name}`}>
     <header className={styles.author}>
-      <span className={styles.avatar} style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>
-        {post.author_avatar_url ? null : initials(authorName)}
-      </span>
+      <span className={styles.avatar} style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>{post.author_avatar_url ? null : initials(authorName)}</span>
       <span className={styles.authorMeta}><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
     </header>
-
     {post.body ? <p className={styles.copy}>{post.body}</p> : null}
     <FeedPhotos post={post} href={href} />
-
     <Link className={styles.place} href={href}>
       <span className={styles.placeMeta}>{categoryLabel(location.kind)}</span>
       <small className={styles.placeArea}>{location.neighborhood || location.city || ''}</small>
-      <h2>{location.name}</h2>
-      <b className={styles.placeAdd} aria-hidden="true">+</b>
+      <h2>{location.name}</h2><b className={styles.placeAdd} aria-hidden="true">+</b>
     </Link>
-
     <footer className={styles.interactions} aria-label="Post actions">
       <details className={styles.actionMenu}>
         <summary aria-label={`Comment on ${post.title}`}>◯<span>{post.comments.length || ''}</span></summary>
         <div className={styles.actionPanel}>
-          {post.comments.length ? <div className={styles.commentList}>{post.comments.map((comment) => <p key={comment.id}>
-            <strong>{comment.author?.display_name || comment.author?.username || 'Puddle person'}</strong>
-            <span>{comment.body}</span>
-          </p>)}</div> : <p>No recent comments.</p>}
-          <form action={createFeedComment}>
-            <input type="hidden" name="post_id" value={post.id} />
-            <input name="comment_body" required maxLength="2000" placeholder="Add a comment" aria-label="Add a comment" />
-            <button type="submit">Post</button>
-          </form>
+          {post.comments.length ? <div className={styles.commentList}>{post.comments.map((comment) => <p key={comment.id}><strong>{comment.author?.display_name || comment.author?.username || 'Puddle person'}</strong><span>{comment.body}</span></p>)}</div> : <p>No recent comments.</p>}
+          <form action={createFeedComment}><input type="hidden" name="post_id" value={post.id} /><input name="comment_body" required maxLength="2000" placeholder="Add a comment" aria-label="Add a comment" /><button type="submit">Post</button></form>
         </div>
       </details>
-
       <Link href={href} aria-label="Open puddle">◒</Link>
-
-      <form action={toggleFeedSave}>
-        <input type="hidden" name="location_id" value={post.location_id} />
-        <button className={post.saved ? styles.saved : ''} type="submit" aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}>
-          {post.saved ? '♥' : '♡'}
-        </button>
-      </form>
-
+      <form action={toggleFeedSave}><input type="hidden" name="location_id" value={post.location_id} /><button className={post.saved ? styles.saved : ''} type="submit" aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}>{post.saved ? '♥' : '♡'}</button></form>
       <FeedShareMenu postId={post.id} title={post.title || location.name} />
     </footer>
   </article>
@@ -110,27 +85,15 @@ function FeedPost({ post }) {
 function FeedTop({ view, query }) {
   return <header className={styles.header} data-testid="feed-header">
     <Link className={styles.back} href="/discover" aria-label="Back to Swipe">‹</Link>
-    <InstantSegment
-      className={styles.tabs}
-      tone="yellow"
-      activeValue={view}
-      ariaLabel="Posts or map"
-      testId="feed-tabs"
-      items={[
-        { value: 'feed', label: 'Posts', href: '/map' },
-        { value: 'map', label: 'Map', href: '/map?view=map' }
-      ]}
-    />
+    <InstantSegment className={styles.tabs} tone="yellow" activeValue={view} ariaLabel="Posts or map" testId="feed-tabs" items={[{ value: 'feed', label: 'Posts', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]} />
     {view === 'feed' ? <DiscoverSearchOverlay initialQuery={query || ''} /> : <span aria-hidden="true" />}
   </header>
 }
 
 function MapScreen({ points, center, heatmap = [], passActive = false, selectingForPost = false }) {
   return <section className={styles.mapScreen} data-testid="feed-map-canvas">
-    {selectingForPost ? <div className={styles.mapSelectionNotice}><strong>Choose a place for your post.</strong><Link href="/create/post">Cancel</Link></div> : null}
-    <div className={styles.mapCanvas}>
-      <LocationMap initialPoints={points} initialCenter={center} heatmapPoints={heatmap} passActive={passActive && !selectingForPost} loadCatalogue selectingForPost={selectingForPost} />
-    </div>
+    {selectingForPost ? <div className={styles.mapSelectionNotice}><strong>Choose a place for your post.</strong><Link href="/map?compose=1">Cancel</Link></div> : null}
+    <div className={styles.mapCanvas}><LocationMap initialPoints={points} initialCenter={center} heatmapPoints={heatmap} passActive={passActive && !selectingForPost} loadCatalogue selectingForPost={selectingForPost} /></div>
   </section>
 }
 
@@ -150,7 +113,7 @@ function StreamPlaceholder({ label }) {
 async function MapScreenSlot({ mapPromise, selectingForPost }) {
   const mapSnapshot = await mapPromise
   const mapPoints = selectingForPost
-    ? mapSnapshot.points.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
+    ? mapSnapshot.points.map((point) => ({ ...point, href: `/map?compose=1&location=${encodeURIComponent(point.id)}` }))
     : mapSnapshot.points
   return <MapScreen
     points={mapPoints}
@@ -167,17 +130,19 @@ async function FeedStreamSlot({ feedPromise, query }) {
   return <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
     {feed.items.length ? feed.items.map((post) => <FeedPost post={post} key={post.id} />) : <div className={styles.empty}>
       <strong>{query ? 'No puddles match that search on this page.' : 'No one has posted a puddle yet.'}</strong>
-      {moreHref ? <Link href={moreHref}>Search older puddles</Link> : <Link href="/create/post">Create the first one</Link>}
+      {moreHref ? <Link href={moreHref}>Search older puddles</Link> : <Link href="/map?compose=1">Create the first one</Link>}
     </div>}
     {moreHref && feed.items.length ? <nav aria-label="Discover pagination"><Link href={moreHref}>More puddles</Link></nav> : null}
   </section>
 }
 
-async function CreatePuddleSlot({ feedPromise, mapPromise }) {
+async function CreatePuddleSlot({ feedPromise, mapPromise, initialOpen, requestedLocation }) {
   const [feed, mapSnapshot] = await Promise.all([feedPromise, mapPromise])
   return <DiscoverCreatePuddle
     avatarUrl={feed.self.avatar_url}
     displayName={feed.self.display_name || 'Puddle person'}
+    initialOpen={initialOpen}
+    requestedLocation={requestedLocation}
     points={mapSnapshot.points.map((point) => ({
       id: point.id,
       title: point.title,
@@ -195,6 +160,8 @@ export default async function LocationMapPage({ searchParams }) {
   const selectingForPost = view === 'map' && params?.selectForPost === '1'
   const beforeCreatedAt = typeof params?.before === 'string' ? params.before : null
   const beforePostId = typeof params?.beforeId === 'string' ? params.beforeId : null
+  const initialComposerOpen = view === 'feed' && params?.compose === '1'
+  const requestedLocation = typeof params?.location === 'string' ? params.location : ''
 
   return renderProductPage(async (session) => {
     const mapPromise = getLocationMapSnapshot(session)
@@ -206,7 +173,6 @@ export default async function LocationMapPage({ searchParams }) {
       <AuthMessage searchParams={params} />
       <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-view={view}>
         <FeedTop view={view} query={params?.q} />
-
         {view === 'map' ? <Suspense fallback={<StreamPlaceholder label="Loading map" />}>
           <MapScreenSlot mapPromise={mapPromise} selectingForPost={selectingForPost} />
         </Suspense> : <>
@@ -214,7 +180,12 @@ export default async function LocationMapPage({ searchParams }) {
             <FeedStreamSlot feedPromise={feedPromise} query={query} />
           </Suspense>
           <Suspense fallback={null}>
-            <CreatePuddleSlot feedPromise={feedPromise} mapPromise={mapPromise} />
+            <CreatePuddleSlot
+              feedPromise={feedPromise}
+              mapPromise={mapPromise}
+              initialOpen={initialComposerOpen}
+              requestedLocation={requestedLocation}
+            />
           </Suspense>
         </>}
       </div>

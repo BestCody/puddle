@@ -10,7 +10,7 @@ Puddle is a Next.js application deployed through Vercel.
 browser
   -> Next.js routes / API routes
   -> proxy.js security + session boundary
-  -> Supabase auth/database, OpenSearch, B2, Stripe, and approved external APIs
+  -> Supabase auth/database, Backblaze B2, Stripe, and approved external APIs
 ```
 
 `proxy.js` owns the common request boundary: security headers, origin/unsafe-method checks, request-size limits, protected-route authentication, account moderation gates, cache policy, and server timing.
@@ -23,29 +23,21 @@ Supabase remains the identity and relational product system. It is not a legacy 
 
 ### Global mode
 
-When `GLOBAL_LOCATION_SEARCH_ENABLED=true`:
-
 ```text
 Discover / map API
   -> global discovery layer
-  -> OpenSearch `locations-active`
+  -> B2-only location serving (data/search/active.json)
+     -> packed planner routing tiles -> immutable geo packs
+     -> compact text projection cores/details + prefix postings
   -> ranked published locations
   -> Puddle product/social overlays where needed
 ```
 
-OpenSearch failures do not silently fail over to Postgres. The global path can use its short-lived in-process success cache and degraded empty/stale responses, but the serving boundary remains OpenSearch-only.
+B2 serving failures fail closed and never fall back to Postgres. The global path may use its short-lived in-process success cache, but the serving boundary remains B2-only; there is no retired-backend switch left to resurrect.
 
 ### Relational mode
 
-When global serving is disabled:
-
-```text
-Discover API
-  -> relational discovery layer
-  -> Supabase/Postgres
-```
-
-This is a deliberate serving mode for the relational Puddle catalogue, not an emergency OpenSearch fallback.
+Retired. The relational Puddle catalogue no longer participates in discovery serving, and no emergency fallback into it exists.
 
 ## 3. Global location data pipeline
 
@@ -62,16 +54,15 @@ latest Overture Places + Foursquare bulk source
   -> stable Puddle UUID preservation
   -> existing Google-ID and photo overlays
   -> normalized canonical B2 snapshot
-  -> validated blue/green OpenSearch index
-  -> atomic `locations-active` alias switch
+  -> packed planner manifests with validated hash ledgers
+  -> atomic data/search/active.json pointer activation
 ```
 
 Key durable workflows:
 
 - `global-bootstrap.yml`: exports current Puddle UUID/source/enrichment state and publishes immutable plus `current` bootstrap Parquet to B2.
-- `global-location-data.yml`: builds the canonical global snapshot and optionally activates the validated OpenSearch index.
-- `opensearch-map-smoke.yml`: checks a real authenticated OpenSearch viewport request after relevant serving changes or manual dispatch.
-- `sync-opensearch-runtime-auth.yml`: verifies OpenSearch credentials and stores the runtime copy in Supabase Vault.
+- `global-location-data.yml`: builds the canonical global snapshot and activates the validated planner manifest.
+- `sync-b2-data-runtime-auth.yml` / `sync-b2-media-runtime-auth.yml`: verify scoped B2 credentials and store the runtime copies in Supabase Vault.
 
 Completed dated progress/resume workflows are not part of production architecture and must not be recreated as permanent repository files.
 
@@ -87,7 +78,6 @@ Wikimedia / Mapillary / KartaView candidate
   -> B2 `media/photos/by-sha256/<prefix>/<sha256>.jpg`
   -> Supabase `media_objects` registration
   -> provenance link from `location_photo_sources`
-  -> content hash projected into OpenSearch
   -> client URL `/api/open-photo/<sha256>`
 ```
 
@@ -178,7 +168,7 @@ The repository should reject reintroduction of these runtime patterns:
 - Supabase Storage as the canonical open-location-photo byte store
 - Supabase-named open-photo compatibility shims and completed B2 migration/cleanup scripts
 - provider-specific public B2 URL identity/delivery settings
-- OpenSearch-to-Postgres emergency fallback
+- OpenSearch serving backend, query DSL, runtime credentials, and OpenSearch-to-Postgres emergency fallback
 - dated one-off global-location progress/resume workflows
 - marker-file workflow triggers used only to force GitHub Actions runs
 

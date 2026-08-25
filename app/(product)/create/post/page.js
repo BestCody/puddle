@@ -72,20 +72,14 @@ function CreatePostPreview({ avatar, name, point }) {
     <strong className="figma-create-post-preview-name">{name}</strong>
     <small className="figma-create-post-preview-time">New puddle</small>
     <p className="figma-create-post-preview-copy">{copy}</p>
-
     <div className="figma-create-post-preview-photos">
       <i className="is-main" style={photoStyle} />
       {point?.photo_url ? <i style={photoStyle} /> : <i />}
       <i className="is-more">{point ? 'Place' : '+'}</i>
     </div>
-
     <div className="figma-create-post-preview-place">
-      <span>{category}</span>
-      <small>{location}</small>
-      <h2>{title}</h2>
-      <b>+</b>
+      <span>{category}</span><small>{location}</small><h2>{title}</h2><b>+</b>
     </div>
-
     <footer className="figma-create-post-preview-actions"><span>◯</span><span>◒</span><span>♡</span><span>↗</span></footer>
   </article>
 }
@@ -107,23 +101,19 @@ export default async function CreatePostPage({ searchParams }) {
 
     return <div className="figma-create-post-screen" data-figma-node="25:79">
       <AuthMessage searchParams={params} />
-
       <header className="figma-create-post-topbar">
         <Link className="figma-feed-back" href="/map" aria-label="Back to Feed">‹</Link>
         <span className="figma-create-post-mobile-logo" aria-hidden="true" />
         <nav className="figma-dashboard-segment figma-feed-tabs" aria-label="Feed or map">
-          <Link className="is-active" href="/map">Feed</Link>
-          <Link href="/map?view=map">Map</Link>
+          <Link className="is-active" href="/map">Feed</Link><Link href="/map?view=map">Map</Link>
         </nav>
         <form className="figma-feed-search figma-create-post-search" action="/plans" method="get">
           <label><input aria-label="Search saved puddles" type="search" name="q" placeholder="Search saved puddles" /></label>
           <button type="submit" aria-label="Search">⌕</button>
         </form>
       </header>
-
       <section className="figma-create-post-workspace" aria-label="Post composer preview">
         <CreatePostPreview avatar={avatar} name={name} point={selectedPoint} />
-
         <form className="figma-create-post-card" aria-label="Create a puddle post" action={createPuddlePost}>
           <input type="hidden" name="location_id" value={selectedPoint?.id || ''} />
           <span className="figma-feed-post-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(name)}</span>
@@ -139,11 +129,7 @@ export default async function CreatePostPage({ searchParams }) {
             <div className="figma-create-post-add-menu">
               <strong>Attach a place</strong>
               {selectablePoints.length ? <div className="figma-create-post-location-options">
-                {selectablePoints.slice(0, 12).map((point) => <Link
-                  className={selectedPoint?.id === point.id ? 'is-selected' : ''}
-                  href={`/create/post?location=${encodeURIComponent(point.id)}`}
-                  key={point.id}
-                ><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
+                {selectablePoints.slice(0, 12).map((point) => <Link className={selectedPoint?.id === point.id ? 'is-selected' : ''} href={`/create/post?location=${encodeURIComponent(point.id)}`} key={point.id}><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
               </div> : <p>Choose a place from Swipe, Saved, or the map.</p>}
             </div>
             <div className="figma-create-post-add-footer"><span>{selectedPoint ? selectedPoint.title : 'No place selected'}</span></div>
@@ -151,7 +137,6 @@ export default async function CreatePostPage({ searchParams }) {
           <Link className="figma-create-post-map" href="/map?view=map&selectForPost=1" aria-label="Choose a place from the map">⌑</Link>
         </form>
       </section>
-
       {!selectedPoint ? <div className="figma-create-post-empty"><strong>Choose a place before you post.</strong><Link href="/discover">Start swiping</Link></div> : null}
     </div>
   })

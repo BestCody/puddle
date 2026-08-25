@@ -4,14 +4,13 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('discovery is OpenSearch-only and degrades without querying the retired relational catalogue', async () => {
+test('discovery is B2-only with no degraded fallback paths into the retired relational catalogue', async () => {
   const selector = await read('lib/app/discovery.js')
   const global = await read('lib/app/discovery-global.js')
   const route = await read('app/api/discovery/route.js')
 
   assert.match(selector, /getGlobalDiscoveryFeed/)
-  assert.match(selector, /global-location-stale-cache/)
-  assert.match(selector, /global-location-degraded/)
+  assert.doesNotMatch(selector, /global-location-stale-cache|global-location-degraded|emptyDegradedFeed/)
   assert.doesNotMatch(selector, /getRelationalDiscoveryFeed|discovery-relational|from\(['"]locations['"]\)/)
   assert.match(global, /global-location-serving/)
   assert.match(global, /searchGlobalLocations/)
@@ -48,7 +47,7 @@ test('private B2 stays behind same-origin open-photo URLs', async () => {
   const nextConfig = await read('next.config.mjs')
   const deliveryUrl = await read('lib/media/open-photo-url.js')
   const openPhotoRoute = await read('app/api/open-photo/[sha256]/route.js')
-  const globalDoc = await read('scripts/global-data/index_opensearch.py')
+  const globalDoc = await read('scripts/global-data/build_b2_search_index.py')
 
   assert.doesNotMatch(nextConfig, /B2_MEDIA_PUBLIC_BASE_URL|B2_DOWNLOAD_BASE_URL|media\.puddle\.app/)
   assert.match(deliveryUrl, /\/api\/open-photo\//)

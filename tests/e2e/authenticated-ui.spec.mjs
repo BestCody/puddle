@@ -94,14 +94,13 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await attachRender(page, testInfo, 'map')
 
   await page.goto('/create/post')
-  await expect(page.locator('.figma-create-post-card')).toBeVisible()
-  await expect(page.getByLabel('Open add menu')).toBeVisible()
-  if (testInfo.project.name === 'mobile-chromium') {
-    await page.getByLabel('Open add menu').click()
-    await expect(page.locator('.figma-create-post-add-menu')).toBeVisible()
-    await attachRender(page, testInfo, 'feed-post-add-menu')
-    await page.getByLabel('Open add menu').click()
-  }
+  await expect(page).toHaveURL(/\/map\?compose=1$/)
+  await expect(page.getByTestId('feed-composer')).toHaveClass(/is-open/)
+  await expect(page.getByRole('form', { name: 'Create a puddle' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveAttribute('placeholder', 'Title')
+  await expect(page.getByRole('textbox', { name: 'Description' })).toHaveAttribute('placeholder', 'Description')
+  await expect(page.getByLabel('Close create puddle')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Publish puddle' })).toBeVisible()
   await assertRouteHealth(page)
   await attachRender(page, testInfo, 'feed-post')
 

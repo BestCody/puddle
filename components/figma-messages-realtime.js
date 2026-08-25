@@ -66,6 +66,9 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
   const [conversationsHasMore, setConversationsHasMore] = useState(Boolean(initialSnapshot.conversationsHasMore))
   const [messages, setMessages] = useState(initialSnapshot.messages || [])
   const [messagesHasMore, setMessagesHasMore] = useState(Boolean(initialSnapshot.messagesHasMore))
+  const [shareableLocations, setShareableLocations] = useState(initialSnapshot.shareableLocations || [])
+  const [shareableLocationsLoaded, setShareableLocationsLoaded] = useState(Boolean(initialSnapshot.shareableLocations?.length))
+  const [shareableLocationsLoading, setShareableLocationsLoading] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [paging, setPaging] = useState(false)
@@ -88,6 +91,21 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
     if (!node) return
     node.scrollTop = node.scrollHeight
   }, [selectedId, latestMessageId])
+
+  async function loadShareableLocations() {
+    if (shareableLocationsLoaded || shareableLocationsLoading) return
+    setShareableLocationsLoading(true)
+    try {
+      const response = await fetch('/api/saved-location-options', { cache: 'no-store' })
+      const payload = response.ok ? await response.json() : null
+      setShareableLocations(Array.isArray(payload?.items) ? payload.items : [])
+    } catch {
+      setShareableLocations([])
+    } finally {
+      setShareableLocationsLoaded(true)
+      setShareableLocationsLoading(false)
+    }
+  }
 
   async function markSelectedRead() {
     if (!selectedId) return
@@ -301,9 +319,15 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
           </div>
           {notice ? <p className="figma-friends-chat-notice" role="status">{notice}</p> : null}
           <form className="figma-friends-composer puddle-text-composer" onSubmit={send}>
-            <details className="figma-friends-composer-menu is-attachment" ref={placeMenuRef}>
+            <details
+              className="figma-friends-composer-menu is-attachment"
+              ref={placeMenuRef}
+              onToggle={(event) => {
+                if (event.currentTarget.open) loadShareableLocations()
+              }}
+            >
               <summary aria-label="Add a place" title="Add a place">+</summary>
-              <div className="figma-message-place-picker"><strong>Share a saved place</strong>{initialSnapshot.shareableLocations?.length ? initialSnapshot.shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
+              <div className="figma-message-place-picker"><strong>Share a saved place</strong>{shareableLocations.length ? shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
             </details>
             <details className="figma-friends-composer-menu is-more">
               <summary aria-label="More message options">○</summary>

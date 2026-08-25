@@ -15,37 +15,6 @@ function textParam(value, max = 80) {
   return String(value || '').trim().slice(0, max)
 }
 
-function unavailableFeed(session, filters) {
-  const latitude = Number(session.profile?.latitude)
-  const longitude = Number(session.profile?.longitude)
-  const hasCenter = Number.isFinite(latitude) && Number.isFinite(longitude)
-  return {
-    requestId: null,
-    impressionKey: null,
-    items: [],
-    filters,
-    center: hasCenter ? { latitude, longitude } : null,
-    centerLabel: session.profile?.location_label || session.profile?.city || null,
-    categories: [],
-    recycled: false,
-    emptyReason: null,
-    continuation: { excluded: 0, candidateLimit: 0, hasMore: false },
-    fallback: true,
-    fallbackReason: 'temporary_failure',
-    rankingVersion: 'unavailable',
-    experiment: { experiment: 'unavailable', variant: 'control', bucket: 0, holdout: false },
-    rejections: [],
-    personalization: { behavioral: false, friendActivity: false, vector: false, explicitInterestsOnly: true },
-    infrastructure: {
-      source: 'location-serving-unavailable',
-      relationalServed: 0,
-      googleUiKitEligible: 0,
-      overlayRpc: null,
-      timings: { queryMs: 0, totalMs: 0 }
-    }
-  }
-}
-
 export default async function DiscoverPage({ searchParams }) {
   const params = await searchParams
   return renderProductPage(async (session) => {
@@ -63,13 +32,9 @@ export default async function DiscoverPage({ searchParams }) {
       accessible: params?.accessible === 'true'
     }
 
-    let feed
-    try {
-      feed = await getDiscoveryFeed(session, feedFilters)
-    } catch (error) {
-      console.error(`Initial discovery feed failed: ${error?.message || 'unknown error'}`)
-      feed = unavailableFeed(session, feedFilters)
-    }
+    // No degraded-feed fallback: a serving failure propagates and surfaces as a
+    // request error instead of silently rendering an unavailable deck.
+    const feed = await getDiscoveryFeed(session, feedFilters)
 
     after(() => recordSampledDiscoveryAnalytics(session, feed)
       .catch((error) => console.warn(`Sampled discovery analytics failed: ${error.message}`)))

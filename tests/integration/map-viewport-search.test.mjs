@@ -15,9 +15,10 @@ test('map catalogue loading is viewport-bounded through the selected global sear
     read('app/(product)/map/page.js')
   ])
 
-  assert.match(facadeSource, /GLOBAL_LOCATION_SEARCH_BACKEND/)
+  assert.doesNotMatch(facadeSource, /GLOBAL_LOCATION_SEARCH_BACKEND|opensearch/i)
   assert.match(facadeSource, /searchGlobalLocationsInViewport/)
   assert.match(facadeSource, /searchB2GlobalLocationsInViewport/)
+  assert.match(facadeSource, /fails closed/)
   assert.match(b2Source, /normalizeGlobalLocationViewport/)
   assert.match(b2Source, /fetchCoarseViewportDocuments/)
   assert.match(b2Source, /resolveGeoShardPlan/)
