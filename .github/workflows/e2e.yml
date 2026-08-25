@@ -96,36 +96,22 @@ jobs:
           B2_STUB_STANDALONE=1 node tests/e2e/global-location-b2-stub.mjs > /tmp/puddle-e2e-b2-stub.log 2>&1 &
           stub_pid=$!
           trap 'kill "$stub_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
+          # curl may race the server bind; under `bash -e` a bare failing curl
+          # would abort the step, so keep it inside an if-condition.
+          healthy=0
+          for attempt in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:39200/health >/dev/null; then
+              healthy=1
               break
             fi
-            if [ "$attempt" = 30 ]; then
-              cat /tmp/puddle-e2e-b2-stub.log
-              echo "::error::B2 emulator failed health check; log tail:"
-              tail -n 15 /tmp/puddle-e2e-b2-stub.log | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
-              exit 1
-            fi
-            sleep 0.2
+            sleep 0.25
           done
-          set -o pipefail
-          logfile="$(mktemp)"
-          set +e
-          npm run e2e:test 2>&1 | tee "$logfile"
-          code=$?
-          set -e
-          if [ "$code" -ne 0 ]; then
-            # Surface failing spec/test titles as annotations so failures are
-            # diagnosable without authenticated log access.
-            grep -E "✖|✘|›.*spec\.mjs" "$logfile" | tail -n 10 | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
-            # Startup/timeout-style failures print no ✖ lines; dump the tail so
-            # the root cause (webServer, build, or boot crash) is still visible.
-            if ! grep -qE "✖|✘" "$logfile"; then
-              echo "::error::no test failures recorded; dumping tail (startup/webServer failure?)"
-              tail -n 20 "$logfile" | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
-            fi
-            exit "$code"
+          if [ "$healthy" != "1" ]; then
+            echo "::error::B2 emulator failed health check; log:"
+            cat /tmp/puddle-e2e-b2-stub.log | cut -c1-240 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
           fi
+          npm run e2e:test
       - name: Upload browser diagnostics
         if: always()
         uses: actions/upload-artifact@v7
