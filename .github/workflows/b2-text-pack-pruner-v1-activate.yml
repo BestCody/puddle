@@ -20,11 +20,11 @@ jobs:
     timeout-minutes: 60
     env:
       PYTHONUNBUFFERED: '1'
-      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
-      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
-      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME }}
-      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
-      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
       B2_DATA_PREFIX: data
       GLOBAL_LOCATION_SEARCH_INDEX: locations-active
       GLOBAL_LOCATION_MAX_RADIUS_KM: '100'

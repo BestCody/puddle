@@ -29,11 +29,11 @@ jobs:
     runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 75
     env:
-      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
-      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
-      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME }}
-      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_DATA_S3_ENDPOINT }}
-      B2_DATA_S3_REGION: ${{ vars.B2_DATA_S3_REGION }}
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
       B2_DATA_PREFIX: data
     steps:
       - uses: actions/checkout@v6
