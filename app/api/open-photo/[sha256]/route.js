@@ -13,6 +13,8 @@ const CONFIG_TTL_MS = 5 * 60 * 1000
 const AUTH_TTL_MS = 60 * 60 * 1000
 let configCache = null
 let authCache = null
+let configInFlight = null
+let authInFlight = null
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(milliseconds) || 0)))
@@ -28,31 +30,54 @@ function canonicalStorageKey(hash) {
 
 async function runtimeConfig(admin) {
   if (configCache?.expiresAt > Date.now()) return configCache.value
-  const { data, error } = await admin.rpc('get_b2_media_runtime_auth')
-  if (error) throw error
-  const value = data && typeof data === 'object' ? data : null
-  if (!value?.keyId || !value?.applicationKey || !value?.bucketId || !value?.bucketName) {
-    const unavailable = new Error('Private media runtime authentication is unavailable.')
-    unavailable.status = 503
-    throw unavailable
+  if (configInFlight) return configInFlight
+  const promise = (async () => {
+    const { data, error } = await admin.rpc('get_b2_media_runtime_auth')
+    if (error) throw error
+    const value = data && typeof data === 'object' ? data : null
+    if (!value?.keyId || !value?.applicationKey || !value?.bucketName) {
+      const unavailable = new Error('Private media runtime authentication is unavailable.')
+      unavailable.status = 503
+      throw unavailable
+    }
+    configCache = { value, expiresAt: Date.now() + CONFIG_TTL_MS }
+    return value
+  })()
+  configInFlight = promise
+  try {
+    return await promise
+  } finally {
+    if (configInFlight === promise) configInFlight = null
   }
-  configCache = { value, expiresAt: Date.now() + CONFIG_TTL_MS }
-  return value
 }
 
 async function authorization(config, force = false) {
-  if (!force && authCache?.expiresAt > Date.now() && authCache.keyId === config.keyId && authCache.bucketId === config.bucketId) {
+  const cacheKey = `${config.keyId}:${config.bucketId || ''}:${config.bucketName}`
+  if (!force && authCache?.expiresAt > Date.now() && authCache.key === cacheKey) {
     return authCache.value
   }
-  const value = await authorizeB2({ keyId: config.keyId, applicationKey: config.applicationKey })
-  const capabilities = new Set(value.allowed?.capabilities || [])
-  const buckets = Array.isArray(value.allowed?.buckets) ? value.allowed.buckets : []
-  if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 media key lacks readFiles capability.')
-  if (buckets.length && !buckets.some((bucket) => bucket?.id === config.bucketId && bucket?.name === config.bucketName)) {
-    throw new Error('B2 media key is not authorized for the configured bucket.')
+  if (!force && authInFlight?.key === cacheKey) return authInFlight.promise
+  const promise = (async () => {
+    const value = await authorizeB2({ keyId: config.keyId, applicationKey: config.applicationKey })
+    const capabilities = new Set(value.allowed?.capabilities || [])
+    const buckets = Array.isArray(value.allowed?.buckets) ? value.allowed.buckets : []
+    if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 media key lacks readFiles capability.')
+    const matchingBucket = buckets.find((bucket) => {
+      const idMatches = !config.bucketId || bucket?.id === config.bucketId
+      return idMatches && bucket?.name === config.bucketName
+    })
+    if (buckets.length && !matchingBucket) {
+      throw new Error('B2 media key is not authorized for the configured bucket.')
+    }
+    authCache = { value, key: cacheKey, bucketId: config.bucketId || matchingBucket?.id || null, expiresAt: Date.now() + AUTH_TTL_MS }
+    return value
+  })()
+  if (!force) authInFlight = { key: cacheKey, promise }
+  try {
+    return await promise
+  } finally {
+    if (authInFlight?.promise === promise) authInFlight = null
   }
-  authCache = { value, keyId: config.keyId, bucketId: config.bucketId, expiresAt: Date.now() + AUTH_TTL_MS }
-  return value
 }
 
 async function downloadPrivateObject(config, key) {

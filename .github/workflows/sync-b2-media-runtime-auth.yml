@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/sync-b2-media-runtime-auth.yml'
       - 'supabase/migrations/10072_b2_media_runtime_vault.sql'
+      - 'supabase/migrations/20260825180000_b2_media_bucket_id_optional.sql'
   workflow_dispatch:
 
 permissions:
@@ -22,10 +23,13 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_MEDIA_APPLICATION_KEY_ID }}
-      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_MEDIA_APPLICATION_KEY }}
-      B2_MEDIA_BUCKET_ID: ${{ secrets.B2_MEDIA_BUCKET_ID }}
-      B2_MEDIA_BUCKET_NAME: ${{ vars.B2_MEDIA_BUCKET_NAME }}
+      # The first production deployment reuses the existing restricted B2 key.
+      # Keep the runtime namespace explicit while accepting the repository's
+      # established legacy secret names until separately scoped media keys exist.
+      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_MEDIA_BUCKET_ID: ${{ secrets.B2_BUCKET_ID }}
+      B2_MEDIA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
     steps:
       - name: Validate required secret presence
         shell: bash
@@ -35,7 +39,6 @@ jobs:
           test -n "$SUPABASE_SECRET_KEY"
           test -n "$B2_MEDIA_APPLICATION_KEY_ID"
           test -n "$B2_MEDIA_APPLICATION_KEY"
-          test -n "$B2_MEDIA_BUCKET_ID"
           test -n "$B2_MEDIA_BUCKET_NAME"
 
       - name: Verify private B2 read access and store encrypted runtime copy
@@ -46,7 +49,7 @@ jobs:
           const required = [
             'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_KEY',
             'B2_MEDIA_APPLICATION_KEY_ID', 'B2_MEDIA_APPLICATION_KEY',
-            'B2_MEDIA_BUCKET_ID', 'B2_MEDIA_BUCKET_NAME'
+            'B2_MEDIA_BUCKET_NAME'
           ]
           for (const name of required) if (!process.env[name]) throw new Error(`${name} is not configured.`)
 
@@ -63,9 +66,19 @@ jobs:
           const capabilities = new Set(storage?.allowed?.capabilities || [])
           if (!storage?.downloadUrl || !b2?.authorizationToken) throw new Error('B2 authorization did not return a download endpoint.')
           if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 media key lacks readFiles capability.')
-          if (buckets.length && !buckets.some((bucket) => bucket?.id === process.env.B2_MEDIA_BUCKET_ID && bucket?.name === process.env.B2_MEDIA_BUCKET_NAME)) {
+          const configuredBucketId = process.env.B2_MEDIA_BUCKET_ID || ''
+          const configuredBucketName = process.env.B2_MEDIA_BUCKET_NAME
+          const matchingBucket = buckets.find((bucket) => {
+            const idMatches = !configuredBucketId || bucket?.id === configuredBucketId
+            return idMatches && bucket?.name === configuredBucketName
+          })
+          if (buckets.length && !matchingBucket) {
             throw new Error('B2 media key is not restricted to/authorized for the configured production bucket.')
           }
+          // B2 data/runtime auth already supports unrestricted keys scoped by bucket
+          // name. Preserve that behavior when the legacy repository secrets do not
+          // include a bucket ID; a restricted key still yields and stores its ID.
+          const bucketId = configuredBucketId || matchingBucket?.id || ''
 
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
           const serviceKey = process.env.SUPABASE_SECRET_KEY
@@ -80,8 +93,8 @@ jobs:
             body: JSON.stringify({
               p_key_id: process.env.B2_MEDIA_APPLICATION_KEY_ID,
               p_application_key: process.env.B2_MEDIA_APPLICATION_KEY,
-              p_bucket_id: process.env.B2_MEDIA_BUCKET_ID,
-              p_bucket_name: process.env.B2_MEDIA_BUCKET_NAME
+              p_bucket_id: bucketId,
+              p_bucket_name: configuredBucketName
             }),
             redirect: 'error',
             signal: AbortSignal.timeout(10_000)

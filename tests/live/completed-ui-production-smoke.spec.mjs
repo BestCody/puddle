@@ -46,7 +46,7 @@ async function deleteDisposableAccount(page) {
   try {
     await page.goto('/account', { waitUntil: 'domcontentloaded', timeout: 30_000 })
     if (!/\/account(?:\?|$)/.test(page.url())) return
-    const confirmation = page.getByLabel('Confirmation')
+    const confirmation = page.locator('input[name="confirmation"]')
     if (!(await confirmation.isVisible().catch(() => false))) return
     await confirmation.fill('DELETE')
     await Promise.all([
