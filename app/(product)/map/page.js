@@ -151,14 +151,15 @@ export default async function LocationMapPage({ searchParams }) {
   const beforePostId = typeof params?.beforeId === 'string' ? params.beforeId : null
 
   return renderProductPage(async (session) => {
-    const mapPromise = getLocationMapSnapshot(session)
-    const feedPromise = view === 'feed'
-      ? getSocialFeedSnapshot(session, query, { beforeCreatedAt, beforePostId })
-      : Promise.resolve(null)
-    const [mapSnapshot, feed] = await Promise.all([mapPromise, feedPromise])
-    const mapPoints = selectingForPost
+    const [mapSnapshot, feed] = await Promise.all([
+      view === 'map' ? getLocationMapSnapshot(session) : Promise.resolve(null),
+      view === 'feed'
+        ? getSocialFeedSnapshot(session, query, { beforeCreatedAt, beforePostId })
+        : Promise.resolve(null)
+    ])
+    const mapPoints = selectingForPost && mapSnapshot
       ? mapSnapshot.points.map((point) => ({ ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }))
-      : mapSnapshot.points
+      : mapSnapshot?.points || []
     const moreHref = feed ? nextFeedHref(query, feed.pagination) : null
 
     return <>
@@ -178,13 +179,6 @@ export default async function LocationMapPage({ searchParams }) {
           <DiscoverCreatePuddle
             avatarUrl={feed.self.avatar_url}
             displayName={feed.self.display_name || 'Puddle person'}
-            points={mapSnapshot.points.map((point) => ({
-              id: point.id,
-              title: point.title,
-              city: point.city,
-              neighborhood: point.neighborhood,
-              category: point.category
-            }))}
           />
         </>}
       </div>
