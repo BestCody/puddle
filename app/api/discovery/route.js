@@ -27,16 +27,18 @@ async function authenticatedSession(traceId) {
   if (!isSupabaseConfigured()) return { error: NextResponse.json({ error: 'Discovery is unavailable.' }, { status: 503 }) }
   const supabaseStarted = latencyStart()
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
+  const userId = typeof claimsData?.claims?.sub === 'string' ? claimsData.claims.sub : null
+  if (!userId) {
     recordServerLatency('supabase.discoveryAuth', elapsedMs(supabaseStarted), SERVER_LATENCY_BUDGET_MS.pageAuthUser, {
       trace_id: traceId,
       service: 'supabase',
       operation: 'discoveryAuth',
-      failed: true
+      failed: Boolean(claimsError || !userId)
     })
     return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   }
+  const user = { id: userId }
   const { data: profile } = await supabase
     .from('profiles')
     .select('id,birth_date,interests,latitude,longitude,city,region,country,country_code,timezone,location_label,search_radius_km')

@@ -22,6 +22,17 @@ test('Proxy verifies claims and only loads moderation profile state when require
   assert.match(session, /if \(!loadProfileState\)/)
 })
 
+test('Hot read APIs reuse verified claims instead of making a second auth-user request', async () => {
+  const [discovery, map] = await Promise.all([
+    read('app/api/discovery/route.js'),
+    read('app/api/map/viewport/route.js')
+  ])
+  for (const source of [discovery, map]) {
+    assert.match(source, /auth\.getClaims\(\)/)
+    assert.doesNotMatch(source, /auth\.getUser\(\)/)
+  }
+})
+
 test('Dashboard shell uses one trusted bootstrap RPC', async () => {
   const [shell, migration] = await Promise.all([
     read('components/product-shell.js'),

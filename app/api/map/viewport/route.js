@@ -21,15 +21,16 @@ async function requireUser(traceId) {
   }
   const started = latencyStart()
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
+  const userId = typeof claimsData?.claims?.sub === 'string' ? claimsData.claims.sub : null
   recordServerLatency('supabase.mapAuth', elapsedMs(started), SERVER_LATENCY_BUDGET_MS.pageAuthUser, {
     trace_id: traceId,
     service: 'supabase',
     operation: 'mapAuth',
-    failed: !user
+    failed: Boolean(claimsError || !userId)
   })
-  if (!user) return { error: NextResponse.json({ error: 'Sign in to browse map locations.' }, { status: 401 }) }
-  return { user, supabase }
+  if (!userId) return { error: NextResponse.json({ error: 'Sign in to browse map locations.' }, { status: 401 }) }
+  return { user: { id: userId }, supabase }
 }
 
 function finiteParam(params, name) {
