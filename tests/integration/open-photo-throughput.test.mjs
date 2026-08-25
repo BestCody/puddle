@@ -87,7 +87,7 @@ test('global photo materialization claims exact and MIH uniqueness before B2 upl
   assert.match(materializer, /key = upload_media\(normalized, content_hash\)/)
   assert.ok(materializer.indexOf('claim_photo(row, content_hash, perceptual, confirmation)') < materializer.indexOf('key = upload_media(normalized, content_hash)'))
   assert.match(materializer, /for row in candidates:/)
-  assert.match(materializer, /continue\n            token = claim\.get\('claim_token'\)/)
+  assert.match(materializer, /continue\r?\n\s+token = claim\.get\('claim_token'\)/)
   assert.match(materializer, /candidate_rank<=\{FALLBACK_CANDIDATES\}/)
   assert.match(materializer, /JOIN l ON l\.id=c\.location_id/)
   assert.match(materializer, /GLOBAL_PHOTO_LOCATION_BATCH/)

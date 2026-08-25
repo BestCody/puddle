@@ -29,8 +29,9 @@ test('Dashboard shell uses one trusted bootstrap RPC with parallel fallback', as
   assert.match(shell, /rpc\('dashboard_bootstrap_v1'\)/)
   assert.doesNotMatch(shell, /known_privileged:/)
   assert.doesNotMatch(migration, /known_privileged/)
-  assert.match(shell, /Promise\.all\(/)
-  assert.match(shell, /parallel_fallback/)
+  // Fallback removal: the bootstrap RPC is the single source; failures propagate.
+  assert.doesNotMatch(shell, /Promise\.all\(/)
+  assert.doesNotMatch(shell, /parallel_fallback/)
   assert.match(shell, /dashboard_bootstrap/)
 })
 
