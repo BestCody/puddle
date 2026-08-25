@@ -87,7 +87,7 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> "$GITHUB_ENV"
           echo "MAILPIT_URL=$INBUCKET_URL" >> "$GITHUB_ENV"
-          echo "B2_AUTHORIZE_ENDPOINT=http://127.0.0.1:39200" >> "$GITHUB_ENV"
+          echo "B2_AUTHORIZE_ENDPOINT=http://127.0.0.1:39200/b2api/v4/b2_authorize_account" >> "$GITHUB_ENV"
           echo "B2_DATA_APPLICATION_KEY_ID=e2e-key-id" >> "$GITHUB_ENV"
           echo "B2_DATA_APPLICATION_KEY=e2e-application-key" >> "$GITHUB_ENV"
           echo "B2_DATA_BUCKET_NAME=puddle-e2e-assets" >> "$GITHUB_ENV"
