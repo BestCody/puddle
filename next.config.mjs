@@ -52,7 +52,12 @@ const nextConfig = {
       { source: '/landing-demo/:path*', headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }] }
     ]
   },
-  async redirects() { return [{ source: '/index.html', destination: '/', permanent: true }] },
+  async redirects() {
+    return [
+      { source: '/index.html', destination: '/', permanent: true },
+      { source: '/create/post', destination: '/map?compose=1', permanent: false }
+    ]
+  },
   async rewrites() { return { beforeFiles: [{ source: '/', destination: '/landing.html' }] } }
 }
 
