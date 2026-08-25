@@ -44,6 +44,16 @@ test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-pla
   assert.doesNotMatch(migration, /security definer/i)
 })
 
+test('Social feed hot path uses existing RLS tables instead of missing RPC contracts', async () => {
+  const feed = await read('lib/app/social-feed-data.js')
+  assert.match(feed, /\.from\('social_posts'\)[\s\S]*\.select\('id,created_at'\)/)
+  assert.match(feed, /\.order\('created_at', \{ ascending: false \}\)[\s\S]*\.order\('id', \{ ascending: false \}\)/)
+  assert.match(feed, /social_feed_post_keys/)
+  assert.match(feed, /\.from\('social_comments'\)/)
+  assert.match(feed, /social_comment_previews/)
+  assert.doesNotMatch(feed, /social_feed_post_ids_v2|social_comment_previews_v2/)
+})
+
 test('Partial caching is limited to cookie-free published public location data', async () => {
   const [config, cache, publicClient, place, discover] = await Promise.all([
     read('next.config.mjs'),
