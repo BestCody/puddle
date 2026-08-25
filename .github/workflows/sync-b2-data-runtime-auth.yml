@@ -22,10 +22,10 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID || secrets.B2_KEY_ID }}
-      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY || secrets.B2_APPLICATION_KEY }}
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_DATA_APPLICATION_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_DATA_APPLICATION_KEY }}
       B2_DATA_BUCKET_ID: ${{ secrets.B2_DATA_BUCKET_ID }}
-      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME || secrets.B2_DATA_BUCKET_NAME || secrets.B2_BUCKET || 'puddle-assets' }}
+      B2_DATA_BUCKET_NAME: ${{ vars.B2_DATA_BUCKET_NAME }}
     steps:
       - name: Validate required secret presence
         shell: bash
