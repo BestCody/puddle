@@ -70,7 +70,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       document.removeEventListener('pointerdown', closeOutside, true)
       window.removeEventListener('keydown', closeOnEscape)
     }
-  }, [open, savedPointsLoaded, savedPointsLoading])
+  }, [open, savedPointsLoaded])
 
   return <div
     className={`puddle-discover-create-dock${open ? ' is-open' : ''}`}
