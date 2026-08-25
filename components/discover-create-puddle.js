@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
 
 function initials(name) {
@@ -12,22 +13,33 @@ function placeLabel(point) {
 }
 
 export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle person', points = [] }) {
+  const searchParams = useSearchParams()
+  const requestedLocation = searchParams.get('location') || ''
+  const shouldOpenFromRoute = searchParams.get('compose') === '1'
   const initialPoints = useMemo(() => Array.isArray(points) ? points.filter((point) => point?.id) : [], [points])
   const [savedPoints, setSavedPoints] = useState(initialPoints)
   const [savedPointsLoaded, setSavedPointsLoaded] = useState(Boolean(initialPoints.length))
   const [savedPointsLoading, setSavedPointsLoading] = useState(false)
-  const [open, setOpen] = useState(false)
-  const [locationId, setLocationId] = useState(initialPoints[0]?.id || '')
+  const [open, setOpen] = useState(shouldOpenFromRoute)
+  const [locationId, setLocationId] = useState(requestedLocation || initialPoints[0]?.id || '')
   const dockRef = useRef(null)
   const titleRef = useRef(null)
+
+  useEffect(() => {
+    if (shouldOpenFromRoute) setOpen(true)
+  }, [shouldOpenFromRoute])
+
+  useEffect(() => {
+    if (requestedLocation) setLocationId(requestedLocation)
+  }, [requestedLocation])
 
   useEffect(() => {
     if (initialPoints.length) {
       setSavedPoints(initialPoints)
       setSavedPointsLoaded(true)
-      setLocationId((current) => current || initialPoints[0]?.id || '')
+      setLocationId((current) => current || requestedLocation || initialPoints[0]?.id || '')
     }
-  }, [initialPoints])
+  }, [initialPoints, requestedLocation])
 
   useEffect(() => {
     if (!open) return undefined
@@ -45,12 +57,13 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       if (savedPointsLoaded || savedPointsLoading) return
       setSavedPointsLoading(true)
       try {
-        const response = await fetch('/api/saved-location-options', { cache: 'no-store' })
+        const query = requestedLocation ? `?ids=${encodeURIComponent(requestedLocation)}` : ''
+        const response = await fetch(`/api/saved-location-options${query}`, { cache: 'no-store' })
         const payload = response.ok ? await response.json() : null
         if (!active) return
         const items = Array.isArray(payload?.items) ? payload.items.filter((point) => point?.id) : []
         setSavedPoints(items)
-        setLocationId((current) => current || items[0]?.id || '')
+        setLocationId((current) => current || requestedLocation || items[0]?.id || '')
       } catch {
         if (active) setSavedPoints([])
       } finally {
@@ -70,7 +83,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       document.removeEventListener('pointerdown', closeOutside, true)
       window.removeEventListener('keydown', closeOnEscape)
     }
-  }, [open, savedPointsLoaded])
+  }, [open, requestedLocation, savedPointsLoaded, savedPointsLoading])
 
   return <div
     className={`puddle-discover-create-dock${open ? ' is-open' : ''}`}
