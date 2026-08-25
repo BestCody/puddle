@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { searchGlobalLocationsInViewport } from '@/lib/app/global-location-search'
 import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overlay'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
@@ -14,6 +15,12 @@ import {
 } from '@/lib/performance/server-latency'
 
 export const dynamic = 'force-dynamic'
+
+const cachedPublicViewportSearch = unstable_cache(
+  async (serializedViewport) => searchGlobalLocationsInViewport(JSON.parse(serializedViewport), { traceId: null }),
+  ['global-location-viewport-v1'],
+  { revalidate: 30, tags: ['global-location-search'] }
+)
 
 async function requireUser(traceId) {
   if (!isSupabaseConfigured()) {
@@ -105,7 +112,7 @@ export async function GET(request) {
     const searchStarted = latencyStart()
     const [auth, result] = await Promise.all([
       requireUser(traceId),
-      searchGlobalLocationsInViewport(viewport, { traceId })
+      cachedPublicViewportSearch(JSON.stringify(viewport))
     ])
     const searchDuration = elapsedMs(searchStarted)
 
