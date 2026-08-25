@@ -73,7 +73,10 @@ jobs:
           retention-days: 14
 
   production-load:
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    # The live URL is the already-deployed main site, not a PR preview. Keep
+    # this as an explicit post-deploy gate so a PR cannot fail on unrelated
+    # production variance while preserving the real production measurement.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:

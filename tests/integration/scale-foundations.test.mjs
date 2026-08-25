@@ -80,7 +80,7 @@ test('production SLO observations and trace IDs cover Vercel, Supabase, and B2',
   assert.match(docs, /Dependency SLOs/)
 })
 
-test('the live PR gate load-tests every critical production read path with bounded concurrency', async () => {
+test('the live production gate load-tests every critical read path with bounded concurrency', async () => {
   const [load, workflow] = await Promise.all([
     read('tests/live/production-load.spec.mjs'),
     read('.github/workflows/live-production-smoke.yml')
@@ -92,6 +92,7 @@ test('the live PR gate load-tests every critical production read path with bound
   }
   assert.match(load, /puddle_production_load_result/)
   assert.match(workflow, /production-load:/)
-  assert.match(workflow, /pull_request:/)
+  assert.match(workflow, /workflow_dispatch/)
+  assert.doesNotMatch(workflow, /if: github\.event_name == 'pull_request'/)
   assert.match(workflow, /tests\/live\/production-load\.spec\.mjs/)
 })
