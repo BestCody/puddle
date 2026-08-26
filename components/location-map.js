@@ -260,6 +260,10 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   }
   function pointerDown(event) {
     if (event.button !== 0) return
+    // Controls inside the canvas own their pointer gesture. Capturing their
+    // pointer here can retarget the subsequent click to the canvas, leaving a
+    // marker visibly selected without updating the details card.
+    if (event.target?.closest?.('button,a')) return
     event.currentTarget.setPointerCapture(event.pointerId)
     dragRef.current = { x: event.clientX, y: event.clientY, center: projectedCenter }
   }

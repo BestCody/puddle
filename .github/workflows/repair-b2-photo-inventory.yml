@@ -1,0 +1,45 @@
+name: Repair canonical B2 photo metadata
+
+# This workflow repairs only verified metadata on the existing canonical B2
+# object. It never deletes objects or changes their bytes. The default dry run
+# makes the candidate set reviewable before an operator enables apply.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Apply verified same-key metadata repairs (no deletions)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repair-b2-photo-inventory
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_MEDIA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_MEDIA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_MEDIA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_MEDIA_OPEN_PHOTO_PREFIX: ${{ vars.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256' }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install repair dependencies
+        run: python -m pip install --disable-pip-version-check boto3 pillow
+      - name: Verify and optionally repair canonical metadata
+        run: >-
+          python scripts/global-data/repair_b2_photo_inventory.py
+          --workers=32
+          ${{ inputs.apply && '--apply' || '' }}

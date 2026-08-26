@@ -72,7 +72,10 @@ CONCURRENCY = max(1, min(256, int(os.getenv('GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY',
 FALLBACK_CANDIDATES = max(1, min(12, int(os.getenv('GLOBAL_PHOTO_FALLBACK_CANDIDATES', '9'))))
 # This is intentionally only a memory-sized batch. The outer worker drains every
 # eligible candidate and has no per-run location cap.
-LOCATION_BATCH = max(100, min(10_000, int(os.getenv('GLOBAL_PHOTO_LOCATION_BATCH', '2500'))))
+# This is only the in-memory grouping size. It never limits the number of
+# locations drained by a run; candidate_batches() continues until the cursor is
+# exhausted. The value is intentionally configurable without a hidden 10k cap.
+LOCATION_BATCH = max(100, int(os.getenv('GLOBAL_PHOTO_LOCATION_BATCH', '2500')))
 CLAIM_CONCURRENCY = max(1, min(64, int(os.getenv('GLOBAL_PHOTO_CLAIM_CONCURRENCY', '32'))))
 ATTEMPT_RETRY_DAYS = max(1, min(365, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_DAYS', '7'))))
 ATTEMPT_RETRY_HOURS = max(1, min(24, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_HOURS', '1'))))
@@ -484,7 +487,7 @@ def candidate_batches(query):
     grouped = {}
     current_location_id = None
     current_candidates = []
-    fetch_size = max(1024, min(100_000, LOCATION_BATCH * (FALLBACK_CANDIDATES + 1)))
+    fetch_size = max(1024, LOCATION_BATCH * (FALLBACK_CANDIDATES + 1))
     try:
         while True:
             rows = cursor.fetchmany(fetch_size)

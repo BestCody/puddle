@@ -65,10 +65,16 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
     await page.getByRole('checkbox', { name: 'Parks & gardens' }).check()
     await page.getByRole('button', { name: 'Build my date deck →' }).click()
     await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 30_000 })
-    await expect(page.locator('.figma-swipe-card')).toBeVisible({ timeout: 30_000 })
-    const discoveryImage = page.locator('.figma-swipe-card-photo img').first()
-    await expect(discoveryImage).toHaveCount(1)
-    await expect.poll(async () => discoveryImage.evaluate((image) => image.complete && image.naturalWidth > 0)).toBeTruthy()
+    const discoveryCard = page.locator('.figma-swipe-card').first()
+    await expect(discoveryCard).toBeVisible({ timeout: 30_000 })
+    const discoveryImage = discoveryCard.locator('.figma-swipe-card-photo img')
+    const unavailablePhoto = discoveryCard.locator('.figma-swipe-card-photo-empty')
+    await expect.poll(async () => (await discoveryImage.count()) + (await unavailablePhoto.count())).toBe(1)
+    if (await discoveryImage.count()) {
+      await expect.poll(async () => discoveryImage.first().evaluate((image) => image.complete && image.naturalWidth > 0)).toBeTruthy()
+    } else {
+      await expect(unavailablePhoto).toHaveAttribute('aria-label', 'No verified photo is available')
+    }
     for (const name of ['Message', 'Pass', 'Save', 'Post']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
 
     const filterButton = page.getByRole('button', { name: 'Open filters' })

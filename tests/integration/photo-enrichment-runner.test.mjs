@@ -49,6 +49,7 @@ test('selected licensed photos materialize directly into immutable B2 media', as
   assert.match(materializer, /B2_MEDIA_OPEN_PHOTO_PREFIX/)
   assert.doesNotMatch(materializer, /parser\.add_argument\('--limit'/)
   assert.doesNotMatch(materializer, /\bLIMIT\s*=/)
+  assert.doesNotMatch(materializer, /min\(10_000|min\(100_000/)
   assert.match(materializer, /for grouped in candidate_batches\(query\)/)
   assert.match(materializer, /photo_attempts/)
   assert.match(materializer, /retryable_error/)
@@ -70,6 +71,36 @@ test('canonical B2 photo inventory audit is read-only and checks byte identity',
   assert.match(audit, /MAX_SOURCE_PIXELS/)
   assert.match(audit, /photo_metadata/)
   assert.doesNotMatch(audit, /(?:put|copy|delete)_object|upload_file|supabase_rpc/i)
+})
+
+test('canonical B2 metadata repair is byte-preserving and never deletes inventory', async () => {
+  const workflow = await read('.github/workflows/repair-b2-photo-inventory.yml')
+  const repair = await read('scripts/global-data/repair_b2_photo_inventory.py')
+
+  assert.match(workflow, /workflow_dispatch:/)
+  assert.match(workflow, /inputs:\s+apply:/)
+  assert.match(workflow, /repair_b2_photo_inventory\.py/)
+  assert.match(repair, /hashlib\.sha256/)
+  assert.match(repair, /Image\.open/)
+  assert.match(repair, /copy_object/)
+  assert.match(repair, /MetadataDirective.*REPLACE/)
+  assert.match(repair, /objectsRemoved.*0/)
+  assert.doesNotMatch(repair, /delete_object|delete_objects|remove\(/i)
+})
+
+test('the three previously implicit table-access decisions are encoded in migration', async () => {
+  const migration = await read('supabase/migrations/20260826190000_intentional_rls_for_internal_tables.sql')
+
+  for (const table of ['location_save_counts', 'location_save_density_tiles', 'spatial_ref_sys']) {
+    if (table !== 'spatial_ref_sys') assert.match(migration, new RegExp(`alter table if exists public\\.${table} enable row level security`))
+  }
+  assert.match(migration, /location_save_counts_service_role_all/)
+  assert.match(migration, /location_save_density_tiles_service_role_all/)
+  assert.match(migration, /spatial_ref_sys_read/)
+  assert.match(migration, /table_owner=current_user or coalesce\(migration_role_is_superuser,false\)/)
+  assert.match(migration, /spatial_ref_sys is extension-owned/)
+  assert.match(migration, /revoke insert, update, delete, truncate, references, trigger[\s\S]*spatial_ref_sys/)
+  assert.match(migration, /grant select on table public\.spatial_ref_sys to public/)
 })
 
 test('materializer tolerates pre-B2 bootstrap photo metadata without content hashes', async () => {
