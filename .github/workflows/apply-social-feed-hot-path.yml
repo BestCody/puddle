@@ -1,0 +1,35 @@
+name: Apply social feed hot-path migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply-social-feed-hot-path
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3.0.0
+        with:
+          version: latest
+
+      - name: Apply the idempotent production social-feed migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          supabase db query \
+            --project-ref cegoqtvajwajczbofpep \
+            --file supabase/migrations/20260825024000_restore_social_feed_hot_path.sql

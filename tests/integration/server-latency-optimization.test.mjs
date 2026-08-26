@@ -134,6 +134,20 @@ test('Map feed uses a lightweight protected shell and hydrates only through boun
   assert.match(shell, /form action=\{signOut\}/)
 })
 
+test('Map view preloads its fixed authenticated snapshot before hydration', async () => {
+  const [page, client] = await Promise.all([
+    read('app/(map)/map/page.js'),
+    read('components/map-route-client.js')
+  ])
+  assert.match(page, /searchParams \? await searchParams/)
+  assert.match(page, /rel="preload"/)
+  assert.match(page, /as="fetch"/)
+  assert.match(page, /href="\/api\/map\/snapshot"/)
+  assert.match(page, /crossOrigin="use-credentials"/)
+  assert.match(client, /cache: 'default'/)
+  assert.match(client, /credentials: 'same-origin'/)
+})
+
 test('Production timing separates parallel auth and catalogue reads', async () => {
   const [viewport, discovery] = await Promise.all([
     read('app/api/map/viewport/route.js'),

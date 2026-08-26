@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { authorizeB2 } from '@/lib/storage/b2-native'
+import { createTraceId, elapsedMs, latencyStart } from '@/lib/performance/server-latency'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
@@ -26,6 +27,12 @@ function encodeB2Key(key) {
 
 function canonicalStorageKey(hash) {
   return `media/photos/by-sha256/${hash.slice(0, 2)}/${hash}.jpg`
+}
+
+function serverTiming(entries, totalMs) {
+  return [...entries, { name: 'total', durationMs: totalMs }]
+    .map(({ name, durationMs }) => `${name};dur=${Math.max(0, Number(durationMs) || 0)}`)
+    .join(',')
 }
 
 async function runtimeConfig(admin) {
@@ -107,15 +114,29 @@ async function downloadPrivateObject(config, key) {
 }
 
 export async function GET(_request, { params }) {
+  const traceId = createTraceId()
+  const startedAt = latencyStart()
+  const timings = []
   try {
     const { sha256: rawHash } = await params
     const hash = String(rawHash || '').trim().toLowerCase()
-    if (!HASH_RE.test(hash)) return NextResponse.json({ error: 'Photo not found.' }, { status: 404 })
+    if (!HASH_RE.test(hash)) {
+      const response = NextResponse.json({ error: 'Photo not found.' }, { status: 404 })
+      response.headers.set('x-puddle-trace-id', traceId)
+      response.headers.set('Server-Timing', serverTiming(timings, elapsedMs(startedAt)))
+      return response
+    }
 
+    const configStartedAt = latencyStart()
     const config = await runtimeConfig(createAdminClient())
+    timings.push({ name: 'config', durationMs: elapsedMs(configStartedAt) })
+    const downloadStartedAt = latencyStart()
     const body = await downloadPrivateObject(config, canonicalStorageKey(hash))
+    timings.push({ name: 'b2', durationMs: elapsedMs(downloadStartedAt) })
+    const verifyStartedAt = latencyStart()
     const actualHash = createHash('sha256').update(body).digest('hex')
     if (actualHash !== hash) throw new Error('Private B2 media failed canonical SHA256 verification.')
+    timings.push({ name: 'verify', durationMs: elapsedMs(verifyStartedAt) })
 
     return new Response(body, {
       status: 200,
@@ -126,14 +147,19 @@ export async function GET(_request, { params }) {
         'Cache-Control': 'public, max-age=31536000, immutable',
         'CDN-Cache-Control': 'public, max-age=31536000, immutable',
         ETag: `\"sha256-${hash}\"`,
-        'X-Content-Type-Options': 'nosniff'
+        'X-Content-Type-Options': 'nosniff',
+        'x-puddle-trace-id': traceId,
+        'Server-Timing': serverTiming(timings, elapsedMs(startedAt))
       }
     })
   } catch (error) {
-    console.error('Open photo delivery failed', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: error?.status === 404 ? 'Photo not found.' : 'Photo delivery is temporarily unavailable.' },
       { status: error?.status === 404 ? 404 : 502, headers: { 'Cache-Control': 'private, no-store' } }
     )
+    response.headers.set('x-puddle-trace-id', traceId)
+    response.headers.set('Server-Timing', serverTiming(timings, elapsedMs(startedAt)))
+    console.error(`Open photo delivery failed trace=${traceId}`, error)
+    return response
   }
 }

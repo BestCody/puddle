@@ -32,7 +32,10 @@ function MapScreen({ selectingForPost }) {
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch('/api/map/snapshot', { cache: 'no-store', signal: controller.signal })
+    // The map page emits a credentialed fetch preload for this fixed endpoint.
+    // Default cache mode lets hydration consume that preload while the API's
+    // private no-store response still prevents browser persistence.
+    fetch('/api/map/snapshot', { cache: 'default', credentials: 'same-origin', signal: controller.signal })
       .then(async (response) => {
         const payload = await response.json()
         if (!response.ok) {

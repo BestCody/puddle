@@ -82,6 +82,25 @@ test('production SLO observations and trace IDs cover Vercel, Supabase, and B2',
   assert.match(docs, /Dependency SLOs/)
 })
 
+test('CI E2E Supabase reserves a free port block instead of assuming fixed host ports', async () => {
+  const workflow = await read('.github/workflows/e2e.yml')
+  assert.match(workflow, /import socket/)
+  assert.match(workflow, /for candidate in range\(55320, 59000, 10\)/)
+  assert.match(workflow, /Could not find seven consecutive free Supabase ports/)
+  for (const port of [55320, 55321, 55322, 55323, 55324, 55325, 55326]) {
+    assert.doesNotMatch(workflow, new RegExp(`(?:port|shadow_port|smtp_port|pop3_port) = ${port}`))
+  }
+})
+
+test('the production social-feed repair is a targeted authenticated migration', async () => {
+  const workflow = await read('.github/workflows/apply-social-feed-hot-path.yml')
+  assert.match(workflow, /SUPABASE_ACCESS_TOKEN/)
+  assert.match(workflow, /supabase db query/)
+  assert.match(workflow, /--project-ref cegoqtvajwajczbofpep/)
+  assert.match(workflow, /20260825024000_restore_social_feed_hot_path\.sql/)
+  assert.doesNotMatch(workflow, /db push/)
+})
+
 test('the live production gate load-tests every critical read path with bounded concurrency', async () => {
   const [load, workflow] = await Promise.all([
     read('tests/live/production-load.spec.mjs'),

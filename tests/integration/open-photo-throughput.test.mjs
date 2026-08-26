@@ -63,6 +63,11 @@ test('global free-photo workers saturate provider budgets and direct delivery st
   assert.match(delivery, /canonicalStorageKey/)
   assert.match(delivery, /media\/photos\/by-sha256/)
   assert.match(delivery, /actualHash !== hash/)
+  assert.match(delivery, /x-puddle-trace-id/)
+  assert.match(delivery, /Server-Timing/)
+  assert.match(delivery, /name: 'config'/)
+  assert.match(delivery, /name: 'b2'/)
+  assert.match(delivery, /name: 'verify'/)
   assert.doesNotMatch(delivery, /from\('media_objects'\)/)
 })
 

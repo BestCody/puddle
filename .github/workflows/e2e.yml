@@ -54,18 +54,38 @@ jobs:
           mkdir -p .e2e-local
           cp -R supabase .e2e-local/supabase
           python - <<'PY'
+          import socket
           from pathlib import Path
+
           path = Path('.e2e-local/supabase/config.toml')
           value = path.read_text()
+          base = None
+          for candidate in range(55320, 59000, 10):
+              sockets = []
+              try:
+                  for port in range(candidate, candidate + 7):
+                      sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                      sock.bind(('0.0.0.0', port))
+                      sockets.append(sock)
+                  base = candidate
+                  break
+              except OSError:
+                  pass
+              finally:
+                  for sock in sockets:
+                      sock.close()
+          if base is None:
+              raise SystemExit('Could not find seven consecutive free Supabase ports.')
           replacements = {
               'project_id = "puddle-local"': 'project_id = "puddle-e2e"',
-              'port = 54321': 'port = 55321',
-              'port = 54322': 'port = 55322',
-              'shadow_port = 54320': 'shadow_port = 55320',
-              'port = 54323': 'port = 55323',
-              'port = 54324': 'port = 55324',
-              'smtp_port = 54325': 'smtp_port = 55325',
-              'pop3_port = 54326': 'pop3_port = 55326',
+              'port = 54321': f'port = {base + 1}',
+              'port = 54322': f'port = {base + 2}',
+              'shadow_port = 54320': f'shadow_port = {base}',
+              'port = 54323': f'port = {base + 3}',
+              'port = 54324': f'port = {base + 4}',
+              'smtp_port = 54325': f'smtp_port = {base + 5}',
+              'pop3_port = 54326': f'pop3_port = {base + 6}',
           }
           for old, new in replacements.items():
               if old not in value:
