@@ -47,6 +47,21 @@ test('selected licensed photos materialize directly into immutable B2 media', as
   assert.match(materializer, /B2_MEDIA_OPEN_PHOTO_PREFIX/)
 })
 
+test('canonical B2 photo inventory audit is read-only and checks byte identity', async () => {
+  const workflow = await read('.github/workflows/audit-b2-photo-inventory.yml')
+  const audit = await read('scripts/global-data/audit_b2_photo_inventory.py')
+
+  assert.match(workflow, /workflow_dispatch:/)
+  assert.match(workflow, /audit_b2_photo_inventory\.py/)
+  assert.match(audit, /list_objects_v2/)
+  assert.match(audit, /head_object/)
+  assert.match(audit, /get_object/)
+  assert.match(audit, /hashlib\.sha256/)
+  assert.match(audit, /Image\.open/)
+  assert.match(audit, /photo_metadata/)
+  assert.doesNotMatch(audit, /(?:put|copy|delete)_object|upload_file|supabase_rpc/i)
+})
+
 test('materializer tolerates pre-B2 bootstrap photo metadata without content hashes', async () => {
   const materializer = await read('scripts/global-data/materialize_photo_candidates.py')
   assert.match(materializer, /DESCRIBE SELECT \* FROM read_parquet/)
