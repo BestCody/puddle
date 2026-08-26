@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { unstable_cache } from 'next/cache'
 import { headers } from 'next/headers'
-import { searchGlobalLocationsInViewport } from '@/lib/app/global-location-search'
 import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overlay'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
@@ -17,6 +16,11 @@ import {
 
 export const dynamic = 'force-dynamic'
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+async function searchGlobalLocationsInViewport(input, options = {}) {
+  const search = await import('@/lib/app/global-location-search')
+  return search.searchGlobalLocationsInViewport(input, options)
+}
 
 const cachedPublicViewportSearch = unstable_cache(
   async (serializedViewport) => searchGlobalLocationsInViewport(JSON.parse(serializedViewport), { traceId: null }),

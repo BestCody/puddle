@@ -19,7 +19,7 @@ test('production desktop landing preserves the current responsive Figma structur
   await page.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(page.getByRole('dialog')).not.toBeVisible()
 
-  await page.locator('.landing-canvas--desktop a[href="/signin"]').first().click()
+  await page.locator('.login-panel a[href="/signin"]').first().click()
   await expect(page).toHaveURL(/\/signin(?:\?|$)/)
 })
 

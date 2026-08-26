@@ -47,6 +47,7 @@ jobs:
       - name: Run live product UI smoke
         run: npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/completed-ui-production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs
       - name: Run bounded production load until SLOs pass
+        if: always()
         shell: bash
         run: |
           set +e

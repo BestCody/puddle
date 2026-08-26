@@ -63,8 +63,6 @@ export default async function SavedPlacePage({ params, searchParams }) {
     const isPinned = Boolean(savedState?.pinned_at)
     const mapStates = [isSaved ? 'saved' : null, plannedItem ? 'planned' : null].filter(Boolean)
     const folders = [location.kind].filter(Boolean)
-    const primaryFolders = folders.slice(0, 2)
-    const overflowFolders = folders.slice(2)
     const transitionNames = savedLocationTransitionNames(location.id)
 
     const mapPoint = Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude)) ? [{
@@ -102,11 +100,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
       <div className={styles.detailCategoryBand}>
         <nav className={styles.detailCategories} aria-label="Saved categories">
           <Link className={styles.detailCategoryActive} href="/plans?tab=saved">All</Link>
-          {primaryFolders.map((folder) => <Link href={`/plans?tab=saved&category=${encodeURIComponent(folder)}`} key={folder}><span aria-hidden="true">{categoryIcon(folder)}</span>{categoryLabel(folder)}</Link>)}
-          {overflowFolders.length ? <details className={styles.moreCategories}>
-            <summary aria-label="More saved categories">+</summary>
-            <div>{overflowFolders.map((folder) => <Link href={`/plans?tab=saved&category=${encodeURIComponent(folder)}`} key={folder}>{categoryLabel(folder)}</Link>)}</div>
-          </details> : null}
+          {folders.map((folder) => <Link href={`/plans?tab=saved&category=${encodeURIComponent(folder)}`} key={folder}><span aria-hidden="true">{categoryIcon(folder)}</span>{categoryLabel(folder)}</Link>)}
         </nav>
       </div>
 

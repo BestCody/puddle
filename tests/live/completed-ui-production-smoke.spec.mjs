@@ -111,10 +111,9 @@ test('completed UI paths work against production', async ({ page, browser }) => 
 
     const detailPath = '/plans/moonlight-cafe'
     await page.goto(detailPath)
-    const moreCategories = page.getByLabel('More saved categories')
-    await expect(moreCategories).toBeVisible()
-    await moreCategories.click()
-    await expect(moreCategories.locator('..').getByRole('link').first()).toBeVisible()
+    const savedCategories = page.getByRole('navigation', { name: 'Saved categories' })
+    await expect(savedCategories.getByRole('link', { name: 'All', exact: true })).toBeVisible()
+    await expect(savedCategories.getByRole('link').nth(1)).toBeVisible()
 
     const originalReview = `Live review ${suffix}`
     const updatedReview = `Updated live review ${suffix}`

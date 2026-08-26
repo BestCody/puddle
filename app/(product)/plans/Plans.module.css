@@ -96,31 +96,11 @@
   font: 400 20px/1 var(--figma-mono);
 }
 
-.moreCategories {
-  position: relative;
-  align-self: flex-end;
-  height: 37px;
-}
-
-.moreCategories > summary {
-  width: 34px;
-  height: 37px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  list-style: none;
-  cursor: pointer;
-  color: #727272;
-  font: 300 31px/1 Manrope, sans-serif;
-}
-
-.moreCategories > summary::-webkit-details-marker,
 .share > summary::-webkit-details-marker,
 .planVisit > summary::-webkit-details-marker {
   display: none;
 }
 
-.moreCategories > div,
 .share > div {
   position: absolute;
   z-index: 40;
@@ -131,25 +111,6 @@
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 8px 24px rgba(0,0,0,.12);
-}
-
-.moreCategories > div {
-  top: 42px;
-  left: -8px;
-  min-width: 180px;
-}
-
-.moreCategories > div a {
-  padding: 9px 11px;
-  border-radius: 10px;
-  color: #727272;
-  font: 700 13px/1.2 Manrope, sans-serif;
-  text-decoration: none;
-}
-
-.moreCategories > div a.categoryActive {
-  background: #e8d8f6;
-  color: #43255c;
 }
 
 .planBand {
@@ -434,11 +395,6 @@
 .detailCategories > a > span {
   color: #929292;
   font: 400 20px/1 var(--figma-mono);
-}
-
-.detailMore {
-  width: 28px;
-  font: 300 31px/1 Manrope, sans-serif !important;
 }
 
 .detailCard {
@@ -940,10 +896,6 @@
   .detailCategories > a.detailCategoryActive {
     width: auto;
     padding: 7px 13px;
-  }
-
-  .detailMore {
-    width: 28px !important;
   }
 
   .detailCard {
