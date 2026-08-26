@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   production-smoke:
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[live-smoke]')
+    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '[live-smoke]')) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:

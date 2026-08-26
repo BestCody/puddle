@@ -115,6 +115,7 @@ test('the live production gate load-tests every critical read path with bounded 
   assert.match(load, /puddle_production_load_result/)
   assert.match(workflow, /production-load:/)
   assert.match(workflow, /workflow_dispatch/)
+  assert.match(workflow, /github\.event_name == 'workflow_dispatch'/)
   assert.doesNotMatch(workflow, /if: github\.event_name == 'pull_request'/)
   assert.match(workflow, /Run live product UI smoke/)
   assert.match(workflow, /Run bounded production load until SLOs pass/)
