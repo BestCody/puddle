@@ -62,13 +62,13 @@ test('Pass owners get a bounded saver page and a separate total count', async ()
 
 test('Pass notification alerts are realtime, permission-gated, and activate immediately', async () => {
   const alerts = await read('components/pass-notification-alerts.js')
-  const shell = await read('components/product-shell.js')
+  const runtime = await read('components/dashboard-runtime.js')
   const migration = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
 
   assert.match(alerts, /Notification\.requestPermission/)
   assert.match(alerts, /postgres_changes/)
   assert.match(alerts, /PERMISSION_EVENT/)
-  assert.match(shell, /<PassNotificationAlerts enabled=\{passActive\}/)
+  assert.match(runtime, /<PassNotificationAlerts enabled=\{Boolean\(bootstrap\?\.passActive\)\}/)
   assert.match(migration, /alter publication supabase_realtime add table public\.notifications/)
 })
 

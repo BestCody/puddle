@@ -2,52 +2,12 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { ProductNav } from './product-nav'
 import { FigmaDashboardSidebar } from './figma-dashboard-sidebar'
-import { PassNotificationAlerts } from './pass-notification-alerts'
+import { DashboardRuntime } from './dashboard-runtime'
 import { MainContentTransition } from './main-content-transition'
 import { SettingsOverlay } from './settings-overlay'
 import { SettingsTrigger } from './settings-trigger'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
-import { SERVER_LATENCY_BUDGET_MS, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
-
-const BUILTIN_PRIVILEGED_ROLES = new Set(['admin', 'moderator', 'support', 'finance'])
-
-async function loadDashboardBootstrap(user, profile) {
-  const knownPrivileged = BUILTIN_PRIVILEGED_ROLES.has(profile?.role)
-  let showAdmin = knownPrivileged
-  let unreadNotifications = 0
-  let passActive = false
-  const bootstrapStartedAt = latencyStart()
-
-  // No fallback path: the bootstrap RPC is the single source. If it fails the
-  // error propagates so the failure is visible instead of silently degrading
-  // into a slower three-query mode.
-  const client = await createClient()
-  const { data, error } = await client.rpc('dashboard_bootstrap_v1')
-  if (error) throw error
-  showAdmin = Boolean(data?.show_admin)
-  unreadNotifications = Number(data?.unread_notifications || 0)
-  passActive = Boolean(data?.pass_active)
-
-  const bootstrapMs = elapsedMs(bootstrapStartedAt)
-  recordServerLatency('dashboard_bootstrap', bootstrapMs, SERVER_LATENCY_BUDGET_MS.dashboardBootstrap, { mode: 'rpc' })
-  return { showAdmin, unreadNotifications, passActive }
-}
-
-async function PassAlertsSlot({ bootstrapPromise, profileId }) {
-  const { passActive } = await bootstrapPromise
-  return <PassNotificationAlerts enabled={passActive} profileId={profileId} />
-}
-
-async function NotificationMenuSlot({ bootstrapPromise }) {
-  const { unreadNotifications } = await bootstrapPromise
-  return <Link href="/account?section=notifications&returnTo=%2Fdiscover">Notifications{unreadNotifications ? ` (${unreadNotifications})` : ''}</Link>
-}
-
-async function AdminMenuSlot({ bootstrapPromise }) {
-  const { showAdmin } = await bootstrapPromise
-  return showAdmin ? <Link href="/admin">Admin</Link> : null
-}
 
 async function AwaitProductContent({ contentPromise }) {
   return await contentPromise
@@ -74,14 +34,12 @@ export async function ProductShell({ user, profile, children, contentPromise = n
     }
   }
 
-  const bootstrapPromise = loadDashboardBootstrap(user, profile)
   const appearance = ['light', 'dark', 'system'].includes(profile?.appearance_theme) ? profile.appearance_theme : 'light'
   const content = contentPromise
     ? <Suspense fallback={<ProductContentFallback />}><AwaitProductContent contentPromise={contentPromise} /></Suspense>
     : children
 
   return <div className="figma-dashboard-shell" data-appearance={appearance}>
-    <Suspense fallback={null}><PassAlertsSlot bootstrapPromise={bootstrapPromise} profileId={user.id} /></Suspense>
     <FigmaDashboardSidebar avatarUrl={avatarUrl} initialAppearance={appearance} />
 
     <div className="figma-dashboard-stage">
@@ -91,9 +49,8 @@ export async function ProductShell({ user, profile, children, contentPromise = n
           <strong>{profile?.display_name || 'Puddle person'}</strong>
           <Link href="/profile">Profile</Link>
           <Link href="/membership">Pass</Link>
-          <Suspense fallback={<Link href="/account?section=notifications&returnTo=%2Fdiscover">Notifications</Link>}><NotificationMenuSlot bootstrapPromise={bootstrapPromise} /></Suspense>
+          <DashboardRuntime profileId={user.id} />
           <SettingsTrigger>Settings</SettingsTrigger>
-          <Suspense fallback={null}><AdminMenuSlot bootstrapPromise={bootstrapPromise} /></Suspense>
           <form action={signOut}><button type="submit">Sign out</button></form>
         </div>
       </details>

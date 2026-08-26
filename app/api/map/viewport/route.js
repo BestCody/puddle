@@ -6,7 +6,6 @@ import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overl
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createClient } from '@/lib/supabase/server'
-import { ensureProfileCached } from '@/lib/auth/profile'
 import {
   SERVER_LATENCY_BUDGET_MS,
   createTraceId,
@@ -43,11 +42,15 @@ async function requireUser(traceId) {
   })
   if (!UUID_PATTERN.test(userId)) return { error: NextResponse.json({ error: 'Sign in to browse map locations.' }, { status: 401 }) }
   const profileStarted = latencyStart()
-  const { profile, error: profileError } = await ensureProfileCached(supabase, { id: userId })
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('suspended_at,banned_at')
+    .eq('id', userId)
+    .maybeSingle()
   recordServerLatency('supabase.mapProfile', elapsedMs(profileStarted), SERVER_LATENCY_BUDGET_MS.pageSession, {
-    trace_id: traceId, service: 'supabase', operation: 'mapProfile', failed: Boolean(profileError)
+    trace_id: traceId, service: 'supabase', operation: 'mapProfile', failed: Boolean(profileError || !profile)
   })
-  if (profileError) return { error: NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }) }
+  if (profileError || !profile) return { error: NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }) }
   if (profile?.suspended_at || profile?.banned_at) {
     return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
   }

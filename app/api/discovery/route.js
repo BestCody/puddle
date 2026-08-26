@@ -2,7 +2,7 @@ import { after, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { ensureProfileCached } from '@/lib/auth/profile'
+import { ensureProfile } from '@/lib/auth/profile'
 import { getDiscoveryFeed } from '@/lib/app/discovery'
 import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { verifyCsrf } from '@/lib/security/csrf'
@@ -43,7 +43,7 @@ async function authenticatedSession(traceId) {
     return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   }
   const user = { id: userId }
-  const { profile, error: profileError } = await ensureProfileCached(supabase, user)
+  const { profile, error: profileError } = await ensureProfile(supabase, user)
   const authMs = elapsedMs(supabaseStarted)
   recordServerLatency('supabase.discoverySession', authMs, SERVER_LATENCY_BUDGET_MS.pageSession, {
     trace_id: traceId, service: 'supabase', operation: 'discoverySession',

@@ -26,7 +26,7 @@ test('Proxy verifies claims and only loads moderation profile state when require
   assert.match(pageUser, /mode: 'proxy_claims'/)
 })
 
-test('Hot read APIs consume the proxy-verified user and share bounded profile reads', async () => {
+test('Hot read APIs consume the proxy-verified user and verify only required profile state', async () => {
   const [discovery, map, profile] = await Promise.all([
     read('app/api/discovery/route.js'),
     read('app/api/map/viewport/route.js'),
@@ -34,12 +34,13 @@ test('Hot read APIs consume the proxy-verified user and share bounded profile re
   ])
   for (const source of [discovery, map]) {
     assert.match(source, /x-puddle-verified-user-id/)
-    assert.match(source, /ensureProfileCached/)
     assert.doesNotMatch(source, /auth\.getClaims\(\)/)
     assert.doesNotMatch(source, /auth\.getUser\(\)/)
   }
-  assert.match(profile, /const profileLoads = new Map\(\)/)
-  assert.match(profile, /PROFILE_CACHE_TTL_MS = 2_000/)
+  assert.match(discovery, /ensureProfile/)
+  assert.match(map, /select\('suspended_at,banned_at'\)/)
+  assert.doesNotMatch(map, /ensureProfile/)
+  assert.doesNotMatch(profile, /profileLoads|PROFILE_CACHE_TTL_MS|invalidateProfileCache/)
 })
 
 test('Hot API routes own the account-state gate when proxy moderation is skipped', async () => {
@@ -69,18 +70,19 @@ test('Public catalogue reads share short-lived immutable search results across u
   }
 })
 
-test('Dashboard shell uses one trusted bootstrap RPC', async () => {
-  const [shell, migration] = await Promise.all([
+test('Dashboard shell defers its one trusted bootstrap RPC until after critical HTML', async () => {
+  const [shell, runtime, migration] = await Promise.all([
     read('components/product-shell.js'),
+    read('components/dashboard-runtime.js'),
     read('supabase/migrations/10060_latency_optimization.sql')
   ])
-  assert.match(shell, /rpc\('dashboard_bootstrap_v1'\)/)
-  assert.doesNotMatch(shell, /known_privileged:/)
+  assert.match(shell, /<DashboardRuntime profileId=\{user\.id\} \/>/)
+  assert.doesNotMatch(shell, /rpc\('dashboard_bootstrap_v1'\)/)
+  assert.match(runtime, /rpc\('dashboard_bootstrap_v1'\)/)
+  assert.doesNotMatch(runtime, /known_privileged:/)
   assert.doesNotMatch(migration, /known_privileged/)
-  // The bootstrap RPC is the single source; failures propagate.
-  assert.doesNotMatch(shell, /Promise\.all\(/)
-  assert.doesNotMatch(shell, /parallel_fallback/)
-  assert.match(shell, /dashboard_bootstrap/)
+  assert.doesNotMatch(runtime, /Promise\.all\(/)
+  assert.doesNotMatch(runtime, /parallel_fallback/)
 })
 
 test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-plan fixes', async () => {
