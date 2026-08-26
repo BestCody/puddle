@@ -22,9 +22,11 @@ permissions:
   contents: read
 
 concurrency:
-  # Preserve the legacy group's name so a pre-merge monolithic run can never
-  # overlap the first registry reconciliation/materialization run.
-  group: global-photo-enrichment
+  # Country-scoped runs can overlap the global drain: claims are serialized by
+  # the database registry, media keys are content-addressed, and metadata is
+  # written as append-only country partitions. Runs for the same scope remain
+  # serialized so their candidate and attempt ledgers cannot race.
+  group: global-photo-enrichment-${{ inputs.countries || 'all' }}
   cancel-in-progress: false
 
 jobs:

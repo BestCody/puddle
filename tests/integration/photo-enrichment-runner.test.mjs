@@ -10,6 +10,7 @@ test('global photo materialization runs hourly and can be dispatched manually', 
   assert.match(workflow, /workflow_dispatch:/)
   assert.match(workflow, /\bschedule:/)
   assert.match(workflow, /cron: '31 \* \* \* \*'/)
+  assert.match(workflow, /group: global-photo-enrichment-\$\{\{ inputs\.countries \|\| 'all' \}\}/)
   assert.doesNotMatch(workflow, /materialize_limit/)
   assert.doesNotMatch(workflow, /--limit=/)
   assert.doesNotMatch(workflow, /timeout-minutes:/)
