@@ -23,12 +23,14 @@ test('Friends Pass Profile and Settings own page geometry through Grid and flow'
 })
 
 test('Create Post preserves Figma overlap using Grid instead of page x/y coordinates', async () => {
-  const [page, flow, layout] = await Promise.all([
+  const [page, flow, layout, nextConfig] = await Promise.all([
     read('app/(product)/create/post/page.js'),
     read('app/figma-dashboard-flow.css'),
-    read('app/layout.js')
+    read('app/layout.js'),
+    read('next.config.mjs')
   ])
 
+  assert.doesNotMatch(nextConfig, /source:\s*'\/create\/post'/)
   assert.match(page, /data-figma-node="25:79"/)
   assert.match(page, /className="figma-create-post-topbar"/)
   assert.match(page, /className="figma-create-post-workspace"/)

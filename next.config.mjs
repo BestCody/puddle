@@ -54,8 +54,7 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      { source: '/index.html', destination: '/', permanent: true },
-      { source: '/create/post', destination: '/map?compose=1', permanent: false }
+      { source: '/index.html', destination: '/', permanent: true }
     ]
   },
   async rewrites() { return { beforeFiles: [{ source: '/', destination: '/landing.html' }] } }
