@@ -61,7 +61,8 @@ test('selected licensed photos materialize directly into immutable B2 media', as
   assert.match(materializer, /for grouped in candidate_batches\(query\)/)
   assert.match(materializer, /photo_attempts/)
   assert.match(materializer, /retryable_error/)
-  assert.match(materializer, /NO_REDIRECT_OPENER/)
+  assert.match(materializer, /HTTP_POOL/)
+  assert.match(materializer, /redirect=False/)
   assert.match(materializer, /MAX_SOURCE_PIXELS/)
   assert.match(workflow, /build_b2_photo_search_overlay\.py/)
   assert.ok(workflow.indexOf('materialize_photo_candidates.py') < workflow.indexOf('build_b2_photo_search_overlay.py'))
@@ -164,7 +165,7 @@ test('provider rate limits match upstream contracts', async () => {
   assert.match(wikimediaWorkflow, /WIKIMEDIA_REQUESTS_PER_MINUTE: '200'/)
   assert.match(wikimedia, /min\(200, int\(os\.getenv\('WIKIMEDIA_REQUESTS_PER_MINUTE'/)
   assert.match(wikimedia, /3 if ACCESS_TOKEN else 1/)
-  assert.match(wikimedia, /'iiurlwidth': '1920'/)
+  assert.match(wikimedia, /'iiurlwidth': '1600'/)
   assert.match(wikimedia, /'Accept-Encoding': 'gzip'/)
   assert.match(wikimedia, /gate\.defer\(5\.0\)/)
 

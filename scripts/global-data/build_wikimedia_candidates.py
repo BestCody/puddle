@@ -184,7 +184,9 @@ def commons_request(lat, lon, radius):
         'action': 'query', 'format': 'json', 'generator': 'geosearch', 'maxlag': '5',
         'ggsprimary': 'all', 'ggsnamespace': '6', 'ggsradius': str(int(radius)), 'ggslimit': '500',
         'ggscoord': f'{lat}|{lon}', 'prop': 'coordinates|imageinfo',
-        'iiprop': 'url|size|extmetadata', 'iiurlwidth': '1920',
+        # Materialization never retains more than 1600px wide, so requesting
+        # 1920px only spends Wikimedia bandwidth on pixels that are discarded.
+        'iiprop': 'url|size|extmetadata', 'iiurlwidth': '1600',
         'iiextmetadatafilter': 'Artist|Credit|ImageDescription|LicenseShortName|UsageTerms'
     }
     url = 'https://commons.wikimedia.org/w/api.php?' + urllib.parse.urlencode(params)

@@ -30,7 +30,7 @@ test('global free-photo workers saturate provider budgets and direct delivery st
   assert.match(wikimedia, /REQUESTS_PER_MINUTE = max\(1, min\(200/)
   assert.match(wikimedia, /3 if ACCESS_TOKEN else 1/)
   assert.match(wikimedia, /'ggslimit': '500'/)
-  assert.match(wikimedia, /'iiurlwidth': '1920'/)
+  assert.match(wikimedia, /'iiurlwidth': '1600'/)
   assert.match(wikimedia, /gate\.defer\(5\.0\)/)
   assert.match(wikimedia, /STATE_PREFIX/)
   assert.match(wikimedia, /merge_candidates/)
@@ -59,6 +59,8 @@ test('global free-photo workers saturate provider budgets and direct delivery st
   assert.match(materializer, /WIKIMEDIA_DOWNLOAD_MBIT/)
   assert.match(materializer, /MAPILLARY_GRAPH_REQUESTS_PER_MINUTE/)
   assert.match(materializer, /Retry-After/)
+  assert.match(materializer, /HTTP_POOL/)
+  assert.match(materializer, /redirect=False/)
 
   assert.match(delivery, /canonicalStorageKey/)
   assert.match(delivery, /media\/photos\/by-sha256/)

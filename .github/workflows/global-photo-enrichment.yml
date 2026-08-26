@@ -55,7 +55,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - run: python -m pip install --disable-pip-version-check duckdb boto3 pillow brotli orjson
+      - run: python -m pip install --disable-pip-version-check duckdb boto3 pillow brotli orjson urllib3
       - id: active
         run: python scripts/global-data/active_snapshot.py
       - name: Reconcile pre-registry global B2 photo metadata once per snapshot

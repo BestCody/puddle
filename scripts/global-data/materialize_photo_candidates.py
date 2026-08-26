@@ -18,11 +18,11 @@ import threading
 import time
 import urllib.error
 import urllib.parse
-import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import boto3
 import duckdb
+import urllib3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from PIL import Image, ImageOps
@@ -115,16 +115,41 @@ data_s3 = boto3.client(
     config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
 )
 SUPABASE_GATE = threading.BoundedSemaphore(CLAIM_CONCURRENCY)
+HTTP_POOL = urllib3.PoolManager(
+    num_pools=16,
+    maxsize=max(32, min(256, CONCURRENCY + CLAIM_CONCURRENCY)),
+    block=True,
+    cert_reqs='CERT_REQUIRED',
+)
 
 
-class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Require every provider redirect to pass the same HTTPS/host allowlist."""
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
-NO_REDIRECT_OPENER = urllib.request.build_opener(NoRedirectHandler)
+def pooled_json_request(method, url, *, headers, body=None, timeout=30):
+    """Read a small JSON response while reusing verified HTTPS connections."""
+    response = None
+    try:
+        response = HTTP_POOL.request(
+            method,
+            url,
+            body=body,
+            headers=headers,
+            preload_content=False,
+            redirect=False,
+            retries=False,
+            timeout=urllib3.Timeout(connect=min(10, timeout), read=timeout),
+        )
+        raw = response.read()
+        if response.status >= 300:
+            raise urllib.error.HTTPError(
+                url,
+                response.status,
+                f'HTTP {response.status}',
+                response.headers,
+                io.BytesIO(raw),
+            )
+        return raw
+    finally:
+        if response is not None:
+            response.release_conn()
 
 
 def prefix_exists(prefix):
@@ -154,9 +179,8 @@ def supabase_rpc(name, payload, retries=6):
     with SUPABASE_GATE:
         for attempt in range(retries):
             try:
-                with urllib.request.urlopen(urllib.request.Request(url, data=body, method='POST', headers=headers), timeout=30) as response:
-                    raw = response.read()
-                    return json.loads(raw) if raw else None
+                raw = pooled_json_request('POST', url, headers=headers, body=body, timeout=30)
+                return json.loads(raw) if raw else None
             except urllib.error.HTTPError as error:
                 raw = error.read().decode(errors='replace')[:800]
                 if error.code not in {408, 425, 429, 500, 502, 503, 504} or attempt + 1 >= retries:
@@ -270,7 +294,7 @@ def complete_candidate(reservation_token, status, result=None, content_hash=None
 def retryable_candidate_error(error):
     if isinstance(error, urllib.error.HTTPError):
         return error.code in TRANSIENT_HTTP_CODES
-    if isinstance(error, (urllib.error.URLError, TimeoutError, ConnectionError)):
+    if isinstance(error, (urllib3.exceptions.HTTPError, urllib.error.URLError, TimeoutError, ConnectionError)):
         return True
     return False
 
@@ -318,12 +342,15 @@ def mapillary_details(image_id):
     for attempt in range(6):
         wait_mapillary_graph_start()
         try:
-            request = urllib.request.Request(url, headers={
-                'Accept': 'application/json',
-                'User-Agent': 'Puddle/1.0 global photo materializer (https://puddle.you/)',
-            })
-            with urllib.request.urlopen(request, timeout=20) as response:
-                row = json.load(response)
+            row = json.loads(pooled_json_request(
+                'GET',
+                url,
+                headers={
+                    'Accept': 'application/json',
+                    'User-Agent': 'Puddle/1.0 global photo materializer (https://puddle.you/)',
+                },
+                timeout=20,
+            ))
             creator = str((row.get('creator') or {}).get('username') or (row.get('creator') or {}).get('name') or 'Mapillary contributor').strip()
             return {
                 'asset_url': row.get('thumb_2048_url'),
@@ -361,43 +388,68 @@ def download(url, provider):
         parsed = urllib.parse.urlparse(current)
         if parsed.scheme != 'https' or not approved_host(provider, parsed.hostname or ''):
             raise RuntimeError(f'unapproved {provider} asset host')
-        request = urllib.request.Request(current, headers={
-            'Accept': 'image/avif,image/webp,image/png,image/jpeg',
-            'User-Agent': 'Puddle/1.0 licensed photo materializer (https://puddle.you/)',
-        })
         gate = WIKIMEDIA_DOWNLOAD_GATE if provider == 'wikimedia-commons' else None
         if gate:
             gate.acquire()
+        response = None
         try:
-            with NO_REDIRECT_OPENER.open(request, timeout=30) as response:
-                content_type = (response.headers.get_content_type() or '').lower()
-                try:
-                    declared = int(response.headers.get('Content-Length') or 0)
-                except ValueError:
-                    declared = 0
-                if declared > MAX_BYTES:
-                    raise RuntimeError('image exceeds 10 MB')
-                if provider == 'wikimedia-commons':
-                    chunks = []
-                    total = 0
-                    while total <= MAX_BYTES:
-                        chunk_size = min(64 * 1024, MAX_BYTES + 1 - total)
-                        if chunk_size <= 0:
-                            break
-                        reserve_wikimedia_bandwidth(chunk_size)
-                        chunk = response.read(chunk_size)
-                        if not chunk:
-                            break
-                        chunks.append(chunk)
-                        total += len(chunk)
-                    body = b''.join(chunks)
-                else:
-                    body = response.read(MAX_BYTES + 1)
-                if not body or len(body) > MAX_BYTES:
-                    raise RuntimeError('image is empty or exceeds 10 MB')
-                if content_type not in {'image/jpeg', 'image/png', 'image/webp', 'image/avif', 'application/octet-stream'}:
-                    raise RuntimeError(f'unsupported image type {content_type}')
-                return body
+            response = HTTP_POOL.request(
+                'GET',
+                current,
+                headers={
+                    'Accept': 'image/avif,image/webp,image/png,image/jpeg',
+                    'User-Agent': 'Puddle/1.0 licensed photo materializer (https://puddle.you/)',
+                },
+                preload_content=False,
+                redirect=False,
+                retries=False,
+                timeout=urllib3.Timeout(connect=10, read=30),
+            )
+            if 300 <= response.status < 400 and response.headers.get('Location'):
+                redirects += 1
+                if redirects > 3:
+                    raise RuntimeError('too many image redirects')
+                current = urllib.parse.urljoin(current, response.headers['Location'])
+                response.release_conn()
+                response = None
+                continue
+            if response.status >= 300:
+                error_body = response.read(8192)
+                raise urllib.error.HTTPError(
+                    current,
+                    response.status,
+                    f'HTTP {response.status}',
+                    response.headers,
+                    io.BytesIO(error_body),
+                )
+            content_type = str(response.headers.get('Content-Type') or '').split(';', 1)[0].strip().lower()
+            try:
+                declared = int(response.headers.get('Content-Length') or 0)
+            except ValueError:
+                declared = 0
+            if declared > MAX_BYTES:
+                raise RuntimeError('image exceeds 10 MB')
+            if provider == 'wikimedia-commons':
+                chunks = []
+                total = 0
+                while total <= MAX_BYTES:
+                    chunk_size = min(64 * 1024, MAX_BYTES + 1 - total)
+                    if chunk_size <= 0:
+                        break
+                    reserve_wikimedia_bandwidth(chunk_size)
+                    chunk = response.read(chunk_size)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                    total += len(chunk)
+                body = b''.join(chunks)
+            else:
+                body = response.read(MAX_BYTES + 1)
+            if not body or len(body) > MAX_BYTES:
+                raise RuntimeError('image is empty or exceeds 10 MB')
+            if content_type not in {'image/jpeg', 'image/png', 'image/webp', 'image/avif', 'application/octet-stream'}:
+                raise RuntimeError(f'unsupported image type {content_type}')
+            return body
         except urllib.error.HTTPError as error:
             if error.code in {301, 302, 303, 307, 308} and error.headers.get('Location'):
                 redirects += 1
@@ -416,11 +468,13 @@ def download(url, provider):
                 time.sleep(min(60.0, delay))
                 continue
             raise
-        except (urllib.error.URLError, TimeoutError, ConnectionError):
+        except (urllib3.exceptions.HTTPError, urllib.error.URLError, TimeoutError, ConnectionError):
             if attempt >= 5:
                 raise
             time.sleep(min(30.0, 0.5 * (2 ** attempt)))
         finally:
+            if response is not None:
+                response.release_conn()
             if gate:
                 gate.release()
     raise RuntimeError(f'{provider} image download exhausted retries')
@@ -775,6 +829,7 @@ for country in countries():
         """
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
         for grouped in candidate_batches(query):
+            batch_started = time.monotonic()
             target_ids = sorted(grouped)
 
             results = []
@@ -796,6 +851,7 @@ for country in countries():
             exhausted = sum(1 for row in diagnostics if row.get('status') == 'exhausted')
             retryable_errors = sum(1 for row in diagnostics if row.get('status') in {'retryable_error', 'worker_error'})
             already_claimed = sum(1 for row in diagnostics if row.get('status') == 'already_claimed')
+            elapsed_seconds = max(time.monotonic() - batch_started, 0.001)
             duplicate_fallbacks = sum(
                 1 for row in diagnostics for attempt in row.get('attempts', [])
                 if attempt.get('conflict') in {'provider_asset_duplicate','exact_duplicate','near_duplicate','concurrent_unique_conflict'}
@@ -810,5 +866,8 @@ for country in countries():
                 'exhausted': exhausted,
                 'retryableErrors': retryable_errors,
                 'batchSize': LOCATION_BATCH,
+                'elapsedSeconds': round(elapsed_seconds, 1),
+                'photosPerMinute': round(len(results) * 60 / elapsed_seconds, 2),
+                'locationsPerMinute': round(len(target_ids) * 60 / elapsed_seconds, 2),
                 'failureSamples': failure_samples,
             }, indent=2), flush=True)
