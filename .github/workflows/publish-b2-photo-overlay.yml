@@ -1,0 +1,36 @@
+name: Publish B2 photo serving overlay
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialize with materialization so the overlay is built from a complete
+  # append-only metadata snapshot, never from a batch that is still writing.
+  group: global-photo-enrichment
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_DATA_PREFIX: data
+      GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES: ${{ vars.GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES || '12582912' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --disable-pip-version-check duckdb boto3 brotli orjson
+      - id: active
+        name: Resolve the active location snapshot
+        run: python scripts/global-data/active_snapshot.py
+      - name: Publish atomic B2 photo serving overlay
+        run: python scripts/global-data/build_b2_photo_search_overlay.py --snapshot='${{ steps.active.outputs.snapshot }}'

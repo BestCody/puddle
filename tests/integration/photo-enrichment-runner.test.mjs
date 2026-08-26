@@ -6,6 +6,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8
 
 test('global photo materialization runs hourly and can be dispatched manually', async () => {
   const workflow = await read('.github/workflows/global-photo-enrichment.yml')
+  const overlayWorkflow = await read('.github/workflows/publish-b2-photo-overlay.yml')
   assert.match(workflow, /workflow_dispatch:/)
   assert.match(workflow, /\bschedule:/)
   assert.match(workflow, /cron: '31 \* \* \* \*'/)
@@ -13,6 +14,10 @@ test('global photo materialization runs hourly and can be dispatched manually', 
   assert.doesNotMatch(workflow, /--limit=/)
   assert.doesNotMatch(workflow, /timeout-minutes:/)
   assert.match(workflow, /cancel-in-progress: false/)
+  assert.match(overlayWorkflow, /workflow_dispatch:/)
+  assert.match(overlayWorkflow, /group: global-photo-enrichment/)
+  assert.match(overlayWorkflow, /build_b2_photo_search_overlay\.py/)
+  assert.doesNotMatch(overlayWorkflow, /materialize_photo_candidates\.py/)
 })
 
 test('global photo enrichment builds candidates from the active canonical snapshot', async () => {
