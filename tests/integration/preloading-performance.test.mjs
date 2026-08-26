@@ -193,8 +193,9 @@ test('dashboard navigation keeps the shell mounted, preserves UI, and streams ro
 
   assert.match(layout, /import '\.\/performance-loading\.css'/)
   assert.match(layout, /import '\.\/sidebar-interactions\.css'/)
-  assert.match(productLayout, /export default async function ProductLayout/)
-  assert.match(productLayout, /<ProductShell user=\{session\.user\} profile=\{session\.profile\}>\{children\}<\/ProductShell>/)
+  assert.match(productLayout, /export default function ProductLayout/)
+  assert.match(productLayout, /<StaticProductShell>\{children\}<\/StaticProductShell>/)
+  assert.doesNotMatch(productLayout, /requireUser|<ProductShell user=/)
   assert.match(productLoading, /puddle-main-transition-loader/)
   assert.match(shell, /import \{ MainContentTransition \} from '\.\/main-content-transition'/)
   assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{content\}<\/MainContentTransition><\/main>/)

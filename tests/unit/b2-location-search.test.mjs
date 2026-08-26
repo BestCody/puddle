@@ -199,6 +199,21 @@ test('B2 radius search routes, filters, fuzzily matches, and ranks candidates', 
   assert.equal(result.diagnostics.textProjection, false)
 })
 
+test('B2 radius search can prioritize canonical photo candidates without widening hydration', async () => {
+  reset()
+  const { fetchFn } = fixtureFetch()
+  const result = await searchB2GlobalLocations({
+    latitude: 43.65, longitude: -79.39, distanceKm: 25,
+    preferredCategories: ['cafe'], candidateLimit: 1, preferPhoto: true
+  }, {
+    env: { ...env, GLOBAL_LOCATION_RANK_PREFERRED_CATEGORY: '100' },
+    fetchFn
+  })
+  assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
+  assert.equal(result.candidateLimit, 1)
+  assert.equal(result.diagnostics.photoFirst, true)
+})
+
 test('B2 dense text radius search uses compact core and hydrates winner detail', async () => {
   reset()
   const { fetchFn, projectionCandidateKey } = fixtureFetch()

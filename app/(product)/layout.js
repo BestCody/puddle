@@ -1,9 +1,10 @@
-import { ProductShell } from '@/components/product-shell'
-import { requireUser } from '@/lib/auth/user'
+import { StaticProductShell } from '@/components/static-product-shell'
 
+// The proxy has already authenticated protected product requests. Keep the
+// navigation chrome independent from the profile read so the route can stream
+// its authenticated content as soon as the page data is ready.
 export const dynamic = 'force-dynamic'
 
-export default async function ProductLayout({ children }) {
-  const session = await requireUser({ onboarding: true })
-  return <ProductShell user={session.user} profile={session.profile}>{children}</ProductShell>
+export default function ProductLayout({ children }) {
+  return <StaticProductShell>{children}</StaticProductShell>
 }

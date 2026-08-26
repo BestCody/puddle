@@ -108,11 +108,13 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const panFrameRef = useRef(0)
   const pendingCenterRef = useRef(null)
   const catalogueCacheRef = useRef(new Map())
+  const catalogueRequestRef = useRef(0)
   const [viewport, setViewport] = useState({ width: 900, height: 620 })
   const [center, setCenter] = useState(initialCenter || { latitude: 43.6532, longitude: -79.3832 })
   const [zoom, setZoom] = useState(initialPoints.length <= 1 ? 14 : 12)
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(initialPoints[0]?.id || null)
+  const [selectedPoint, setSelectedPoint] = useState(initialPoints[0] || null)
   const [heatmapEnabled, setHeatmapEnabled] = useState(Boolean(passActive))
   const [visibleHeatmap, setVisibleHeatmap] = useState(heatmapPoints)
   const [cataloguePoints, setCataloguePoints] = useState([])
@@ -130,6 +132,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   }, [])
 
   useEffect(() => {
+    const requestId = ++catalogueRequestRef.current
     if (!loadCatalogue || filter !== 'all') return undefined
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
@@ -137,7 +140,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       const cacheKey = viewportCacheKey(bounds, zoom)
       const cached = catalogueCacheRef.current.get(cacheKey)
       if (cached) {
-        setCataloguePoints(cached)
+        if (!controller.signal.aborted && requestId === catalogueRequestRef.current) setCataloguePoints(cached)
         return
       }
       const params = new URLSearchParams({
@@ -152,7 +155,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         const cache = catalogueCacheRef.current
         cache.set(cacheKey, next)
         if (cache.size > CATALOGUE_CACHE_LIMIT) cache.delete(cache.keys().next().value)
-        setCataloguePoints(next)
+        if (!controller.signal.aborted && requestId === catalogueRequestRef.current) setCataloguePoints(next)
       } catch (error) {
         if (error?.name !== 'AbortError') console.warn('Could not refresh visible Puddle locations.', { message: error?.message || 'unknown error' })
       }
@@ -192,11 +195,12 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         states: [...new Set([...(existing.states || []), ...(point.states || [])])]
       } : point)
     }
+    if (selectedPoint?.id === selectedId && !merged.has(selectedPoint.id)) merged.set(selectedPoint.id, selectedPoint)
     return [...merged.values()]
-  }, [cataloguePoints, initialPoints])
+  }, [cataloguePoints, initialPoints, selectedId, selectedPoint])
 
   const points = useMemo(() => filter === 'all' ? allPoints : allPoints.filter((point) => point.states.includes(filter)), [allPoints, filter])
-  const selected = allPoints.find((point) => point.id === selectedId) || points[0] || null
+  const selected = allPoints.find((point) => point.id === selectedId) || (selectedPoint?.id === selectedId ? selectedPoint : null) || points[0] || null
   const projectedCenter = project(center.latitude, center.longitude, zoom)
   const maxHeat = Math.max(1, ...visibleHeatmap.map((point) => Number(point.save_count) || 0))
 
@@ -236,9 +240,20 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   function changeFilter(next) {
     setFilter(next)
     const first = next === 'all' ? allPoints[0] : allPoints.find((point) => point.states.includes(next))
-    if (first) { setSelectedId(first.id); setCenter({ latitude: first.latitude, longitude: first.longitude }) }
+    if (first) {
+      setSelectedPoint(first)
+      setSelectedId(first.id)
+      setCenter({ latitude: first.latitude, longitude: first.longitude })
+    } else {
+      setSelectedPoint(null)
+      setSelectedId(null)
+    }
   }
-  function selectPoint(point) { setSelectedId(point.id); setCenter({ latitude: point.latitude, longitude: point.longitude }) }
+  function selectPoint(point) {
+    setSelectedPoint(point)
+    setSelectedId(point.id)
+    setCenter({ latitude: point.latitude, longitude: point.longitude })
+  }
   function openCluster(cluster) {
     setCenter({ latitude: cluster.latitude, longitude: cluster.longitude })
     setZoom((value) => clamp(value + (value < 9 ? 2 : 1), MIN_ZOOM, MAX_ZOOM))

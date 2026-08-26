@@ -42,6 +42,9 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(mapSource, /280\)/)
   assert.match(mapSource, /loadCatalogue/)
   assert.match(mapSource, /controller\.abort\(\)/)
+  assert.match(mapSource, /catalogueRequestRef/)
+  assert.match(mapSource, /selectedPoint/)
+  assert.match(mapSource, /setSelectedPoint\(point\)/)
 
   assert.doesNotMatch(dataSource, /public_map_location_search_v1/)
   assert.doesNotMatch(dataSource, /rpcOr|globalLocationsOr/)
