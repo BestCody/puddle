@@ -1,0 +1,36 @@
+name: Audit B2 photo and search-index alignment
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_size:
+        description: "Number of overlay IDs to check against active ID shards"
+        required: false
+        default: "100"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b2-photo-index-alignment
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_DATA_PREFIX: data
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --disable-pip-version-check boto3 brotli orjson
+      - name: Compare active overlay IDs with active index IDs
+        run: python scripts/global-data/audit_b2_photo_index_alignment.py --sample-size="${{ inputs.sample_size }}" --require-match
