@@ -123,7 +123,7 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     const originalReview = `Live review ${suffix}`
     const updatedReview = `Updated live review ${suffix}`
     await page.getByLabel('Your rating').selectOption('5')
-    await page.getByLabel('Review').fill(originalReview)
+    await page.getByRole('textbox', { name: 'Review', exact: true }).fill(originalReview)
     await submitServerAction(page, 'Post review', 'Your review was saved.', detailPath)
 
     let reviewSection = page.getByTestId('saved-place-reviews')
@@ -131,7 +131,7 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     await expect(ownReviewCard.getByText(originalReview, { exact: true })).toBeVisible({ timeout: 30_000 })
 
     await page.getByLabel('Your rating').selectOption('4')
-    await page.getByLabel('Review').fill(updatedReview)
+    await page.getByRole('textbox', { name: 'Review', exact: true }).fill(updatedReview)
     await submitServerAction(page, 'Update review', 'Your review was saved.', detailPath)
 
     reviewSection = page.getByTestId('saved-place-reviews')

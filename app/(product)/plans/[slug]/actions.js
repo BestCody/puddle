@@ -134,8 +134,8 @@ export async function deletePlaceReview(formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = value(formData, 'location_id', 80)
   await ensureLocation(formData, locationId)
-  const { data, error } = await session.supabase.rpc('delete_location_review_v1', { target_location: locationId })
-  if (error || !data) finish(formData, 'We could not remove your review.', 'error')
+  const { error } = await session.supabase.rpc('delete_location_review_v1', { target_location: locationId })
+  if (error) finish(formData, 'We could not remove your review.', 'error')
   revalidatePath(destination(formData))
   finish(formData, 'Your review was removed.')
 }
