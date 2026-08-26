@@ -74,6 +74,7 @@ test('Pass saver listing is keyset-paged and its headline count is incrementally
 test('social feed uses bounded RLS keyset pages, indexed top-N comment previews, and lazy friend hydration', async () => {
   const feed = await read('lib/app/social-feed-data.js')
   const page = await read('app/(product)/map/page.js')
+  const client = await read('components/social-feed-client.js')
   const share = await read('app/(product)/map/feed-share-menu.js')
   const cursor = await read('supabase/migrations/10067_feed_keyset_pagination.sql')
   const edges = await read('supabase/migrations/10068_scalability_edge_hardening.sql')
@@ -92,7 +93,8 @@ test('social feed uses bounded RLS keyset pages, indexed top-N comment previews,
   assert.doesNotMatch(feed, /social_friends_v1/)
   assert.match(feed, /nextBeforeCreatedAt/)
   assert.match(feed, /nextBeforePostId/)
-  assert.match(page, /More puddles/)
+  assert.match(page, /<SocialFeedClient/)
+  assert.match(client, /More puddles/)
   assert.match(share, /social_friend_picker_v2/)
   assert.match(share, /More friends/)
   assert.match(cursor, /\(p\.created_at, p\.id\) < \(before_created_at, before_post_id\)/)

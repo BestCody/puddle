@@ -90,8 +90,9 @@ test('top pills size to their labels and move their highlight before navigation 
 
   assert.match(mapPage, /\{ value: 'feed', label: 'Posts', href: '\/map' \}/)
   assert.match(mapPage, /tone="yellow"/)
-  assert.match(mapPage, /<Suspense fallback=\{<StreamPlaceholder label="Loading posts" \/>\}>/)
+  assert.match(mapPage, /<SocialFeedClient/)
   assert.match(mapPage, /<Suspense fallback=\{<StreamPlaceholder label="Loading map" \/>\}>/)
+  assert.doesNotMatch(mapPage, /getSocialFeedSnapshot/)
   assert.doesNotMatch(mapPage, /await Promise\.all\(\[mapPromise, feedPromise\]\)/)
   assert.match(plansPage, /tone="purple"/)
   assert.match(passPage, /tone="pink"/)

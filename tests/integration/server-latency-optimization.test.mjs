@@ -58,8 +58,8 @@ test('Hot API routes own the account-state gate when proxy moderation is skipped
     read('app/api/discovery/route.js'),
     read('app/api/map/viewport/route.js')
   ])
-  assert.match(proxy, /moderationExemptApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport'\]\)/)
-  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport'\]\)/)
+  assert.match(proxy, /moderationExemptApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/social-feed'\]\)/)
+  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/social-feed'\]\)/)
   for (const source of [discovery, map]) {
     assert.match(source, /profile\?\.suspended_at/)
     assert.match(source, /Account status could not be verified/)
@@ -120,10 +120,12 @@ test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-pla
   assert.doesNotMatch(migration, /security definer/i)
 })
 
-test('Social feed uses one indexed post-page read and parallel bounded hydration', async () => {
-  const [feed, page, restore] = await Promise.all([
+test('Social feed uses one indexed post-page read and a shell-first API render', async () => {
+  const [feed, page, client, api, restore] = await Promise.all([
     read('lib/app/social-feed-data.js'),
     read('app/(product)/map/page.js'),
+    read('components/social-feed-client.js'),
+    read('app/api/social-feed/route.js'),
     read('supabase/migrations/20260825024000_restore_social_feed_hot_path.sql')
   ])
   assert.match(feed, /\.from\('social_posts'\)[\s\S]*profiles!social_posts_author_id_fkey/)
@@ -136,7 +138,12 @@ test('Social feed uses one indexed post-page read and parallel bounded hydration
   assert.match(feed, /social-feed-location-hydration-v1/)
   assert.match(feed, /revalidate: 300/)
   assert.doesNotMatch(feed, /social_comment_previews_fallback/)
-  assert.match(page, /view === 'map' \? getLocationMapSnapshot\(session\) : null/)
+  assert.match(page, /<SocialFeedClient/)
+  assert.match(client, /fetch\(`\/api\/social-feed/)
+  assert.match(client, /More puddles/)
+  assert.match(api, /getSocialFeedSnapshot/)
+  assert.match(api, /getCurrentUser/)
+  assert.match(api, /Cache-Control.*private, no-store/)
   assert.doesNotMatch(page, /CreatePuddleSlot\(\{ feedPromise, mapPromise/)
   assert.match(restore, /social_posts_feed_keyset_idx/)
   assert.match(restore, /social_comments_post_preview_idx/)

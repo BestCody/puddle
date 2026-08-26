@@ -6,6 +6,7 @@ const MIN_SUCCESS_RATE = 0.99
 const P95_LIMIT_MS = {
   discovery: PRODUCTION_SLOS.discovery.p95Ms,
   mapViewport: PRODUCTION_SLOS.mapViewport.p95Ms,
+  socialShell: PRODUCTION_SLOS.socialFeed.p95Ms,
   socialFeed: PRODUCTION_SLOS.socialFeed.p95Ms,
   savedHistory: PRODUCTION_SLOS.savedHistory.p95Ms,
   locationDetail: PRODUCTION_SLOS.locationDetail.p95Ms
@@ -90,23 +91,49 @@ function parseServerTiming(value) {
   return timings
 }
 
-async function timedGet(request, path) {
+async function authCookieHeader(page, baseUrl) {
+  const cookies = await page.context().cookies(baseUrl)
+  return cookies.map(({ name, value }) => `${name}=${value}`).join('; ')
+}
+
+async function timedGet(page, path, cookieHeader) {
   const started = performance.now()
+  const baseUrl = process.env.LIVE_BASE_URL || 'https://puddle.you'
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15_000)
   try {
-    const response = await request.get(path, {
+    const response = await fetch(new URL(path, baseUrl), {
       headers: {
+        cookie: cookieHeader,
         'x-puddle-load-test': 'bounded-pr-gate'
       },
-      timeout: 15_000
+      redirect: 'manual',
+      signal: controller.signal
     })
-    const body = await response.body()
-    const bodyText = body.toString('utf8')
+    const headersDurationMs = performance.now() - started
+    const bodyStarted = performance.now()
+    const chunks = []
+    if (response.body) {
+      const reader = response.body.getReader()
+      while (true) {
+        const next = await reader.read()
+        if (next.done) break
+        if (next.value?.length) chunks.push(Buffer.from(next.value))
+      }
+    } else {
+      chunks.push(Buffer.from(await response.arrayBuffer()))
+    }
+    const bodyText = Buffer.concat(chunks).toString('utf8')
     return {
-      ok: response.ok(),
-      status: response.status(),
+      ok: response.ok,
+      status: response.status,
       durationMs: performance.now() - started,
-      traceId: response.headers()['x-puddle-trace-id'] || null,
-      serverTiming: parseServerTiming(response.headers()['server-timing']),
+      headersDurationMs,
+      bodyDurationMs: performance.now() - bodyStarted,
+      traceId: response.headers.get('x-puddle-trace-id') || null,
+      vercelId: response.headers.get('x-vercel-id') || null,
+      cacheStatus: response.headers.get('x-vercel-cache') || null,
+      serverTiming: parseServerTiming(response.headers.get('server-timing')),
       bodyText,
       bodyPreview: bodyText.slice(0, 240)
     }
@@ -115,15 +142,25 @@ async function timedGet(request, path) {
       ok: false,
       status: 0,
       durationMs: performance.now() - started,
+      headersDurationMs: null,
+      bodyDurationMs: null,
+      vercelId: null,
+      cacheStatus: null,
       error: String(error?.message || error)
     }
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
-async function runScenario(request, name, path, { allowUnavailable503 = false } = {}) {
+function phasePercentile(samples, field, fraction) {
+  return percentile(samples.map((sample) => sample[field]).filter(Number.isFinite), fraction)
+}
+
+async function runScenario(page, cookieHeader, name, path, { allowUnavailable503 = false } = {}) {
   const samples = []
   for (const concurrency of STAGES) {
-    const batch = await Promise.all(Array.from({ length: concurrency }, () => timedGet(request, path)))
+    const batch = await Promise.all(Array.from({ length: concurrency }, () => timedGet(page, path, cookieHeader)))
     samples.push(...batch.map((sample) => ({ ...sample, concurrency })))
   }
 
@@ -141,6 +178,10 @@ async function runScenario(request, name, path, { allowUnavailable503 = false } 
     p50_ms: Math.round(percentile(durations, 0.5)),
     p95_ms: Math.round(percentile(durations, 0.95)),
     p99_ms: Math.round(percentile(durations, 0.99)),
+    headers_p50_ms: Math.round(phasePercentile(samples, 'headersDurationMs', 0.5)),
+    headers_p95_ms: Math.round(phasePercentile(samples, 'headersDurationMs', 0.95)),
+    headers_p99_ms: Math.round(phasePercentile(samples, 'headersDurationMs', 0.99)),
+    body_read_p95_ms: Math.round(phasePercentile(samples, 'bodyDurationMs', 0.95)),
     body_bytes_p95: Math.round(percentile(samples.map((sample) => Buffer.byteLength(sample.bodyText || '', 'utf8')), 0.95)),
     status_counts: Object.fromEntries(statuses.map((status) => [
       String(status),
@@ -151,12 +192,20 @@ async function runScenario(request, name, path, { allowUnavailable503 = false } 
       String(concurrency),
       Math.round(percentile(samples.filter((sample) => sample.concurrency === concurrency).map((sample) => sample.durationMs), 0.95))
     ])),
+    stage_headers_p95_ms: Object.fromEntries(STAGES.map((concurrency) => [
+      String(concurrency), Math.round(phasePercentile(samples.filter((sample) => sample.concurrency === concurrency), 'headersDurationMs', 0.95))
+    ])),
+    stage_body_read_p95_ms: Object.fromEntries(STAGES.map((concurrency) => [
+      String(concurrency), Math.round(phasePercentile(samples.filter((sample) => sample.concurrency === concurrency), 'bodyDurationMs', 0.95))
+    ])),
     server_timing_p95_ms: Object.fromEntries(
       [...new Set(samples.flatMap((sample) => Object.keys(sample.serverTiming || {})))].map((name) => [
         name,
         Math.round(percentile(samples.map((sample) => sample.serverTiming?.[name]).filter(Number.isFinite), 0.95))
       ])
     ),
+    vercel_ids: [...new Set(samples.map((sample) => sample.vercelId).filter(Boolean))].slice(0, 5),
+    cache_statuses: [...new Set(samples.map((sample) => sample.cacheStatus).filter(Boolean))],
     stages: STAGES
   }
   console.info(JSON.stringify(summary))
@@ -181,6 +230,7 @@ test('bounded production load gate covers all critical read paths', async ({ pag
   try {
     await createDisposableAccount(page)
     accountCreated = true
+    const cookieHeader = await authCookieHeader(page, process.env.LIVE_BASE_URL || 'https://puddle.you')
 
     const discovery = await page.request.get('/api/discovery?limit=10', { timeout: 15_000 })
     expect(discovery.ok()).toBeTruthy()
@@ -189,7 +239,7 @@ test('bounded production load gate covers all critical read paths', async ({ pag
       ? `/plans/${discoveryPayload.items.find((item) => item?.slug).slug}`
       : null
 
-    const mapPreflight = await timedGet(page.request, '/api/map/viewport?north=43.78&south=43.55&east=-79.20&west=-79.62&zoom=11')
+    const mapPreflight = await timedGet(page, '/api/map/viewport?north=43.78&south=43.55&east=-79.20&west=-79.62&zoom=11', cookieHeader)
     if (mapPreflight.ok) {
       const mapPayload = JSON.parse(mapPreflight.bodyText || '{}')
       if (!detailPath) detailPath = mapPayload?.points?.find((point) => point?.href)?.href || null
@@ -204,19 +254,21 @@ test('bounded production load gate covers all critical read paths', async ({ pag
     expect(detailPath, 'location detail path from production discovery/map').toBeTruthy()
 
     const summaries = []
-    summaries.push(await runScenario(page.request, 'discovery', '/api/discovery?limit=10'))
+    summaries.push(await runScenario(page, cookieHeader, 'discovery', '/api/discovery?limit=10'))
     summaries.push(await runScenario(
-      page.request,
+      page,
+      cookieHeader,
       'mapViewport',
       '/api/map/viewport?north=43.78&south=43.55&east=-79.20&west=-79.62&zoom=11',
       { allowUnavailable503: true }
     ))
-    summaries.push(await runScenario(page.request, 'socialFeed', '/map'))
-    summaries.push(await runScenario(page.request, 'savedHistory', '/plans?tab=saved'))
-    summaries.push(await runScenario(page.request, 'locationDetail', detailPath))
+    summaries.push(await runScenario(page, cookieHeader, 'socialShell', '/map'))
+    summaries.push(await runScenario(page, cookieHeader, 'socialFeed', '/api/social-feed'))
+    summaries.push(await runScenario(page, cookieHeader, 'savedHistory', '/plans?tab=saved'))
+    summaries.push(await runScenario(page, cookieHeader, 'locationDetail', detailPath))
 
     expect(summaries.map((summary) => summary.scenario)).toEqual([
-      'discovery', 'mapViewport', 'socialFeed', 'savedHistory', 'locationDetail'
+      'discovery', 'mapViewport', 'socialShell', 'socialFeed', 'savedHistory', 'locationDetail'
     ])
     for (const summary of summaries) assertScenario(summary)
   } finally {
