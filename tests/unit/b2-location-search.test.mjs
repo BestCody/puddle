@@ -14,6 +14,7 @@ import {
   haversineDistanceMeters
 } from '../../lib/app/location-search-shards.js'
 import { clearB2SearchAuthorizationCache } from '../../lib/app/b2-search-object-store.js'
+import { clearPhotoSearchOverlayCaches } from '../../lib/app/b2-photo-search-overlay.js'
 import { clearTextProjectionCaches } from '../../lib/app/b2-text-search-projection.js'
 import { queryPrefixCodes } from '../../lib/app/b2-text-postings.js'
 import { normalizeSearchText, prepareTextQuery, scoreTextMatch } from '../../lib/app/location-search-ranking.js'
@@ -82,7 +83,7 @@ function detail(row) {
   ]
 }
 
-function fixtureFetch({ delayMs = 0 } = {}) {
+function fixtureFetch({ delayMs = 0, photoOverlay = false } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
@@ -94,6 +95,9 @@ function fixtureFetch({ delayMs = 0 } = {}) {
   const projectionCandidateKey = `${projectionBase}/candidate.json`
   const coreKey = `${projectionBase}/core/${digest(geoKey)}.json.zst`
   const detailKey = `${projectionBase}/detail/${digest(geoKey)}/00000.json.zst`
+  const overlayHash = 'a'.repeat(64)
+  const overlayBody = br([1, [['loc-2', [overlayHash, 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]]]])
+  const overlayObjectKey = `${prefix}/photo-overlay-v1/sha256=${createHash('sha256').update(overlayBody).digest('hex')}/photos.json.br`
   const manifest = {
     schema_version: 1, snapshot: '2026-08-19', source_snapshot: '2026-08-19', prefix,
     planner: { id: plannerId },
@@ -117,7 +121,7 @@ function fixtureFetch({ delayMs = 0 } = {}) {
     ])],
     [geoKey, geoBody],
     [`${prefix}/geo-map/z1/13/10.json.br`, br([tower, cafe])],
-    [`${prefix}/id/60c.json.br`, br({ 'loc-1': tower })],
+    [`${prefix}/id/60c.json.br`, br({ 'loc-1': tower, 'loc-2': cafe })],
     [`${prefix}/slug/e79.json.br`, br({ 'cn-tower': 'loc-1' })],
     [projectionCandidateKey, Buffer.from(JSON.stringify({
       schema_version: 1,
@@ -131,6 +135,18 @@ function fixtureFetch({ delayMs = 0 } = {}) {
     [coreKey, zstd([1, [core(tower), core(cafe)]])],
     [detailKey, zstd([1, 0, [detail(tower), detail(cafe)]])]
   ])
+  if (photoOverlay) {
+    objects.set('data/search/photo-overlay-v1/active.json', Buffer.from(JSON.stringify({
+      schema_version: 1,
+      overlay_version: 1,
+      source_snapshot: '2026-08-19',
+      source_manifest_key: manifestKey,
+      object_key: overlayObjectKey,
+      object_sha256: overlayObjectKey.match(/sha256=([0-9a-f]{64})/)?.[1],
+      photo_count: 1
+    })))
+    objects.set(overlayObjectKey, overlayBody)
+  }
   const counts = new Map()
 
   const fetchFn = async (url) => {
@@ -160,6 +176,7 @@ function fixtureFetch({ delayMs = 0 } = {}) {
 function reset() {
   clearLocationSearchCaches()
   clearB2SearchAuthorizationCache()
+  clearPhotoSearchOverlayCaches()
   clearTextProjectionCaches()
 }
 
@@ -212,6 +229,21 @@ test('B2 radius search can prioritize canonical photo candidates without widenin
   assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
   assert.equal(result.candidateLimit, 1)
   assert.equal(result.diagnostics.photoFirst, true)
+})
+
+test('B2 radius search applies freshly materialized photo metadata before photo-first ranking', async () => {
+  reset()
+  const { fetchFn, projectionCandidateKey } = fixtureFetch({ photoOverlay: true })
+  const result = await searchB2GlobalLocations({
+    latitude: 43.65, longitude: -79.39, distanceKm: 25,
+    preferredCategories: ['cafe'], candidateLimit: 1, preferPhoto: true
+  }, {
+    env: { ...env, GLOBAL_LOCATION_RANK_PREFERRED_CATEGORY: '100', GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey },
+    fetchFn
+  })
+  assert.equal(result.candidates[0]?.id, 'loc-2')
+  assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
+  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1 })
 })
 
 test('B2 dense text radius search uses compact core and hydrates winner detail', async () => {
@@ -297,6 +329,17 @@ test('B2 viewport uses exact bounds at normal zoom', async () => {
   }, { env, fetchFn })
   assert.deepEqual(new Set(result.candidates.map((row) => row.id)), new Set(['loc-1', 'loc-2']))
   assert.equal(result.diagnostics.coarseFallback, undefined)
+})
+
+test('B2 viewport applies the photo overlay before selecting map results', async () => {
+  reset()
+  const { fetchFn } = fixtureFetch({ photoOverlay: true })
+  const result = await searchB2GlobalLocationsInViewport({
+    north: 43.74, south: 43.5, west: -79.6, east: -79.2, zoom: 11, candidateLimit: 1
+  }, { env, fetchFn })
+  assert.equal(result.candidates[0]?.id, 'loc-2')
+  assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
+  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1 })
 })
 
 test('dense normal-zoom B2 viewport falls back to bounded coarse map instead of failing budget', async () => {

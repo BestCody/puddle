@@ -52,7 +52,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - run: python -m pip install --disable-pip-version-check duckdb boto3 pillow
+      - run: python -m pip install --disable-pip-version-check duckdb boto3 pillow brotli orjson
       - id: active
         run: python scripts/global-data/active_snapshot.py
       - name: Reconcile pre-registry global B2 photo metadata once per snapshot
@@ -82,3 +82,7 @@ jobs:
           GLOBAL_PHOTO_ATTEMPT_RETRY_DAYS: ${{ vars.GLOBAL_PHOTO_ATTEMPT_RETRY_DAYS || '7' }}
           GLOBAL_PHOTO_ATTEMPT_RETRY_HOURS: ${{ vars.GLOBAL_PHOTO_ATTEMPT_RETRY_HOURS || '1' }}
           GLOBAL_PHOTO_CLAIM_LEASE_SECONDS: ${{ vars.GLOBAL_PHOTO_CLAIM_LEASE_SECONDS || '1200' }}
+      - name: Publish atomic B2 photo serving overlay
+        run: python scripts/global-data/build_b2_photo_search_overlay.py --snapshot='${{ steps.active.outputs.snapshot }}'
+        env:
+          GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES: ${{ vars.GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES || '12582912' }}

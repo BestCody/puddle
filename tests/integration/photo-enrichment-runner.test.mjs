@@ -32,6 +32,7 @@ test('the immutable location rebuild carries active canonical photo state forwar
   assert.match(workflow, /carry_photo_enrichment\.py/)
   assert.ok(workflow.indexOf('carry_photo_enrichment.py') < workflow.indexOf('build_bootstrap_overlays.py'))
   assert.ok(workflow.indexOf('build_bootstrap_overlays.py') < workflow.indexOf('build_b2_search_index.py'))
+  assert.ok(workflow.indexOf('validate_b2_search_index.py --snapshot') < workflow.lastIndexOf('build_b2_photo_search_overlay.py'))
   assert.match(carrier, /photo_metadata/)
   assert.match(carrier, /photo_exclusions/)
   assert.match(carrier, /copy_object/)
@@ -42,6 +43,7 @@ test('the immutable location rebuild carries active canonical photo state forwar
 test('selected licensed photos materialize directly into immutable B2 media', async () => {
   const workflow = await read('.github/workflows/global-photo-enrichment.yml')
   const materializer = await read('scripts/global-data/materialize_photo_candidates.py')
+  const overlayBuilder = await read('scripts/global-data/build_b2_photo_search_overlay.py')
   assert.match(workflow, /B2_MEDIA_OPEN_PHOTO_PREFIX/)
   assert.match(workflow, /media\/photos\/by-sha256/)
   assert.match(workflow, /materialize_photo_candidates\.py/)
@@ -55,6 +57,13 @@ test('selected licensed photos materialize directly into immutable B2 media', as
   assert.match(materializer, /retryable_error/)
   assert.match(materializer, /NO_REDIRECT_OPENER/)
   assert.match(materializer, /MAX_SOURCE_PIXELS/)
+  assert.match(workflow, /build_b2_photo_search_overlay\.py/)
+  assert.ok(workflow.indexOf('materialize_photo_candidates.py') < workflow.indexOf('build_b2_photo_search_overlay.py'))
+  assert.match(workflow, /pip install[^\n]*brotli[^\n]*orjson/)
+  assert.match(overlayBuilder, /photo-overlay-v1/)
+  assert.match(overlayBuilder, /CacheControl.*immutable/)
+  assert.match(overlayBuilder, /CacheControl=.*no-store/)
+  assert.doesNotMatch(overlayBuilder, /delete_object|delete_objects/i)
 })
 
 test('canonical B2 photo inventory audit is read-only and checks byte identity', async () => {

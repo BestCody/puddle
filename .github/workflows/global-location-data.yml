@@ -93,3 +93,8 @@ jobs:
       - name: Atomically activate validated B2 search snapshot
         if: github.event_name != 'workflow_dispatch' || inputs.activate_search
         run: python scripts/global-data/validate_b2_search_index.py --snapshot='${{ steps.snapshot.outputs.snapshot }}' --activate
+      - name: Publish photo overlay for the activated search snapshot
+        if: github.event_name != 'workflow_dispatch' || inputs.activate_search
+        run: python scripts/global-data/build_b2_photo_search_overlay.py --snapshot='${{ steps.snapshot.outputs.snapshot }}'
+        env:
+          GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES: ${{ vars.GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES || '12582912' }}

@@ -12,6 +12,8 @@ const env = {
   VERCEL_ENV: 'production',
   GLOBAL_LOCATION_RUNTIME_CACHE: '1',
   GLOBAL_LOCATION_SEARCH_MANIFEST_KEY: 'data/search/active.json',
+  GLOBAL_LOCATION_PHOTO_OVERLAY_ACTIVE_KEY: 'data/search/photo-overlay-v1/active.json',
+  GLOBAL_LOCATION_PHOTO_OVERLAY_RUNTIME_CACHE_TTL_SECONDS: '45',
   GLOBAL_LOCATION_RUNTIME_CACHE_ACTIVE_TTL_SECONDS: '30',
   GLOBAL_LOCATION_RUNTIME_CACHE_IMMUTABLE_TTL_SECONDS: '2592000',
   GLOBAL_LOCATION_RUNTIME_CACHE_MAX_RAW_BYTES: '1400000'
@@ -28,6 +30,7 @@ test('regional B2 cache defaults on for the real production fetch path', () => {
 
 test('active pointer gets a short TTL while snapshot objects are immutable-cache candidates', () => {
   assert.deepEqual(b2RuntimeObjectCachePolicy('data/search/active.json', env), { kind: 'active', ttl: 30 })
+  assert.deepEqual(b2RuntimeObjectCachePolicy('data/search/photo-overlay-v1/active.json', env), { kind: 'photo-overlay-active', ttl: 45 })
   assert.deepEqual(
     b2RuntimeObjectCachePolicy('data/search/schema=v1/snapshot=2026-08-17/geo/r5/example.json.br', env),
     { kind: 'immutable', ttl: 2592000 }
