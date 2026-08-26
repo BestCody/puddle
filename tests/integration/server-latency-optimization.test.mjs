@@ -25,6 +25,7 @@ test('Proxy verifies claims and only loads moderation profile state when require
   assert.match(proxy, /requestHeaders\.delete\(verifiedProductUserHeader\)/)
   assert.match(proxy, /requestHeaders\.set\(verifiedProductUserHeader, user\.id\)/)
   assert.match(pageUser, /mode: 'proxy_claims'/)
+  assert.match(pageUser, /import \{ ensureProfile, profileSelect \} from '\.\/profile'/)
 })
 
 test('Hot read APIs consume the proxy-verified user and verify only required profile state', async () => {
