@@ -1,0 +1,36 @@
+name: Apply review delete contract
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply-review-delete-contract
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v3.0.0
+        with:
+          version: latest
+
+      - name: Apply the idempotent production review-delete migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          supabase db query \
+            --linked \
+            --project-ref cegoqtvajwajczbofpep \
+            --file supabase/migrations/20260826183000_idempotent_review_delete.sql
