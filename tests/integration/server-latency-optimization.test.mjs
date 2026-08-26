@@ -99,6 +99,7 @@ test('Social feed uses one indexed post-page read and parallel bounded hydration
   assert.doesNotMatch(feed, /social_feed_post_keys/)
   assert.match(feed, /const \[locationsById, commentRows, states\] = await Promise\.all\(/)
   assert.match(feed, /rpc\('social_comment_previews_v2'/)
+  assert.match(feed, /const socialFeedInFlight = new Map\(\)/)
   assert.doesNotMatch(feed, /social_comment_previews_fallback/)
   assert.match(page, /view === 'map' \? getLocationMapSnapshot\(session\) : null/)
   assert.doesNotMatch(page, /CreatePuddleSlot\(\{ feedPromise, mapPromise/)
@@ -110,10 +111,12 @@ test('Social feed uses one indexed post-page read and parallel bounded hydration
 })
 
 test('B2 radius serving uses compact cores and a snapshot-aware entity cache', async () => {
-  const [search, shards, runtimeCache] = await Promise.all([
+  const [search, shards, runtimeCache, projection, gateway] = await Promise.all([
     read('lib/app/b2-location-search.js'),
     read('lib/app/location-search-shards.js'),
-    read('lib/app/b2-runtime-object-cache.js')
+    read('lib/app/b2-runtime-object-cache.js'),
+    read('lib/app/b2-text-search-projection.js'),
+    read('lib/app/global-location-search.js')
   ])
   assert.match(search, /projection = await fetchTextProjectionCore\(targetPlan/)
   assert.match(search, /query\.normalized[\s\S]*scoreNormalizedTextFields/)
@@ -121,6 +124,11 @@ test('B2 radius serving uses compact cores and a snapshot-aware entity cache', a
   assert.match(shards, /queueB2RuntimeLocationCacheWrite\(prefix, loaded/)
   assert.match(runtimeCache, /LOCATION_CACHE_VERSION/)
   assert.match(runtimeCache, /b2RuntimeLocationCacheKey/)
+  assert.match(shards, /manifestInFlight/)
+  assert.match(projection, /READY_IN_FLIGHT/)
+  assert.match(projection, /PROJECTION_PAYLOAD_IN_FLIGHT/)
+  assert.match(gateway, /const searchInFlight = new Map\(\)/)
+  assert.match(gateway, /const idsInFlight = new Map\(\)/)
 })
 
 test('Partial caching is limited to cookie-free published public location data', async () => {
@@ -135,7 +143,9 @@ test('Partial caching is limited to cookie-free published public location data',
   assert.match(cache, /unstable_cache/)
   assert.match(cache, /revalidate:\s*300/)
   assert.match(cache, /tags:\s*\['public-locations'\]/)
-  assert.match(cache, /const \[suspended, overlay, similarPlaces\] = await Promise\.all\(/)
+  assert.match(cache, /return \{ location, similar: \[\] \}/)
+  assert.match(cache, /cachedPublicLocationRecommendations/)
+  assert.match(cache, /const publicLocationInFlight = new Map\(\)/)
   assert.doesNotMatch(cache, /cookies\(|headers\(/)
   assert.match(publicClient, /persistSession: false/)
   assert.match(place, /getCachedPublicLocation/)

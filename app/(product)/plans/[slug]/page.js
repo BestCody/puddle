@@ -5,9 +5,10 @@ import { LocationMap } from '@/components/location-map'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getPublicLocation } from '@/lib/app/public-content'
-import { getLocationPlanStatus, getLocationPlansPage } from '@/lib/app/location-plans-data'
+import { getLocationPlanStatus } from '@/lib/app/location-plans-data'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 import { deletePlaceReview, planPlaceVisit, shareSavedPlace, togglePinnedPlace, toggleSavedPlace, upsertPlaceReview } from './actions'
+import { SimilarPlaces } from './similar-places'
 import styles from '../Plans.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -22,23 +23,6 @@ function categoryIcon(value) {
   if (label.includes('court')) return '◉'
   if (label.includes('coffee') || label.includes('cafe')) return '♨'
   return '•'
-}
-
-function folderKey(item) {
-  return item?.folder || item?.category || item?.kind || 'Saved'
-}
-
-function dashboardSimilarHref(item) {
-  if (item.content_kind === 'event') return `/events/${item.slug}`
-  return `/plans/${item.slug}`
-}
-
-function similarTitle(item) {
-  return item.title || item.name || 'Puddle'
-}
-
-function similarLocation(item) {
-  return item.city || item.location?.city || categoryLabel(item.category || item.kind)
 }
 
 export async function generateMetadata({ params }) {
@@ -82,8 +66,8 @@ export default async function SavedPlacePage({ params, searchParams }) {
   return renderProductPage(async (session) => {
     const result = await resultPromise
     if (!result) notFound()
-    const { location, similar } = result
-    const [{ data: savedState }, { data: friends }, { data: reviews }, savedPage, plannedItem] = await Promise.all([
+    const { location } = result
+    const [{ data: savedState }, { data: friends }, { data: reviews }, plannedItem] = await Promise.all([
       session.supabase
         .from('user_content_states')
         .select('pinned_at')
@@ -93,7 +77,6 @@ export default async function SavedPlacePage({ params, searchParams }) {
         .maybeSingle(),
       session.supabase.rpc('social_friends_v2'),
       session.supabase.rpc('location_reviews_v1', { target_location: location.id }),
-      getLocationPlansPage(session, { tab: 'saved' }),
       getLocationPlanStatus(session, location.id)
     ])
     const isSaved = Boolean(savedState)
@@ -103,7 +86,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
     const reviewList = reviews || []
     const myReview = reviewList.find((review) => review.author_id === session.user.id) || null
     const averageRating = reviewList.length ? reviewList.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviewList.length : null
-    const folders = [...new Set((savedPage?.items || []).map(folderKey).filter(Boolean))]
+    const folders = [location.kind].filter(Boolean)
     const primaryFolders = folders.slice(0, 2)
     const overflowFolders = folders.slice(2)
     const transitionNames = savedLocationTransitionNames(location.id)
@@ -203,14 +186,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
         </section>
       </article>
 
-      <section className={styles.similar} data-testid="saved-similar">
-        <h2>Similar splashes</h2>
-        <div className={styles.similarGrid}>{similar.slice(0, 3).map((item) => <Link className={styles.similarCard} href={dashboardSimilarHref(item)} key={`${item.content_kind || 'place'}:${item.id}`}>
-          <span className={styles.similarPhoto} style={item.cover_url ? { backgroundImage: `url(${item.cover_url})` } : undefined} />
-          <strong>{similarTitle(item)}</strong>
-          <small><span>{similarLocation(item)}</span>{Number.isFinite(Number(item.distance_km)) ? <b>{Number(item.distance_km).toFixed(1)} km</b> : null}</small>
-        </Link>)}</div>
-      </section>
+      <SimilarPlaces slug={slug} />
 
       <form className={`${styles.floatingSearch} ${styles.detailSearch}`} action="/plans" method="get" data-testid="saved-detail-search">
         <input type="hidden" name="tab" value="saved" />

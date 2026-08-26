@@ -20,6 +20,7 @@ const moderationExemptApiPrefixes = [
   '/api/health',
   '/api/system',
   '/api/location-photos',
+  '/api/public-location',
   '/api/billing/webhook'
 ]
 // These exact read routes perform their own claims and account-state checks so

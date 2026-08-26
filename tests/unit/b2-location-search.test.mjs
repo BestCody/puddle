@@ -82,7 +82,7 @@ function detail(row) {
   ]
 }
 
-function fixtureFetch() {
+function fixtureFetch({ delayMs = 0 } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
@@ -131,6 +131,7 @@ function fixtureFetch() {
     [coreKey, zstd([1, [core(tower), core(cafe)]])],
     [detailKey, zstd([1, 0, [detail(tower), detail(cafe)]])]
   ])
+  const counts = new Map()
 
   const fetchFn = async (url) => {
     const value = String(url)
@@ -148,10 +149,12 @@ function fixtureFetch() {
     const index = value.indexOf(marker)
     if (index < 0) return new Response('', { status: 404 })
     const key = value.slice(index + marker.length).split('/').map(decodeURIComponent).join('/')
+    counts.set(key, (counts.get(key) || 0) + 1)
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs))
     const body = objects.get(key)
     return body ? new Response(body, { status: 200, headers: { 'content-length': String(body.length) } }) : new Response('', { status: 404 })
   }
-  return { fetchFn, projectionCandidateKey }
+  return { fetchFn, projectionCandidateKey, coreKey, detailKey, counts }
 }
 
 function reset() {
@@ -230,6 +233,26 @@ test('B2 structured radius search reuses compact core and hydrates winner detail
   assert.equal(result.diagnostics.textProjection, true)
   assert.equal(result.diagnostics.textMode, 'core-scan')
   assert.equal(result.diagnostics.decodedCandidates, 2)
+})
+
+test('concurrent compact searches share manifest, readiness, decode, and hydration work', async () => {
+  reset()
+  const { fetchFn, projectionCandidateKey, coreKey, detailKey, counts } = fixtureFetch({ delayMs: 10 })
+  const projectionEnv = { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey }
+  const input = {
+    latitude: 43.65, longitude: -79.39, distanceKm: 25,
+    filters: { category: 'landmark' }, candidateLimit: 20
+  }
+  const results = await Promise.all([
+    searchB2GlobalLocations(input, { env: projectionEnv, fetchFn }),
+    searchB2GlobalLocations(input, { env: projectionEnv, fetchFn }),
+    searchB2GlobalLocations(input, { env: projectionEnv, fetchFn })
+  ])
+  assert.deepEqual(results.map((result) => result.candidates[0]?.id), ['loc-1', 'loc-1', 'loc-1'])
+  assert.equal(counts.get('data/search/active.json'), 1)
+  assert.equal(counts.get(projectionCandidateKey), 1)
+  assert.equal(counts.get(coreKey), 1)
+  assert.equal(counts.get(detailKey), 1)
 })
 
 test('B2 text search fails loudly when an activated projection core is missing', async () => {

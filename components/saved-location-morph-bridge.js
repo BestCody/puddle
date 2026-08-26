@@ -186,6 +186,14 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
         if (requestRef.current !== requestId) return
         if (transitionReadyRef.current) setDetail(payload)
         else pendingDetailRef.current = payload
+
+        const similarResponse = await fetch(`/api/public-location/${encodeURIComponent(nextPreview.slug)}/similar`)
+        const similarPayload = await similarResponse.json()
+        if (!similarResponse.ok) throw new Error(similarPayload?.error || 'Could not load similar places.')
+        if (requestRef.current !== requestId) return
+        const similar = Array.isArray(similarPayload?.items) ? similarPayload.items.slice(0, 3) : []
+        if (transitionReadyRef.current) setDetail((current) => current ? { ...current, similar } : current)
+        else if (pendingDetailRef.current) pendingDetailRef.current = { ...pendingDetailRef.current, similar }
       } catch (error) {
         if (requestRef.current === requestId) setMessage(error?.message || 'Could not load Saved details.')
       }

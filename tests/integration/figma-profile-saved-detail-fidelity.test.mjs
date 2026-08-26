@@ -58,15 +58,16 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
 })
 
 test('Saved Place Open preserves Figma 38:223 relationships through scoped structural layout', async () => {
-  const [page, styles, layout] = await Promise.all([
+  const [page, similar, styles, layout] = await Promise.all([
     read('app/(product)/plans/[slug]/page.js'),
+    read('app/(product)/plans/[slug]/similar-places.js'),
     read('app/(product)/plans/Plans.module.css'),
     read('app/layout.js')
   ])
 
   assert.match(page, /import styles from '\.\.\/Plans\.module\.css'/)
-  assert.match(page, /import \{ getLocationPlanStatus, getLocationPlansPage \} from '@\/lib\/app\/location-plans-data'/)
-  assert.match(page, /getLocationPlansPage\(session, \{ tab: 'saved' \}\)/)
+  assert.match(page, /import \{ getLocationPlanStatus \} from '@\/lib\/app\/location-plans-data'/)
+  assert.doesNotMatch(page, /getLocationPlansPage/)
   assert.match(page, /getLocationPlanStatus\(session, location\.id\)/)
   assert.doesNotMatch(page, /getLocationPlansSnapshot/)
   assert.match(page, /data-figma-node="38:223"/)
@@ -84,6 +85,9 @@ test('Saved Place Open preserves Figma 38:223 relationships through scoped struc
   assert.match(page, /Local spot/)
   assert.match(page, /className=\{styles\.reviews\}/)
   assert.match(page, /className=\{styles\.detailMap\}/)
+  assert.match(page, /<SimilarPlaces slug=\{slug\} \/>/)
+  assert.match(similar, /useEffect/)
+  assert.match(similar, /\/api\/public-location\/\$\{encodeURIComponent\(slug\)\}\/similar/)
   assert.doesNotMatch(page, /figma-saved-detail-kicker/)
   assert.doesNotMatch(page, /figma-saved-detail-description/)
   assert.doesNotMatch(page, /figma-saved-detail-tags/)

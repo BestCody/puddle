@@ -80,6 +80,16 @@ function percentile(values, fraction) {
   return sorted[index]
 }
 
+function parseServerTiming(value) {
+  const timings = {}
+  for (const entry of String(value || '').split(',')) {
+    const match = entry.trim().match(/^([A-Za-z0-9_-]+)(?:;[^,]*?dur=([0-9.]+))?/)
+    if (!match || !Number.isFinite(Number(match[2]))) continue
+    timings[match[1]] = Number(match[2])
+  }
+  return timings
+}
+
 async function timedGet(request, path) {
   const started = performance.now()
   try {
@@ -96,6 +106,7 @@ async function timedGet(request, path) {
       status: response.status(),
       durationMs: performance.now() - started,
       traceId: response.headers()['x-puddle-trace-id'] || null,
+      serverTiming: parseServerTiming(response.headers()['server-timing']),
       bodyText,
       bodyPreview: bodyText.slice(0, 240)
     }
@@ -135,21 +146,32 @@ async function runScenario(request, name, path, { allowUnavailable503 = false } 
       samples.filter((sample) => sample.status === status).length
     ])),
     sample_error: samples.find((sample) => !sample.ok)?.bodyPreview || samples.find((sample) => !sample.ok)?.error || null,
+    stage_p95_ms: Object.fromEntries(STAGES.map((concurrency) => [
+      String(concurrency),
+      Math.round(percentile(samples.filter((sample) => sample.concurrency === concurrency).map((sample) => sample.durationMs), 0.95))
+    ])),
+    server_timing_p95_ms: Object.fromEntries(
+      [...new Set(samples.flatMap((sample) => Object.keys(sample.serverTiming || {})))].map((name) => [
+        name,
+        Math.round(percentile(samples.map((sample) => sample.serverTiming?.[name]).filter(Number.isFinite), 0.95))
+      ])
+    ),
     stages: STAGES
   }
   console.info(JSON.stringify(summary))
-
-  if (blocked) {
-    // This is not a passing service measurement: it explicitly records an infrastructure
-    // prerequisite that prevented the path from reaching its backing service. The PR gate
-    // may continue so the other production paths are still measured instead of being hidden.
-    expect(summary.p95_ms, `${name} fail-closed p95`).toBeLessThanOrEqual(P95_LIMIT_MS[name])
-    return summary
-  }
-
-  expect(successRate, `${name} success rate`).toBeGreaterThanOrEqual(MIN_SUCCESS_RATE)
-  expect(summary.p95_ms, `${name} p95`).toBeLessThanOrEqual(P95_LIMIT_MS[name])
   return summary
+}
+
+function assertScenario(summary) {
+  if (summary.blocked) {
+    // This is not a passing service measurement: it explicitly records an infrastructure
+    // prerequisite that prevented the path from reaching its backing service. Assertions
+    // are deferred until every route is measured so one miss never hides the other results.
+    expect(summary.p95_ms, `${summary.scenario} fail-closed p95`).toBeLessThanOrEqual(P95_LIMIT_MS[summary.scenario])
+    return
+  }
+  expect(summary.success_rate, `${summary.scenario} success rate`).toBeGreaterThanOrEqual(MIN_SUCCESS_RATE)
+  expect(summary.p95_ms, `${summary.scenario} p95`).toBeLessThanOrEqual(P95_LIMIT_MS[summary.scenario])
 }
 
 test('bounded production load gate covers all critical read paths', async ({ page }) => {
@@ -195,6 +217,7 @@ test('bounded production load gate covers all critical read paths', async ({ pag
     expect(summaries.map((summary) => summary.scenario)).toEqual([
       'discovery', 'mapViewport', 'socialFeed', 'savedHistory', 'locationDetail'
     ])
+    for (const summary of summaries) assertScenario(summary)
   } finally {
     if (accountCreated) await deleteDisposableAccount(page)
   }
