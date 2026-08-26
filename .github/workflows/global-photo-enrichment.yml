@@ -33,6 +33,7 @@ jobs:
   materialize:
     if: github.event_name == 'workflow_dispatch' || vars.GLOBAL_PHOTO_PIPELINE_ENABLED == 'true'
     runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
     env:
       B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
       B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
@@ -54,7 +55,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - run: python -m pip install --disable-pip-version-check duckdb boto3 pillow brotli orjson
+      - run: python -m pip install --disable-pip-version-check duckdb boto3 pillow brotli orjson urllib3
       - id: active
         run: python scripts/global-data/active_snapshot.py
       - name: Reconcile pre-registry global B2 photo metadata once per snapshot
