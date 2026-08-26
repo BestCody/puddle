@@ -107,9 +107,14 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     await createDisposableAccount(friendPage, friend)
     friendCreated = true
 
-    for (const slug of ['moonlight-cafe', 'sunset-steps', 'laneway-gallery']) await ensureSaved(page, slug)
+    const discoveryResponse = await page.request.get('/api/discovery?limit=10')
+    expect(discoveryResponse.ok()).toBeTruthy()
+    const discoveryPayload = await discoveryResponse.json()
+    const detailSlug = discoveryPayload?.items?.find((item) => item?.slug)?.slug
+    expect(detailSlug, 'production discovery should provide a canonical detail slug').toBeTruthy()
+    await ensureSaved(page, detailSlug)
 
-    const detailPath = '/plans/moonlight-cafe'
+    const detailPath = `/plans/${detailSlug}`
     await page.goto(detailPath)
     const savedCategories = page.getByRole('navigation', { name: 'Saved categories' })
     await expect(savedCategories.getByRole('link', { name: 'All', exact: true })).toBeVisible()

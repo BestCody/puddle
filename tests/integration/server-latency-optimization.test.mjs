@@ -45,6 +45,13 @@ test('Hot read APIs consume the proxy-verified user and verify only required pro
   assert.doesNotMatch(profile, /profileLoads|PROFILE_CACHE_TTL_MS|invalidateProfileCache/)
 })
 
+test('Discovery overlaps profile and seen-history reads before B2 serving', async () => {
+  const source = await read('app/api/discovery/route.js')
+  assert.match(source, /const profilePromise = supabase[\s\S]*const seenPromise = supabase\.rpc\('discovery_seen_locations_v1'\)/)
+  assert.match(source, /Promise\.all\(\[profilePromise, seenPromise\]\)/)
+  assert.match(source, /preloadedSeenLocationIds/)
+})
+
 test('Hot API routes own the account-state gate when proxy moderation is skipped', async () => {
   const [proxy, discovery, map] = await Promise.all([
     read('proxy.js'),

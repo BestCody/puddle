@@ -38,11 +38,16 @@ async function authenticatedSession(traceId, requestHeaders) {
     return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   }
   const user = { id: userId }
-  const { data: profile, error: profileError } = await supabase
+  // Profile coordinates/preferences and seen history are independent reads.
+  // Start both before awaiting either one so the authenticated discovery path
+  // is bounded by the slower read instead of their sum.
+  const profilePromise = supabase
     .from('profiles')
     .select(DISCOVERY_PROFILE_SELECT)
     .eq('id', userId)
     .maybeSingle()
+  const seenPromise = supabase.rpc('discovery_seen_locations_v1').catch((error) => ({ data: null, error }))
+  const [{ data: profile, error: profileError }, seenResult] = await Promise.all([profilePromise, seenPromise])
   const authMs = elapsedMs(supabaseStarted)
   recordServerLatency('supabase.discoverySession', authMs, SERVER_LATENCY_BUDGET_MS.pageSession, {
     trace_id: traceId, service: 'supabase', operation: 'discoverySession',
@@ -52,7 +57,12 @@ async function authenticatedSession(traceId, requestHeaders) {
   if (profile?.suspended_at || profile?.banned_at) {
     return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
   }
-  return { session: { supabase, user, profile: profile || {}, traceId, authMs } }
+  const preloadedSeenLocationIds = seenResult?.error
+    ? []
+    : (Array.isArray(seenResult?.data) ? seenResult.data : [])
+      .map((row) => typeof row === 'string' ? row : row?.location_id || row?.locationId || row?.id || null)
+      .filter(Boolean)
+  return { session: { supabase, user, profile: profile || {}, traceId, authMs, preloadedSeenLocationIds } }
 }
 
 function withTrace(response, traceId) {
@@ -64,7 +74,10 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
   const started = latencyStart()
   let feed
   try {
-    feed = await getDiscoveryFeed(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
+    feed = await getDiscoveryFeed(session, { ...filters, kind: 'place', date: 'any' }, {
+      excludeIds,
+      preloadedSeenLocationIds: session.preloadedSeenLocationIds
+    })
   } catch (error) {
     console.error(`Discovery refresh failed trace=${traceId}: ${error?.message || 'unknown error'}`)
     recordSloObservation('discovery', elapsedMs(started), false, { trace_id: traceId, service: 'vercel' })
