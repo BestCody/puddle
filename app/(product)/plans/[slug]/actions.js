@@ -13,7 +13,7 @@ function value(formData, key, max = 1000) {
 
 function destination(formData) {
   const slug = value(formData, 'slug', 180)
-  return slug ? `/places/${encodeURIComponent(slug)}` : '/plans'
+  return slug ? `/plans/${encodeURIComponent(slug)}` : '/plans'
 }
 
 function finish(formData, message, type = 'success') {
