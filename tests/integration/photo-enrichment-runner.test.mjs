@@ -90,6 +90,7 @@ test('canonical B2 metadata repair is byte-preserving and never deletes inventor
 
 test('the three previously implicit table-access decisions are encoded in migration', async () => {
   const migration = await read('supabase/migrations/20260826190000_intentional_rls_for_internal_tables.sql')
+  const applyWorkflow = await read('.github/workflows/apply-internal-table-rls.yml')
 
   for (const table of ['location_save_counts', 'location_save_density_tiles', 'spatial_ref_sys']) {
     if (table !== 'spatial_ref_sys') assert.match(migration, new RegExp(`alter table if exists public\\.${table} enable row level security`))
@@ -101,6 +102,9 @@ test('the three previously implicit table-access decisions are encoded in migrat
   assert.match(migration, /spatial_ref_sys is extension-owned/)
   assert.match(migration, /revoke insert, update, delete, truncate, references, trigger[\s\S]*spatial_ref_sys/)
   assert.match(migration, /grant select on table public\.spatial_ref_sys to public/)
+  assert.match(applyWorkflow, /SUPABASE_ACCESS_TOKEN/)
+  assert.match(applyWorkflow, /supabase db query/)
+  assert.match(applyWorkflow, /20260826190000_intentional_rls_for_internal_tables\.sql/)
 })
 
 test('materializer tolerates pre-B2 bootstrap photo metadata without content hashes', async () => {
