@@ -148,6 +148,19 @@ test('Production timing separates parallel auth and catalogue reads', async () =
   assert.match(discovery, /search;dur=\$\{searchMs\}/)
 })
 
+test('Map snapshots only load map-relevant relationship IDs before one B2 hydration', async () => {
+  const [map, plans] = await Promise.all([
+    read('lib/app/location-map-data.js'),
+    read('lib/app/location-plans-data.js')
+  ])
+  assert.match(map, /getLocationPlansMapSnapshot/)
+  assert.doesNotMatch(map, /getLocationPlansSnapshot/)
+  assert.match(plans, /lightweightPlanned/)
+  assert.match(plans, /getLocationPlansMapSnapshot/)
+  assert.match(plans, /tab: 'saved', lightweightSaved: true/)
+  assert.match(plans, /tab: 'planned', lightweightPlanned: true/)
+})
+
 test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-plan fixes', async () => {
   const migration = await read('supabase/migrations/10060_latency_optimization.sql')
   assert.match(migration, /dashboard_bootstrap_v1/)
