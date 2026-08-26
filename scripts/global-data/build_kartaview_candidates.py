@@ -10,6 +10,7 @@ import argparse
 import concurrent.futures
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -35,11 +36,19 @@ def clean_prefix(value):
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
+def safe_partition(value, label):
+    value = str(value or '').strip()
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', value) or '..' in value:
+        raise ValueError(f'{label} contains an unsafe partition value')
+    return value
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 parser.add_argument('--countries', default=os.getenv('GLOBAL_PHOTO_COUNTRIES', ''))
 parser.add_argument('--limit', type=int, default=int(os.getenv('KARTAVIEW_REQUEST_LIMIT', '1000')))
 args = parser.parse_args()
+args.snapshot = safe_partition(args.snapshot, 'snapshot')
 
 TOKEN = os.getenv('KARTAVIEW_ACCESS_TOKEN', '').strip()
 BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
@@ -212,9 +221,9 @@ def score(location, image):
 
 def countries(con):
     if args.countries.strip():
-        return sorted({v.strip().upper() for v in args.countries.split(',') if v.strip()})
+        return sorted({safe_partition(v.strip().upper(), 'country') for v in args.countries.split(',') if v.strip()})
     glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet'
-    return [str(r[0]) for r in con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}', hive_partitioning=true) ORDER BY country_code").fetchall() if r[0]]
+    return [safe_partition(r[0], 'country') for r in con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}', hive_partitioning=true) ORDER BY country_code").fetchall() if r[0]]
 
 
 def merge_attempts(con, country, attempted):

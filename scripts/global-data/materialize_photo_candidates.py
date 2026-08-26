@@ -13,17 +13,18 @@ import hashlib
 import io
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import boto3
 import duckdb
 from botocore.client import Config
+from botocore.exceptions import ClientError
 from PIL import Image, ImageOps
 
 
@@ -39,11 +40,18 @@ def clean_prefix(value):
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
+def safe_partition(value, label):
+    value = str(value or '').strip()
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', value) or '..' in value:
+        raise ValueError(f'{label} contains an unsafe partition value')
+    return value
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 parser.add_argument('--countries', default=os.getenv('GLOBAL_PHOTO_COUNTRIES', ''))
-parser.add_argument('--limit', type=int, default=int(os.getenv('GLOBAL_PHOTO_MATERIALIZE_LIMIT', '10000')))
 args = parser.parse_args()
+args.snapshot = safe_partition(args.snapshot, 'snapshot')
 
 DATA_BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
 DATA_ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
@@ -61,11 +69,16 @@ SUPABASE_URL = first_env('NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL').rstrip('/')
 SUPABASE_KEY = first_env('SUPABASE_SECRET_KEY')
 MAPILLARY_TOKEN = os.getenv('MAPILLARY_ACCESS_TOKEN', '').strip()
 CONCURRENCY = max(1, min(256, int(os.getenv('GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY', '96'))))
-LIMIT = max(1, min(1_000_000, args.limit))
 FALLBACK_CANDIDATES = max(1, min(12, int(os.getenv('GLOBAL_PHOTO_FALLBACK_CANDIDATES', '9'))))
+# This is intentionally only a memory-sized batch. The outer worker drains every
+# eligible candidate and has no per-run location cap.
 LOCATION_BATCH = max(100, min(10_000, int(os.getenv('GLOBAL_PHOTO_LOCATION_BATCH', '2500'))))
+CLAIM_CONCURRENCY = max(1, min(64, int(os.getenv('GLOBAL_PHOTO_CLAIM_CONCURRENCY', '32'))))
+ATTEMPT_RETRY_DAYS = max(1, min(365, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_DAYS', '7'))))
+ATTEMPT_RETRY_HOURS = max(1, min(24, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_HOURS', '1'))))
 CLAIM_LEASE_SECONDS = max(300, min(3600, int(os.getenv('GLOBAL_PHOTO_CLAIM_LEASE_SECONDS', '1200'))))
 MAX_BYTES = 10_000_000
+MAX_SOURCE_PIXELS = 40_000_000
 PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3}
 TRANSIENT_HTTP_CODES = {408, 425, 429, 500, 502, 503, 504}
 WIKIMEDIA_DOWNLOAD_CONCURRENCY = max(1, min(2, int(os.getenv('GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY', '2'))))
@@ -79,6 +92,7 @@ MAPILLARY_GRAPH_START_INTERVAL = 60.0 / MAPILLARY_GRAPH_REQUESTS_PER_MINUTE
 MAPILLARY_GRAPH_LOCK = threading.Lock()
 MAPILLARY_GRAPH_NEXT_AT = 0.0
 EXCLUSION_PREFIX = f'{DATA_PREFIX}/enrichment/photo_exclusions/snapshot={args.snapshot}'
+ATTEMPT_PREFIX = f'{DATA_PREFIX}/enrichment/photo_attempts/snapshot={args.snapshot}'
 
 if not DATA_ENDPOINT_URL or not DATA_KEY_ID or not DATA_KEY:
     raise RuntimeError('B2 data endpoint and credentials are required.')
@@ -97,6 +111,17 @@ data_s3 = boto3.client(
     's3', endpoint_url=DATA_ENDPOINT_URL, aws_access_key_id=DATA_KEY_ID, aws_secret_access_key=DATA_KEY,
     config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}),
 )
+SUPABASE_GATE = threading.BoundedSemaphore(CLAIM_CONCURRENCY)
+
+
+class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Require every provider redirect to pass the same HTTPS/host allowlist."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+NO_REDIRECT_OPENER = urllib.request.build_opener(NoRedirectHandler)
 
 
 def prefix_exists(prefix):
@@ -104,8 +129,15 @@ def prefix_exists(prefix):
 
 
 def object_exists(key):
-    listing = data_s3.list_objects_v2(Bucket=DATA_BUCKET, Prefix=key, MaxKeys=1)
-    return any(str(item.get('Key') or '') == key for item in listing.get('Contents', []))
+    try:
+        data_s3.head_object(Bucket=DATA_BUCKET, Key=key)
+        return True
+    except ClientError as error:
+        code = str(error.response.get('Error', {}).get('Code', ''))
+        status = error.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
+        if code in {'404', 'NoSuchKey', 'NotFound'} or status == 404:
+            return False
+        raise
 
 
 def supabase_rpc(name, payload, retries=6):
@@ -116,21 +148,26 @@ def supabase_rpc(name, payload, retries=6):
         'apikey': SUPABASE_KEY, 'Authorization': f'Bearer {SUPABASE_KEY}',
         'User-Agent': 'Puddle/1.0 global photo materializer',
     }
-    for attempt in range(retries):
-        try:
-            with urllib.request.urlopen(urllib.request.Request(url, data=body, method='POST', headers=headers), timeout=30) as response:
-                raw = response.read()
-                return json.loads(raw) if raw else None
-        except urllib.error.HTTPError as error:
-            raw = error.read().decode(errors='replace')[:800]
-            if error.code not in {408, 425, 429, 500, 502, 503, 504} or attempt + 1 >= retries:
-                raise RuntimeError(f'Supabase RPC {name} failed with {error.code}: {raw}') from error
-            retry_after = error.headers.get('Retry-After')
-            time.sleep(float(retry_after) if retry_after and retry_after.isdigit() else min(20, 0.5 * (2 ** attempt)))
-        except Exception:
-            if attempt + 1 >= retries:
-                raise
-            time.sleep(min(10, 0.5 * (2 ** attempt)))
+    with SUPABASE_GATE:
+        for attempt in range(retries):
+            try:
+                with urllib.request.urlopen(urllib.request.Request(url, data=body, method='POST', headers=headers), timeout=30) as response:
+                    raw = response.read()
+                    return json.loads(raw) if raw else None
+            except urllib.error.HTTPError as error:
+                raw = error.read().decode(errors='replace')[:800]
+                if error.code not in {408, 425, 429, 500, 502, 503, 504} or attempt + 1 >= retries:
+                    raise RuntimeError(f'Supabase RPC {name} failed with {error.code}: {raw}') from error
+                retry_after = error.headers.get('Retry-After')
+                try:
+                    delay = float(retry_after) if retry_after else 0.0
+                except ValueError:
+                    delay = 0.0
+                time.sleep(min(60.0, delay if delay > 0 else min(20, 0.5 * (2 ** attempt))))
+            except Exception:
+                if attempt + 1 >= retries:
+                    raise
+                time.sleep(min(10, 0.5 * (2 ** attempt)))
     raise RuntimeError(f'Supabase RPC {name} exhausted retries')
 
 
@@ -255,9 +292,12 @@ def download(url, provider):
         if gate:
             gate.acquire()
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with NO_REDIRECT_OPENER.open(request, timeout=30) as response:
                 content_type = (response.headers.get_content_type() or '').lower()
-                declared = int(response.headers.get('Content-Length') or 0)
+                try:
+                    declared = int(response.headers.get('Content-Length') or 0)
+                except ValueError:
+                    declared = 0
                 if declared > MAX_BYTES:
                     raise RuntimeError('image exceeds 10 MB')
                 if provider == 'wikimedia-commons':
@@ -299,6 +339,10 @@ def download(url, provider):
                 time.sleep(min(60.0, delay))
                 continue
             raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt >= 5:
+                raise
+            time.sleep(min(30.0, 0.5 * (2 ** attempt)))
         finally:
             if gate:
                 gate.release()
@@ -326,6 +370,8 @@ def average_hash(image):
 
 def normalize(body):
     with Image.open(io.BytesIO(body)) as original:
+        if original.width * original.height > MAX_SOURCE_PIXELS:
+            raise RuntimeError('source image has too many pixels')
         image = ImageOps.exif_transpose(original).convert('RGB')
         if image.width > 1600 or image.height > 1000:
             image.thumbnail((1600, 1000), Image.Resampling.LANCZOS)
@@ -334,6 +380,8 @@ def normalize(body):
         out = io.BytesIO()
         image.save(out, format='JPEG', quality=84, optimize=True, progressive=True)
         data = out.getvalue()
+        if not data or len(data) > MAX_BYTES:
+            raise RuntimeError('normalized image is empty or exceeds 10 MB')
         return data, image.width, image.height, perceptual, confirmation
 
 
@@ -343,8 +391,12 @@ def upload_media(data, sha256):
         head = s3.head_object(Bucket=MEDIA_BUCKET, Key=key)
         if int(head.get('ContentLength', -1)) == len(data) and head.get('Metadata', {}).get('sha256') == sha256:
             return key
-    except Exception:
-        pass
+        raise RuntimeError(f'B2 media object exists with mismatched integrity metadata: {key}')
+    except ClientError as error:
+        code = str(error.response.get('Error', {}).get('Code', ''))
+        status = error.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
+        if code not in {'404', 'NoSuchKey', 'NotFound'} and status != 404:
+            raise
     s3.put_object(
         Bucket=MEDIA_BUCKET, Key=key, Body=data, ContentType='image/jpeg',
         CacheControl='public, max-age=31536000, immutable',
@@ -401,25 +453,60 @@ def materialize_location(candidates):
             }, {'location_id': location_id, 'status': 'materialized', 'attempts': attempts, 'winnerRank': row['candidate_rank']}
         except Exception as error:
             attempts.append({'provider': row['provider'], 'candidateRank': row['candidate_rank'], 'error': str(error)[:240]})
-    return None, {'location_id': location_id, 'status': 'exhausted', 'attempts': attempts}
+    status = 'retryable_error' if any(attempt.get('error') for attempt in attempts) else 'exhausted'
+    return None, {'location_id': location_id, 'status': status, 'attempts': attempts}
 
 
 con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
-con.execute(f"""CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{DATA_KEY_ID.replace("'","''")}',SECRET '{DATA_KEY.replace("'","''")}',REGION '{DATA_REGION.replace("'","''")}',ENDPOINT '{DATA_ENDPOINT.replace("'","''")}',URL_STYLE 'path',USE_SSL true);""")
-con.execute('CREATE TEMP TABLE attempted_photo_locations(location_id VARCHAR PRIMARY KEY)')
-if prefix_exists(EXCLUSION_PREFIX):
-    con.execute(f"CREATE OR REPLACE TEMP VIEW photo_exclusions AS SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('s3://{DATA_BUCKET}/{EXCLUSION_PREFIX}/*.parquet',union_by_name=true)")
-else:
-    con.execute("CREATE OR REPLACE TEMP VIEW photo_exclusions AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false")
+B2_SECRET_SQL = f"""CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{DATA_KEY_ID.replace("'","''")}',SECRET '{DATA_KEY.replace("'","''")}',REGION '{DATA_REGION.replace("'","''")}',ENDPOINT '{DATA_ENDPOINT.replace("'","''")}',URL_STYLE 'path',USE_SSL true);"""
+con.execute(B2_SECRET_SQL)
 
 
 def countries():
     if args.countries.strip():
-        return sorted({v.strip().upper() for v in args.countries.split(',') if v.strip()})
+        return sorted({safe_partition(v.strip().upper(), 'country') for v in args.countries.split(',') if v.strip()})
     glob = f's3://{DATA_BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet'
-    return [str(r[0]) for r in con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}',hive_partitioning=true) ORDER BY country_code").fetchall() if r[0]]
+    return [safe_partition(r[0], 'country') for r in con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}',hive_partitioning=true) ORDER BY country_code").fetchall() if r[0]]
+
+
+def candidate_batches(query):
+    """Stream one ranked candidate query instead of rescanning B2 for every batch."""
+    columns = ['location_id', 'provider', 'external_photo_id', 'asset_url', 'page_url', 'attribution', 'license', 'license_url', 'rank_score', 'candidate_rank']
+    # Keep the read cursor independent from the connection used to write each
+    # completed Parquet batch; a write must not reset a partially consumed read.
+    cursor = con.cursor()
+    cursor.execute('INSTALL httpfs; LOAD httpfs;')
+    cursor.execute('SET preserve_insertion_order=false')
+    cursor.execute(B2_SECRET_SQL)
+    cursor.execute(query)
+    grouped = {}
+    current_location_id = None
+    current_candidates = []
+    fetch_size = max(1024, min(100_000, LOCATION_BATCH * (FALLBACK_CANDIDATES + 1)))
+    try:
+        while True:
+            rows = cursor.fetchmany(fetch_size)
+            if not rows:
+                break
+            for row in rows:
+                item = dict(zip(columns, row))
+                location_id = str(item['location_id'])
+                if current_location_id is not None and location_id != current_location_id:
+                    grouped[current_location_id] = current_candidates
+                    if len(grouped) >= LOCATION_BATCH:
+                        yield grouped
+                        grouped = {}
+                    current_candidates = []
+                current_location_id = location_id
+                current_candidates.append(item)
+        if current_location_id is not None:
+            grouped[current_location_id] = current_candidates
+        if grouped:
+            yield grouped
+    finally:
+        cursor.close()
 
 
 def write_results(country, results):
@@ -434,12 +521,42 @@ def write_results(country, results):
     con.execute(f"COPY materialized_results TO '{out}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 100000)")
 
 
+def write_attempts(country, diagnostics):
+    # Successful locations are already durable in photo_metadata and do not
+    # need a second state record. Keeping only retryable failures bounds the
+    # ledger and makes subsequent scans cheaper.
+    diagnostics = [detail for detail in diagnostics if detail.get('status') != 'materialized']
+    if not diagnostics:
+        return
+    attempted_at = datetime.now(timezone.utc)
+    rows = []
+    for detail in diagnostics:
+        status = str(detail.get('status') or 'worker_error')
+        if status == 'exhausted':
+            retry_at = attempted_at + timedelta(days=ATTEMPT_RETRY_DAYS)
+        else:
+            retry_at = attempted_at + timedelta(hours=ATTEMPT_RETRY_HOURS)
+        rows.append((
+            str(detail.get('location_id') or ''), status, attempted_at, retry_at,
+            len(detail.get('attempts') or []),
+            json.dumps(detail, separators=(',', ':'), ensure_ascii=False)[:4000],
+        ))
+    con.execute('DROP TABLE IF EXISTS photo_attempt_results')
+    con.execute('CREATE TEMP TABLE photo_attempt_results(location_id VARCHAR,status VARCHAR,attempted_at TIMESTAMPTZ,retry_at TIMESTAMPTZ,candidate_count INTEGER,details VARCHAR)')
+    con.executemany('INSERT INTO photo_attempt_results VALUES (?,?,?,?,?,?)', rows)
+    stamp = attempted_at.strftime('%Y%m%dT%H%M%S%fZ')
+    out = f's3://{DATA_BUCKET}/{ATTEMPT_PREFIX}/country_code={country}/part-{stamp}.parquet'
+    con.execute(f"COPY photo_attempt_results TO '{out}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 100000)")
+
+
 # Fail closed before doing provider work if the uniqueness RPCs/migration are not live.
 cleanup_expired_claims()
-remaining = LIMIT
+if prefix_exists(EXCLUSION_PREFIX):
+    exclusion_sql = f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('s3://{DATA_BUCKET}/{EXCLUSION_PREFIX}/*.parquet',union_by_name=true)"
+else:
+    exclusion_sql = 'SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false'
+
 for country in countries():
-    if remaining <= 0:
-        break
     map_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=mapillary/snapshot={args.snapshot}/country_code={country}'
     wiki_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=wikimedia-commons/snapshot={args.snapshot}/country_code={country}'
     karta_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=kartaview/snapshot={args.snapshot}/country_code={country}'
@@ -454,7 +571,6 @@ for country in countries():
         continue
     union = ' UNION ALL '.join(sources)
     loc = f"s3://{DATA_BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/locations.parquet"
-    con.execute(f"CREATE OR REPLACE TEMP VIEW all_candidates AS {union}")
     existing_sources = []
     bootstrap_photo = f'{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/photo_metadata.parquet'
     if object_exists(bootstrap_photo):
@@ -472,23 +588,42 @@ for country in countries():
             existing_sources.append(f"SELECT cast(location_id AS VARCHAR) location_id,lower(cast(content_hash AS VARCHAR)) content_hash FROM read_parquet('{enriched_uri}', union_by_name=true)")
         else:
             print(f'{country}: ignoring legacy enrichment photo metadata without content_hash', flush=True)
-    if existing_sources:
-        con.execute(f"CREATE OR REPLACE TEMP VIEW raw_existing_photos AS {' UNION ALL '.join(existing_sources)}")
-        con.execute("""CREATE OR REPLACE TEMP VIEW existing_photos AS
-          SELECT DISTINCT e.location_id
-          FROM raw_existing_photos e
-          WHERE NOT EXISTS (
-            SELECT 1 FROM photo_exclusions x
-            WHERE x.location_id=e.location_id AND x.content_hash=e.content_hash
-          )
-        """)
+    existing_sql = ' UNION ALL '.join(existing_sources) if existing_sources else 'SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false'
+    attempt_prefix = f'{ATTEMPT_PREFIX}/country_code={country}'
+    if prefix_exists(attempt_prefix):
+        attempt_uri = f's3://{DATA_BUCKET}/{attempt_prefix}/*.parquet'
+        recent_attempts_sql = f"""
+          SELECT location_id FROM (
+            SELECT cast(location_id AS VARCHAR) location_id,
+                   cast(status AS VARCHAR) status,
+                   try_cast(retry_at AS TIMESTAMPTZ) retry_at,
+                   row_number() OVER (
+                     PARTITION BY cast(location_id AS VARCHAR)
+                     ORDER BY try_cast(attempted_at AS TIMESTAMPTZ) DESC NULLS LAST
+                   ) attempt_rank
+            FROM read_parquet('{attempt_uri}', union_by_name=true)
+          ) latest
+          WHERE attempt_rank=1
+            AND status <> 'materialized'
+            AND retry_at > current_timestamp
+        """
     else:
-        con.execute("CREATE OR REPLACE TEMP VIEW existing_photos AS SELECT NULL::VARCHAR AS location_id WHERE false")
+        recent_attempts_sql = 'SELECT NULL::VARCHAR location_id WHERE false'
 
-    while remaining > 0:
-        target_limit = min(remaining, LOCATION_BATCH)
-        rows = con.execute(f"""
-          WITH l AS (SELECT id,category FROM read_parquet('{loc}')),
+    query = f"""
+          WITH all_candidates AS ({union}),
+          photo_exclusions AS ({exclusion_sql}),
+          raw_existing_photos AS ({existing_sql}),
+          existing_photos AS (
+            SELECT DISTINCT e.location_id
+            FROM raw_existing_photos e
+            WHERE NOT EXISTS (
+              SELECT 1 FROM photo_exclusions x
+              WHERE x.location_id=e.location_id AND x.content_hash=e.content_hash
+            )
+          ),
+          recent_photo_attempts AS ({recent_attempts_sql}),
+          l AS (SELECT id,category FROM read_parquet('{loc}')),
           ranked AS (
             SELECT c.*,l.category,
               CASE WHEN l.category IN ('park','museum','gallery','attraction','scenic_spot')
@@ -498,33 +633,23 @@ for country in countries():
             FROM all_candidates c
             JOIN l ON l.id=c.location_id
             WHERE NOT EXISTS (SELECT 1 FROM existing_photos e WHERE e.location_id=cast(c.location_id AS VARCHAR))
-              AND NOT EXISTS (SELECT 1 FROM attempted_photo_locations a WHERE a.location_id=cast(c.location_id AS VARCHAR))
+              AND NOT EXISTS (SELECT 1 FROM recent_photo_attempts a WHERE a.location_id=cast(c.location_id AS VARCHAR))
           ), targets AS (
             SELECT location_id,min(provider_rank) best_provider,max(coalesce(rank_score,0)) best_score
             FROM ranked
             GROUP BY location_id
-            ORDER BY best_provider,best_score DESC,location_id
-            LIMIT {target_limit}
           )
           SELECT r.location_id,r.provider,r.external_photo_id,r.asset_url,r.page_url,r.attribution,r.license,r.license_url,r.rank_score,r.candidate_rank
           FROM ranked r JOIN targets t ON t.location_id=r.location_id
           WHERE r.candidate_rank<={FALLBACK_CANDIDATES}
-          ORDER BY r.location_id,r.candidate_rank
-        """).fetchall()
-        if not rows:
-            break
-        cols = ['location_id', 'provider', 'external_photo_id', 'asset_url', 'page_url', 'attribution', 'license', 'license_url', 'rank_score', 'candidate_rank']
-        grouped = defaultdict(list)
-        for row in rows:
-            item = dict(zip(cols, row))
-            grouped[str(item['location_id'])].append(item)
-        target_ids = sorted(grouped)
-        con.executemany('INSERT OR IGNORE INTO attempted_photo_locations VALUES (?)', [(value,) for value in target_ids])
-        remaining -= len(target_ids)
+          ORDER BY t.best_provider,t.best_score DESC,t.location_id,r.candidate_rank
+        """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        for grouped in candidate_batches(query):
+            target_ids = sorted(grouped)
 
-        results = []
-        diagnostics = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+            results = []
+            diagnostics = []
             future_map = {pool.submit(materialize_location, grouped[location_id]): location_id for location_id in target_ids}
             for future in concurrent.futures.as_completed(future_map):
                 location_id = future_map[future]
@@ -537,21 +662,24 @@ for country in countries():
                             print(f'{country}: materialized {len(results)} unique photos in current batch', flush=True)
                 except Exception as error:
                     diagnostics.append({'location_id': location_id, 'status': 'worker_error', 'error': str(error)[:300]})
-        write_results(country, results)
-        exhausted = sum(1 for row in diagnostics if row.get('status') == 'exhausted')
-        already_claimed = sum(1 for row in diagnostics if row.get('status') == 'already_claimed')
-        duplicate_fallbacks = sum(
-            1 for row in diagnostics for attempt in row.get('attempts', [])
-            if attempt.get('conflict') in {'provider_asset_duplicate','exact_duplicate','near_duplicate','concurrent_unique_conflict'}
-        )
-        failure_samples = [row for row in diagnostics if row.get('status') not in {'materialized','already_claimed'}][:10]
-        print(json.dumps({
-            'country': country,
-            'locationsAttempted': len(target_ids),
-            'materialized': len(results),
-            'duplicateFallbacks': duplicate_fallbacks,
-            'alreadyClaimed': already_claimed,
-            'exhausted': exhausted,
-            'remainingRunBudget': remaining,
-            'failureSamples': failure_samples,
-        }, indent=2), flush=True)
+            write_results(country, results)
+            write_attempts(country, diagnostics)
+            exhausted = sum(1 for row in diagnostics if row.get('status') == 'exhausted')
+            retryable_errors = sum(1 for row in diagnostics if row.get('status') in {'retryable_error', 'worker_error'})
+            already_claimed = sum(1 for row in diagnostics if row.get('status') == 'already_claimed')
+            duplicate_fallbacks = sum(
+                1 for row in diagnostics for attempt in row.get('attempts', [])
+                if attempt.get('conflict') in {'provider_asset_duplicate','exact_duplicate','near_duplicate','concurrent_unique_conflict'}
+            )
+            failure_samples = [row for row in diagnostics if row.get('status') not in {'materialized','already_claimed'}][:10]
+            print(json.dumps({
+                'country': country,
+                'locationsAttempted': len(target_ids),
+                'materialized': len(results),
+                'duplicateFallbacks': duplicate_fallbacks,
+                'alreadyClaimed': already_claimed,
+                'exhausted': exhausted,
+                'retryableErrors': retryable_errors,
+                'batchSize': LOCATION_BATCH,
+                'failureSamples': failure_samples,
+            }, indent=2), flush=True)

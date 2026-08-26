@@ -12,6 +12,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import tempfile
 import time
 import urllib.error
@@ -38,6 +39,13 @@ def clean_prefix(value):
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
+def safe_partition(value, label):
+    value = str(value or '').strip()
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', value) or '..' in value:
+        raise ValueError(f'{label} contains an unsafe partition value')
+    return value
+
+
 SUPABASE_URL = first_env('NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL').rstrip('/')
 SUPABASE_KEY = first_env('SUPABASE_SECRET_KEY')
 DATA_BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
@@ -54,6 +62,8 @@ MEDIA_KEY = first_env('B2_MEDIA_APPLICATION_KEY', 'B2_APPLICATION_KEY', default=
 SNAPSHOT = str(os.getenv('GLOBAL_LOCATION_SNAPSHOT', '')).strip()
 CONCURRENCY = max(1, min(64, int(os.getenv('GLOBAL_PHOTO_EXISTING_RECONCILE_CONCURRENCY', '32'))))
 PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3}
+MAX_IMAGE_BYTES = 10_000_000
+MAX_SOURCE_PIXELS = 40_000_000
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError('Supabase URL and service secret are required.')
@@ -63,6 +73,9 @@ if not MEDIA_ENDPOINT or not MEDIA_KEY_ID or not MEDIA_KEY:
     raise RuntimeError('B2 media credentials are required.')
 if not SNAPSHOT:
     raise RuntimeError('GLOBAL_LOCATION_SNAPSHOT is required.')
+if not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', SNAPSHOT):
+    raise RuntimeError('GLOBAL_LOCATION_SNAPSHOT must be an ISO date snapshot.')
+SNAPSHOT = safe_partition(SNAPSHOT, 'snapshot')
 
 PHOTO_PREFIX = f'{DATA_PREFIX}/enrichment/photo_metadata/snapshot={SNAPSHOT}'
 EXCLUSION_PREFIX = f'{DATA_PREFIX}/enrichment/photo_exclusions/snapshot={SNAPSHOT}'
@@ -144,14 +157,28 @@ def verify_and_register(row):
     external_id = str(row.get('external_photo_id') or '').strip()
     storage_key = str(row.get('storage_key') or '').strip()
     expected = str(row.get('content_hash') or '').lower().strip()
-    if not external_id or not storage_key or len(expected) != 64:
+    expected_key = f'media/photos/by-sha256/{expected[:2]}/{expected}.jpg' if re.fullmatch(r'[0-9a-f]{64}', expected) else ''
+    if not external_id or not storage_key or not expected_key or storage_key != expected_key:
         raise RuntimeError('existing global photo metadata is missing canonical identity fields')
 
-    body = media_s3.get_object(Bucket=MEDIA_BUCKET, Key=storage_key)['Body'].read()
+    head = media_s3.head_object(Bucket=MEDIA_BUCKET, Key=storage_key)
+    declared_size = int(head.get('ContentLength') or 0)
+    if declared_size <= 0 or declared_size > MAX_IMAGE_BYTES:
+        raise RuntimeError(f'existing global photo exceeds the {MAX_IMAGE_BYTES}-byte safety limit')
+    response = media_s3.get_object(Bucket=MEDIA_BUCKET, Key=storage_key)
+    stream = response['Body']
+    try:
+        body = stream.read(MAX_IMAGE_BYTES + 1)
+    finally:
+        stream.close()
+    if len(body) != declared_size or len(body) > MAX_IMAGE_BYTES:
+        raise RuntimeError('existing global photo body size verification failed')
     actual = hashlib.sha256(body).hexdigest()
     if actual != expected:
         raise RuntimeError(f'B2 SHA-256 mismatch for {row["location_id"]}: expected {expected}, got {actual}')
     with Image.open(io.BytesIO(body)) as original:
+        if original.width * original.height > MAX_SOURCE_PIXELS:
+            raise RuntimeError('existing global photo has too many pixels')
         image = ImageOps.exif_transpose(original).convert('RGB')
         perceptual = dhash(image)
         confirmation = average_hash(image)
@@ -256,7 +283,7 @@ if prefix_exists(EXCLUSION_PREFIX):
 else:
     con.execute("CREATE OR REPLACE TEMP VIEW prior_exclusions AS SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false")
 
-countries = [row[0] for row in con.execute('SELECT DISTINCT country_partition FROM pre_registry_photos WHERE country_partition IS NOT NULL ORDER BY 1').fetchall()]
+countries = [safe_partition(row[0], 'country') for row in con.execute('SELECT DISTINCT country_partition FROM pre_registry_photos WHERE country_partition IS NOT NULL ORDER BY 1').fetchall()]
 totals = {'locations': 0, 'metadataRows': 0, 'registeredLocations': 0, 'exhaustedLocations': 0, 'excluded': 0, 'failed': 0}
 exclusion_keys = []
 for country in countries:

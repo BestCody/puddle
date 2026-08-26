@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -38,12 +39,20 @@ def clean_prefix(value):
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
+def safe_partition(value, label):
+    value = str(value or '').strip()
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', value) or '..' in value:
+        raise ValueError(f'{label} contains an unsafe partition value')
+    return value
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 parser.add_argument('--countries', default=os.getenv('GLOBAL_PHOTO_COUNTRIES', ''))
 parser.add_argument('--zoom', type=int, default=int(os.getenv('MAPILLARY_TILE_ZOOM', '14')))
 parser.add_argument('--request-limit', type=int, default=int(os.getenv('MAPILLARY_TILE_REQUEST_LIMIT', '12500')))
 args = parser.parse_args()
+args.snapshot = safe_partition(args.snapshot, 'snapshot')
 
 TOKEN = os.environ['MAPILLARY_ACCESS_TOKEN']
 BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
@@ -218,10 +227,10 @@ def image_rows(tile, payload):
 
 def countries(con):
     if args.countries.strip():
-        return sorted({value.strip().upper() for value in args.countries.split(',') if value.strip()})
+        return sorted({safe_partition(value.strip().upper(), 'country') for value in args.countries.split(',') if value.strip()})
     glob = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet'
     rows = con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}', hive_partitioning=true) ORDER BY country_code").fetchall()
-    return [str(row[0]) for row in rows if row[0]]
+    return [safe_partition(row[0], 'country') for row in rows if row[0]]
 
 
 def merge_candidates(con, country):

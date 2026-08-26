@@ -27,6 +27,7 @@ from PIL import Image
 HEX_HASH = re.compile(r"[0-9a-f]{64}")
 SNAPSHOT = re.compile(r"\d{4}-\d{2}-\d{2}")
 MAX_IMAGE_BYTES = 10_000_000
+MAX_SOURCE_PIXELS = 40_000_000
 MAX_WIDTH = 1_600
 MAX_HEIGHT = 1_000
 
@@ -162,14 +163,17 @@ def audit_object(
                 with Image.open(io.BytesIO(body)) as image:
                     image.verify()
                 with Image.open(io.BytesIO(body)) as image:
-                    image.load()
                     image_format = str(image.format or "").upper()
                     width, height = image.size
                     mode = str(image.mode or "")
+                    if width * height <= MAX_SOURCE_PIXELS:
+                        image.load()
                 if image_format != "JPEG":
                     issues.append("decoded_format_not_jpeg")
                 if width <= 0 or height <= 0:
                     issues.append("invalid_dimensions")
+                if width * height > MAX_SOURCE_PIXELS:
+                    issues.append("source_pixels_exceed_safety_limit")
                 if width > MAX_WIDTH or height > MAX_HEIGHT:
                     issues.append("dimensions_exceed_normalized_limit")
                 if mode != "RGB":
@@ -498,6 +502,7 @@ def main() -> int:
         "requirements": {
             "canonicalKey": "media/photos/by-sha256/<first-two>/<sha256>.jpg",
             "maxImageBytes": args.max_image_bytes,
+            "maxSourcePixels": MAX_SOURCE_PIXELS,
             "format": "JPEG",
             "mode": "RGB",
             "maxWidth": MAX_WIDTH,
