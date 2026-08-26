@@ -6,8 +6,6 @@ import { LocationMap } from '@/components/location-map'
 import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
 import { DiscoverSearchOverlay } from '@/components/discover-search-overlay'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
-import { getSocialFeedSnapshot } from '@/lib/app/social-feed-data'
 import { FeedShareMenu } from './feed-share-menu'
 import { createFeedComment, toggleFeedSave } from './actions'
 import styles from './MapFeed.module.css'
@@ -16,6 +14,17 @@ export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Discover and map',
   description: 'Browse Puddle posts and explore Puddle locations on the map.'
+}
+
+// Keep each view's data graph out of the other view's cold-start bundle.
+async function getLocationMapSnapshot(session) {
+  const mapData = await import('@/lib/app/location-map-data')
+  return mapData.getLocationMapSnapshot(session)
+}
+
+async function getSocialFeedSnapshot(session, query, options) {
+  const feedData = await import('@/lib/app/social-feed-data')
+  return feedData.getSocialFeedSnapshot(session, query, options)
 }
 
 function initials(name) {
