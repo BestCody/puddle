@@ -7,9 +7,10 @@ permissions:
   contents: read
 
 concurrency:
-  # Serialize with materialization so the overlay is built from a complete
-  # append-only metadata snapshot, never from a batch that is still writing.
-  group: global-photo-enrichment
+  # Photo metadata is append-only and each B2 object is uploaded atomically.
+  # Serialize overlay builders with each other, but do not make an already
+  # usable snapshot wait for a multi-hour materialization drain.
+  group: b2-photo-overlay-publish
   cancel-in-progress: false
 
 jobs:

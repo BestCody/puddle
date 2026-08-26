@@ -15,7 +15,7 @@ test('global photo materialization runs hourly and can be dispatched manually', 
   assert.doesNotMatch(workflow, /timeout-minutes:/)
   assert.match(workflow, /cancel-in-progress: false/)
   assert.match(overlayWorkflow, /workflow_dispatch:/)
-  assert.match(overlayWorkflow, /group: global-photo-enrichment/)
+  assert.match(overlayWorkflow, /group: b2-photo-overlay-publish/)
   assert.match(overlayWorkflow, /build_b2_photo_search_overlay\.py/)
   assert.doesNotMatch(overlayWorkflow, /materialize_photo_candidates\.py/)
 })
