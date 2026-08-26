@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test'
+import { PRODUCTION_SLOS } from '../../lib/performance/server-latency.js'
 
 const STAGES = [5, 10, 20]
 const MIN_SUCCESS_RATE = 0.99
 const P95_LIMIT_MS = {
-  discovery: 2500,
-  mapViewport: 2000,
-  socialFeed: 3500,
-  savedHistory: 3500,
-  locationDetail: 3500
+  discovery: PRODUCTION_SLOS.discovery.p95Ms,
+  mapViewport: PRODUCTION_SLOS.mapViewport.p95Ms,
+  socialFeed: PRODUCTION_SLOS.socialFeed.p95Ms,
+  savedHistory: PRODUCTION_SLOS.savedHistory.p95Ms,
+  locationDetail: PRODUCTION_SLOS.locationDetail.p95Ms
 }
 
 async function deleteDisposableAccount(page) {

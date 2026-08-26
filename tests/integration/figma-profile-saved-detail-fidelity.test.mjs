@@ -65,7 +65,10 @@ test('Saved Place Open preserves Figma 38:223 relationships through scoped struc
   ])
 
   assert.match(page, /import styles from '\.\.\/Plans\.module\.css'/)
-  assert.match(page, /import \{ getLocationPlansSnapshot \} from '@\/lib\/app\/location-plans-data'/)
+  assert.match(page, /import \{ getLocationPlanStatus, getLocationPlansPage \} from '@\/lib\/app\/location-plans-data'/)
+  assert.match(page, /getLocationPlansPage\(session, \{ tab: 'saved' \}\)/)
+  assert.match(page, /getLocationPlanStatus\(session, location\.id\)/)
+  assert.doesNotMatch(page, /getLocationPlansSnapshot/)
   assert.match(page, /data-figma-node="38:223"/)
   assert.match(page, /data-testid="saved-detail-screen"/)
   assert.match(page, /className=\{styles\.detailCategories\}/)

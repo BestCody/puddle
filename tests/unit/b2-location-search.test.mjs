@@ -214,6 +214,24 @@ test('B2 dense text radius search uses compact core and hydrates winner detail',
   assert.equal(result.diagnostics.decodedCandidates, 2)
 })
 
+test('B2 structured radius search reuses compact core and hydrates winner detail', async () => {
+  reset()
+  const { fetchFn, projectionCandidateKey } = fixtureFetch()
+  const result = await searchB2GlobalLocations({
+    latitude: 43.65, longitude: -79.39, distanceKm: 25,
+    filters: { category: 'landmark' }, candidateLimit: 20
+  }, {
+    env: { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey },
+    fetchFn
+  })
+  assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
+  assert.equal(result.candidates[0]?.slug, 'cn-tower')
+  assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'abc')
+  assert.equal(result.diagnostics.textProjection, true)
+  assert.equal(result.diagnostics.textMode, 'core-scan')
+  assert.equal(result.diagnostics.decodedCandidates, 2)
+})
+
 test('B2 text search fails loudly when an activated projection core is missing', async () => {
   reset()
   const { fetchFn, projectionCandidateKey } = fixtureFetch()

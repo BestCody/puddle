@@ -5,7 +5,7 @@ import { LocationMap } from '@/components/location-map'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getPublicLocation } from '@/lib/app/public-content'
-import { getLocationPlansSnapshot } from '@/lib/app/location-plans-data'
+import { getLocationPlanStatus, getLocationPlansPage } from '@/lib/app/location-plans-data'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 import { deletePlaceReview, planPlaceVisit, shareSavedPlace, togglePinnedPlace, toggleSavedPlace, upsertPlaceReview } from './actions'
 import styles from '../Plans.module.css'
@@ -74,12 +74,16 @@ function ReviewEditor({ location, slug, review }) {
 export default async function SavedPlacePage({ params, searchParams }) {
   const { slug } = await params
   const query = await searchParams
-  const result = await getPublicLocation(slug)
-  if (!result) notFound()
+  // Public catalogue data and the authenticated session are independent. Start
+  // the cached location read before authentication so cold B2 work overlaps the
+  // profile lookup instead of forming a request waterfall.
+  const resultPromise = getPublicLocation(slug)
 
   return renderProductPage(async (session) => {
+    const result = await resultPromise
+    if (!result) notFound()
     const { location, similar } = result
-    const [{ data: savedState }, { data: friends }, { data: reviews }, plansSnapshot] = await Promise.all([
+    const [{ data: savedState }, { data: friends }, { data: reviews }, savedPage, plannedItem] = await Promise.all([
       session.supabase
         .from('user_content_states')
         .select('pinned_at')
@@ -89,17 +93,17 @@ export default async function SavedPlacePage({ params, searchParams }) {
         .maybeSingle(),
       session.supabase.rpc('social_friends_v2'),
       session.supabase.rpc('location_reviews_v1', { target_location: location.id }),
-      getLocationPlansSnapshot(session)
+      getLocationPlansPage(session, { tab: 'saved' }),
+      getLocationPlanStatus(session, location.id)
     ])
     const isSaved = Boolean(savedState)
     const isPinned = Boolean(savedState?.pinned_at)
-    const plannedItem = (plansSnapshot?.planned || []).find((item) => item.location_id === location.id) || null
     const mapStates = [isSaved ? 'saved' : null, plannedItem ? 'planned' : null].filter(Boolean)
     const friendList = friends || []
     const reviewList = reviews || []
     const myReview = reviewList.find((review) => review.author_id === session.user.id) || null
     const averageRating = reviewList.length ? reviewList.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviewList.length : null
-    const folders = [...new Set((plansSnapshot?.saved || []).map(folderKey).filter(Boolean))]
+    const folders = [...new Set((savedPage?.items || []).map(folderKey).filter(Boolean))]
     const primaryFolders = folders.slice(0, 2)
     const overflowFolders = folders.slice(2)
     const transitionNames = savedLocationTransitionNames(location.id)

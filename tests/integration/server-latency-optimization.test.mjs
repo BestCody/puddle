@@ -11,15 +11,19 @@ test('Vercel compute is pinned beside the Supabase us-west-2 database', async ()
 })
 
 test('Proxy verifies claims and only loads moderation profile state when required', async () => {
-  const [proxy, session] = await Promise.all([
+  const [proxy, session, pageUser] = await Promise.all([
     read('proxy.js'),
-    read('lib/supabase/proxy.js')
+    read('lib/supabase/proxy.js'),
+    read('lib/auth/user.js')
   ])
   assert.match(proxy, /loadProfileState: moderationGate/)
   assert.match(proxy, /Server-Timing|appendServerTiming/)
   assert.match(session, /supabase\.auth\.getClaims\(\)/)
   assert.doesNotMatch(session, /supabase\.auth\.getUser\(\)/)
   assert.match(session, /if \(!loadProfileState\)/)
+  assert.match(proxy, /requestHeaders\.delete\(verifiedProductUserHeader\)/)
+  assert.match(proxy, /requestHeaders\.set\(verifiedProductUserHeader, user\.id\)/)
+  assert.match(pageUser, /mode: 'proxy_claims'/)
 })
 
 test('Hot read APIs reuse verified claims instead of making a second auth-user request', async () => {
@@ -83,22 +87,40 @@ test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-pla
   assert.doesNotMatch(migration, /security definer/i)
 })
 
-test('Social feed avoids the missing feed-key RPC and restores indexed per-post comment previews', async () => {
-  const [feed, restore] = await Promise.all([
+test('Social feed uses one indexed post-page read and parallel bounded hydration', async () => {
+  const [feed, page, restore] = await Promise.all([
     read('lib/app/social-feed-data.js'),
+    read('app/(product)/map/page.js'),
     read('supabase/migrations/20260825024000_restore_social_feed_hot_path.sql')
   ])
-  assert.match(feed, /\.from\('social_posts'\)[\s\S]*\.select\('id,created_at'\)/)
+  assert.match(feed, /\.from\('social_posts'\)[\s\S]*profiles!social_posts_author_id_fkey/)
   assert.match(feed, /\.order\('created_at', \{ ascending: false \}\)[\s\S]*\.order\('id', \{ ascending: false \}\)/)
-  assert.match(feed, /social_feed_post_keys/)
-  assert.doesNotMatch(feed, /rpc\('social_feed_post_ids_v2'/)
+  assert.match(feed, /social_feed_posts/)
+  assert.doesNotMatch(feed, /social_feed_post_keys/)
+  assert.match(feed, /const \[locationsById, commentRows, states\] = await Promise\.all\(/)
   assert.match(feed, /rpc\('social_comment_previews_v2'/)
-  assert.match(feed, /social_comment_previews_fallback/)
+  assert.doesNotMatch(feed, /social_comment_previews_fallback/)
+  assert.match(page, /view === 'map' \? getLocationMapSnapshot\(session\) : null/)
+  assert.doesNotMatch(page, /CreatePuddleSlot\(\{ feedPromise, mapPromise/)
   assert.match(restore, /social_posts_feed_keyset_idx/)
   assert.match(restore, /social_comments_post_preview_idx/)
   assert.match(restore, /create or replace function public\.social_comment_previews_v2/)
   assert.match(restore, /cross join lateral/)
   assert.match(restore, /security invoker/i)
+})
+
+test('B2 radius serving uses compact cores and a snapshot-aware entity cache', async () => {
+  const [search, shards, runtimeCache] = await Promise.all([
+    read('lib/app/b2-location-search.js'),
+    read('lib/app/location-search-shards.js'),
+    read('lib/app/b2-runtime-object-cache.js')
+  ])
+  assert.match(search, /projection = await fetchTextProjectionCore\(targetPlan/)
+  assert.match(search, /query\.normalized[\s\S]*scoreNormalizedTextFields/)
+  assert.match(shards, /readB2RuntimeLocationCache\(prefix, values/)
+  assert.match(shards, /queueB2RuntimeLocationCacheWrite\(prefix, loaded/)
+  assert.match(runtimeCache, /LOCATION_CACHE_VERSION/)
+  assert.match(runtimeCache, /b2RuntimeLocationCacheKey/)
 })
 
 test('Partial caching is limited to cookie-free published public location data', async () => {
@@ -113,7 +135,7 @@ test('Partial caching is limited to cookie-free published public location data',
   assert.match(cache, /unstable_cache/)
   assert.match(cache, /revalidate:\s*300/)
   assert.match(cache, /tags:\s*\['public-locations'\]/)
-  assert.match(cache, /const \[overlay, similarPlaces\] = await Promise\.all\(/)
+  assert.match(cache, /const \[suspended, overlay, similarPlaces\] = await Promise\.all\(/)
   assert.doesNotMatch(cache, /cookies\(|headers\(/)
   assert.match(publicClient, /persistSession: false/)
   assert.match(place, /getCachedPublicLocation/)

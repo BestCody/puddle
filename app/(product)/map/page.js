@@ -136,20 +136,13 @@ async function FeedStreamSlot({ feedPromise, query }) {
   </section>
 }
 
-async function CreatePuddleSlot({ feedPromise, mapPromise, initialOpen, requestedLocation }) {
-  const [feed, mapSnapshot] = await Promise.all([feedPromise, mapPromise])
+async function CreatePuddleSlot({ feedPromise, initialOpen, requestedLocation }) {
+  const feed = await feedPromise
   return <DiscoverCreatePuddle
     avatarUrl={feed.self.avatar_url}
     displayName={feed.self.display_name || 'Puddle person'}
     initialOpen={initialOpen}
     requestedLocation={requestedLocation}
-    points={mapSnapshot.points.map((point) => ({
-      id: point.id,
-      title: point.title,
-      city: point.city,
-      neighborhood: point.neighborhood,
-      category: point.category
-    }))}
   />
 }
 
@@ -164,7 +157,10 @@ export default async function LocationMapPage({ searchParams }) {
   const requestedLocation = typeof params?.location === 'string' ? params.location : ''
 
   return renderProductPage(async (session) => {
-    const mapPromise = getLocationMapSnapshot(session)
+    // Feed rendering does not need the saved-location map snapshot. The composer
+    // already fetches its bounded options only when opened, so avoid making every
+    // feed request wait for three history reads and B2 hydration.
+    const mapPromise = view === 'map' ? getLocationMapSnapshot(session) : null
     const feedPromise = view === 'feed'
       ? getSocialFeedSnapshot(session, query, { beforeCreatedAt, beforePostId })
       : Promise.resolve(null)
@@ -182,7 +178,6 @@ export default async function LocationMapPage({ searchParams }) {
           <Suspense fallback={null}>
             <CreatePuddleSlot
               feedPromise={feedPromise}
-              mapPromise={mapPromise}
               initialOpen={initialComposerOpen}
               requestedLocation={requestedLocation}
             />

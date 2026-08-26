@@ -12,6 +12,7 @@ const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsi
 const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
 const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
 const publicNoSessionPaths = new Set([...cacheablePublicPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
+const verifiedProductUserHeader = 'x-puddle-verified-user-id'
 const moderationExemptApiPrefixes = [
   '/api/appeals',
   '/api/auth',
@@ -61,6 +62,7 @@ export async function proxy(request) {
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('x-request-id', request.headers.get('x-request-id') || request.headers.get('cf-ray') || crypto.randomUUID())
   requestHeaders.delete('x-puddle-product-route')
+  requestHeaders.delete(verifiedProductUserHeader)
   if (matchesPrefix(pathname, productRoutePrefixes)) requestHeaders.set('x-puddle-product-route', '1')
 
   if (request.method === 'OPTIONS' && pathname.startsWith('/api/')) {
@@ -115,7 +117,17 @@ export async function proxy(request) {
     return secured(cachePolicy(response, pathname, isAuthOnly), { request, nonce })
   }
 
-  const { response, user, profileState, profileError, configured, timings } = await updateSession(request, requestHeaders, { loadProfileState: moderationGate })
+  const session = await updateSession(request, requestHeaders, { loadProfileState: moderationGate })
+  const { user, profileState, profileError, configured, timings } = session
+  let { response } = session
+  if (user && matchesPrefix(pathname, productRoutePrefixes)) {
+    // The proxy has already verified this ID with getClaims(). Strip any inbound
+    // value above, then forward only the verified ID to Server Components so they
+    // do not repeat the same auth verification. Request override headers are not
+    // exposed to the browser.
+    requestHeaders.set(verifiedProductUserHeader, user.id)
+    response = carriesCookies(response, NextResponse.next({ request: { headers: requestHeaders } }))
+  }
   if (moderationGate && user && profileError) {
     return timed(secured(cachePolicy(NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
