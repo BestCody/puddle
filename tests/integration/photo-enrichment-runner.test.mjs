@@ -21,6 +21,22 @@ test('global photo enrichment builds candidates from the active canonical snapsh
   assert.match(workflow, /steps\.active\.outputs\.snapshot/)
 })
 
+test('the immutable location rebuild carries active canonical photo state forward before indexing', async () => {
+  const workflow = await read('.github/workflows/global-location-data.yml')
+  const carrier = await read('scripts/global-data/carry_photo_enrichment.py')
+
+  assert.match(workflow, /id: active/)
+  assert.match(workflow, /active_snapshot\.py/)
+  assert.match(workflow, /carry_photo_enrichment\.py/)
+  assert.ok(workflow.indexOf('carry_photo_enrichment.py') < workflow.indexOf('build_bootstrap_overlays.py'))
+  assert.ok(workflow.indexOf('build_bootstrap_overlays.py') < workflow.indexOf('build_b2_search_index.py'))
+  assert.match(carrier, /photo_metadata/)
+  assert.match(carrier, /photo_exclusions/)
+  assert.match(carrier, /copy_object/)
+  assert.match(carrier, /source-snapshot/)
+  assert.match(carrier, /target-snapshot/)
+})
+
 test('selected licensed photos materialize directly into immutable B2 media', async () => {
   const workflow = await read('.github/workflows/global-photo-enrichment.yml')
   const materializer = await read('scripts/global-data/materialize_photo_candidates.py')
