@@ -246,11 +246,11 @@ function SharedView({ client, snapshot }) {
 function AddView({ client, snapshot }) {
   const router = useRouter()
   const incoming = snapshot.requests.filter((item) => item.direction === 'incoming')
-  const outgoing = snapshot.requests.filter((item) => item.direction === 'outgoing')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [pendingTarget, setPendingTarget] = useState(null)
+  const [hiddenOutgoing, setHiddenOutgoing] = useState(() => new Set())
 
   async function search(event) {
     event.preventDefault()
@@ -264,23 +264,35 @@ function AddView({ client, snapshot }) {
 
   async function request(person) {
     setPendingTarget(person.id)
-    await client.rpc('social_send_friend_request_v1', { target: person.id })
+    const { error } = await client.rpc('social_send_friend_request_v1', { target: person.id })
     setPendingTarget(null)
-    router.refresh()
+    if (!error) {
+      setHiddenOutgoing((current) => {
+        const next = new Set(current)
+        next.delete(person.id)
+        return next
+      })
+      router.refresh()
+    }
   }
   async function respond(person, response) {
     setPendingTarget(person.id)
-    await client.rpc('social_respond_friend_request_v1', { target: person.id, response })
+    const { error } = await client.rpc('social_respond_friend_request_v1', { target: person.id, response })
     setPendingTarget(null)
-    router.refresh()
+    if (!error) router.refresh()
   }
   async function cancel(person) {
     if (pendingTarget) return
     setPendingTarget(person.id)
     const { error } = await client.rpc('social_cancel_friend_request_v1', { target: person.id })
     setPendingTarget(null)
-    if (!error) router.refresh()
+    if (!error) {
+      setHiddenOutgoing((current) => new Set([...current, person.id]))
+      router.refresh()
+    }
   }
+
+  const outgoing = snapshot.requests.filter((item) => item.direction === 'outgoing' && !hiddenOutgoing.has(item.id))
 
   return <section className="figma-friends-add-view">
     <h1>Add Friends</h1>

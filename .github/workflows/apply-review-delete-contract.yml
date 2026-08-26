@@ -1,4 +1,4 @@
-name: Apply review delete contract
+name: Apply social interaction contracts
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: apply-review-delete-contract
+  group: apply-social-interaction-contracts
   cancel-in-progress: false
 
 jobs:
@@ -34,3 +34,12 @@ jobs:
             --linked \
             --project-ref cegoqtvajwajczbofpep \
             --file supabase/migrations/20260826183000_idempotent_review_delete.sql
+
+      - name: Apply the idempotent production friend-request migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db query \
+            --linked \
+            --project-ref cegoqtvajwajczbofpep \
+            --file supabase/migrations/20260826184000_idempotent_friend_request_cancel.sql
