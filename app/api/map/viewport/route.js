@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { unstable_cache } from 'next/cache'
+import { headers } from 'next/headers'
 import { searchGlobalLocationsInViewport } from '@/lib/app/global-location-search'
 import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overlay'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createClient } from '@/lib/supabase/server'
+import { ensureProfileCached } from '@/lib/auth/profile'
 import {
   SERVER_LATENCY_BUDGET_MS,
   createTraceId,
@@ -15,6 +17,7 @@ import {
 } from '@/lib/performance/server-latency'
 
 export const dynamic = 'force-dynamic'
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const cachedPublicViewportSearch = unstable_cache(
   async (serializedViewport) => searchGlobalLocationsInViewport(JSON.parse(serializedViewport), { traceId: null }),
@@ -27,22 +30,20 @@ async function requireUser(traceId) {
     return { error: NextResponse.json({ error: 'Map locations are unavailable.' }, { status: 503 }) }
   }
   const started = latencyStart()
+  const requestHeaders = await headers()
+  const userId = requestHeaders.get('x-puddle-product-route') === '1'
+    ? String(requestHeaders.get('x-puddle-verified-user-id') || '').trim()
+    : ''
   const supabase = await createClient()
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
-  const userId = typeof claimsData?.claims?.sub === 'string' ? claimsData.claims.sub : null
   recordServerLatency('supabase.mapAuth', elapsedMs(started), SERVER_LATENCY_BUDGET_MS.pageAuthUser, {
     trace_id: traceId,
     service: 'supabase',
     operation: 'mapAuth',
-    failed: Boolean(claimsError || !userId)
+    failed: !UUID_PATTERN.test(userId)
   })
-  if (!userId) return { error: NextResponse.json({ error: 'Sign in to browse map locations.' }, { status: 401 }) }
+  if (!UUID_PATTERN.test(userId)) return { error: NextResponse.json({ error: 'Sign in to browse map locations.' }, { status: 401 }) }
   const profileStarted = latencyStart()
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('suspended_at,banned_at')
-    .eq('id', userId)
-    .maybeSingle()
+  const { profile, error: profileError } = await ensureProfileCached(supabase, { id: userId })
   recordServerLatency('supabase.mapProfile', elapsedMs(profileStarted), SERVER_LATENCY_BUDGET_MS.pageSession, {
     trace_id: traceId, service: 'supabase', operation: 'mapProfile', failed: Boolean(profileError)
   })

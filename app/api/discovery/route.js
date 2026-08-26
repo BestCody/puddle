@@ -1,6 +1,8 @@
 import { after, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { ensureProfileCached } from '@/lib/auth/profile'
 import { getDiscoveryFeed } from '@/lib/app/discovery'
 import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
 import { verifyCsrf } from '@/lib/security/csrf'
@@ -26,25 +28,24 @@ function continuationExcludes(value) {
 async function authenticatedSession(traceId) {
   if (!isSupabaseConfigured()) return { error: NextResponse.json({ error: 'Discovery is unavailable.' }, { status: 503 }) }
   const supabaseStarted = latencyStart()
+  const requestHeaders = await headers()
+  const userId = requestHeaders.get('x-puddle-product-route') === '1'
+    ? String(requestHeaders.get('x-puddle-verified-user-id') || '').trim()
+    : ''
   const supabase = await createClient()
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
-  const userId = typeof claimsData?.claims?.sub === 'string' ? claimsData.claims.sub : null
-  if (!userId) {
+  if (!UUID_PATTERN.test(userId)) {
     recordServerLatency('supabase.discoveryAuth', elapsedMs(supabaseStarted), SERVER_LATENCY_BUDGET_MS.pageAuthUser, {
       trace_id: traceId,
       service: 'supabase',
       operation: 'discoveryAuth',
-      failed: Boolean(claimsError || !userId)
+      failed: true
     })
     return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   }
   const user = { id: userId }
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id,birth_date,interests,latitude,longitude,city,region,country,country_code,timezone,location_label,search_radius_km,suspended_at,banned_at')
-    .eq('id', user.id)
-    .maybeSingle()
-  recordServerLatency('supabase.discoverySession', elapsedMs(supabaseStarted), SERVER_LATENCY_BUDGET_MS.pageSession, {
+  const { profile, error: profileError } = await ensureProfileCached(supabase, user)
+  const authMs = elapsedMs(supabaseStarted)
+  recordServerLatency('supabase.discoverySession', authMs, SERVER_LATENCY_BUDGET_MS.pageSession, {
     trace_id: traceId, service: 'supabase', operation: 'discoverySession',
     failed: Boolean(profileError)
   })
@@ -52,7 +53,7 @@ async function authenticatedSession(traceId) {
   if (profile?.suspended_at || profile?.banned_at) {
     return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
   }
-  return { session: { supabase, user, profile: profile || {}, traceId } }
+  return { session: { supabase, user, profile: profile || {}, traceId, authMs } }
 }
 
 function withTrace(response, traceId) {
@@ -101,7 +102,7 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
   return withTrace(NextResponse.json(feed, {
     headers: {
       'Cache-Control': 'private, no-store',
-      'server-timing': `query;dur=${queryMs}, total;dur=${totalMs}`
+      'server-timing': `auth;dur=${Number(session.authMs || 0)}, query;dur=${queryMs}, total;dur=${totalMs}`
     }
   }), traceId)
 }

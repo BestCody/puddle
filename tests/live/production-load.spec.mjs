@@ -141,6 +141,7 @@ async function runScenario(request, name, path, { allowUnavailable503 = false } 
     p50_ms: Math.round(percentile(durations, 0.5)),
     p95_ms: Math.round(percentile(durations, 0.95)),
     p99_ms: Math.round(percentile(durations, 0.99)),
+    body_bytes_p95: Math.round(percentile(samples.map((sample) => Buffer.byteLength(sample.bodyText || '', 'utf8')), 0.95)),
     status_counts: Object.fromEntries(statuses.map((status) => [
       String(status),
       samples.filter((sample) => sample.status === status).length

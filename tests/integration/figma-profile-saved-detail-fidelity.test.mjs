@@ -58,9 +58,11 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
 })
 
 test('Saved Place Open preserves Figma 38:223 relationships through scoped structural layout', async () => {
-  const [page, similar, styles, layout] = await Promise.all([
+  const [page, similar, reviews, share, styles, layout] = await Promise.all([
     read('app/(product)/plans/[slug]/page.js'),
     read('app/(product)/plans/[slug]/similar-places.js'),
+    read('app/(product)/plans/[slug]/detail-reviews.js'),
+    read('app/(product)/plans/[slug]/detail-share-menu.js'),
     read('app/(product)/plans/Plans.module.css'),
     read('app/layout.js')
   ])
@@ -83,7 +85,10 @@ test('Saved Place Open preserves Figma 38:223 relationships through scoped struc
   assert.match(page, /className=\{styles\.detailTitle\}/)
   assert.match(page, /Price varies/)
   assert.match(page, /Local spot/)
-  assert.match(page, /className=\{styles\.reviews\}/)
+  assert.match(reviews, /className=\{styles\.reviews\}/)
+  assert.match(reviews, /location_reviews_v1/)
+  assert.match(share, /social_friend_picker_v2/)
+  assert.doesNotMatch(page, /location_reviews_v1|social_friends_v2/)
   assert.match(page, /className=\{styles\.detailMap\}/)
   assert.match(page, /<SimilarPlaces slug=\{slug\} \/>/)
   assert.match(similar, /useEffect/)

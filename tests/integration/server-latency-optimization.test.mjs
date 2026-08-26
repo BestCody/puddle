@@ -26,15 +26,20 @@ test('Proxy verifies claims and only loads moderation profile state when require
   assert.match(pageUser, /mode: 'proxy_claims'/)
 })
 
-test('Hot read APIs reuse verified claims instead of making a second auth-user request', async () => {
-  const [discovery, map] = await Promise.all([
+test('Hot read APIs consume the proxy-verified user and share bounded profile reads', async () => {
+  const [discovery, map, profile] = await Promise.all([
     read('app/api/discovery/route.js'),
-    read('app/api/map/viewport/route.js')
+    read('app/api/map/viewport/route.js'),
+    read('lib/auth/profile.js')
   ])
   for (const source of [discovery, map]) {
-    assert.match(source, /auth\.getClaims\(\)/)
+    assert.match(source, /x-puddle-verified-user-id/)
+    assert.match(source, /ensureProfileCached/)
+    assert.doesNotMatch(source, /auth\.getClaims\(\)/)
     assert.doesNotMatch(source, /auth\.getUser\(\)/)
   }
+  assert.match(profile, /const profileLoads = new Map\(\)/)
+  assert.match(profile, /PROFILE_CACHE_TTL_MS = 2_000/)
 })
 
 test('Hot API routes own the account-state gate when proxy moderation is skipped', async () => {
@@ -44,8 +49,9 @@ test('Hot API routes own the account-state gate when proxy moderation is skipped
     read('app/api/map/viewport/route.js')
   ])
   assert.match(proxy, /moderationExemptApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport'\]\)/)
+  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport'\]\)/)
   for (const source of [discovery, map]) {
-    assert.match(source, /suspended_at,banned_at/)
+    assert.match(source, /profile\?\.suspended_at/)
     assert.match(source, /Account status could not be verified/)
     assert.match(source, /This account is suspended|This account is banned/)
   }
@@ -100,6 +106,8 @@ test('Social feed uses one indexed post-page read and parallel bounded hydration
   assert.match(feed, /const \[locationsById, commentRows, states\] = await Promise\.all\(/)
   assert.match(feed, /rpc\('social_comment_previews_v2'/)
   assert.match(feed, /const socialFeedInFlight = new Map\(\)/)
+  assert.match(feed, /social-feed-location-hydration-v1/)
+  assert.match(feed, /revalidate: 300/)
   assert.doesNotMatch(feed, /social_comment_previews_fallback/)
   assert.match(page, /view === 'map' \? getLocationMapSnapshot\(session\) : null/)
   assert.doesNotMatch(page, /CreatePuddleSlot\(\{ feedPromise, mapPromise/)

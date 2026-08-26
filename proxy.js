@@ -23,9 +23,10 @@ const moderationExemptApiPrefixes = [
   '/api/public-location',
   '/api/billing/webhook'
 ]
-// These exact read routes perform their own claims and account-state checks so
-// the proxy does not serialize a second claims/profile round trip ahead of them.
+// These exact read routes reuse proxy-verified claims, then perform their full
+// account-state check through the shared bounded profile cache.
 const moderationExemptApiPaths = new Set(['/api/discovery', '/api/map/viewport'])
+const verifiedReadApiPaths = new Set(['/api/discovery', '/api/map/viewport'])
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
@@ -64,7 +65,8 @@ export async function proxy(request) {
   requestHeaders.set('x-request-id', request.headers.get('x-request-id') || request.headers.get('cf-ray') || crypto.randomUUID())
   requestHeaders.delete('x-puddle-product-route')
   requestHeaders.delete(verifiedProductUserHeader)
-  if (matchesPrefix(pathname, productRoutePrefixes)) requestHeaders.set('x-puddle-product-route', '1')
+  const verifiedReadApi = verifiedReadApiPaths.has(pathname)
+  if (matchesPrefix(pathname, productRoutePrefixes) || verifiedReadApi) requestHeaders.set('x-puddle-product-route', '1')
 
   if (request.method === 'OPTIONS' && pathname.startsWith('/api/')) {
     const origin = request.headers.get('origin')
@@ -111,7 +113,7 @@ export async function proxy(request) {
   const hasAuthFailure = request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('auth_error')
   const moderationGate = requiresModerationGate(pathname)
   const hasAuthCookie = hasSupabaseAuthCookie(request)
-  const needsSession = isProtected || (hasAuthCookie && (!pathname.startsWith('/api/') || moderationGate))
+  const needsSession = isProtected || verifiedReadApi || (hasAuthCookie && (!pathname.startsWith('/api/') || moderationGate))
 
   if (!needsSession) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
@@ -121,7 +123,7 @@ export async function proxy(request) {
   const session = await updateSession(request, requestHeaders, { loadProfileState: moderationGate })
   const { user, profileState, profileError, configured, timings } = session
   let { response } = session
-  if (user && matchesPrefix(pathname, productRoutePrefixes)) {
+  if (user && requestHeaders.get('x-puddle-product-route') === '1') {
     // The proxy has already verified this ID with getClaims(). Strip any inbound
     // value above, then forward only the verified ID to Server Components so they
     // do not repeat the same auth verification. Request override headers are not
@@ -134,6 +136,12 @@ export async function proxy(request) {
   }
   if (moderationGate && user && (profileState?.suspended_at || profileState?.banned_at)) {
     return timed(secured(cachePolicy(NextResponse.json({ error: profileState?.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }), pathname, true), { request, nonce }), proxyStartedAt, timings)
+  }
+  if (verifiedReadApi && !configured) {
+    return timed(secured(cachePolicy(NextResponse.json({ error: 'Product data is temporarily unavailable.' }, { status: 503 }), pathname, true), { request, nonce }), proxyStartedAt, timings)
+  }
+  if (verifiedReadApi && !user) {
+    return timed(secured(cachePolicy(NextResponse.json({ error: 'Sign in to continue.' }, { status: 401 }), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (isProtected && !configured) {
     const url = new URL('/signin', request.url)
