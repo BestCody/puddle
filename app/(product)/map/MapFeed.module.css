@@ -511,9 +511,37 @@
   border-radius: 0;
 }
 
-.mapCanvas :global(.location-map-toolbar),
-.mapCanvas :global(.location-map-side) {
+.mapCanvas :global(.location-map-toolbar) {
   display: none !important;
+}
+
+/* The full-screen map still needs an actionable selected-location card. The
+   base map keeps the card beside the canvas; here it becomes a compact
+   overlay so marker selection exposes the canonical details route without
+   giving up the map viewport. */
+.mapCanvas :global(.location-map-side) {
+  position: absolute;
+  z-index: 8;
+  top: 96px;
+  right: 24px;
+  width: min(320px, calc(100% - 48px));
+  max-height: calc(100% - 120px);
+  display: flex !important;
+  overflow: hidden;
+  border: 1px solid #e8e2e5;
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .16);
+  pointer-events: auto;
+}
+
+.mapCanvas :global(.location-map-side .location-map-list) {
+  display: none;
+}
+
+.mapCanvas :global(.location-map-side .location-map-card) {
+  width: 100%;
+  overflow: auto;
+  border-bottom: 0;
 }
 
 .mapCanvas :global(.location-map-layout) {
@@ -920,6 +948,13 @@
   .mapCanvas :global(.location-map-layout),
   .mapCanvas :global(.location-map-canvas) {
     min-height: 874px;
+  }
+
+  .mapCanvas :global(.location-map-side) {
+    top: 92px;
+    right: 16px;
+    width: min(303px, calc(100% - 32px));
+    max-height: calc(100% - 108px);
   }
 
   .mapPuddle {

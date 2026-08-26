@@ -200,7 +200,13 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   }, [cataloguePoints, initialPoints, selectedId, selectedPoint])
 
   const points = useMemo(() => filter === 'all' ? allPoints : allPoints.filter((point) => point.states.includes(filter)), [allPoints, filter])
-  const selected = allPoints.find((point) => point.id === selectedId) || (selectedPoint?.id === selectedId ? selectedPoint : null) || points[0] || null
+  // Keep the point captured by the marker click authoritative while the
+  // viewport request replaces the catalogue window. The request may briefly
+  // contain a different slice (or an older version of the same row), but the
+  // details card must never disappear during that refresh.
+  const selected = selectedPoint?.id === selectedId
+    ? selectedPoint
+    : allPoints.find((point) => point.id === selectedId) || points[0] || null
   const projectedCenter = project(center.latitude, center.longitude, zoom)
   const maxHeat = Math.max(1, ...visibleHeatmap.map((point) => Number(point.save_count) || 0))
 
