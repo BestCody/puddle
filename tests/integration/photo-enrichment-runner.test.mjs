@@ -97,6 +97,8 @@ test('the three previously implicit table-access decisions are encoded in migrat
   }
   assert.match(migration, /location_save_counts_service_role_all/)
   assert.match(migration, /location_save_density_tiles_service_role_all/)
+  assert.match(migration, /to_regclass\('public\.location_save_counts'\)/)
+  assert.match(migration, /to_regclass\('public\.location_save_density_tiles'\)/)
   assert.match(migration, /spatial_ref_sys_read/)
   assert.match(migration, /table_owner=current_user or coalesce\(migration_role_is_superuser,false\)/)
   assert.match(migration, /spatial_ref_sys is extension-owned/)

@@ -5,31 +5,32 @@
 alter table if exists public.location_save_counts enable row level security;
 alter table if exists public.location_save_density_tiles enable row level security;
 
-revoke all on table public.location_save_counts from public, anon, authenticated;
-revoke all on table public.location_save_density_tiles from public, anon, authenticated;
-grant all on table public.location_save_counts to service_role;
-grant all on table public.location_save_density_tiles to service_role;
+-- The projections were retired from some hosted environments during the B2
+-- cutover. Keep this migration safe in both shapes: enforce the decision when
+-- a projection exists, and make its absence an explicit no-op.
+do $$
+begin
+  if to_regclass('public.location_save_counts') is not null then
+    execute 'revoke all on table public.location_save_counts from public, anon, authenticated';
+    execute 'grant all on table public.location_save_counts to service_role';
+    execute 'drop policy if exists location_save_counts_service_role_all on public.location_save_counts';
+    execute 'create policy location_save_counts_service_role_all on public.location_save_counts for all to service_role using (true) with check (true)';
+    execute 'comment on table public.location_save_counts is ''Internal save-count projection. RLS blocks client roles; service_role and owned SECURITY DEFINER workers maintain it.''';
+  else
+    raise notice 'location_save_counts is not installed; no RLS change required';
+  end if;
 
-drop policy if exists location_save_counts_service_role_all on public.location_save_counts;
-create policy location_save_counts_service_role_all
-  on public.location_save_counts
-  for all
-  to service_role
-  using (true)
-  with check (true);
-
-drop policy if exists location_save_density_tiles_service_role_all on public.location_save_density_tiles;
-create policy location_save_density_tiles_service_role_all
-  on public.location_save_density_tiles
-  for all
-  to service_role
-  using (true)
-  with check (true);
-
-comment on table public.location_save_counts is
-  'Internal save-count projection. RLS blocks client roles; service_role and owned SECURITY DEFINER workers maintain it.';
-comment on table public.location_save_density_tiles is
-  'Internal Pass heatmap projection. RLS blocks client roles; service_role and owned SECURITY DEFINER workers maintain it.';
+  if to_regclass('public.location_save_density_tiles') is not null then
+    execute 'revoke all on table public.location_save_density_tiles from public, anon, authenticated';
+    execute 'grant all on table public.location_save_density_tiles to service_role';
+    execute 'drop policy if exists location_save_density_tiles_service_role_all on public.location_save_density_tiles';
+    execute 'create policy location_save_density_tiles_service_role_all on public.location_save_density_tiles for all to service_role using (true) with check (true)';
+    execute 'comment on table public.location_save_density_tiles is ''Internal Pass heatmap projection. RLS blocks client roles; service_role and owned SECURITY DEFINER workers maintain it.''';
+  else
+    raise notice 'location_save_density_tiles is not installed; no RLS change required';
+  end if;
+end
+$$;
 
 -- spatial_ref_sys belongs to the PostGIS extension and is commonly owned by
 -- supabase_admin rather than the migration role. A migration must not fail or
