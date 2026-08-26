@@ -243,7 +243,7 @@ test('B2 radius search applies freshly materialized photo metadata before photo-
   })
   assert.equal(result.candidates[0]?.id, 'loc-2')
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
-  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1 })
+  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1, possibleCount: 2, matchedCount: 1 })
 })
 
 test('B2 dense text radius search uses compact core and hydrates winner detail', async () => {
@@ -339,7 +339,7 @@ test('B2 viewport applies the photo overlay before selecting map results', async
   }, { env, fetchFn })
   assert.equal(result.candidates[0]?.id, 'loc-2')
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
-  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1 })
+  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1, possibleCount: 2, matchedCount: 1 })
 })
 
 test('dense normal-zoom B2 viewport falls back to bounded coarse map instead of failing budget', async () => {
