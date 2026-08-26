@@ -103,9 +103,11 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
   })
 
   const queryMs = Number(feed.infrastructure?.timings?.queryMs || 0)
+  const searchMs = Number(feed.infrastructure?.timings?.searchMs || 0)
+  const seenMs = Number(feed.infrastructure?.timings?.seenMs || 0)
   const totalMs = elapsedMs(started)
   if (String(feed.infrastructure?.source || '').startsWith('global-location')) {
-    recordSloObservation('globalLocationSearch', queryMs, !feed.infrastructure?.searchTimedOut, {
+    recordSloObservation('globalLocationSearch', searchMs, !feed.infrastructure?.searchTimedOut, {
       trace_id: traceId,
       service: 'b2',
       search_took_ms: Number(feed.infrastructure?.searchTookMs || 0),
@@ -121,7 +123,7 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
   return withTrace(NextResponse.json(feed, {
     headers: {
       'Cache-Control': 'private, no-store',
-      'server-timing': `auth;dur=${Number(session.authMs || 0)}, query;dur=${queryMs}, total;dur=${totalMs}`
+      'server-timing': `auth;dur=${Number(session.authMs || 0)}, search;dur=${searchMs}, seen;dur=${seenMs}, query;dur=${queryMs}, total;dur=${totalMs}`
     }
   }), traceId)
 }

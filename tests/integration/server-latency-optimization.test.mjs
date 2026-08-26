@@ -127,10 +127,25 @@ test('Map feed uses a lightweight protected shell and hydrates only through boun
   assert.match(layout, /StaticProductShell/)
   assert.match(layout, /force-dynamic/)
   assert.match(page, /MapRouteClient/)
+  assert.match(page, /force-dynamic/)
   assert.doesNotMatch(page, /requireUser|createClient|getSocialFeedSnapshot|location-map-data/)
   assert.match(shell, /FigmaDashboardSidebar/)
   assert.match(shell, /SettingsOverlay/)
   assert.match(shell, /form action=\{signOut\}/)
+})
+
+test('Production timing separates parallel auth and catalogue reads', async () => {
+  const [viewport, discovery] = await Promise.all([
+    read('app/api/map/viewport/route.js'),
+    read('app/api/discovery/route.js')
+  ])
+  assert.match(viewport, /authStarted = latencyStart\(\)/)
+  assert.match(viewport, /searchStarted = latencyStart\(\)/)
+  assert.match(viewport, /b2Search;dur=\$\{searchDuration\}/)
+  assert.match(viewport, /auth;dur=\$\{authDuration\}/)
+  assert.match(discovery, /searchMs = Number\(feed\.infrastructure\?\.timings\?\.searchMs/)
+  assert.match(discovery, /seenMs = Number\(feed\.infrastructure\?\.timings\?\.seenMs/)
+  assert.match(discovery, /search;dur=\$\{searchMs\}/)
 })
 
 test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-plan fixes', async () => {

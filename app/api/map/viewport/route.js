@@ -117,12 +117,23 @@ export async function GET(request) {
 
     // Authentication and catalogue search are independent network reads. Run them in
     // parallel so map latency is bounded by the slower backend rather than their sum.
+    // Measure each promise independently; measuring after Promise.all would
+    // label the slower auth read as B2 time and make production profiling
+    // misleading.
+    const authStarted = latencyStart()
+    const authPromise = requireUser(traceId).then((value) => ({
+      value,
+      durationMs: elapsedMs(authStarted)
+    }))
     const searchStarted = latencyStart()
-    const [auth, result] = await Promise.all([
-      requireUser(traceId),
-      cachedPublicViewportSearch(JSON.stringify(viewport))
+    const searchPromise = cachedPublicViewportSearch(JSON.stringify(viewport)).then((value) => ({
+      value,
+      durationMs: elapsedMs(searchStarted)
+    }))
+    const [{ value: auth, durationMs: authDuration }, { value: result, durationMs: searchDuration }] = await Promise.all([
+      authPromise,
+      searchPromise
     ])
-    const searchDuration = elapsedMs(searchStarted)
 
     if (auth.error) {
       auth.error.headers.set('x-puddle-trace-id', traceId)
@@ -153,7 +164,7 @@ export async function GET(request) {
       {
         traceId,
         headers: {
-          'server-timing': `b2Search;dur=${searchDuration}, moderation;dur=${moderationDuration}, total;dur=${totalMs}`
+          'server-timing': `auth;dur=${authDuration}, b2Search;dur=${searchDuration}, moderation;dur=${moderationDuration}, total;dur=${totalMs}`
         }
       }
     )
