@@ -6,6 +6,8 @@ import { createTraceId, elapsedMs, latencyStart, recordSloObservation } from '@/
 
 export const dynamic = 'force-dynamic'
 
+const MAP_PROFILE_SELECT = 'id,display_name,avatar_path,onboarding_completed_at,suspended_at,banned_at'
+
 function response(body, { status = 200, traceId, startedAt, serverTiming = '' } = {}) {
   return NextResponse.json(body, {
     status,
@@ -24,7 +26,7 @@ export async function GET() {
     return response({ error: 'The map is unavailable.' }, { status: 503, traceId, startedAt })
   }
 
-  const current = await getCurrentUser()
+  const current = await getCurrentUser({ profileFields: MAP_PROFILE_SELECT })
   if (!current.user) return response({ error: 'Sign in to view your map.' }, { status: 401, traceId, startedAt })
   if (current.profileError || !current.profile) {
     return response({ error: 'Account status could not be verified.' }, { status: 503, traceId, startedAt })

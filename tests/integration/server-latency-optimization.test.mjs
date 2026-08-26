@@ -149,9 +149,10 @@ test('Production timing separates parallel auth and catalogue reads', async () =
 })
 
 test('Map snapshots only load map-relevant relationship IDs before one B2 hydration', async () => {
-  const [map, plans] = await Promise.all([
+  const [map, plans, route] = await Promise.all([
     read('lib/app/location-map-data.js'),
-    read('lib/app/location-plans-data.js')
+    read('lib/app/location-plans-data.js'),
+    read('app/api/map/snapshot/route.js')
   ])
   assert.match(map, /getLocationPlansMapSnapshot/)
   assert.doesNotMatch(map, /getLocationPlansSnapshot/)
@@ -159,6 +160,8 @@ test('Map snapshots only load map-relevant relationship IDs before one B2 hydrat
   assert.match(plans, /getLocationPlansMapSnapshot/)
   assert.match(plans, /tab: 'saved', lightweightSaved: true/)
   assert.match(plans, /tab: 'planned', lightweightPlanned: true/)
+  assert.match(route, /MAP_PROFILE_SELECT/)
+  assert.match(route, /getCurrentUser\(\{ profileFields: MAP_PROFILE_SELECT \}\)/)
 })
 
 test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-plan fixes', async () => {
