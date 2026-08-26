@@ -27,6 +27,7 @@ jobs:
   enrich:
     if: github.event_name == 'workflow_dispatch' || vars.GLOBAL_PHOTO_PIPELINE_ENABLED == 'true'
     runs-on: ${{ vars.GLOBAL_DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 360
     env:
       B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
       B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}

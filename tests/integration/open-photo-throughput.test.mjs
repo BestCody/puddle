@@ -23,7 +23,7 @@ test('global free-photo workers saturate provider budgets and direct delivery st
   assert.match(materializeWorkflow, /GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY: '2'/)
   assert.match(materializeWorkflow, /GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_MBIT: '25'/)
   assert.match(materializeWorkflow, /MAPILLARY_GRAPH_REQUESTS_PER_MINUTE: '50000'/)
-  assert.doesNotMatch(materializeWorkflow, /timeout-minutes: 360/)
+  assert.match(materializeWorkflow, /timeout-minutes: 360/)
 
   assert.match(wikimediaWorkflow, /WIKIMEDIA_REQUESTS_PER_MINUTE: '200'/)
   assert.match(wikimediaWorkflow, /WIKIMEDIA_MAX_CONCURRENCY: '3'/)
@@ -37,7 +37,7 @@ test('global free-photo workers saturate provider budgets and direct delivery st
 
   assert.match(mapillaryWorkflow, /MAPILLARY_TILE_DAILY_LIMIT: '50000'/)
   assert.match(mapillaryWorkflow, /default: '50000'/)
-  assert.doesNotMatch(mapillaryWorkflow, /timeout-minutes: 180/)
+  assert.match(mapillaryWorkflow, /timeout-minutes: 360/)
   assert.match(mapillary, /zoom-14 vector tiles/)
   assert.match(mapillary, /DAILY_REQUEST_LIMIT = max\(1, min\(50_000/)
   assert.match(mapillary, /STATE_PREFIX/)

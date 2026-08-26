@@ -13,7 +13,7 @@ test('global photo materialization runs hourly and can be dispatched manually', 
   assert.match(workflow, /group: global-photo-enrichment-\$\{\{ inputs\.countries \|\| 'all' \}\}/)
   assert.doesNotMatch(workflow, /materialize_limit/)
   assert.doesNotMatch(workflow, /--limit=/)
-  assert.doesNotMatch(workflow, /timeout-minutes:/)
+  assert.match(workflow, /timeout-minutes: 360/)
   assert.match(workflow, /cancel-in-progress: false/)
   assert.match(overlayWorkflow, /workflow_dispatch:/)
   assert.match(overlayWorkflow, /group: b2-photo-overlay-publish/)
