@@ -8,7 +8,8 @@ test('Vercel compute is pinned beside the Supabase us-west-2 database', async ()
   const vercel = JSON.parse(await read('vercel.json'))
   assert.deepEqual(vercel.regions, ['pdx1'])
   assert.equal(vercel.fluid, true)
-  assert.doesNotMatch(await read('app/api/internal/b2-production-selftest/route.js'), /preferredRegion/)
+  assert.doesNotMatch(await read('vercel.json'), /b2-production-selftest/)
+  await assert.rejects(read('app/api/internal/b2-production-selftest/route.js'), { code: 'ENOENT' })
 })
 
 test('Proxy verifies claims and only loads moderation profile state when required', async () => {
