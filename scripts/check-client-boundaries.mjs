@@ -9,7 +9,14 @@ const clientFiles = []
 const findings = []
 
 for (const path of paths) {
-  const source = await readFile(join(root, path), 'utf8')
+  let source
+  try {
+    source = await readFile(join(root, path), 'utf8')
+  } catch (error) {
+    // A deleted tracked route remains in the index until it is staged.
+    if (error?.code === 'ENOENT') continue
+    throw error
+  }
   const bytes = Buffer.byteLength(source)
   const client = /^\s*["']use client["']/.test(source.slice(0, 300))
   if (!client) continue

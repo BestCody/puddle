@@ -28,9 +28,10 @@ test('Proxy verifies claims and only loads moderation profile state when require
 })
 
 test('Hot read APIs consume the proxy-verified user and verify only required profile state', async () => {
-  const [discovery, map, profile] = await Promise.all([
+  const [discovery, map, snapshot, profile] = await Promise.all([
     read('app/api/discovery/route.js'),
     read('app/api/map/viewport/route.js'),
+    read('app/api/map/snapshot/route.js'),
     read('lib/auth/profile.js')
   ])
   for (const source of [discovery, map]) {
@@ -42,6 +43,8 @@ test('Hot read APIs consume the proxy-verified user and verify only required pro
   assert.doesNotMatch(discovery, /ensureProfile/)
   assert.match(map, /select\('suspended_at,banned_at'\)/)
   assert.doesNotMatch(map, /ensureProfile/)
+  assert.match(snapshot, /getCurrentUser/)
+  assert.match(snapshot, /getLocationMapSnapshot/)
   assert.doesNotMatch(profile, /profileLoads|PROFILE_CACHE_TTL_MS|invalidateProfileCache/)
 })
 
@@ -53,18 +56,22 @@ test('Discovery overlaps profile and seen-history reads before B2 serving', asyn
 })
 
 test('Hot API routes own the account-state gate when proxy moderation is skipped', async () => {
-  const [proxy, discovery, map] = await Promise.all([
+  const [proxy, discovery, map, snapshot] = await Promise.all([
     read('proxy.js'),
     read('app/api/discovery/route.js'),
-    read('app/api/map/viewport/route.js')
+    read('app/api/map/viewport/route.js'),
+    read('app/api/map/snapshot/route.js')
   ])
-  assert.match(proxy, /moderationExemptApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/social-feed'\]\)/)
-  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/social-feed'\]\)/)
+  assert.match(proxy, /moderationExemptApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/map\/snapshot', '\/api\/social-feed'\]\)/)
+  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/map\/snapshot', '\/api\/social-feed'\]\)/)
   for (const source of [discovery, map]) {
     assert.match(source, /profile\?\.suspended_at/)
     assert.match(source, /Account status could not be verified/)
     assert.match(source, /This account is suspended|This account is banned/)
   }
+  assert.match(snapshot, /current\.profile\.suspended_at/)
+  assert.match(snapshot, /Account status could not be verified/)
+  assert.match(snapshot, /This account is suspended|This account is banned/)
 })
 
 test('Public catalogue reads share short-lived immutable search results across users', async () => {
@@ -110,6 +117,21 @@ test('Dashboard shell defers its one trusted bootstrap RPC until after critical 
   assert.doesNotMatch(runtime, /parallel_fallback/)
 })
 
+test('Map feed uses a lightweight protected shell and hydrates only through bounded APIs', async () => {
+  const [layout, page, shell] = await Promise.all([
+    read('app/(map)/layout.js'),
+    read('app/(map)/map/page.js'),
+    read('components/static-product-shell.js')
+  ])
+  assert.match(layout, /StaticProductShell/)
+  assert.match(layout, /force-dynamic/)
+  assert.match(page, /MapRouteClient/)
+  assert.doesNotMatch(page, /requireUser|createClient|getSocialFeedSnapshot|location-map-data/)
+  assert.match(shell, /FigmaDashboardSidebar/)
+  assert.match(shell, /SettingsOverlay/)
+  assert.match(shell, /form action=\{signOut\}/)
+})
+
 test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-plan fixes', async () => {
   const migration = await read('supabase/migrations/10060_latency_optimization.sql')
   assert.match(migration, /dashboard_bootstrap_v1/)
@@ -123,7 +145,7 @@ test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-pla
 test('Social feed uses one indexed post-page read and a shell-first API render', async () => {
   const [feed, page, client, api, restore] = await Promise.all([
     read('lib/app/social-feed-data.js'),
-    read('app/(product)/map/page.js'),
+    read('components/map-route-client.js'),
     read('components/social-feed-client.js'),
     read('app/api/social-feed/route.js'),
     read('supabase/migrations/20260825024000_restore_social_feed_hot_path.sql')
@@ -139,6 +161,7 @@ test('Social feed uses one indexed post-page read and a shell-first API render',
   assert.match(feed, /revalidate: 300/)
   assert.doesNotMatch(feed, /social_comment_previews_fallback/)
   assert.match(page, /<SocialFeedClient/)
+  assert.match(page, /useSearchParams/)
   assert.match(client, /fetch\(`\/api\/social-feed/)
   assert.match(client, /More puddles/)
   assert.match(api, /getSocialFeedSnapshot/)

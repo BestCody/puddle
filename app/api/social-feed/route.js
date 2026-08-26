@@ -26,7 +26,7 @@ export async function GET(request) {
   const current = await getCurrentUser()
   if (!current.user) return response({ error: 'Sign in to view the feed.' }, { status: 401, traceId, startedAt })
   if (current.profileError || !current.profile) return response({ error: 'Account status could not be verified.' }, { status: 503, traceId, startedAt })
-  if (!current.profile.onboarding_completed_at) return response({ error: 'Complete onboarding to view the feed.' }, { status: 403, traceId, startedAt })
+  if (!current.profile.onboarding_completed_at) return response({ error: 'Complete onboarding to view the feed.', code: 'onboarding_required' }, { status: 403, traceId, startedAt })
   if (current.profile.suspended_at || current.profile.banned_at) {
     return response({ error: current.profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403, traceId, startedAt })
   }

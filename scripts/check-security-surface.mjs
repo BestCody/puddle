@@ -41,7 +41,14 @@ await requireMarkers('tests/e2e/support.mjs', ["from 'node:crypto'", 'randomUUID
 
 const testScripts = tracked.filter((path) => path.startsWith('tests/') && /\.(?:[cm]?js|jsx|ts|tsx)$/.test(path))
 for (const path of testScripts) {
-  const value = await source(path)
+  let value
+  try {
+    value = await source(path)
+  } catch (error) {
+    // A deleted tracked test remains in the index until the refactor is staged.
+    if (error?.code === 'ENOENT') continue
+    throw error
+  }
   if (/\bMath\.random\s*\(/.test(value)) findings.push(`${path}: use cryptographic test identifiers instead of Math.random()`)
 }
 

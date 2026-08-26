@@ -6,6 +6,7 @@ const MIN_SUCCESS_RATE = 0.99
 const P95_LIMIT_MS = {
   discovery: PRODUCTION_SLOS.discovery.p95Ms,
   mapViewport: PRODUCTION_SLOS.mapViewport.p95Ms,
+  mapSnapshot: PRODUCTION_SLOS.mapSnapshot.p95Ms,
   socialShell: PRODUCTION_SLOS.socialFeed.p95Ms,
   socialFeed: PRODUCTION_SLOS.socialFeed.p95Ms,
   savedHistory: PRODUCTION_SLOS.savedHistory.p95Ms,
@@ -113,15 +114,18 @@ async function timedGet(page, path, cookieHeader) {
     const headersDurationMs = performance.now() - started
     const bodyStarted = performance.now()
     const chunks = []
+    let firstByteDurationMs = null
     if (response.body) {
       const reader = response.body.getReader()
       while (true) {
         const next = await reader.read()
         if (next.done) break
+        if (firstByteDurationMs === null) firstByteDurationMs = performance.now() - started
         if (next.value?.length) chunks.push(Buffer.from(next.value))
       }
     } else {
       chunks.push(Buffer.from(await response.arrayBuffer()))
+      firstByteDurationMs = performance.now() - started
     }
     const bodyText = Buffer.concat(chunks).toString('utf8')
     return {
@@ -129,6 +133,7 @@ async function timedGet(page, path, cookieHeader) {
       status: response.status,
       durationMs: performance.now() - started,
       headersDurationMs,
+      firstByteDurationMs,
       bodyDurationMs: performance.now() - bodyStarted,
       traceId: response.headers.get('x-puddle-trace-id') || null,
       vercelId: response.headers.get('x-vercel-id') || null,
@@ -143,6 +148,7 @@ async function timedGet(page, path, cookieHeader) {
       status: 0,
       durationMs: performance.now() - started,
       headersDurationMs: null,
+      firstByteDurationMs: null,
       bodyDurationMs: null,
       vercelId: null,
       cacheStatus: null,
@@ -181,6 +187,8 @@ async function runScenario(page, cookieHeader, name, path, { allowUnavailable503
     headers_p50_ms: Math.round(phasePercentile(samples, 'headersDurationMs', 0.5)),
     headers_p95_ms: Math.round(phasePercentile(samples, 'headersDurationMs', 0.95)),
     headers_p99_ms: Math.round(phasePercentile(samples, 'headersDurationMs', 0.99)),
+    first_byte_p95_ms: Math.round(phasePercentile(samples, 'firstByteDurationMs', 0.95)),
+    first_byte_p99_ms: Math.round(phasePercentile(samples, 'firstByteDurationMs', 0.99)),
     body_read_p95_ms: Math.round(phasePercentile(samples, 'bodyDurationMs', 0.95)),
     body_bytes_p95: Math.round(percentile(samples.map((sample) => Buffer.byteLength(sample.bodyText || '', 'utf8')), 0.95)),
     status_counts: Object.fromEntries(statuses.map((status) => [
@@ -194,6 +202,9 @@ async function runScenario(page, cookieHeader, name, path, { allowUnavailable503
     ])),
     stage_headers_p95_ms: Object.fromEntries(STAGES.map((concurrency) => [
       String(concurrency), Math.round(phasePercentile(samples.filter((sample) => sample.concurrency === concurrency), 'headersDurationMs', 0.95))
+    ])),
+    stage_first_byte_p95_ms: Object.fromEntries(STAGES.map((concurrency) => [
+      String(concurrency), Math.round(phasePercentile(samples.filter((sample) => sample.concurrency === concurrency), 'firstByteDurationMs', 0.95))
     ])),
     stage_body_read_p95_ms: Object.fromEntries(STAGES.map((concurrency) => [
       String(concurrency), Math.round(phasePercentile(samples.filter((sample) => sample.concurrency === concurrency), 'bodyDurationMs', 0.95))
@@ -262,13 +273,14 @@ test('bounded production load gate covers all critical read paths', async ({ pag
       '/api/map/viewport?north=43.78&south=43.55&east=-79.20&west=-79.62&zoom=11',
       { allowUnavailable503: true }
     ))
+    summaries.push(await runScenario(page, cookieHeader, 'mapSnapshot', '/api/map/snapshot'))
     summaries.push(await runScenario(page, cookieHeader, 'socialShell', '/map'))
     summaries.push(await runScenario(page, cookieHeader, 'socialFeed', '/api/social-feed'))
     summaries.push(await runScenario(page, cookieHeader, 'savedHistory', '/plans?tab=saved'))
     summaries.push(await runScenario(page, cookieHeader, 'locationDetail', detailPath))
 
     expect(summaries.map((summary) => summary.scenario)).toEqual([
-      'discovery', 'mapViewport', 'socialShell', 'socialFeed', 'savedHistory', 'locationDetail'
+      'discovery', 'mapViewport', 'mapSnapshot', 'socialShell', 'socialFeed', 'savedHistory', 'locationDetail'
     ])
     for (const summary of summaries) assertScenario(summary)
   } finally {

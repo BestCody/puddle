@@ -73,7 +73,7 @@ test('Pass saver listing is keyset-paged and its headline count is incrementally
 
 test('social feed uses bounded RLS keyset pages, indexed top-N comment previews, and lazy friend hydration', async () => {
   const feed = await read('lib/app/social-feed-data.js')
-  const page = await read('app/(product)/map/page.js')
+  const page = await read('components/map-route-client.js')
   const client = await read('components/social-feed-client.js')
   const share = await read('app/(product)/map/feed-share-menu.js')
   const cursor = await read('supabase/migrations/10067_feed_keyset_pagination.sql')

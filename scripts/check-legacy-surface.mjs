@@ -167,7 +167,16 @@ const retiredCataloguePatterns = [
 const retiredCatalogueRelationPattern = /['"][^'"]*\blocations\s*(?:!|\()[^'"]*['"]/
 
 for (const relative of activeTrackedFiles) {
-  const source = await read(relative)
+  let source
+  try {
+    source = await read(relative)
+  } catch (error) {
+    // Git keeps a deleted file in its tracked index until the deletion is
+    // staged. Ignore that transient path so legacy scanning remains usable
+    // during a normal working-tree refactor.
+    if (error?.code === 'ENOENT') continue
+    throw error
+  }
   if (
     retiredCataloguePatterns.some((pattern) => pattern.test(source)) ||
     (isJavaScriptLike(relative) && retiredCatalogueRelationPattern.test(source))

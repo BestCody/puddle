@@ -62,7 +62,7 @@ test('top pills size to their labels and move their highlight before navigation 
     read('components/segment-interaction-bridge.js'),
     read('app/sidebar-interactions.css'),
     read('app/ui-targeted-fixes.css'),
-    read('app/(product)/map/page.js'),
+    read('components/map-route-client.js'),
     read('app/(product)/plans/page.js'),
     read('app/(product)/membership/page.js'),
     read('app/layout.js')
@@ -91,7 +91,8 @@ test('top pills size to their labels and move their highlight before navigation 
   assert.match(mapPage, /\{ value: 'feed', label: 'Posts', href: '\/map' \}/)
   assert.match(mapPage, /tone="yellow"/)
   assert.match(mapPage, /<SocialFeedClient/)
-  assert.match(mapPage, /<Suspense fallback=\{<StreamPlaceholder label="Loading map" \/>\}>/)
+  assert.match(mapPage, /<LocationMap[\s\S]*loadCatalogue/)
+  assert.match(mapPage, /useSearchParams/)
   assert.doesNotMatch(mapPage, /getSocialFeedSnapshot/)
   assert.doesNotMatch(mapPage, /await Promise\.all\(\[mapPromise, feedPromise\]\)/)
   assert.match(plansPage, /tone="purple"/)

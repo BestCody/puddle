@@ -153,7 +153,7 @@ export async function signInThroughUi(page, email, password, next = '/discover')
 }
 
 export async function signOutThroughUi(page) {
-  // The current Figma composition intentionally hides the legacy three-dot
+  // The current Figma composition intentionally hides the three-dot
   // account menu. Keep auth coverage on the real production sign-out server
   // action by submitting its rendered form instead of inventing a visible
   // control solely for E2E. CSS locators include hidden DOM; role locators do not.

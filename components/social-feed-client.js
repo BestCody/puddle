@@ -104,6 +104,11 @@ export function SocialFeedClient({
   const [feed, setFeed] = useState(null)
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
+  const [identity, setIdentity] = useState({ avatarUrl, displayName })
+
+  useEffect(() => {
+    setIdentity({ avatarUrl, displayName })
+  }, [avatarUrl, displayName])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -115,12 +120,23 @@ export function SocialFeedClient({
     setError('')
 
     fetch(`/api/social-feed${params.toString() ? `?${params}` : ''}`, { cache: 'no-store', signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`Feed returned ${response.status}`)
-        return response.json()
+      .then(async (response) => {
+        const payload = await response.json()
+        if (!response.ok) {
+          if (payload?.code === 'onboarding_required') window.location.assign('/onboarding')
+          throw new Error(payload?.error || `Feed returned ${response.status}`)
+        }
+        return payload
       })
       .then((payload) => {
-        if (!controller.signal.aborted) setFeed(payload)
+        if (controller.signal.aborted) return
+        setFeed(payload)
+        if (payload?.self) {
+          setIdentity({
+            avatarUrl: payload.self.avatar_url || avatarUrl || null,
+            displayName: payload.self.display_name || displayName || 'Puddle person'
+          })
+        }
       })
       .catch((cause) => {
         if (!controller.signal.aborted) setError(cause?.message || 'The feed could not be loaded.')
@@ -136,8 +152,8 @@ export function SocialFeedClient({
           : <div className={styles.empty} role="status" aria-label="Loading posts"><strong>Loadingâ€¦</strong></div>}
     </section>
     <DiscoverCreatePuddle
-      avatarUrl={avatarUrl}
-      displayName={displayName}
+      avatarUrl={identity.avatarUrl}
+      displayName={identity.displayName}
       initialOpen={initialOpen}
       requestedLocation={requestedLocation}
     />
