@@ -65,7 +65,7 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
     await page.getByRole('checkbox', { name: 'Parks & gardens' }).check()
     await page.getByRole('button', { name: 'Build my date deck →' }).click()
     await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 30_000 })
-    await expect(page.locator('.minimal-swipe-card')).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('.figma-swipe-card')).toBeVisible({ timeout: 30_000 })
     for (const name of ['Back', 'Pass', 'Save', 'Star']) await expect(page.getByRole('button', { name })).toBeVisible()
 
     const filterButton = page.getByRole('button', { name: 'Open filters' })
@@ -115,7 +115,7 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
     await expect(page.getByText('Profile picture updated.')).toBeVisible({ timeout: 30_000 })
 
     await page.reload()
-    const profileImage = page.locator('.minimal-profile-avatar img')
+    const profileImage = page.locator('.figma-profile-avatar img')
     await expect(profileImage).toBeVisible()
     await expect.poll(async () => profileImage.evaluate((image) => image.complete && image.naturalWidth > 0)).toBeTruthy()
     const src = await profileImage.getAttribute('src')
@@ -129,9 +129,12 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
     expect(stats.channels[0].mean).toBeGreaterThan(stats.channels[2].mean + 50)
 
     await page.goto('/account')
-    await expect(page.locator('.figma-settings-page')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Profile settings' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Billing' })).toHaveAttribute('href', '/membership?view=manage')
+    await expect(page.locator('.figma-settings-screen')).toBeVisible()
+    const billingLink = page.getByRole('link', { name: 'Billing' }).first()
+    await expect(billingLink).toHaveAttribute('href', /section=billing/)
+    await billingLink.click()
+    await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'View plans' })).toHaveAttribute('href', '/membership')
 
     await page.goto('/membership')
     await expect(page.locator('.figma-pass-title')).toContainText('Membership')

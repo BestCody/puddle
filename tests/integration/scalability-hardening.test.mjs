@@ -80,7 +80,7 @@ test('social feed uses bounded RLS keyset pages, indexed top-N comment previews,
   const bounds = await read('supabase/migrations/10069_scalability_work_bounds.sql')
   const restore = await read('supabase/migrations/20260825024000_restore_social_feed_hot_path.sql')
 
-  assert.match(feed, /DEFAULT_PAGE_SIZE = 5/)
+  assert.match(feed, /DEFAULT_PAGE_SIZE = 3/)
   assert.match(feed, /\.from\('social_posts'\)[\s\S]*profiles!social_posts_author_id_fkey/)
   assert.match(feed, /\.order\('created_at', \{ ascending: false \}\)[\s\S]*\.order\('id', \{ ascending: false \}\)/)
   assert.match(feed, /pageSize \+ 1/)

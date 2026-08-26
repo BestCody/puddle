@@ -44,19 +44,21 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Allow production deployment to begin
         run: sleep 45
-      - name: Run live product smoke until deployed version passes
+      - name: Run live product UI smoke
+        run: npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/completed-ui-production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs
+      - name: Run bounded production load until SLOs pass
         shell: bash
         run: |
           set +e
           for attempt in 1 2 3 4; do
-            echo "Live smoke attempt ${attempt}/4"
-            npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/completed-ui-production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs tests/live/production-load.spec.mjs
+            echo "Production load attempt ${attempt}/4"
+            npx playwright test --config=playwright.live.config.mjs tests/live/production-load.spec.mjs
             status=$?
             if [ "$status" -eq 0 ]; then
               exit 0
             fi
             if [ "$attempt" -lt 4 ]; then
-              echo "Live smoke did not pass yet; waiting 30 seconds for deployment convergence."
+              echo "Production load did not meet every SLO; waiting 30 seconds before retrying."
               sleep 30
             fi
           done

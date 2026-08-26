@@ -38,6 +38,8 @@ async function createDisposableAccount(page, { displayName, email, password, use
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page.getByRole('option').filter({ hasText: 'Toronto' }).click()
   await page.getByRole('checkbox', { name: 'Coffee shops' }).check()
+  await page.getByRole('checkbox', { name: 'Restaurants' }).check()
+  await page.getByRole('checkbox', { name: 'Parks & gardens' }).check()
   await page.getByRole('button', { name: 'Build my date deck →' }).click()
   await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 30_000 })
 }

@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "fluid": true,
   "buildCommand": "npm run vercel-build",
   "ignoreCommand": "node -e \"/* process.exit(0) */ process.exit(1)\"",
   "regions": ["pdx1"],

@@ -1,12 +1,7 @@
 import { after, NextResponse } from 'next/server'
-import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { ensureProfile } from '@/lib/auth/profile'
 import { getDiscoveryFeed } from '@/lib/app/discovery'
-import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
-import { verifyCsrf } from '@/lib/security/csrf'
-import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 import {
   SERVER_LATENCY_BUDGET_MS,
   createTraceId,
@@ -19,16 +14,16 @@ import {
 export const dynamic = 'force-dynamic'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const DISCOVERY_PROFILE_SELECT = 'latitude,longitude,search_radius_km,interests,location_label,city,suspended_at,banned_at'
 
 function continuationExcludes(value) {
   if (!Array.isArray(value)) return []
   return [...new Set(value.map((item) => String(item || '').trim()).filter((item) => UUID_PATTERN.test(item)))]
 }
 
-async function authenticatedSession(traceId) {
+async function authenticatedSession(traceId, requestHeaders) {
   if (!isSupabaseConfigured()) return { error: NextResponse.json({ error: 'Discovery is unavailable.' }, { status: 503 }) }
   const supabaseStarted = latencyStart()
-  const requestHeaders = await headers()
   const userId = requestHeaders.get('x-puddle-product-route') === '1'
     ? String(requestHeaders.get('x-puddle-verified-user-id') || '').trim()
     : ''
@@ -43,13 +38,17 @@ async function authenticatedSession(traceId) {
     return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   }
   const user = { id: userId }
-  const { profile, error: profileError } = await ensureProfile(supabase, user)
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select(DISCOVERY_PROFILE_SELECT)
+    .eq('id', userId)
+    .maybeSingle()
   const authMs = elapsedMs(supabaseStarted)
   recordServerLatency('supabase.discoverySession', authMs, SERVER_LATENCY_BUDGET_MS.pageSession, {
     trace_id: traceId, service: 'supabase', operation: 'discoverySession',
-    failed: Boolean(profileError)
+    failed: Boolean(profileError || !profile)
   })
-  if (profileError) return { error: NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }) }
+  if (profileError || !profile) return { error: NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }) }
   if (profile?.suspended_at || profile?.banned_at) {
     return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
   }
@@ -77,6 +76,7 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
 
   after(async () => {
     try {
+      const { recordSampledDiscoveryAnalytics } = await import('@/lib/app/discovery-analytics')
       await recordSampledDiscoveryAnalytics({ supabase: session.supabase, user: session.user }, feed)
     } catch (error) {
       console.warn(`Sampled discovery analytics failed trace=${traceId}: ${error.message}`)
@@ -109,7 +109,7 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
 
 export async function GET(request) {
   const traceId = createTraceId()
-  const auth = await authenticatedSession(traceId)
+  const auth = await authenticatedSession(traceId, request.headers)
   if (auth.error) return withTrace(auth.error, traceId)
   const requestedFilters = Object.fromEntries(request.nextUrl.searchParams)
   return discoveryResponse(auth.session, requestedFilters, [], traceId)
@@ -117,8 +117,12 @@ export async function GET(request) {
 
 export async function POST(request) {
   const traceId = createTraceId()
+  const [{ verifyCsrf }, { readJsonLimited, safeSecurityError }] = await Promise.all([
+    import('@/lib/security/csrf'),
+    import('@/lib/security/request')
+  ])
   if (!verifyCsrf(request)) return withTrace(NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 }), traceId)
-  const auth = await authenticatedSession(traceId)
+  const auth = await authenticatedSession(traceId, request.headers)
   if (auth.error) return withTrace(auth.error, traceId)
   try {
     const body = await readJsonLimited(request, 40_000)

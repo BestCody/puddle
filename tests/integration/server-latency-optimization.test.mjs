@@ -7,6 +7,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8
 test('Vercel compute is pinned beside the Supabase us-west-2 database', async () => {
   const vercel = JSON.parse(await read('vercel.json'))
   assert.deepEqual(vercel.regions, ['pdx1'])
+  assert.equal(vercel.fluid, true)
   assert.doesNotMatch(await read('app/api/internal/b2-production-selftest/route.js'), /preferredRegion/)
 })
 
@@ -37,7 +38,8 @@ test('Hot read APIs consume the proxy-verified user and verify only required pro
     assert.doesNotMatch(source, /auth\.getClaims\(\)/)
     assert.doesNotMatch(source, /auth\.getUser\(\)/)
   }
-  assert.match(discovery, /ensureProfile/)
+  assert.match(discovery, /DISCOVERY_PROFILE_SELECT = 'latitude,longitude,search_radius_km,interests,location_label,city,suspended_at,banned_at'/)
+  assert.doesNotMatch(discovery, /ensureProfile/)
   assert.match(map, /select\('suspended_at,banned_at'\)/)
   assert.doesNotMatch(map, /ensureProfile/)
   assert.doesNotMatch(profile, /profileLoads|PROFILE_CACHE_TTL_MS|invalidateProfileCache/)
