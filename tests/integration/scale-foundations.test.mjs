@@ -96,6 +96,7 @@ test('the production social-feed repair is a targeted authenticated migration', 
   const workflow = await read('.github/workflows/apply-social-feed-hot-path.yml')
   assert.match(workflow, /SUPABASE_ACCESS_TOKEN/)
   assert.match(workflow, /supabase db query/)
+  assert.match(workflow, /--linked/)
   assert.match(workflow, /--project-ref cegoqtvajwajczbofpep/)
   assert.match(workflow, /20260825024000_restore_social_feed_hot_path\.sql/)
   assert.doesNotMatch(workflow, /db push/)

@@ -31,5 +31,6 @@ jobs:
           set -euo pipefail
           test -n "$SUPABASE_ACCESS_TOKEN"
           supabase db query \
+            --linked \
             --project-ref cegoqtvajwajczbofpep \
             --file supabase/migrations/20260825024000_restore_social_feed_hot_path.sql
