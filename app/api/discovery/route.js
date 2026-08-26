@@ -46,7 +46,13 @@ async function authenticatedSession(traceId, requestHeaders) {
     .select(DISCOVERY_PROFILE_SELECT)
     .eq('id', userId)
     .maybeSingle()
-  const seenPromise = supabase.rpc('discovery_seen_locations_v1').catch((error) => ({ data: null, error }))
+  const seenPromise = (async () => {
+    try {
+      return await supabase.rpc('discovery_seen_locations_v1')
+    } catch (error) {
+      return { data: null, error }
+    }
+  })()
   const [{ data: profile, error: profileError }, seenResult] = await Promise.all([profilePromise, seenPromise])
   const authMs = elapsedMs(supabaseStarted)
   recordServerLatency('supabase.discoverySession', authMs, SERVER_LATENCY_BUDGET_MS.pageSession, {

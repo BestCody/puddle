@@ -101,6 +101,7 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
     await expect(page).toHaveURL(/\/matches\?tab=shared/)
 
     await page.goto('/profile')
+    await page.getByRole('button', { name: 'Change profile photo' }).click()
     const imageBuffer = await sharp({
       create: { width: 96, height: 96, channels: 3, background: { r: 238, g: 70, b: 122 } }
     }).png().toBuffer()

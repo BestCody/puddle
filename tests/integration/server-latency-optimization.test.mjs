@@ -47,7 +47,7 @@ test('Hot read APIs consume the proxy-verified user and verify only required pro
 
 test('Discovery overlaps profile and seen-history reads before B2 serving', async () => {
   const source = await read('app/api/discovery/route.js')
-  assert.match(source, /const profilePromise = supabase[\s\S]*const seenPromise = supabase\.rpc\('discovery_seen_locations_v1'\)/)
+  assert.match(source, /const profilePromise = supabase[\s\S]*const seenPromise = \(async \(\) => \{[\s\S]*supabase\.rpc\('discovery_seen_locations_v1'\)/)
   assert.match(source, /Promise\.all\(\[profilePromise, seenPromise\]\)/)
   assert.match(source, /preloadedSeenLocationIds/)
 })
