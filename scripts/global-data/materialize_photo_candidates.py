@@ -2,10 +2,10 @@
 """Materialize globally unique licensed location photos into immutable B2 media.
 
 Discovery remains bulk/spatial. For each real canonical location this worker keeps
-several ranked provider candidates, downloads them one at a time, and atomically
-claims exact/perceptual identity in Postgres before uploading bytes. Duplicate
-candidates fall through to the next candidate for that location. Different
-locations are processed concurrently.
+several ranked provider candidates, atomically reserves an unseen provider asset
+or source URL before any download, then claims exact/perceptual identity in
+Postgres before uploading bytes. Duplicate candidates fall through to the next
+candidate for that location. Different locations are processed concurrently.
 """
 import argparse
 import concurrent.futures
@@ -184,7 +184,7 @@ def claim_photo(row, content_hash, perceptual_hash, confirmation_hash):
     provider_code = PROVIDER_CODES.get(provider)
     if not provider_code:
         raise RuntimeError(f'unsupported provider {provider}')
-    external_id = str(row['external_photo_id'])
+    external_id = str(row['external_photo_id']).strip()
     provider_hash = hashlib.sha256(provider.encode() + b'\0' + external_id.encode()).hexdigest()
     response = supabase_rpc('claim_global_photo_v1', {
         'p_location_id': str(row['location_id']),
@@ -199,6 +199,80 @@ def claim_photo(row, content_hash, perceptual_hash, confirmation_hash):
     if not isinstance(response, list) or len(response) != 1 or not isinstance(response[0], dict):
         raise RuntimeError(f'invalid global photo claim response: {response!r}')
     return response[0]
+
+
+def normalize_source_url(value):
+    """Canonicalize an HTTPS source identity without changing image parameters."""
+    raw = str(value or '').strip()
+    if not raw:
+        return None
+    try:
+        parsed = urllib.parse.urlsplit(raw)
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        return None
+    if parsed.scheme.lower() != 'https' or not hostname or parsed.username or parsed.password:
+        return None
+    hostname = hostname.rstrip('.').lower()
+    if ':' in hostname and not hostname.startswith('['):
+        hostname = f'[{hostname}]'
+    netloc = hostname if port in (None, 443) else f'{hostname}:{port}'
+    return urllib.parse.urlunsplit(('https', netloc, parsed.path or '/', parsed.query, ''))
+
+
+def reserve_candidate(row):
+    provider = str(row.get('provider') or '')
+    provider_code = PROVIDER_CODES.get(provider)
+    if not provider_code:
+        raise RuntimeError(f'unsupported provider {provider}')
+    external_id = str(row.get('external_photo_id') or '').strip()
+    if not external_id:
+        raise RuntimeError('provider candidate is missing external_photo_id')
+    response = supabase_rpc('reserve_global_photo_candidate_v1', {
+        'p_location_id': str(row['location_id']),
+        'p_provider_code': provider_code,
+        'p_provider_asset_id': external_id,
+        'p_normalized_source_url': normalize_source_url(row.get('asset_url')),
+        'p_lease_seconds': CLAIM_LEASE_SECONDS,
+    })
+    if not isinstance(response, list) or len(response) != 1 or not isinstance(response[0], dict):
+        raise RuntimeError(f'invalid global photo candidate reservation response: {response!r}')
+    return response[0]
+
+
+def bind_candidate_url(reservation_token, source_url):
+    normalized = normalize_source_url(source_url)
+    if not normalized:
+        raise RuntimeError('provider returned an invalid HTTPS asset URL')
+    response = supabase_rpc('bind_global_photo_candidate_url_v1', {
+        'p_reservation_token': reservation_token,
+        'p_normalized_source_url': normalized,
+    })
+    if not isinstance(response, list) or len(response) != 1 or not isinstance(response[0], dict):
+        raise RuntimeError(f'invalid global photo candidate URL binding response: {response!r}')
+    return response[0]
+
+
+def complete_candidate(reservation_token, status, result=None, content_hash=None, storage_key=None, retry_seconds=3600):
+    completed = supabase_rpc('complete_global_photo_candidate_v1', {
+        'p_reservation_token': reservation_token,
+        'p_status': status,
+        'p_result': result,
+        'p_content_sha256': content_hash,
+        'p_storage_key': storage_key,
+        'p_retry_seconds': retry_seconds,
+    })
+    if completed is not True:
+        raise RuntimeError(f'global photo candidate reservation could not be completed as {status}')
+
+
+def retryable_candidate_error(error):
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code in TRANSIENT_HTTP_CODES
+    if isinstance(error, (urllib.error.URLError, TimeoutError, ConnectionError)):
+        return True
+    return False
 
 
 def release_claim(token):
@@ -413,11 +487,9 @@ def upload_media(data, sha256):
     return key
 
 
-def prepare_candidate(row):
+def prepare_candidate(row, candidate=None):
     provider = row['provider']
-    candidate = dict(row)
-    if provider == 'mapillary':
-        candidate.update(mapillary_details(row['external_photo_id']))
+    candidate = dict(candidate or row)
     body = download(candidate.get('asset_url'), provider)
     normalized, width, height, perceptual, confirmation = normalize(body)
     content_hash = hashlib.sha256(normalized).hexdigest()
@@ -428,25 +500,69 @@ def materialize_location(candidates):
     location_id = str(candidates[0]['location_id'])
     attempts = []
     for row in candidates:
+        candidate_token = None
         try:
-            candidate, normalized, width, height, perceptual, confirmation, content_hash = prepare_candidate(row)
+            reservation = reserve_candidate(row)
+            reservation_status = str(reservation.get('reservation_status') or '')
+            if reservation_status != 'reserved':
+                attempts.append({
+                    'provider': row['provider'], 'candidateRank': row['candidate_rank'],
+                    'preflight': reservation_status,
+                    'conflict': reservation.get('conflict_kind') or reservation_status,
+                })
+                continue
+            candidate_token = reservation.get('reservation_token')
+            if not candidate_token:
+                raise RuntimeError('candidate reservation succeeded without a token')
+
+            candidate = dict(row)
+            if row['provider'] == 'mapillary':
+                candidate.update(mapillary_details(row['external_photo_id']))
+                binding = bind_candidate_url(candidate_token, candidate.get('asset_url'))
+                binding_status = str(binding.get('bind_status') or '')
+                if binding_status != 'bound':
+                    attempts.append({
+                        'provider': row['provider'], 'candidateRank': row['candidate_rank'],
+                        'preflight': binding_status,
+                        'conflict': binding.get('conflict_kind') or binding_status,
+                    })
+                    candidate_token = None
+                    continue
+
+            candidate, normalized, width, height, perceptual, confirmation, content_hash = prepare_candidate(row, candidate)
             claim = claim_photo(row, content_hash, perceptual, confirmation)
             claim_status = claim.get('claim_status')
             conflict_kind = claim.get('conflict_kind')
             if claim_status != 'claimed':
+                candidate_status = 'available' if conflict_kind == 'location_has_photo' else 'duplicate'
+                try:
+                    complete_candidate(
+                        candidate_token, candidate_status, conflict_kind or claim_status,
+                        content_hash=content_hash, retry_seconds=0 if candidate_status == 'available' else 3600,
+                    )
+                finally:
+                    candidate_token = None
                 attempts.append({'provider': row['provider'], 'candidateRank': row['candidate_rank'], 'conflict': conflict_kind or claim_status})
                 if conflict_kind == 'location_has_photo':
                     return None, {'location_id': location_id, 'status': 'already_claimed', 'attempts': attempts}
                 continue
-            token = claim.get('claim_token')
-            if not token:
+            photo_claim_token = claim.get('claim_token')
+            if not photo_claim_token:
                 raise RuntimeError('claim succeeded without a token')
             try:
                 key = upload_media(normalized, content_hash)
-                finalize_claim(token, key)
+                finalize_claim(photo_claim_token, key)
             except Exception:
-                release_claim(token)
+                release_claim(photo_claim_token)
                 raise
+            try:
+                complete_candidate(candidate_token, 'accepted', 'materialized', content_hash=content_hash, storage_key=key)
+            except Exception as error:
+                # The authoritative photo claim and immutable B2 object are
+                # already complete. A later reservation reconciles this row
+                # from global_photo_claims without downloading the asset again.
+                print(f'warning: candidate registry completion failed for {row["provider"]}/{row["external_photo_id"]}: {error}', flush=True)
+            candidate_token = None
             return {
                 'location_id': location_id, 'provider': row['provider'], 'external_photo_id': row['external_photo_id'],
                 'storage_backend': 'b2', 'storage_key': key, 'content_hash': content_hash, 'perceptual_hash': perceptual,
@@ -455,6 +571,16 @@ def materialize_location(candidates):
                 'rank_score': float(row.get('rank_score') or 0), 'verified_at': datetime.now(timezone.utc).isoformat()
             }, {'location_id': location_id, 'status': 'materialized', 'attempts': attempts, 'winnerRank': row['candidate_rank']}
         except Exception as error:
+            if candidate_token:
+                try:
+                    complete_candidate(
+                        candidate_token,
+                        'available' if retryable_candidate_error(error) else 'invalid',
+                        str(error)[:240],
+                        retry_seconds=3600 if retryable_candidate_error(error) else 0,
+                    )
+                except Exception as completion_error:
+                    print(f'warning: candidate registry error handling failed for {row["provider"]}/{row["external_photo_id"]}: {completion_error}', flush=True)
             attempts.append({'provider': row['provider'], 'candidateRank': row['candidate_rank'], 'error': str(error)[:240]})
     status = 'retryable_error' if any(attempt.get('error') for attempt in attempts) else 'exhausted'
     return None, {'location_id': location_id, 'status': status, 'attempts': attempts}

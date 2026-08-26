@@ -13,6 +13,7 @@ test('existing B2 photos are reconciled once and retired identities cannot resur
   const canonicalSearch = await source('scripts/global-data/location_search_common.py')
   const b2Indexer = await source('scripts/global-data/build_b2_search_index.py')
   const registration = await source('supabase/migrations/10079_reconcile_existing_global_photo_claims.sql')
+  const candidateRegistry = await source('supabase/migrations/20260826200000_global_photo_candidate_registry.sql')
   const retirement = await source('supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql')
 
   assert.doesNotMatch(workflow, /sync_retired_photo_exclusions\.py/)
@@ -44,6 +45,21 @@ test('existing B2 photos are reconciled once and retired identities cannot resur
   assert.match(materializer, /def object_exists\(key\):/)
   assert.match(materializer, /if object_exists\(bootstrap_photo\):/)
   assert.doesNotMatch(materializer, /prefix_exists\(bootstrap_photo\.rsplit/)
+
+  // Candidate identity is claimed before provider details or image bytes are
+  // fetched, while the authoritative hash registry remains the final gate.
+  assert.match(candidateRegistry, /global_photo_candidate_registry/)
+  assert.match(candidateRegistry, /unique index if not exists global_photo_candidate_registry_url_unique_idx/)
+  assert.match(candidateRegistry, /reserve_global_photo_candidate_v1/)
+  assert.match(candidateRegistry, /bind_global_photo_candidate_url_v1/)
+  assert.match(candidateRegistry, /complete_global_photo_candidate_v1/)
+  assert.match(candidateRegistry, /candidate_lease_active/)
+  assert.match(candidateRegistry, /provider_asset_already_materialized/)
+  assert.match(materializer, /reserve_global_photo_candidate_v1/)
+  assert.match(materializer, /bind_global_photo_candidate_url_v1/)
+  assert.match(materializer, /normalize_source_url/)
+  assert.match(materializer, /complete_global_photo_candidate_v1/)
+  assert.ok(materializer.indexOf('reserve_candidate(row)') < materializer.indexOf('download(candidate.get(\'asset_url\'), provider)'))
 
   // B2 serving consumes the shared canonical projection so photo retirement semantics cannot drift.
   assert.match(canonicalSearch, /photo_exclusion_glob/)

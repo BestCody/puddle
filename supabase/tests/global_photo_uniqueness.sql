@@ -121,6 +121,114 @@ begin
     raise exception 'one-photo-per-location invariant failed: status=%, kind=%',v_status,v_kind;
   end if;
 
+  -- Provider identity and normalized source URL are reserved before any
+  -- provider detail request or image download. The reservation is shared by
+  -- concurrent workers and terminal outcomes remain idempotent.
+  select reservation_status,reservation_token,prior_location_id,conflict_kind
+  into v_status,v_token,v_conflict,v_kind
+  from public.reserve_global_photo_candidate_v1(
+    '88888888-8888-8888-8888-888888888888'::uuid,
+    1::smallint,
+    'candidate-before-download',
+    'https://upload.wikimedia.org/candidate/before-download.jpg',
+    900
+  );
+  if v_status <> 'reserved' or v_token is null then
+    raise exception 'candidate was not reserved before download: status=%, token=%',v_status,v_token;
+  end if;
+
+  select reservation_status,reservation_token,prior_location_id,conflict_kind
+  into v_status,v_token,v_conflict,v_kind
+  from public.reserve_global_photo_candidate_v1(
+    '99999999-9999-9999-9999-999999999999'::uuid,
+    1::smallint,
+    'candidate-before-download',
+    'https://upload.wikimedia.org/candidate/changed-url.jpg',
+    900
+  );
+  if v_status <> 'in_flight' or v_kind <> 'candidate_lease_active' then
+    raise exception 'duplicate provider candidate was not blocked in flight: status=%, kind=%',v_status,v_kind;
+  end if;
+
+  select public.complete_global_photo_candidate_v1(
+    '00000000-0000-0000-0000-000000000000'::uuid,
+    'accepted','should-not-complete',null,null,0
+  ) into v_bool;
+  if v_bool is distinct from false then
+    raise exception 'unknown candidate reservation token unexpectedly completed';
+  end if;
+
+  -- Complete the original reservation and verify both identity keys skip it.
+  select public.complete_global_photo_candidate_v1(
+    (select lease_token from public.global_photo_candidate_registry
+     where provider_code=1 and provider_asset_id='candidate-before-download'),
+    'accepted','materialized',repeat('8',64),'media/photos/by-sha256/88/' || repeat('8',64) || '.jpg',0
+  ) into v_bool;
+  if v_bool is distinct from true then
+    raise exception 'candidate reservation did not complete';
+  end if;
+
+  select reservation_status,reservation_token,prior_location_id,conflict_kind
+  into v_status,v_token,v_conflict,v_kind
+  from public.reserve_global_photo_candidate_v1(
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+    1::smallint,
+    'candidate-before-download',
+    'https://upload.wikimedia.org/candidate/before-download.jpg',
+    900
+  );
+  if v_status <> 'seen' then
+    raise exception 'completed provider candidate was not skipped: status=%, kind=%',v_status,v_kind;
+  end if;
+
+  select reservation_status,reservation_token,prior_location_id,conflict_kind
+  into v_status,v_token,v_conflict,v_kind
+  from public.reserve_global_photo_candidate_v1(
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+    2::smallint,
+    'same-url-different-provider',
+    'https://upload.wikimedia.org/candidate/before-download.jpg',
+    900
+  );
+  if v_status <> 'seen' or v_kind <> 'source_url_seen' then
+    raise exception 'completed source URL was not deduplicated: status=%, kind=%',v_status,v_kind;
+  end if;
+
+  -- Retryable outcomes release the lease without allowing a second worker to
+  -- download concurrently; once the retry is due, a worker can reserve it.
+  select reservation_status,reservation_token,prior_location_id,conflict_kind
+  into v_status,v_token,v_conflict,v_kind
+  from public.reserve_global_photo_candidate_v1(
+    'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+    3::smallint,
+    'retryable-candidate',
+    'https://kartaview.org/candidate/retryable.jpg',
+    900
+  );
+  if v_status <> 'reserved' or v_token is null then
+    raise exception 'retryable candidate was not initially reserved: status=%',v_status;
+  end if;
+  select public.complete_global_photo_candidate_v1(v_token,'available','temporary provider error',null,null,0) into v_bool;
+  if v_bool is distinct from true then
+    raise exception 'retryable candidate was not released';
+  end if;
+  select reservation_status,reservation_token,prior_location_id,conflict_kind
+  into v_status,v_token,v_conflict,v_kind
+  from public.reserve_global_photo_candidate_v1(
+    'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid,
+    3::smallint,
+    'retryable-candidate',
+    'https://kartaview.org/candidate/retryable.jpg',
+    900
+  );
+  if v_status <> 'reserved' or v_token is null then
+    raise exception 'released retryable candidate could not be retried: status=%',v_status;
+  end if;
+  select public.complete_global_photo_candidate_v1(v_token,'invalid','invalid image',null,null,0) into v_bool;
+  if v_bool is distinct from true then
+    raise exception 'invalid candidate was not completed';
+  end if;
+
   -- Pre-registry B2 objects are installed directly as live claims after the
   -- caller verifies the immutable object bytes.
   select registration_status,conflict_location_id,conflict_kind
