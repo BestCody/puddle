@@ -358,3 +358,6 @@
   .puddle-discover-search-overlay,
   .puddle-discover-search-dialog { transition: none !important; }
 }
+
+/* Wheel gestures belong to the map and must not scroll or zoom the document. */
+.location-map-canvas { overscroll-behavior: none; }

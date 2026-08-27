@@ -16,6 +16,8 @@ test('map pans on the compositor and visible catalogue markers open details', as
 
     const map = page.getByTestId('feed-map-canvas')
     await expect(map).toBeVisible()
+    const mapCanvas = map.locator('.location-map-canvas')
+    await expect(mapCanvas).toBeVisible()
     const canvasBox = await map.boundingBox()
     expect(canvasBox).toBeTruthy()
 
@@ -40,6 +42,22 @@ test('map pans on the compositor and visible catalogue markers open details', as
     await interactiveMarker.click()
     await expect(interactiveMarker).toHaveClass(/is-selected/)
     await expect(map.getByRole('link', { name: 'Open details', exact: true })).toBeVisible()
+
+    const beforeScroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+    const beforeZoom = await mapCanvas.getAttribute('data-map-zoom')
+    const wheelBox = await mapCanvas.boundingBox()
+    expect(wheelBox).toBeTruthy()
+    await page.mouse.move(wheelBox.x + wheelBox.width * .25, wheelBox.y + wheelBox.height * .5)
+    await page.mouse.wheel(0, 500)
+    await expect.poll(() => mapCanvas.getAttribute('data-map-zoom')).not.toBe(beforeZoom)
+    expect(await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))).toEqual(beforeScroll)
+
+    const ctrlWheel = await mapCanvas.evaluate((element) => {
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: 100 })
+      element.dispatchEvent(event)
+      return event.defaultPrevented
+    })
+    expect(ctrlWheel).toBe(true)
 
     const panLayer = map.locator('.location-map-pan-layer')
     await expect(panLayer).toHaveCount(1)
