@@ -106,6 +106,7 @@ test('broken B2 photo references are excluded durably without deleting media', a
   assert.match(workflow, /repair_b2_photo_references\.py/)
   assert.match(workflow, /inputs\.apply/)
   assert.match(workflow, /build_b2_photo_search_overlay\.py/)
+  assert.match(workflow, /pip install[^\n]*brotli[^\n]*orjson/)
   assert.match(repair, /canonical_media_hashes/)
   assert.match(repair, /missing_canonical_object/)
   assert.match(repair, /repair-missing-canonical-v1\.parquet/)
