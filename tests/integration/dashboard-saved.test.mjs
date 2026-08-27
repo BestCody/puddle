@@ -99,6 +99,8 @@ test('saved places hydrate canonical metadata and open details as a same-page sh
   assert.match(morphBridge, /flushSync/)
   assert.match(morphBridge, /saved-inline-detail-layer/)
   assert.match(morphBridge, /fetch\(`\/api\/saved-location\/\$\{encodeURIComponent\(nextPreview\.slug\)\}`/)
+  assert.match(morphBridge, /useModalFocus\(detailRef, closeRef\)/)
+  assert.match(morphBridge, /event\.key === 'Escape'/)
   assert.match(morphBridge, /needsRefreshRef/)
   assert.doesNotMatch(morphBridge, /window\.location\.assign/)
   assert.doesNotMatch(morphBridge, /history\.back\(\)/)

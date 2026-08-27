@@ -38,5 +38,6 @@ test('search, create, share, and saved detail overlays share the focus boundary'
   assert.match(create, /role="dialog" aria-modal="true"/)
   assert.match(social, /useModalFocus\(sheetRef\)/)
   assert.match(social, /aria-haspopup="dialog" aria-expanded=\{open\}/)
-  assert.match(saved, /useModalFocus\(detailRef\)/)
+  assert.match(saved, /useModalFocus\(detailRef, closeRef\)/)
+  assert.match(saved, /if \(event\.key === 'Escape'\) onClose\(\)/)
 })

@@ -85,6 +85,7 @@ function mapPoint(location, state) {
 
 function SamePageSavedDetail({ preview, detail, busy, message, detailError, names, onClose, onRetry, onAction }) {
   const detailRef = useRef(null)
+  const closeRef = useRef(null)
   const location = detail?.location || {
     id: preview.key,
     slug: preview.slug,
@@ -100,12 +101,20 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
   const posts = detail?.posts || []
   const similarPlaces = (detail?.similar || []).filter((item) => item?.content_kind !== 'event' && item?.slug)
 
-  useModalFocus(detailRef)
+  useModalFocus(detailRef, closeRef)
+
+  useEffect(() => {
+    function closeOnEscape(event) {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
 
   return <div ref={detailRef} className="saved-inline-detail-layer" role="dialog" aria-modal="true" aria-label={`${location.name} details`} tabIndex={-1}>
     <button className="saved-inline-detail-backdrop" type="button" aria-label="Close saved details" onClick={onClose} />
     <article className="saved-inline-detail-card" style={{ viewTransitionName: names.card }}>
-      <button className="saved-inline-detail-close" type="button" onClick={onClose} aria-label="Close saved details">×</button>
+      <button ref={closeRef} className="saved-inline-detail-close" type="button" onClick={onClose} aria-label="Close saved details">×</button>
 
       <div className="saved-inline-detail-main">
         <PhotoFrame className="saved-inline-detail-hero" data-inline-morph-photo src={image} alt={`${location.name} photo`} loading="eager" style={{ viewTransitionName: names.photo }} />

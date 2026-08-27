@@ -37,6 +37,7 @@ test('social feed media and action controls render without corrupted glyphs or b
   assert.match(socialBar, /friendsError/)
   assert.match(socialBar, /Friends could not be loaded\./)
   assert.match(socialBar, /Try again/)
+  assert.match(socialBar, /event\.key === 'Escape'/)
   assert.match(photoFrame, /onLoad=\{\(\) => setLoaded\(true\)\}/)
   assert.match(photoFrame, /data-photo-state=\{state\}/)
 })
