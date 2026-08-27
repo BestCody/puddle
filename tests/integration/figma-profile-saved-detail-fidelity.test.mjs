@@ -133,6 +133,8 @@ test('Saved detail media and secondary reads expose resilient user-facing states
   assert.doesNotMatch(similar, /error\?\.message/)
   assert.match(similar, /PhotoFrame as="span"/)
   assert.match(photoFrame, /onError=\{\(\) => setFailed\(true\)\}/)
+  assert.match(photoFrame, /onLoad=\{\(\) => setLoaded\(true\)\}/)
+  assert.match(photoFrame, /data-photo-state=\{state\}/)
   assert.match(photoFrame, /Photo unavailable/)
   assert.match(styles, /\.detailHero > img/)
   assert.match(styles, /\.detailHeroUnavailable/)

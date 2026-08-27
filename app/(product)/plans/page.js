@@ -4,6 +4,7 @@ import { InstantSegment } from '@/components/instant-segment'
 import { SavedSearchOverlay } from '@/components/discover-search-overlay'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { SavedLightweightGrid } from '@/components/saved-lightweight-grid'
+import { PhotoFrame } from '@/components/photo-frame'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import styles from './Plans.module.css'
@@ -56,15 +57,20 @@ function SavedCard({ item, session, active }) {
   const secondaryMeta = active === 'planned' && item.planned_for ? dateLabel(item.planned_for) : null
   const morphable = active === 'saved' && Boolean(item.slug)
 
-  const photo = morphable
-    ? <a className={styles.placePhoto} href={detail} data-saved-morph-link data-saved-morph-photo style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
-        {!image ? <span aria-hidden="true">Puddle</span> : null}
-        {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
-      </a>
-    : <Link className={styles.placePhoto} href={detail} style={image ? { backgroundImage: `url(${image})` } : undefined} aria-label={`Open ${item.title}`}>
-        {!image ? <span aria-hidden="true">Puddle</span> : null}
-        {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
-      </Link>
+  const photo = <PhotoFrame
+    as="a"
+    href={detail}
+    className={styles.placePhoto}
+    unavailableClassName={styles.placePhotoUnavailable}
+    src={image}
+    alt={`${item.title} photo`}
+    aria-label={`Open ${item.title}`}
+    unavailableText={image ? 'Photo unavailable' : 'Puddle'}
+    data-saved-morph-link={morphable ? '' : undefined}
+    data-saved-morph-photo={morphable ? '' : undefined}
+  >
+    {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
+  </PhotoFrame>
 
   const title = morphable
     ? <a href={detail} data-saved-morph-link>{item.title}</a>

@@ -61,22 +61,6 @@
     padding-bottom: 3px !important;
   }
 
-  /* Friends node 32:17 */
-  /* The legacy social shell adds 28px horizontal page padding. Figma already
-     places the 954px two-panel workspace explicitly at x=308, so retaining
-     that generic padding shrinks and shifts the actual Friends panels. */
-  .social-hub { padding-left: 0 !important; padding-right: 0 !important; }
-  .social-tabs { width: 238px !important; height: 48px !important; }
-  .social-tabs button {
-    min-width: 0 !important;
-    height: 36px !important;
-    padding-inline: 7px !important;
-  }
-  /* DOM order is Add, Message, Shared; Figma visually orders Message, Shared, Add. */
-  .social-tabs button:nth-child(2) { flex: 0 0 92px !important; }
-  .social-tabs button:nth-child(3) { flex: 0 0 75px !important; }
-  .social-tabs button:nth-child(1) { flex: 0 0 59px !important; }
-
   /* Pass node 40:312 */
   .figma-pass-segment { width: 167px !important; height: 48px !important; }
   .figma-pass-segment > a {

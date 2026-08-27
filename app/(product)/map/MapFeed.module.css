@@ -225,6 +225,16 @@
   object-fit: cover;
 }
 
+.photo[data-photo-state='loading'] {
+  color: #858585;
+  text-align: center;
+  font: 700 13px/1.2 Manrope, sans-serif;
+}
+
+.photo[data-photo-state='loading'] > img {
+  opacity: 0;
+}
+
 .photoUnavailable {
   padding: 1rem;
   color: #858585;

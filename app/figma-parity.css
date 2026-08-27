@@ -57,7 +57,6 @@
   /* Only Swipe has the top-right menu in the current desktop Figma. */
   .minimal-product-shell:has(.figma-feed-page) .minimal-product-header,
   .minimal-product-shell:has(.figma-saved-page) .minimal-product-header,
-  .minimal-product-shell:has(.social-hub) .minimal-product-header,
   .minimal-product-shell:has(.figma-pass-page) .minimal-product-header,
   .minimal-product-shell:has(.minimal-profile-page) .minimal-product-header,
   .minimal-product-shell:has(.figma-settings-page) .minimal-product-header {
@@ -179,29 +178,6 @@
     left: 750px !important;
     bottom: 44px !important;
     width: 420px !important;
-  }
-
-  /* Friends node 32:17. */
-  .minimal-product-main:has(.social-hub) {
-    padding: 39px 0 48px !important;
-  }
-  .social-hub {
-    width: 954px !important;
-    max-width: 954px !important;
-    min-height: 763px !important;
-    margin: 0 0 0 28px !important;
-    padding-top: 63px !important;
-    transform: none !important;
-  }
-  .social-messages-layout {
-    grid-template-columns: 339px 602px !important;
-    gap: 13px !important;
-    min-height: 700px !important;
-  }
-  .social-conversation-list,
-  .social-chat-panel {
-    min-height: 700px !important;
-    height: 700px !important;
   }
 
   /* Pass node 40:312. */

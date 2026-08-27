@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8
 
 test('active messaging uses cursor-paged inbox and newest-first message pages', async () => {
   const data = await read('lib/app/social-hub-data.js')
-  const ui = await read('components/figma-social-hub.js')
+  const ui = await read('components/figma-messages-realtime.js')
   const migration = await read('supabase/migrations/10065_scalability_hardening.sql')
   const edges = await read('supabase/migrations/10068_scalability_edge_hardening.sql')
   const bounds = await read('supabase/migrations/10069_scalability_work_bounds.sql')

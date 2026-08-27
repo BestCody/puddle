@@ -156,7 +156,7 @@ button,input,select,textarea{max-width:100%}
   .product-header-actions,.public-header nav,.app-nav{gap:.4rem}
   .product-hero,.profile-hero,.public-listing-hero{border-radius:22px}
   .product-title,.product-hero h1,.public-hero-copy h1,.public-host-hero h1{font-size:clamp(2.25rem,13vw,3.2rem)}
-  .page-heading-row,.product-toolbar,.public-safety-bar,.listing-social-heading,.social-section-heading,.conversation-header,.location-sharing-heading,.active-location-card,.ai-creation-heading,.admin-header,.admin-case-heading{align-items:flex-start;flex-direction:column}
+  .page-heading-row,.product-toolbar,.public-safety-bar,.listing-social-heading,.conversation-header,.location-sharing-heading,.active-location-card,.ai-creation-heading,.admin-header,.admin-case-heading{align-items:flex-start;flex-direction:column}
   .deck-stack{height:clamp(500px,145vw,555px)}
   .discovery-art{height:50%}
   .content-tile{grid-template-columns:95px minmax(0,1fr)}
