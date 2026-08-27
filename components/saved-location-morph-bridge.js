@@ -96,6 +96,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
   const point = mapPoint(location, detail?.state)
   const center = point.length ? { latitude: point[0].latitude, longitude: point[0].longitude } : null
   const posts = detail?.posts || []
+  const similarPlaces = (detail?.similar || []).filter((item) => item?.content_kind !== 'event' && item?.slug)
 
   return <div className="saved-inline-detail-layer" role="dialog" aria-modal="true" aria-label={`${location.name} details`}>
     <button className="saved-inline-detail-backdrop" type="button" aria-label="Close saved details" onClick={onClose} />
@@ -159,7 +160,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
       <aside className="saved-inline-detail-side">
         <div className="saved-inline-detail-map">{detail && point.length ? <LocationMap initialPoints={point} initialCenter={center} /> : detail ? <div className="saved-inline-detail-map-empty">Map unavailable</div> : <div className="saved-inline-detail-map-loading" />}</div>
         {location.summary || location.description ? <p className="saved-inline-detail-summary">{location.summary || location.description}</p> : null}
-        {detail?.similar?.length ? <div className="saved-inline-detail-similar"><h2>Similar splashes</h2>{detail.similar.map((item) => { const title = item.title || item.name || 'Puddle'; return <a href={item.content_kind === 'event' ? `/events/${item.slug}` : `/plans/${item.slug}`} key={`${item.content_kind || 'place'}:${item.id}`}><PhotoFrame as="span" src={item.cover_url} alt={`${title} photo`} className="saved-inline-detail-similar-photo" /><strong>{title}</strong></a> })}</div> : null}
+        {similarPlaces.length ? <div className="saved-inline-detail-similar"><h2>Similar splashes</h2>{similarPlaces.map((item) => { const title = item.title || item.name || 'Puddle'; return <a href={`/places/${encodeURIComponent(item.slug)}`} key={`place:${item.id || item.slug}`}><PhotoFrame as="span" src={item.cover_url} alt={`${title} photo`} className="saved-inline-detail-similar-photo" /><strong>{title}</strong></a> })}</div> : null}
       </aside>
     </article>
   </div>

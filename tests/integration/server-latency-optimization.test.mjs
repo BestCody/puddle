@@ -89,7 +89,7 @@ test('Public catalogue reads share short-lived immutable search results across u
 })
 
 test('Hot cached routes load the B2 search graph only when catalogue data is needed', async () => {
-  const sources = await Promise.all([
+  const [discovery, map, socialFeed, plans, publicLocation, publicContent, mapData] = await Promise.all([
     read('lib/app/discovery-global.js'),
     read('app/api/map/viewport/route.js'),
     read('lib/app/social-feed-data.js'),
@@ -98,10 +98,12 @@ test('Hot cached routes load the B2 search graph only when catalogue data is nee
     read('lib/app/public-content.js'),
     read('lib/app/location-map-data.js')
   ])
-  for (const source of sources) {
+  for (const source of [discovery, map, socialFeed, plans, publicLocation, mapData]) {
     assert.match(source, /await import\(['"][^'"]*global-location-search(?:\.js)?['"]\)/)
     assert.doesNotMatch(source, /import \{[^}]+\} from ['"][^'"]*global-location-search(?:\.js)?['"]/)
   }
+  assert.match(publicContent, /getCachedPublicLocation/)
+  assert.doesNotMatch(publicContent, /global-location-search/)
 })
 
 test('Dashboard shell defers its one trusted bootstrap RPC until after critical HTML', async () => {

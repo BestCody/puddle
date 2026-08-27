@@ -122,3 +122,22 @@ test('public listing and upload previews do not contain silent image paths', asy
   assert.doesNotMatch(uploader, /<img/)
   assert.match(uploader, /Preview unavailable/)
 })
+
+test('public recommendations expose only supported place destinations', async () => {
+  const [content, cache, similar, morph] = await Promise.all([
+    read('lib/app/public-content.js'),
+    read('lib/app/public-location-cache.js'),
+    read('app/(product)/plans/[slug]/similar-places.js'),
+    read('components/saved-location-morph-bridge.js')
+  ])
+
+  assert.doesNotMatch(content, /getPublicEvent|getPublicHost|demoEvent|demoPlace|demoHost|eventStructuredData/)
+  assert.match(cache, /public-location-recommendations-v2/)
+  assert.doesNotMatch(cache, /relatedEvents|content_kind:\s*'event'|from\('events'\)/)
+  assert.match(similar, /content_kind !== 'event'/)
+  assert.match(similar, /`\/places\/\$\{encodeURIComponent\(item\.slug\)\}`/)
+  assert.doesNotMatch(similar, /\/events\//)
+  assert.match(morph, /content_kind !== 'event'/)
+  assert.match(morph, /`\/places\/\$\{encodeURIComponent\(item\.slug\)\}`/)
+  assert.doesNotMatch(morph, /\/events\//)
+})
