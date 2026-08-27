@@ -34,6 +34,23 @@ async function expectDashboardMainFillsStage(page) {
   expect(Math.abs(geometry.mainWidth - geometry.stageWidth)).toBeLessThanOrEqual(2)
 }
 
+async function expectActiveSegmentHighlight(segment) {
+  const highlight = await segment.evaluate((element) => {
+    const active = element.querySelector(':scope > .is-active')
+    const pseudo = getComputedStyle(element, '::before')
+    return {
+      activeText: active?.textContent?.trim() || '',
+      pseudoContent: pseudo.content,
+      pseudoBackground: pseudo.backgroundColor,
+      pseudoWidth: Number.parseFloat(pseudo.width) || 0
+    }
+  })
+  expect(highlight.activeText).not.toBe('')
+  expect(highlight.pseudoContent).toBe('""')
+  expect(highlight.pseudoBackground).not.toBe('rgba(0, 0, 0, 0)')
+  expect(highlight.pseudoWidth).toBeGreaterThan(0)
+}
+
 test('authenticated desktop dashboard keeps navigation and core product behavior usable', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Desktop dashboard contract only')
 
@@ -90,6 +107,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const feedTabs = page.getByTestId('feed-tabs')
   await expect(feedTabs.getByRole('link', { name: 'Posts', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
+  await expectActiveSegmentHighlight(feedTabs)
   const feedSearch = page.getByTestId('feed-search')
   await expect(feedSearch).toBeVisible()
   await expect(feedSearch).toContainText('Search Puddles')
@@ -136,6 +154,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const savedTabs = page.getByTestId('saved-tabs')
   await expect(savedTabs.getByRole('link', { name: 'Saved', exact: true })).toBeVisible()
   await expect(savedTabs.getByRole('link', { name: 'Plans', exact: true })).toBeVisible()
+  await expectActiveSegmentHighlight(savedTabs)
   await expect(page.getByTestId('saved-categories')).toBeVisible()
   await expect(page.getByTestId('saved-search')).toBeVisible()
   await savedTabs.getByRole('link', { name: 'Plans', exact: true }).click()
@@ -146,6 +165,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await openDesktop(page, '/matches')
   await expect(page.locator('.figma-friends-message-layout')).toBeVisible()
   const friendsTabs = page.locator('.figma-friends-tabs')
+  await expectActiveSegmentHighlight(friendsTabs)
   await friendsTabs.getByRole('link', { name: 'Shared', exact: true }).click()
   await expect(page).toHaveURL(/\/matches\?tab=shared/)
   await expect(page.locator('.figma-friends-shared-view')).toBeVisible()
@@ -158,6 +178,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(page.locator('.figma-pass-plan-free').getByText('Free', { exact: true })).toBeVisible()
   await expect(page.locator('.figma-pass-plan-paid').getByText('Pass', { exact: true })).toBeVisible()
   await expect(page.getByText('Notification alerts', { exact: true })).toBeVisible()
+  await expectActiveSegmentHighlight(page.locator('.figma-pass-tabs'))
   await expect(page.getByText('Billed monthly. Taxes and renewal terms appear before payment.', { exact: true })).toHaveCount(0)
   await page.locator('.figma-pass-tabs').getByRole('link', { name: 'Manage', exact: true }).click()
   await expect(page).toHaveURL(/\/membership\?view=manage/)
