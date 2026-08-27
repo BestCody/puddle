@@ -187,6 +187,7 @@
 
 .photo {
   min-width: 0;
+  position: relative;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -203,9 +204,43 @@
   grid-row: span 2;
 }
 
+.photoSingle {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}
+
+.photoPair {
+  grid-row: span 2;
+}
+
 .photoEmpty {
   grid-column: 1 / -1;
   grid-row: 1 / -1;
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.photoUnavailable {
+  padding: 1rem;
+  color: #858585;
+  text-align: center;
+  font: 700 13px/1.2 Manrope, sans-serif;
+}
+
+.photoCount {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, .72);
+  color: #fff;
+  font: 800 13px/1 Manrope, sans-serif;
 }
 
 .place {
@@ -274,6 +309,11 @@
 }
 
 .interactions > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
   color: #858585;
   font: 500 26px/1 Manrope, sans-serif;
   text-decoration: none;
@@ -553,6 +593,25 @@
   overscroll-behavior: none;
 }
 
+.actionIcon {
+  width: 25px;
+  height: 25px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.actionIconFilled {
+  fill: currentColor;
+}
+
+.actionCount {
+  min-width: 1ch;
+}
+
 .mapEmpty {
   position: absolute;
   inset: 0;
@@ -561,76 +620,6 @@
   background: #eee;
   color: #858585;
   font: 800 18px/1.3 Manrope, sans-serif;
-}
-
-.mapPuddle {
-  position: absolute;
-  top: 172.16px;
-  left: 82.18px;
-  width: 440.361px;
-  height: 545.555px;
-  pointer-events: none;
-  border-radius: 45% 55% 48% 52% / 36% 44% 56% 64%;
-  background: rgba(76, 165, 247, .25);
-}
-
-.mapCard {
-  position: absolute;
-  top: 435px;
-  left: 149px;
-  width: 303.574px;
-  min-height: 114.015px;
-  padding: 11px 48px 12px 13px;
-  overflow: hidden;
-  border-radius: 17.487px;
-  background: #4ca5f7;
-  color: #fff;
-  text-decoration: none;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, .12);
-  box-sizing: border-box;
-}
-
-.mapCardMeta,
-.mapCardArea {
-  min-height: 17.822px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 6px;
-  border-radius: 20.984px;
-  background: #25639d;
-  font: 600 9.523px/1 var(--figma-mono);
-}
-
-.mapCardArea {
-  position: absolute;
-  top: 7.78px;
-  right: 11px;
-}
-
-.mapCard strong {
-  display: block;
-  max-width: 264px;
-  margin-top: 42px;
-  overflow-wrap: anywhere;
-  font: 800 21.858px/1 Manrope, sans-serif;
-  letter-spacing: -1.8215px;
-}
-
-.mapCardAdd {
-  position: absolute;
-  right: 11px;
-  bottom: 8px;
-  width: 28.363px;
-  height: 27.463px;
-  display: grid;
-  place-items: center;
-  border-radius: 17.487px;
-  background: #25639d;
-  font: 500 23px/1 Manrope, sans-serif;
-}
-
-.mapSearch {
-  display: none;
 }
 
 .mapSelectionNotice {
@@ -958,65 +947,4 @@
     max-height: calc(100% - 108px);
   }
 
-  .mapPuddle {
-    top: 58.74px;
-    left: -164.92px;
-    width: 440.361px;
-    height: 545.555px;
-    border-radius: 52% 48% 57% 43% / 38% 43% 57% 62%;
-    background: rgba(76, 165, 247, .28);
-    transform: rotate(-6deg);
-  }
-
-  .mapCard {
-    top: 319px;
-    left: -125px;
-    width: 303.574px;
-    min-height: 114.015px;
-    border-radius: 17.487px;
-  }
-
-  .mapSearch {
-    position: absolute;
-    z-index: 35;
-    left: calc(50% - 4px);
-    bottom: 117px;
-    width: 190px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 12px 0 16px;
-    transform: translateX(-50%);
-    border: 2.5px solid #d9d9d9;
-    border-radius: 999px;
-    background: #fff;
-    box-sizing: border-box;
-  }
-
-  .mapSearch label {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .mapSearch input {
-    width: 100%;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: #333;
-    font: 600 16px/1 Manrope, sans-serif;
-  }
-
-  .mapSearch input::placeholder {
-    color: #b3b3b3;
-  }
-
-  .mapSearch button {
-    border: 0;
-    background: transparent;
-    color: #111;
-    cursor: pointer;
-    font-size: 18px;
-  }
 }

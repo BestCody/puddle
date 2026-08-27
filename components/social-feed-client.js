@@ -29,14 +29,56 @@ function timeLabel(value) {
   return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }
 
+function FeedPhoto({ href, locationName, url, label, className = '', moreCount = 0 }) {
+  const [failed, setFailed] = useState(false)
+  const unavailable = !url || failed
+  return <Link
+    href={href}
+    className={`${styles.photo} ${className} ${unavailable ? styles.photoUnavailable : ''}`}
+    aria-label={unavailable ? `No verified photo available for ${locationName}` : label}
+  >
+    {unavailable ? <span>Photo unavailable</span> : <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />}
+    {moreCount > 0 ? <span className={styles.photoCount}>+{moreCount}</span> : null}
+  </Link>
+}
+
 function FeedPhotos({ post, href }) {
-  const photos = Array.isArray(post.photo_urls) ? post.photo_urls : []
+  const photos = Array.isArray(post.photo_urls) ? post.photo_urls.filter(Boolean) : []
   const count = photos.length
-  return <div className={styles.photos} aria-label={`${post.location.name} photos`}>
-    <Link href={href} className={`${styles.photo} ${styles.photoMain}`} style={photos[0] ? { backgroundImage: `url(${photos[0]})` } : undefined} aria-label={`Open ${post.location.name}`} />
-    <Link href={href} className={styles.photo} style={photos[1] ? { backgroundImage: `url(${photos[1]})` } : undefined} aria-label={`Open ${post.location.name} photo 2`} />
-    <Link href={href} className={styles.photo} style={photos[2] ? { backgroundImage: `url(${photos[2]})` } : undefined} aria-label={`Open ${post.location.name} photo 3`}>{count > 3 ? `+${count - 2}` : null}</Link>
+  const locationName = post.location.name
+  if (!count) return <div className={styles.photos} aria-label={`${locationName} photos`}>
+    <FeedPhoto href={href} locationName={locationName} url={null} label={`Open ${locationName}`} className={styles.photoEmpty} />
   </div>
+  return <div className={styles.photos} aria-label={`${locationName} photos`}>
+    {photos.slice(0, 3).map((url, index) => {
+      const layoutClass = count === 1
+        ? styles.photoSingle
+        : count === 2
+          ? (index === 0 ? styles.photoMain : styles.photoPair)
+          : index === 0 ? styles.photoMain : ''
+      return <FeedPhoto
+        key={`${url}:${index}`}
+        href={href}
+        locationName={locationName}
+        url={url}
+        label={`Open ${locationName}${index ? ` photo ${index + 1}` : ''}`}
+        className={layoutClass}
+        moreCount={index === 2 ? count - 3 : 0}
+      />
+    })}
+  </div>
+}
+
+function CommentIcon() {
+  return <svg className={styles.actionIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h15v10h-9l-4.5 3v-3H4.5v-10Z" /></svg>
+}
+
+function OpenPuddleIcon() {
+  return <svg className={styles.actionIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>
+}
+
+function SaveIcon({ saved }) {
+  return <svg className={`${styles.actionIcon} ${saved ? styles.actionIconFilled : ''}`} viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.6c0 5-8.8 10.4-8.8 10.4S3.2 13.6 3.2 8.6A4.6 4.6 0 0 1 12 6.7a4.6 4.6 0 0 1 8.8 1.9Z" /></svg>
 }
 
 function FeedPost({ post }) {
@@ -59,14 +101,14 @@ function FeedPost({ post }) {
     </Link>
     <footer className={styles.interactions} aria-label="Post actions">
       <details className={styles.actionMenu}>
-        <summary aria-label={`Comment on ${post.title}`}>â—¯<span>{comments.length || ''}</span></summary>
+        <summary aria-label={`Comment on ${post.title}`}><CommentIcon /><span className={styles.actionCount}>{comments.length || ''}</span></summary>
         <div className={styles.actionPanel}>
           {comments.length ? <div className={styles.commentList}>{comments.map((comment) => <p key={comment.id}><strong>{comment.author?.display_name || comment.author?.username || 'Puddle person'}</strong><span>{comment.body}</span></p>)}</div> : <p>No recent comments.</p>}
           <form action={createFeedComment}><input type="hidden" name="post_id" value={post.id} /><input name="comment_body" required maxLength="2000" placeholder="Add a comment" aria-label="Add a comment" /><button type="submit">Post</button></form>
         </div>
       </details>
-      <Link href={href} aria-label="Open puddle">â—’</Link>
-      <form action={toggleFeedSave}><input type="hidden" name="location_id" value={post.location_id} /><button className={post.saved ? styles.saved : ''} type="submit" aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}>{post.saved ? 'â™¥' : 'â™¡'}</button></form>
+      <Link href={href} aria-label="Open puddle"><OpenPuddleIcon /></Link>
+      <form action={toggleFeedSave}><input type="hidden" name="location_id" value={post.location_id} /><button className={post.saved ? styles.saved : ''} type="submit" aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}><SaveIcon saved={post.saved} /></button></form>
       <FeedShareMenu postId={post.id} title={post.title || location.name} />
     </footer>
   </article>
@@ -149,7 +191,7 @@ export function SocialFeedClient({
     <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
       {error ? <div className={styles.empty} role="alert"><strong>Could not load posts.</strong><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button><small>{error}</small></div>
         : feed ? <FeedStream feed={feed} query={query} />
-          : <div className={styles.empty} role="status" aria-label="Loading posts"><strong>Loadingâ€¦</strong></div>}
+          : <div className={styles.empty} role="status" aria-label="Loading posts"><strong>Loading…</strong></div>}
     </section>
     <DiscoverCreatePuddle
       avatarUrl={identity.avatarUrl}
