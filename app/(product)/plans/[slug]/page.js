@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { AuthMessage } from '@/components/auth-message'
 import { LocationMap } from '@/components/location-map'
+import { PhotoFrame } from '@/components/photo-frame'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getPublicLocation } from '@/lib/app/public-content'
@@ -107,7 +108,15 @@ export default async function SavedPlacePage({ params, searchParams }) {
       <article className={styles.detailCard} data-testid="saved-detail-card" style={{ viewTransitionName: transitionNames.card }}>
         <div className={styles.detailLeft}>
           <section className={styles.detailMedia} aria-label={`${location.name} photo`} data-testid="saved-detail-media">
-            <div className={styles.detailHero} style={{ ...(gallery[0] ? { backgroundImage: `url(${gallery[0]})` } : {}), viewTransitionName: transitionNames.photo }} />
+            <PhotoFrame
+              src={gallery[0]}
+              alt={`${location.name} photo`}
+              className={styles.detailHero}
+              unavailableClassName={styles.detailHeroUnavailable}
+              loading="eager"
+              fetchPriority="high"
+              style={{ viewTransitionName: transitionNames.photo }}
+            />
           </section>
 
           <div className={styles.detailActions} aria-label="Saved place actions">

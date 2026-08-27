@@ -110,3 +110,38 @@ test('Saved Place Open preserves Figma 38:223 relationships through scoped struc
   assert.doesNotMatch(layout, /figma-dashboard-saved\.css/)
   assert.doesNotMatch(layout, /figma-dashboard-saved-detail-fidelity\.css/)
 })
+
+test('Saved detail media and secondary reads expose resilient user-facing states', async () => {
+  const [page, reviews, similar, photoFrame, styles, morph] = await Promise.all([
+    read('app/(product)/plans/[slug]/page.js'),
+    read('app/(product)/plans/[slug]/detail-reviews.js'),
+    read('app/(product)/plans/[slug]/similar-places.js'),
+    read('components/photo-frame.js'),
+    read('app/(product)/plans/Plans.module.css'),
+    read('components/saved-location-morph-bridge.js')
+  ])
+
+  assert.match(page, /<PhotoFrame[\s\S]*detailHero/)
+  assert.match(page, /fetchPriority="high"/)
+  assert.match(reviews, /setRetry/)
+  assert.match(reviews, /Loading reviews…/)
+  assert.match(reviews, /Reviews could not be loaded\./)
+  assert.match(reviews, /Try again/)
+  assert.match(similar, /setRetry/)
+  assert.match(similar, /Loading similar places…/)
+  assert.match(similar, /Recommendations could not be loaded\./)
+  assert.doesNotMatch(similar, /error\?\.message/)
+  assert.match(similar, /PhotoFrame as="span"/)
+  assert.match(photoFrame, /onError=\{\(\) => setFailed\(true\)\}/)
+  assert.match(photoFrame, /Photo unavailable/)
+  assert.match(styles, /\.detailHero > img/)
+  assert.match(styles, /\.detailHeroUnavailable/)
+  assert.match(styles, /\.similarPhoto > img/)
+  assert.match(styles, /\.similarPhotoUnavailable/)
+  assert.match(styles, /\.reviewStatusError/)
+  assert.match(morph, /className="saved-inline-detail-hero" data-inline-morph-photo/)
+  assert.match(morph, /saved-inline-detail-similar-photo/)
+  assert.match(morph, /detailError/)
+  assert.match(morph, /Saved details could not be loaded\./)
+  assert.match(morph, /onRetry=\{retryDetail\}/)
+})
