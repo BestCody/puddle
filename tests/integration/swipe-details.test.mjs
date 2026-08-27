@@ -5,9 +5,10 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('swipe full details stays inside the deck and keeps decisions in context', async () => {
-  const [card, styles] = await Promise.all([
+  const [card, styles, focus] = await Promise.all([
     read('components/figma-swipe-card.js'),
-    read('app/figma-dashboard-swipe.css')
+    read('app/figma-dashboard-swipe.css'),
+    read('components/modal-focus.js')
   ])
 
   assert.doesNotMatch(card, /Link href=\{item\.href\}/)
@@ -22,6 +23,13 @@ test('swipe full details stays inside the deck and keeps decisions in context', 
   assert.match(card, /onError=\{\(\) => setFailed\(true\)\}/)
   assert.match(card, /mainPhotoFailed/)
   assert.match(card, /No verified photo is available/)
+  assert.match(card, /useModalFocus\(dialog, close\)/)
+  assert.match(card, /tabIndex=\{-1\}/)
+  assert.match(card, /event\.preventDefault\(\); choose\('pass'\)/)
+  assert.match(focus, /event\.key !== 'Tab'/)
+  assert.match(focus, /document\.activeElement === first/)
+  assert.match(focus, /document\.activeElement === last/)
+  assert.match(focus, /previous\?\.isConnected/)
   assert.match(styles, /\.figma-swipe-details-actions/)
   assert.match(styles, /grid-template-columns:\s*repeat\(3,\s*1fr\)/)
   assert.match(styles, /\.figma-swipe-details-photo-empty/)

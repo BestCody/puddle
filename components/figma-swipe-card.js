@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DISCOVERY_IMAGE_SIZES, canOptimizeDiscoveryImage } from '@/lib/media/discovery-image'
+import { useModalFocus } from '@/components/modal-focus'
 
 const labels = {
   cafe: 'Coffee', restaurant: 'Restaurant', bar: 'Bar', park: 'Park', museum: 'Museum',
@@ -35,16 +36,16 @@ function DetailsPhoto({ url, title, index }) {
 
 function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
   const close = useRef(null)
+  const dialog = useRef(null)
+  useModalFocus(dialog, close)
   useEffect(() => {
-    const previous = document.activeElement
-    close.current?.focus()
     function keydown(event) { if (event.key === 'Escape') onClose() }
     window.addEventListener('keydown', keydown)
-    return () => { window.removeEventListener('keydown', keydown); previous?.focus?.() }
+    return () => window.removeEventListener('keydown', keydown)
   }, [onClose])
 
   return <div className="figma-swipe-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section className="figma-swipe-details" role="dialog" aria-modal="true" aria-label={`Full details for ${item.title}`}>
+    <section ref={dialog} className="figma-swipe-details" role="dialog" aria-modal="true" aria-label={`Full details for ${item.title}`} tabIndex={-1}>
       <button ref={close} type="button" className="figma-swipe-details-close" onClick={onClose} aria-label="Close details">×</button>
       {photoUrls.length ? <div className="figma-swipe-details-gallery">{photoUrls.slice(0, 3).map((url, index) => <DetailsPhoto url={url} title={item.title} index={index} key={url} />)}</div> : null}
       <span className="figma-swipe-details-kicker">{categoryLabel(item.category)}</span>
@@ -130,9 +131,9 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       onPointerCancel={pointerUp}
       tabIndex={0}
       onKeyDown={(event) => {
-        if (event.key === 'ArrowLeft') choose('pass')
-        if (event.key === 'ArrowRight') choose('save')
-        if (event.key === 'Enter' || event.key === 'ArrowUp') setDetailsOpen(true)
+        if (event.key === 'ArrowLeft') { event.preventDefault(); choose('pass') }
+        if (event.key === 'ArrowRight') { event.preventDefault(); choose('save') }
+        if (event.key === 'Enter' || event.key === 'ArrowUp') { event.preventDefault(); setDetailsOpen(true) }
       }}
       aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >

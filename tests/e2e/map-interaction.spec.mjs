@@ -87,6 +87,16 @@ test('map clusters are clickable, pans on the compositor, and markers show direc
     await expect(map.getByRole('link', { name: 'Directions', exact: true })).toBeVisible()
     await expect(map.getByRole('link', { name: 'Open details', exact: true })).toHaveCount(0)
 
+    await mapCanvas.focus()
+    const beforeKeyboardPan = await mapCanvas.getAttribute('data-map-center-longitude')
+    const beforeKeyboardZoom = await mapCanvas.getAttribute('data-map-zoom')
+    const beforeKeyboardScroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(() => mapCanvas.getAttribute('data-map-center-longitude')).not.toBe(beforeKeyboardPan)
+    await page.keyboard.press('+')
+    await expect.poll(() => mapCanvas.getAttribute('data-map-zoom')).not.toBe(beforeKeyboardZoom)
+    expect(await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))).toEqual(beforeKeyboardScroll)
+
     const beforeScroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
     const beforeZoom = await mapCanvas.getAttribute('data-map-zoom')
     const wheelBox = await mapCanvas.boundingBox()

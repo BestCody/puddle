@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { csrfFetch } from '@/lib/security/csrf-client'
+import { useModalFocus } from '@/components/modal-focus'
 
 const PREFERENCE_CATEGORIES = [
   { value: 'cafe', label: 'Coffee shops' },
@@ -25,10 +26,22 @@ function categoryLabel(value) {
 }
 
 export function DiscoveryFilterSheet({ filters, categories = [], onChange, onApply, onClose, loading }) {
+  const sheetRef = useRef(null)
+  const closeRef = useRef(null)
   const [locationQuery, setLocationQuery] = useState(filters.locationLabel || '')
   const [locationResults, setLocationResults] = useState([])
   const [locationMessage, setLocationMessage] = useState('')
   const [locationBusy, setLocationBusy] = useState(false)
+
+  useModalFocus(sheetRef, closeRef)
+
+  useEffect(() => {
+    function closeOnEscape(event) {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
 
   useEffect(() => {
     setLocationQuery(filters.locationLabel || '')
@@ -96,8 +109,8 @@ export function DiscoveryFilterSheet({ filters, categories = [], onChange, onApp
 
   return (
     <div className="minimal-details-backdrop puddle-universal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <section className="minimal-filter-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title">
-        <header><h2 id="filter-title">Filters</h2><button type="button" onClick={onClose} aria-label="Close filters">×</button></header>
+      <section ref={sheetRef} className="minimal-filter-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title" tabIndex={-1}>
+        <header><h2 id="filter-title">Filters</h2><button ref={closeRef} type="button" onClick={onClose} aria-label="Close filters">×</button></header>
 
         <div className="location-picker">
           <label className="field location-search-field">Location
