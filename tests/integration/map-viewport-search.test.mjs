@@ -67,6 +67,8 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(mapSource, /suppressClickUntilRef/)
   assert.match(mapSource, /distance > 6/)
   assert.match(mapSource, /startDrag\(event, press\)/)
+  assert.match(mapSource, /suppressClickUntilRef\.current > Date\.now\(\)/)
+  assert.match(mapSource, /data-map-point-id=\{point\.id\}/)
   assert.match(mapSource, /addEventListener\('wheel', onWheel, \{ passive: false \}\)/)
   assert.doesNotMatch(mapSource, /onWheel=\{wheel\}/)
   assert.match(mapStyles, /\.location-map-canvas \{ overscroll-behavior: none; \}/)

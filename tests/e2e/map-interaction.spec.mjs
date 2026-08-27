@@ -68,6 +68,8 @@ test('map clusters are clickable, pans on the compositor, and markers show direc
       }
     }
     expect(interactiveMarker).toBeTruthy()
+    const markerLabel = await interactiveMarker.getAttribute('aria-label')
+    expect(markerLabel).toBeTruthy()
     const panLayer = map.locator('.location-map-pan-layer')
     await expect(panLayer).toHaveCount(1)
     const markerBox = await interactiveMarker.boundingBox()
@@ -79,8 +81,9 @@ test('map clusters are clickable, pans on the compositor, and markers show direc
     expect(markerDragTransform).toMatch(/^translate3d\((?!0, 0, 0\))/)
     await page.mouse.up()
     await expect.poll(() => panLayer.evaluate((element) => element.style.transform)).toMatch(/^translate3d\(0px, 0px, 0px\)$/)
-    await interactiveMarker.click()
-    await expect(interactiveMarker).toHaveClass(/is-selected/)
+    const markerAfterDrag = map.getByRole('button', { name: markerLabel, exact: true })
+    await markerAfterDrag.click()
+    await expect(markerAfterDrag).toHaveClass(/is-selected/)
     await expect(map.getByRole('link', { name: 'Directions', exact: true })).toBeVisible()
     await expect(map.getByRole('link', { name: 'Open details', exact: true })).toHaveCount(0)
 
