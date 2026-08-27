@@ -1,6 +1,5 @@
 "use client"
 
-import Link from 'next/link'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { PhotoFrame } from '@/components/photo-frame'
 
@@ -9,6 +8,7 @@ const MIN_ZOOM = 3
 const MAX_ZOOM = 18
 const MARKER_OVERSCAN = 72
 const CATALOGUE_CACHE_LIMIT = 24
+const MIN_CLUSTER_CELL_SIZE = 56
 
 function clamp(value, min, max) { return Math.min(max, Math.max(min, value)) }
 function normalizeLongitude(value) { return ((((Number(value) + 180) % 360) + 360) % 360) - 180 }
@@ -70,7 +70,7 @@ function clusterCellSize(zoom) {
   if (zoom < 9) return 104
   if (zoom < 11) return 82
   if (zoom < 13) return 62
-  return 0
+  return MIN_CLUSTER_CELL_SIZE
 }
 
 const MapTileLayer = memo(function MapTileLayer({ center, zoom, viewport }) {
@@ -135,6 +135,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const [filter, setFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(initialPoints[0]?.id || null)
   const [selectedPoint, setSelectedPoint] = useState(initialPoints[0] || null)
+  const [expandedClusterKey, setExpandedClusterKey] = useState(null)
   const [heatmapEnabled, setHeatmapEnabled] = useState(Boolean(passActive))
   const [visibleHeatmap, setVisibleHeatmap] = useState(heatmapPoints)
   const [cataloguePoints, setCataloguePoints] = useState([])
@@ -152,7 +153,10 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       wheelFrameRef.current = 0
       const delta = pendingWheelDeltaRef.current
       pendingWheelDeltaRef.current = 0
-      if (delta) setZoom((value) => clamp(value + (delta < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM))
+      if (delta) {
+        setExpandedClusterKey(null)
+        setZoom((value) => clamp(value + (delta < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM))
+      }
     })
   }, [])
 
@@ -295,7 +299,6 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
 
   const markerGroups = useMemo(() => {
     const cellSize = clusterCellSize(zoom)
-    if (!cellSize) return visiblePointItems.map((item) => ({ type: 'point', ...item }))
     const cells = new Map()
     for (const item of visiblePointItems) {
       const key = `${Math.floor(item.x / cellSize)}:${Math.floor(item.y / cellSize)}`
@@ -305,19 +308,36 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }
     return [...cells.entries()].map(([key, items]) => {
       if (items.length === 1 && zoom >= 11) return { type: 'point', ...items[0] }
+      if (expandedClusterKey === key && zoom >= MAX_ZOOM) {
+        return items.map((item, index) => {
+          const ring = Math.floor(index / 8)
+          const ringItems = Math.min(8, items.length - ring * 8)
+          const radius = 68 + ring * 58
+          const angle = (index % 8) / ringItems * Math.PI * 2 - Math.PI / 2 + (ring % 2 ? Math.PI / 8 : 0)
+          return {
+            type: 'point',
+            ...item,
+            x: item.x + Math.cos(angle) * radius,
+            y: item.y + Math.sin(angle) * radius,
+            spiderfied: true
+          }
+        })
+      }
       return {
         type: 'cluster',
         key,
         count: items.length,
+        items,
         x: items.reduce((sum, item) => sum + item.x, 0) / items.length,
         y: items.reduce((sum, item) => sum + item.y, 0) / items.length,
         latitude: items.reduce((sum, item) => sum + Number(item.point.latitude), 0) / items.length,
         longitude: items.reduce((sum, item) => sum + Number(item.point.longitude), 0) / items.length
       }
     })
-  }, [visiblePointItems, zoom])
+  }, [expandedClusterKey, visiblePointItems, zoom])
 
   function changeFilter(next) {
+    setExpandedClusterKey(null)
     setFilter(next)
     const first = next === 'all' ? allPoints[0] : allPoints.find((point) => point.states.includes(next))
     if (first) {
@@ -330,11 +350,17 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }
   }
   function selectPoint(point) {
+    setExpandedClusterKey(null)
     setSelectedPoint(point)
     setSelectedId(point.id)
     setCenter({ latitude: point.latitude, longitude: point.longitude })
   }
   function openCluster(cluster) {
+    if (zoom >= MAX_ZOOM) {
+      setExpandedClusterKey((value) => value === cluster.key ? null : cluster.key)
+      return
+    }
+    setExpandedClusterKey(null)
     setCenter({ latitude: cluster.latitude, longitude: cluster.longitude })
     setZoom((value) => clamp(value + (value < 9 ? 2 : 1), MIN_ZOOM, MAX_ZOOM))
   }
@@ -352,20 +378,24 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     const offset = panOffsets[event.key]
     if (offset) {
       event.preventDefault()
+      setExpandedClusterKey(null)
       setCenter(unproject(projectedCenter.x + offset[0], projectedCenter.y + offset[1], zoom))
       return
     }
     if (event.key === '+' || event.key === '=' || event.key === 'Add') {
       event.preventDefault()
+      setExpandedClusterKey(null)
       setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM))
       return
     }
     if (event.key === '-' || event.key === '_' || event.key === 'Subtract') {
       event.preventDefault()
+      setExpandedClusterKey(null)
       setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM))
     }
   }
   function startDrag(event, press) {
+    setExpandedClusterKey(null)
     event.currentTarget.setPointerCapture(event.pointerId)
     event.currentTarget.style.cursor = 'grabbing'
     event.currentTarget.classList.add('is-dragging')
@@ -471,6 +501,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }
     setLocationState('loading')
     navigator.geolocation.getCurrentPosition((position) => {
+      setExpandedClusterKey(null)
       setCenter({ latitude: position.coords.latitude, longitude: normalizeLongitude(position.coords.longitude) })
       setZoom(14)
       setLocationState('ready')
@@ -497,14 +528,14 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
             const size = Math.round(34 + ratio * 74)
             return <span className="location-map-heat" title={`${point.name}: ${point.save_count} saves`} style={{ width: `${size}px`, height: `${size}px`, opacity: .2 + ratio * .5, transform: `translate3d(${x}px,${y}px,0) translate(-50%,-50%)` }} key={point.id}><b>{point.save_count}</b></span>
           })}</div> : null}
-          <div className="location-map-markers">{markerGroups.map((item) => {
-            if (item.type === 'cluster') return <button type="button" className="location-map-cluster" style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); openCluster(item) }} aria-label={`${item.count} locations. Zoom in to explore.`} key={`cluster:${zoom}:${item.key}`}><span>{item.count}</span></button>
+          <div className="location-map-markers">{markerGroups.flatMap((item) => {
+            if (item.type === 'cluster') return [<button type="button" className="location-map-cluster" style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); openCluster(item) }} aria-label={`${item.count} locations. ${zoom >= MAX_ZOOM ? 'Expand to choose a location.' : 'Zoom in to explore.'}`} aria-expanded={zoom >= MAX_ZOOM ? expandedClusterKey === item.key : undefined} key={`cluster:${zoom}:${item.key}`}><span>{item.count}</span></button>]
             const point = item.point
             const primary = primaryState(point)
-            return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${item.x}px,${item.y}px,0) rotate(-45deg)${selectedId === point.id ? ' scale(1.15)' : ''}` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} data-map-point-id={point.id} key={point.id}><span aria-hidden="true">{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? 'P' : '♥'}</span></button>
+            return [<button type="button" className={`location-map-marker is-${primary}${item.spiderfied ? ' is-spiderfied' : ''} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${item.x}px,${item.y}px,0) rotate(-45deg)${selectedId === point.id ? ' scale(1.15)' : ''}` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} data-map-point-id={point.id} key={point.id}><span aria-hidden="true">{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? 'P' : '♥'}</span></button>]
           })}</div>
         </div>
-        <div className="location-map-zoom"><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
+        <div className="location-map-zoom"><button type="button" onClick={(event) => { event.stopPropagation(); setExpandedClusterKey(null); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setExpandedClusterKey(null); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
         <a className="location-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onPointerDown={(event) => event.stopPropagation()}>© OpenStreetMap contributors</a>
         {loadCatalogue && filter === 'all' && catalogueState === 'loading' ? <div className="location-map-status" role="status">Loading locations…</div> : null}
         {loadCatalogue && filter === 'all' && catalogueState === 'error' ? <div className="location-map-status is-error" role="alert"><span>Locations could not be loaded.</span><button type="button" onClick={() => setCatalogueRetry((value) => value + 1)}>Try again</button></div> : null}

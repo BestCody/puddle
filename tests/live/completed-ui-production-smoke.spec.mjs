@@ -105,6 +105,20 @@ async function firstInteractiveViewportMarker(map, selector) {
   throw new Error(`No interactive ${selector} was inside the map viewport.`)
 }
 
+async function clickFirstInteractiveViewportMarker(page, map, selector) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const marker = await firstInteractiveViewportMarker(map, selector)
+    await expect(marker).toBeVisible({ timeout: 30_000 })
+    try {
+      await marker.click({ timeout: 5_000 })
+      return
+    } catch (error) {
+      if (attempt === 4) throw error
+      await page.waitForTimeout(200)
+    }
+  }
+}
+
 test('completed UI paths work against production', async ({ page, browser }) => {
   test.setTimeout(240_000)
   const suffix = `${Date.now().toString(36)}${crypto.randomUUID().replaceAll('-', '').slice(0, 7)}`
@@ -188,9 +202,7 @@ test('completed UI paths work against production', async ({ page, browser }) => 
 
     await page.goto('/map?view=map')
     const map = page.getByTestId('feed-map-canvas')
-    const catalogueMarker = await firstInteractiveViewportMarker(map, '.location-map-marker.is-catalogue')
-    await expect(catalogueMarker).toBeVisible({ timeout: 30_000 })
-    await catalogueMarker.click()
+    await clickFirstInteractiveViewportMarker(page, map, '.location-map-marker.is-catalogue')
     await expect(map.getByRole('link', { name: 'Directions', exact: true })).toBeVisible()
   } finally {
     if (ownerCreated) await deleteDisposableAccount(page)

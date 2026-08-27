@@ -182,7 +182,11 @@ def request_tile(tile, budget):
         req = urllib.request.Request(url, headers={'User-Agent': 'Puddle/1.0 global Mapillary coverage indexer'})
         try:
             with urllib.request.urlopen(req, timeout=20) as response:
-                return tile, response.read(), None
+                payload = response.read()
+                content_type = response.headers.get_content_type().lower()
+                if content_type in {'application/json', 'text/html', 'text/plain'}:
+                    return tile, b'', f'permanent:unexpected content type {content_type}'
+                return tile, payload, None
         except urllib.error.HTTPError as error:
             if error.code == 404:
                 return tile, b'', None
@@ -363,12 +367,20 @@ try:
         first_incomplete = None
         failures = []
         for index, (tile, payload, error) in enumerate(results):
-            if error and first_incomplete is None:
+            retryable_error = error and not str(error).startswith('permanent:')
+            if retryable_error and first_incomplete is None:
                 first_incomplete = index
             if error:
                 failures.append({'tile': tile, 'error': error})
                 continue
-            rows = image_rows(tile, payload)
+            try:
+                rows = image_rows(tile, payload)
+            except Exception as decode_error:
+                # A malformed 200 response is isolated to its tile. It must
+                # not rewind the whole country or abort a near-complete run;
+                # the next snapshot will naturally retry the tile.
+                failures.append({'tile': tile, 'error': f'permanent:decode {decode_error}'})
+                continue
             if rows:
                 con.executemany('INSERT INTO mapillary_images VALUES (?,?,?,?,?,?,?,?)', rows)
                 inserted += len(rows)

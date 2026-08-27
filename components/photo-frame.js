@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export function PhotoFrame({
   as: Element = 'div',
@@ -17,18 +17,23 @@ export function PhotoFrame({
 }) {
   const [failed, setFailed] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const imageRef = useRef(null)
   const available = Boolean(src) && !failed
   const state = !available ? 'unavailable' : loaded ? 'ready' : 'loading'
 
   useEffect(() => {
     setFailed(false)
     setLoaded(false)
+    const image = imageRef.current
+    if (!image?.complete) return
+    if (image.naturalWidth > 0) setLoaded(true)
+    else setFailed(true)
   }, [src])
 
   const classes = [className, !available ? unavailableClassName : ''].filter(Boolean).join(' ')
   return <Element {...props} className={classes || undefined} data-photo-state={state}>
     {available
-      ? <img src={src} alt={alt} loading={loading} fetchPriority={fetchPriority} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
+      ? <img ref={imageRef} src={src} alt={alt} loading={loading} fetchPriority={fetchPriority} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
       : null}
     {state !== 'ready' ? <span className="photo-frame-message" aria-hidden="true">{state === 'loading' ? loadingText : unavailableText}</span> : null}
     {children}
