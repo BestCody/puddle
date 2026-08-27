@@ -113,10 +113,10 @@ export default async function AccountPage({ searchParams }) {
           <form className="figma-settings-section" id="profile" action={updateDateProfile}>
             <header><small>Profile</small><h1>Profile</h1><p>Manage how your profile appears across Puddle.</p></header>
             <div className="figma-settings-section-body">
-              <div className="figma-settings-row"><label>Display name</label><input name="display_name" defaultValue={profile?.display_name || ''} required maxLength="60" /></div>
-              <div className="figma-settings-row"><label>Username</label><UsernameInput defaultValue={profile?.username || ''} id="account-username" /></div>
-              <div className="figma-settings-row is-tall"><label>About</label><textarea name="bio" defaultValue={profile?.bio || ''} maxLength="500" /></div>
-              <div className="figma-settings-row"><label>Visibility</label><select name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Shared-plan attendees</option><option value="hidden">Hidden</option></select></div>
+              <div className="figma-settings-row"><label htmlFor="account-display-name">Display name</label><input id="account-display-name" name="display_name" defaultValue={profile?.display_name || ''} required maxLength="60" /></div>
+              <div className="figma-settings-row"><label htmlFor="account-username">Username</label><UsernameInput defaultValue={profile?.username || ''} id="account-username" /></div>
+              <div className="figma-settings-row is-tall"><label htmlFor="account-bio">About</label><textarea id="account-bio" name="bio" defaultValue={profile?.bio || ''} maxLength="500" /></div>
+              <div className="figma-settings-row"><label htmlFor="account-visibility">Visibility</label><select id="account-visibility" name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Shared-plan attendees</option><option value="hidden">Hidden</option></select></div>
             </div>
             <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save changes</SubmitButton></div>
           </form>
@@ -126,8 +126,8 @@ export default async function AccountPage({ searchParams }) {
             <div className="figma-settings-section-body">
               <div className="figma-settings-row"><label>Email</label><span>{user.email || 'No email available'}</span><Link href="/change-email">Change</Link></div>
               <form action={updatePassword} className="figma-settings-nested-form">
-                <div className="figma-settings-row"><label>New password</label><input name="password" type="password" minLength="10" maxLength="128" required /></div>
-                <div className="figma-settings-row"><label>Confirm password</label><input name="password_confirmation" type="password" minLength="10" maxLength="128" required /></div>
+                <div className="figma-settings-row"><label htmlFor="account-password">New password</label><input id="account-password" name="password" type="password" minLength="10" maxLength="128" required /></div>
+                <div className="figma-settings-row"><label htmlFor="account-password-confirmation">Confirm password</label><input id="account-password-confirmation" name="password_confirmation" type="password" minLength="10" maxLength="128" required /></div>
                 <div className="figma-settings-submit"><SubmitButton>Change password</SubmitButton></div>
               </form>
             </div>
@@ -136,8 +136,8 @@ export default async function AccountPage({ searchParams }) {
           <form className="figma-settings-section" id="appearance" action={updateAppearance}>
             <header><small>Appearance</small><h1>Appearance</h1><p>Choose how Puddle looks for you.</p></header>
             <div className="figma-settings-section-body">
-              <div className="figma-settings-row"><label>Theme</label><select name="appearance_theme" defaultValue={profile?.appearance_theme || 'light'}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></div>
-              <div className="figma-settings-row"><label>Profile color</label><select name="profile_theme" defaultValue={profile?.profile_theme || 'blue'}><option value="blue">Blue</option><option value="green">Green</option><option value="yellow">Yellow</option><option value="purple">Purple</option><option value="red">Red</option><option value="grey">Grey</option></select></div>
+              <div className="figma-settings-row"><label htmlFor="account-appearance-theme">Theme</label><select id="account-appearance-theme" name="appearance_theme" defaultValue={profile?.appearance_theme || 'light'}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></div>
+              <div className="figma-settings-row"><label htmlFor="account-profile-theme">Profile color</label><select id="account-profile-theme" name="profile_theme" defaultValue={profile?.profile_theme || 'blue'}><option value="blue">Blue</option><option value="green">Green</option><option value="yellow">Yellow</option><option value="purple">Purple</option><option value="red">Red</option><option value="grey">Grey</option></select></div>
             </div>
             <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save appearance</SubmitButton></div>
           </form>
@@ -190,7 +190,7 @@ export default async function AccountPage({ searchParams }) {
             <div className="figma-settings-section-body figma-settings-section-body--danger">
               <p className="figma-settings-warning">Permanently delete your Puddle account and associated records.</p>
               <form action={deleteAccount}>
-                <div className="figma-settings-row"><label>Type DELETE</label><input name="confirmation" autoComplete="off" required minLength="6" maxLength="6" pattern="DELETE" /></div>
+                <div className="figma-settings-row"><label htmlFor="account-delete-confirmation">Type DELETE</label><input id="account-delete-confirmation" name="confirmation" autoComplete="off" required minLength="6" maxLength="6" pattern="DELETE" /></div>
                 <div className="figma-settings-submit is-danger"><SubmitButton pendingText="Deleting…">Delete my account</SubmitButton></div>
               </form>
             </div>
