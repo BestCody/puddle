@@ -48,7 +48,7 @@ export function RoutedSegment({ items, activeValue, ariaLabel, className = '', t
       '--segment-active-index': activeIndex,
       '--segment-active-bg': TONE_COLORS[tone] || TONE_COLORS.neutral,
       '--segment-active-left': '4px',
-      '--segment-active-width': '0px'
+      '--segment-active-width': 'calc((100% - 8px) / var(--segment-count))'
     }}
   >
     {items.map((item, index) => <Link

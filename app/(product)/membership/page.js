@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
-import { InstantSegment } from '@/components/instant-segment'
+import { RoutedSegment } from '@/components/routed-segment'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getMembershipSnapshot } from '@/lib/app/membership-data'
 import { openMembershipPortal, startTinderCheckout } from './actions'
@@ -18,7 +18,7 @@ function periodLabel(value) {
 }
 
 function PassTabs({ view }) {
-  return <InstantSegment
+  return <RoutedSegment
     className="figma-pass-tabs"
     tone="pink"
     activeValue={view}

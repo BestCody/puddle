@@ -108,3 +108,17 @@ test('current product media surfaces use the canonical image contract', async ()
   assert.match(primitives, /\[data-photo-state='unavailable'\] > img/)
   assert.match(primitives, /\.photo-frame-message/)
 })
+
+test('public listing and upload previews do not contain silent image paths', async () => {
+  const [listing, uploader] = await Promise.all([
+    read('components/public-listing.js'),
+    read('components/media-uploader.js')
+  ])
+
+  assert.match(listing, /PhotoFrame/)
+  assert.doesNotMatch(listing, /backgroundImage|<img|PublicEventView|PublicHostView/)
+  assert.match(listing, /Photo unavailable/)
+  assert.match(uploader, /PhotoFrame/)
+  assert.doesNotMatch(uploader, /<img/)
+  assert.match(uploader, /Preview unavailable/)
+})
