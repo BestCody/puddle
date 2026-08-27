@@ -26,6 +26,7 @@ import urllib3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from PIL import Image, ImageOps
+from kartaview_urls import canonical_asset_url
 
 
 def first_env(*names, default=''):
@@ -259,11 +260,12 @@ def reserve_candidate(row):
     external_id = str(row.get('external_photo_id') or '').strip()
     if not external_id:
         raise RuntimeError('provider candidate is missing external_photo_id')
+    asset = canonical_asset_url(row.get('asset_url')) if provider == 'kartaview' else row.get('asset_url')
     response = supabase_rpc('reserve_global_photo_candidate_v1', {
         'p_location_id': str(row['location_id']),
         'p_provider_code': provider_code,
         'p_provider_asset_id': external_id,
-        'p_normalized_source_url': normalize_source_url(row.get('asset_url')),
+        'p_normalized_source_url': normalize_source_url(asset),
         'p_lease_seconds': CLAIM_LEASE_SECONDS,
     })
     if not isinstance(response, list) or len(response) != 1 or not isinstance(response[0], dict):
@@ -550,7 +552,8 @@ def upload_media(data, sha256):
 def prepare_candidate(row, candidate=None):
     provider = row['provider']
     candidate = dict(candidate or row)
-    body = download(candidate.get('asset_url'), provider)
+    asset = canonical_asset_url(candidate.get('asset_url')) if provider == 'kartaview' else candidate.get('asset_url')
+    body = download(asset, provider)
     normalized, width, height, perceptual, confirmation = normalize(body)
     content_hash = hashlib.sha256(normalized).hexdigest()
     return candidate, normalized, width, height, perceptual, confirmation, content_hash
@@ -631,18 +634,29 @@ def materialize_location(candidates):
                 'rank_score': float(row.get('rank_score') or 0), 'verified_at': datetime.now(timezone.utc).isoformat()
             }, {'location_id': location_id, 'status': 'materialized', 'attempts': attempts, 'winnerRank': row['candidate_rank']}
         except Exception as error:
+            retryable = retryable_candidate_error(error)
             if candidate_token:
                 try:
                     complete_candidate(
                         candidate_token,
-                        'available' if retryable_candidate_error(error) else 'invalid',
+                        'available' if retryable else 'invalid',
                         str(error)[:240],
-                        retry_seconds=3600 if retryable_candidate_error(error) else 0,
+                        retry_seconds=3600 if retryable else 0,
                     )
                 except Exception as completion_error:
                     print(f'warning: candidate registry error handling failed for {row["provider"]}/{row["external_photo_id"]}: {completion_error}', flush=True)
-            attempts.append({'provider': row['provider'], 'candidateRank': row['candidate_rank'], 'error': str(error)[:240]})
-    status = 'retryable_error' if any(attempt.get('error') for attempt in attempts) else 'exhausted'
+            attempts.append({
+                'provider': row['provider'],
+                'candidateRank': row['candidate_rank'],
+                'error': str(error)[:240],
+                'retryable': retryable,
+            })
+    if any(attempt.get('retryable') for attempt in attempts):
+        status = 'retryable_error'
+    elif any(attempt.get('error') for attempt in attempts):
+        status = 'invalid'
+    else:
+        status = 'exhausted'
     return None, {'location_id': location_id, 'status': status, 'attempts': attempts}
 
 
@@ -712,8 +726,9 @@ def write_results(country, results):
 
 def write_attempts(country, diagnostics):
     # Successful locations are already durable in photo_metadata and do not
-    # need a second state record. Keeping only retryable failures bounds the
-    # ledger and makes subsequent scans cheaper.
+    # need a second state record. Keeping only non-success outcomes bounds the
+    # ledger and makes subsequent scans cheaper; permanent invalid assets use
+    # the long retry window instead of occupying the hourly retry path.
     diagnostics = [detail for detail in diagnostics if detail.get('status') != 'materialized']
     if not diagnostics:
         return
@@ -721,7 +736,7 @@ def write_attempts(country, diagnostics):
     rows = []
     for detail in diagnostics:
         status = str(detail.get('status') or 'worker_error')
-        if status == 'exhausted':
+        if status in {'exhausted', 'invalid'}:
             retry_at = attempted_at + timedelta(days=ATTEMPT_RETRY_DAYS)
         else:
             retry_at = attempted_at + timedelta(hours=ATTEMPT_RETRY_HOURS)
