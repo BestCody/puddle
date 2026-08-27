@@ -12,6 +12,8 @@ const HASH_RE = /^[0-9a-f]{64}$/
 const RETRYABLE = new Set([401, 408, 425, 429, 500, 502, 503, 504])
 const CONFIG_TTL_MS = 5 * 60 * 1000
 const AUTH_TTL_MS = 60 * 60 * 1000
+const MEDIA_PREFIX = String(process.env.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256/')
+  .replace(/^\/+|\/+$/g, '')
 let configCache = null
 let authCache = null
 let configInFlight = null
@@ -26,7 +28,7 @@ function encodeB2Key(key) {
 }
 
 function canonicalStorageKey(hash) {
-  return `media/photos/by-sha256/${hash.slice(0, 2)}/${hash}.jpg`
+  return `${MEDIA_PREFIX}/${hash.slice(0, 2)}/${hash}.jpg`
 }
 
 function serverTiming(entries, totalMs) {

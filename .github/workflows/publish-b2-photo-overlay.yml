@@ -23,6 +23,12 @@ jobs:
       B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
       B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
       B2_DATA_PREFIX: data
+      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_MEDIA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_MEDIA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_MEDIA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_MEDIA_OPEN_PHOTO_PREFIX: ${{ vars.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256' }}
       GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES: ${{ vars.GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES || '12582912' }}
     steps:
       - uses: actions/checkout@v6

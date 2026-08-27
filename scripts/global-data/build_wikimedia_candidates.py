@@ -74,7 +74,11 @@ MIN_INTERVAL = 60.0 / REQUESTS_PER_MINUTE
 CONCURRENCY = max(1, min(3 if ACCESS_TOKEN else 1, int(os.getenv('WIKIMEDIA_MAX_CONCURRENCY', '3'))))
 MAX_CANDIDATES = max(1, min(10, int(os.getenv('OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER', '3'))))
 USER_AGENT = os.getenv('WIKIMEDIA_USER_AGENT', 'Puddle/1.0 global location photo indexer (https://puddle.you/)')
-DEFAULT_REQUEST_LIMIT = REQUESTS_PER_MINUTE * 350
+RUN_BUDGET_SECONDS = max(60, int(os.getenv('WIKIMEDIA_RUN_BUDGET_SECONDS', str(4 * 60 * 60))))
+RUN_DEADLINE = time.monotonic() + RUN_BUDGET_SECONDS
+# Keep a margin inside the Actions timeout. This is a request-start budget, not
+# a location cap; the durable geographic cursor resumes the remaining cells.
+DEFAULT_REQUEST_LIMIT = REQUESTS_PER_MINUTE * max(1, RUN_BUDGET_SECONDS // 60)
 REQUEST_LIMIT = max(1, min(REQUESTS_PER_MINUTE * 360, int(args.request_limit or os.getenv('WIKIMEDIA_REQUEST_LIMIT', DEFAULT_REQUEST_LIMIT))))
 SCOPE = 'all' if not args.countries.strip() else hashlib.sha1(args.countries.strip().upper().encode()).hexdigest()[:12]
 STATE_PREFIX = f'{DATA_PREFIX}/enrichment/photo_state/provider=wikimedia-commons/snapshot={args.snapshot}/scope={SCOPE}'
@@ -129,6 +133,10 @@ class RequestBudget:
             self.used += 1
             return True
 
+    def release(self):
+        with self.lock:
+            self.used = max(0, self.used - 1)
+
 
 class RateGate:
     def __init__(self, interval):
@@ -137,13 +145,16 @@ class RateGate:
         self.next_at = 0.0
         self.paused_until = 0.0
 
-    def wait(self):
+    def wait(self, deadline=None):
         with self.lock:
             now = time.monotonic()
             start = max(now, self.next_at, self.paused_until)
             self.next_at = start + self.interval
+        if deadline is not None and start >= deadline:
+            return False
         if start > now:
             time.sleep(start - now)
+        return deadline is None or time.monotonic() < deadline
 
     def defer(self, seconds):
         with self.lock:
@@ -152,6 +163,10 @@ class RateGate:
 
 budget = RequestBudget(REQUEST_LIMIT)
 gate = RateGate(MIN_INTERVAL)
+
+
+def runtime_exhausted():
+    return time.monotonic() >= RUN_DEADLINE
 
 
 def strip_html(value):
@@ -194,9 +209,13 @@ def commons_request(lat, lon, radius):
     if ACCESS_TOKEN:
         headers['Authorization'] = f'Bearer {ACCESS_TOKEN}'
     for attempt in range(6):
+        if runtime_exhausted():
+            return None, 'runtime_budget_exhausted'
         if not budget.claim():
             return None, 'budget_exhausted'
-        gate.wait()
+        if not gate.wait(RUN_DEADLINE):
+            budget.release()
+            return None, 'runtime_budget_exhausted'
         try:
             started = time.monotonic()
             with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=25) as response:
@@ -247,6 +266,8 @@ def process_base_cell(cell):
     pending = [cell]
     rows = []
     while pending:
+        if runtime_exhausted():
+            return {'complete': False, 'rows': rows, 'error': 'runtime_budget_exhausted'}
         lat0, lon0, size = pending.pop(0)
         center_lat = lat0 + size / 2
         center_lon = lon0 + size / 2
@@ -354,7 +375,7 @@ country_index = max(0, min(len(country_list), int(state.get('countryIndex', 0)))
 cell_offset = max(0, int(state.get('cellOffset', 0)))
 summaries = []
 
-while country_index < len(country_list) and budget.used < budget.limit:
+while country_index < len(country_list) and budget.used < budget.limit and not runtime_exhausted():
     country = country_list[country_index]
     path = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/locations.parquet'
     con.execute(f"""
@@ -448,6 +469,8 @@ print(json.dumps({
     'scope': SCOPE,
     'requests': budget.used,
     'requestLimit': REQUEST_LIMIT,
+    'runBudgetSeconds': RUN_BUDGET_SECONDS,
+    'runtimeBudgetExhausted': runtime_exhausted(),
     'requestsPerMinute': REQUESTS_PER_MINUTE,
     'maxConcurrency': CONCURRENCY,
     'complete': country_index >= len(country_list),

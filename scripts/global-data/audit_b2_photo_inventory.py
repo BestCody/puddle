@@ -230,6 +230,7 @@ def read_active_photo_metadata(
     data_key_id: str,
     data_key: str,
     data_region: str,
+    media_prefix: str,
 ) -> dict[str, object]:
     normalized_prefix = f"{data_prefix}/normalized/schema=v1/snapshot={snapshot}"
     enriched_prefix = f"{data_prefix}/enrichment/photo_metadata/snapshot={snapshot}"
@@ -344,7 +345,7 @@ SELECT count(*) FROM photo_refs
 WHERE storage_key IS NOT NULL AND trim(storage_key) <> ''
   AND (
     content_hash IS NULL
-    OR trim(storage_key) <> 'media/photos/by-sha256/' || substr(lower(trim(content_hash)),1,2) || '/' || lower(trim(content_hash)) || '.jpg'
+    OR trim(storage_key) <> '{media_prefix.replace("'", "''")}/' || substr(lower(trim(content_hash)),1,2) || '/' || lower(trim(content_hash)) || '.jpg'
   )
 """
             ).fetchone()[0]
@@ -474,6 +475,7 @@ def main() -> int:
         data_key_id,
         data_key,
         data_region,
+        media_prefix,
     )
     reference_hashes = set(metadata.pop("referenceHashes"))
     missing_reference_hashes = sorted(reference_hashes - canonical_hashes)
@@ -500,7 +502,7 @@ def main() -> int:
         "activeManifestSnapshot": manifest_snapshot,
         "auditedSnapshot": snapshot,
         "requirements": {
-            "canonicalKey": "media/photos/by-sha256/<first-two>/<sha256>.jpg",
+            "canonicalKey": f"{media_prefix}/<first-two>/<sha256>.jpg",
             "maxImageBytes": args.max_image_bytes,
             "maxSourcePixels": MAX_SOURCE_PIXELS,
             "format": "JPEG",

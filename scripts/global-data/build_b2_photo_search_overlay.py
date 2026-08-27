@@ -23,7 +23,7 @@ import orjson
 from botocore.client import Config
 from botocore.exceptions import ClientError
 
-from location_search_common import b2_source_config, configure_duckdb
+from location_search_common import b2_source_config, clean_prefix, configure_duckdb, first_env
 
 
 OVERLAY_VERSION = 1
@@ -68,6 +68,47 @@ def list_keys(client, bucket: str, prefix: str) -> list[str]:
             if str(item.get("Key") or "").endswith(".parquet")
         )
     return sorted(keys)
+
+
+def media_source_config(source):
+    """Resolve the media bucket independently from the data bucket.
+
+    Most deployments share one B2 bucket, but the serving path is allowed to
+    use a separately scoped media key. The overlay must validate against the
+    bucket that actually serves immutable photo bytes.
+    """
+    endpoint_url = first_env("B2_MEDIA_S3_ENDPOINT", default=source.endpoint_url).rstrip("/")
+    return {
+        "bucket": first_env("B2_MEDIA_BUCKET_NAME", "B2_DATA_BUCKET_NAME", default=source.bucket),
+        "endpoint_url": endpoint_url,
+        "key_id": first_env(
+            "B2_MEDIA_KEY_ID",
+            "B2_MEDIA_APPLICATION_KEY_ID",
+            "B2_DATA_KEY_ID",
+            "B2_DATA_APPLICATION_KEY_ID",
+            default=source.key_id,
+        ),
+        "application_key": first_env(
+            "B2_MEDIA_APPLICATION_KEY",
+            "B2_DATA_APPLICATION_KEY",
+            default=source.application_key,
+        ),
+        "region": first_env("B2_MEDIA_S3_REGION", "B2_DATA_S3_REGION", default=source.region),
+        "prefix": clean_prefix(first_env("B2_MEDIA_OPEN_PHOTO_PREFIX", default="media/photos/by-sha256")),
+    }
+
+
+def list_canonical_media_hashes(client, bucket: str, prefix: str) -> set[str]:
+    """List only content-addressed objects that can be served by open-photo."""
+    pattern = re.compile(r"^" + re.escape(prefix) + r"/([0-9a-f]{2})/([0-9a-f]{64})\.jpg$")
+    hashes: set[str] = set()
+    paginator = client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix.rstrip("/") + "/"):
+        for item in page.get("Contents", []):
+            match = pattern.fullmatch(str(item.get("Key") or ""))
+            if match and match.group(1) == match.group(2)[:2]:
+                hashes.add(match.group(2))
+    return hashes
 
 
 def columns_for(con, glob: str) -> dict[str, str]:
@@ -156,6 +197,17 @@ client = boto3.client(
     region_name=source.region,
     config=Config(retries={"max_attempts": 10, "mode": "adaptive"}),
 )
+media = media_source_config(source)
+if not media["endpoint_url"] or not media["key_id"] or not media["application_key"] or not media["prefix"]:
+    raise RuntimeError("B2 media endpoint, credentials, and photo prefix are required.")
+media_client = boto3.client(
+    "s3",
+    endpoint_url=media["endpoint_url"],
+    aws_access_key_id=media["key_id"],
+    aws_secret_access_key=media["application_key"],
+    region_name=media["region"],
+    config=Config(retries={"max_attempts": 10, "mode": "adaptive"}),
+)
 
 active_key = f"{source.data_prefix}/search/active.json"
 active_body = client.get_object(Bucket=source.bucket, Key=active_key)["Body"].read()
@@ -222,6 +274,12 @@ if (normalized_files or enriched_keys) and compatible_sources == 0:
         f"Photo metadata exists but no compatible source was found; files={len(normalized_files) + len(enriched_keys)}"
     )
 
+canonical_media_hashes = list_canonical_media_hashes(media_client, media["bucket"], media["prefix"])
+if (normalized_files or enriched_keys) and not canonical_media_hashes:
+    raise RuntimeError("Photo metadata exists but no canonical B2 media objects were found; refusing to publish an empty overlay.")
+con.execute("CREATE TEMP TABLE canonical_media_hashes(content_hash VARCHAR PRIMARY KEY)")
+con.executemany("INSERT INTO canonical_media_hashes VALUES (?)", [(value,) for value in sorted(canonical_media_hashes)])
+
 rows = con.execute(
     """
     WITH ranked AS (
@@ -241,6 +299,8 @@ rows = con.execute(
                    lower(trim(cast(p.content_hash AS VARCHAR)))
         ) AS rn
       FROM photo_rows p
+      JOIN canonical_media_hashes m
+        ON m.content_hash=lower(trim(cast(p.content_hash AS VARCHAR)))
       WHERE trim(cast(p.location_id AS VARCHAR)) <> ''
         AND regexp_full_match(lower(trim(cast(p.content_hash AS VARCHAR))), '[0-9a-f]{64}')
         AND NOT EXISTS (
@@ -255,6 +315,22 @@ rows = con.execute(
     ORDER BY location_id
     """
 ).fetchall()
+missing_media_references = int(
+    con.execute(
+        """
+        SELECT count(*) FROM (
+          SELECT DISTINCT trim(cast(p.location_id AS VARCHAR)), lower(trim(cast(p.content_hash AS VARCHAR)))
+          FROM photo_rows p
+          WHERE trim(cast(p.location_id AS VARCHAR)) <> ''
+            AND regexp_full_match(lower(trim(cast(p.content_hash AS VARCHAR))), '[0-9a-f]{64}')
+            AND NOT EXISTS (
+              SELECT 1 FROM canonical_media_hashes m
+              WHERE m.content_hash=lower(trim(cast(p.content_hash AS VARCHAR)))
+            )
+        )
+        """
+    ).fetchone()[0]
+)
 con.close()
 
 entries = []
@@ -337,6 +413,7 @@ client.put_object(
 print(
     f"photo_overlay_published=true snapshot={args.snapshot} photos={len(entries)} "
     f"raw_bytes={len(raw)} compressed_bytes={len(compressed)} incompatible_files={incompatible_files} "
+    f"missing_media_references={missing_media_references} "
     f"object_key={object_key} pointer_key={pointer_key}",
     flush=True,
 )
