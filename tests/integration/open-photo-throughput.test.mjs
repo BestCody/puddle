@@ -53,6 +53,10 @@ test('global free-photo workers saturate provider budgets and direct delivery st
   assert.match(kartaview, /START_INTERVAL = 3600\.0 \/ REQUESTS_PER_HOUR/)
   assert.match(kartaview, /photo_attempts\/provider=kartaview/)
   assert.match(kartaview, /attempted_since_checkpoint/)
+  assert.match(kartaview, /COUNTRY_CURSOR_KEY/)
+  assert.match(kartaview, /read_country_cursor/)
+  assert.match(kartaview, /write_country_cursor/)
+  assert.match(kartaview, /ordered_countries/)
   assert.match(kartaWorkflow, /KARTAVIEW_REQUESTS_PER_HOUR: '1000'/)
   assert.match(kartaWorkflow, /KARTAVIEW_MAX_CONCURRENCY: '8'/)
 
