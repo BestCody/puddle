@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { PhotoFrame } from '@/components/photo-frame'
 
 const TILE_SIZE = 256
 const MIN_ZOOM = 3
@@ -95,12 +96,16 @@ const MapTileLayer = memo(function MapTileLayer({ center, zoom, viewport }) {
 })
 
 function MapCardPhoto({ point }) {
-  const [failed, setFailed] = useState(false)
-  const unavailable = !point.photo_url || failed
-  return <div className={`location-map-card-photo${unavailable ? ' is-unavailable' : ''}`}>
-    {!unavailable ? <img src={point.photo_url} alt={`${point.title} photo`} loading="lazy" decoding="async" onError={() => setFailed(true)} /> : <span className="location-map-card-photo-empty">Photo unavailable</span>}
+  return <PhotoFrame
+    src={point.photo_url}
+    alt={`${point.title} photo`}
+    className="location-map-card-photo"
+    unavailableClassName="is-unavailable"
+    unavailableText="Photo unavailable"
+    loading="lazy"
+  >
     <span className="location-map-card-photo-state">{point.states.map(stateLabel).join(' · ')}</span>
-  </div>
+  </PhotoFrame>
 }
 
 function PointCard({ point }) {

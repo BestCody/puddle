@@ -5,6 +5,7 @@ import './date-swipe.css'
 import './swipe-v2.css'
 import './swipe-motion.css'
 import './real-place-photos.css'
+import './media-primitives.css'
 import './product.css'
 import './sidebar-refresh.css'
 import './home-dashboard.css'
@@ -72,7 +73,6 @@ import './saved-location-mobile-stability-20260823.css'
 import './saved-location-motion-simplified-20260825.css'
 import './messages-realtime-polish.css'
 import './messages-stable-compat.css'
-import { SegmentInteractionBridge } from '@/components/segment-interaction-bridge'
 import { SettingsScrollBridge } from '@/components/settings-scroll-bridge'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -102,7 +102,6 @@ export default function RootLayout({ children }) {
     </head>
     <body>
       {children}
-      <SegmentInteractionBridge />
       <SettingsScrollBridge />
       <ServiceWorkerCleanup />
       {vercelTelemetryEnabled ? <><SpeedInsights /><Analytics /></> : null}

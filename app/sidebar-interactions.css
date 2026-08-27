@@ -39,17 +39,29 @@
   overflow: hidden;
 }
 
+.routed-segment {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr)) !important;
+  align-items: center !important;
+  overflow: hidden;
+}
+
 .figma-instant-segment.tone-yellow,
+.routed-segment.tone-yellow,
 .figma-dashboard-segment[class*="MapFeed_tabs"] { --segment-active-bg: #f2c035; }
 .figma-instant-segment.tone-purple,
+.routed-segment.tone-purple,
 .figma-dashboard-segment[class*="Plans_tabs"] { --segment-active-bg: #b784e4; }
 .figma-instant-segment.tone-green,
+.routed-segment.tone-green,
 .figma-friends-tabs { --segment-active-bg: #78e152; }
 .figma-instant-segment.tone-pink,
+.routed-segment.tone-pink,
 .figma-pass-tabs { --segment-active-bg: #e73668; }
 
 .figma-instant-segment-highlight,
-.figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
+.routed-segment[data-segment-enhanced="true"]::before {
   position: absolute;
   z-index: 1;
   top: 4px;
@@ -63,18 +75,6 @@
   transform: translateX(calc(var(--segment-active-index) * 100%));
   transition: transform 145ms cubic-bezier(.2,.8,.2,1);
   will-change: transform;
-}
-
-.figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"] {
-  position: relative !important;
-  display: grid !important;
-  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr)) !important;
-  align-items: center !important;
-  overflow: hidden;
-}
-
-.figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
-  content: "";
 }
 
 .figma-dashboard-segment > a,
@@ -100,7 +100,7 @@
 }
 
 .figma-dashboard-segment > .is-active,
-.figma-dashboard-segment > .is-ui-active {
+.routed-segment > .is-active {
   background: transparent !important;
   color: #fff !important;
   box-shadow: none !important;
@@ -108,6 +108,8 @@
 
 .figma-dashboard-segment[data-segment-count="3"] > a,
 .figma-dashboard-segment[data-segment-count="3"] > button,
+.routed-segment[data-segment-count="3"] > a,
+.routed-segment[data-segment-count="3"] > button,
 .figma-instant-segment[data-count="3"] > a,
 .figma-instant-segment[data-count="3"] > button {
   font-size: 12px !important;
@@ -115,7 +117,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .figma-instant-segment-highlight,
-  .figma-dashboard-segment:not(.figma-instant-segment)[data-segment-enhanced="true"]::before {
+  .routed-segment[data-segment-enhanced="true"]::before {
     transition: none;
   }
 }

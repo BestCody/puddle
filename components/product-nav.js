@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { beginMainContentLoading } from './main-content-transition'
+import { PhotoFrame } from '@/components/photo-frame'
 
 function NavIcon({ type, avatarUrl }) {
   if (type === 'swipe') return <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="6" width="12" height="20" rx="3"/><path d="M13 10h6M6 11l-4 5 4 5M26 11l4 5-4 5"/></svg>
@@ -11,7 +12,7 @@ function NavIcon({ type, avatarUrl }) {
   if (type === 'saved') return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 5.5h12v21l-6-4-6 4v-21Z"/></svg>
   if (type === 'friends') return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 6c7 0 12 4.3 12 9.7S23 25.4 16 25.4c-1.7 0-3.3-.25-4.8-.75L5 27l2-5.2c-1.9-1.7-3-3.8-3-6.1C4 10.3 9 6 16 6Z"/></svg>
   if (type === 'pass') return <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="8" width="22" height="16" rx="2"/><path d="M5 13h22"/></svg>
-  if (type === 'profile' && avatarUrl) return <img className="figma-dashboard-avatar" src={avatarUrl} alt="" aria-hidden="true" />
+  if (type === 'profile' && avatarUrl) return <PhotoFrame as="span" className="figma-dashboard-avatar" src={avatarUrl} alt="" unavailableText="" loadingText="" />
   if (type === 'profile') return <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="11" r="5"/><path d="M7 27c.8-6 4.3-9 9-9s8.2 3 9 9"/></svg>
   return null
 }

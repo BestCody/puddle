@@ -117,7 +117,6 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   }
 
   const showMainPhoto = Boolean(mainPhoto) && !mainPhotoFailed
-  const photoStyle = !optimizedMainPhoto && showMainPhoto ? { backgroundImage: `url(${mainPhoto})` } : undefined
   const locationId = item.location_id || item.content_id || item.id || ''
 
   return <>
@@ -137,7 +136,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       }}
       aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
-      <div className="figma-swipe-card-photo" style={photoStyle}>
+      <div className="figma-swipe-card-photo">
         {optimizedMainPhoto && showMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload onError={() => setMainPhotoFailed(true)} /> : null}
         {!optimizedMainPhoto && showMainPhoto ? <img src={mainPhoto} alt={item.title} loading="eager" decoding="async" onError={() => setMainPhotoFailed(true)} /> : null}
         {!showMainPhoto ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo is available">Photo unavailable</div> : null}

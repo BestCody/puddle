@@ -85,3 +85,26 @@ test('current social routes share resilient media primitives without the retired
   assert.doesNotMatch(parity, /\.social-hub|\.social-messages-layout/)
   assert.doesNotMatch(fine, /\.social-hub|\.social-tabs/)
 })
+
+test('current product media surfaces use the canonical image contract', async () => {
+  const paths = [
+    'components/discover-create-puddle.js',
+    'components/product-nav.js',
+    'components/location-map.js',
+    'components/saved-location-morph-bridge.js',
+    'app/(product)/create/post/page.js',
+    'app/(product)/global-matches/page.js',
+    'app/(product)/profile/page.js',
+    'app/studio/places/[id]/page.js'
+  ]
+  const sources = await Promise.all(paths.map(read))
+  for (const source of sources) {
+    assert.match(source, /PhotoFrame/)
+    assert.doesNotMatch(source, /backgroundImage/)
+  }
+
+  const primitives = await read('app/media-primitives.css')
+  assert.match(primitives, /\[data-photo-state='loading'\] > img/)
+  assert.match(primitives, /\[data-photo-state='unavailable'\] > img/)
+  assert.match(primitives, /\.photo-frame-message/)
+})

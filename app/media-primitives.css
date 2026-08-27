@@ -1,0 +1,20 @@
+/* One image contract for every current product surface. */
+[data-photo-state='loading'] > img {
+  opacity: 0;
+}
+
+[data-photo-state='unavailable'] > img {
+  display: none;
+}
+
+.photo-frame-message {
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  font: inherit;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}

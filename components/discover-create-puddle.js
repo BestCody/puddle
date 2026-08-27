@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
+import { PhotoFrame } from '@/components/photo-frame'
 
 function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
@@ -97,7 +98,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
 
   return <div className={`puddle-discover-create-dock${open ? ' is-open' : ''}`} data-testid="feed-composer" ref={dockRef}>
     <button className="puddle-discover-create-trigger" type="button" aria-expanded={open} aria-controls="discover-create-puddle-form" onClick={() => setOpen(true)}>
-      <span className="puddle-discover-create-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? null : initials(displayName)}</span>
+      <PhotoFrame as="span" className="puddle-discover-create-avatar" src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
       <span className="puddle-discover-create-placeholder">Create a puddle...</span>
       <b className="puddle-discover-create-arrow" aria-hidden="true">↑</b>
     </button>
@@ -105,7 +106,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
     <form action={createPuddlePost} className="puddle-discover-create-form" id="discover-create-puddle-form" aria-label="Create a puddle" aria-hidden={!open} inert={!open}>
       <input type="hidden" name="location_id" value={locationId} />
       <header className="puddle-discover-create-header">
-        <span className="puddle-discover-create-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? null : initials(displayName)}</span>
+        <PhotoFrame as="span" className="puddle-discover-create-avatar" src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
         <fieldset className="puddle-discover-create-visibility" aria-label="Post visibility">
           <label><input type="radio" name="visibility" value="public" defaultChecked /><span>Public</span></label>
           <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>
