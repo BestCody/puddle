@@ -104,6 +104,15 @@
 }
 
 /* Density clusters replace piles of individual markers while zoomed out. */
+.location-map-pan-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
 .location-map-cluster {
   position: absolute;
   top: 0;

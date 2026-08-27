@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 const TILE_SIZE = 256
 const MIN_ZOOM = 3
@@ -72,7 +72,7 @@ function clusterCellSize(zoom) {
   return 0
 }
 
-function MapTileLayer({ center, zoom, viewport }) {
+const MapTileLayer = memo(function MapTileLayer({ center, zoom, viewport }) {
   const projectedCenter = project(center.latitude, center.longitude, zoom)
   const tileCount = 2 ** zoom
   const minX = Math.floor((projectedCenter.x - viewport.width / 2) / TILE_SIZE) - 1
@@ -92,7 +92,7 @@ function MapTileLayer({ center, zoom, viewport }) {
     }
   }
   return <div className="location-map-tiles" aria-hidden="true">{tiles.map((tile) => <img key={tile.key} src={tile.src} alt="" draggable="false" width="256" height="256" style={{ transform: `translate3d(${tile.left}px,${tile.top}px,0)` }} />)}</div>
-}
+})
 
 function PointCard({ point }) {
   if (!point) return <div className="location-map-empty-selection"><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, upcoming plans, and Puddle locations in this map area.</p></div>
@@ -104,9 +104,12 @@ function PointCard({ point }) {
 
 export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, selectingForPost = false }) {
   const mapRef = useRef(null)
+  const panLayerRef = useRef(null)
   const dragRef = useRef(null)
   const panFrameRef = useRef(0)
-  const pendingCenterRef = useRef(null)
+  const pendingPanRef = useRef(null)
+  const wheelFrameRef = useRef(0)
+  const pendingWheelDeltaRef = useRef(0)
   const catalogueCacheRef = useRef(new Map())
   const catalogueRequestRef = useRef(0)
   const [viewport, setViewport] = useState({ width: 900, height: 620 })
@@ -129,7 +132,15 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
 
   useEffect(() => () => {
     if (panFrameRef.current) window.cancelAnimationFrame(panFrameRef.current)
+    if (wheelFrameRef.current) window.cancelAnimationFrame(wheelFrameRef.current)
   }, [])
+
+  // Panning is rendered by the compositor while the pointer is down. The
+  // React state update happens only after release, so projection, list layout,
+  // and viewport fetching cannot compete with the drag frame.
+  useLayoutEffect(() => {
+    if (!dragRef.current && panLayerRef.current) panLayerRef.current.style.transform = 'translate3d(0, 0, 0)'
+  }, [center.latitude, center.longitude, zoom])
 
   useEffect(() => {
     const requestId = ++catalogueRequestRef.current
@@ -265,33 +276,77 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     setZoom((value) => clamp(value + (value < 9 ? 2 : 1), MIN_ZOOM, MAX_ZOOM))
   }
   function pointerDown(event) {
-    if (event.button !== 0) return
+    if (event.button !== 0 || event.isPrimary === false) return
     // Controls inside the canvas own their pointer gesture. Capturing their
     // pointer here can retarget the subsequent click to the canvas, leaving a
     // marker visibly selected without updating the details card.
     if (event.target?.closest?.('button,a')) return
     event.currentTarget.setPointerCapture(event.pointerId)
-    dragRef.current = { x: event.clientX, y: event.clientY, center: projectedCenter }
+    event.currentTarget.style.cursor = 'grabbing'
+    if (panLayerRef.current) panLayerRef.current.style.transform = 'translate3d(0, 0, 0)'
+    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, center: projectedCenter, zoom }
+    pendingPanRef.current = null
   }
   function pointerMove(event) {
     const drag = dragRef.current
-    if (!drag) return
-    pendingCenterRef.current = unproject(drag.center.x - (event.clientX - drag.x), drag.center.y - (event.clientY - drag.y), zoom)
+    if (!drag || event.pointerId !== drag.pointerId) return
+    const x = event.clientX - drag.x
+    const y = event.clientY - drag.y
+    pendingPanRef.current = {
+      x,
+      y,
+      center: unproject(drag.center.x - x, drag.center.y - y, drag.zoom)
+    }
     if (panFrameRef.current) return
     panFrameRef.current = window.requestAnimationFrame(() => {
       panFrameRef.current = 0
-      if (pendingCenterRef.current) setCenter(pendingCenterRef.current)
+      const pending = pendingPanRef.current
+      if (!pending || !dragRef.current) return
+      if (panLayerRef.current) panLayerRef.current.style.transform = `translate3d(${pending.x}px, ${pending.y}px, 0)`
     })
   }
   function pointerUp(event) {
+    const drag = dragRef.current
+    if (!drag || event.pointerId !== drag.pointerId) return
     dragRef.current = null
-    if (pendingCenterRef.current) {
-      setCenter(pendingCenterRef.current)
-      pendingCenterRef.current = null
+    const x = event.clientX - drag.x
+    const y = event.clientY - drag.y
+    pendingPanRef.current = null
+    if (panFrameRef.current) {
+      window.cancelAnimationFrame(panFrameRef.current)
+      panFrameRef.current = 0
     }
+    if (x || y) setCenter(unproject(drag.center.x - x, drag.center.y - y, drag.zoom))
+    event.currentTarget.style.cursor = 'grab'
     try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
   }
-  function wheel(event) { event.preventDefault(); setZoom((value) => clamp(value + (event.deltaY < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM)) }
+  function pointerCancel(event) {
+    const drag = dragRef.current
+    if (!drag || event.pointerId !== drag.pointerId) return
+    const pending = pendingPanRef.current
+    dragRef.current = null
+    pendingPanRef.current = null
+    if (panFrameRef.current) {
+      window.cancelAnimationFrame(panFrameRef.current)
+      panFrameRef.current = 0
+    }
+    if (panLayerRef.current) panLayerRef.current.style.transform = 'translate3d(0, 0, 0)'
+    if (pending) setCenter(pending.center)
+    event.currentTarget.style.cursor = 'grab'
+    try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
+  }
+  function wheel(event) {
+    event.preventDefault()
+    if (!event.deltaY) return
+    pendingWheelDeltaRef.current += event.deltaY
+    if (wheelFrameRef.current) return
+    wheelFrameRef.current = window.requestAnimationFrame(() => {
+      wheelFrameRef.current = 0
+      const delta = pendingWheelDeltaRef.current
+      pendingWheelDeltaRef.current = 0
+      if (delta) setZoom((value) => clamp(value + (delta < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM))
+    })
+  }
   function locate() {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition((position) => { setCenter({ latitude: position.coords.latitude, longitude: normalizeLongitude(position.coords.longitude) }); setZoom(14) }, () => {}, { maximumAge: 300000, timeout: 8000 })
@@ -306,22 +361,24 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       </div>
     </section>
     <div className="location-map-layout">
-      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onWheel={wheel} aria-label="Interactive map of Puddle locations">
-        <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
-        {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{visibleHeatmap.map((point) => {
-          const projected = project(point.latitude, point.longitude, zoom)
-          const x = projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2
-          const y = projected.y - projectedCenter.y + viewport.height / 2
-          const ratio = Math.max(.12, (Number(point.save_count) || 1) / maxHeat)
-          const size = Math.round(34 + ratio * 74)
-          return <span className="location-map-heat" title={`${point.name}: ${point.save_count} saves`} style={{ width: `${size}px`, height: `${size}px`, opacity: .2 + ratio * .5, transform: `translate3d(${x}px,${y}px,0) translate(-50%,-50%)` }} key={point.id}><b>{point.save_count}</b></span>
-        })}</div> : null}
-        <div className="location-map-markers">{markerGroups.map((item) => {
-          if (item.type === 'cluster') return <button type="button" className="location-map-cluster" style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { event.stopPropagation(); openCluster(item) }} aria-label={`${item.count} locations. Zoom in to explore.`} key={`cluster:${zoom}:${item.key}`}><span>{item.count}</span></button>
-          const point = item.point
-          const primary = primaryState(point)
-          return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span>{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? '•' : '♥'}</span></button>
-        })}</div>
+      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onWheel={wheel} aria-label="Interactive map of Puddle locations">
+        <div className="location-map-pan-layer" ref={panLayerRef}>
+          <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
+          {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{visibleHeatmap.map((point) => {
+            const projected = project(point.latitude, point.longitude, zoom)
+            const x = projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2
+            const y = projected.y - projectedCenter.y + viewport.height / 2
+            const ratio = Math.max(.12, (Number(point.save_count) || 1) / maxHeat)
+            const size = Math.round(34 + ratio * 74)
+            return <span className="location-map-heat" title={`${point.name}: ${point.save_count} saves`} style={{ width: `${size}px`, height: `${size}px`, opacity: .2 + ratio * .5, transform: `translate3d(${x}px,${y}px,0) translate(-50%,-50%)` }} key={point.id}><b>{point.save_count}</b></span>
+          })}</div> : null}
+          <div className="location-map-markers">{markerGroups.map((item) => {
+            if (item.type === 'cluster') return <button type="button" className="location-map-cluster" style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { event.stopPropagation(); openCluster(item) }} aria-label={`${item.count} locations. Zoom in to explore.`} key={`cluster:${zoom}:${item.key}`}><span>{item.count}</span></button>
+            const point = item.point
+            const primary = primaryState(point)
+            return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span>{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? '•' : '♥'}</span></button>
+          })}</div>
+        </div>
         <div className="location-map-zoom"><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
         <a className="location-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onPointerDown={(event) => event.stopPropagation()}>© OpenStreetMap contributors</a>
       </section>
