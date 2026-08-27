@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useModalFocus } from '@/components/modal-focus'
 
 const swipePlaces = [
   { id: 'maple-grove', title: 'Maple Grove Park', category: 'Park', distance: '208m', address: '2243 Devon Road, Oakville' },
@@ -39,9 +40,21 @@ function DemoBottomNav({ active }) {
 }
 
 function DemoDetails({ title, subtitle, onClose }) {
+  const dialogRef = useRef(null)
+  const closeRef = useRef(null)
+  useModalFocus(dialogRef, closeRef)
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
   return <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section className="landing-demo-dialog" role="dialog" aria-modal="true" aria-label={`${title} details`}>
-      <button type="button" className="landing-demo-dialog-close" onClick={onClose} aria-label="Close details">×</button>
+    <section ref={dialogRef} className="landing-demo-dialog" role="dialog" aria-modal="true" aria-label={`${title} details`} tabIndex={-1}>
+      <button ref={closeRef} type="button" className="landing-demo-dialog-close" onClick={onClose} aria-label="Close details">×</button>
       <div className="landing-demo-dialog-photo" aria-hidden="true" />
       <small>Oakville</small>
       <h2>{title}</h2>
@@ -200,6 +213,18 @@ function ProfileDemo() {
   const [name, setName] = useState('Richie Zheng')
   const [following, setFollowing] = useState(false)
   const [messageOpen, setMessageOpen] = useState(false)
+  const messageRef = useRef(null)
+  const messageCloseRef = useRef(null)
+  useModalFocus(messageRef, messageCloseRef, messageOpen)
+
+  useEffect(() => {
+    if (!messageOpen) return undefined
+    function onKeyDown(event) {
+      if (event.key === 'Escape') setMessageOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [messageOpen])
 
   return <div className="landing-demo-screen landing-demo-screen--profile" data-demo-screen="profile" data-figma-screen="40:347">
     <header className="landing-demo-profile-cover"><button type="button" onClick={() => setEditing((value) => !value)}>{editing ? 'Done' : 'Edit'}</button></header>
@@ -219,7 +244,7 @@ function ProfileDemo() {
       <button className="landing-demo-profile-add" type="button" aria-label="Add profile section">＋</button>
     </section>
     <DemoBottomNav active="profile" />
-    {messageOpen ? <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setMessageOpen(false) }}><section className="landing-demo-message" role="dialog" aria-modal="true" aria-label="Message Richie Zheng"><button type="button" onClick={() => setMessageOpen(false)} aria-label="Close message">×</button><strong>Message Richie Zheng</strong><textarea aria-label="Message" placeholder="Write a message…" /><button type="button" onClick={() => setMessageOpen(false)}>Send</button></section></div> : null}
+    {messageOpen ? <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setMessageOpen(false) }}><section ref={messageRef} className="landing-demo-message" role="dialog" aria-modal="true" aria-label="Message Richie Zheng" tabIndex={-1}><button ref={messageCloseRef} type="button" onClick={() => setMessageOpen(false)} aria-label="Close message">×</button><strong>Message Richie Zheng</strong><textarea aria-label="Message" placeholder="Write a message…" /><button type="button" onClick={() => setMessageOpen(false)}>Send</button></section></div> : null}
   </div>
 }
 
