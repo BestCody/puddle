@@ -112,6 +112,8 @@
   will-change: transform;
   backface-visibility: hidden;
 }
+.location-map-canvas.is-dragging,
+.location-map-canvas.is-dragging * { cursor: grabbing !important; }
 
 .location-map-cluster {
   position: absolute;

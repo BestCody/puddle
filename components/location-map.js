@@ -115,6 +115,8 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const mapRef = useRef(null)
   const panLayerRef = useRef(null)
   const dragRef = useRef(null)
+  const pressRef = useRef(null)
+  const suppressClickUntilRef = useRef(0)
   const panFrameRef = useRef(0)
   const pendingPanRef = useRef(null)
   const wheelFrameRef = useRef(0)
@@ -331,19 +333,35 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     setCenter({ latitude: cluster.latitude, longitude: cluster.longitude })
     setZoom((value) => clamp(value + (value < 9 ? 2 : 1), MIN_ZOOM, MAX_ZOOM))
   }
-  function pointerDown(event) {
-    if (event.button !== 0 || event.isPrimary === false) return
-    // Controls inside the canvas own their pointer gesture. Capturing their
-    // pointer here can retarget the subsequent click to the canvas, leaving a
-    // marker visibly selected without updating the details card.
-    if (event.target?.closest?.('button,a')) return
+  function startDrag(event, press) {
     event.currentTarget.setPointerCapture(event.pointerId)
     event.currentTarget.style.cursor = 'grabbing'
+    event.currentTarget.classList.add('is-dragging')
     if (panLayerRef.current) panLayerRef.current.style.transform = 'translate3d(0, 0, 0)'
-    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, center: projectedCenter, zoom }
+    dragRef.current = press
     pendingPanRef.current = null
   }
+  function pointerDown(event) {
+    if (event.button !== 0 || event.isPrimary === false) return
+    const press = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, center: projectedCenter, zoom }
+    // Let a marker or cluster receive a normal click. If the pointer moves
+    // far enough, pointerMove promotes that press into a map drag instead.
+    if (event.target?.closest?.('button,a')) {
+      pressRef.current = press
+      return
+    }
+    startDrag(event, press)
+  }
   function pointerMove(event) {
+    if (!dragRef.current && pressRef.current?.pointerId === event.pointerId) {
+      const press = pressRef.current
+      const distance = Math.hypot(event.clientX - press.x, event.clientY - press.y)
+      if (distance > 6) {
+        pressRef.current = null
+        suppressClickUntilRef.current = Date.now() + 350
+        startDrag(event, press)
+      }
+    }
     const drag = dragRef.current
     if (!drag || event.pointerId !== drag.pointerId) return
     const x = event.clientX - drag.x
@@ -362,9 +380,14 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     })
   }
   function pointerUp(event) {
+    if (!dragRef.current && pressRef.current?.pointerId === event.pointerId) {
+      pressRef.current = null
+      return
+    }
     const drag = dragRef.current
     if (!drag || event.pointerId !== drag.pointerId) return
     dragRef.current = null
+    pressRef.current = null
     const x = event.clientX - drag.x
     const y = event.clientY - drag.y
     pendingPanRef.current = null
@@ -374,14 +397,20 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }
     if (x || y) setCenter(unproject(drag.center.x - x, drag.center.y - y, drag.zoom))
     event.currentTarget.style.cursor = 'grab'
+    event.currentTarget.classList.remove('is-dragging')
     try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
   }
   function pointerCancel(event) {
+    if (!dragRef.current && pressRef.current?.pointerId === event.pointerId) {
+      pressRef.current = null
+      return
+    }
     const drag = dragRef.current
     if (!drag || event.pointerId !== drag.pointerId) return
     const pending = pendingPanRef.current
     dragRef.current = null
     pendingPanRef.current = null
+    pressRef.current = null
     if (panFrameRef.current) {
       window.cancelAnimationFrame(panFrameRef.current)
       panFrameRef.current = 0
@@ -389,7 +418,15 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     if (panLayerRef.current) panLayerRef.current.style.transform = 'translate3d(0, 0, 0)'
     if (pending) setCenter(pending.center)
     event.currentTarget.style.cursor = 'grab'
+    event.currentTarget.classList.remove('is-dragging')
     try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
+  }
+  function consumeDragClick(event) {
+    if (suppressClickUntilRef.current <= Date.now()) return false
+    suppressClickUntilRef.current = 0
+    event.preventDefault()
+    event.stopPropagation()
+    return true
   }
   function locate() {
     if (!navigator.geolocation) {
@@ -425,10 +462,10 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
             return <span className="location-map-heat" title={`${point.name}: ${point.save_count} saves`} style={{ width: `${size}px`, height: `${size}px`, opacity: .2 + ratio * .5, transform: `translate3d(${x}px,${y}px,0) translate(-50%,-50%)` }} key={point.id}><b>{point.save_count}</b></span>
           })}</div> : null}
           <div className="location-map-markers">{markerGroups.map((item) => {
-            if (item.type === 'cluster') return <button type="button" className="location-map-cluster" style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { event.stopPropagation(); openCluster(item) }} aria-label={`${item.count} locations. Zoom in to explore.`} key={`cluster:${zoom}:${item.key}`}><span>{item.count}</span></button>
+            if (item.type === 'cluster') return <button type="button" className="location-map-cluster" style={{ transform: `translate3d(${item.x}px,${item.y}px,0)` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); openCluster(item) }} aria-label={`${item.count} locations. Zoom in to explore.`} key={`cluster:${zoom}:${item.key}`}><span>{item.count}</span></button>
             const point = item.point
             const primary = primaryState(point)
-            return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${item.x}px,${item.y}px,0) rotate(-45deg)${selectedId === point.id ? ' scale(1.15)' : ''}` }} onClick={(event) => { event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span>{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? '•' : '♥'}</span></button>
+            return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${item.x}px,${item.y}px,0) rotate(-45deg)${selectedId === point.id ? ' scale(1.15)' : ''}` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} key={point.id}><span aria-hidden="true">{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? 'P' : '♥'}</span></button>
           })}</div>
         </div>
         <div className="location-map-zoom"><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
