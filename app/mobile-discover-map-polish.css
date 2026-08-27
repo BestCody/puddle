@@ -128,12 +128,19 @@
   background: rgba(76,165,247,.9);
   color: #fff;
   pointer-events: auto;
+  z-index: 4;
   box-shadow: 0 4px 14px rgba(0,0,0,.18);
   cursor: pointer;
   will-change: transform;
 }
 .location-map-cluster > span { font: 800 13px/1 Manrope, sans-serif; }
 .location-map-cluster:hover { box-shadow: 0 5px 18px rgba(0,0,0,.23); }
+
+/* Keep positioning separate from pin rotation. CSS individual transforms on a
+   positioned marker rotate its map coordinates as well as its shape. */
+.location-map-marker { rotate: none; }
+.location-map-marker.is-selected { scale: none; }
+.location-map-marker > span { rotate: none; transform: rotate(45deg); }
 
 .figma-dashboard-shell[data-appearance='dark'] .puddle-discover-search-trigger,
 .figma-dashboard-shell[data-resolved-appearance='dark'] .puddle-discover-search-trigger,

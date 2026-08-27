@@ -21,6 +21,13 @@ test('map clusters are clickable, pans on the compositor, and markers show direc
     const canvasBox = await map.boundingBox()
     expect(canvasBox).toBeTruthy()
 
+    const catalogueMarkers = map.locator('.location-map-marker.is-catalogue')
+    await expect.poll(() => catalogueMarkers.count(), { timeout: 30_000 }).toBeGreaterThan(1)
+    const zoomOut = map.getByRole('button', { name: 'Zoom out', exact: true })
+    await zoomOut.click()
+    await zoomOut.click()
+    await expect(mapCanvas).toHaveAttribute('data-map-zoom', '12')
+
     const clusters = map.locator('.location-map-cluster')
     await expect.poll(() => clusters.count(), { timeout: 30_000 }).toBeGreaterThan(0)
     let interactiveCluster = null
