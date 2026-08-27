@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
+import { useModalFocus } from '@/components/modal-focus'
 import { PhotoFrame } from '@/components/photo-frame'
 
 function initials(name) {
@@ -22,7 +23,10 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
   const [open, setOpen] = useState(Boolean(initialOpen))
   const [locationId, setLocationId] = useState(requestedLocation || initialPoints[0]?.id || '')
   const dockRef = useRef(null)
+  const formRef = useRef(null)
   const titleRef = useRef(null)
+
+  useModalFocus(formRef, titleRef, open)
 
   useEffect(() => {
     if (initialOpen) setOpen(true)
@@ -42,7 +46,6 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
 
   useEffect(() => {
     if (!open) return undefined
-    const frame = window.requestAnimationFrame(() => titleRef.current?.focus())
     const closeOutside = (event) => {
       if (!dockRef.current?.contains(event.target)) setOpen(false)
     }
@@ -52,7 +55,6 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
     document.addEventListener('pointerdown', closeOutside, true)
     window.addEventListener('keydown', closeOnEscape)
     return () => {
-      window.cancelAnimationFrame(frame)
       document.removeEventListener('pointerdown', closeOutside, true)
       window.removeEventListener('keydown', closeOnEscape)
     }
@@ -103,7 +105,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       <b className="puddle-discover-create-arrow" aria-hidden="true">↑</b>
     </button>
 
-    <form action={createPuddlePost} className="puddle-discover-create-form" id="discover-create-puddle-form" aria-label="Create a puddle" aria-hidden={!open} inert={!open}>
+    <form ref={formRef} action={createPuddlePost} className="puddle-discover-create-form" id="discover-create-puddle-form" role="dialog" aria-modal="true" aria-label="Create a puddle" aria-hidden={!open} inert={!open} tabIndex={-1}>
       <input type="hidden" name="location_id" value={locationId} />
       <header className="puddle-discover-create-header">
         <PhotoFrame as="span" className="puddle-discover-create-avatar" src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { LocationMap } from '@/components/location-map'
+import { useModalFocus } from '@/components/modal-focus'
 import { PhotoFrame } from '@/components/photo-frame'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 
@@ -83,6 +84,7 @@ function mapPoint(location, state) {
 }
 
 function SamePageSavedDetail({ preview, detail, busy, message, detailError, names, onClose, onRetry, onAction }) {
+  const detailRef = useRef(null)
   const location = detail?.location || {
     id: preview.key,
     slug: preview.slug,
@@ -98,7 +100,9 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
   const posts = detail?.posts || []
   const similarPlaces = (detail?.similar || []).filter((item) => item?.content_kind !== 'event' && item?.slug)
 
-  return <div className="saved-inline-detail-layer" role="dialog" aria-modal="true" aria-label={`${location.name} details`}>
+  useModalFocus(detailRef)
+
+  return <div ref={detailRef} className="saved-inline-detail-layer" role="dialog" aria-modal="true" aria-label={`${location.name} details`} tabIndex={-1}>
     <button className="saved-inline-detail-backdrop" type="button" aria-label="Close saved details" onClick={onClose} />
     <article className="saved-inline-detail-card" style={{ viewTransitionName: names.card }}>
       <button className="saved-inline-detail-close" type="button" onClick={onClose} aria-label="Close saved details">×</button>

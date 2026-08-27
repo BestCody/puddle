@@ -20,8 +20,9 @@ function focusable(container) {
   })
 }
 
-export function useModalFocus(containerRef, initialFocusRef = null) {
+export function useModalFocus(containerRef, initialFocusRef = null, enabled = true) {
   useEffect(() => {
+    if (!enabled) return undefined
     const container = containerRef.current
     if (!container) return undefined
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -55,5 +56,5 @@ export function useModalFocus(containerRef, initialFocusRef = null) {
       document.removeEventListener('keydown', keepFocusInside)
       if (previous?.isConnected) previous.focus()
     }
-  }, [containerRef, initialFocusRef])
+  }, [containerRef, initialFocusRef, enabled])
 }
