@@ -24,11 +24,13 @@ function photos(item) {
 }
 
 function DetailsPhoto({ url, title, index }) {
+  const [failed, setFailed] = useState(false)
   const alt = index ? `${title} photo ${index + 1}` : title
+  if (failed) return <div className="figma-swipe-details-photo-empty" role="img" aria-label={`${alt}: photo unavailable`}>Photo unavailable</div>
   if (canOptimizeDiscoveryImage(url)) {
-    return <Image src={url} alt={alt} width={420} height={260} sizes="(max-width: 760px) 50vw, 310px" />
+    return <Image src={url} alt={alt} width={420} height={260} sizes="(max-width: 760px) 50vw, 310px" onError={() => setFailed(true)} />
   }
-  return <img src={url} alt={alt} loading="lazy" decoding="async" />
+  return <img src={url} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} />
 }
 
 function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
@@ -66,9 +68,12 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [mainPhotoFailed, setMainPhotoFailed] = useState(false)
   const photoUrls = useMemo(() => photos(item), [item])
   const mainPhoto = photoUrls[0] || null
   const optimizedMainPhoto = mainPhoto && canOptimizeDiscoveryImage(mainPhoto) ? mainPhoto : null
+
+  useEffect(() => setMainPhotoFailed(false), [mainPhoto])
 
   async function choose(action) {
     if (busy || choiceInFlight.current) return
@@ -111,7 +116,8 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
     else setDragX(0)
   }
 
-  const photoStyle = !optimizedMainPhoto && mainPhoto ? { backgroundImage: `url(${mainPhoto})` } : undefined
+  const showMainPhoto = Boolean(mainPhoto) && !mainPhotoFailed
+  const photoStyle = !optimizedMainPhoto && showMainPhoto ? { backgroundImage: `url(${mainPhoto})` } : undefined
   const locationId = item.location_id || item.content_id || item.id || ''
 
   return <>
@@ -132,8 +138,9 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
       <div className="figma-swipe-card-photo" style={photoStyle}>
-        {optimizedMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload /> : null}
-        {!mainPhoto ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo is available">Photo unavailable</div> : null}
+        {optimizedMainPhoto && showMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload onError={() => setMainPhotoFailed(true)} /> : null}
+        {!optimizedMainPhoto && showMainPhoto ? <img src={mainPhoto} alt={item.title} loading="eager" decoding="async" onError={() => setMainPhotoFailed(true)} /> : null}
+        {!showMainPhoto ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo is available">Photo unavailable</div> : null}
       </div>
       <div className="figma-swipe-card-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
       <div className="figma-swipe-card-copy"><h1>{item.title}</h1><p>{addressLabel(item)}</p></div>

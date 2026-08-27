@@ -26,18 +26,23 @@ function ReviewEditor({ locationId, slug, review }) {
 export function DetailReviews({ locationId, slug, userId }) {
   const client = useMemo(() => createClient(), [])
   const [state, setState] = useState({ loading: true, reviews: [], error: null })
+  const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     let active = true
+    setState({ loading: true, reviews: [], error: null })
     async function load() {
-      const { data, error } = await client.rpc('location_reviews_v1', { target_location: locationId })
-      if (!active) return
-      if (error) setState({ loading: false, reviews: [], error: 'Reviews could not be loaded.' })
-      else setState({ loading: false, reviews: data || [], error: null })
+      try {
+        const { data, error } = await client.rpc('location_reviews_v1', { target_location: locationId })
+        if (error) throw error
+        if (active) setState({ loading: false, reviews: data || [], error: null })
+      } catch {
+        if (active) setState({ loading: false, reviews: [], error: 'Reviews could not be loaded.' })
+      }
     }
     load()
     return () => { active = false }
-  }, [client, locationId])
+  }, [client, locationId, retry])
 
   const myReview = state.reviews.find((review) => review.author_id === userId) || null
   const averageRating = state.reviews.length
@@ -49,8 +54,8 @@ export function DetailReviews({ locationId, slug, userId }) {
     <div style={{ padding: '0 20px 18px' }}>
       <ReviewEditor key={myReview?.id || 'new'} locationId={locationId} slug={slug} review={myReview} />
       {myReview ? <form action={deletePlaceReview} style={{ marginTop: 7 }}><HiddenLocation locationId={locationId} slug={slug} /><button type="submit" style={{ border: 0, background: 'transparent', padding: 0, color: '#777', font: '700 12px/1.2 Manrope, sans-serif', textDecoration: 'underline', cursor: 'pointer' }}>Delete my review</button></form> : null}
-      {state.loading ? <div style={{ marginTop: 14 }} aria-label="Loading reviews" /> : null}
-      {state.error ? <div style={{ marginTop: 14 }} role="status">{state.error}</div> : null}
+      {state.loading ? <div className={styles.reviewStatus} role="status">Loading reviews…</div> : null}
+      {state.error ? <div className={`${styles.reviewStatus} ${styles.reviewStatusError}`} role="alert"><span>{state.error}</span><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
       {!state.loading && !state.error ? <div style={{ display: 'grid', gap: 9, marginTop: 14 }}>
         {state.reviews.length ? state.reviews.map((review) => <article key={review.id} style={{ paddingTop: 9, borderTop: '1px solid #ececec' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, font: '700 13px/1.2 Manrope, sans-serif' }}><strong>{review.display_name || review.username || 'Puddle person'}</strong><span aria-label={`${review.rating} out of 5 stars`}>{'★'.repeat(Number(review.rating))}{'☆'.repeat(5 - Number(review.rating))}</span></div>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { LocationMap } from '@/components/location-map'
+import { PhotoFrame } from '@/components/photo-frame'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 
 function applyNames(card) {
@@ -81,7 +82,7 @@ function mapPoint(location, state) {
   }]
 }
 
-function SamePageSavedDetail({ preview, detail, busy, message, names, onClose, onAction }) {
+function SamePageSavedDetail({ preview, detail, busy, message, detailError, names, onClose, onRetry, onAction }) {
   const location = detail?.location || {
     id: preview.key,
     slug: preview.slug,
@@ -102,7 +103,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, names, onClose, o
       <button className="saved-inline-detail-close" type="button" onClick={onClose} aria-label="Close saved details">×</button>
 
       <div className="saved-inline-detail-main">
-        <div className="saved-inline-detail-hero" data-inline-morph-photo style={{ backgroundImage: image ? `url(${image})` : undefined, viewTransitionName: names.photo }} />
+        <PhotoFrame className="saved-inline-detail-hero" data-inline-morph-photo src={image} alt={`${location.name} photo`} loading="eager" style={{ viewTransitionName: names.photo }} />
 
         <div className="saved-inline-detail-actions">
           <button type="button" disabled={!detail || busy} className="is-primary" onClick={() => onAction('toggle_pinned')}>{detail?.state?.pinned ? 'Unpin' : 'Pin'}</button>
@@ -120,6 +121,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, names, onClose, o
           <span>Local spot</span>
         </div>
 
+        {detailError ? <div className="saved-inline-detail-message is-error" role="alert"><span>{detailError}</span><button type="button" onClick={onRetry}>Try again</button></div> : null}
         {message ? <div className="saved-inline-detail-message" role="status">{message}</div> : null}
 
         <section className="saved-inline-detail-plan">
@@ -157,7 +159,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, names, onClose, o
       <aside className="saved-inline-detail-side">
         <div className="saved-inline-detail-map">{detail && point.length ? <LocationMap initialPoints={point} initialCenter={center} /> : detail ? <div className="saved-inline-detail-map-empty">Map unavailable</div> : <div className="saved-inline-detail-map-loading" />}</div>
         {location.summary || location.description ? <p className="saved-inline-detail-summary">{location.summary || location.description}</p> : null}
-        {detail?.similar?.length ? <div className="saved-inline-detail-similar"><h2>Similar splashes</h2>{detail.similar.map((item) => <a href={item.content_kind === 'event' ? `/events/${item.slug}` : `/plans/${item.slug}`} key={`${item.content_kind || 'place'}:${item.id}`}><span style={item.cover_url ? { backgroundImage: `url(${item.cover_url})` } : undefined} /><strong>{item.title || item.name || 'Puddle'}</strong></a>)}</div> : null}
+        {detail?.similar?.length ? <div className="saved-inline-detail-similar"><h2>Similar splashes</h2>{detail.similar.map((item) => { const title = item.title || item.name || 'Puddle'; return <a href={item.content_kind === 'event' ? `/events/${item.slug}` : `/plans/${item.slug}`} key={`${item.content_kind || 'place'}:${item.id}`}><PhotoFrame as="span" src={item.cover_url} alt={`${title} photo`} className="saved-inline-detail-similar-photo" /><strong>{title}</strong></a> })}</div> : null}
       </aside>
     </article>
   </div>
@@ -169,8 +171,10 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
   const [detail, setDetail] = useState(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [detailError, setDetailError] = useState('')
   const sourceCardRef = useRef(null)
   const requestRef = useRef(0)
+  const detailLoaderRef = useRef(null)
   const needsRefreshRef = useRef(false)
   const transitionReadyRef = useRef(false)
   const pendingDetailRef = useRef(null)
@@ -194,10 +198,12 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
         const similar = Array.isArray(similarPayload?.items) ? similarPayload.items.slice(0, 3) : []
         if (transitionReadyRef.current) setDetail((current) => current ? { ...current, similar } : current)
         else if (pendingDetailRef.current) pendingDetailRef.current = { ...pendingDetailRef.current, similar }
-      } catch (error) {
-        if (requestRef.current === requestId) setMessage(error?.message || 'Could not load Saved details.')
+      } catch {
+        if (requestRef.current === requestId) setDetailError('Saved details could not be loaded.')
       }
     }
+
+    detailLoaderRef.current = loadDetail
 
     async function openFromLink(link) {
       const card = link.closest('[data-saved-morph-card]')
@@ -216,6 +222,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
       transitionReadyRef.current = false
       pendingDetailRef.current = null
       setMessage('')
+      setDetailError('')
       setDetail(null)
       requestRef.current += 1
       const requestId = requestRef.current
@@ -254,7 +261,10 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
     }
 
     document.addEventListener('click', onClick, true)
-    return () => document.removeEventListener('click', onClick, true)
+    return () => {
+      if (detailLoaderRef.current === loadDetail) detailLoaderRef.current = null
+      document.removeEventListener('click', onClick, true)
+    }
   }, [detailLocationId])
 
   async function close() {
@@ -268,6 +278,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
         setPreview(null)
         setDetail(null)
         setMessage('')
+        setDetailError('')
       })
       applyNames(card)
     }
@@ -285,6 +296,16 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
     }
   }
 
+  function retryDetail() {
+    if (!preview || busy || !detailLoaderRef.current) return
+    requestRef.current += 1
+    pendingDetailRef.current = null
+    setDetail(null)
+    setMessage('')
+    setDetailError('')
+    detailLoaderRef.current(preview, requestRef.current)
+  }
+
   async function performAction(action, extra = {}) {
     if (!preview || busy) return
     setBusy(true)
@@ -300,13 +321,13 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
       setDetail(payload)
       setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : 'Saved.')
       if (['toggle_saved', 'toggle_pinned', 'plan'].includes(action)) needsRefreshRef.current = true
-    } catch (error) {
-      setMessage(error?.message || 'That action could not be completed.')
+    } catch {
+      setMessage('That action could not be completed.')
     } finally {
       setBusy(false)
     }
   }
 
   if (detailLocationId || !preview) return null
-  return <SamePageSavedDetail preview={preview} detail={detail} busy={busy} message={message} names={preview.names} onClose={close} onAction={performAction} />
+  return <SamePageSavedDetail preview={preview} detail={detail} busy={busy} message={message} detailError={detailError} names={preview.names} onClose={close} onRetry={retryDetail} onAction={performAction} />
 }
