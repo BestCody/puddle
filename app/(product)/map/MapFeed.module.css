@@ -550,6 +550,7 @@
 
 .mapCanvas :global(.location-map-canvas) {
   touch-action: none;
+  overscroll-behavior: none;
 }
 
 .mapEmpty {

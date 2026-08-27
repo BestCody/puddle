@@ -5,13 +5,14 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('map catalogue loading is viewport-bounded through the selected global search backend', async () => {
-  const [facadeSource, b2Source, shardSource, routeSource, snapshotSource, mapSource, dataSource, pageSource] = await Promise.all([
+  const [facadeSource, b2Source, shardSource, routeSource, snapshotSource, mapSource, mapStyles, dataSource, pageSource] = await Promise.all([
     read('lib/app/global-location-search.js'),
     read('lib/app/b2-location-search.js'),
     read('lib/app/location-search-shards.js'),
     read('app/api/map/viewport/route.js'),
     read('app/api/map/snapshot/route.js'),
     read('components/location-map.js'),
+    read('app/mobile-discover-map-polish.css'),
     read('lib/app/location-map-data.js'),
     read('components/map-route-client.js')
   ])
@@ -51,6 +52,9 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(mapSource, /panLayerRef\.current\.style\.transform/)
   assert.match(mapSource, /useLayoutEffect/)
   assert.match(mapSource, /event\.pointerId !== drag\.pointerId/)
+  assert.match(mapSource, /addEventListener\('wheel', onWheel, \{ passive: false \}\)/)
+  assert.doesNotMatch(mapSource, /onWheel=\{wheel\}/)
+  assert.match(mapStyles, /\.location-map-canvas \{ overscroll-behavior: none; \}/)
 
   assert.match(await read('app/(product)/map/MapFeed.module.css'), /location-map-side\) \{[\s\S]*display: flex !important/)
   assert.match(await read('app/(product)/map/MapFeed.module.css'), /location-map-side \.location-map-list\) \{[\s\S]*display: none/)

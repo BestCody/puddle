@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 const TILE_SIZE = 256
 const MIN_ZOOM = 3
@@ -122,6 +122,20 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const [visibleHeatmap, setVisibleHeatmap] = useState(heatmapPoints)
   const [cataloguePoints, setCataloguePoints] = useState([])
 
+  const wheel = useCallback((event) => {
+    // Ctrl+wheel is browser zoom. Keep it from changing the page while the
+    // pointer is over the map; regular wheel input is the map zoom gesture.
+    if (event.ctrlKey || !event.deltaY) return
+    pendingWheelDeltaRef.current += event.deltaY
+    if (wheelFrameRef.current) return
+    wheelFrameRef.current = window.requestAnimationFrame(() => {
+      wheelFrameRef.current = 0
+      const delta = pendingWheelDeltaRef.current
+      pendingWheelDeltaRef.current = 0
+      if (delta) setZoom((value) => clamp(value + (delta < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM))
+    })
+  }, [])
+
   useEffect(() => {
     const node = mapRef.current
     if (!node) return
@@ -129,6 +143,21 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     observer.observe(node)
     return () => observer.disconnect()
   }, [])
+
+  useEffect(() => {
+    const node = mapRef.current
+    if (!node) return undefined
+    // React's delegated wheel listener can be treated as passive by the
+    // browser. Bind at the canvas with passive:false so page scrolling and
+    // browser zoom are reliably cancelled only inside the map surface.
+    const onWheel = (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      wheel(event)
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }, [wheel])
 
   useEffect(() => () => {
     if (panFrameRef.current) window.cancelAnimationFrame(panFrameRef.current)
@@ -335,18 +364,6 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     event.currentTarget.style.cursor = 'grab'
     try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
   }
-  function wheel(event) {
-    event.preventDefault()
-    if (!event.deltaY) return
-    pendingWheelDeltaRef.current += event.deltaY
-    if (wheelFrameRef.current) return
-    wheelFrameRef.current = window.requestAnimationFrame(() => {
-      wheelFrameRef.current = 0
-      const delta = pendingWheelDeltaRef.current
-      pendingWheelDeltaRef.current = 0
-      if (delta) setZoom((value) => clamp(value + (delta < 0 ? 1 : -1), MIN_ZOOM, MAX_ZOOM))
-    })
-  }
   function locate() {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition((position) => { setCenter({ latitude: position.coords.latitude, longitude: normalizeLongitude(position.coords.longitude) }); setZoom(14) }, () => {}, { maximumAge: 300000, timeout: 8000 })
@@ -361,7 +378,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       </div>
     </section>
     <div className="location-map-layout">
-      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onWheel={wheel} aria-label="Interactive map of Puddle locations">
+      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} data-map-zoom={zoom} aria-label="Interactive map of Puddle locations">
         <div className="location-map-pan-layer" ref={panLayerRef}>
           <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
           {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{visibleHeatmap.map((point) => {
