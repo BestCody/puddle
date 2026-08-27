@@ -56,8 +56,34 @@ test('the configured active Stripe price maps to Tinder tier and item period exp
   assert.equal(membership.tier, 'tinder')
   assert.equal(membership.stripe_price_id, 'price_test')
   assert.equal(membership.current_period_end, new Date(2_000_000_000 * 1000).toISOString())
+  assert.equal(membership.cancel_at_period_end, false)
   assert.equal(membershipIsActive(membership, 1_900_000_000_000), true)
   assert.equal(membershipIsActive(membership, 2_100_000_000_000), false)
+})
+
+test('scheduled Stripe cancellations are visible before the paid period ends', () => {
+  const membership = membershipFromSubscription({
+    id: 'sub_scheduled_cancel',
+    customer: 'cus_test',
+    status: 'active',
+    cancel_at_period_end: false,
+    cancel_at: 2_000_000_100,
+    items: { data: [{ price: { id: 'price_test' }, quantity: 1, current_period_end: 2_000_000_000 }] }
+  }, '00000000-0000-4000-8000-000000000001', 'price_test', 2_000_000_000_000)
+  assert.equal(membership.cancel_at_period_end, true)
+  assert.equal(membership.tier, 'tinder')
+  assert.equal(membershipIsActive(membership, 1_900_000_000_000), true)
+
+  const ended = membershipFromSubscription({
+    id: 'sub_ended_cancel',
+    customer: 'cus_test',
+    status: 'canceled',
+    cancel_at_period_end: false,
+    cancel_at: 1_900_000_000,
+    items: { data: [{ price: { id: 'price_test' }, quantity: 1, current_period_end: 2_000_000_000 }] }
+  }, '00000000-0000-4000-8000-000000000001', 'price_test', 2_000_000_000_000)
+  assert.equal(ended.cancel_at_period_end, false)
+  assert.equal(ended.tier, 'free')
 })
 
 test('another price or a zero-quantity Tinder item does not grant Tinder tier', () => {
