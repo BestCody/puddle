@@ -33,6 +33,16 @@ MAP_PROVIDER_TOKEN
 SENTRY_DSN
 ```
 
+## Stripe webhook configuration
+
+The enabled Stripe test and live event destination must use:
+
+```text
+https://puddle.you/api/billing/webhook
+```
+
+The destination signing secret must be stored in `STRIPE_WEBHOOK_SECRET` for the matching Vercel environment. It must listen for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, and `invoice.payment_failed`. The retired `/api/stripe/webhook` path must not be configured.
+
 ## Production rules
 
 - Event discovery may support 13+, but social matching, dating intent and cross-user live location are 18+.

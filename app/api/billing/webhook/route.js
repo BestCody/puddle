@@ -4,6 +4,12 @@ import { membershipFromSubscription, retrieveSubscription, verifyStripeWebhook }
 
 export const dynamic = 'force-dynamic'
 
+const INVOICE_SUBSCRIPTION_EVENTS = new Set(['invoice.paid', 'invoice.payment_failed'])
+
+function isUuid(value) {
+  return /^[0-9a-f-]{36}$/i.test(String(value || '').trim())
+}
+
 async function membershipUserId(admin, subscription, fallbackUserId = null) {
   const metadataUserId = String(subscription?.metadata?.puddle_user_id || fallbackUserId || '').trim()
   if (/^[0-9a-f-]{36}$/i.test(metadataUserId)) return metadataUserId
@@ -14,12 +20,19 @@ async function membershipUserId(admin, subscription, fallbackUserId = null) {
   else if (customerId) query = query.eq('stripe_customer_id', customerId)
   else return null
   const result = await query.maybeSingle()
+  if (result.error) throw result.error
   return result.data?.user_id || null
 }
 
 async function syncSubscription(admin, subscription, fallbackUserId = null) {
   const userId = await membershipUserId(admin, subscription, fallbackUserId)
-  if (!userId) return false
+  if (!userId) {
+    const metadata = subscription?.metadata || {}
+    if (metadata.puddle_tier === 'tinder' || isUuid(fallbackUserId)) {
+      throw new Error('Stripe subscription is not linked to a Puddle user.')
+    }
+    return false
+  }
   const record = membershipFromSubscription(subscription, userId)
   const saved = await admin.from('puddle_memberships').upsert(record, { onConflict: 'user_id' })
   if (saved.error) throw saved.error
@@ -53,6 +66,9 @@ export async function POST(request) {
       await syncSubscription(admin, subscription, object.client_reference_id)
     } else if (event.type.startsWith('customer.subscription.')) {
       const subscription = await currentSubscription(object)
+      await syncSubscription(admin, subscription)
+    } else if (INVOICE_SUBSCRIPTION_EVENTS.has(event.type) && object.subscription) {
+      const subscription = await currentSubscription(object.subscription)
       await syncSubscription(admin, subscription)
     }
     const recorded = await admin.from('stripe_membership_events').insert({ event_id: event.id, event_type: event.type })
