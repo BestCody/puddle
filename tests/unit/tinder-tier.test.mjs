@@ -34,6 +34,15 @@ test('subscription webhooks refresh the current Stripe object before changing ac
   assert.doesNotMatch(route, /await syncSubscription\(admin, object\)/)
 })
 
+test('Stripe billing uses the canonical endpoint and retries marked events that cannot be linked', async () => {
+  const route = await source('app/api/billing/webhook/route.js')
+  await assert.rejects(source('app/api/stripe/webhook/route.js'), { code: 'ENOENT' })
+  assert.doesNotMatch(route, /api\/stripe\/webhook/)
+  assert.match(route, /invoice\.paid/)
+  assert.match(route, /invoice\.payment_failed/)
+  assert.match(route, /Stripe subscription is not linked to a Puddle user\./)
+})
+
 test('the configured active Stripe price maps to Tinder tier and item period expiry closes access', () => {
   const subscription = {
     id: 'sub_test',
