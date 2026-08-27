@@ -191,7 +191,7 @@ test('completed UI paths work against production', async ({ page, browser }) => 
     const catalogueMarker = await firstInteractiveViewportMarker(map, '.location-map-marker.is-catalogue')
     await expect(catalogueMarker).toBeVisible({ timeout: 30_000 })
     await catalogueMarker.click()
-    await expect(map.getByRole('link', { name: 'Open details' })).toBeVisible()
+    await expect(map.getByRole('link', { name: 'Directions', exact: true })).toBeVisible()
   } finally {
     if (ownerCreated) await deleteDisposableAccount(page)
     if (friendCreated && friendPage) await deleteDisposableAccount(friendPage)
