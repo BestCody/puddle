@@ -1,7 +1,8 @@
 "use client"
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useModalFocus } from '@/components/modal-focus'
 import { PhotoFrame } from '@/components/photo-frame'
 import { createClient } from '@/lib/supabase/client'
 import { csrfFetch } from '@/lib/security/csrf-client'
@@ -23,7 +24,10 @@ function MiniAvatar({ client, person }) {
 function SendSheet({ client, item, friends, friendsLoading, friendsError, onRetry, onClose, onSent }) {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(null)
+  const sheetRef = useRef(null)
   const title = item.title || item.name || 'this place'
+
+  useModalFocus(sheetRef)
 
   async function send(friend) {
     if (busy) return
@@ -44,7 +48,7 @@ function SendSheet({ client, item, friends, friendsLoading, friendsError, onRetr
   }
 
   return <div className="social-sheet-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
-    <section className="social-profile-sheet send-sheet" role="dialog" aria-modal="true" aria-label={`Send ${title} to a friend`}>
+    <section ref={sheetRef} className="social-profile-sheet send-sheet" role="dialog" aria-modal="true" aria-label={`Send ${title} to a friend`} tabIndex={-1}>
       <button className="social-sheet-close" type="button" onClick={onClose} disabled={Boolean(busy)} aria-label="Close">×</button>
       <h2>Send to</h2>
       <p>{title}</p>
@@ -93,7 +97,7 @@ export function DiscoverSocialBar({ item, onMessage }) {
   }
 
   return <>
-    <button className="discover-share-trigger" type="button" aria-label="Send to" title="Send to" onClick={() => setOpen(true)}>
+    <button className="discover-share-trigger" type="button" aria-label="Send to" title="Send to" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
       <img src={SHARE_ICON} alt="" aria-hidden="true" />
     </button>
     {open ? <SendSheet client={client} item={item} friends={friends} friendsLoading={friendsLoading} friendsError={friendsError} onRetry={() => setFriendsRetry((value) => value + 1)} onClose={() => setOpen(false)} onSent={sent} /> : null}
