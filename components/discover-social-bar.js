@@ -29,6 +29,14 @@ function SendSheet({ client, item, friends, friendsLoading, friendsError, onRetr
 
   useModalFocus(sheetRef)
 
+  useEffect(() => {
+    function closeOnEscape(event) {
+      if (event.key === 'Escape' && !busy) onClose()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [busy, onClose])
+
   async function send(friend) {
     if (busy) return
     setBusy(friend.id)
