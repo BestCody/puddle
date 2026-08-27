@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { authLinkErrorMessage, isDuplicateUsernameError, profileWriteErrorMessage, safeAuthErrorCode } from '../../lib/auth/errors.js'
-import { authenticatedDestination } from '../../lib/auth/profile.js'
+import { authenticatedDestination, ensureProfile } from '../../lib/auth/profile.js'
 import { pathWithMessage, safeNextPath } from '../../lib/auth/redirect.js'
 import { birthDateError, formatBirthDateDigits, isValidEmail, sanitizeUsername } from '../../lib/app/input-validation.js'
 
@@ -37,6 +37,57 @@ test('new or recovered profiles are always sent through onboarding', () => {
   assert.equal(authenticatedDestination({ onboarding_completed_at: '2026-01-01T00:00:00Z' }, '/onboarding'), '/discover')
   assert.equal(authenticatedDestination({ onboarding_completed_at: '2026-01-01T00:00:00Z' }, '/dashboard'), '/discover')
   assert.equal(authenticatedDestination({ onboarding_completed_at: '2026-01-01T00:00:00Z' }, '/create'), '/create')
+})
+
+test('transient profile reads retry once while permanent errors fail closed', async () => {
+  let transientReads = 0
+  const transientSupabase = {
+    from() {
+      return {
+        select() {
+          return {
+            eq() {
+              return {
+                maybeSingle: async () => {
+                  transientReads += 1
+                  return transientReads === 1
+                    ? { data: null, error: { status: 503, message: 'temporarily unavailable' } }
+                    : { data: { id: '11111111-1111-4111-8111-111111111111' }, error: null }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  const recovered = await ensureProfile(transientSupabase, { id: '11111111-1111-4111-8111-111111111111' })
+  assert.equal(transientReads, 2)
+  assert.equal(recovered.profile.id, '11111111-1111-4111-8111-111111111111')
+
+  let permanentReads = 0
+  const permanentSupabase = {
+    from() {
+      return {
+        select() {
+          return {
+            eq() {
+              return {
+                maybeSingle: async () => {
+                  permanentReads += 1
+                  return { data: null, error: { status: 400, message: 'invalid request' } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  const failed = await ensureProfile(permanentSupabase, { id: '22222222-2222-4222-8222-222222222222' })
+  assert.equal(permanentReads, 1)
+  assert.equal(failed.profile, null)
+  assert.equal(failed.error.status, 400)
 })
 
 test('password recovery is allowed before onboarding is complete', () => {
