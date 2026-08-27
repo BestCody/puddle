@@ -55,6 +55,9 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(mapSource, /addEventListener\('wheel', onWheel, \{ passive: false \}\)/)
   assert.doesNotMatch(mapSource, /onWheel=\{wheel\}/)
   assert.match(mapStyles, /\.location-map-canvas \{ overscroll-behavior: none; \}/)
+  assert.match(mapStyles, /\.location-map-cluster[\s\S]*pointer-events: auto;/)
+  assert.doesNotMatch(mapSource, /Open details/)
+  assert.match(mapSource, /Directions<\/a>/)
 
   assert.match(await read('app/(product)/map/MapFeed.module.css'), /location-map-side\) \{[\s\S]*display: flex !important/)
   assert.match(await read('app/(product)/map/MapFeed.module.css'), /location-map-side \.location-map-list\) \{[\s\S]*display: none/)
