@@ -9,8 +9,8 @@ function categoryLabel(value) {
   return String(value || 'Place').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-function itemHref(item) {
-  return item.content_kind === 'event' ? `/events/${item.slug}` : `/plans/${item.slug}`
+function placeHref(item) {
+  return `/places/${encodeURIComponent(item.slug)}`
 }
 
 function itemTitle(item) {
@@ -44,11 +44,14 @@ export function SimilarPlaces({ slug }) {
     return () => controller.abort()
   }, [slug, retry])
 
+  const places = state.items.filter((item) => item?.content_kind !== 'event' && item?.slug).slice(0, 3)
+  if (!state.loading && !state.error && !places.length) return null
+
   return <section className={styles.similar} data-testid="saved-similar" aria-busy={state.loading || undefined}>
     <h2>Similar splashes</h2>
     {state.loading ? <div className={styles.similarStatus} role="status">Loading similar places…</div> : null}
     {state.error ? <div className={`${styles.similarStatus} ${styles.similarStatusError}`} role="alert"><span>{state.error}</span><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
-    {!state.loading && !state.error ? <div className={styles.similarGrid}>{state.items.slice(0, 3).map((item) => <Link className={styles.similarCard} href={itemHref(item)} key={`${item.content_kind || 'place'}:${item.id}`}>
+    {!state.loading && !state.error ? <div className={styles.similarGrid}>{places.map((item) => <Link className={styles.similarCard} href={placeHref(item)} key={`place:${item.id || item.slug}`}>
       <PhotoFrame as="span" src={item.cover_url} alt={`${itemTitle(item)} photo`} className={styles.similarPhoto} unavailableClassName={styles.similarPhotoUnavailable} />
       <strong>{itemTitle(item)}</strong>
       <small><span>{itemLocation(item)}</span>{Number.isFinite(Number(item.distance_km)) ? <b>{Number(item.distance_km).toFixed(1)} km</b> : null}</small>

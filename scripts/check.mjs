@@ -106,7 +106,7 @@ for (const forbidden of ["from('locations')",'source_metadata','latitude:','long
 }
 
 const publicLocation = await read('lib/app/public-location-cache.js')
-for (const marker of ['getGlobalLocationBySlug','searchGlobalLocations','relatedEvents','isLocationSuspended']) {
+for (const marker of ['getGlobalLocationBySlug','searchGlobalLocations','globalSimilar','public-location-recommendations-v2','isLocationSuspended']) {
   if (!publicLocation.includes(marker)) throw new Error(`Public location path is missing ${marker}`)
 }
 if (publicLocation.includes("from('locations')")) throw new Error('Public location path still reads the Supabase catalogue')
