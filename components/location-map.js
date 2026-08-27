@@ -338,6 +338,33 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     setCenter({ latitude: cluster.latitude, longitude: cluster.longitude })
     setZoom((value) => clamp(value + (value < 9 ? 2 : 1), MIN_ZOOM, MAX_ZOOM))
   }
+  function handleMapKeyDown(event) {
+    // Marker, cluster, zoom, and attribution controls own their keyboard
+    // interaction. Arrow-key navigation belongs to the map canvas itself.
+    if (event.target !== event.currentTarget) return
+    const panDistance = Math.max(80, Math.round(Math.min(viewport.width, viewport.height) * .25))
+    const panOffsets = {
+      ArrowLeft: [-panDistance, 0],
+      ArrowRight: [panDistance, 0],
+      ArrowUp: [0, -panDistance],
+      ArrowDown: [0, panDistance]
+    }
+    const offset = panOffsets[event.key]
+    if (offset) {
+      event.preventDefault()
+      setCenter(unproject(projectedCenter.x + offset[0], projectedCenter.y + offset[1], zoom))
+      return
+    }
+    if (event.key === '+' || event.key === '=' || event.key === 'Add') {
+      event.preventDefault()
+      setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM))
+      return
+    }
+    if (event.key === '-' || event.key === '_' || event.key === 'Subtract') {
+      event.preventDefault()
+      setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM))
+    }
+  }
   function startDrag(event, press) {
     event.currentTarget.setPointerCapture(event.pointerId)
     event.currentTarget.style.cursor = 'grabbing'
@@ -459,7 +486,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       </div>
     </section>
     <div className="location-map-layout">
-      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} data-map-zoom={zoom} aria-label="Interactive map of Puddle locations">
+      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onKeyDown={handleMapKeyDown} data-map-zoom={zoom} data-map-center-latitude={center.latitude} data-map-center-longitude={center.longitude} tabIndex={0} aria-label="Interactive map of Puddle locations. Use arrow keys to pan and plus or minus to zoom.">
         <div className="location-map-pan-layer" ref={panLayerRef}>
           <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
           {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{visibleHeatmap.map((point) => {
