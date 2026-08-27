@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 
-function MessageIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h15v10h-9l-4.5 3v-3H4.5v-10Z"/></svg>
+function UndoIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6"/></svg>
 }
 function PassIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -16,7 +16,7 @@ function PostIcon() {
 }
 
 const actions = [
-  { key: 'undo', label: 'Message', Icon: MessageIcon },
+  { key: 'undo', label: 'Undo', Icon: UndoIcon },
   { key: 'pass', label: 'Pass', Icon: PassIcon },
   { key: 'save', label: 'Save', Icon: SaveIcon },
   { key: 'perfect', label: 'Post', Icon: PostIcon }

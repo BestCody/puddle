@@ -16,8 +16,8 @@ test('rebuilt Figma swipe card keeps drag, dock, keyboard, and durable persisten
   assert.match(cardSource, /prefers-reduced-motion: reduce/)
   assert.match(cardSource, /if \(delta <= -90\) choose\('pass'\)/)
   assert.match(cardSource, /else if \(delta >= 90\) choose\('save'\)/)
-  assert.match(cardSource, /event\.key === 'ArrowLeft'\) choose\('pass'\)/)
-  assert.match(cardSource, /event\.key === 'ArrowRight'\) choose\('save'\)/)
+  assert.match(cardSource, /event\.key === 'ArrowLeft'\) \{ event\.preventDefault\(\); choose\('pass'\) \}/)
+  assert.match(cardSource, /event\.key === 'ArrowRight'\) \{ event\.preventDefault\(\); choose\('save'\) \}/)
   assert.match(cardSource, /await onChoice\(action, item\)/)
 
   assert.match(workspaceSource, /import \{ FigmaSwipeCard \}/)

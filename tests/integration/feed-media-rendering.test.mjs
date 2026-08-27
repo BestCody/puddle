@@ -65,13 +65,14 @@ test('saved cards render canonical photos and explicit image failure states', as
 })
 
 test('current social routes share resilient media primitives without the retired social shell', async () => {
-  const [hub, messages, layout, pass, parity, fine] = await Promise.all([
+  const [hub, messages, layout, pass, parity, fine, dock] = await Promise.all([
     read('components/figma-social-hub.js'),
     read('components/figma-messages-realtime.js'),
     read('app/layout.js'),
     read('app/figma-social-pass.css'),
     read('app/figma-parity.css'),
-    read('app/figma-parity-fine.css')
+    read('app/figma-parity-fine.css'),
+    read('components/swipe-action-dock.js')
   ])
 
   assert.match(hub, /PhotoFrame/)
@@ -79,6 +80,14 @@ test('current social routes share resilient media primitives without the retired
   assert.match(hub, /Friend search could not be completed\./)
   assert.match(messages, /PhotoFrame/)
   assert.match(messages, /Saved places could not be loaded\./)
+  assert.match(messages, /placeholder="Text Message"[\s\S]*aria-label="Message"/)
+  assert.match(hub, /placeholder="Search name or @username"[\s\S]*aria-label="Search friends by name or username"/)
+  assert.match(hub, /aria-label=\{`Add \$\{person\.display_name \|\| person\.username \|\| 'friend'\}`\}/)
+  assert.match(hub, /Accept friend request from/)
+  assert.match(hub, /Decline friend request from/)
+  assert.match(dock, /function UndoIcon/)
+  assert.match(dock, /\{ key: 'undo', label: 'Undo', Icon: UndoIcon \}/)
+  assert.doesNotMatch(dock, /label: 'Message'/)
   assert.match(layout, /import '\.\/social-primitives\.css'/)
   assert.doesNotMatch(layout, /social-hub\.css/)
   assert.doesNotMatch(pass, /\.social-hub|\.social-tabs|\.social-messages-layout/)

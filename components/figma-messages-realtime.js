@@ -359,7 +359,7 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
               <summary aria-label="More message options">○</summary>
               <div><Link href="/matches?tab=shared">View shared puddles</Link><Link href="/plans">Open Saved</Link></div>
             </details>
-            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Text Message" maxLength={5000} />
+            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Text Message" aria-label="Message" maxLength={5000} />
             <button className="is-send puddle-send-action" type="submit" disabled={!draft.trim() || busy} aria-label="Send message">↑</button>
           </form>
         </> : <div className="figma-friends-chat-empty">Select a conversation</div>}

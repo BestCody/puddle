@@ -73,7 +73,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   expect(page.url()).toBe(discoverUrl)
 
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
-  const undo = page.getByRole('button', { name: 'Message', exact: true })
+  const undo = page.getByRole('button', { name: 'Undo', exact: true })
   await expect(undo).toBeVisible()
   await expect(undo).toBeDisabled()
   for (const name of ['Pass', 'Save', 'Post']) {
