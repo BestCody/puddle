@@ -118,6 +118,18 @@
   object-fit: cover;
 }
 
+.saved-inline-detail-hero[data-photo-state='loading'] {
+  display: grid;
+  place-items: center;
+  color: #858585;
+  font: 700 13px/1.25 Manrope, sans-serif;
+  text-align: center;
+}
+
+.saved-inline-detail-hero[data-photo-state='loading'] > img {
+  opacity: 0;
+}
+
 .saved-inline-detail-hero[data-photo-state='unavailable'] {
   display: grid;
   place-items: center;
@@ -527,6 +539,18 @@
   display: block;
   border-radius: inherit;
   object-fit: cover;
+}
+
+.saved-inline-detail-similar-photo[data-photo-state='loading'] {
+  display: grid;
+  place-items: center;
+  color: #858585;
+  font: 700 9px/1.1 Manrope, sans-serif;
+  text-align: center;
+}
+
+.saved-inline-detail-similar-photo[data-photo-state='loading'] > img {
+  opacity: 0;
 }
 
 .saved-inline-detail-similar-photo[data-photo-state='unavailable'] {

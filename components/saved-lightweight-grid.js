@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
+import { PhotoFrame } from '@/components/photo-frame'
 
 const PREVIEW_CACHE_KEY = 'puddle:saved-place-previews:v2'
 const PREVIEW_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
@@ -45,20 +46,22 @@ function writePreviewCache(previews) {
 }
 
 function SavedCardPhoto({ className, href, ready, title, image, children }) {
-  const [failed, setFailed] = useState(false)
-  const showImage = Boolean(image) && !failed
-  return <a
-    className={`${className}${showImage ? '' : ' is-unavailable'}`}
+  return <PhotoFrame
+    as="a"
+    className={className}
     href={href}
+    src={image}
+    alt={`${title} photo`}
+    unavailableClassName="is-unavailable"
+    unavailableText={image ? 'Photo unavailable' : 'Puddle'}
     data-saved-morph-link={ready ? '' : undefined}
     data-saved-morph-photo={ready ? '' : undefined}
     aria-disabled={!ready}
     onClick={(event) => { if (!ready) event.preventDefault() }}
     aria-label={`Open ${title}`}
   >
-    {showImage ? <img src={image} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} /> : <span aria-hidden="true">{image ? 'Photo unavailable' : 'Puddle'}</span>}
     {children}
-  </a>
+  </PhotoFrame>
 }
 
 export function SavedLightweightGrid({ items = [], className = '', cardClassName = '', photoClassName = '', copyClassName = '', metaClassName = '', perfectPickClassName = '' }) {

@@ -45,11 +45,13 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [savedUrl, setSavedUrl] = useState(() => publicMediaUrl(client, currentPath))
+  const [photoFailed, setPhotoFailed] = useState(false)
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const shownUrl = preview || savedUrl
   const safeShownUrl = safeImageUrl(shownUrl)
 
+  useEffect(() => setPhotoFailed(false), [safeShownUrl])
   useEffect(() => {
     if (!preview) setSavedUrl(publicMediaUrl(client, currentPath))
   }, [client, currentPath, preview])
@@ -138,7 +140,7 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
 
   return <div className="profile-photo-editor">
     <span className="social-avatar is-large" style={{ overflow: 'hidden' }}>
-      {safeShownUrl ? <Image src={safeShownUrl} alt="Profile preview" width={96} height={96} unoptimized={safeShownUrl.startsWith('blob:')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
+      {safeShownUrl && !photoFailed ? <Image src={safeShownUrl} alt="Profile preview" width={96} height={96} unoptimized={safeShownUrl.startsWith('blob:')} onError={() => setPhotoFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
     </span>
     <div>
       <div className="profile-photo-actions">

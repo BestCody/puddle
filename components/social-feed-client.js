@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
+import { PhotoFrame } from '@/components/photo-frame'
 import { createFeedComment, toggleFeedSave } from '@/app/(product)/map/actions'
 import { FeedShareMenu } from '@/app/(product)/map/feed-share-menu'
 import styles from '@/app/(product)/map/MapFeed.module.css'
@@ -30,16 +31,17 @@ function timeLabel(value) {
 }
 
 function FeedPhoto({ href, locationName, url, label, className = '', moreCount = 0 }) {
-  const [failed, setFailed] = useState(false)
-  const unavailable = !url || failed
-  return <Link
+  return <PhotoFrame
+    as={Link}
     href={href}
-    className={`${styles.photo} ${className} ${unavailable ? styles.photoUnavailable : ''}`}
-    aria-label={unavailable ? `No verified photo available for ${locationName}` : label}
+    className={`${styles.photo} ${className}`}
+    unavailableClassName={styles.photoUnavailable}
+    unavailableText="Photo unavailable"
+    alt=""
+    aria-label={!url ? `No verified photo available for ${locationName}` : label}
   >
-    {unavailable ? <span>Photo unavailable</span> : <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />}
     {moreCount > 0 ? <span className={styles.photoCount}>+{moreCount}</span> : null}
-  </Link>
+  </PhotoFrame>
 }
 
 function FeedPhotos({ post, href }) {
@@ -89,7 +91,7 @@ function FeedPost({ post }) {
   const comments = Array.isArray(post.comments) ? post.comments : []
   return <article className={styles.post} id={`post-${post.id}`} data-testid="feed-post" aria-label={post.title || `Puddle at ${location.name}`}>
     <header className={styles.author}>
-      <span className={styles.avatar} style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>{post.author_avatar_url ? null : initials(authorName)}</span>
+      <PhotoFrame as="span" src={post.author_avatar_url} alt="" className={styles.avatar} unavailableText={initials(authorName)} loadingText="" />
       <span className={styles.authorMeta}><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
     </header>
     {post.body ? <p className={styles.copy}>{post.body}</p> : null}
@@ -181,7 +183,10 @@ export function SocialFeedClient({
         }
       })
       .catch((cause) => {
-        if (!controller.signal.aborted) setError(cause?.message || 'The feed could not be loaded.')
+        if (!controller.signal.aborted) {
+          console.warn('Could not load social feed.', { message: cause?.message || 'unknown error' })
+          setError('The feed could not be loaded.')
+        }
       })
 
     return () => controller.abort()
@@ -189,7 +194,7 @@ export function SocialFeedClient({
 
   return <>
     <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
-      {error ? <div className={styles.empty} role="alert"><strong>Could not load posts.</strong><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button><small>{error}</small></div>
+      {error ? <div className={styles.empty} role="alert"><strong>Could not load posts.</strong><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button><small>Check your connection and try again.</small></div>
         : feed ? <FeedStream feed={feed} query={query} />
           : <div className={styles.empty} role="status" aria-label="Loading posts"><strong>Loading…</strong></div>}
     </section>

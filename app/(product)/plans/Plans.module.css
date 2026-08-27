@@ -188,7 +188,27 @@
   object-fit: cover;
 }
 
-.placePhoto.is-unavailable {
+.placePhoto[data-photo-state='loading'] {
+  color: #858585;
+  font-size: 13px;
+  text-align: center;
+}
+
+.placePhoto[data-photo-state='loading'] > img {
+  opacity: 0;
+}
+
+.placePhoto[data-photo-state='unavailable']::after {
+  display: none;
+}
+
+.placePhotoUnavailable {
+  color: #858585;
+  font-size: 13px;
+  text-align: center;
+}
+
+.placePhoto:global(.is-unavailable) {
   color: #858585;
   font-size: 13px;
   text-align: center;
@@ -476,6 +496,18 @@
   height: 100%;
   display: block;
   object-fit: cover;
+}
+
+.detailHero[data-photo-state='loading'] {
+  display: grid;
+  place-items: center;
+  color: #858585;
+  font: 700 13px/1.25 Manrope, sans-serif;
+  text-align: center;
+}
+
+.detailHero[data-photo-state='loading'] > img {
+  opacity: 0;
 }
 
 .detailHeroUnavailable {
@@ -809,6 +841,18 @@
   display: block;
   object-fit: cover;
   border-radius: inherit;
+}
+
+.similarPhoto[data-photo-state='loading'] {
+  display: grid;
+  place-items: center;
+  color: #858585;
+  font: 700 12px/1.25 Manrope, sans-serif;
+  text-align: center;
+}
+
+.similarPhoto[data-photo-state='loading'] > img {
+  opacity: 0;
 }
 
 .similarPhotoUnavailable {

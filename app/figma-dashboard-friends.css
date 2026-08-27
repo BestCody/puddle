@@ -29,6 +29,8 @@
   color: #555;
   font: 800 12px/1 Manrope, sans-serif;
 }
+.figma-friends-avatar > img { width:100%; height:100%; display:block; object-fit:cover; }
+.figma-friends-avatar[data-photo-state='loading'] > img { opacity:0; }
 
 /* Message */
 .figma-friends-message-layout {
@@ -115,6 +117,7 @@
 .figma-friends-composer button.is-send { border-color:#78e152; color:#58c92e; }
 .figma-friends-composer button:disabled { opacity:.45; }
 .figma-friends-chat-empty { height:100%; display:grid; place-items:center; color:#b7b7b7; font:800 16px/1.2 Manrope,sans-serif; }
+.figma-friends-add-notice { position:absolute; z-index:25; top:372px; left:31px; right:31px; margin:0; padding:8px 12px; border-radius:12px; background:#fff; }
 
 /* Shared */
 .figma-friends-shared-view { position:absolute; inset:0; }
@@ -146,7 +149,9 @@
   box-shadow:0 4px 0 rgba(0,0,0,.10);
   box-sizing:border-box;
 }
-.figma-friends-shared-photo { position:absolute; top:7px; left:7px; right:7px; height:104px; border:2px solid #dedede; border-radius:25px; background:#f0f0f0 center/cover no-repeat; }
+.figma-friends-shared-photo { position:absolute; top:7px; left:7px; right:7px; height:104px; display:grid; place-items:center; border:2px solid #dedede; border-radius:25px; background:#f0f0f0 center/cover no-repeat; color:#858585; text-align:center; font:700 12px/1.2 Manrope,sans-serif; text-decoration:none; }
+.figma-friends-shared-photo > img { width:100%; height:100%; display:block; object-fit:cover; border-radius:inherit; }
+.figma-friends-shared-photo[data-photo-state='loading'] > img { opacity:0; }
 .figma-friends-shared-place h2 { position:absolute; top:123px; left:12px; right:12px; margin:0; font:800 25px/1 Manrope,sans-serif; letter-spacing:-1px; }
 .figma-friends-shared-place small { position:absolute; left:12px; bottom:30px; color:#858585; font:700 13px/1 var(--figma-mono); }
 .figma-friends-shared-place > span { position:absolute; right:12px; bottom:30px; color:#858585; font:700 13px/1 var(--figma-mono); }
@@ -246,5 +251,6 @@
   .figma-friends-add-view > h1 { top:120px; left:16px; font-size:52px; }
   .figma-friends-search { top:208px; left:12px; right:12px; }
   .figma-friends-search-results { top:267px; left:12px; right:12px; }
+  .figma-friends-add-notice { top:267px; left:12px; right:12px; }
   .figma-friends-request-card { top:290px; width:calc(100% - 24px); }
 }

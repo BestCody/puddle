@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { PhotoFrame } from '@/components/photo-frame'
 import { createClient } from '@/lib/supabase/client'
 
 function initials(name) {
@@ -20,7 +21,7 @@ function Avatar({ client, person }) {
   const path = person?.avatar_path || person?.friend_avatar_path || person?.sender_avatar_path
   const name = person?.display_name || person?.friend_name || person?.sender_name || 'Puddle person'
   const url = mediaUrl(client, path)
-  return <span className="figma-friends-avatar" style={url ? { backgroundImage: `url(${url})` } : undefined}>{url ? null : initials(name)}</span>
+  return <PhotoFrame as="span" src={url} alt="" className="figma-friends-avatar" unavailableText={initials(name)} loadingText="" />
 }
 
 function MessagesTabs() {
@@ -95,14 +96,20 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
   async function loadShareableLocations() {
     if (shareableLocationsLoaded || shareableLocationsLoading) return
     setShareableLocationsLoading(true)
+    let loaded = false
     try {
       const response = await fetch('/api/saved-location-options', { cache: 'no-store' })
-      const payload = response.ok ? await response.json() : null
+      if (!response.ok) throw new Error(`Saved locations returned ${response.status}`)
+      const payload = await response.json()
       setShareableLocations(Array.isArray(payload?.items) ? payload.items : [])
-    } catch {
+      setNotice('')
+      loaded = true
+    } catch (cause) {
+      console.warn('Could not load saved places for messaging.', { message: cause?.message || 'unknown error' })
       setShareableLocations([])
+      setNotice('Saved places could not be loaded.')
     } finally {
-      setShareableLocationsLoaded(true)
+      setShareableLocationsLoaded(loaded)
       setShareableLocationsLoading(false)
     }
   }
@@ -115,7 +122,7 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
   }
 
   async function refreshMessages() {
-    if (!selectedId) return
+    if (!selectedId) return false
     try {
       const { data, error } = await client.rpc('social_messages_v2', {
         target: selectedId,
@@ -125,8 +132,12 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
       if (!error && data) {
         setMessages(data)
         setMessagesHasMore(data.length === 50)
+        return true
       }
-    } catch {}
+    } catch (cause) {
+      console.warn('Could not refresh messages.', { message: cause?.message || 'unknown error' })
+    }
+    return false
   }
 
   async function refreshConversations() {
@@ -208,6 +219,10 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
         setMessages((current) => mergeById(data || [], current))
         setMessagesHasMore((data || []).length === 50)
       }
+      if (error || !data) setNotice('Older messages could not be loaded.')
+    } catch (cause) {
+      console.warn('Could not load older messages.', { message: cause?.message || 'unknown error' })
+      setNotice('Older messages could not be loaded.')
     } finally {
       setPaging(false)
     }
@@ -237,6 +252,10 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
         })
         setConversationsHasMore((data || []).length === 30)
       }
+      if (error || !data) setNotice('More conversations could not be loaded.')
+    } catch (cause) {
+      console.warn('Could not load more conversations.', { message: cause?.message || 'unknown error' })
+      setNotice('More conversations could not be loaded.')
     } finally {
       setPaging(false)
     }
@@ -255,7 +274,7 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
         return
       }
       setDraft('')
-      await refreshMessages()
+      if (!await refreshMessages()) setNotice('Message sent, but the conversation could not be refreshed.')
       await markSelectedRead()
       await refreshConversations()
     } catch {
@@ -327,7 +346,7 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
               }}
             >
               <summary aria-label="Add a place" title="Add a place">+</summary>
-              <div className="figma-message-place-picker"><strong>Share a saved place</strong>{shareableLocations.length ? shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
+              <div className="figma-message-place-picker"><strong>Share a saved place</strong>{shareableLocationsLoading ? <p>Loading saved places...</p> : shareableLocations.length ? shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
             </details>
             <details className="figma-friends-composer-menu is-more">
               <summary aria-label="More message options">○</summary>
