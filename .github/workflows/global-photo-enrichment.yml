@@ -85,6 +85,9 @@ jobs:
           GLOBAL_PHOTO_ATTEMPT_RETRY_DAYS: ${{ vars.GLOBAL_PHOTO_ATTEMPT_RETRY_DAYS || '7' }}
           GLOBAL_PHOTO_ATTEMPT_RETRY_HOURS: ${{ vars.GLOBAL_PHOTO_ATTEMPT_RETRY_HOURS || '1' }}
           GLOBAL_PHOTO_CLAIM_LEASE_SECONDS: ${{ vars.GLOBAL_PHOTO_CLAIM_LEASE_SECONDS || '1200' }}
+          # Leave headroom before the six-hour Actions timeout; the candidate
+          # cursor resumes every remaining location on the next run.
+          GLOBAL_PHOTO_RUN_BUDGET_SECONDS: '19800'
       - name: Publish atomic B2 photo serving overlay
         run: python scripts/global-data/build_b2_photo_search_overlay.py --snapshot='${{ steps.active.outputs.snapshot }}'
         env:

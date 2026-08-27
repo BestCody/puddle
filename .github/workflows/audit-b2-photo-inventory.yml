@@ -8,6 +8,10 @@ on:
         required: false
         default: ''
         type: string
+  schedule:
+    # A full byte audit is intentionally weekly: it reads the complete
+    # canonical media prefix and is too expensive to run on every enrichment.
+    - cron: '17 4 * * 1'
 
 permissions:
   contents: read
@@ -42,4 +46,13 @@ jobs:
       - name: Install audit dependencies
         run: python -m pip install --disable-pip-version-check boto3 duckdb pillow
       - name: Audit canonical B2 photos
-        run: python scripts/global-data/audit_b2_photo_inventory.py --snapshot='${{ inputs.snapshot }}'
+        shell: bash
+        run: python scripts/global-data/audit_b2_photo_inventory.py --snapshot='${{ inputs.snapshot }}' 2>&1 | tee b2-photo-inventory-audit.json
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: b2-photo-inventory-audit
+          path: b2-photo-inventory-audit.json
+          if-no-files-found: ignore
+          retention-days: 30

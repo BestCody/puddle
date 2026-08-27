@@ -57,5 +57,9 @@ jobs:
           WIKIMEDIA_REQUESTS_PER_MINUTE: '200'
           # The worker clamps this to 1 when no access token is present, matching the Action API robot policy.
           WIKIMEDIA_MAX_CONCURRENCY: '3'
+          # Four hours of provider time leaves room for checkpointing and
+          # teardown inside the six-hour Actions timeout.
+          WIKIMEDIA_RUN_BUDGET_SECONDS: '14400'
+          WIKIMEDIA_REQUEST_LIMIT: ${{ vars.WIKIMEDIA_REQUEST_LIMIT || '48000' }}
           WIKIMEDIA_RESCAN_DAYS: ${{ vars.WIKIMEDIA_RESCAN_DAYS || '30' }}
           OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER: '3'

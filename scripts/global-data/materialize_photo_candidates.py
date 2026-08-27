@@ -76,6 +76,8 @@ FALLBACK_CANDIDATES = max(1, min(12, int(os.getenv('GLOBAL_PHOTO_FALLBACK_CANDID
 # locations drained by a run; candidate_batches() continues until the cursor is
 # exhausted. The value is intentionally configurable without a hidden 10k cap.
 LOCATION_BATCH = max(100, int(os.getenv('GLOBAL_PHOTO_LOCATION_BATCH', '2500')))
+RUN_BUDGET_SECONDS = max(60, int(os.getenv('GLOBAL_PHOTO_RUN_BUDGET_SECONDS', str(330 * 60))))
+RUN_DEADLINE = time.monotonic() + RUN_BUDGET_SECONDS
 CLAIM_CONCURRENCY = max(1, min(64, int(os.getenv('GLOBAL_PHOTO_CLAIM_CONCURRENCY', '32'))))
 ATTEMPT_RETRY_DAYS = max(1, min(365, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_DAYS', '7'))))
 ATTEMPT_RETRY_HOURS = max(1, min(24, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_HOURS', '1'))))
@@ -121,6 +123,10 @@ HTTP_POOL = urllib3.PoolManager(
     block=True,
     cert_reqs='CERT_REQUIRED',
 )
+
+
+def runtime_exhausted():
+    return time.monotonic() >= RUN_DEADLINE
 
 
 def pooled_json_request(method, url, *, headers, body=None, timeout=30):
@@ -739,7 +745,14 @@ if prefix_exists(EXCLUSION_PREFIX):
 else:
     exclusion_sql = 'SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false'
 
+stop_requested = False
+batches_processed = 0
+locations_seen = 0
+materialized_total = 0
 for country in countries():
+    if runtime_exhausted():
+        stop_requested = True
+        break
     map_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=mapillary/snapshot={args.snapshot}/country_code={country}'
     wiki_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=wikimedia-commons/snapshot={args.snapshot}/country_code={country}'
     karta_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=kartaview/snapshot={args.snapshot}/country_code={country}'
@@ -829,8 +842,12 @@ for country in countries():
         """
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
         for grouped in candidate_batches(query):
+            if runtime_exhausted():
+                stop_requested = True
+                break
             batch_started = time.monotonic()
             target_ids = sorted(grouped)
+            locations_seen += len(target_ids)
 
             results = []
             diagnostics = []
@@ -848,6 +865,8 @@ for country in countries():
                     diagnostics.append({'location_id': location_id, 'status': 'worker_error', 'error': str(error)[:300]})
             write_results(country, results)
             write_attempts(country, diagnostics)
+            batches_processed += 1
+            materialized_total += len(results)
             exhausted = sum(1 for row in diagnostics if row.get('status') == 'exhausted')
             retryable_errors = sum(1 for row in diagnostics if row.get('status') in {'retryable_error', 'worker_error'})
             already_claimed = sum(1 for row in diagnostics if row.get('status') == 'already_claimed')
@@ -871,3 +890,22 @@ for country in countries():
                 'locationsPerMinute': round(len(target_ids) * 60 / elapsed_seconds, 2),
                 'failureSamples': failure_samples,
             }, indent=2), flush=True)
+            if runtime_exhausted():
+                stop_requested = True
+                break
+        if stop_requested:
+            break
+
+    if stop_requested:
+        break
+
+print(json.dumps({
+    'provider': 'global-photo-materializer',
+    'snapshot': args.snapshot,
+    'complete': not stop_requested,
+    'runBudgetSeconds': RUN_BUDGET_SECONDS,
+    'runtimeBudgetExhausted': runtime_exhausted(),
+    'batchesProcessed': batches_processed,
+    'locationsSeen': locations_seen,
+    'materialized': materialized_total,
+}, indent=2), flush=True)

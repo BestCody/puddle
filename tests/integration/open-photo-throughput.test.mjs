@@ -23,6 +23,7 @@ test('global free-photo workers saturate provider budgets and direct delivery st
   assert.match(materializeWorkflow, /GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY: '2'/)
   assert.match(materializeWorkflow, /GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_MBIT: '25'/)
   assert.match(materializeWorkflow, /MAPILLARY_GRAPH_REQUESTS_PER_MINUTE: '50000'/)
+  assert.match(materializeWorkflow, /GLOBAL_PHOTO_RUN_BUDGET_SECONDS: '19800'/)
   assert.match(materializeWorkflow, /timeout-minutes: 360/)
 
   assert.match(wikimediaWorkflow, /WIKIMEDIA_REQUESTS_PER_MINUTE: '200'/)
@@ -34,6 +35,7 @@ test('global free-photo workers saturate provider budgets and direct delivery st
   assert.match(wikimedia, /gate\.defer\(5\.0\)/)
   assert.match(wikimedia, /STATE_PREFIX/)
   assert.match(wikimedia, /merge_candidates/)
+  assert.match(wikimedia, /RUN_BUDGET_SECONDS/)
 
   assert.match(mapillaryWorkflow, /MAPILLARY_TILE_DAILY_LIMIT: '50000'/)
   assert.match(mapillaryWorkflow, /default: '50000'/)
@@ -50,6 +52,7 @@ test('global free-photo workers saturate provider budgets and direct delivery st
   assert.match(kartaview, /REQUESTS_PER_HOUR = max\(1, min\(PROVIDER_HOURLY_MAX/)
   assert.match(kartaview, /START_INTERVAL = 3600\.0 \/ REQUESTS_PER_HOUR/)
   assert.match(kartaview, /photo_attempts\/provider=kartaview/)
+  assert.match(kartaview, /attempted_since_checkpoint/)
   assert.match(kartaWorkflow, /KARTAVIEW_REQUESTS_PER_HOUR: '1000'/)
   assert.match(kartaWorkflow, /KARTAVIEW_MAX_CONCURRENCY: '8'/)
 

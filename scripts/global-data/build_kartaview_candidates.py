@@ -70,6 +70,9 @@ MAX_HEADING_ERROR = float(os.getenv('KARTAVIEW_MAX_HEADING_ERROR', '110'))
 LIMIT = max(1, min(PROVIDER_HOURLY_MAX, args.limit))
 MAX_CANDIDATES = max(1, min(10, int(os.getenv('OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER', '3'))))
 RECHECK_DAYS = max(1, min(365, int(os.getenv('KARTAVIEW_RECHECK_DAYS', '30'))))
+RUN_BUDGET_SECONDS = max(60, int(os.getenv('KARTAVIEW_RUN_BUDGET_SECONDS', str(65 * 60))))
+RUN_DEADLINE = time.monotonic() + RUN_BUDGET_SECONDS
+CHECKPOINT_EVERY = max(10, min(250, int(os.getenv('KARTAVIEW_CHECKPOINT_EVERY', '100'))))
 
 data_s3 = boto3.client(
     's3', endpoint_url=ENDPOINT_URL, aws_access_key_id=KEY_ID, aws_secret_access_key=KEY,
@@ -105,6 +108,10 @@ class RequestBudget:
             self.used += 1
             return True
 
+    def release(self):
+        with self.lock:
+            self.used = max(0, self.used - 1)
+
 
 class RateGate:
     def __init__(self, interval):
@@ -113,13 +120,16 @@ class RateGate:
         self.next_at = 0.0
         self.paused_until = 0.0
 
-    def wait(self):
+    def wait(self, deadline=None):
         with self.lock:
             now = time.monotonic()
             start = max(now, self.next_at, self.paused_until)
             self.next_at = start + self.interval
+        if deadline is not None and start >= deadline:
+            return False
         if start > now:
             time.sleep(start - now)
+        return deadline is None or time.monotonic() < deadline
 
     def defer(self, seconds):
         with self.lock:
@@ -128,6 +138,10 @@ class RateGate:
 
 budget = RequestBudget(LIMIT)
 gate = RateGate(START_INTERVAL)
+
+
+def runtime_exhausted():
+    return time.monotonic() >= RUN_DEADLINE
 
 
 def rows_from_payload(payload):
@@ -160,20 +174,28 @@ def request_location(row):
         params['access_token'] = TOKEN
     url = 'https://api.openstreetcam.org/2.0/photo/?' + urllib.parse.urlencode(params)
     for attempt in range(6):
+        if runtime_exhausted():
+            return row, [], False, 'runtime_budget_exhausted'
         if not budget.claim():
             return row, [], False, 'budget_exhausted'
-        gate.wait()
+        if not gate.wait(RUN_DEADLINE):
+            budget.release()
+            return row, [], False, 'runtime_budget_exhausted'
         try:
             req = urllib.request.Request(url, headers={'Accept': 'application/json', 'User-Agent': 'Puddle/1.0 global KartaView fallback indexer (https://puddle.you/)'})
             with urllib.request.urlopen(req, timeout=25) as response:
                 payload = json.load(response)
             return row, rows_from_payload(payload), True, None
         except urllib.error.HTTPError as error:
+            if runtime_exhausted():
+                return row, [], False, 'runtime_budget_exhausted'
             if error.code not in {408, 425, 429, 500, 502, 503, 504} or attempt == 5:
                 return row, [], False, f'HTTP {error.code}'
             retry = error.headers.get('Retry-After')
             gate.defer(float(retry) if retry and retry.isdigit() else min(60, 1.0 * (2 ** attempt)))
         except Exception as error:
+            if runtime_exhausted():
+                return row, [], False, 'runtime_budget_exhausted'
             if attempt == 5:
                 return row, [], False, str(error)[:200]
             gate.defer(min(20, 1.0 * (2 ** attempt)))
@@ -301,8 +323,9 @@ con.execute(f"""CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{KEY_ID
 
 remaining_locations = LIMIT
 summaries = []
+stop_requested = False
 for country in countries(con):
-    if budget.used >= budget.limit or remaining_locations <= 0:
+    if runtime_exhausted() or budget.used >= budget.limit or remaining_locations <= 0:
         break
 
     loc = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/locations.parquet'
@@ -345,13 +368,20 @@ for country in countries(con):
     print(f'{country}: spending up to {budget.limit - budget.used} remaining KartaView request starts at {REQUESTS_PER_HOUR}/hour')
     candidates = []
     attempted = []
+    attempted_since_checkpoint = []
     failures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
         for location, images, success, error in pool.map(request_location, locations, chunksize=1):
             if not success:
                 failures.append({'location_id': location['location_id'], 'error': error})
+                if error in {'runtime_budget_exhausted', 'budget_exhausted'}:
+                    stop_requested = True
                 continue
             attempted.append(location['location_id'])
+            attempted_since_checkpoint.append(location['location_id'])
+            if len(attempted_since_checkpoint) >= CHECKPOINT_EVERY:
+                merge_attempts(con, country, attempted_since_checkpoint)
+                attempted_since_checkpoint = []
             ranked = []
             for image in images:
                 measured = score(location, image)
@@ -374,7 +404,7 @@ for country in countries(con):
                     'https://creativecommons.org/licenses/by-sa/4.0/', distance, heading_error, value
                 ))
 
-    merge_attempts(con, country, attempted)
+    merge_attempts(con, country, attempted_since_checkpoint)
     candidate_count = merge_candidates(con, country, candidates)
     remaining_locations -= len(attempted)
     summaries.append({
@@ -384,6 +414,8 @@ for country in countries(con):
         'candidates': candidate_count,
         'failures': failures[:10],
     })
+    if stop_requested:
+        break
 
 print(json.dumps({
     'provider': 'kartaview',
@@ -393,5 +425,9 @@ print(json.dumps({
     'requestLimit': LIMIT,
     'requestsPerHour': REQUESTS_PER_HOUR,
     'maxConcurrency': CONCURRENCY,
+    'runBudgetSeconds': RUN_BUDGET_SECONDS,
+    'runtimeBudgetExhausted': runtime_exhausted(),
+    'checkpointEvery': CHECKPOINT_EVERY,
+    'stoppedReason': 'runtime_budget_exhausted' if runtime_exhausted() else ('request_budget_exhausted' if budget.used >= budget.limit else None),
     'countries': summaries,
 }, indent=2))
