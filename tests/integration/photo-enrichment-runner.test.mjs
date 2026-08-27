@@ -174,6 +174,7 @@ test('provider rate limits match upstream contracts', async () => {
   const mapillary = await read('scripts/global-data/build_mapillary_candidates.py')
   const kartaWorkflow = await read('.github/workflows/global-kartaview-enrichment.yml')
   const karta = await read('scripts/global-data/build_kartaview_candidates.py')
+  const kartaUrls = await read('scripts/global-data/kartaview_urls.py')
 
   assert.match(materializeWorkflow, /GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY: '192'/)
   assert.match(materializeWorkflow, /GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY: '2'/)
@@ -213,6 +214,15 @@ test('provider rate limits match upstream contracts', async () => {
   assert.match(karta, /RUN_BUDGET_SECONDS/)
   assert.match(karta, /CHECKPOINT_EVERY/)
   assert.match(karta, /attempted_since_checkpoint/)
+  assert.match(karta, /from kartaview_urls import asset_url/)
+  assert.match(kartaUrls, /imageProcUrl/)
+  assert.match(kartaUrls, /cdn\.kartaview\.org\/pr:sharp/)
+  assert.match(kartaUrls, /\{\{sizeprefix\}\}/)
+  assert.match(kartaUrls, /urlsafe_b64encode/)
+  assert.match(materializer, /from kartaview_urls import canonical_asset_url/)
+  assert.match(materializer, /provider == 'kartaview'/)
+  assert.match(materializer, /status in \{'exhausted', 'invalid'\}/)
+  assert.match(materializer, /'retryable': retryable/)
 
   assert.match(materializer, /RUN_BUDGET_SECONDS/)
   assert.match(materializer, /runtimeBudgetExhausted/)

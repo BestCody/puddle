@@ -22,6 +22,7 @@ import boto3
 import duckdb
 from botocore.client import Config
 from botocore.exceptions import ClientError
+from kartaview_urls import asset_url
 
 
 def first_env(*names, default=''):
@@ -151,11 +152,6 @@ def rows_from_payload(payload):
         payload.get('result'), payload.get('data'), payload.get('currentPageItems')
     ]
     return next((value for value in candidates if isinstance(value, list)), [])
-
-
-def asset_url(row):
-    value = row.get('procUrl') or row.get('processedUrl') or row.get('imageUrl') or row.get('fileurl') or row.get('fileUrl') or (row.get('sequence') or {}).get('fileurl')
-    return str(value).replace('[[sizeprefix]]', 'proc') if value else None
 
 
 def finite(value):

@@ -59,7 +59,7 @@ test('existing B2 photos are reconciled once and retired identities cannot resur
   assert.match(materializer, /bind_global_photo_candidate_url_v1/)
   assert.match(materializer, /normalize_source_url/)
   assert.match(materializer, /complete_global_photo_candidate_v1/)
-  assert.ok(materializer.indexOf('reserve_candidate(row)') < materializer.indexOf('download(candidate.get(\'asset_url\'), provider)'))
+  assert.ok(materializer.indexOf('reserve_candidate(row)') < materializer.indexOf('body = download('))
 
   // B2 serving consumes the shared canonical projection so photo retirement semantics cannot drift.
   assert.match(canonicalSearch, /photo_exclusion_glob/)
