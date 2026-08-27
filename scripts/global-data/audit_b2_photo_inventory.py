@@ -338,14 +338,15 @@ WHERE content_hash IS NULL
 """
             ).fetchone()[0]
         )
+        storage_key_prefix_sql = media_prefix.replace("'", "''")
         invalid_storage_key_count = int(
             con.execute(
-                """
+                f"""
 SELECT count(*) FROM photo_refs
 WHERE storage_key IS NOT NULL AND trim(storage_key) <> ''
   AND (
     content_hash IS NULL
-    OR trim(storage_key) <> '{media_prefix.replace("'", "''")}/' || substr(lower(trim(content_hash)),1,2) || '/' || lower(trim(content_hash)) || '.jpg'
+    OR trim(storage_key) <> '{storage_key_prefix_sql}/' || substr(lower(trim(content_hash)),1,2) || '/' || lower(trim(content_hash)) || '.jpg'
   )
 """
             ).fetchone()[0]
