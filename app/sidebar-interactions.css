@@ -49,6 +49,7 @@
 .figma-pass-tabs { --segment-active-bg: #e73668; }
 
 .routed-segment[data-segment-enhanced="true"]::before {
+  content: '';
   position: absolute;
   z-index: 1;
   top: 4px;
