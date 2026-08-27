@@ -146,6 +146,7 @@
 /* Keep positioning separate from pin rotation. CSS individual transforms on a
    positioned marker rotate its map coordinates as well as its shape. */
 .location-map-marker { rotate: none; }
+.location-map-marker.is-spiderfied { z-index: 7; }
 .location-map-marker.is-selected { scale: none; }
 .location-map-marker > span { rotate: none; transform: rotate(45deg); }
 

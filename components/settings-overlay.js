@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export const SETTINGS_OPEN_EVENT = 'puddle:settings-open'
 export const SETTINGS_CLOSE_EVENT = 'puddle:settings-close'
@@ -33,9 +33,12 @@ export function SettingsOverlay() {
   const frameRef = useRef(null)
   const frameCleanupRef = useRef(null)
 
-  function requestClose() {
-    window.dispatchEvent(new Event(SETTINGS_CLOSE_EVENT))
-  }
+  const closeOverlay = useCallback(() => {
+    setOpen(false)
+    document.documentElement.classList.remove('puddle-settings-overlay-open')
+  }, [])
+
+  function requestClose() { closeOverlay() }
 
   useEffect(() => {
     if (window.self !== window.top) return
@@ -44,10 +47,6 @@ export function SettingsOverlay() {
     function openOverlay() {
       setOpen(true)
       document.documentElement.classList.add('puddle-settings-overlay-open')
-    }
-    function closeOverlay() {
-      setOpen(false)
-      document.documentElement.classList.remove('puddle-settings-overlay-open')
     }
     function onKeyDown(event) {
       if (event.key === 'Escape') closeOverlay()
@@ -64,7 +63,7 @@ export function SettingsOverlay() {
       window.removeEventListener('keydown', onKeyDown)
       document.documentElement.classList.remove('puddle-settings-overlay-open')
     }
-  }, [])
+  }, [closeOverlay])
 
   useEffect(() => {
     if (!open) return undefined

@@ -83,6 +83,9 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(mapStyles, /\.location-map-marker \{ rotate: none; \}/)
   assert.match(mapStyles, /\.location-map-canvas\.is-dragging/)
   assert.match(mapSource, /translate3d\(\$\{item\.x\}px,\$\{item\.y\}px,0\) rotate\(-45deg\)/)
+  assert.match(mapSource, /MIN_CLUSTER_CELL_SIZE/)
+  assert.match(mapSource, /spiderfied/)
+  assert.match(mapSource, /Expand to choose a location\./)
   assert.doesNotMatch(mapSource, /Open details/)
   assert.match(mapSource, /Directions<\/a>/)
 

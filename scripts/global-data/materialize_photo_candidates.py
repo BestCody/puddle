@@ -675,24 +675,51 @@ def countries():
 
 
 def candidate_batches(query):
-    """Stream one ranked candidate query instead of rescanning B2 for every batch."""
+    """Build one country queue, then drain it in uncapped cursor batches.
+
+    The eligible queue is materialized once so every subsequent batch reads
+    local DuckDB state instead of repeatedly rescanning remote Parquet files.
+    Ranking is applied only to the current location batch, which avoids the
+    unbounded global window that previously hid progress for hours.
+    """
     columns = ['location_id', 'provider', 'external_photo_id', 'asset_url', 'page_url', 'attribution', 'license', 'license_url', 'rank_score', 'candidate_rank']
-    # Keep the read cursor independent from the connection used to write each
-    # completed Parquet batch; a write must not reset a partially consumed read.
-    cursor = con.cursor()
-    cursor.execute('INSTALL httpfs; LOAD httpfs;')
-    cursor.execute('SET preserve_insertion_order=false')
-    cursor.execute(B2_SECRET_SQL)
-    cursor.execute(query)
-    grouped = {}
-    current_location_id = None
-    current_candidates = []
-    fetch_size = max(1024, LOCATION_BATCH * (FALLBACK_CANDIDATES + 1))
+    con.execute('DROP TABLE IF EXISTS photo_candidate_queue')
+    queue_started = time.monotonic()
     try:
-        while True:
-            rows = cursor.fetchmany(fetch_size)
+        con.execute(f'CREATE TEMP TABLE photo_candidate_queue AS {query}')
+        queue_stats = con.execute('SELECT count(*), count(DISTINCT location_id) FROM photo_candidate_queue').fetchone()
+        print(f'photo candidate queue ready: {queue_stats[1]} locations, {queue_stats[0]} candidates in {time.monotonic() - queue_started:.1f}s', flush=True)
+        location_cursor = ''
+        while not runtime_exhausted():
+            escaped_cursor = location_cursor.replace("'", "''")
+            batch_query = f"""
+              WITH target_locations AS (
+                SELECT location_id
+                FROM photo_candidate_queue
+                WHERE location_id > '{escaped_cursor}'
+                GROUP BY location_id
+                ORDER BY location_id
+                LIMIT {LOCATION_BATCH}
+              ), ranked AS (
+                SELECT q.*,
+                       row_number() OVER (
+                         PARTITION BY q.location_id
+                         ORDER BY q.provider_rank,coalesce(q.rank_score,0) DESC,q.external_photo_id
+                       ) candidate_rank
+                FROM photo_candidate_queue q
+                JOIN target_locations t ON t.location_id=q.location_id
+              )
+              SELECT location_id,provider,external_photo_id,asset_url,page_url,attribution,license,license_url,rank_score,candidate_rank
+              FROM ranked
+              WHERE candidate_rank <= {FALLBACK_CANDIDATES}
+              ORDER BY location_id,candidate_rank
+            """
+            rows = con.execute(batch_query).fetchall()
             if not rows:
                 break
+            grouped = {}
+            current_location_id = None
+            current_candidates = []
             for row in rows:
                 item = dict(zip(columns, row))
                 location_id = str(item['location_id'])
@@ -704,12 +731,18 @@ def candidate_batches(query):
                     current_candidates = []
                 current_location_id = location_id
                 current_candidates.append(item)
-        if current_location_id is not None:
-            grouped[current_location_id] = current_candidates
-        if grouped:
+            if current_location_id is not None:
+                grouped[current_location_id] = current_candidates
+            if not grouped:
+                break
+            next_cursor = max(grouped)
+            if next_cursor <= location_cursor:
+                raise RuntimeError('photo candidate cursor did not advance')
+            print(f'photo candidate batch ready: {len(grouped)} locations after {next_cursor}', flush=True)
             yield grouped
+            location_cursor = next_cursor
     finally:
-        cursor.close()
+        con.execute('DROP TABLE IF EXISTS photo_candidate_queue')
 
 
 def write_results(country, results):
@@ -834,26 +867,19 @@ for country in countries():
             )
           ),
           recent_photo_attempts AS ({recent_attempts_sql}),
-          l AS (SELECT id,category FROM read_parquet('{loc}')),
-          ranked AS (
-            SELECT c.*,l.category,
+          l AS (SELECT cast(id AS VARCHAR) location_id,category FROM read_parquet('{loc}')),
+          eligible_candidates AS (
+            SELECT cast(c.location_id AS VARCHAR) location_id,c.provider,c.external_photo_id,c.asset_url,c.page_url,c.attribution,c.license,c.license_url,c.rank_score,
               CASE WHEN l.category IN ('park','museum','gallery','attraction','scenic_spot')
                    THEN CASE c.provider WHEN 'wikimedia-commons' THEN 0 WHEN 'mapillary' THEN 1 WHEN 'kartaview' THEN 2 ELSE 3 END
-                   ELSE CASE c.provider WHEN 'mapillary' THEN 0 WHEN 'wikimedia-commons' THEN 1 WHEN 'kartaview' THEN 2 ELSE 3 END END provider_rank,
-              row_number() OVER(PARTITION BY c.location_id ORDER BY provider_rank,coalesce(c.rank_score,0) DESC,c.external_photo_id) candidate_rank
+                   ELSE CASE c.provider WHEN 'mapillary' THEN 0 WHEN 'wikimedia-commons' THEN 1 WHEN 'kartaview' THEN 2 ELSE 3 END END provider_rank
             FROM all_candidates c
-            JOIN l ON l.id=c.location_id
+            JOIN l ON l.location_id=cast(c.location_id AS VARCHAR)
             WHERE NOT EXISTS (SELECT 1 FROM existing_photos e WHERE e.location_id=cast(c.location_id AS VARCHAR))
               AND NOT EXISTS (SELECT 1 FROM recent_photo_attempts a WHERE a.location_id=cast(c.location_id AS VARCHAR))
-          ), targets AS (
-            SELECT location_id,min(provider_rank) best_provider,max(coalesce(rank_score,0)) best_score
-            FROM ranked
-            GROUP BY location_id
           )
-          SELECT r.location_id,r.provider,r.external_photo_id,r.asset_url,r.page_url,r.attribution,r.license,r.license_url,r.rank_score,r.candidate_rank
-          FROM ranked r JOIN targets t ON t.location_id=r.location_id
-          WHERE r.candidate_rank<={FALLBACK_CANDIDATES}
-          ORDER BY t.best_provider,t.best_score DESC,t.location_id,r.candidate_rank
+          SELECT location_id,provider,external_photo_id,asset_url,page_url,attribution,license,license_url,rank_score,provider_rank
+          FROM eligible_candidates
         """
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
         for grouped in candidate_batches(query):

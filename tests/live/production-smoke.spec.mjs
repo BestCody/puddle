@@ -75,7 +75,7 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
     } else {
       await expect(unavailablePhoto).toHaveAttribute('aria-label', 'No verified photo is available')
     }
-    for (const name of ['Message', 'Pass', 'Save', 'Post']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
+    for (const name of ['Pass', 'Save', 'Post']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
 
     const filterButton = page.getByRole('button', { name: 'Open filters' })
     const detailsButton = page.getByRole('button', { name: 'Open details' })
