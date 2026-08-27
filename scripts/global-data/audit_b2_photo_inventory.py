@@ -438,6 +438,22 @@ def main() -> int:
     manifest_snapshot = validate_snapshot(manifest.get("snapshot"), "active manifest snapshot")
     snapshot = validate_snapshot(args.snapshot or manifest_snapshot, "snapshot")
 
+    # Materialization writes media bytes before it appends metadata. Read the
+    # reference view first, then list media, so a concurrent append cannot make
+    # a newly uploaded object appear to be missing from this audit.
+    metadata = read_active_photo_metadata(
+        data_client,
+        data_bucket,
+        data_prefix,
+        snapshot,
+        data_endpoint,
+        data_key_id,
+        data_key,
+        data_region,
+        media_prefix,
+    )
+    reference_hashes = set(metadata.pop("referenceHashes"))
+
     media_objects = list_objects(media_client, media_bucket, media_prefix)
     pattern = re.compile(r"^" + re.escape(media_prefix) + r"/([0-9a-f]{2})/([0-9a-f]{64})\.jpg$")
     object_results: list[dict[str, object]] = []
@@ -467,18 +483,6 @@ def main() -> int:
         if issues and len(invalid_results) < args.max_samples:
             invalid_results.append({"key": result.get("key"), "issues": issues})
 
-    metadata = read_active_photo_metadata(
-        data_client,
-        data_bucket,
-        data_prefix,
-        snapshot,
-        data_endpoint,
-        data_key_id,
-        data_key,
-        data_region,
-        media_prefix,
-    )
-    reference_hashes = set(metadata.pop("referenceHashes"))
     missing_reference_hashes = sorted(reference_hashes - canonical_hashes)
     unreferenced_hashes = sorted(canonical_hashes - reference_hashes)
     linked_invalid_hashes = sorted(reference_hashes - valid_hashes)

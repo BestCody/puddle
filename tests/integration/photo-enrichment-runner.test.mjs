@@ -88,6 +88,7 @@ test('canonical B2 photo inventory audit is read-only and checks byte identity',
   assert.match(audit, /Image\.open/)
   assert.match(audit, /MAX_SOURCE_PIXELS/)
   assert.match(audit, /photo_metadata/)
+  assert.ok(audit.lastIndexOf('metadata = read_active_photo_metadata(') < audit.lastIndexOf('media_objects = list_objects('))
   assert.doesNotMatch(audit, /(?:put|copy|delete)_object|upload_file|supabase_rpc/i)
 })
 
