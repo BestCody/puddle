@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
+import { PhotoFrame } from '@/components/photo-frame'
+import { RoutedSegment } from '@/components/routed-segment'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
@@ -65,16 +67,14 @@ function CreatePostPreview({ avatar, name, point }) {
   const category = categoryLabel(point?.category)
   const location = point?.city || point?.neighborhood || 'Your Puddle'
   const copy = point?.summary || 'Pick a place below, add a title and description, then publish it to your feed.'
-  const photoStyle = point?.photo_url ? { backgroundImage: `url(${point.photo_url})` } : undefined
-
   return <article className="figma-create-post-blur" aria-hidden="true">
-    <span className="figma-create-post-preview-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(name)}</span>
+    <PhotoFrame as="span" className="figma-create-post-preview-avatar" src={avatar} alt="" unavailableText={initials(name)} loadingText="" />
     <strong className="figma-create-post-preview-name">{name}</strong>
     <small className="figma-create-post-preview-time">New puddle</small>
     <p className="figma-create-post-preview-copy">{copy}</p>
     <div className="figma-create-post-preview-photos">
-      <i className="is-main" style={photoStyle} />
-      {point?.photo_url ? <i style={photoStyle} /> : <i />}
+      <PhotoFrame as="i" className="is-main" src={point?.photo_url} alt="" unavailableText="Photo unavailable" />
+      {point?.photo_url ? <PhotoFrame as="i" src={point.photo_url} alt="" unavailableText="Photo unavailable" /> : <i />}
       <i className="is-more">{point ? 'Place' : '+'}</i>
     </div>
     <div className="figma-create-post-preview-place">
@@ -104,9 +104,13 @@ export default async function CreatePostPage({ searchParams }) {
       <header className="figma-create-post-topbar">
         <Link className="figma-feed-back" href="/map" aria-label="Back to Feed">‹</Link>
         <span className="figma-create-post-mobile-logo" aria-hidden="true" />
-        <nav className="figma-dashboard-segment figma-feed-tabs" aria-label="Feed or map">
-          <Link className="is-active" href="/map">Feed</Link><Link href="/map?view=map">Map</Link>
-        </nav>
+        <RoutedSegment
+          className="figma-feed-tabs"
+          tone="yellow"
+          activeValue="feed"
+          ariaLabel="Feed or map"
+          items={[{ value: 'feed', label: 'Feed', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]}
+        />
         <form className="figma-feed-search figma-create-post-search" action="/plans" method="get">
           <label><input aria-label="Search saved puddles" type="search" name="q" placeholder="Search saved puddles" /></label>
           <button type="submit" aria-label="Search">⌕</button>
@@ -116,7 +120,7 @@ export default async function CreatePostPage({ searchParams }) {
         <CreatePostPreview avatar={avatar} name={name} point={selectedPoint} />
         <form className="figma-create-post-card" aria-label="Create a puddle post" action={createPuddlePost}>
           <input type="hidden" name="location_id" value={selectedPoint?.id || ''} />
-          <span className="figma-feed-post-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : initials(name)}</span>
+          <PhotoFrame as="span" className="figma-feed-post-avatar" src={avatar} alt="" unavailableText={initials(name)} loadingText="" />
           <fieldset className="figma-create-post-visibility" aria-label="Post visibility">
             <label><input type="radio" name="visibility" value="public" defaultChecked /><span>Public</span></label>
             <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ProfilePhotoEditor } from '@/components/profile-photo-editor'
+import { PhotoFrame } from '@/components/photo-frame'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
@@ -123,7 +124,7 @@ export default async function ProfilePage({ searchParams }) {
 
         <details className="figma-profile-avatar-editor">
           <summary aria-label="Change profile photo">
-            <span className="figma-profile-avatar">{avatarUrl ? <img src={avatarUrl} alt={`${displayName} profile`} /> : <span>{initials(displayName)}</span>}</span>
+            <PhotoFrame as="span" className="figma-profile-avatar" src={avatarUrl} alt={`${displayName} profile`} unavailableText={initials(displayName)} loadingText="" />
           </summary>
           <div className="figma-profile-photo-editor"><ProfilePhotoEditor userId={session.user.id} currentPath={session.profile.avatar_path || null} displayName={displayName} /></div>
         </details>
@@ -148,9 +149,9 @@ export default async function ProfilePage({ searchParams }) {
           <article className="figma-profile-card figma-profile-puddles-card">
             <h2>Puddles</h2>
             {recentPost ? <Link className="figma-profile-post-preview figma-profile-real-post" href="/map">
-              <header><span className="figma-profile-post-avatar" style={avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined}>{avatarUrl ? '' : initials(displayName)}</span><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
+              <header><PhotoFrame as="span" className="figma-profile-post-avatar" src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" /><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
               <p>{recentPost.body || recentPost.title}</p>
-              <div className="figma-profile-post-collage" style={recentCover ? { backgroundImage: `url(${recentCover})` } : undefined}><i /><i /><i>{visiblePosts.length > 1 ? `+${visiblePosts.length - 1}` : ''}</i></div>
+              <div className="figma-profile-post-collage"><PhotoFrame as="i" src={recentCover} alt={`${recentLocation?.name || recentPost.title} photo`} unavailableText="Photo unavailable" /><i /><i>{visiblePosts.length > 1 ? `+${visiblePosts.length - 1}` : ''}</i></div>
               <div className="figma-profile-post-place"><small>{String(recentLocation?.kind || 'Place').replaceAll('_', ' ')}</small><strong>{recentLocation?.name || recentPost.title}</strong><b>+</b></div>
             </Link> : <div className="figma-profile-card-empty"><p>No puddles posted yet.</p><Link href="/create/post">Create one</Link></div>}
           </article>

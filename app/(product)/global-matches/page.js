@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
+import { PhotoFrame } from '@/components/photo-frame'
 import { EmptyState } from '@/components/empty-state'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getGlobalConnectionsSnapshot } from '@/lib/app/global-connections-data'
@@ -47,9 +48,9 @@ export default async function GlobalMatchesPage({ searchParams }) {
           const avatar = mediaUrl(session, person.avatar_path)
           const cover = mediaUrl(session, person.cover_path)
           return <article className="global-person-card" key={`${person.user_id}:${person.location_id}`}>
-            <div className="global-person-place" style={cover ? { backgroundImage: `url(${cover})` } : undefined}><span>{placeLabel(person)}</span></div>
+            <PhotoFrame as="div" className="global-person-place" src={cover} alt={`${placeLabel(person)} photo`} unavailableText="Photo unavailable"><span>{placeLabel(person)}</span></PhotoFrame>
             <div className="global-person-copy">
-              <div className="global-person-heading"><div className="global-person-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : String(person.display_name || 'P')[0]}</div><div><h3>{person.display_name || 'Puddle person'}</h3><small>{[person.user_city, person.user_country].filter(Boolean).join(', ') || 'Global'} · {intentLabel(person.intent)}</small></div></div>
+              <div className="global-person-heading"><PhotoFrame as="div" className="global-person-avatar" src={avatar} alt="" unavailableText={String(person.display_name || 'P')[0]} loadingText="" /><div><h3>{person.display_name || 'Puddle person'}</h3><small>{[person.user_city, person.user_country].filter(Boolean).join(', ') || 'Global'} · {intentLabel(person.intent)}</small></div></div>
               {person.bio ? <p>{person.bio}</p> : null}
               <details><summary>Send message request</summary><form action={requestGlobalConnection} className="global-request-form"><input type="hidden" name="target_user" value={person.user_id} /><input type="hidden" name="target_location" value={person.location_id} /><label>Invite for<select name="intent" defaultValue="either"><option value="either">Date or hangout</option><option value="date">Date</option><option value="hangout">Hangout</option></select></label><label>Message<textarea name="opening_message" maxLength="800" required placeholder={`Want to check out ${person.location_name} together?`} /></label><button className="membership-primary" type="submit">Send request</button></form></details>
             </div>
@@ -64,7 +65,7 @@ export default async function GlobalMatchesPage({ searchParams }) {
           const place = thread.place || {}
           const avatar = mediaUrl(session, person.avatarPath)
           return <details className="global-thread" key={thread.id} open={thread.status === 'pending' && thread.incoming}>
-            <summary><div className="global-person-avatar" style={avatar ? { backgroundImage: `url(${avatar})` } : undefined}>{avatar ? null : String(person.displayName || 'P')[0]}</div><div><strong>{person.displayName || 'Puddle person'}</strong><small>{place.name || 'Shared place'} · {thread.status}</small></div><span>›</span></summary>
+            <summary><PhotoFrame as="div" className="global-person-avatar" src={avatar} alt="" unavailableText={String(person.displayName || 'P')[0]} loadingText="" /><div><strong>{person.displayName || 'Puddle person'}</strong><small>{place.name || 'Shared place'} · {thread.status}</small></div><span>›</span></summary>
             <div className="global-thread-body">
               <div className="global-message-list">{(thread.messages || []).map((message) => <p className={message.senderId === session.user.id ? 'is-self' : ''} key={message.id}><span>{message.body}</span></p>)}</div>
               {thread.status === 'pending' && thread.incoming ? <form action={respondGlobalConnection} className="global-inline-actions"><input type="hidden" name="thread_id" value={thread.id} /><button className="membership-primary" name="decision" value="accepted" type="submit">Accept</button><button name="decision" value="declined" type="submit">Decline</button></form> : null}

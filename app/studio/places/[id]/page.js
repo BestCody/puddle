@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { LocationEditor } from '@/components/location-editor'
 import { MediaUploader } from '@/components/media-uploader'
+import { PhotoFrame } from '@/components/photo-frame'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getCreatorOptions, getEditableLocation } from '@/lib/app/creator-data'
 import { getMembershipSnapshot } from '@/lib/app/membership-data'
@@ -70,7 +71,7 @@ export default async function EditLocationPage({ params, searchParams }) {
           const photo = avatarUrl(session, person.avatar_path)
           const name = person.display_name || person.username || 'Puddle person'
           return <article key={person.id}>
-            <span className="pass-location-saver-avatar" style={photo ? { backgroundImage: `url(${photo})` } : undefined}>{photo ? null : initials(name)}</span>
+            <PhotoFrame as="span" className="pass-location-saver-avatar" src={photo} alt="" unavailableText={initials(name)} loadingText="" />
             <div><strong>{name}</strong>{person.username ? <small>@{person.username}</small> : null}</div>
           </article>
         })}</div> : <p className="pass-location-savers-empty">No visible savers on this page.</p>}

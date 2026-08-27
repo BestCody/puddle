@@ -145,7 +145,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
           {detail ? posts.length ? <div className="saved-inline-detail-post-list">{posts.map((post) => {
             const authorName = post.author?.display_name || post.author?.username || 'Puddle person'
             return <a className="saved-inline-detail-post" href={`/map#post-${post.id}`} key={post.id}>
-              <span className="saved-inline-detail-post-avatar" style={post.author_avatar_url ? { backgroundImage: `url(${post.author_avatar_url})` } : undefined}>{post.author_avatar_url ? null : initials(authorName)}</span>
+              <PhotoFrame as="span" className="saved-inline-detail-post-avatar" src={post.author_avatar_url} alt="" unavailableText={initials(authorName)} loadingText="" />
               <span className="saved-inline-detail-post-copy">
                 <span><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
                 {post.title ? <b>{post.title}</b> : null}

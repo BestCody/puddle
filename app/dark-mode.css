@@ -94,7 +94,7 @@
   border-color: #3b4147 !important;
 }
 
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-segment > :is(a, button):not(.is-active):not(.is-ui-active) {
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-segment > :is(a, button):not(.is-active) {
   color: #aab0b5 !important;
 }
 

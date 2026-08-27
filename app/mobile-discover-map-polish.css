@@ -162,16 +162,6 @@
   display: block;
   object-fit: cover;
 }
-.location-map-card-photo > .location-map-card-photo-empty {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  color: #777;
-  font: 700 13px/1.2 Manrope, sans-serif;
-  text-align: center;
-}
 .location-map-card-photo.is-unavailable::after { display: none; }
 .location-map-card-photo-state {
   position: absolute;

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PhotoFrame } from '@/components/photo-frame'
+import { RoutedSegment } from '@/components/routed-segment'
 import { createClient } from '@/lib/supabase/client'
 
 function initials(name) {
@@ -25,11 +26,17 @@ function Avatar({ client, person, className = '' }) {
 }
 
 function FriendsTabs({ tab }) {
-  return <nav className="figma-dashboard-segment figma-friends-tabs" aria-label="Friends sections">
-    <Link className={tab === 'messages' ? 'is-active' : ''} href="/matches?tab=messages">Message</Link>
-    <Link className={tab === 'shared' ? 'is-active' : ''} href="/matches?tab=shared">Shared</Link>
-    <Link className={tab === 'add' ? 'is-active' : ''} href="/matches?tab=add">Add</Link>
-  </nav>
+  return <RoutedSegment
+    className="figma-friends-tabs"
+    tone="green"
+    activeValue={tab}
+    ariaLabel="Friends sections"
+    items={[
+      { value: 'messages', label: 'Message', href: '/matches?tab=messages' },
+      { value: 'shared', label: 'Shared', href: '/matches?tab=shared' },
+      { value: 'add', label: 'Add', href: '/matches?tab=add' }
+    ]}
+  />
 }
 
 function SharedView({ client, snapshot }) {
