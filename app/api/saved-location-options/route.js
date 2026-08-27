@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
+import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic'
 const SAVED_OPTION_LIMIT = 50
 
 function optionShape(row) {
+  const photo = row?.primary_photo && typeof row.primary_photo === 'object' ? row.primary_photo : {}
   return {
     id: row.id,
     name: row.name || 'Saved place',
@@ -15,7 +17,8 @@ function optionShape(row) {
     slug: row.slug || null,
     city: row.city || row.region || row.country || null,
     neighborhood: row.neighborhood || null,
-    category: row.category || row.kind || 'place'
+    category: row.category || row.kind || 'place',
+    cover_url: openPhotoUrlForHash(photo.content_hash)
   }
 }
 

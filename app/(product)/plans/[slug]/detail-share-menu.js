@@ -23,19 +23,22 @@ export function DetailShareMenu({ locationId, slug }) {
     if (loading) return
     setLoading(true)
     setError(null)
-    const { data, error: queryError } = await client.rpc('social_friend_picker_v2', {
-      before_name: cursor?.sort_name || null,
-      before_id: cursor?.id || null,
-      result_limit: 30
-    })
-    if (queryError) setError('Friends could not be loaded.')
-    else {
+    try {
+      const { data, error: queryError } = await client.rpc('social_friend_picker_v2', {
+        before_name: cursor?.sort_name || null,
+        before_id: cursor?.id || null,
+        result_limit: 30
+      })
+      if (queryError) throw queryError
       const rows = data || []
       setFriends((current) => cursor ? mergeFriends(current, rows) : rows)
       setHasMore(rows.length === 30)
       setLoaded(true)
+    } catch {
+      setError('Friends could not be loaded.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   function onToggle(event) {
@@ -53,7 +56,8 @@ export function DetailShareMenu({ locationId, slug }) {
       </form>)}
       {loading ? <p>Loading friends…</p> : null}
       {error ? <p role="status">{error}</p> : null}
-      {loaded && !friends.length && !loading ? <p>Add a friend before sharing.</p> : null}
+      {error && !loading ? <button type="button" onClick={() => loadPage()}>Try again</button> : null}
+      {loaded && !friends.length && !loading && !error ? <p>Add a friend before sharing.</p> : null}
       {hasMore && !loading ? <button type="button" onClick={() => loadPage(friends[friends.length - 1])}>More friends</button> : null}
     </div>
   </details>

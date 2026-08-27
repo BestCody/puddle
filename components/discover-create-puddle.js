@@ -16,6 +16,8 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
   const [savedPoints, setSavedPoints] = useState(initialPoints)
   const [savedPointsLoaded, setSavedPointsLoaded] = useState(Boolean(initialPoints.length))
   const [savedPointsLoading, setSavedPointsLoading] = useState(false)
+  const [savedPointsError, setSavedPointsError] = useState('')
+  const [savedPointsRetry, setSavedPointsRetry] = useState(0)
   const [open, setOpen] = useState(Boolean(initialOpen))
   const [locationId, setLocationId] = useState(requestedLocation || initialPoints[0]?.id || '')
   const dockRef = useRef(null)
@@ -59,18 +61,23 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
     if (!open || savedPointsLoaded) return undefined
     let active = true
     setSavedPointsLoading(true)
+    setSavedPointsError('')
 
     async function loadSavedPoints() {
       try {
         const query = requestedLocation ? `?ids=${encodeURIComponent(requestedLocation)}` : ''
         const response = await fetch(`/api/saved-location-options${query}`, { cache: 'no-store' })
-        const payload = response.ok ? await response.json() : null
+        if (!response.ok) throw new Error(`Saved locations returned ${response.status}`)
+        const payload = await response.json()
         if (!active) return
         const items = Array.isArray(payload?.items) ? payload.items.filter((point) => point?.id) : []
         setSavedPoints(items)
         setLocationId((current) => current || requestedLocation || items[0]?.id || '')
       } catch {
-        if (active) setSavedPoints([])
+        if (active) {
+          setSavedPoints([])
+          setSavedPointsError('Saved places could not be loaded.')
+        }
       } finally {
         if (active) {
           setSavedPointsLoaded(true)
@@ -81,7 +88,12 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
 
     loadSavedPoints()
     return () => { active = false }
-  }, [open, requestedLocation, savedPointsLoaded])
+  }, [open, requestedLocation, savedPointsLoaded, savedPointsRetry])
+
+  function retrySavedPoints() {
+    setSavedPointsLoaded(false)
+    setSavedPointsRetry((value) => value + 1)
+  }
 
   return <div className={`puddle-discover-create-dock${open ? ' is-open' : ''}`} data-testid="feed-composer" ref={dockRef}>
     <button className="puddle-discover-create-trigger" type="button" aria-expanded={open} aria-controls="discover-create-puddle-form" onClick={() => setOpen(true)}>
@@ -110,7 +122,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
             {savedPoints.length ? savedPoints.map((point) => <option value={point.id} key={point.id}>{point.title} · {placeLabel(point)}</option>) : <option value="">Save a place first</option>}
           </select>
         </label>
-        {savedPointsLoading ? <small>Loading saved places...</small> : !savedPoints.length ? <small>Save a place before publishing a puddle.</small> : null}
+        {savedPointsLoading ? <small>Loading saved places...</small> : savedPointsError ? <small role="alert">{savedPointsError} <button type="button" onClick={retrySavedPoints}>Try again</button></small> : !savedPoints.length ? <small>Save a place before publishing a puddle.</small> : null}
       </div>
     </form>
   </div>
