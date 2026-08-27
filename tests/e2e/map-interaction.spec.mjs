@@ -21,6 +21,22 @@ test('map pans on the compositor and visible catalogue markers open details', as
     const canvasBox = await map.boundingBox()
     expect(canvasBox).toBeTruthy()
 
+    const beforeScroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+    const beforeZoom = await mapCanvas.getAttribute('data-map-zoom')
+    const wheelBox = await mapCanvas.boundingBox()
+    expect(wheelBox).toBeTruthy()
+    await page.mouse.move(wheelBox.x + wheelBox.width * .25, wheelBox.y + wheelBox.height * .5)
+    await page.mouse.wheel(0, 500)
+    await expect.poll(() => mapCanvas.getAttribute('data-map-zoom')).not.toBe(beforeZoom)
+    expect(await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))).toEqual(beforeScroll)
+
+    const ctrlWheel = await mapCanvas.evaluate((element) => {
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: 100 })
+      element.dispatchEvent(event)
+      return event.defaultPrevented
+    })
+    expect(ctrlWheel).toBe(true)
+
     const markers = map.locator('.location-map-marker.is-catalogue')
     await expect.poll(() => markers.count(), { timeout: 30_000 }).toBeGreaterThan(0)
     let interactiveMarker = null
