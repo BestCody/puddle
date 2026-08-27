@@ -57,8 +57,7 @@ test('dashboard navigation warms intent targets plus at most two bounded idle hi
 })
 
 test('top pills size to their labels and move their highlight before navigation completes', async () => {
-  const [segment, routed, sidebarStyles, targetedStyles, mapPage, plansPage, passPage, layout] = await Promise.all([
-    read('components/instant-segment.js'),
+  const [routed, sidebarStyles, targetedStyles, mapPage, plansPage, passPage, layout] = await Promise.all([
     read('components/routed-segment.js'),
     read('app/sidebar-interactions.css'),
     read('app/ui-targeted-fixes.css'),
@@ -68,20 +67,13 @@ test('top pills size to their labels and move their highlight before navigation 
     read('app/layout.js')
   ])
 
-  assert.match(segment, /useLayoutEffect/)
-  assert.match(segment, /active\.offsetLeft/)
-  assert.match(segment, /active\.offsetWidth/)
-  assert.match(segment, /--segment-active-left/)
-  assert.match(segment, /--segment-active-width/)
-  assert.match(segment, /onPointerDown=\{\(event\) =>/)
-
   assert.match(routed, /useLayoutEffect/)
   assert.match(routed, /active\.offsetLeft/)
   assert.match(routed, /active\.offsetWidth/)
   assert.match(routed, /data-segment-enhanced="true"/)
   assert.match(routed, /data-segment-count/)
   assert.match(routed, /onPointerDown=\{\(event\) =>/)
-  assert.doesNotMatch(layout, /segment-interaction-bridge/)
+  assert.doesNotMatch(layout, /segment-interaction-bridge|instant-segment/)
   assert.match(layout, /import '\.\/ui-targeted-fixes\.css'/)
 
   assert.match(targetedStyles, /width:\s*max-content !important/)

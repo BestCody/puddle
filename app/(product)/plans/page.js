@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
-import { InstantSegment } from '@/components/instant-segment'
+import { RoutedSegment } from '@/components/routed-segment'
 import { SavedSearchOverlay } from '@/components/discover-search-overlay'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { SavedLightweightGrid } from '@/components/saved-lightweight-grid'
@@ -147,7 +147,7 @@ export default async function PlansPage({ searchParams }) {
       <SavedLocationMorphBridge />
       <AuthMessage searchParams={params} />
       <header className={styles.topbar}>
-        <InstantSegment
+        <RoutedSegment
           className={styles.tabs}
           tone="purple"
           activeValue={active === 'planned' ? 'planned' : 'saved'}

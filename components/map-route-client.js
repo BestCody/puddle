@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { InstantSegment } from '@/components/instant-segment'
+import { RoutedSegment } from '@/components/routed-segment'
 import { LocationMap } from '@/components/location-map'
 import { DiscoverSearchOverlay } from '@/components/discover-search-overlay'
 import { SocialFeedClient } from '@/components/social-feed-client'
@@ -14,7 +14,7 @@ const DEFAULT_MAP_CENTER = { latitude: 43.6532, longitude: -79.3832 }
 function FeedTop({ view, query }) {
   return <header className={styles.header} data-testid="feed-header">
     <Link className={styles.back} href="/discover" aria-label="Back to Swipe">‹</Link>
-    <InstantSegment className={styles.tabs} tone="yellow" activeValue={view} ariaLabel="Posts or map" testId="feed-tabs" items={[{ value: 'feed', label: 'Posts', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]} />
+    <RoutedSegment className={styles.tabs} tone="yellow" activeValue={view} ariaLabel="Posts or map" testId="feed-tabs" items={[{ value: 'feed', label: 'Posts', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]} />
     {view === 'feed' ? <DiscoverSearchOverlay initialQuery={query} /> : <span aria-hidden="true" />}
   </header>
 }

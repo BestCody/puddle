@@ -31,14 +31,6 @@
   box-sizing: border-box !important;
 }
 
-.figma-instant-segment {
-  position: relative !important;
-  display: grid !important;
-  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr)) !important;
-  align-items: center !important;
-  overflow: hidden;
-}
-
 .routed-segment {
   position: relative !important;
   display: grid !important;
@@ -47,20 +39,15 @@
   overflow: hidden;
 }
 
-.figma-instant-segment.tone-yellow,
 .routed-segment.tone-yellow,
 .figma-dashboard-segment[class*="MapFeed_tabs"] { --segment-active-bg: #f2c035; }
-.figma-instant-segment.tone-purple,
 .routed-segment.tone-purple,
 .figma-dashboard-segment[class*="Plans_tabs"] { --segment-active-bg: #b784e4; }
-.figma-instant-segment.tone-green,
 .routed-segment.tone-green,
 .figma-friends-tabs { --segment-active-bg: #78e152; }
-.figma-instant-segment.tone-pink,
 .routed-segment.tone-pink,
 .figma-pass-tabs { --segment-active-bg: #e73668; }
 
-.figma-instant-segment-highlight,
 .routed-segment[data-segment-enhanced="true"]::before {
   position: absolute;
   z-index: 1;
@@ -106,17 +93,12 @@
   box-shadow: none !important;
 }
 
-.figma-dashboard-segment[data-segment-count="3"] > a,
-.figma-dashboard-segment[data-segment-count="3"] > button,
 .routed-segment[data-segment-count="3"] > a,
-.routed-segment[data-segment-count="3"] > button,
-.figma-instant-segment[data-count="3"] > a,
-.figma-instant-segment[data-count="3"] > button {
+.routed-segment[data-segment-count="3"] > button {
   font-size: 12px !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .figma-instant-segment-highlight,
   .routed-segment[data-segment-enhanced="true"]::before {
     transition: none;
   }

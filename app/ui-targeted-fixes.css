@@ -25,7 +25,6 @@
   box-sizing: border-box !important;
 }
 
-.figma-instant-segment,
 .routed-segment[data-segment-enhanced="true"] {
   position: relative !important;
   display: inline-flex !important;
@@ -48,16 +47,11 @@
 }
 
 /* Preserve the normal top-pill text size instead of shrinking longer/multi-tab controls. */
-.figma-dashboard-segment[data-segment-count="3"] > a,
-.figma-dashboard-segment[data-segment-count="3"] > button,
 .routed-segment[data-segment-count="3"] > a,
-.routed-segment[data-segment-count="3"] > button,
-.figma-instant-segment[data-count="3"] > a,
-.figma-instant-segment[data-count="3"] > button {
+.routed-segment[data-segment-count="3"] > button {
   font-size: 16px !important;
 }
 
-.figma-instant-segment-highlight,
 .routed-segment[data-segment-enhanced="true"]::before {
   left: var(--segment-active-left, 4px) !important;
   width: var(--segment-active-width, 0px) !important;
@@ -186,7 +180,6 @@ body:has(.figma-swipe-screen) {
 
 @media (prefers-reduced-motion: reduce) {
   .puddle-settings-overlay,
-  .figma-instant-segment-highlight,
   .routed-segment[data-segment-enhanced="true"]::before {
     transition: none !important;
   }
