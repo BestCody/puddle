@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-const PREVIEW_CACHE_KEY = 'puddle:saved-place-previews:v1'
+const PREVIEW_CACHE_KEY = 'puddle:saved-place-previews:v2'
 const PREVIEW_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const PREVIEW_CACHE_LIMIT = 300
 
@@ -44,13 +44,33 @@ function writePreviewCache(previews) {
   } catch {}
 }
 
+function SavedCardPhoto({ className, href, ready, title, image, children }) {
+  const [failed, setFailed] = useState(false)
+  const showImage = Boolean(image) && !failed
+  return <a
+    className={`${className}${showImage ? '' : ' is-unavailable'}`}
+    href={href}
+    data-saved-morph-link={ready ? '' : undefined}
+    data-saved-morph-photo={ready ? '' : undefined}
+    aria-disabled={!ready}
+    onClick={(event) => { if (!ready) event.preventDefault() }}
+    aria-label={`Open ${title}`}
+  >
+    {showImage ? <img src={image} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} /> : <span aria-hidden="true">{image ? 'Photo unavailable' : 'Puddle'}</span>}
+    {children}
+  </a>
+}
+
 export function SavedLightweightGrid({ items = [], className = '', cardClassName = '', photoClassName = '', copyClassName = '', metaClassName = '', perfectPickClassName = '' }) {
   const ids = useMemo(() => items.map((item) => String(item.location_id || '')).filter(Boolean), [items])
   const [previews, setPreviews] = useState({})
+  const [loadError, setLoadError] = useState('')
+  const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     if (!ids.length) return undefined
     const controller = new AbortController()
+    setLoadError('')
     const cached = readPreviewCache(ids)
     if (Object.keys(cached).length) setPreviews(cached)
 
@@ -58,7 +78,10 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
     if (!missingIds.length) return () => controller.abort()
 
     fetch(`/api/saved-location-options?ids=${encodeURIComponent(missingIds.join(','))}`, { cache: 'no-store', signal: controller.signal })
-      .then((response) => response.ok ? response.json() : null)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Saved locations returned ${response.status}`)
+        return response.json()
+      })
       .then((payload) => {
         const next = {}
         for (const item of payload?.items || []) next[String(item.id)] = item
@@ -66,16 +89,23 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
         setPreviews((current) => ({ ...current, ...next }))
         writePreviewCache(next)
       })
-      .catch(() => {})
+      .catch((cause) => {
+        if (!controller.signal.aborted) {
+          console.warn('Could not load saved place previews.', { message: cause?.message || 'unknown error' })
+          setLoadError('Saved places could not be loaded.')
+        }
+      })
     return () => controller.abort()
-  }, [ids])
+  }, [ids, retry])
 
   return <section className={className} aria-label="Saved places" data-testid="saved-grid">
+    {loadError ? <div className="saved-lightweight-error" role="alert"><strong>{loadError}</strong><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
     {items.map((item, index) => {
       const preview = previews[String(item.location_id)]
       const title = preview?.title || 'Saved place'
       const meta = preview?.city || categoryLabel(preview?.category)
       const slug = preview?.slug || null
+      const image = preview?.cover_url || null
       const detail = slug ? `/plans/${slug}` : '#'
       const ready = Boolean(slug)
       const titleDelay = `${Math.min(index, 12) * 34}ms`
@@ -87,12 +117,12 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
         data-saved-morph-slug={ready ? slug : undefined}
         data-saved-morph-title={ready ? title : undefined}
         data-saved-morph-meta-text={ready ? meta : undefined}
+        data-saved-morph-image={ready && image ? image : undefined}
         key={`saved:${item.location_id}`}
       >
-        <a className={photoClassName} href={detail} data-saved-morph-link={ready ? '' : undefined} aria-disabled={!ready} onClick={(event) => { if (!ready) event.preventDefault() }} aria-label={`Open ${title}`}>
-          <span aria-hidden="true">Puddle</span>
+        <SavedCardPhoto className={photoClassName} href={detail} ready={ready} title={title} image={image}>
           {item.perfect_pick ? <b className={perfectPickClassName}>★ Perfect Pick</b> : null}
-        </a>
+        </SavedCardPhoto>
         <div className={copyClassName}>
           <h2>
             <a href={detail} data-saved-morph-link={ready ? '' : undefined} onClick={(event) => { if (!ready) event.preventDefault() }}>

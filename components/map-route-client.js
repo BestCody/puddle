@@ -29,9 +29,11 @@ function AuthMessageClient({ params }) {
 function MapScreen({ selectingForPost }) {
   const [snapshot, setSnapshot] = useState(null)
   const [error, setError] = useState('')
+  const [reload, setReload] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
+    setError('')
     // The map page emits a credentialed fetch preload for this fixed endpoint.
     // Default cache mode lets hydration consume that preload while the API's
     // private no-store response still prevents browser persistence.
@@ -48,11 +50,14 @@ function MapScreen({ selectingForPost }) {
         if (!controller.signal.aborted) setSnapshot(payload)
       })
       .catch((cause) => {
-        if (!controller.signal.aborted) setError(cause?.message || 'The map could not be loaded.')
+        if (!controller.signal.aborted) {
+          console.warn('Could not load map snapshot.', { message: cause?.message || 'unknown error' })
+          setError('The map could not be loaded.')
+        }
       })
 
     return () => controller.abort()
-  }, [])
+  }, [reload])
 
   const mapPoints = snapshot?.points?.map((point) => selectingForPost
     ? { ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }
@@ -60,7 +65,7 @@ function MapScreen({ selectingForPost }) {
 
   return <section className={styles.mapScreen} data-testid="feed-map-canvas">
     {selectingForPost ? <div className={styles.mapSelectionNotice}><strong>Choose a place for your post.</strong><Link href="/map?compose=1">Cancel</Link></div> : null}
-    {error ? <div className={styles.mapEmpty} role="alert"><strong>Could not load the map.</strong><small>{error}</small></div>
+    {error ? <div className={styles.mapEmpty} role="alert"><strong>Could not load the map.</strong><small>Check your connection and try again.</small><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button></div>
       : snapshot ? <div className={styles.mapCanvas}><LocationMap
         key={`${selectingForPost ? 'select' : 'browse'}:${snapshot.self?.display_name || 'map'}`}
         initialPoints={mapPoints}

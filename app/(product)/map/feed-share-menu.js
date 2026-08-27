@@ -16,23 +16,29 @@ export function FeedShareMenu({ postId, title }) {
   const [friends, setFriends] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [hasMore, setHasMore] = useState(false)
 
   async function loadPage(cursor = null) {
     if (loading) return
     setLoading(true)
-    const { data, error } = await client.rpc('social_friend_picker_v2', {
-      before_name: cursor?.sort_name || null,
-      before_id: cursor?.id || null,
-      result_limit: 30
-    })
-    if (!error) {
+    setError('')
+    try {
+      const { data, error: queryError } = await client.rpc('social_friend_picker_v2', {
+        before_name: cursor?.sort_name || null,
+        before_id: cursor?.id || null,
+        result_limit: 30
+      })
+      if (queryError) throw queryError
       const rows = data || []
       setFriends((current) => cursor ? mergeFriends(current, rows) : rows)
       setHasMore(rows.length === 30)
       setLoaded(true)
+    } catch {
+      setError('Friends could not be loaded.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   function onToggle(event) {
@@ -54,7 +60,9 @@ export function FeedShareMenu({ postId, title }) {
         <button type="submit">{friend.display_name || friend.username || 'Friend'}</button>
       </form>)}
       {loading ? <p>Loading friends…</p> : null}
-      {loaded && !friends.length && !loading ? <p>Add a friend before sharing.</p> : null}
+      {error ? <p role="alert">{error}</p> : null}
+      {error && !loading ? <button type="button" onClick={() => loadPage()}>Try again</button> : null}
+      {loaded && !friends.length && !loading && !error ? <p>Add a friend before sharing.</p> : null}
       {hasMore && !loading ? <button type="button" onClick={loadMore}>More friends</button> : null}
     </div>
   </details>

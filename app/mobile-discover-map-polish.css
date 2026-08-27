@@ -198,7 +198,7 @@
   font: 700 12px/1.3 Manrope, sans-serif;
   pointer-events: none;
 }
-.location-map-status.is-error { color: #8b2434; }
+.location-map-status.is-error { color: #8b2434; pointer-events: auto; }
 .location-map-status button {
   flex: 0 0 auto;
   min-height: 30px;

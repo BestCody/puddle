@@ -22,7 +22,7 @@ function MiniAvatar({ client, person }) {
   return <span className="social-avatar" title={person?.display_name || person?.username || 'Friend'} style={url ? { backgroundImage: `url(${url})` } : undefined}>{url ? null : initials(person?.display_name || person?.username)}</span>
 }
 
-function SendSheet({ client, item, friends, onClose, onSent }) {
+function SendSheet({ client, item, friends, friendsLoading, friendsError, onRetry, onClose, onSent }) {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(null)
   const title = item.title || item.name || 'this place'
@@ -50,7 +50,7 @@ function SendSheet({ client, item, friends, onClose, onSent }) {
       <button className="social-sheet-close" type="button" onClick={onClose} disabled={Boolean(busy)} aria-label="Close">×</button>
       <h2>Send to</h2>
       <p>{title}</p>
-      {friends.length ? <>
+      {friendsLoading ? <div className="social-empty" role="status"><strong>Loading friends...</strong></div> : friendsError ? <div className="social-empty" role="alert"><strong>{friendsError}</strong><button type="button" onClick={onRetry}>Try again</button></div> : friends.length ? <>
         <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add a note (optional)" maxLength={1000} />
         <div>{friends.map((friend) => <div className="social-person-row" key={friend.id}>
           <MiniAvatar client={client} person={friend} />
@@ -65,13 +65,29 @@ function SendSheet({ client, item, friends, onClose, onSent }) {
 export function DiscoverSocialBar({ item, onMessage }) {
   const client = useMemo(() => createClient(), [])
   const [friends, setFriends] = useState([])
+  const [friendsLoading, setFriendsLoading] = useState(true)
+  const [friendsError, setFriendsError] = useState('')
+  const [friendsRetry, setFriendsRetry] = useState(0)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     let active = true
-    client.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 100 }).then(({ data }) => { if (active) setFriends(data || []) })
+    setFriendsLoading(true)
+    setFriendsError('')
+    client.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 100 })
+      .then(({ data, error }) => {
+        if (error) throw error
+        if (active) setFriends(data || [])
+      })
+      .catch(() => {
+        if (active) {
+          setFriends([])
+          setFriendsError('Friends could not be loaded.')
+        }
+      })
+      .finally(() => { if (active) setFriendsLoading(false) })
     return () => { active = false }
-  }, [client])
+  }, [client, friendsRetry])
 
   function sent(message, success) {
     onMessage?.(message)
@@ -82,6 +98,6 @@ export function DiscoverSocialBar({ item, onMessage }) {
     <button className="discover-share-trigger" type="button" aria-label="Send to" title="Send to" onClick={() => setOpen(true)}>
       <img src={SHARE_ICON} alt="" aria-hidden="true" />
     </button>
-    {open ? <SendSheet client={client} item={item} friends={friends} onClose={() => setOpen(false)} onSent={sent} /> : null}
+    {open ? <SendSheet client={client} item={item} friends={friends} friendsLoading={friendsLoading} friendsError={friendsError} onRetry={() => setFriendsRetry((value) => value + 1)} onClose={() => setOpen(false)} onSent={sent} /> : null}
   </>
 }
