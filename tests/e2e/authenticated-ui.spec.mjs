@@ -148,6 +148,9 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await expect(page.locator('.figma-settings-window')).toBeVisible()
   await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await attachRender(page, testInfo, 'settings-default')
+  for (const label of ['Display name', 'Username', 'About', 'Visibility', 'New password', 'Confirm password', 'Theme', 'Profile color', 'Type DELETE']) {
+    await expect(page.getByLabel(label, { exact: true })).toBeVisible()
+  }
   if (testInfo.project.name === 'desktop-chromium') {
     await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
   }
