@@ -3,8 +3,10 @@
 
 Successful no-match lookups are persisted in B2 so the 1,000 requests/hour
 allowance continuously advances to new locations instead of retrying the same
-places. Candidate files are merged, not overwritten, and transient failures are
-left unattempted so a later run can retry them.
+places. Global runs rotate their country start point through a durable B2
+cursor so a large country cannot consume every scheduled run. Candidate files
+are merged, not overwritten, and transient failures are left unattempted so a
+later run can retry them.
 """
 import argparse
 import concurrent.futures
@@ -74,6 +76,7 @@ RECHECK_DAYS = max(1, min(365, int(os.getenv('KARTAVIEW_RECHECK_DAYS', '30'))))
 RUN_BUDGET_SECONDS = max(60, int(os.getenv('KARTAVIEW_RUN_BUDGET_SECONDS', str(65 * 60))))
 RUN_DEADLINE = time.monotonic() + RUN_BUDGET_SECONDS
 CHECKPOINT_EVERY = max(10, min(250, int(os.getenv('KARTAVIEW_CHECKPOINT_EVERY', '100'))))
+COUNTRY_CURSOR_KEY = f'{DATA_PREFIX}/enrichment/photo_cursors/provider=kartaview/snapshot={args.snapshot}/cursor.json'
 
 data_s3 = boto3.client(
     's3', endpoint_url=ENDPOINT_URL, aws_access_key_id=KEY_ID, aws_secret_access_key=KEY,
@@ -90,6 +93,34 @@ def object_exists(key):
         if code in {'404', 'NoSuchKey', 'NotFound'}:
             return False
         raise
+
+
+def read_country_cursor():
+    if not object_exists(COUNTRY_CURSOR_KEY):
+        return None
+    response = data_s3.get_object(Bucket=BUCKET, Key=COUNTRY_CURSOR_KEY)
+    try:
+        payload = json.loads(response['Body'].read().decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as error:
+        raise RuntimeError(f'KartaView country cursor is invalid: {error}') from error
+    return safe_partition(payload.get('nextCountry'), 'cursor country') if payload.get('nextCountry') else None
+
+
+def write_country_cursor(country):
+    payload = {
+        'provider': 'kartaview',
+        'snapshot': args.snapshot,
+        'nextCountry': country,
+        'updatedAt': datetime.now(timezone.utc).isoformat(),
+        'runId': os.getenv('GITHUB_RUN_ID', ''),
+    }
+    data_s3.put_object(
+        Bucket=BUCKET,
+        Key=COUNTRY_CURSOR_KEY,
+        Body=json.dumps(payload, separators=(',', ':')).encode('utf-8'),
+        ContentType='application/json',
+        CacheControl='no-store',
+    )
 
 
 def prefix_exists(prefix):
@@ -320,9 +351,21 @@ con.execute(f"""CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{KEY_ID
 remaining_locations = LIMIT
 summaries = []
 stop_requested = False
-for country in countries(con):
+country_partitions = countries(con)
+global_scope = not args.countries.strip()
+ordered_countries = list(country_partitions)
+starting_country = None
+if global_scope and ordered_countries:
+    starting_country = read_country_cursor()
+    if starting_country in ordered_countries:
+        start_index = ordered_countries.index(starting_country)
+        ordered_countries = ordered_countries[start_index:] + ordered_countries[:start_index]
+
+last_country = None
+for country in ordered_countries:
     if runtime_exhausted() or budget.used >= budget.limit or remaining_locations <= 0:
         break
+    last_country = country
 
     loc = f's3://{BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code={country}/locations.parquet'
     existing = []
@@ -413,6 +456,11 @@ for country in countries(con):
     if stop_requested:
         break
 
+next_country = None
+if global_scope and country_partitions and last_country:
+    next_country = country_partitions[(country_partitions.index(last_country) + 1) % len(country_partitions)]
+    write_country_cursor(next_country)
+
 print(json.dumps({
     'provider': 'kartaview',
     'snapshot': args.snapshot,
@@ -424,6 +472,8 @@ print(json.dumps({
     'runBudgetSeconds': RUN_BUDGET_SECONDS,
     'runtimeBudgetExhausted': runtime_exhausted(),
     'checkpointEvery': CHECKPOINT_EVERY,
+    'startingCountry': ordered_countries[0] if ordered_countries else None,
+    'nextCountry': next_country,
     'stoppedReason': 'runtime_budget_exhausted' if runtime_exhausted() else ('request_budget_exhausted' if budget.used >= budget.limit else None),
     'countries': summaries,
 }, indent=2))
