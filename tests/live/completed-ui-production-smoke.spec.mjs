@@ -77,6 +77,34 @@ async function submitServerAction(page, buttonName, expectedMessage, detailPath)
   await page.goto(detailPath)
 }
 
+async function firstInteractiveViewportMarker(map, selector) {
+  const markers = map.locator(selector)
+  await expect.poll(() => markers.count(), { timeout: 30_000, message: `Expected ${selector} to load.` }).toBeGreaterThan(0)
+  const canvasBox = await map.boundingBox()
+  if (!canvasBox) throw new Error('Map canvas has no viewport bounds.')
+
+  for (let index = 0; index < await markers.count(); index += 1) {
+    const marker = markers.nth(index)
+    const box = await marker.boundingBox()
+    if (!box || box.right <= canvasBox.x || box.left >= canvasBox.x + canvasBox.width || box.bottom <= canvasBox.y || box.top >= canvasBox.y + canvasBox.height) continue
+    const hitTarget = await marker.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      const samples = [
+        [rect.left + rect.width / 2, rect.top + rect.height / 2],
+        [rect.left + rect.width * .35, rect.top + rect.height * .35],
+        [rect.left + rect.width * .65, rect.top + rect.height * .65]
+      ]
+      return samples.some(([x, y]) => {
+        const hit = document.elementFromPoint(x, y)
+        return hit === element || hit?.closest?.('.location-map-marker') === element
+      })
+    })
+    if (hitTarget) return marker
+  }
+
+  throw new Error(`No interactive ${selector} was inside the map viewport.`)
+}
+
 test('completed UI paths work against production', async ({ page, browser }) => {
   test.setTimeout(240_000)
   const suffix = `${Date.now().toString(36)}${crypto.randomUUID().replaceAll('-', '').slice(0, 7)}`
@@ -160,7 +188,7 @@ test('completed UI paths work against production', async ({ page, browser }) => 
 
     await page.goto('/map?view=map')
     const map = page.getByTestId('feed-map-canvas')
-    const catalogueMarker = map.locator('.location-map-marker.is-catalogue').first()
+    const catalogueMarker = await firstInteractiveViewportMarker(map, '.location-map-marker.is-catalogue')
     await expect(catalogueMarker).toBeVisible({ timeout: 30_000 })
     await catalogueMarker.click()
     await expect(map.getByRole('link', { name: 'Open details' })).toBeVisible()
