@@ -5,16 +5,31 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('Discover keeps a bounded rolling preload window and refills before the deck runs dry', async () => {
-  const [workspace, preloader] = await Promise.all([
+  const [workspace, preloader, rum] = await Promise.all([
     read('components/date-swipe-workspace-v2.js'),
-    read('components/discovery-photo-preloader.js')
+    read('components/discovery-photo-preloader.js'),
+    read('components/discovery-rum.js')
   ])
 
   assert.match(workspace, /const DECK_BATCH_SIZE = 12/)
+  assert.match(workspace, /const PREFETCH_THRESHOLD = 8/)
   assert.match(workspace, /const REFILL_THRESHOLD = 5/)
+  assert.match(workspace, /const continuationPrefetchInFlight = useRef\(null\)/)
+  assert.match(workspace, /const prefetchedContinuation = useRef\(null\)/)
+  assert.match(workspace, /const prefetchMore = useCallback/)
+  assert.match(workspace, /timedDiscoveryRequest/)
   assert.match(workspace, /const PHOTO_PRELOAD_AHEAD = 2/)
-  assert.match(workspace, /Math\.max\(0, feed\.items\.length - index\) <= REFILL_THRESHOLD/)
+  assert.match(workspace, /remaining <= PREFETCH_THRESHOLD\) prefetchMore\(\)/)
+  assert.match(workspace, /const remaining = Math\.max\(0, feed\.items\.length - index\)/)
+  assert.match(workspace, /remaining <= REFILL_THRESHOLD\) loadMore\(\)/)
   assert.match(workspace, /<DiscoveryPhotoPreloader items=\{feed\.items\} index=\{index\} ahead=\{PHOTO_PRELOAD_AHEAD\} \/>/)
+
+  assert.match(rum, /import \{ track \} from '@vercel\/analytics'/)
+  assert.match(rum, /track\('discovery_rum', properties\)/)
+  assert.match(rum, /DISCOVERY_RUM_SAMPLE_RATE = 0\.1/)
+  assert.match(rum, /x-puddle-region/)
+  assert.match(rum, /server_\$\{name\}_ms/)
+  assert.match(rum, /reportInitialDiscoveryNavigation/)
 
   assert.match(preloader, /item\.photo_urls/)
   assert.match(preloader, /item\.photo_url/)

@@ -3,6 +3,7 @@ import { AuthMessage } from '@/components/auth-message'
 import { DateSwipeWorkspaceV2 } from '@/components/date-swipe-workspace-v2'
 import { getDiscoveryFeed } from '@/lib/app/discovery'
 import { recordSampledDiscoveryAnalytics } from '@/lib/app/discovery-analytics'
+import { deploymentRegion } from '@/lib/performance/deployment-region'
 import { renderProductPage } from '@/lib/app/render-product-page'
 
 export const dynamic = 'force-dynamic'
@@ -41,7 +42,7 @@ export default async function DiscoverPage({ searchParams }) {
 
     return <>
       <AuthMessage searchParams={params} />
-      <DateSwipeWorkspaceV2 initialFeed={feed} profileId={session.user.id} />
+      <DateSwipeWorkspaceV2 initialFeed={feed} profileId={session.user.id} initialRegion={deploymentRegion()} />
     </>
   })
 }

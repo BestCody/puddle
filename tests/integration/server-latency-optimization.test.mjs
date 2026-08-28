@@ -179,6 +179,17 @@ test('Production timing separates parallel auth and catalogue reads', async () =
   assert.match(discovery, /search;dur=\$\{searchMs\}/)
 })
 
+test('Discovery exposes its compute region for privacy-safe real-user profiling', async () => {
+  const [route, page, region] = await Promise.all([
+    read('app/api/discovery/route.js'),
+    read('app/(product)/discover/page.js'),
+    read('lib/performance/deployment-region.js')
+  ])
+  assert.match(route, /response\.headers\.set\('x-puddle-region', deploymentRegion\(\)\)/)
+  assert.match(page, /initialRegion=\{deploymentRegion\(\)\}/)
+  assert.match(region, /process\.env\.VERCEL_REGION/)
+})
+
 test('Map snapshots only load map-relevant relationship IDs before one B2 hydration', async () => {
   const [map, plans, route] = await Promise.all([
     read('lib/app/location-map-data.js'),
