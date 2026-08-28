@@ -10,6 +10,7 @@ import {
   recordServerLatency,
   recordSloObservation
 } from '@/lib/performance/server-latency'
+import { deploymentRegion } from '@/lib/performance/deployment-region'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,6 +81,7 @@ async function authenticatedSession(traceId, requestHeaders) {
 
 function withTrace(response, traceId) {
   response.headers.set('x-puddle-trace-id', traceId)
+  response.headers.set('x-puddle-region', deploymentRegion())
   return response
 }
 

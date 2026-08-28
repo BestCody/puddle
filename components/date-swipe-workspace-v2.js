@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DiscoveryPhotoPreloader } from '@/components/discovery-photo-preloader'
+import { reportInitialDiscoveryNavigation, timedDiscoveryRequest } from '@/components/discovery-rum'
 import { FigmaSwipeCard } from '@/components/figma-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { DiscoveryFilterSheet } from '@/components/discovery-filter-sheet'
@@ -13,6 +14,7 @@ const ACTION_RETRY_BASE_MS = 1_000
 const ACTION_RETRY_MAX_MS = 30_000
 const ACTION_STORAGE_PREFIX = 'puddle:pending-discovery-actions:v1'
 const DECK_BATCH_SIZE = 12
+const PREFETCH_THRESHOLD = 8
 const REFILL_THRESHOLD = 5
 const PHOTO_PRELOAD_AHEAD = 2
 const MAX_SEARCH_DISTANCE_KM = 20_040
@@ -99,7 +101,7 @@ function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) 
   </div>
 }
 
-export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
+export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = 'local' }) {
   const initialItems = initialFeed.items.slice(0, DECK_BATCH_SIZE)
   const [feed, setFeed] = useState({ ...initialFeed, items: withRequestId(initialItems, initialFeed.requestId) })
   const [filters, setFilters] = useState({
@@ -131,6 +133,8 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
   const inFlight = useRef(Promise.resolve())
   const pendingItems = useRef(new Set())
   const continuationInFlight = useRef(null)
+  const continuationPrefetchInFlight = useRef(null)
+  const prefetchedContinuation = useRef(null)
   const deckGeneration = useRef(0)
   const sessionIds = useRef(new Set(initialItems.map((item) => item.content_id)))
 
@@ -143,6 +147,10 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     const timer = window.setTimeout(() => setMessage(''), 2400)
     return () => window.clearTimeout(timer)
   }, [message])
+
+  useEffect(() => {
+    reportInitialDiscoveryNavigation(initialRegion)
+  }, [initialRegion])
 
   const flushActions = useCallback(({ keepalive = false } = {}) => {
     if (flushTimer.current) {
@@ -236,55 +244,127 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
     await inFlight.current.catch(() => {})
   }, [flushActions])
 
-  const loadMore = useCallback(async () => {
-    if (continuationInFlight.current || exhausted) return continuationInFlight.current
-    const generation = deckGeneration.current
+  const buildContinuationSnapshot = useCallback((generation) => {
     const normalized = { ...filters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
-    setLoadingMore(true)
+    const visibleIds = feed.items.slice(index).map((item) => item?.content_id).filter(Boolean)
+    const pendingActionIds = actionBuffer.current.map((entry) => entry.payload?.contentId).filter(Boolean)
+    const excludeIds = [...new Set([...visibleIds, ...pendingActionIds])]
+    return {
+      normalized,
+      excludeIds,
+      key: JSON.stringify({ generation, filters: normalized })
+    }
+  }, [feed.items, filters, index])
+
+  const fetchContinuation = useCallback((snapshot, phase) => timedDiscoveryRequest(
+    () => csrfFetch('/api/discovery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filters: snapshot.normalized, excludeIds: snapshot.excludeIds })
+    }),
+    { phase, region: initialRegion }
+  ), [initialRegion])
+
+  const applyContinuationResult = useCallback((result, generation) => {
+    if (!result || generation !== deckGeneration.current) return
+    const nextItems = (result.items || []).filter((item) => item?.content_id && !sessionIds.current.has(item.content_id)).slice(0, DECK_BATCH_SIZE)
+    for (const item of nextItems) sessionIds.current.add(item.content_id)
+    if (nextItems.length) {
+      const annotated = withRequestId(nextItems, result.requestId)
+      setFeed((value) => ({
+        ...value,
+        items: [...value.items, ...annotated],
+        categories: [...new Set([...(value.categories || []), ...(result.categories || [])])].sort(),
+        infrastructure: result.infrastructure || value.infrastructure,
+        continuation: result.continuation || value.continuation
+      }))
+    }
+    if (result.continuation?.hasMore === false || (!nextItems.length && !(result.items || []).length)) setExhausted(true)
+  }, [])
+
+  const prefetchMore = useCallback(() => {
+    if (exhausted) return null
+    const generation = deckGeneration.current
+    if (continuationInFlight.current) return continuationInFlight.current
+    if (continuationPrefetchInFlight.current?.generation === generation) return continuationPrefetchInFlight.current.promise
+    if (prefetchedContinuation.current?.generation === generation) return Promise.resolve(prefetchedContinuation.current)
 
     const task = (async () => {
       await drainActions()
       if (generation !== deckGeneration.current) return null
-      const visibleIds = feed.items.slice(index).map((item) => item?.content_id).filter(Boolean)
-      const pendingActionIds = actionBuffer.current.map((entry) => entry.payload?.contentId).filter(Boolean)
-      const excludeIds = [...new Set([...visibleIds, ...pendingActionIds])]
-      const response = await csrfFetch('/api/discovery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filters: normalized, excludeIds })
-      })
-      const result = await response.json().catch(() => ({}))
-      if (generation !== deckGeneration.current) return null
-      if (!response.ok) {
-        setMessage(result.error || 'Could not load more places.')
+      const snapshot = buildContinuationSnapshot(generation)
+      const { response, result } = await fetchContinuation(snapshot, 'prefetch')
+      if (generation !== deckGeneration.current || !response.ok) return null
+      return { generation, key: snapshot.key, result }
+    })()
+    const entry = { generation, promise: task }
+    continuationPrefetchInFlight.current = entry
+    task.then((value) => {
+      if (value && value.generation === deckGeneration.current) prefetchedContinuation.current = value
+    }).catch(() => {}).finally(() => {
+      if (continuationPrefetchInFlight.current === entry) continuationPrefetchInFlight.current = null
+    })
+    return task
+  }, [buildContinuationSnapshot, drainActions, exhausted, fetchContinuation])
+
+  const loadMore = useCallback(async () => {
+    if (continuationInFlight.current || exhausted) return continuationInFlight.current
+    const generation = deckGeneration.current
+    setLoadingMore(true)
+
+    const task = (async () => {
+      try {
+        await drainActions()
+        if (generation !== deckGeneration.current) return null
+        const snapshot = buildContinuationSnapshot(generation)
+        let result = null
+        const cached = prefetchedContinuation.current
+        if (cached?.generation === generation && cached.key === snapshot.key) {
+          prefetchedContinuation.current = null
+          result = cached.result
+        }
+
+        if (!result) {
+          const active = continuationPrefetchInFlight.current
+          if (active?.generation === generation) {
+            const prefetched = await active.promise.catch(() => null)
+            if (prefetched?.generation === generation && prefetched.key === snapshot.key) {
+              prefetchedContinuation.current = null
+              result = prefetched.result
+            }
+          }
+        }
+
+        if (!result) {
+          const responseResult = await fetchContinuation(snapshot, 'continuation')
+          if (generation !== deckGeneration.current) return null
+          if (!responseResult.response.ok) {
+            setMessage(responseResult.result.error || 'Could not load more places.')
+            return null
+          }
+          result = responseResult.result
+        }
+
+        applyContinuationResult(result, generation)
+        return result
+      } catch {
+        if (generation === deckGeneration.current) setMessage('Could not load more places.')
         return null
       }
-      const nextItems = (result.items || []).filter((item) => item?.content_id && !sessionIds.current.has(item.content_id)).slice(0, DECK_BATCH_SIZE)
-      for (const item of nextItems) sessionIds.current.add(item.content_id)
-      if (nextItems.length) {
-        const annotated = withRequestId(nextItems, result.requestId)
-        setFeed((value) => ({
-          ...value,
-          items: [...value.items, ...annotated],
-          categories: [...new Set([...(value.categories || []), ...(result.categories || [])])].sort(),
-          infrastructure: result.infrastructure || value.infrastructure,
-          continuation: result.continuation || value.continuation
-        }))
-      }
-      if (result.continuation?.hasMore === false || (!nextItems.length && !(result.items || []).length)) setExhausted(true)
-      return result
     })().finally(() => {
       if (generation === deckGeneration.current) setLoadingMore(false)
-      continuationInFlight.current = null
+      if (continuationInFlight.current === task) continuationInFlight.current = null
     })
     continuationInFlight.current = task
     return task
-  }, [filters, exhausted, drainActions, feed.items, index])
+  }, [applyContinuationResult, buildContinuationSnapshot, drainActions, exhausted, fetchContinuation])
 
   useEffect(() => {
-    if (exhausted || loadingMore) return
-    if (Math.max(0, feed.items.length - index) <= REFILL_THRESHOLD) loadMore().catch(() => {})
-  }, [feed.items.length, index, exhausted, loadingMore, loadMore])
+    if (exhausted) return
+    const remaining = Math.max(0, feed.items.length - index)
+    if (remaining <= PREFETCH_THRESHOLD) prefetchMore().catch(() => {})
+    if (remaining <= REFILL_THRESHOLD) loadMore().catch(() => {})
+  }, [feed.items.length, index, exhausted, loadingMore, loadMore, prefetchMore])
 
   useEffect(() => {
     const flushBeforeLeaving = () => {
@@ -319,11 +399,26 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId }) {
 
   async function refresh(nextFilters = filters) {
     setLoading(true)
-    deckGeneration.current += 1
+    const generation = deckGeneration.current + 1
+    deckGeneration.current = generation
+    prefetchedContinuation.current = null
     await drainActions()
     const normalized = { ...nextFilters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
-    const response = await fetch(`/api/discovery?${queryString(normalized)}`, { cache: 'no-store' })
-    const result = await response.json().catch(() => ({}))
+    let response
+    let result
+    try {
+      ({ response, result } = await timedDiscoveryRequest(
+        () => fetch(`/api/discovery?${queryString(normalized)}`, { cache: 'no-store' }),
+        { phase: 'refresh', region: initialRegion }
+      ))
+    } catch {
+      if (generation === deckGeneration.current) {
+        setLoading(false)
+        setMessage('Could not load a new deck.')
+      }
+      return
+    }
+    if (generation !== deckGeneration.current) return
     setLoading(false)
     if (!response.ok) return setMessage(result.error || 'Could not load a new deck.')
     const nextItems = (result.items || []).slice(0, DECK_BATCH_SIZE)
