@@ -1,0 +1,62 @@
+name: Export canonical photo reset manifest
+
+on:
+  workflow_dispatch:
+    inputs:
+      snapshot:
+        description: ISO snapshot date; empty uses the active location snapshot
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-photo-reset-manifest
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_DATA_PREFIX: data
+      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_MEDIA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_MEDIA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_MEDIA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_MEDIA_OPEN_PHOTO_PREFIX: ${{ vars.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install manifest dependencies
+        run: python -m pip install --disable-pip-version-check boto3 duckdb
+      - name: Export and upload complete recovery manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/global-data/export_b2_photo_reset_manifest.py \
+            --snapshot='${{ inputs.snapshot }}' \
+            --output-dir=photo-reset-manifest 2>&1 | tee photo-reset-manifest.log
+      - name: Upload local manifest artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: canonical-photo-reset-manifest
+          path: |
+            photo-reset-manifest
+            photo-reset-manifest.log
+          if-no-files-found: ignore
+          retention-days: 90

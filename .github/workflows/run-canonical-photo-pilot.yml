@@ -1,0 +1,142 @@
+name: Run canonical photo pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      countries:
+        description: Comma-separated country codes for the pilot
+        required: false
+        default: CA
+        type: string
+      max_locations:
+        description: Small explicit pilot location count; production remains uncapped
+        required: false
+        default: '10'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-photo-pilot
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    if: vars.GLOBAL_PHOTO_PIPELINE_ENABLED != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_DATA_PREFIX: data
+      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_MEDIA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_MEDIA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_MEDIA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_MEDIA_OPEN_PHOTO_PREFIX: ${{ vars.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      MAPILLARY_ACCESS_TOKEN: ${{ secrets.MAPILLARY_ACCESS_TOKEN }}
+      KARTAVIEW_ACCESS_TOKEN: ${{ secrets.KARTAVIEW_ACCESS_TOKEN }}
+      WIKIMEDIA_ACCESS_TOKEN: ${{ secrets.WIKIMEDIA_ACCESS_TOKEN }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install pilot dependencies
+        run: python -m pip install --disable-pip-version-check boto3 duckdb pillow brotli orjson urllib3 mapbox-vector-tile numpy
+      - id: active
+        name: Resolve active snapshot
+        run: python scripts/global-data/active_snapshot.py
+      - uses: supabase/setup-cli@v3.0.0
+        with:
+          version: latest
+      - name: Ensure candidate identity constraints are deployed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          supabase db query \
+            --linked \
+            --project-ref cegoqtvajwajczbofpep \
+            --file supabase/migrations/20260826200000_global_photo_candidate_registry.sql
+      - name: Verify database uniqueness invariants in a rollback-only transaction
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db query \
+            --linked \
+            --project-ref cegoqtvajwajczbofpep \
+            --file supabase/tests/global_photo_uniqueness.sql
+      - name: Build a small Wikimedia candidate sample
+        run: >-
+          python scripts/global-data/build_wikimedia_candidates.py
+          --snapshot='${{ steps.active.outputs.snapshot }}'
+          --countries='${{ inputs.countries }}'
+          --request-limit=100
+        env:
+          WIKIMEDIA_REQUESTS_PER_MINUTE: '200'
+          WIKIMEDIA_MAX_CONCURRENCY: '3'
+          WIKIMEDIA_RUN_BUDGET_SECONDS: '900'
+          OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER: '3'
+      - name: Build a small Mapillary candidate sample
+        run: >-
+          python scripts/global-data/build_mapillary_candidates.py
+          --snapshot='${{ steps.active.outputs.snapshot }}'
+          --countries='${{ inputs.countries }}'
+          --request-limit=100
+        env:
+          MAPILLARY_TILE_DAILY_LIMIT: '50000'
+          MAPILLARY_TILE_CONCURRENCY: '96'
+          OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER: '3'
+      - name: Build a small KartaView candidate sample
+        run: >-
+          python scripts/global-data/build_kartaview_candidates.py
+          --snapshot='${{ steps.active.outputs.snapshot }}'
+          --countries='${{ inputs.countries }}'
+          --limit=100
+        env:
+          KARTAVIEW_REQUESTS_PER_HOUR: '1000'
+          KARTAVIEW_MAX_CONCURRENCY: '8'
+          KARTAVIEW_RUN_BUDGET_SECONDS: '900'
+          OPEN_PHOTO_MAX_CANDIDATES_PER_PROVIDER: '3'
+      - name: Materialize only the explicit pilot set
+        run: >-
+          python scripts/global-data/materialize_photo_candidates.py
+          --snapshot='${{ steps.active.outputs.snapshot }}'
+          --countries='${{ inputs.countries }}'
+          --max-locations='${{ inputs.max_locations }}'
+        env:
+          GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY: '32'
+          GLOBAL_PHOTO_CLAIM_CONCURRENCY: '16'
+          GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY: '2'
+          GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_MBIT: '25'
+          GLOBAL_PHOTO_RUN_BUDGET_SECONDS: '3600'
+          GLOBAL_PHOTO_LOCATION_BATCH: '100'
+          GLOBAL_PHOTO_FALLBACK_CANDIDATES: '9'
+      - name: Publish the pilot search overlay
+        run: python scripts/global-data/build_b2_photo_search_overlay.py --snapshot='${{ steps.active.outputs.snapshot }}'
+        env:
+          GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES: ${{ vars.GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES || '12582912' }}
+      - name: Verify every pilot image against the canonical contract
+        run: >-
+          python scripts/global-data/verify_photo_pilot.py
+          --snapshot='${{ steps.active.outputs.snapshot }}'
+          --countries='${{ inputs.countries }}'
+          --report=pilot-verification.json
+      - name: Upload pilot verification
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: canonical-photo-pilot-verification
+          path: pilot-verification.json
+          if-no-files-found: ignore
+          retention-days: 90

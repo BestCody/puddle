@@ -1,0 +1,75 @@
+name: Reset canonical photo pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_key:
+        description: Complete B2 recovery manifest key produced by the export workflow
+        required: true
+        type: string
+      confirm:
+        description: Type DELETE_CANONICAL_PHOTO_PIPELINE to authorize the scoped reset
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-photo-reset
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    if: vars.GLOBAL_PHOTO_PIPELINE_ENABLED != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      B2_DATA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_DATA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_DATA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_DATA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_DATA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_DATA_PREFIX: data
+      B2_MEDIA_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_MEDIA_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_MEDIA_BUCKET_NAME: ${{ secrets.B2_BUCKET }}
+      B2_MEDIA_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+      B2_MEDIA_S3_REGION: ${{ secrets.B2_REGION }}
+      B2_MEDIA_OPEN_PHOTO_PREFIX: ${{ vars.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256' }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - name: Confirm the pipeline is frozen
+        shell: bash
+        run: test '${{ vars.GLOBAL_PHOTO_PIPELINE_ENABLED }}' != 'true'
+      - uses: supabase/setup-cli@v3.0.0
+        with:
+          version: latest
+      - name: Delete scoped Supabase photo records transactionally
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ inputs.confirm }}' = 'DELETE_CANONICAL_PHOTO_PIPELINE'
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          supabase db query \
+            --linked \
+            --project-ref cegoqtvajwajczbofpep \
+            --file scripts/global-data/reset_canonical_photo_pipeline.sql
+      - name: Delete and verify scoped B2 photo data
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check boto3
+          python scripts/global-data/reset_canonical_photo_pipeline.py \
+            --manifest-key='${{ inputs.manifest_key }}' \
+            --confirm='${{ inputs.confirm }}' 2>&1 | tee photo-reset-report.json
+      - name: Upload reset report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: canonical-photo-reset-report
+          path: photo-reset-report.json
+          if-no-files-found: ignore
+          retention-days: 90
