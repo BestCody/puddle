@@ -1,7 +1,6 @@
 "use client"
 
-import { useLayoutEffect, useRef, useTransition } from 'react'
-import { setAppearanceThemeFromLogo } from '@/app/account/actions'
+import { useLayoutEffect, useRef } from 'react'
 
 const PENDING_KEY = 'puddle:appearance-pending'
 const EXPLICIT_THEMES = new Set(['light', 'dark'])
@@ -25,7 +24,6 @@ function applyAppearance(shell, appearance) {
 
 export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
   const buttonRef = useRef(null)
-  const [, startTransition] = useTransition()
 
   useLayoutEffect(() => {
     const shell = buttonRef.current?.closest('.figma-dashboard-shell')
@@ -42,32 +40,12 @@ export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
     return () => media.removeEventListener?.('change', syncSystemAppearance)
   }, [initialAppearance])
 
-  function toggleAppearance() {
-    const shell = buttonRef.current?.closest('.figma-dashboard-shell')
-    if (!shell) return
-
-    const previousAppearance = shell.dataset.appearance || initialAppearance
-    const currentResolved = shell.dataset.resolvedAppearance || resolveAppearance(previousAppearance)
-    const nextAppearance = currentResolved === 'dark' ? 'light' : 'dark'
-
-    applyAppearance(shell, nextAppearance)
-    window.sessionStorage.setItem(PENDING_KEY, nextAppearance)
-
-    startTransition(async () => {
-      const result = await setAppearanceThemeFromLogo(nextAppearance)
-      window.sessionStorage.removeItem(PENDING_KEY)
-      if (!result?.ok) applyAppearance(shell, previousAppearance)
-    })
-  }
-
   return <button
     ref={buttonRef}
     type="button"
     className="puddle-logo puddle-logo-theme-toggle"
     style={buttonStyle}
-    aria-label="Toggle light and dark mode"
-    title="Toggle light and dark mode"
-    onClick={toggleAppearance}
+    aria-label="Puddle"
   >
     <img src="/puddle-mark-outline.svg" alt="" width="44" height="44" />
   </button>
