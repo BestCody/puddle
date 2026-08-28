@@ -95,7 +95,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const undo = page.getByRole('button', { name: 'Undo', exact: true })
   await expect(undo).toBeVisible()
   await expect(undo).toBeDisabled()
-  for (const name of ['Pass', 'Save', 'Post']) {
+  for (const name of ['Pass', 'Save', 'Star']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
   }
   await page.getByRole('button', { name: 'Open details' }).click()
@@ -107,7 +107,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
 
   await openDesktop(page, '/map')
   const feedTabs = page.getByTestId('feed-tabs')
-  await expect(feedTabs.getByRole('link', { name: 'Posts', exact: true })).toBeVisible()
+  await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
   await expectActiveSegmentHighlight(feedTabs)
   const feedSearch = page.getByTestId('feed-search')

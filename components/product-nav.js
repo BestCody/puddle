@@ -17,9 +17,21 @@ function NavIcon({ type, avatarUrl }) {
   return null
 }
 
+let navIdentityPromise = null
+
+function loadNavIdentity() {
+  if (navIdentityPromise) return navIdentityPromise
+  navIdentityPromise = fetch('/api/profile/identity', { credentials: 'same-origin', cache: 'no-store' })
+    .then((response) => response.ok ? response.json() : null)
+    .then((value) => value?.avatarUrl ? value : null)
+    .catch(() => null)
+    .finally(() => { navIdentityPromise = null })
+  return navIdentityPromise
+}
+
 const items = [
   { href: '/discover', label: 'Swipe', icon: 'swipe', tone: 'blue' },
-  { href: '/map', label: 'Discover', icon: 'feed', tone: 'yellow' },
+  { href: '/map', label: 'Feed', icon: 'feed', tone: 'yellow' },
   { href: '/plans', label: 'Saved', icon: 'saved', tone: 'purple' },
   { href: '/matches', label: 'Friends', icon: 'friends', tone: 'green' },
   { href: '/membership', label: 'Pass', icon: 'pass', tone: 'pink' },
@@ -66,7 +78,20 @@ function NavItems({ mobile = false, avatarUrl = null }) {
   const router = useRouter()
   const routeActiveHref = items.find((item) => isActive(pathname, item.href))?.href ?? null
   const [selectedHref, setSelectedHref] = useState(routeActiveHref)
+  const [resolvedAvatarUrl, setResolvedAvatarUrl] = useState(avatarUrl)
   const navigationIntentRef = useRef(null)
+
+  useEffect(() => {
+    if (avatarUrl) {
+      setResolvedAvatarUrl(avatarUrl)
+      return undefined
+    }
+    let active = true
+    loadNavIdentity().then((identity) => {
+      if (active && identity?.avatarUrl) setResolvedAvatarUrl(identity.avatarUrl)
+    })
+    return () => { active = false }
+  }, [avatarUrl])
 
   useEffect(() => {
     if (navigationIntentRef.current) {
@@ -157,7 +182,7 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       aria-label={item.label}
       key={item.href}
     >
-      <span className="figma-dashboard-nav-icon"><NavIcon type={item.icon} avatarUrl={avatarUrl} /></span>
+      <span className="figma-dashboard-nav-icon"><NavIcon type={item.icon} avatarUrl={resolvedAvatarUrl} /></span>
       {mobile ? null : <span className="figma-dashboard-nav-label">{item.label}</span>}
     </Link>
   })

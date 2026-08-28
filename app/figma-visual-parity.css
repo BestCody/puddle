@@ -1,0 +1,280 @@
+/*
+ * Current authenticated visual contract.
+ *
+ * Layout is expressed through the shell, intrinsic component ratios, and
+ * viewport-safe insets. This is the single responsive contract for the
+ * rebuilt Swipe, Feed, and Map surfaces.
+ */
+
+:root {
+  --puddle-mobile-nav-height: 104px;
+  --puddle-mobile-content-bottom: calc(var(--puddle-mobile-nav-height) + env(safe-area-inset-bottom));
+}
+
+body:has(.figma-dashboard-shell) {
+  min-width: 280px;
+  scrollbar-width: thin;
+  scrollbar-color: #c7c7c7 transparent;
+}
+
+body:has(.figma-dashboard-shell)::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body:has(.figma-dashboard-shell)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body:has(.figma-dashboard-shell)::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #c7c7c7;
+  background-clip: padding-box;
+}
+
+.figma-dashboard-shell,
+.figma-dashboard-stage,
+.figma-dashboard-main {
+  min-height: 100dvh;
+}
+
+body:has([data-testid='feed-screen'][data-view='map']) {
+  overflow: hidden;
+}
+
+[data-testid='feed-screen'][data-view='map'] {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+}
+
+.figma-swipe-mobile-logo {
+  display: none;
+}
+
+.figma-swipe-screen::before {
+  content: none !important;
+}
+
+@media (max-width: 760px) {
+  .figma-dashboard-main {
+    min-height: 100dvh;
+    padding-bottom: var(--puddle-mobile-content-bottom);
+  }
+
+  .figma-dashboard-mobile-nav {
+    height: var(--puddle-mobile-nav-height);
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .figma-swipe-screen {
+    height: calc(100dvh - var(--puddle-mobile-content-bottom));
+    min-height: calc(100dvh - var(--puddle-mobile-content-bottom));
+    max-height: calc(100dvh - var(--puddle-mobile-content-bottom));
+    overflow: clip !important;
+  }
+
+  .figma-swipe-workspace {
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto !important;
+    align-content: start !important;
+    justify-items: center !important;
+    gap: clamp(7px, 1.25dvh, 12px) !important;
+    padding: clamp(72px, 12dvh, 103px) clamp(16px, 5vw, 24px) clamp(12px, 3dvh, 24px) !important;
+    box-sizing: border-box;
+  }
+
+  .figma-swipe-mobile-logo {
+    position: absolute;
+    z-index: 20;
+    top: clamp(24px, 4.6dvh, 40px);
+    left: 50%;
+    width: clamp(32px, 9vw, 38px);
+    aspect-ratio: 1;
+    display: block;
+    transform: translateX(-50%);
+    background: url('/puddle-mark-outline.svg') center / contain no-repeat;
+    pointer-events: none;
+  }
+
+  .figma-swipe-card-stage {
+    position: relative !important;
+    inset: auto !important;
+    width: min(325px, calc(100% - 16px), calc(59.7dvh - 170px)) !important;
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 325 / 544 !important;
+    margin: 0 auto !important;
+    transform: none !important;
+  }
+
+  .figma-swipe-card-stage > .figma-swipe-card,
+  .figma-swipe-card-stage > .minimal-swipe-card.figma-swipe-card {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+  }
+
+  .figma-swipe-actions,
+  .minimal-swipe-actions.figma-swipe-actions {
+    position: relative !important;
+    inset: auto !important;
+    width: min(288px, calc(100% - 16px)) !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    transform: none !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: clamp(5px, 2vw, 8px) !important;
+  }
+
+  .figma-swipe-action,
+  .figma-swipe-actions .minimal-swipe-action {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .figma-swipe-action > span,
+  .figma-swipe-actions .minimal-swipe-action > span {
+    width: clamp(44px, min(15vw, 7.6dvh), 58px) !important;
+    min-width: clamp(44px, min(15vw, 7.6dvh), 58px) !important;
+    height: clamp(44px, min(15vw, 7.6dvh), 58px) !important;
+    min-height: clamp(44px, min(15vw, 7.6dvh), 58px) !important;
+  }
+
+  .figma-swipe-action svg,
+  .figma-swipe-actions .minimal-swipe-action svg {
+    width: clamp(21px, 7vw, 27px) !important;
+    height: clamp(21px, 7vw, 27px) !important;
+  }
+
+  .figma-swipe-action small,
+  .figma-swipe-actions .minimal-swipe-action small {
+    font-size: clamp(8.5px, 2.6vw, 10px) !important;
+  }
+
+  .figma-swipe-status {
+    position: relative !important;
+    inset: auto !important;
+    width: max-content !important;
+    max-width: calc(100% - 32px) !important;
+    min-height: 14px !important;
+    margin: 0 !important;
+    transform: none !important;
+    text-align: center !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] {
+    padding: 0 !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] > .header {
+    position: absolute;
+    z-index: 20;
+    top: clamp(24px, 4.6dvh, 40px);
+    left: clamp(16px, 4.7vw, 19px);
+    right: clamp(16px, 4.7vw, 19px);
+    width: auto;
+    min-height: 41px;
+    pointer-events: none;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-workspace,
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-layout,
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-canvas {
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side {
+    top: auto !important;
+    right: clamp(12px, 4vw, 16px) !important;
+    bottom: calc(var(--puddle-mobile-content-bottom) + 74px) !important;
+    width: min(303px, calc(100% - 32px)) !important;
+    max-height: min(112px, calc(100% - 220px)) !important;
+    border-radius: 16px !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-card {
+    display: grid !important;
+    grid-template-columns: clamp(58px, 18vw, 72px) minmax(0, 1fr) !important;
+    min-height: 96px !important;
+    max-height: 112px !important;
+    overflow: hidden !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-card-photo {
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: 1 !important;
+    margin: 10px !important;
+    border-radius: 12px !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-card > div:last-child {
+    min-width: 0 !important;
+    display: grid !important;
+    align-content: center !important;
+    gap: 3px !important;
+    padding: 10px 12px 10px 0 !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-card h2 {
+    min-width: 0;
+    margin: 0 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: clamp(14px, 4vw, 18px) !important;
+    letter-spacing: -.04em;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-card p,
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-card-tags,
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-plan-time {
+    display: none !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-zoom {
+    display: none !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-screen .puddle-map-search-trigger {
+    position: absolute !important;
+    z-index: 12;
+    top: auto !important;
+    right: auto !important;
+    bottom: calc(var(--puddle-mobile-content-bottom) + 16px) !important;
+    left: 50% !important;
+    width: min(220px, calc(100% - 32px)) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 42px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start !important;
+    gap: 8px;
+    padding: 0 14px !important;
+    transform: translateX(-50%) !important;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-screen .puddle-map-search-trigger > span {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: nowrap !important;
+    color: #777;
+    font: 700 13px/1 Manrope, sans-serif;
+  }
+
+  [data-testid='feed-screen'][data-view='map'] .map-screen .puddle-map-search-trigger > b {
+    margin-left: auto;
+  }
+}

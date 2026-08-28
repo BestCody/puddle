@@ -75,7 +75,7 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
     } else {
       await expect(unavailablePhoto).toHaveAttribute('aria-label', 'No verified photo is available')
     }
-    for (const name of ['Pass', 'Save', 'Post']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
+    for (const name of ['Pass', 'Save', 'Star']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
 
     const filterButton = page.getByRole('button', { name: 'Open filters' })
     const detailsButton = page.getByRole('button', { name: 'Open details' })
@@ -91,7 +91,7 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
 
     await page.goto('/map')
     const feedTabs = page.getByTestId('feed-tabs')
-    await expect(feedTabs.getByRole('link', { name: 'Posts', exact: true })).toBeVisible()
+    await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
     await feedTabs.getByRole('link', { name: 'Map', exact: true }).click()
     await expect(page).toHaveURL(/\/map\?view=map/)
     await expect(page.getByTestId('feed-map-canvas')).toBeVisible()

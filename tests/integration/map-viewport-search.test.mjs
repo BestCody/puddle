@@ -88,6 +88,8 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(mapSource, /Expand to choose a location\./)
   assert.doesNotMatch(mapSource, /Open details/)
   assert.match(mapSource, /Directions<\/a>/)
+  assert.match(pageSource, /<DiscoverSearchOverlay initialQuery=\{query\} mapMode \/>/)
+  assert.match(pageSource, /ariaLabel="Feed or map"/)
 
   const mapFeedStyles = await read('app/(product)/map/MapFeed.module.css')
   assert.match(mapFeedStyles, /location-map-side\) \{[\s\S]*display: flex !important/)
