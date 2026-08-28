@@ -123,6 +123,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   const [exhausted, setExhausted] = useState(initialFeed.continuation?.hasMore === false && initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
   const [message, setMessage] = useState('')
   const [actionRequest, setActionRequest] = useState(null)
+  const [cardExiting, setCardExiting] = useState(false)
 
   const storageKey = useMemo(() => actionStorageKey(profileId), [profileId])
   const actionBuffer = useRef([])
@@ -140,6 +141,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   const sessionIds = useRef(new Set(initialItems.map((item) => item.content_id)))
 
   const current = feed.items[index] || null
+  const nextCard = feed.items[index + 1] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
   const busy = false
 
@@ -507,7 +509,10 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
       </button>
 
       {current ? <>
-        <div className="figma-swipe-card-stage"><FigmaSwipeCard item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} /></div>
+        <div className={`figma-swipe-card-stage${cardExiting ? ' is-advancing' : ''}`}>
+          {nextCard ? <div className="figma-swipe-card-layer is-back"><FigmaSwipeCard item={nextCard} onChoice={() => {}} busy preview /></div> : null}
+          <div className="figma-swipe-card-layer is-front"><FigmaSwipeCard key={current.content_id || current.id} item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} onExitChange={setCardExiting} /></div>
+        </div>
         <SwipeActionDock
           onUndo={undo}
           onPass={() => requestChoice('pass')}
