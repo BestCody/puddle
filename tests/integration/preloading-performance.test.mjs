@@ -156,13 +156,12 @@ test('Settings opens over the current page and Swipe locks only page scrolling',
   assert.doesNotMatch(targetedStyles, /touch-action:\s*none/)
 })
 
-test('Puddle logo toggles a persisted comprehensive dark mode without recoloring branded content', async () => {
-  const [layout, shell, sidebar, toggle, actions, darkStyles] = await Promise.all([
+test('Puddle logo keeps appearance state without toggling dark mode on click', async () => {
+  const [layout, shell, sidebar, toggle, darkStyles] = await Promise.all([
     read('app/layout.js'),
     read('components/product-shell.js'),
     read('components/figma-dashboard-sidebar.js'),
     read('components/appearance-toggle-logo.js'),
-    read('app/account/actions.js'),
     read('app/dark-mode.css')
   ])
 
@@ -174,14 +173,8 @@ test('Puddle logo toggles a persisted comprehensive dark mode without recoloring
 
   assert.match(toggle, /shell\.dataset\.appearance = appearance/)
   assert.match(toggle, /shell\.dataset\.resolvedAppearance = resolved/)
-  assert.match(toggle, /const nextAppearance = currentResolved === 'dark' \? 'light' : 'dark'/)
-  assert.match(toggle, /applyAppearance\(shell, nextAppearance\)[\s\S]*setAppearanceThemeFromLogo\(nextAppearance\)/)
-  assert.match(toggle, /sessionStorage\.setItem\(PENDING_KEY, nextAppearance\)/)
-  assert.match(toggle, /aria-label="Toggle light and dark mode"/)
-
-  assert.match(actions, /export async function setAppearanceThemeFromLogo\(theme\)/)
-  assert.match(actions, /appearance_theme:\s*appearanceTheme/)
-  assert.match(actions, /revalidateAppearancePaths\(\)/)
+  assert.match(toggle, /aria-label="Puddle"/)
+  assert.doesNotMatch(toggle, /toggleAppearance|setAppearanceThemeFromLogo|onClick=|sessionStorage\.setItem\(PENDING_KEY/)
 
   assert.match(darkStyles, /--puddle-dark-bg:\s*#111315/)
   assert.match(darkStyles, /--puddle-dark-raised:\s*#202428/)
