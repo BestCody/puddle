@@ -41,7 +41,8 @@ test('Hot read APIs consume the proxy-verified user and verify only required pro
     assert.doesNotMatch(source, /auth\.getClaims\(\)/)
     assert.doesNotMatch(source, /auth\.getUser\(\)/)
   }
-  assert.match(discovery, /DISCOVERY_PROFILE_SELECT = 'latitude,longitude,search_radius_km,interests,location_label,city,suspended_at,banned_at'/)
+  assert.match(discovery, /supabase\.rpc\('discovery_session_v1'\)/)
+  assert.match(discovery, /seen_location_ids/)
   assert.doesNotMatch(discovery, /ensureProfile/)
   assert.match(map, /select\('suspended_at,banned_at'\)/)
   assert.doesNotMatch(map, /ensureProfile/)
@@ -50,11 +51,21 @@ test('Hot read APIs consume the proxy-verified user and verify only required pro
   assert.doesNotMatch(profile, /profileLoads|PROFILE_CACHE_TTL_MS|invalidateProfileCache/)
 })
 
-test('Discovery overlaps profile and seen-history reads before B2 serving', async () => {
+test('Discovery bundles profile and seen history before B2 serving', async () => {
   const source = await read('app/api/discovery/route.js')
-  assert.match(source, /const profilePromise = supabase[\s\S]*const seenPromise = \(async \(\) => \{[\s\S]*supabase\.rpc\('discovery_seen_locations_v1'\)/)
-  assert.match(source, /Promise\.all\(\[profilePromise, seenPromise\]\)/)
+  assert.match(source, /supabase\.rpc\('discovery_session_v1'\)/)
+  assert.doesNotMatch(source, /discovery_seen_locations_v1/)
+  assert.doesNotMatch(source, /profilePromise|seenPromise/)
   assert.match(source, /preloadedSeenLocationIds/)
+})
+
+test('Discovery session migration uses the current relational seen-state tables', async () => {
+  const migration = await read('supabase/migrations/20260828021500_discovery_session_bundle.sql')
+  assert.match(migration, /create index if not exists discovery_actions_profile_location_latest_idx/)
+  assert.match(migration, /create or replace function public\.discovery_session_v1/)
+  assert.match(migration, /public\.discovery_actions/)
+  assert.match(migration, /public\.user_content_states/)
+  assert.doesNotMatch(migration, /public\.locations/)
 })
 
 test('Hot API routes own the account-state gate when proxy moderation is skipped', async () => {

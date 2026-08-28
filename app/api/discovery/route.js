@@ -14,7 +14,6 @@ import {
 export const dynamic = 'force-dynamic'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const DISCOVERY_PROFILE_SELECT = 'latitude,longitude,search_radius_km,interests,location_label,city,suspended_at,banned_at'
 
 function continuationExcludes(value) {
   if (!Array.isArray(value)) return []
@@ -38,36 +37,30 @@ async function authenticatedSession(traceId, requestHeaders) {
     return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   }
   const user = { id: userId }
-  // Profile coordinates/preferences and seen history are independent reads.
-  // Start both before awaiting either one so the authenticated discovery path
-  // is bounded by the slower read instead of their sum.
-  const profilePromise = supabase
-    .from('profiles')
-    .select(DISCOVERY_PROFILE_SELECT)
-    .eq('id', userId)
-    .maybeSingle()
-  const seenPromise = (async () => {
-    try {
-      return await supabase.rpc('discovery_seen_locations_v1')
-    } catch (error) {
-      return { data: null, error }
-    }
-  })()
-  const [{ data: profile, error: profileError }, seenResult] = await Promise.all([profilePromise, seenPromise])
+  // Profile state and seen history are read together by one authenticated RPC.
+  // This removes a second Supabase round trip while preserving the same
+  // account-state and seen-location semantics.
+  let sessionResult
+  try {
+    sessionResult = await supabase.rpc('discovery_session_v1')
+  } catch (error) {
+    sessionResult = { data: null, error }
+  }
   const authMs = elapsedMs(supabaseStarted)
   recordServerLatency('supabase.discoverySession', authMs, SERVER_LATENCY_BUDGET_MS.pageSession, {
     trace_id: traceId, service: 'supabase', operation: 'discoverySession',
-    failed: Boolean(profileError || !profile)
+    failed: Boolean(sessionResult.error || !sessionResult.data?.profile)
   })
-  if (profileError || !profile) return { error: NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }) }
+  const profile = sessionResult.data?.profile && typeof sessionResult.data.profile === 'object'
+    ? sessionResult.data.profile
+    : null
+  if (sessionResult.error || !profile) return { error: NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 }) }
   if (profile?.suspended_at || profile?.banned_at) {
     return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
   }
-  const preloadedSeenLocationIds = seenResult?.error
-    ? []
-    : (Array.isArray(seenResult?.data) ? seenResult.data : [])
-      .map((row) => typeof row === 'string' ? row : row?.location_id || row?.locationId || row?.id || null)
-      .filter(Boolean)
+  const preloadedSeenLocationIds = Array.isArray(sessionResult.data?.seen_location_ids)
+    ? sessionResult.data.seen_location_ids.filter((id) => typeof id === 'string' && UUID_PATTERN.test(id))
+    : []
   return { session: { supabase, user, profile: profile || {}, traceId, authMs, preloadedSeenLocationIds } }
 }
 
