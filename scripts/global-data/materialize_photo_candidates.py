@@ -51,8 +51,16 @@ def safe_partition(value, label):
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 parser.add_argument('--countries', default=os.getenv('GLOBAL_PHOTO_COUNTRIES', ''))
+parser.add_argument(
+    '--max-locations',
+    type=int,
+    default=None,
+    help='Optional explicit pilot bound; the production drain remains uncapped when omitted.',
+)
 args = parser.parse_args()
 args.snapshot = safe_partition(args.snapshot, 'snapshot')
+if args.max_locations is not None and args.max_locations < 1:
+    raise ValueError('--max-locations must be positive when supplied')
 
 DATA_BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
 DATA_ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
@@ -674,7 +682,7 @@ def countries():
     return [safe_partition(r[0], 'country') for r in con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}',hive_partitioning=true) ORDER BY country_code").fetchall() if r[0]]
 
 
-def candidate_batches(query):
+def candidate_batches(query, location_limit=None):
     """Build one country queue, then drain it in uncapped cursor batches.
 
     The eligible queue is materialized once so every subsequent batch reads
@@ -685,12 +693,18 @@ def candidate_batches(query):
     columns = ['location_id', 'provider', 'external_photo_id', 'asset_url', 'page_url', 'attribution', 'license', 'license_url', 'rank_score', 'candidate_rank']
     con.execute('DROP TABLE IF EXISTS photo_candidate_queue')
     queue_started = time.monotonic()
+    emitted_locations = 0
     try:
         con.execute(f'CREATE TEMP TABLE photo_candidate_queue AS {query}')
         queue_stats = con.execute('SELECT count(*), count(DISTINCT location_id) FROM photo_candidate_queue').fetchone()
         print(f'photo candidate queue ready: {queue_stats[1]} locations, {queue_stats[0]} candidates in {time.monotonic() - queue_started:.1f}s', flush=True)
         location_cursor = ''
         while not runtime_exhausted():
+            if location_limit is not None and emitted_locations >= location_limit:
+                break
+            batch_limit = LOCATION_BATCH
+            if location_limit is not None:
+                batch_limit = min(batch_limit, location_limit - emitted_locations)
             escaped_cursor = location_cursor.replace("'", "''")
             batch_query = f"""
               WITH target_locations AS (
@@ -699,7 +713,7 @@ def candidate_batches(query):
                 WHERE location_id > '{escaped_cursor}'
                 GROUP BY location_id
                 ORDER BY location_id
-                LIMIT {LOCATION_BATCH}
+                LIMIT {batch_limit}
               ), ranked AS (
                 SELECT q.*,
                        row_number() OVER (
@@ -739,6 +753,7 @@ def candidate_batches(query):
             if next_cursor <= location_cursor:
                 raise RuntimeError('photo candidate cursor did not advance')
             print(f'photo candidate batch ready: {len(grouped)} locations after {next_cursor}', flush=True)
+            emitted_locations += len(grouped)
             yield grouped
             location_cursor = next_cursor
     finally:
@@ -801,6 +816,11 @@ for country in countries():
     if runtime_exhausted():
         stop_requested = True
         break
+    country_location_limit = None
+    if args.max_locations is not None:
+        country_location_limit = max(0, args.max_locations - locations_seen)
+        if country_location_limit == 0:
+            break
     map_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=mapillary/snapshot={args.snapshot}/country_code={country}'
     wiki_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=wikimedia-commons/snapshot={args.snapshot}/country_code={country}'
     karta_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=kartaview/snapshot={args.snapshot}/country_code={country}'
@@ -882,7 +902,7 @@ for country in countries():
           FROM eligible_candidates
         """
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-        for grouped in candidate_batches(query):
+        for grouped in candidate_batches(query, country_location_limit):
             if runtime_exhausted():
                 stop_requested = True
                 break
@@ -949,4 +969,5 @@ print(json.dumps({
     'batchesProcessed': batches_processed,
     'locationsSeen': locations_seen,
     'materialized': materialized_total,
+    'maxLocations': args.max_locations,
 }, indent=2), flush=True)

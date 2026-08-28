@@ -58,7 +58,7 @@ test('selected licensed photos materialize directly into immutable B2 media', as
   assert.doesNotMatch(materializer, /parser\.add_argument\('--limit'/)
   assert.doesNotMatch(materializer, /\bLIMIT\s*=/)
   assert.doesNotMatch(materializer, /min\(10_000|min\(100_000/)
-  assert.match(materializer, /for grouped in candidate_batches\(query\)/)
+  assert.match(materializer, /for grouped in candidate_batches\(query(?:, country_location_limit)?\)/)
   assert.match(materializer, /CREATE TEMP TABLE photo_candidate_queue AS/)
   assert.match(materializer, /WHERE location_id > '\{escaped_cursor\}'/)
   assert.match(materializer, /row_number\(\) OVER/)
