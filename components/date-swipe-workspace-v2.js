@@ -14,7 +14,8 @@ const ACTION_RETRY_BASE_MS = 1_000
 const ACTION_RETRY_MAX_MS = 30_000
 const ACTION_STORAGE_PREFIX = 'puddle:pending-discovery-actions:v1'
 const DECK_BATCH_SIZE = 12
-const PREFETCH_THRESHOLD = 8
+const CONTINUATION_BATCH_SIZE = 16
+const PREFETCH_THRESHOLD = 10
 const REFILL_THRESHOLD = 5
 const PHOTO_PRELOAD_AHEAD = 2
 const MAX_SEARCH_DISTANCE_KM = 20_040
@@ -245,7 +246,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   }, [flushActions])
 
   const buildContinuationSnapshot = useCallback((generation) => {
-    const normalized = { ...filters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE }
+    const normalized = { ...filters, q: '', kind: 'place', date: 'any', limit: CONTINUATION_BATCH_SIZE }
     const visibleIds = feed.items.slice(index).map((item) => item?.content_id).filter(Boolean)
     const pendingActionIds = actionBuffer.current.map((entry) => entry.payload?.contentId).filter(Boolean)
     const excludeIds = [...new Set([...visibleIds, ...pendingActionIds])]
@@ -267,7 +268,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
 
   const applyContinuationResult = useCallback((result, generation) => {
     if (!result || generation !== deckGeneration.current) return
-    const nextItems = (result.items || []).filter((item) => item?.content_id && !sessionIds.current.has(item.content_id)).slice(0, DECK_BATCH_SIZE)
+    const nextItems = (result.items || []).filter((item) => item?.content_id && !sessionIds.current.has(item.content_id)).slice(0, CONTINUATION_BATCH_SIZE)
     for (const item of nextItems) sessionIds.current.add(item.content_id)
     if (nextItems.length) {
       const annotated = withRequestId(nextItems, result.requestId)
