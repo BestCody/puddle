@@ -1,6 +1,6 @@
 /* Targeted mobile/settings/post polish for Aug 23. Desktop settings remain untouched. */
 
-/* Swipe Post uses only the plus glyph inside the existing circular action control. */
+/* Swipe Star keeps the shared action glyph sizing contract. */
 .figma-swipe-action.is-perfect svg {
   overflow: visible !important;
 }

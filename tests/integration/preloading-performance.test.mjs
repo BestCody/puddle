@@ -68,8 +68,8 @@ test('dashboard navigation warms intent targets plus at most two bounded idle hi
   assert.match(nav, /setSelectedHref\(href\)[\s\S]*beginMainContentLoading\(\)/)
   assert.match(nav, /const active = item\.href === selectedHref/)
   assert.doesNotMatch(nav, /pendingHref|setPendingHref/)
-  assert.match(nav, /\{ href: '\/map', label: 'Discover'/)
-  assert.doesNotMatch(nav, /label: 'Feed'|activeLabel: 'Explore'/)
+  assert.match(nav, /\{ href: '\/map', label: 'Feed'/)
+  assert.doesNotMatch(nav, /label: 'Discover'|activeLabel: 'Explore'/)
 })
 
 test('top pills size to their labels and move their highlight before navigation completes', async () => {
@@ -100,7 +100,7 @@ test('top pills size to their labels and move their highlight before navigation 
   assert.match(targetedStyles, /left 145ms/)
   assert.match(targetedStyles, /width 145ms/)
 
-  assert.match(mapPage, /\{ value: 'feed', label: 'Posts', href: '\/map' \}/)
+  assert.match(mapPage, /\{ value: 'feed', label: 'Feed', href: '\/map' \}/)
   assert.match(mapPage, /tone="yellow"/)
   assert.match(mapPage, /<SocialFeedClient/)
   assert.match(mapPage, /<LocationMap[\s\S]*loadCatalogue/)

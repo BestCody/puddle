@@ -60,7 +60,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   const undo = page.getByRole('button', { name: 'Undo', exact: true })
   await expect(undo).toBeVisible()
   await expect(undo).toBeDisabled()
-  for (const name of ['Pass', 'Save', 'Post']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
+  for (const name of ['Pass', 'Save', 'Star']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
 
   if (testInfo.project.name === 'desktop-chromium') {
     const desktopSidebar = page.locator('.figma-dashboard-sidebar')
@@ -82,7 +82,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
 
   await page.goto('/map')
   const feedTabs = page.getByTestId('feed-tabs')
-  await expect(feedTabs.getByRole('link', { name: 'Posts', exact: true })).toBeVisible()
+  await expect(feedTabs.getByRole('link', { name: 'Feed', exact: true })).toBeVisible()
   await expect(feedTabs.getByRole('link', { name: 'Map', exact: true })).toBeVisible()
   await assertFeedStructure(page)
   await assertRouteHealth(page)

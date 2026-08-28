@@ -14,7 +14,7 @@ const DEFAULT_MAP_CENTER = { latitude: 43.6532, longitude: -79.3832 }
 function FeedTop({ view, query }) {
   return <header className={styles.header} data-testid="feed-header">
     <Link className={styles.back} href="/discover" aria-label="Back to Swipe">‹</Link>
-    <RoutedSegment className={styles.tabs} tone="yellow" activeValue={view} ariaLabel="Posts or map" testId="feed-tabs" items={[{ value: 'feed', label: 'Posts', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]} />
+    <RoutedSegment className={styles.tabs} tone="yellow" activeValue={view} ariaLabel="Feed or map" testId="feed-tabs" items={[{ value: 'feed', label: 'Feed', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]} />
     {view === 'feed' ? <DiscoverSearchOverlay initialQuery={query} /> : <span aria-hidden="true" />}
   </header>
 }
@@ -26,7 +26,7 @@ function AuthMessageClient({ params }) {
   return <p className={`auth-message ${error ? 'is-error' : 'is-success'}`}>{error || success}</p>
 }
 
-function MapScreen({ selectingForPost }) {
+function MapScreen({ selectingForPost, query }) {
   const [snapshot, setSnapshot] = useState(null)
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
@@ -63,10 +63,11 @@ function MapScreen({ selectingForPost }) {
     ? { ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }
     : point) || []
 
-  return <section className={styles.mapScreen} data-testid="feed-map-canvas">
+  return <section className={`${styles.mapScreen} map-screen`} data-testid="feed-map-canvas">
+    <DiscoverSearchOverlay initialQuery={query} mapMode />
     {selectingForPost ? <div className={styles.mapSelectionNotice}><strong>Choose a place for your post.</strong><Link href="/map?compose=1">Cancel</Link></div> : null}
     {error ? <div className={styles.mapEmpty} role="alert"><strong>Could not load the map.</strong><small>Check your connection and try again.</small><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button></div>
-      : snapshot ? <div className={styles.mapCanvas}><LocationMap
+      : snapshot ? <div className={`${styles.mapCanvas} map-canvas`}><LocationMap
         key={`${selectingForPost ? 'select' : 'browse'}:${snapshot.self?.display_name || 'map'}`}
         initialPoints={mapPoints}
         initialCenter={snapshot.center || DEFAULT_MAP_CENTER}
@@ -93,7 +94,7 @@ export function MapRouteClient() {
     <AuthMessageClient params={params} />
     <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-view={view}>
       <FeedTop view={view} query={query} />
-      {view === 'map' ? <MapScreen selectingForPost={selectingForPost} /> : <SocialFeedClient
+      {view === 'map' ? <MapScreen selectingForPost={selectingForPost} query={query} /> : <SocialFeedClient
         query={query}
         beforeCreatedAt={beforeCreatedAt}
         beforePostId={beforePostId}

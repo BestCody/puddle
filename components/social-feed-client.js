@@ -30,13 +30,13 @@ function timeLabel(value) {
   return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }
 
-function FeedPhoto({ href, locationName, url, label, className = '', moreCount = 0 }) {
+function FeedPhoto({ href, locationName, url, label, className = '', moreCount = 0, unavailableText = 'Photo unavailable' }) {
   return <PhotoFrame
     as={Link}
     href={href}
     className={`${styles.photo} ${className}`}
     unavailableClassName={styles.photoUnavailable}
-    unavailableText="Photo unavailable"
+    unavailableText={unavailableText}
     alt=""
     aria-label={!url ? `No verified photo available for ${locationName}` : label}
   >
@@ -48,8 +48,11 @@ function FeedPhotos({ post, href }) {
   const photos = Array.isArray(post.photo_urls) ? post.photo_urls.filter(Boolean) : []
   const count = photos.length
   const locationName = post.location.name
-  if (!count) return <div className={styles.photos} aria-label={`${locationName} photos`}>
-    <FeedPhoto href={href} locationName={locationName} url={null} label={`Open ${locationName}`} className={styles.photoEmpty} />
+  if (!count) return <div className={`${styles.photos} ${styles.photosEmpty}`} aria-label={`${locationName} photos`}>
+    <FeedPhoto href={href} locationName={locationName} url={null} label={`Open ${locationName}`} className={`${styles.photoMain} ${styles.photoEmptyCell}`} unavailableText="" />
+    <FeedPhoto href={href} locationName={locationName} url={null} label={`Open ${locationName}`} className={styles.photoEmptyCell} unavailableText="" />
+    <FeedPhoto href={href} locationName={locationName} url={null} label={`Open ${locationName}`} className={styles.photoEmptyCell} unavailableText="" />
+    <span className={styles.photoEmptyLabel} aria-hidden="true">Photo unavailable</span>
   </div>
   return <div className={styles.photos} aria-label={`${locationName} photos`}>
     {photos.slice(0, 3).map((url, index) => {

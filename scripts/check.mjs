@@ -10,7 +10,7 @@ const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
   'public/landing.html','public/styles.css','public/landing.css','public/app.js','public/puddle-mark.svg',
   'app/layout.js','app/(product)/layout.js','app/(product)/loading.js','app/(product)/discover/page.js','app/(map)/layout.js','app/(map)/map/page.js','app/(product)/matches/page.js','app/(product)/profile/page.js','app/(product)/plans/page.js','app/(product)/plans/[slug]/page.js',
-  'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js','app/api/map/snapshot/route.js',
+  'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js','app/api/map/snapshot/route.js','app/api/profile/identity/route.js',
   'components/product-nav.js','components/static-product-shell.js','components/map-route-client.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js',
   'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js',
   'lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/app/location-moderation-overlay.js','lib/app/b2-photo-search-overlay.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
@@ -44,7 +44,7 @@ for (const path of removed) {
 
 const syntaxFiles = [
   'next.config.mjs','proxy.js','instrumentation.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js','lib/app/location-moderation-overlay.js','lib/app/b2-photo-search-overlay.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
-  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs','app/api/profile/identity/route.js',
   'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js','app/api/map/snapshot/route.js'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })

@@ -86,8 +86,13 @@ export function PuddleSearchOverlay({
   </>
 }
 
-export function DiscoverSearchOverlay({ initialQuery = '' }) {
-  return <PuddleSearchOverlay initialQuery={initialQuery} />
+export function DiscoverSearchOverlay({ initialQuery = '', mapMode = false }) {
+  return <PuddleSearchOverlay
+    initialQuery={initialQuery}
+    fixedParams={mapMode ? { view: 'map' } : {}}
+    triggerClassName={mapMode ? 'puddle-map-search-trigger' : ''}
+    testId={mapMode ? 'map-search' : 'feed-search'}
+  />
 }
 
 export function SavedSearchOverlay({ initialQuery = '', category = 'all' }) {

@@ -499,6 +499,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
 
   return <section className="figma-swipe-screen">
     <DiscoveryPhotoPreloader items={feed.items} index={index} ahead={PHOTO_PRELOAD_AHEAD} />
+    <span className="figma-swipe-mobile-logo" aria-hidden="true" />
     <div className="figma-swipe-workspace">
       <button className="figma-swipe-filter-trigger" type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">Filters</button>
 
