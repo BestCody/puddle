@@ -176,9 +176,9 @@ img{display:block;max-width:100%}
   .feature-icon--save{width:clamp(15px,3.06vw,21.554px);height:auto}
   .feature-icon--feed{width:clamp(28px,5.92vw,41.655px);height:auto}
   .feature-phone{width:71.46%;height:auto;aspect-ratio:393/852;margin-top:clamp(18px,4.3vw,30px)}
-  .interactive-pill{right:10px;bottom:12px;min-width:0;width:42%;height:54px}
-  .interactive-pill>img{width:32px;height:32px;margin-left:9px}
-  .interactive-pill span{margin-left:6px;font-size:clamp(10px,2.7vw,18px)}
+  .interactive-pill{right:2.4%;bottom:2.65%;min-width:0;width:42%;height:clamp(32px,7.6vw,54px);overflow:hidden}
+  .interactive-pill>img{width:clamp(22px,5.8vw,41px);height:auto;margin-left:6px}
+  .interactive-pill span{min-width:0;margin:0 6px 0 5px;overflow:hidden;font-size:clamp(9px,2.25vw,15.84px);line-height:1.05;letter-spacing:-.02em}
   .feature-card--m-profile{display:block;margin:5.68% 0 0 22.59%;}
 
   .trust-heading{width:56.78%;margin:6.35% 0 3.84% 23.72%}
