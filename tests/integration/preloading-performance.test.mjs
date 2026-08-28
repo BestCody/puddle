@@ -12,7 +12,8 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   ])
 
   assert.match(workspace, /const DECK_BATCH_SIZE = 12/)
-  assert.match(workspace, /const PREFETCH_THRESHOLD = 8/)
+  assert.match(workspace, /const CONTINUATION_BATCH_SIZE = 16/)
+  assert.match(workspace, /const PREFETCH_THRESHOLD = 10/)
   assert.match(workspace, /const REFILL_THRESHOLD = 5/)
   assert.match(workspace, /const continuationPrefetchInFlight = useRef\(null\)/)
   assert.match(workspace, /const prefetchedContinuation = useRef\(null\)/)
