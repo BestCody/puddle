@@ -54,6 +54,9 @@ test('Hot read APIs consume the proxy-verified user and verify only required pro
 test('Discovery bundles profile and seen history before B2 serving', async () => {
   const source = await read('app/api/discovery/route.js')
   assert.match(source, /supabase\.rpc\('discovery_session_v1'\)/)
+  assert.match(source, /const discoverySessionInFlight = new Map\(\)/)
+  assert.match(source, /if \(active\) return active/)
+  assert.match(source, /discoverySessionInFlight\.delete\(userId\)/)
   assert.doesNotMatch(source, /discovery_seen_locations_v1/)
   assert.doesNotMatch(source, /profilePromise|seenPromise/)
   assert.match(source, /preloadedSeenLocationIds/)

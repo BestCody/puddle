@@ -14,6 +14,25 @@ import {
 export const dynamic = 'force-dynamic'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const discoverySessionInFlight = new Map()
+
+async function loadDiscoverySession(supabase, userId) {
+  const active = discoverySessionInFlight.get(userId)
+  if (active) return active
+  const request = (async () => {
+    try {
+      return await supabase.rpc('discovery_session_v1')
+    } catch (error) {
+      return { data: null, error }
+    }
+  })()
+  discoverySessionInFlight.set(userId, request)
+  try {
+    return await request
+  } finally {
+    if (discoverySessionInFlight.get(userId) === request) discoverySessionInFlight.delete(userId)
+  }
+}
 
 function continuationExcludes(value) {
   if (!Array.isArray(value)) return []
@@ -40,12 +59,7 @@ async function authenticatedSession(traceId, requestHeaders) {
   // Profile state and seen history are read together by one authenticated RPC.
   // This removes a second Supabase round trip while preserving the same
   // account-state and seen-location semantics.
-  let sessionResult
-  try {
-    sessionResult = await supabase.rpc('discovery_session_v1')
-  } catch (error) {
-    sessionResult = { data: null, error }
-  }
+  const sessionResult = await loadDiscoverySession(supabase, userId)
   const authMs = elapsedMs(supabaseStarted)
   recordServerLatency('supabase.discoverySession', authMs, SERVER_LATENCY_BUDGET_MS.pageSession, {
     trace_id: traceId, service: 'supabase', operation: 'discoverySession',
