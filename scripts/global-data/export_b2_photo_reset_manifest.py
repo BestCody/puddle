@@ -19,7 +19,7 @@ import os
 import re
 import shutil
 import tempfile
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlencode
@@ -77,6 +77,8 @@ def s3_client(endpoint: str, key_id: str, application_key: str, region: str, poo
 def serializable(value: Any) -> Any:
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
     if isinstance(value, bytes):
         return value.hex()
     if isinstance(value, dict):
