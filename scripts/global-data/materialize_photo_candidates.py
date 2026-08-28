@@ -522,14 +522,20 @@ def normalize(body):
         image = ImageOps.exif_transpose(original).convert('RGB')
         if image.width > 1600 or image.height > 1000:
             image.thumbnail((1600, 1000), Image.Resampling.LANCZOS)
-        perceptual = dhash(image)
-        confirmation = average_hash(image)
         out = io.BytesIO()
         image.save(out, format='JPEG', quality=84, optimize=True, progressive=True)
         data = out.getvalue()
         if not data or len(data) > MAX_BYTES:
             raise RuntimeError('normalized image is empty or exceeds 10 MB')
-        return data, image.width, image.height, perceptual, confirmation
+        # Fingerprints must describe the exact canonical bytes written to B2.
+        # JPEG encoding can change pixels enough to flip a perceptual bit, so
+        # calculate both hashes from the encoded representation we serve.
+        with Image.open(io.BytesIO(data)) as canonical:
+            canonical.load()
+            perceptual = dhash(canonical)
+            confirmation = average_hash(canonical)
+            width, height = canonical.width, canonical.height
+        return data, width, height, perceptual, confirmation
 
 
 def upload_media(data, sha256):
