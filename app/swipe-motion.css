@@ -30,7 +30,56 @@
   100%{scale:1;box-shadow:0 7px 22px rgba(75,222,43,.2)}
 }
 
+/* Current Discover deck: purely visual layering around the existing swipe logic. */
+.figma-swipe-card-stage{
+  position:relative;
+  isolation:isolate;
+  overflow:visible;
+}
+.figma-swipe-card-layer{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+}
+.figma-swipe-card-layer.is-front{z-index:2}
+.figma-swipe-card-layer.is-back{
+  z-index:1;
+  pointer-events:none;
+  transform:translateY(18px) scale(.94);
+  transform-origin:50% 92%;
+  opacity:.9;
+  transition:transform .42s cubic-bezier(.16,.84,.22,1),opacity .3s ease;
+  will-change:transform,opacity;
+}
+.figma-swipe-card-stage.is-advancing .figma-swipe-card-layer.is-back{
+  transform:translateY(0) scale(1);
+  opacity:1;
+}
+.figma-swipe-card-layer>.figma-swipe-card{
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+}
+.figma-swipe-card.is-deck-front{
+  position:relative;
+  z-index:2;
+  transition:transform .42s cubic-bezier(.16,.84,.22,1),opacity .3s ease!important;
+  will-change:transform;
+}
+.figma-swipe-card.is-deck-front.is-dragging{transition:none!important}
+.figma-swipe-card.is-deck-preview{
+  position:relative;
+  z-index:1;
+  pointer-events:none!important;
+  user-select:none;
+}
+.figma-swipe-card.is-deck-preview .figma-swipe-details-button,
+.figma-swipe-card.is-deck-preview .figma-swipe-drag-label{display:none!important}
+
 @media (prefers-reduced-motion:reduce){
   .minimal-swipe-card,.minimal-swipe-card[style*="translateX(720px)"],.minimal-swipe-card-preview{transition-duration:.01ms!important;animation:none!important}
   .minimal-swipe-page:has(.minimal-swipe-card[style*="translateX(720px)"]) .minimal-swipe-action.is-save>span{animation:none!important}
+  .figma-swipe-card-layer.is-back,.figma-swipe-card.is-deck-front{transition:none!important}
 }
