@@ -21,6 +21,8 @@ export function PuddleSearchOverlay({
   fixedParams = {},
   placeholder = 'Search Puddles',
   triggerLabel = 'Search Puddles',
+  triggerVisualLabel = null,
+  triggerGlyph = '\u2315',
   triggerClassName = '',
   testId = 'feed-search'
 }) {
@@ -72,8 +74,8 @@ export function PuddleSearchOverlay({
   const triggerClass = ['puddle-discover-search-trigger', 'puddle-search-trigger', triggerClassName].filter(Boolean).join(' ')
 
   return <>
-    <button className={triggerClass} type="button" onClick={() => setOpen(true)} data-testid={testId} aria-haspopup="dialog" aria-controls={dialogId} aria-expanded={open}>
-      <span>{triggerLabel}</span><b aria-hidden="true">⌕</b>
+    <button className={triggerClass} type="button" onClick={() => setOpen(true)} data-testid={testId} aria-label={triggerLabel} aria-haspopup="dialog" aria-controls={dialogId} aria-expanded={open}>
+      <span>{triggerVisualLabel || triggerLabel}</span><b aria-hidden="true">{triggerGlyph}</b>
     </button>
     <div ref={overlayRef} id={dialogId} className={`puddle-discover-search-overlay puddle-search-overlay${open ? ' is-open' : ''}`} role="dialog" aria-modal="true" aria-label={`${triggerLabel} dialog`} aria-hidden={!open} inert={!open} tabIndex={-1}>
       <button className="puddle-discover-search-backdrop puddle-universal-backdrop" type="button" onClick={() => setOpen(false)} aria-label="Close search" />
@@ -102,6 +104,8 @@ export function SavedSearchOverlay({ initialQuery = '', category = 'all' }) {
     fixedParams={{ tab: 'saved', ...(category !== 'all' ? { category } : {}) }}
     placeholder="Search Saved"
     triggerLabel="Search Saved"
+    triggerVisualLabel={'Search a saved puddle\u2026'}
+    triggerGlyph={'\u2191'}
     triggerClassName="puddle-saved-search-trigger"
     testId="saved-search"
   />

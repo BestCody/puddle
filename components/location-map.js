@@ -336,6 +336,16 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     })
   }, [expandedClusterKey, visiblePointItems, zoom])
 
+  const selectedAnchor = selected
+    ? visiblePointItems.find((item) => item.point.id === selected.id)
+    : null
+  const selectionStyle = selectedAnchor
+    ? {
+        '--location-map-selection-x': `${(selectedAnchor.x / Math.max(1, viewport.width)) * 100}%`,
+        '--location-map-selection-y': `${(selectedAnchor.y / Math.max(1, viewport.height)) * 100}%`
+      }
+    : undefined
+
   function changeFilter(next) {
     setExpandedClusterKey(null)
     setFilter(next)
@@ -543,7 +553,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         {locationState === 'denied' ? <div className="location-map-status is-error" role="status">Location access was not granted.</div> : null}
         {locationState === 'unavailable' ? <div className="location-map-status is-error" role="status">Location access is unavailable in this browser.</div> : null}
       </section>
-      <aside className="location-map-side"><PointCard point={selected} /><div className="location-map-list">{visiblePointItems.map(({ point }) => {
+      <aside className="location-map-side" style={selectionStyle}><PointCard point={selected} /><div className="location-map-list">{visiblePointItems.map(({ point }) => {
         const primary = primaryState(point)
         return <button type="button" className={selectedId === point.id ? 'is-active' : ''} onClick={() => selectPoint(point)} key={point.id}><span className={`is-${primary}`} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>
       })}</div></aside>

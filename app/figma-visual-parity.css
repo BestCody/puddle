@@ -278,3 +278,107 @@ body:has([data-testid='feed-screen'][data-view='map']) {
     margin-left: auto;
   }
 }
+
+/* The Figma desktop Swipe header uses a compact menu control. Keep the
+   button's accessible name and filter behavior while expressing the visual
+   control with an icon rather than a text pill. */
+.figma-swipe-filter-icon {
+  display: none;
+}
+
+.figma-swipe-filter-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+@media (min-width: 761px) {
+  .figma-swipe-filter-trigger {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 50% !important;
+  }
+
+  .figma-swipe-filter-icon {
+    display: grid;
+    place-items: center;
+  }
+
+  .figma-swipe-filter-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* Saved search is a persistent content-stage action in the reference. It
+   remains a button that opens the existing dialog, but its resting state is
+   an input-shaped affordance anchored to the dashboard stage. */
+[data-testid='saved-search'] {
+  position: fixed !important;
+  z-index: 75 !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: clamp(20px, 5vh, 44px) !important;
+  left: calc(var(--figma-shell-sidebar, 252px) + (100vw - var(--figma-shell-sidebar, 252px)) / 2) !important;
+  width: min(420px, calc(100vw - var(--figma-shell-sidebar, 252px) - 48px)) !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 4px 5px 4px 17px !important;
+  transform: translateX(-50%) !important;
+  border: 2px solid #e6e6e6 !important;
+  border-radius: 25px !important;
+  background: rgba(255, 255, 255, .97) !important;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .1) !important;
+  color: #b0b0b0 !important;
+  font: 600 14px/1.2 Manrope, sans-serif !important;
+  text-align: left !important;
+}
+
+[data-testid='saved-search'] > span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: #b0b0b0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-testid='saved-search'] > b {
+  width: 42px !important;
+  height: 42px !important;
+  flex: 0 0 42px;
+  display: grid !important;
+  place-items: center;
+  border: 2px solid #b784e4;
+  border-radius: 50%;
+  background: #fff;
+  color: #b784e4;
+  font: 800 22px/1 Manrope, sans-serif !important;
+}
+
+[data-testid='saved-search']:focus-visible {
+  outline: 3px solid #b784e4;
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  [data-testid='saved-search'] {
+    bottom: calc(var(--puddle-mobile-content-bottom) + 16px) !important;
+    left: 50% !important;
+    width: min(360px, calc(100vw - 32px)) !important;
+  }
+}
