@@ -40,29 +40,6 @@ function initSignInHandoff() {
   })
 }
 
-// Figma annotation 164:146: “JUMP IN FADES IN ONLY AFTER THE USER SCROLLS”.
-function initMobileJumpIn() {
-  const jump = $('.mobile-jump')
-  if (!jump) return
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  jump.style.transition = reducedMotion ? 'none' : 'opacity 220ms ease, transform 220ms ease'
-
-  const sync = () => {
-    const mobile = window.matchMedia('(max-width: 760px)').matches
-    const revealed = mobile && window.scrollY > 8
-    jump.style.opacity = revealed ? '1' : '0'
-    jump.style.visibility = revealed ? 'visible' : 'hidden'
-    jump.style.pointerEvents = revealed ? 'auto' : 'none'
-    jump.style.transform = revealed ? 'translateY(0)' : 'translateY(-4px)'
-    jump.setAttribute('aria-hidden', revealed ? 'false' : 'true')
-  }
-
-  sync()
-  window.addEventListener('scroll', sync, { passive: true })
-  window.addEventListener('resize', sync, { passive: true })
-}
-
-
 function initPhoneDemoLoading() {
   const frames = $$('.feature-phone-demo__frame')
   if (!frames.length) return
@@ -139,7 +116,6 @@ function initDraggablePhones() {
 
 function initLanding() {
   protectInteractiveLayers()
-  initMobileJumpIn()
   initPhoneDemoLoading()
 
   $$('[data-open-safety]').forEach((button) => button.addEventListener('click', openSafetyDialog))
