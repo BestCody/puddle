@@ -50,13 +50,6 @@ test('landing page uses the Figma responsive composition and real DOM content', 
     await expect(page.locator('.feature-card--d-profile')).toHaveCount(0)
   } else {
     await expect(page.locator('[data-figma-node="161:116"]')).toBeVisible()
-    const jump = page.locator('.mobile-jump')
-    // Figma annotation 164:146: JUMP IN fades in only after the user scrolls.
-    await expect(jump).toHaveCSS('visibility', 'hidden')
-    await expect(jump).toHaveCSS('opacity', '0')
-    await page.evaluate(() => window.scrollTo({ top: 24, behavior: 'instant' }))
-    await expect(jump).toHaveCSS('visibility', 'visible')
-    await expect(jump).toHaveCSS('opacity', '1')
     await expect(page.locator('.feature-card--m-swipe')).toBeVisible()
     await expect(page.locator('.feature-card--m-profile')).toBeVisible()
     await expect(page.locator('.landing-sticky-left')).not.toBeVisible()

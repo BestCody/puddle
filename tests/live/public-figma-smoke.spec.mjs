@@ -23,7 +23,7 @@ test('production desktop landing preserves the current responsive Figma structur
   await expect(page).toHaveURL(/\/signin(?:\?|$)/)
 })
 
-test('production mobile landing preserves the current responsive Figma structure and scroll reveal', async ({ page }) => {
+test('production mobile landing preserves the current responsive Figma structure', async ({ page }) => {
   await page.setViewportSize({ width: 704, height: 900 })
   await page.goto('/', { waitUntil: 'networkidle' })
   await page.evaluate(() => document.fonts?.ready)
@@ -33,15 +33,8 @@ test('production mobile landing preserves the current responsive Figma structure
   await expect(page.locator('[data-figma-node="83:76"]')).not.toBeVisible()
   await expect(page.locator('img[src="/figma/landing-desktop.png"]')).toHaveCount(0)
   await expect(page.locator('img[src="/figma/landing-mobile.png"]')).toHaveCount(0)
-  const jump = page.locator('.mobile-jump')
-  await expect(jump).toHaveCSS('visibility', 'hidden')
-  await expect(jump).toHaveCSS('opacity', '0')
   await expect(page.locator('.feature-card--m-swipe')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-
-  await page.evaluate(() => window.scrollTo({ top: 24, behavior: 'instant' }))
-  await expect(jump).toBeVisible()
-  await expect(jump).toHaveCSS('opacity', '1')
 
   await page.locator('.final-cta--mobile a[href="/signup"]').click()
   await expect(page).toHaveURL(/\/signup(?:\?|$)/)
