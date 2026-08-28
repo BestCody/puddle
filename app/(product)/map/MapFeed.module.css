@@ -588,23 +588,37 @@
   display: none !important;
 }
 
-/* The full-screen map still needs an actionable selected-location card. The
-   base map keeps the card beside the canvas; here it becomes a compact
-   overlay so marker selection exposes the canonical details route without
-   giving up the map viewport. */
+/* The full-screen map keeps the selected location anchored to its marker. The
+   base map keeps the card beside the canvas; this view uses a compact callout
+   so selection never gives up map context. */
 .mapCanvas :global(.location-map-side) {
   position: absolute;
   z-index: 8;
-  top: 96px;
-  right: 24px;
-  width: min(320px, calc(100% - 48px));
-  max-height: calc(100% - 120px);
-  display: flex !important;
-  overflow: hidden;
-  border: 1px solid #e8e2e5;
-  border-radius: 18px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .16);
+  top: clamp(150px, var(--location-map-selection-y, 50%), calc(100% - 120px));
+  left: clamp(150px, var(--location-map-selection-x, 50%), calc(100% - 150px));
+  right: auto;
+  width: clamp(232px, 28%, 300px);
+  max-height: none;
+  display: block !important;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   pointer-events: auto;
+  transform: translate(-50%, calc(-100% - 18px));
+}
+
+.mapCanvas :global(.location-map-side::after) {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: #73a8ed;
+  transform: translateX(-50%) rotate(45deg);
+  pointer-events: none;
 }
 
 .mapCanvas :global(.location-map-side .location-map-list) {
@@ -613,8 +627,63 @@
 
 .mapCanvas :global(.location-map-side .location-map-card) {
   width: 100%;
-  overflow: auto;
-  border-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 18px;
+  background: #73a8ed;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(38, 82, 142, .24);
+}
+
+.mapCanvas :global(.location-map-side .location-map-card-photo) {
+  display: none;
+}
+
+.mapCanvas :global(.location-map-side .location-map-card > div:last-child) {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 16px 13px;
+}
+
+.mapCanvas :global(.location-map-side .location-map-card small) {
+  width: max-content;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .2);
+  color: rgba(255, 255, 255, .95);
+  font: 700 11px/1 Manrope, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapCanvas :global(.location-map-side .location-map-card h2) {
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  color: #fff;
+  font: 800 clamp(15px, 1.7vw, 19px)/1.1 Manrope, sans-serif;
+  letter-spacing: -.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapCanvas :global(.location-map-side .location-map-card p),
+.mapCanvas :global(.location-map-side .location-map-card-tags),
+.mapCanvas :global(.location-map-side .location-map-plan-time) {
+  display: none;
+}
+
+.mapCanvas :global(.location-map-side .location-map-card-actions) {
+  margin-top: 1px;
+}
+
+.mapCanvas :global(.location-map-side .location-map-card-actions a) {
+  color: #fff;
+  font: 800 12px/1 Manrope, sans-serif;
+  text-underline-offset: 3px;
 }
 
 .mapCanvas :global(.location-map-layout) {
@@ -990,11 +1059,18 @@
 
   .mapCanvas :global(.location-map-side) {
     top: auto;
+    left: auto;
     right: clamp(12px, 4vw, 16px);
     bottom: calc(var(--puddle-mobile-nav-height, 104px) + env(safe-area-inset-bottom) + 74px);
     width: min(303px, calc(100% - 32px));
     max-height: min(112px, calc(100% - 220px));
+    display: flex !important;
+    overflow: hidden;
     border-radius: 16px;
+    background: #fff;
+    border: 1px solid #e8e2e5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+    transform: none;
   }
 
   .mapCanvas :global(.location-map-side .location-map-card) {
@@ -1003,9 +1079,14 @@
     min-height: 96px;
     max-height: 112px;
     overflow: hidden;
+    border-radius: 0;
+    background: #fff;
+    color: #111;
+    box-shadow: none;
   }
 
   .mapCanvas :global(.location-map-side .location-map-card-photo) {
+    display: grid;
     width: auto;
     height: auto;
     min-height: 0;
@@ -1030,6 +1111,18 @@
     white-space: nowrap;
     font-size: clamp(14px, 4vw, 18px);
     letter-spacing: -.04em;
+    color: #111;
+  }
+
+  .mapCanvas :global(.location-map-side .location-map-card small) {
+    width: auto;
+    max-width: none;
+    overflow: hidden;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #777;
+    font-size: 11px;
   }
 
   .mapCanvas :global(.location-map-side .location-map-card p),
@@ -1043,6 +1136,7 @@
   }
 
   .mapCanvas :global(.location-map-side .location-map-card-actions a) {
+    color: #111;
     font-size: 12px;
   }
 

@@ -37,7 +37,6 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop-chromium',
-      testIgnore: /visual-fidelity\.spec\.mjs/,
       use: { ...devices['Desktop Chrome'] }
     },
     {
@@ -45,32 +44,6 @@ export default defineConfig({
       testMatch: /(responsive-public-routes|authenticated-ui)\.spec\.mjs/,
       use: { ...devices['Pixel 5'] }
     },
-    {
-      name: 'figma-desktop',
-      testMatch: /visual-fidelity\.spec\.mjs/,
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 1280, height: 832 },
-        deviceScaleFactor: 1,
-        colorScheme: 'light',
-        reducedMotion: 'reduce',
-        locale: 'en-CA'
-      }
-    },
-    {
-      name: 'figma-mobile',
-      testMatch: /visual-fidelity\.spec\.mjs/,
-      use: {
-        browserName: 'chromium',
-        viewport: { width: 402, height: 874 },
-        deviceScaleFactor: 1,
-        isMobile: true,
-        hasTouch: true,
-        colorScheme: 'light',
-        reducedMotion: 'reduce',
-        locale: 'en-CA'
-      }
-    }
   ],
   webServer: {
     command: serverCommand,

@@ -501,7 +501,10 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
     <DiscoveryPhotoPreloader items={feed.items} index={index} ahead={PHOTO_PRELOAD_AHEAD} />
     <span className="figma-swipe-mobile-logo" aria-hidden="true" />
     <div className="figma-swipe-workspace">
-      <button className="figma-swipe-filter-trigger" type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">Filters</button>
+      <button className="figma-swipe-filter-trigger" type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">
+        <span className="figma-swipe-filter-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 7h16M4 17h16M9 7a2 2 0 1 0 0 0M15 17a2 2 0 1 0 0 0" /></svg></span>
+        <span className="figma-swipe-filter-label">Filters</span>
+      </button>
 
       {current ? <>
         <div className="figma-swipe-card-stage"><FigmaSwipeCard item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} /></div>
