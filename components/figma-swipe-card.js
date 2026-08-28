@@ -62,7 +62,7 @@ function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
   </div>
 }
 
-export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
+export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = false, onExitChange }) {
   const pointerId = useRef(null)
   const originX = useRef(0)
   const choiceInFlight = useRef(false)
@@ -77,38 +77,42 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   useEffect(() => setMainPhotoFailed(false), [mainPhoto])
 
   async function choose(action) {
-    if (busy || choiceInFlight.current) return
+    if (preview || busy || choiceInFlight.current) return
     choiceInFlight.current = true
     setDragging(false)
-    setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
+    const horizontalSwipe = action === 'pass' || action === 'save'
+    const exitDistance = horizontalSwipe ? Math.max(window.innerWidth + 240, 960) : 0
+    if (horizontalSwipe) onExitChange?.(true)
+    setDragX(action === 'pass' ? -exitDistance : action === 'save' ? exitDistance : 0)
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const duration = reduced ? 0 : action === 'save' ? 420 : action === 'pass' ? 260 : 0
+    const duration = reduced ? 0 : horizontalSwipe ? 420 : 0
     try {
       if (duration) await new Promise((resolve) => window.setTimeout(resolve, duration))
       await onChoice(action, item)
     } finally {
       setDragX(0)
+      if (horizontalSwipe) onExitChange?.(false)
       choiceInFlight.current = false
     }
   }
 
   useEffect(() => {
-    if (actionRequest?.id) choose(actionRequest.action)
-  }, [actionRequest?.id])
+    if (!preview && actionRequest?.id) choose(actionRequest.action)
+  }, [actionRequest?.id, preview])
 
   function pointerDown(event) {
-    if (busy || event.target.closest('button,a')) return
+    if (preview || busy || event.target.closest('button,a')) return
     pointerId.current = event.pointerId
     originX.current = event.clientX
     setDragging(true)
     event.currentTarget.setPointerCapture?.(event.pointerId)
   }
   function pointerMove(event) {
-    if (!dragging || pointerId.current !== event.pointerId) return
+    if (preview || !dragging || pointerId.current !== event.pointerId) return
     setDragX(Math.max(-180, Math.min(180, event.clientX - originX.current)))
   }
   function pointerUp(event) {
-    if (pointerId.current !== event.pointerId) return
+    if (preview || pointerId.current !== event.pointerId) return
     const delta = event.clientX - originX.current
     pointerId.current = null
     setDragging(false)
@@ -122,32 +126,32 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
 
   return <>
     <article
-      className={`figma-swipe-card${dragging ? ' is-dragging' : ''}`}
+      className={`figma-swipe-card ${preview ? 'is-deck-preview' : 'is-deck-front'}${dragging ? ' is-dragging' : ''}${choiceInFlight.current ? ' is-exiting' : ''}`}
       data-location-id={locationId || undefined}
-      style={{ transform: `translateX(${dragX}px) rotate(${dragX / 30}deg)` }}
-      onPointerDown={pointerDown}
-      onPointerMove={pointerMove}
-      onPointerUp={pointerUp}
-      onPointerCancel={pointerUp}
-      tabIndex={0}
-      onKeyDown={(event) => {
+      style={preview ? undefined : { transform: `translateX(${dragX}px) rotate(${dragX / 30}deg)` }}
+      onPointerDown={preview ? undefined : pointerDown}
+      onPointerMove={preview ? undefined : pointerMove}
+      onPointerUp={preview ? undefined : pointerUp}
+      onPointerCancel={preview ? undefined : pointerUp}
+      tabIndex={preview ? -1 : 0}
+      aria-hidden={preview || undefined}
+      onKeyDown={preview ? undefined : (event) => {
         if (event.key === 'ArrowLeft') { event.preventDefault(); choose('pass') }
         if (event.key === 'ArrowRight') { event.preventDefault(); choose('save') }
         if (event.key === 'Enter' || event.key === 'ArrowUp') { event.preventDefault(); setDetailsOpen(true) }
       }}
-      aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
+      aria-label={preview ? undefined : `${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
       <div className="figma-swipe-card-photo">
-        {optimizedMainPhoto && showMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload onError={() => setMainPhotoFailed(true)} /> : null}
-        {!optimizedMainPhoto && showMainPhoto ? <img src={mainPhoto} alt={item.title} loading="eager" decoding="async" onError={() => setMainPhotoFailed(true)} /> : null}
-        {!showMainPhoto ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo is available">Photo unavailable</div> : null}
+        {optimizedMainPhoto && showMainPhoto ? <Image src={optimizedMainPhoto} alt={preview ? '' : item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload={!preview} onError={() => setMainPhotoFailed(true)} /> : null}
+        {!optimizedMainPhoto && showMainPhoto ? <img src={mainPhoto} alt={preview ? '' : item.title} loading={preview ? 'eager' : 'eager'} decoding="async" onError={() => setMainPhotoFailed(true)} /> : null}
+        {!showMainPhoto ? <div className="figma-swipe-card-photo-empty" role={preview ? undefined : 'img'} aria-label={preview ? undefined : 'No verified photo is available'}>Photo unavailable</div> : null}
       </div>
       <div className="figma-swipe-card-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
       <div className="figma-swipe-card-copy"><h1>{item.title}</h1><p>{addressLabel(item)}</p></div>
-      <strong className="figma-swipe-drag-label is-pass" style={{ opacity: Math.max(0, -dragX / 90) }}>PASS</strong>
-      <strong className="figma-swipe-drag-label is-save" style={{ opacity: Math.max(0, dragX / 90) }}>SAVE</strong>
-      <button className="figma-swipe-details-button" type="button" aria-label="Open details" onClick={() => setDetailsOpen(true)} disabled={busy}>+</button>
+      {!preview ? <><strong className="figma-swipe-drag-label is-pass" style={{ opacity: Math.max(0, -dragX / 90) }}>PASS</strong><strong className="figma-swipe-drag-label is-save" style={{ opacity: Math.max(0, dragX / 90) }}>SAVE</strong></> : null}
+      {!preview ? <button className="figma-swipe-details-button" type="button" aria-label="Open details" onClick={() => setDetailsOpen(true)} disabled={busy}>+</button> : null}
     </article>
-    {detailsOpen ? <DetailsDialog item={item} photoUrls={photoUrls} busy={busy} onChoice={async (action) => { setDetailsOpen(false); await choose(action) }} onClose={() => setDetailsOpen(false)} /> : null}
+    {!preview && detailsOpen ? <DetailsDialog item={item} photoUrls={photoUrls} busy={busy} onChoice={async (action) => { setDetailsOpen(false); await choose(action) }} onClose={() => setDetailsOpen(false)} /> : null}
   </>
 }
