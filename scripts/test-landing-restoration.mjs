@@ -165,6 +165,8 @@ try {
   assert(await page.locator('.feature-card--m-profile').isVisible(), 'mobile Profile card from Figma 161:116 is missing')
   assert(await page.locator('.safety-panel--mobile').isVisible(), 'mobile safety panel is not visible')
   assert(await page.locator('.trust-heading--mobile img').getAttribute('src') === '/figma/assets/lock.svg', 'mobile Lock must use Figma SVG')
+  assert(await page.locator('.footer-bottom-art--mobile').getAttribute('src') === '/figma/assets/footer-bottom-scenery-mobile.png', 'mobile footer must use the Figma scenic artwork')
+  assert(await page.locator('.footer-wordmark--mobile').isVisible(), 'mobile footer wordmark is missing')
   const mobileCanvas = await layout(page, '.landing-canvas--mobile')
   assert(mobileCanvas.transform === 'none', `mobile canvas is still globally transformed: ${mobileCanvas.transform}`)
   assert(mobileCanvas.position !== 'absolute', 'mobile content canvas is still absolutely positioned')
