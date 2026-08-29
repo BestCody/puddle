@@ -42,6 +42,24 @@ function validCoordinates(latitude, longitude) {
   return Number.isFinite(lat) && Number.isFinite(lon) ? { latitude: lat, longitude: lon } : null
 }
 
+const frameStyle = {
+  position: 'absolute',
+  inset: 0,
+  display: 'grid',
+  placeItems: 'center',
+  overflow: 'hidden',
+  background: '#f0f0f0',
+  color: '#858585',
+  font: '700 13px/1.2 Manrope, sans-serif'
+}
+
+const imageStyle = {
+  width: '100%',
+  height: '100%',
+  display: 'block',
+  objectFit: 'cover'
+}
+
 export function LocationVisualPreview({ slug, title, image = null, latitude = null, longitude = null, className = '', imageClassName = '' }) {
   const directCoordinates = validCoordinates(latitude, longitude)
   const [coordinates, setCoordinates] = useState(directCoordinates)
@@ -75,9 +93,9 @@ export function LocationVisualPreview({ slug, title, image = null, latitude = nu
     return () => controller.abort()
   }, [directCoordinates?.latitude, directCoordinates?.longitude, image, slug])
 
-  return <span className={className} data-location-visual={image ? 'photo' : coordinates ? 'map' : 'fallback'}>
+  return <span className={className} style={frameStyle} data-location-visual={image ? 'photo' : coordinates ? 'map' : 'fallback'}>
     {image
-      ? <img className={imageClassName || undefined} src={image} alt={`${title} photo`} loading="lazy" decoding="async" />
+      ? <img className={imageClassName || undefined} style={imageStyle} src={image} alt={`${title} photo`} loading="lazy" decoding="async" />
       : coordinates
         ? <SwipeMapPreview latitude={coordinates.latitude} longitude={coordinates.longitude} title={title} />
         : <span className="location-visual-fallback" aria-hidden="true">Puddle</span>}
