@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
 import { PhotoFrame } from '@/components/photo-frame'
+import { LocationVisualPreview } from '@/components/location-visual-preview'
 import { createFeedComment, toggleFeedSave } from '@/app/(product)/map/actions'
 import { FeedShareMenu } from '@/app/(product)/map/feed-share-menu'
 import styles from '@/app/(product)/map/MapFeed.module.css'
@@ -30,50 +31,6 @@ function timeLabel(value) {
   return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }
 
-function FeedPhoto({ href, locationName, url, label, className = '', moreCount = 0, unavailableText = 'Photo unavailable' }) {
-  return <PhotoFrame
-    as={Link}
-    href={href}
-    className={`${styles.photo} ${className}`}
-    unavailableClassName={styles.photoUnavailable}
-    unavailableText={unavailableText}
-    alt=""
-    aria-label={!url ? `No verified photo available for ${locationName}` : label}
-  >
-    {moreCount > 0 ? <span className={styles.photoCount}>+{moreCount}</span> : null}
-  </PhotoFrame>
-}
-
-function FeedPhotos({ post, href }) {
-  const photos = Array.isArray(post.photo_urls) ? post.photo_urls.filter(Boolean) : []
-  const count = photos.length
-  const locationName = post.location.name
-  if (!count) return <div className={`${styles.photos} ${styles.photosEmpty}`} aria-label={`${locationName} photos`}>
-    <FeedPhoto href={href} locationName={locationName} url={null} label={`Open ${locationName}`} className={`${styles.photoMain} ${styles.photoEmptyCell}`} unavailableText="" />
-    <FeedPhoto href={href} locationName={locationName} url={null} label={`Open ${locationName}`} className={styles.photoEmptyCell} unavailableText="" />
-    <FeedPhoto href={href} locationName={locationName} url={null} label={`Open ${locationName}`} className={styles.photoEmptyCell} unavailableText="" />
-    <span className={styles.photoEmptyLabel} aria-hidden="true">Photo unavailable</span>
-  </div>
-  return <div className={styles.photos} aria-label={`${locationName} photos`}>
-    {photos.slice(0, 3).map((url, index) => {
-      const layoutClass = count === 1
-        ? styles.photoSingle
-        : count === 2
-          ? (index === 0 ? styles.photoMain : styles.photoPair)
-          : index === 0 ? styles.photoMain : ''
-      return <FeedPhoto
-        key={`${url}:${index}`}
-        href={href}
-        locationName={locationName}
-        url={url}
-        label={`Open ${locationName}${index ? ` photo ${index + 1}` : ''}`}
-        className={layoutClass}
-        moreCount={index === 2 ? count - 3 : 0}
-      />
-    })}
-  </div>
-}
-
 function CommentIcon() {
   return <svg className={styles.actionIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h15v10h-9l-4.5 3v-3H4.5v-10Z" /></svg>
 }
@@ -92,17 +49,20 @@ function FeedPost({ post }) {
   const href = `/plans/${location.slug}`
   const authorName = author.display_name || author.username || 'Puddle person'
   const comments = Array.isArray(post.comments) ? post.comments : []
+  const image = Array.isArray(post.photo_urls) ? post.photo_urls.find(Boolean) || null : null
   return <article className={styles.post} id={`post-${post.id}`} data-testid="feed-post" aria-label={post.title || `Puddle at ${location.name}`}>
     <header className={styles.author}>
       <PhotoFrame as="span" src={post.author_avatar_url} alt="" className={styles.avatar} unavailableText={initials(authorName)} loadingText="" />
       <span className={styles.authorMeta}><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
     </header>
     {post.body ? <p className={styles.copy}>{post.body}</p> : null}
-    <FeedPhotos post={post} href={href} />
-    <Link className={styles.place} href={href}>
+    <Link className={styles.place} href={href} aria-label={`Open ${location.name}`}>
       <span className={styles.placeMeta}>{categoryLabel(location.kind)}</span>
       <small className={styles.placeArea}>{location.neighborhood || location.city || ''}</small>
       <h2>{location.name}</h2><b className={styles.placeAdd} aria-hidden="true">+</b>
+      <span className={styles.placeVisual}>
+        <LocationVisualPreview slug={location.slug} title={location.name} image={image} />
+      </span>
     </Link>
     <footer className={styles.interactions} aria-label="Post actions">
       <details className={styles.actionMenu}>
@@ -193,7 +153,7 @@ export function SocialFeedClient({
       })
 
     return () => controller.abort()
-  }, [beforeCreatedAt, beforePostId, query, reload])
+  }, [avatarUrl, beforeCreatedAt, beforePostId, displayName, query, reload])
 
   return <>
     <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
