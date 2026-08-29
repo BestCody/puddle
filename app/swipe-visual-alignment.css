@@ -120,7 +120,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 
 /* Keep page-level Figma screens fluid even when older styles give them authored frame widths. */
 @media (min-width: 761px) {
-  .figma-swipe-screen,
   .figma-friends-screen,
   .figma-pass-screen,
   .figma-profile-screen,
@@ -151,54 +150,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   }
 }
 
-/* Swipe: anchor card, actions, and status to the visible viewport beside the sidebar. */
-@media (min-width: 761px) {
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage {
-    position: fixed !important;
-    top: 50vh !important;
-    left: var(--figma-shell-sidebar) !important;
-    right: 0 !important;
-    width: 400px !important;
-    height: 560px !important;
-    max-width: calc(100vw - var(--figma-shell-sidebar) - 96px) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    transform: translateY(-58%) !important;
-  }
-
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions {
-    position: fixed !important;
-    top: calc(50vh + 250px) !important;
-    left: var(--figma-shell-sidebar) !important;
-    right: 0 !important;
-    width: 310px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    transform: none !important;
-  }
-
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
-    position: fixed !important;
-    top: calc(50vh + 345px) !important;
-    left: var(--figma-shell-sidebar) !important;
-    right: 0 !important;
-    width: max-content;
-    max-width: calc(100vw - var(--figma-shell-sidebar) - 48px);
-    margin-left: auto !important;
-    margin-right: auto !important;
-    transform: none !important;
-    text-align: center;
-  }
-
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-filter-trigger {
-    position: fixed !important;
-    top: 36px !important;
-    right: 36px !important;
-    left: auto !important;
-    z-index: 80 !important;
-  }
-}
-
 /* Auto-condensed desktop: restore the bottom Settings control and keep full Search usable instead of collapsing it to an icon. */
 @media (min-width: 761px) and (max-width: 1050px) {
   .figma-dashboard-sidebar .figma-dashboard-nav {
@@ -217,11 +168,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     font-size: 0 !important;
   }
 
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
-    left: 102px !important;
-  }
 }
 
 @media (max-width: 760px) {

@@ -1,35 +1,5 @@
 /* Latest-main-safe polish for exact main-panel centering and responsive sidebar behavior. */
 
-/* Restore card copy to a stable bottom-up flow so title + address never depend on fixed y coordinates. */
-.figma-swipe-card-copy {
-  top: auto !important;
-  bottom: 18px !important;
-  height: auto !important;
-  display: grid !important;
-  align-content: end !important;
-  gap: 6px !important;
-}
-
-.figma-swipe-card-copy h1 {
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-  line-height: .98 !important;
-  overflow-wrap: normal !important;
-  word-break: normal !important;
-}
-
-.figma-swipe-card-copy p {
-  position: static !important;
-  inset: auto !important;
-  display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-  line-height: 1.15 !important;
-  overflow-wrap: anywhere !important;
-}
-
 @media (min-width: 761px) {
   /*
    * The stage is a normal block after the fixed sidebar. `width:auto` makes it
@@ -85,84 +55,6 @@
     margin: 0 !important;
     display: grid !important;
     place-items: center !important;
-  }
-
-  /*
-   * Card, four-button dock, and status all use this one grid column. The card
-   * stage now matches the actual 360px density card instead of wrapping a
-   * 360px card inside a 400px stage, which was the source of the 20px drift.
-   */
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-workspace {
-    --puddle-swipe-card-width: 360px;
-    --puddle-swipe-actions-width: 279px;
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 100dvh !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-auto-rows: max-content !important;
-    justify-items: center !important;
-    align-content: center !important;
-    row-gap: 12px !important;
-    padding: 72px 24px 36px !important;
-    box-sizing: border-box !important;
-  }
-
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
-    grid-column: 1 !important;
-    position: relative !important;
-    inset: auto !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    transform: none !important;
-    justify-self: center !important;
-    margin: 0 !important;
-  }
-
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage {
-    width: min(var(--puddle-swipe-card-width), calc(100% - 48px)) !important;
-    height: auto !important;
-    aspect-ratio: 5 / 7 !important;
-  }
-
-  /* The visual card fills the centered stage exactly, so it cannot drift inside it. */
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage > .figma-swipe-card,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage > .figma-swipe-card {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
-  }
-
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions {
-    width: min(var(--puddle-swipe-actions-width), calc(100% - 48px)) !important;
-  }
-
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
-    width: max-content !important;
-    max-width: calc(100% - 48px) !important;
-    text-align: center !important;
-  }
-
-  /* Preserve the current dense desktop typography while keeping title/address in normal flow. */
-  .figma-swipe-card-copy {
-    left: 16px !important;
-    right: 66px !important;
-    bottom: 18px !important;
-  }
-
-  .figma-swipe-card-copy h1 {
-    font-size: 36px !important;
-    letter-spacing: -1.8px !important;
-  }
-
-  .figma-swipe-card-copy p {
-    font-size: 12.2px !important;
   }
 
   /* Smaller expanded Puddle mark without changing the appearance-toggle behavior. */
@@ -287,32 +179,6 @@
     stroke-width: 1.7;
     stroke-linecap: round;
     stroke-linejoin: round;
-  }
-}
-
-/* Short desktop windows keep the connected stack in normal top-down flow instead of clipping it. */
-@media (min-width: 761px) and (max-height: 760px) {
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-workspace {
-    align-content: start !important;
-    padding-top: 64px !important;
-  }
-}
-
-/* Mobile keeps the same title/address flow without disturbing the existing responsive card sizing. */
-@media (max-width: 760px) {
-  .figma-swipe-card-copy {
-    top: auto !important;
-    left: clamp(11px, 4vw, 15px) !important;
-    right: clamp(54px, 15vw, 60px) !important;
-    bottom: clamp(12px, 2.2dvh, 17px) !important;
-    height: auto !important;
-    gap: 5px !important;
-  }
-
-  .figma-swipe-card-copy p {
-    position: static !important;
-    inset: auto !important;
-    margin: 0 !important;
   }
 }
 

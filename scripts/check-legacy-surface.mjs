@@ -61,6 +61,7 @@ const retiredPaths = [
   'app/figma-parity.css',
   'app/figma-profile-parity.css',
   'app/figma-parity-fine.css',
+  'app/swipe-profile-followup.css',
   'components/resizable-product-sidebar.js'
 ]
 
@@ -146,7 +147,6 @@ const activeUiStyles = await Promise.all([
   'app/ui-followup-20260822.css',
   'app/ui-interaction-polish.css',
   'app/ui-interaction-polish-fixes.css',
-  'app/swipe-profile-followup.css',
   'app/sidebar-swipe-polish.css',
   'app/white-stage-swipe-search-followup-20260822.css',
   'app/sidebar-layout-followup-20260822.css',
@@ -170,6 +170,26 @@ for (const marker of [
   'box-sizing: border-box !important'
 ]) {
   if (!savedVisual.includes(marker)) throw new Error(`Saved search control is missing deterministic geometry: ${marker}`)
+}
+
+// Swipe geometry has a small, explicit ownership boundary. Dated follow-up
+// sheets may still own unrelated screens, but they cannot reintroduce a
+// second card/action/layout cascade.
+const supersededSwipeSheets = [
+  'app/discover-controls.css',
+  'app/figma-dashboard-fidelity.css',
+  'app/responsive-density-20260822.css',
+  'app/sidebar-layout-followup-20260822.css',
+  'app/sidebar-swipe-polish.css',
+  'app/swipe-visual-alignment.css',
+  'app/ui-fixes-20260822.css',
+  'app/white-stage-swipe-search-followup-20260822.css'
+]
+const supersededSwipePattern = /\bfigma-swipe-(?:screen|workspace|card(?:-stage|-copy|-meta)?|actions?|status|filter-trigger)\b/
+for (const path of supersededSwipeSheets) {
+  if (supersededSwipePattern.test(await read(path))) {
+    throw new Error(`Swipe geometry escaped its canonical ownership boundary: ${path}`)
+  }
 }
 
 // Derive the retired database contract directly from the migrations that performed

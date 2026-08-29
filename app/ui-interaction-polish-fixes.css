@@ -197,44 +197,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded 
   font-family: system-ui, sans-serif;
 }
 
-/* Swipe header keeps Filters only. The existing account menu remains in markup for build safety but is hidden on Swipe. */
-.figma-dashboard-stage:has(.figma-swipe-screen) .figma-dashboard-account-menu {
-  display: none !important;
-}
-
-.figma-swipe-filter-trigger {
-  top: 36px !important;
-  right: 28px !important;
-  width: auto !important;
-  min-width: 84px !important;
-  height: 44px !important;
-  padding: 0 18px !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  border: 2px solid #dedede !important;
-  border-radius: 999px !important;
-  background: #fff !important;
-  color: #666 !important;
-  cursor: pointer;
-}
-
-/* Preserve the card ratio and center the card without stretching it. */
-.figma-swipe-card-stage {
-  top: 50% !important;
-  left: 50% !important;
-  width: 400px !important;
-  max-width: calc(100% - 96px) !important;
-  height: auto !important;
-  aspect-ratio: 5 / 7;
-  transform: translate(-50%, -56%) !important;
-}
-
-.figma-swipe-card,
-.figma-swipe-card {
-  width: 100% !important;
-  height: 100% !important;
-}
-
 /* More space between major Settings sections, not between controls within a section. */
 .figma-settings-window .figma-settings-section + .figma-settings-section,
 .figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
@@ -316,34 +278,10 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded 
     margin-left: 0 !important;
   }
 
-  .figma-swipe-card-stage {
-    width: 325px !important;
-    max-width: calc(100vw - 44px) !important;
-    height: auto !important;
-    aspect-ratio: 325 / 544;
-    transform: translate(-50%, -54%) !important;
-  }
-
-  .figma-swipe-filter-trigger {
-    top: 24px !important;
-    right: 16px !important;
-    min-width: 76px !important;
-    height: 40px !important;
-    padding-left: 15px !important;
-    padding-right: 15px !important;
-  }
-
   .figma-settings-window .figma-settings-section + .figma-settings-section,
   .figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
     padding-top: 48px !important;
     margin-top: 12px !important;
-  }
-}
-
-@media (max-height: 700px) and (min-width: 761px) {
-  .figma-swipe-card-stage {
-    width: 350px !important;
-    max-width: calc(100% - 96px) !important;
   }
 }
 

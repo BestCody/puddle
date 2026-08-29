@@ -36,5 +36,5 @@ test('rebuilt Figma swipe card keeps drag, dock, keyboard, and durable persisten
   assert.match(shellCss, /transition: transform \.28s ease, opacity \.2s ease/)
   assert.match(swipeCss, /\.figma-swipe-actions\s*\{/)
   assert.match(swipeCss, /top: 666px/)
-  assert.match(swipeCss, /grid-template-columns: repeat\(4, 1fr\)/)
+  assert.match(swipeCss, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/)
 })

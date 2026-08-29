@@ -27,64 +27,6 @@
   .figma-dashboard-settings-link { top: auto; bottom: 16px; }
 }
 
-/* Swipe card internals — these coordinates are local to the fixed-ratio card,
-   not page placement. */
-@media (min-width: 761px) {
-  .figma-swipe-card-copy {
-    top: 397.18px;
-    left: 16.05px;
-    right: 70px;
-    bottom: auto;
-    height: 147px;
-  }
-  .figma-swipe-card-copy h1 {
-    max-width: 290.301px;
-    margin: 0;
-    font-size: 40px;
-    line-height: .96;
-  }
-  .figma-swipe-card-copy p {
-    position: absolute;
-    top: 116.37px;
-    left: 2.09px;
-    margin: 0;
-    font-size: 13.615px;
-    line-height: 1;
-  }
-}
-@media (max-width: 760px) {
-  .figma-swipe-card-copy {
-    top: 405.7px;
-    left: 14.83px;
-    right: 58px;
-    bottom: auto;
-    height: 126px;
-  }
-  .figma-swipe-card-copy h1 {
-    max-width: 236.396px;
-    margin: 0;
-    font-size: 32.573px;
-    line-height: 1.02;
-    letter-spacing: -1.6286px;
-  }
-  .figma-swipe-card-copy p {
-    position: absolute;
-    top: 93.78px;
-    left: .53px;
-    margin: 0;
-    font-size: 11.087px;
-    line-height: 1;
-    letter-spacing: -.6652px;
-  }
-  .figma-swipe-details-button {
-    top: 480.3px;
-    right: 17.5px;
-    bottom: auto;
-    width: 48px;
-    height: 46px;
-  }
-}
-
 /* Profile — Figma 40:347. Positioning of the page/cards is owned by the flow
    sheet; this section keeps the authored visual measurements. */
 @media (min-width: 761px) {

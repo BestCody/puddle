@@ -103,17 +103,6 @@
     margin-top: 0 !important;
   }
 
-  /* Swipe should be centered in the whole right-side stage, not the older 1000px inner cap. */
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-dashboard-main {
-    width: 100% !important;
-    max-width: none !important;
-    margin-inline: 0 !important;
-  }
-
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-workspace {
-    width: 100% !important;
-    justify-items: center !important;
-  }
 }
 
 @media (max-height: 760px) and (min-width: 761px) {

@@ -1,57 +1,4 @@
-/* Targeted UI corrections for Swipe, Settings, Sidebar, Saved, Messages, and Profile.
- * Keep this file last in the global cascade so these fixes can safely normalize older
- * Figma-frame rules without redesigning unrelated screens.
- */
-
-/* 1. Swipe action controls: keep the authored circular geometry stable at every zoom. */
-.figma-swipe-actions {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 10px !important;
-}
-
-.figma-swipe-action {
-  min-width: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-  line-height: 1 !important;
-  box-sizing: border-box !important;
-}
-
-.figma-swipe-action > span {
-  width: 60px !important;
-  min-width: 60px !important;
-  height: 60px !important;
-  min-height: 60px !important;
-  aspect-ratio: 1 / 1 !important;
-  padding: 0 !important;
-  border-width: 2px !important;
-  border-style: solid !important;
-  border-color: currentColor !important;
-  border-radius: 50% !important;
-  display: grid !important;
-  place-items: center !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
-}
-
-.figma-swipe-action svg {
-  width: 29px !important;
-  height: 29px !important;
-  min-width: 29px !important;
-  min-height: 29px !important;
-  display: block !important;
-  flex: none !important;
-}
-
-.figma-swipe-action small {
-  max-width: 100% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  font-size: 12px !important;
-  line-height: 1 !important;
-}
+/* Targeted UI corrections for Settings, Sidebar, Saved, Messages, and Profile. */
 
 /* 2. Settings: the iframe and its white window share one exact responsive boundary. */
 .puddle-settings-overlay-frame {
@@ -200,22 +147,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 
 /* 6. Messages on mobile: list first, then a full-screen conversation with a back link. */
 @media (max-width: 760px) {
-  .figma-swipe-actions {
-    gap: 7px !important;
-  }
-
-  .figma-swipe-action > span {
-    width: 60px !important;
-    min-width: 60px !important;
-    height: 60px !important;
-    min-height: 60px !important;
-    border-radius: 50% !important;
-  }
-
-  .figma-swipe-action small {
-    font-size: 10px !important;
-  }
-
   .figma-settings-window .figma-settings-section + .figma-settings-section,
   .figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
     margin-top: 18px !important;

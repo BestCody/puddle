@@ -1,10 +1,8 @@
-/* Targeted follow-up for stage color, Swipe relationship, and Saved/Discover search alignment. */
+/* Targeted follow-up for stage color and Saved/Discover search alignment. */
 
 /* Light mode uses the same white canvas on both sides of the dashboard. */
 .figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-dashboard-stage,
 .figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-dashboard-main,
-.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-swipe-screen,
-.figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-swipe-workspace,
 .figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) .figma-friends-screen,
 .figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) [data-testid='saved-screen'],
 .figma-dashboard-shell:not([data-appearance='dark']):not([data-resolved-appearance='dark']) [data-testid='feed-screen'][data-view='feed'] {
@@ -46,87 +44,8 @@
   z-index: 900 !important;
 }
 
-/* Desktop Swipe follows the same composition as mobile: card first, centered actions directly below it. */
-@media (min-width: 761px) {
-  .figma-swipe-workspace {
-    --puddle-swipe-card-width: 360px;
-    --puddle-swipe-card-height: 504px;
-    --puddle-swipe-actions-width: 279px;
-    display: grid !important;
-    grid-template-rows: var(--puddle-swipe-card-height) auto auto !important;
-    justify-items: center !important;
-    align-content: start !important;
-    row-gap: 18px !important;
-    padding-top: 90px !important;
-    box-sizing: border-box !important;
-  }
-
-  .figma-swipe-card-stage {
-    position: relative !important;
-    inset: auto !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    width: var(--puddle-swipe-card-width) !important;
-    height: var(--puddle-swipe-card-height) !important;
-    margin: 0 !important;
-    transform: none !important;
-    justify-self: center !important;
-  }
-
-  .figma-swipe-actions {
-    position: relative !important;
-    inset: auto !important;
-    top: auto !important;
-    left: auto !important;
-    width: var(--puddle-swipe-actions-width) !important;
-    margin: 0 auto !important;
-    transform: none !important;
-    justify-self: center !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
-
-  .figma-swipe-status {
-    position: relative !important;
-    inset: auto !important;
-    top: auto !important;
-    left: auto !important;
-    margin: 0 !important;
-    transform: none !important;
-    justify-self: center !important;
-    text-align: center !important;
-  }
-}
-
-/* Mobile Swipe: card and action dock derive from the same responsive width token.
-   This keeps them centered as one visual stack instead of independently sizing each row. */
+/* Search and create overlays remain above the shared stage. */
 @media (max-width: 760px) {
-  .figma-swipe-workspace {
-    --puddle-swipe-card-width: min(325px, calc(100vw - 40px), calc((100dvh - 250px) * 325 / 544));
-    --puddle-swipe-action-width: min(288px, var(--puddle-swipe-card-width));
-    justify-items: center !important;
-  }
-
-  .figma-swipe-card-stage {
-    width: var(--puddle-swipe-card-width) !important;
-    max-width: var(--puddle-swipe-card-width) !important;
-    justify-self: center !important;
-    margin-inline: auto !important;
-  }
-
-  .figma-swipe-actions {
-    width: var(--puddle-swipe-action-width) !important;
-    max-width: var(--puddle-swipe-card-width) !important;
-    justify-self: center !important;
-    margin-inline: auto !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
-
-  .figma-swipe-action {
-    min-width: 0 !important;
-    width: 100% !important;
-  }
-
   [data-testid='saved-screen'] > header:first-of-type {
     padding-inline: 14px !important;
   }

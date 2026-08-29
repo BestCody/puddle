@@ -408,13 +408,6 @@
 .figma-settings-window.is-expanded #billing::after { left: 0; right: 0; }
 
 @media (max-width: 760px) {
-  .figma-swipe-screen,
-  .figma-swipe-workspace { min-height: 770px; }
-  .figma-swipe-workspace { padding: 103px 20px 116px; row-gap: 7px; }
-  .figma-swipe-card-stage { width: min(325px, calc(100vw - 72px)) !important; height: 544px; }
-  .figma-swipe-actions { width: min(288px, 100%); }
-  .figma-swipe-empty { margin-top: 80px; }
-
   .figma-profile-screen { padding: 20px 16px 130px; }
   .figma-profile-hero { height: 290px; }
   .figma-profile-cards {
