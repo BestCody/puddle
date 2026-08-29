@@ -1,0 +1,214 @@
+/* Profile widget cleanup: UI-only responsive containment and centering. */
+
+.figma-profile-edit,
+.figma-profile-add-card {
+  display: none !important;
+}
+
+.figma-profile-card {
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+.figma-profile-card > h2,
+.figma-profile-card > p,
+.figma-profile-card > strong,
+.figma-profile-card .figma-profile-card-link,
+.figma-profile-card .figma-profile-mini-list,
+.figma-profile-card .figma-profile-card-empty {
+  max-width: calc(100% - 32px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+}
+
+.figma-profile-card > h2 {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: clamp(16px, 2.1vw, 23.4px) !important;
+}
+
+.figma-profile-location-card {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  align-items: start !important;
+}
+
+.figma-profile-location-card > strong {
+  width: calc(100% - 40px) !important;
+  max-width: calc(100% - 40px) !important;
+  margin: 0 auto !important;
+  align-self: center !important;
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 3 !important;
+  text-align: center !important;
+  overflow-wrap: anywhere !important;
+  font-size: clamp(17px, 2.5vw, 26px) !important;
+  line-height: 1.15 !important;
+}
+
+.figma-profile-friends-card,
+.figma-profile-saves-card,
+.figma-profile-puddles-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+.figma-profile-mini-list {
+  width: calc(100% - 32px) !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.figma-profile-mini-list > a,
+.figma-profile-mini-list > span,
+.figma-profile-mini-list span,
+.figma-profile-mini-list b {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.figma-profile-mini-list > a {
+  display: block !important;
+  overflow: hidden !important;
+  text-align: center !important;
+  text-decoration: none !important;
+}
+
+.figma-profile-mini-list span {
+  display: block !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  font-size: clamp(11px, 1.7vw, 15px) !important;
+}
+
+.figma-profile-mini-list b {
+  display: none !important;
+}
+
+.figma-profile-card-link {
+  display: block !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  font-size: clamp(11px, 1.6vw, 14px) !important;
+}
+
+.figma-profile-card-empty {
+  display: grid !important;
+  justify-items: center !important;
+  gap: 8px !important;
+  overflow: hidden !important;
+}
+
+.figma-profile-card-empty p,
+.figma-profile-card-empty a {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+.figma-profile-post-preview {
+  width: calc(100% - 30px) !important;
+  max-width: calc(100% - 30px) !important;
+  min-width: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  overflow: hidden !important;
+  flex: 0 1 auto !important;
+}
+
+.figma-profile-post-preview header {
+  max-width: calc(100% - 24px) !important;
+  overflow: hidden !important;
+}
+
+.figma-profile-post-preview header > span:last-child,
+.figma-profile-post-preview header strong,
+.figma-profile-post-preview header small,
+.figma-profile-post-preview > p,
+.figma-profile-post-place strong,
+.figma-profile-post-place small {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.figma-profile-post-preview header > span:last-child,
+.figma-profile-post-preview > p,
+.figma-profile-post-place {
+  text-align: center !important;
+}
+
+.figma-profile-post-preview > p {
+  left: 16px !important;
+  right: 16px !important;
+}
+
+.figma-profile-post-place {
+  left: 16px !important;
+  right: 16px !important;
+  padding-left: 12px !important;
+  padding-right: 44px !important;
+}
+
+.figma-profile-chips {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.figma-profile-chips span,
+.figma-profile-chips > a,
+.figma-profile-actions a,
+.figma-profile-counts > span {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 760px) {
+  .figma-profile-card {
+    min-height: 0 !important;
+  }
+
+  .figma-profile-card > h2 {
+    margin-top: 16px !important;
+    font-size: clamp(16px, 5vw, 22px) !important;
+  }
+
+  .figma-profile-location-card > strong {
+    width: calc(100% - 32px) !important;
+    max-width: calc(100% - 32px) !important;
+    font-size: clamp(17px, 5.5vw, 24px) !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .figma-profile-mini-list span {
+    font-size: clamp(12px, 3.8vw, 15px) !important;
+  }
+
+  .figma-profile-post-preview {
+    width: calc(100% - 24px) !important;
+    max-width: calc(100% - 24px) !important;
+  }
+
+  .figma-profile-post-preview > p,
+  .figma-profile-post-place strong,
+  .figma-profile-post-place small {
+    font-size: clamp(9px, 3vw, 14px) !important;
+  }
+}

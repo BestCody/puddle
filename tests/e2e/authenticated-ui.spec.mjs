@@ -169,13 +169,10 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
     await expect(page.locator('.figma-profile-cards').getByText(label, { exact: true }).first()).toBeVisible()
   }
   await expect(page.getByLabel('Change profile photo')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveAttribute('href', '/profile?customize=1')
+  await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveCount(0)
+  await expect(page.locator('.figma-profile-add-card')).toHaveCount(0)
   await assertRouteHealth(page)
   await attachRender(page, testInfo, 'profile')
-  await page.getByRole('link', { name: 'Edit', exact: true }).click()
-  await expect(page).toHaveURL(/\/profile\?customize=1/)
-  await expect(page.locator('.figma-profile-theme-picker')).toBeVisible()
-  await attachRender(page, testInfo, 'profile-customize')
 
   const activeLabels = await page.locator('[aria-current="page"]').allTextContents()
   expect(activeLabels.join(' ')).toContain('Profile')

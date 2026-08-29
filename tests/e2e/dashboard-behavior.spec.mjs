@@ -190,7 +190,8 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await openDesktop(page, '/profile')
   await expect(page.locator('.figma-profile-identity h1')).toHaveText('Dashboard Behavior Tester')
   await expect(page.locator('.figma-profile-avatar')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveAttribute('href', '/profile?customize=1')
+  await expect(page.getByRole('link', { name: 'Edit', exact: true })).toHaveCount(0)
+  await expect(page.locator('.figma-profile-add-card')).toHaveCount(0)
   for (const label of ['Puddles', 'Location', 'Saves', 'Friends']) {
     await expect(page.locator('.figma-profile-cards').getByText(label, { exact: true }).first()).toBeVisible()
   }
@@ -198,9 +199,6 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(page.getByText('🍻Bar', { exact: true })).toBeVisible()
   await expect(page.getByText('🌙Nightlife', { exact: true })).toBeVisible()
   await expect(page.getByText('🛍️Shop', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Edit', exact: true }).click()
-  await expect(page).toHaveURL(/\/profile\?customize=1/)
-  await expect(page.locator('.figma-profile-theme-picker')).toBeVisible()
 
   await openDesktop(page, '/account')
   await expect(page.locator('.figma-settings-window')).toBeVisible()
