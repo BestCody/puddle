@@ -26,6 +26,20 @@ const demoNav = [
   ['profile', 'Profile', '●']
 ]
 
+const friendPeople = [
+  { id: 'richie', name: 'Richie Zheng', handle: '@Richiezh77', initial: 'R', mutual: '12 mutual puddles' },
+  { id: 'hansen', name: 'Lou Hansen', handle: '@louhansen', initial: 'L', mutual: '8 mutual puddles' },
+  { id: 'amara', name: 'Amara Osei', handle: '@amaraosei', initial: 'A', mutual: '5 mutual puddles' },
+  { id: 'devon', name: 'Devon Park', handle: '@devonp', initial: 'D', mutual: '3 mutual puddles' }
+]
+
+const friendRequests = [
+  { id: 'nina', name: 'Nina Alvarez', handle: '@ninaalv', initial: 'N', mutual: 'Saved Maple Grove Park' },
+  { id: 'omar', name: 'Omar Haddad', handle: '@omarh', initial: 'O', mutual: 'Saved Night Gallery' }
+]
+
+const passPerks = ['Unlimited saved puddles', 'Swipe anywhere in the world', 'See who saved the same place', 'Priority plan invites']
+
 function DemoLogo({ centered = false }) {
   return <img className={`landing-demo-logo${centered ? ' is-centered' : ''}`} src="/figma/assets/logo.svg" alt="Puddle" />
 }
@@ -33,7 +47,9 @@ function DemoLogo({ centered = false }) {
 function DemoBottomNav({ active }) {
   return <nav className="landing-demo-bottom-nav" aria-label="Puddle app navigation">
     {demoNav.map(([view, label, glyph]) => {
-      const href = view === 'save' ? '/landing-demo/save' : ['swipe', 'feed', 'profile'].includes(view) ? `/landing-demo/${view}` : `/${view}`
+      // Every nav target now has a demo screen, so the preview never escapes to a real
+      // (auth-gated, and for friends/pass non-existent) product route.
+      const href = `/landing-demo/${view}`
       return <a key={view} href={href} className={active === view ? `is-active is-${view}` : ''} aria-current={active === view ? 'page' : undefined} aria-label={label}><span aria-hidden="true">{glyph}</span></a>
     })}
   </nav>
@@ -248,9 +264,85 @@ function ProfileDemo() {
   </div>
 }
 
+function FriendsDemo() {
+  const [tab, setTab] = useState('friends')
+  const [query, setQuery] = useState('')
+  const [following, setFollowing] = useState(() => new Set(['richie']))
+  const [requests, setRequests] = useState(friendRequests)
+  const [openItem, setOpenItem] = useState(null)
+
+  const filtered = useMemo(() => friendPeople.filter((person) => (
+    `${person.name} ${person.handle}`.toLowerCase().includes(query.trim().toLowerCase())
+  )), [query])
+
+  function toggleFollow(id) {
+    setFollowing((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  return <div className="landing-demo-screen landing-demo-screen--friends" data-demo-screen="friends">
+    <header className="landing-demo-mobile-header landing-demo-mobile-header--split">
+      <DemoLogo />
+      <div className="landing-demo-segment landing-demo-segment--green" aria-label="Friends or requests">
+        <button className={tab === 'friends' ? 'is-active' : ''} type="button" onClick={() => setTab('friends')}>Friends</button>
+        <button className={tab === 'requests' ? 'is-active' : ''} type="button" onClick={() => setTab('requests')}>Requests</button>
+      </div>
+      <span className="landing-demo-header-spacer" aria-hidden="true" />
+    </header>
+    {tab === 'friends' ? <>
+      <label className="landing-demo-search landing-demo-search--friends"><span className="sr-only">Search friends</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search friends..." /><b aria-hidden="true">&#8981;</b></label>
+      <section className="landing-demo-friends-list" aria-label="Friends">
+        {filtered.length ? filtered.map((person) => <article className="landing-demo-friend-card" key={person.id}>
+          <button type="button" className="landing-demo-friend-open" onClick={() => setOpenItem(person)} aria-label={`Open ${person.name}`}>
+            <span className="landing-demo-avatar">{person.initial}</span>
+            <span className="landing-demo-friend-meta"><strong>{person.name}</strong><small>{person.handle}</small><em>{person.mutual}</em></span>
+          </button>
+          <button type="button" className={following.has(person.id) ? 'landing-demo-friend-follow is-following' : 'landing-demo-friend-follow'} onClick={() => toggleFollow(person.id)}>{following.has(person.id) ? 'Following' : 'Follow'}</button>
+        </article>) : <p className="landing-demo-empty">No friends found.</p>}
+      </section>
+    </> : <section className="landing-demo-friends-list" aria-label="Friend requests">
+      {requests.length ? requests.map((person) => <article className="landing-demo-friend-card" key={person.id}>
+        <button type="button" className="landing-demo-friend-open" onClick={() => setOpenItem(person)} aria-label={`Open ${person.name}`}>
+          <span className="landing-demo-avatar">{person.initial}</span>
+          <span className="landing-demo-friend-meta"><strong>{person.name}</strong><small>{person.handle}</small><em>{person.mutual}</em></span>
+        </button>
+        <button type="button" className="landing-demo-friend-follow" onClick={() => setRequests((items) => items.filter((item) => item.id !== person.id))}>Accept</button>
+      </article>) : <p className="landing-demo-empty">No pending requests.</p>}
+    </section>}
+    <DemoBottomNav active="friends" />
+    {openItem ? <DemoDetails title={openItem.name} subtitle={`${openItem.handle} · ${openItem.mutual}`} onClose={() => setOpenItem(null)} /> : null}
+  </div>
+}
+
+function PassDemo() {
+  const [subscribed, setSubscribed] = useState(false)
+
+  return <div className="landing-demo-screen landing-demo-screen--pass" data-demo-screen="pass">
+    <header className="landing-demo-mobile-header landing-demo-mobile-header--swipe"><DemoLogo centered /></header>
+    <section className="landing-demo-pass-card">
+      <span className="landing-demo-pass-badge" aria-hidden="true">&#9671;</span>
+      <h1>Puddle Pass</h1>
+      <p className="landing-demo-pass-price"><strong>$4</strong><small>per month</small></p>
+      <ul className="landing-demo-pass-perks">
+        {passPerks.map((perk) => <li key={perk}><span aria-hidden="true">&#10003;</span>{perk}</li>)}
+      </ul>
+      <button type="button" className="landing-demo-pass-cta" disabled={subscribed} onClick={() => setSubscribed(true)}>
+        {subscribed ? 'Pass active' : 'Get Puddle Pass'}
+      </button>
+    </section>
+    <DemoBottomNav active="pass" />
+  </div>
+}
+
 export function LandingPhoneDemo({ view }) {
   if (view === 'swipe') return <main className="landing-phone-demo"><SwipeDemo /></main>
   if (view === 'save') return <main className="landing-phone-demo"><SavedDemo /></main>
   if (view === 'feed') return <main className="landing-phone-demo"><FeedDemo /></main>
+  if (view === 'friends') return <main className="landing-phone-demo"><FriendsDemo /></main>
+  if (view === 'pass') return <main className="landing-phone-demo"><PassDemo /></main>
   return <main className="landing-phone-demo"><ProfileDemo /></main>
 }

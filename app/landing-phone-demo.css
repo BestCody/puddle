@@ -42,3 +42,33 @@ body:has(.landing-phone-demo){overflow:hidden}
 .landing-demo-dialog-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:end center;padding:8px;background:rgba(0,0,0,.38)}.landing-demo-dialog,.landing-demo-message{width:min(100%,402px);max-height:82svh;overflow:auto;padding:14px;border-radius:22px;background:#fff;box-shadow:0 -10px 30px rgba(0,0,0,.18);position:relative}.landing-demo-dialog-close,.landing-demo-message>button:first-child{position:absolute;right:12px;top:12px;width:34px;height:34px;border:0;border-radius:999px;background:#fff;font-size:22px}.landing-demo-dialog-photo{height:180px;border-radius:16px;background:#f0f0f0}.landing-demo-dialog small{display:block;margin-top:10px;color:var(--blue);font:800 9px "Martian Mono",monospace}.landing-demo-dialog h2{margin:4px 0;font-size:24px;letter-spacing:-.04em}.landing-demo-dialog p{margin:0;color:#666;font-size:12px}.landing-demo-message{display:grid;gap:10px;padding-top:50px}.landing-demo-message strong{font-size:18px}.landing-demo-message textarea{min-height:100px;resize:none;padding:10px;border:2px solid #e0e0e0;border-radius:12px}.landing-demo-message>button:last-child{padding:9px;border:0;border-radius:999px;background:var(--blue);color:#fff;font-weight:800}
 
 @media(max-width:360px){.landing-demo-screen{padding-left:7px;padding-right:7px}.landing-demo-bottom-nav{margin-left:-7px;margin-right:-7px;padding-inline:7px}.landing-demo-mobile-header--split{grid-template-columns:70px 1fr 70px}.landing-demo-header-spacer{width:70px}.landing-demo-mobile-header--split .landing-demo-logo{width:70px}.landing-demo-saved-grid{gap:6px}.landing-demo-saved-card strong{font-size:10px}.landing-demo-profile-grid{gap:6px}}
+
+.landing-demo-segment--green button.is-active{background:var(--green)}
+.landing-demo-segment--pink button.is-active{background:var(--pink)}
+.landing-demo-bottom-nav a.is-friends{color:var(--green)}
+.landing-demo-bottom-nav a.is-pass{color:var(--pink)}
+.landing-demo-screen--friends{display:flex;flex-direction:column;gap:10px;min-height:100svh;background:#f6f6f6}
+.landing-demo-friends-list{display:flex;flex-direction:column;gap:8px;align-content:start;flex:1}
+.landing-demo-friend-card{display:flex;align-items:center;gap:8px;padding:8px 9px;border:2.5px solid #e5e5e5;border-radius:18px;background:#fff;box-shadow:0 3px 0 rgba(0,0,0,.1)}
+.landing-demo-friend-open{min-width:0;flex:1;display:flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;text-align:left}
+.landing-demo-friend-meta{min-width:0;display:grid;gap:1px}
+.landing-demo-friend-meta strong{color:#111;font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.landing-demo-friend-meta small{color:#8d8d8d;font-size:9px;font-weight:700}
+.landing-demo-friend-meta em{color:var(--green);font-size:9px;font-style:normal;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.landing-demo-friend-follow{flex:none;min-width:64px;padding:6px 10px;border:2px solid var(--green);border-radius:999px;background:var(--green);color:#0d2d05;font-size:10px;font-weight:800}
+.landing-demo-friend-follow.is-following{background:#fff;color:var(--green)}
+.landing-demo-friend-follow:disabled{opacity:.65}
+.landing-demo-search--friends b{border-color:var(--green);color:var(--green)}
+.landing-demo-screen--pass{display:flex;flex-direction:column;gap:10px;min-height:100svh;background:linear-gradient(180deg,#fff0f7 0%,#fff7fb 40%,#fff 100%)}
+.landing-demo-pass-card{flex:1;display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin:0 3px;padding:14px 14px 16px;border:2.5px solid #f0d3e2;border-radius:22px;background:#fff;box-shadow:0 4px 0 rgba(0,0,0,.08)}
+.landing-demo-pass-badge{display:grid;place-items:center;width:34px;height:34px;border:2px solid var(--pink);border-radius:999px;color:var(--pink);font-size:17px}
+.landing-demo-pass-card h1{margin:0;color:#111;font-size:19px;font-weight:800;letter-spacing:-.03em}
+.landing-demo-pass-price{display:flex;align-items:baseline;gap:5px;margin:0}
+.landing-demo-pass-price strong{color:var(--pink);font-size:24px;font-weight:800;letter-spacing:-.04em}
+.landing-demo-pass-price small{color:#8d8d8d;font-size:10px;font-weight:700}
+.landing-demo-pass-perks{display:grid;gap:6px;width:100%;margin:2px 0 0;padding:0;list-style:none}
+.landing-demo-pass-perks li{display:flex;align-items:center;gap:7px;color:#3f3f3f;font-size:11px;font-weight:700;line-height:1.3}
+.landing-demo-pass-perks li span{flex:none;display:grid;place-items:center;width:16px;height:16px;border-radius:999px;background:#ffe4f1;color:var(--pink);font-size:10px;font-weight:900}
+.landing-demo-pass-cta{width:100%;margin-top:auto;min-height:42px;border:2px solid var(--pink);border-radius:999px;background:var(--pink);color:#fff;font-size:12px;font-weight:800;box-shadow:0 3px 0 rgba(0,0,0,.1)}
+.landing-demo-pass-cta:disabled{background:#fff;color:var(--pink);box-shadow:none}
+@media(max-width:420px){.landing-demo-friend-meta strong{font-size:10px}.landing-demo-friend-follow{min-width:58px;font-size:9px}.landing-demo-pass-card h1{font-size:17px}}
