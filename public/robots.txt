@@ -1,2 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /studio/
+Disallow: /account
+Disallow: /settings
+
+Sitemap: https://puddle.you/sitemap.xml

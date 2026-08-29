@@ -7,14 +7,57 @@
   <meta name="description" content="Discover places. See who’s there." />
   <meta property="og:title" content="Puddle — Discover places. See who’s there." />
   <meta property="og:description" content="Discover what’s around you, social media style." />
-  <meta property="og:image" content="/og-puddle.svg" />
+  <meta property="og:image" content="https://puddle.you/og-puddle.svg" />
+  <meta property="og:url" content="https://puddle.you/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Puddle" />
+  <meta property="og:locale" content="en_CA" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Puddle — Discover places. See who’s there." />
+  <meta name="twitter:description" content="Discover what’s around you, social media style." />
+  <meta name="twitter:image" content="https://puddle.you/og-puddle.svg" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
   <link rel="canonical" href="https://puddle.you/" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" href="/puddle-mark.svg" type="image/svg+xml" />
   <link rel="preload" as="image" href="/figma/assets/hero-left.png" />
   <link rel="preload" as="image" href="/figma/assets/hero-right.png" />
   <link rel="preload" as="image" href="/figma/assets/hero-phone-exact.png" />
   <link rel="stylesheet" href="/landing.css?v=1" />
   <title>Puddle — Discover places. See who’s there.</title>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://puddle.you/#organization",
+        "name": "Puddle",
+        "url": "https://puddle.you/",
+        "logo": "https://puddle.you/puddle-mark.svg",
+        "description": "Discover places, save favorites, and find somewhere worth going together.",
+        "areaServed": "Worldwide"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://puddle.you/#website",
+        "name": "Puddle",
+        "url": "https://puddle.you/",
+        "publisher": { "@id": "https://puddle.you/#organization" },
+        "inLanguage": "en"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "Puddle",
+        "applicationCategory": "SocialNetworkingApplication",
+        "operatingSystem": "Web",
+        "url": "https://puddle.you/",
+        "publisher": { "@id": "https://puddle.you/#organization" },
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <main class="landing" aria-label="Puddle">
