@@ -6,7 +6,7 @@
 - B2 photo keys are immutable and content addressed: `media/photos/by-sha256/<first-two>/<sha256>.jpg`.
 - `public.media_objects` is the canonical relational registration/deduplication layer for those bytes.
 - `public.location_photo_sources.media_object_id` links approved photo provenance to the canonical media object.
-- B2 search snapshots and photo overlays are rebuildable serving projections. `primary_photo` stores `content_hash` plus attribution metadata, never a Supabase Storage URL, B2 URL, bucket URL, or other storage-provider URL.
+- OpenSearch is a rebuildable serving projection. `primary_photo` stores `content_hash` plus attribution metadata, never a Supabase Storage URL, B2 URL, bucket URL, or other storage-provider URL.
 - Public clients receive a same-origin Puddle route derived at the API boundary: `/api/open-photo/<sha256>`.
 - The `/api/open-photo/<sha256>` route privately reads B2 and verifies canonical storage key, byte size, and SHA-256 before returning an immutable cacheable image.
 - Supabase Storage is not an approved open-photo byte store. The Supabase-to-B2 migration and cleanup are complete and must not be reintroduced.
@@ -19,11 +19,11 @@ Do not persist a B2 public URL or Puddle delivery URL as media identity. `remote
 
 The open-photo importer calls the canonical B2 writer directly. There is no Supabase-named storage compatibility layer in the supported ingestion path.
 
-## Global catalogue / B2 search projection
+## Global catalogue / OpenSearch
 
-The global data pipeline builds immutable B2 location snapshots and search projections. The photo overlay resolves approved B2 photo rows through `media_object_id`, verifies the canonical B2 key/hash invariant, and writes `content_hash` into the active photo projection. Discovery and map APIs derive `/api/open-photo/<sha256>` from that hash.
+The Supabase bootstrap exports both `location_photo_sources` and `media_objects`. The overlay resolves approved B2 photo rows through `media_object_id`, verifies the canonical B2 key/hash invariant, and writes `content_hash` into `photo_metadata.parquet`. The OpenSearch index maps `primary_photo.content_hash`. Discovery and map APIs derive `/api/open-photo/<sha256>` from that hash.
 
-B2 search projections can always be rebuilt from canonical data; they are never media truth. A storage-provider migration must therefore not require rewriting frontend code or client contracts.
+OpenSearch can always be rebuilt from canonical data; it is never media truth. A storage-provider migration must therefore not require rewriting frontend code or client contracts.
 
 ## Retired systems
 

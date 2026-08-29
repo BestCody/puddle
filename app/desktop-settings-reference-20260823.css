@@ -300,6 +300,7 @@
   }
 
   .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row input,
+  .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row textarea,
   .figma-settings-screen:not(.is-mobile-flow) .figma-settings-row select {
     width: 100% !important;
     min-height: 38px !important;

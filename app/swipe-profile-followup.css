@@ -1,0 +1,53 @@
+/* Narrow follow-up fixes only for Swipe controls/mobile layout and Profile parity. */
+
+/* Keep the four action buttons circular without changing their size or spacing.
+   An inset ring avoids uneven border rasterization while preserving the existing shadow. */
+.figma-swipe-action > span,
+.figma-swipe-actions .minimal-swipe-action > span {
+  width: 60px !important;
+  min-width: 60px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  aspect-ratio: 1 / 1 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  box-shadow:
+    inset 0 0 0 2px currentColor,
+    0 4px 0 rgba(0,0,0,.12) !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* Mobile Swipe: use normal grid centering instead of the older relative left/translate offset. */
+@media (max-width: 760px) {
+  .figma-swipe-workspace {
+    justify-items: center !important;
+  }
+
+  .figma-swipe-card-stage {
+    position: relative !important;
+    inset: auto !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    width: min(350px, calc(100vw - 32px)) !important;
+    max-width: calc(100vw - 32px) !important;
+    height: auto !important;
+    aspect-ratio: 325 / 544 !important;
+    margin-inline: auto !important;
+    transform: none !important;
+    justify-self: center !important;
+  }
+
+  .figma-swipe-card,
+  .minimal-swipe-card.figma-swipe-card {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+/* The temporary compact Profile stat cards were removed from markup.
+   Keep the original desktop/mobile Profile components as the single source of truth. */
+.figma-profile-stat {
+  display: none !important;
+}

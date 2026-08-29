@@ -1,55 +1,44 @@
 /* Fresh Swipe component styles. No legacy product component selectors. */
+.figma-swipe-actions {
+  position: absolute;
+  top: 666px;
+  left: 50%;
+  width: 310px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  transform: translateX(-50%);
+}
 .figma-swipe-action {
-  min-width: 0;
   display: grid;
   justify-items: center;
   gap: 4px;
   padding: 0;
   border: 0;
   background: transparent;
-  line-height: 1;
-  box-sizing: border-box;
   color: #999;
   cursor: pointer;
 }
 .figma-swipe-action > span {
   width: 60px;
-  min-width: 60px;
   height: 60px;
-  min-height: 60px;
-  aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
-  padding: 0;
-  border: 0;
+  border: 2px solid currentColor;
   border-radius: 50%;
   background: rgba(255,255,255,.92);
-  box-shadow:
-    inset 0 0 0 2px currentColor,
-    0 4px 0 rgba(0,0,0,.12);
-  box-sizing: border-box;
-  overflow: hidden;
+  box-shadow: 0 4px 0 rgba(0,0,0,.12);
 }
 .figma-swipe-action svg {
   width: 29px;
   height: 29px;
-  min-width: 29px;
-  min-height: 29px;
-  display: block;
-  flex: none;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.figma-swipe-action small {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font: 800 12px/1 var(--figma-mono);
-}
+.figma-swipe-action small { font: 800 12px/1 var(--figma-mono); }
 .figma-swipe-action.is-undo { color: #d6d6d6; }
 .figma-swipe-action.is-pass { color: var(--figma-pink); }
 .figma-swipe-action.is-save { color: var(--figma-green); }
@@ -178,6 +167,17 @@
 .figma-swipe-details-actions button:disabled { opacity: .5; cursor: default; }
 
 .figma-swipe-empty {
+  position: absolute;
+  top: 210px;
+  left: 50%;
+  width: min(430px, calc(100% - 40px));
+  min-height: 250px;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  padding: 28px;
   border: 2.5px solid #e5e5e5;
   border-radius: 25px;
   background: #fff;
@@ -190,6 +190,9 @@
 .figma-swipe-empty button { min-height: 40px; padding: 0 15px; border: 2px solid #d9d9d9; border-radius: 999px; background: #fff; color: #555; font: 800 13px/1 Manrope, sans-serif; }
 
 @media (max-width: 760px) {
+  .figma-swipe-actions { top: 662px; width: 288px; gap: 7px; }
+  .figma-swipe-action > span { width: 60px; height: 48px; border-radius: 25px; }
+  .figma-swipe-action small { font-size: 10px; }
   .figma-swipe-details-backdrop { padding: 12px; }
   .figma-swipe-details { max-height: 90svh; border-radius: 22px; }
   .figma-swipe-details-gallery { height: 210px; }

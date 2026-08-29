@@ -20,8 +20,49 @@
   background: #4ca5f7;
 }
 
+.figma-dashboard-sidebar.is-concise {
+  width: 102px;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+  top: 201px;
+  left: 37px;
+  width: 43px;
+  height: 43px;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+  width: 43px !important;
+  height: 43px !important;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
+  left: 29px;
+  width: 60px;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
+  width: 60px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
 .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-label {
   display: none;
+}
+.figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
+  display: none;
+}
+
+@media (min-width: 761px) and (max-height: 831px) {
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    top: clamp(89px, calc(48.28vh - 200.7px), 201px);
+  }
+}
+
+@media (min-width: 761px) and (max-height: 579px) {
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    top: 38px;
+  }
 }
 
 @media (max-width: 760px) {

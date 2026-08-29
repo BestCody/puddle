@@ -76,6 +76,22 @@ test('landing feature phones map to the correct interactive Figma product screen
   assert.match(landingCss, /\.interactive-pill\s*\{/)
 })
 
+test('product shell fixes keep compact menu bars and icon-only narrow sidebar', async () => {
+  const [sidebar, polish, profile] = await Promise.all([
+    read('components/resizable-product-sidebar.js'),
+    read('app/product-polish.css'),
+    read('app/(product)/profile/page.js')
+  ])
+
+  assert.match(sidebar, /LABEL_MIN_WIDTH = 196/)
+  assert.match(sidebar, /is-collapsed/)
+  assert.match(polish, /\.minimal-product-sidebar:not\(\.is-expanded\).*\.product-nav-label\{display:none!important\}/s)
+  assert.match(polish, /cursor:col-resize/)
+  assert.match(polish, /\.figma-menu-icon\{display:flex!important;flex-direction:column/)
+  assert.doesNotMatch(profile, /minimal-advanced-settings/)
+  assert.doesNotMatch(profile, />Advanced</)
+})
+
 test('only landing demos can be framed by the same origin', async () => {
   const [headers, proxy, nextConfig] = await Promise.all([
     read('lib/security/headers.js'),

@@ -144,33 +144,22 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await assertRouteHealth(page)
   await attachRender(page, testInfo, 'pass-manage-free')
 
-  const mobileSettings = testInfo.project.name === 'mobile-chromium'
-  await page.goto(mobileSettings ? '/account?mobile=1' : '/account')
+  await page.goto('/account')
   await expect(page.locator('.figma-settings-window')).toBeVisible()
+  await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
   await attachRender(page, testInfo, 'settings-default')
-  if (mobileSettings) {
-    await expect(page.locator('.figma-settings-section:visible')).toHaveCount(0)
-    await page.locator('[data-settings-section="profile"]').click()
-    await expect(page).toHaveURL(/\/account\?mobile=1&section=profile&returnTo=%2Fprofile$/)
-    await expect(page.locator('#profile')).toBeVisible()
-    for (const label of ['Display name', 'Username', 'About', 'Visibility']) {
-      await expect(page.getByLabel(label, { exact: true })).toBeVisible()
-    }
-    await page.goto('/account?mobile=1')
-    await page.locator('[data-settings-section="billing"]').click()
-    await expect(page).toHaveURL(/\/account\?mobile=1&section=billing&returnTo=%2Fprofile$/)
-    await expect(page.locator('#billing')).toBeVisible()
-  } else {
-    await expect(page.locator('.figma-settings-section:visible')).toHaveCount(7)
-    for (const label of ['Display name', 'Username', 'About', 'Visibility', 'New password', 'Confirm password', 'Theme', 'Profile color', 'Type DELETE']) {
-      await expect(page.getByLabel(label, { exact: true })).toBeVisible()
-    }
-    await page.locator('[data-settings-section="profile"]').click()
-    await expect(page.locator('#profile')).toBeVisible()
-    await attachRender(page, testInfo, 'settings-profile')
-    await page.locator('[data-settings-section="billing"]').click()
-    await expect(page.locator('#billing')).toBeVisible()
+  for (const label of ['Display name', 'Username', 'About', 'Visibility', 'New password', 'Confirm password', 'Theme', 'Profile color', 'Type DELETE']) {
+    await expect(page.getByLabel(label, { exact: true })).toBeVisible()
   }
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Profile', exact: true }).click()
+  }
+  await expect(page.locator('#profile')).toBeVisible()
+  await attachRender(page, testInfo, 'settings-profile')
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.locator('.figma-settings-local-nav').getByRole('link', { name: 'Billing', exact: true }).click()
+  }
+  await expect(page.locator('#billing')).toBeVisible()
   await expect(page.getByRole('link', { name: 'View plans' })).toHaveAttribute('href', '/membership')
   await assertRouteHealth(page)
 

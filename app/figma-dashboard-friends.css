@@ -1,6 +1,17 @@
 /* Friends — Figma 32:17, 52:351, 52:386 */
 .figma-friends-screen {
+  min-height: 832px;
+  position: relative;
   background: #f6f6f6;
+  overflow: hidden;
+}
+.figma-friends-tabs {
+  position: absolute;
+  z-index: 20;
+  top: 39px;
+  left: 50%;
+  width: 238px;
+  transform: translateX(-50%);
 }
 .figma-friends-tabs > a:nth-child(1) { width: 92px; }
 .figma-friends-tabs > a:nth-child(2) { width: 75px; }
@@ -22,6 +33,16 @@
 .figma-friends-avatar[data-photo-state='loading'] > img { opacity:0; }
 
 /* Message */
+.figma-friends-message-layout {
+  position: absolute;
+  top: 102px;
+  left: 28px;
+  right: 18px;
+  height: 700px;
+  display: grid;
+  grid-template-columns: 339px minmax(0,1fr);
+  gap: 13px;
+}
 .figma-friends-conversations,
 .figma-friends-chat {
   overflow: hidden;
@@ -96,12 +117,27 @@
 .figma-friends-composer button.is-send { border-color:#78e152; color:#58c92e; }
 .figma-friends-composer button:disabled { opacity:.45; }
 .figma-friends-chat-empty { height:100%; display:grid; place-items:center; color:#b7b7b7; font:800 16px/1.2 Manrope,sans-serif; }
-.figma-friends-add-notice { padding:8px 12px; border-radius:12px; background:#fff; }
+.figma-friends-add-notice { position:absolute; z-index:25; top:372px; left:31px; right:31px; margin:0; padding:8px 12px; border-radius:12px; background:#fff; }
 
 /* Shared */
+.figma-friends-shared-view { position:absolute; inset:0; }
 .figma-friends-shared-view > h1 {
+  position:absolute;
+  top:112px;
+  left:36px;
+  margin:0;
   color:#c9c9c9;
   font:700 30px/1 var(--figma-mono);
+}
+.figma-friends-shared-grid {
+  position:absolute;
+  top:165px;
+  left:27px;
+  right:30px;
+  display:grid;
+  grid-template-columns:351px minmax(0,1fr);
+  grid-auto-rows:214px;
+  gap:20px 11px;
 }
 .figma-friends-shared-place,
 .figma-friends-shared-chat {
@@ -124,7 +160,12 @@
 .figma-friends-shared-empty { grid-column:1/-1; display:grid; place-items:center; color:#b7b7b7; font:800 16px/1 Manrope,sans-serif; }
 
 /* Add */
+.figma-friends-add-view { position:absolute; inset:0; }
 .figma-friends-add-view > h1 {
+  position:absolute;
+  top:174px;
+  left:31px;
+  margin:0;
   background:linear-gradient(180deg,#65e736,#b0ea9c 64%);
   -webkit-background-clip:text;
   background-clip:text;
@@ -133,6 +174,15 @@
   letter-spacing:-4px;
 }
 .figma-friends-search {
+  position:absolute;
+  top:312px;
+  left:22px;
+  right:32px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:4px 5px 4px 14px;
   border:2px solid #e6e6e6;
   border-radius:25px;
   background:#fff;
@@ -144,6 +194,14 @@
 .figma-friends-search input::placeholder { color:#b0b0b0; }
 .figma-friends-search button { width:38px; height:38px; display:grid; place-items:center; border:2px solid #78e152; border-radius:50%; background:#fff; color:#58c92e; font:800 20px/1 Manrope,sans-serif; }
 .figma-friends-search-results {
+  position:absolute;
+  z-index:20;
+  top:372px;
+  left:22px;
+  right:32px;
+  max-height:250px;
+  overflow:auto;
+  padding:8px;
   border:2px solid #e5e5e5;
   border-radius:20px;
   background:#fff;
@@ -156,6 +214,13 @@
 .figma-friends-search-results small { color:#b7b7b7; font:700 11px/1 Manrope,sans-serif; }
 .figma-friends-search-results button { min-width:38px; height:31px; border:1.5px solid #51c129; border-radius:20px; background:#78e152; color:#fff; }
 .figma-friends-request-card {
+  position:absolute;
+  top:386px;
+  left:50%;
+  width:661px;
+  min-height:231px;
+  transform:translateX(-50%);
+  padding:17px 15px;
   border:2.2px solid #e5e5e5;
   border-radius:22px;
   background:#fff;
@@ -176,9 +241,16 @@
 .figma-friends-request-row button.is-decline { border-color:#a7284c; background:#e73668; color:#fff; }
 
 @media (max-width:760px) {
-  .figma-friends-screen { background:#fff; }
+  .figma-friends-screen { min-height:100svh; background:#fff; overflow:visible; padding-bottom:110px; }
+  .figma-friends-tabs { top:28px; width:235px; }
+  .figma-friends-message-layout { top:92px; left:12px; right:12px; height:auto; min-height:650px; grid-template-columns:1fr; }
   .figma-friends-conversations { max-height:190px; }
   .figma-friends-chat { min-height:440px; }
-  .figma-friends-add-view > h1 { font-size:52px; }
-  .figma-friends-add-notice { margin-inline:0; }
+  .figma-friends-shared-view > h1 { top:100px; left:18px; font-size:25px; }
+  .figma-friends-shared-grid { top:145px; left:12px; right:12px; grid-template-columns:1fr; grid-auto-rows:190px; }
+  .figma-friends-add-view > h1 { top:120px; left:16px; font-size:52px; }
+  .figma-friends-search { top:208px; left:12px; right:12px; }
+  .figma-friends-search-results { top:267px; left:12px; right:12px; }
+  .figma-friends-add-notice { top:267px; left:12px; right:12px; }
+  .figma-friends-request-card { top:290px; width:calc(100% - 24px); }
 }

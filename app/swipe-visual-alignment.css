@@ -1,0 +1,293 @@
+/* Final responsive dashboard layer. This file is intentionally last so viewport geometry wins over old Figma frame coordinates without changing component visuals. */
+
+/* Shared authenticated workspace: never cap the main canvas at a fixed Figma width. */
+@media (min-width: 761px) {
+  .figma-dashboard-stage {
+    width: calc(100vw - var(--figma-shell-sidebar)) !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .figma-dashboard-main {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin-inline: 0 !important;
+  }
+
+  .figma-dashboard-main > *,
+  .figma-dashboard-main > * > * {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Sidebar: Settings stays physically anchored to the bottom. The navigation stack centers in the usable area above it. */
+@media (min-width: 761px) {
+  .figma-dashboard-sidebar {
+    height: 100dvh !important;
+    min-height: 0 !important;
+  }
+
+  .figma-dashboard-nav {
+    top: calc(50% - 24px) !important;
+    transform: translateY(-50%) !important;
+  }
+
+  .figma-dashboard-settings-link,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
+    top: auto !important;
+    bottom: clamp(20px, 4dvh, 36px) !important;
+  }
+
+  .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-settings-link {
+    display: inline-flex !important;
+  }
+
+  .figma-dashboard-sidebar-logo {
+    top: clamp(34px, 12dvh, 120px) !important;
+  }
+}
+
+/* Saved / Plans: use the whole right-side workspace instead of a fixed 1000px Figma frame. */
+@media (min-width: 761px) {
+  .figma-saved-page {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+    padding-left: clamp(28px, 4vw, 72px) !important;
+    padding-right: clamp(28px, 4vw, 72px) !important;
+    box-sizing: border-box;
+  }
+
+  .figma-category-tabs,
+  .figma-saved-rule {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .figma-saved-grid,
+  [data-testid="saved-grid"] {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)) !important;
+    gap: clamp(18px, 2vw, 32px) !important;
+  }
+
+  .figma-saved-grid > *,
+  [data-testid="saved-grid"] > [data-testid="saved-card"] {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Discover: keep the tabs centered while allowing Search Puddle to occupy the right-side space. */
+@media (min-width: 761px) {
+  [data-testid="feed-header"] {
+    width: 100% !important;
+    max-width: none !important;
+    padding-left: clamp(28px, 4vw, 72px) !important;
+    padding-right: clamp(28px, 4vw, 72px) !important;
+    box-sizing: border-box !important;
+    grid-template-columns: minmax(180px, 1fr) auto minmax(240px, 1fr) !important;
+  }
+
+  [data-testid="feed-search"] {
+    width: 100% !important;
+    max-width: 460px !important;
+    min-width: 0 !important;
+    justify-self: end !important;
+    padding-inline: 14px !important;
+  }
+
+  [data-testid="feed-search"] label {
+    display: block !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  [data-testid="feed-search"] input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Settings overlay: scale with the viewport and render one clean outer shadow only. */
+.puddle-settings-overlay-frame {
+  width: min(90vw, calc(100vw - 48px)) !important;
+  height: min(84dvh, calc(100dvh - 48px)) !important;
+  max-width: none !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(25, 25, 25, .16) !important;
+  border-radius: 25px !important;
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, .16),
+    0 8px 24px rgba(0, 0, 0, .08) !important;
+  background: #fff !important;
+}
+
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  box-shadow: none !important;
+}
+
+body:has(.figma-settings-screen.is-embedded) .figma-settings-screen,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Keep page-level Figma screens fluid even when older styles give them authored frame widths. */
+@media (min-width: 761px) {
+  .figma-swipe-screen,
+  .figma-friends-screen,
+  .figma-pass-screen,
+  .figma-profile-screen,
+  .figma-create-post-screen,
+  .figma-settings-screen {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+  }
+
+  .figma-profile-cards {
+    width: calc(100% - clamp(72px, 10vw, 160px)) !important;
+    max-width: none !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .figma-pass-plan-grid {
+    width: calc(100% - clamp(72px, 12vw, 200px)) !important;
+    max-width: none !important;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)) !important;
+  }
+
+  .figma-friends-shared-grid,
+  .figma-friends-search,
+  .figma-pass-current-plan,
+  .figma-pass-history {
+    max-width: none !important;
+  }
+}
+
+/* Swipe: anchor card, actions, and status to the visible viewport beside the sidebar. */
+@media (min-width: 761px) {
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage {
+    position: fixed !important;
+    top: 50vh !important;
+    left: var(--figma-shell-sidebar) !important;
+    right: 0 !important;
+    width: 400px !important;
+    height: 560px !important;
+    max-width: calc(100vw - var(--figma-shell-sidebar) - 96px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    transform: translateY(-58%) !important;
+  }
+
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions {
+    position: fixed !important;
+    top: calc(50vh + 250px) !important;
+    left: var(--figma-shell-sidebar) !important;
+    right: 0 !important;
+    width: 310px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    transform: none !important;
+  }
+
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
+    position: fixed !important;
+    top: calc(50vh + 345px) !important;
+    left: var(--figma-shell-sidebar) !important;
+    right: 0 !important;
+    width: max-content;
+    max-width: calc(100vw - var(--figma-shell-sidebar) - 48px);
+    margin-left: auto !important;
+    margin-right: auto !important;
+    transform: none !important;
+    text-align: center;
+  }
+
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-filter-trigger {
+    position: fixed !important;
+    top: 36px !important;
+    right: 36px !important;
+    left: auto !important;
+    z-index: 80 !important;
+  }
+}
+
+/* Auto-condensed desktop: restore the bottom Settings control and keep full Search usable instead of collapsing it to an icon. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  .figma-dashboard-sidebar .figma-dashboard-nav {
+    top: calc(50% - 20px) !important;
+    transform: translateY(-50%) !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-link {
+    top: auto !important;
+    bottom: 24px !important;
+    left: 21px !important;
+    width: 60px !important;
+    height: 56px !important;
+    display: grid !important;
+    place-items: center !important;
+    font-size: 0 !important;
+  }
+
+  [data-testid="feed-header"] {
+    grid-template-columns: minmax(80px, 1fr) auto minmax(180px, 1fr) !important;
+  }
+
+  [data-testid="feed-search"] {
+    width: 100% !important;
+    max-width: 360px !important;
+    justify-content: flex-start !important;
+    padding-inline: 12px !important;
+  }
+
+  [data-testid="feed-search"] label {
+    display: block !important;
+  }
+
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions,
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
+    left: 102px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .puddle-settings-overlay-frame {
+    width: calc(100vw - 20px) !important;
+    height: calc(100dvh - 20px) !important;
+    border-radius: 22px !important;
+  }
+
+  .figma-saved-page {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .figma-saved-grid,
+  [data-testid="saved-grid"] {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+  }
+}

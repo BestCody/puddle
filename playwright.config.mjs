@@ -7,14 +7,13 @@ const serverCommand = process.env.CI
   : 'npm run dev -- --hostname localhost'
 const runtimeEnv = {
   ...process.env,
-  ...(e2eB2AuthorizeEndpoint ? { B2_AUTHORIZE_ENDPOINT: e2eB2AuthorizeEndpoint } : {}),
   E2E_B2_AUTHORIZE_ENDPOINT: e2eB2AuthorizeEndpoint,
   E2E_DIAGNOSTICS: 'true',
   NEXT_PUBLIC_GOOGLE_PLACES_UI_KIT_ENABLED: 'true',
   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'e2e-google-browser-key'
 }
 
-if (!e2eB2AuthorizeEndpoint) delete runtimeEnv.B2_AUTHORIZE_ENDPOINT
+delete runtimeEnv.B2_AUTHORIZE_ENDPOINT
 
 export default defineConfig({
   testDir: './tests/e2e',

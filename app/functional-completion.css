@@ -1,5 +1,7 @@
 /* Functional completion layer. Keeps the authored Figma structure while making
    previously decorative controls usable and giving new menus sensible layouts. */
+
+.figma-create-post-add { position: relative; }
 .figma-create-post-add[open] .figma-create-post-add-menu {
   display: block;
   position: absolute;
@@ -33,7 +35,7 @@
 .figma-create-post-location-options small { color: #777; }
 .figma-create-post-add-footer { pointer-events: none; }
 .figma-create-post-add[open] .figma-create-post-add-footer { display: block; }
-.figma-create-post-empty { text-align: center; font: 700 14px/1.4 Manrope,sans-serif; }
+.figma-create-post-empty { margin: 20px auto; width: min(520px,90%); text-align: center; font: 700 14px/1.4 Manrope,sans-serif; }
 .figma-create-post-empty a { margin-left: 10px; color: #111; }
 
 .figma-saved-detail-actions form { display: inline-flex; margin: 0; }
@@ -117,6 +119,7 @@
 }
 
 @media (max-width: 760px) {
+  .figma-create-post-add[open] .figma-create-post-add-menu { left: 50%; bottom: 70px; transform: translateX(-50%); width: min(360px,calc(100vw - 34px)); }
   .figma-notification-preferences { grid-template-columns: 1fr; }
   .figma-notification-list article { grid-template-columns: 1fr; }
 }

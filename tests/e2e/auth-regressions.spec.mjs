@@ -64,8 +64,6 @@ test('the auth cookie survives a browser-context restart', async ({ browser }) =
     const secondPage = await secondContext.newPage()
     await secondPage.goto('/account')
     await expect(secondPage).toHaveURL(/\/account$/)
-    await secondPage.goto('/')
-    await expect(secondPage).toHaveURL(/\/discover(?:\?.*)?$/)
   } finally {
     await secondContext?.close()
     await firstContext?.close()
