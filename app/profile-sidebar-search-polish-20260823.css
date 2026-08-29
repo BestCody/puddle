@@ -30,8 +30,8 @@
 
 /* Saved and Discover share this search component. Enlarge only the glyph,
    preserving the authored button/container dimensions. */
-.puddle-search-trigger > b,
-.puddle-search-dialog > span {
+.puddle-search-trigger > .puddle-search-trigger-icon,
+.puddle-search-dialog > .puddle-search-dialog-icon {
   width: 24px !important;
   height: 24px !important;
   display: grid !important;

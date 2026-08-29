@@ -137,11 +137,14 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const feedHeader = await page.getByTestId('feed-header').boundingBox()
   const feedTabsBox = await page.getByTestId('feed-tabs').boundingBox()
   const feedStream = await page.getByTestId('feed-stream').boundingBox()
+  const composerBox = await composer.boundingBox()
   expect(feedHeader).toBeTruthy()
   expect(feedTabsBox).toBeTruthy()
   expect(feedStream).toBeTruthy()
+  expect(composerBox).toBeTruthy()
   expect(feedStream.y).toBeGreaterThanOrEqual(feedHeader.y + feedHeader.height - 1)
   expect(Math.abs((feedTabsBox.x + feedTabsBox.width / 2) - (feedStream.x + feedStream.width / 2))).toBeLessThanOrEqual(1)
+  expect(Math.abs((feedTabsBox.x + feedTabsBox.width / 2) - (composerBox.x + composerBox.width / 2))).toBeLessThanOrEqual(1)
 
   await openDesktop(page, '/create/post')
   await expect(page).toHaveURL(/\/create\/post(?:\?.*)?$/)
@@ -164,18 +167,23 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const savedSearch = page.getByTestId('saved-search')
   await expect(savedSearch).toBeVisible()
   const savedSearchGeometry = await savedSearch.evaluate((element) => {
-    const arrow = element.querySelector(':scope > b')
+    const arrow = element.querySelector(':scope > .puddle-search-trigger-icon')
     if (!arrow) return null
     const shell = element.getBoundingClientRect()
     const arrowBox = arrow.getBoundingClientRect()
     return {
-      shell: { top: shell.top, bottom: shell.bottom },
-      arrow: { top: arrowBox.top, bottom: arrowBox.bottom },
+      shell: { left: shell.left, top: shell.top, right: shell.right, bottom: shell.bottom, width: shell.width },
+      arrow: { left: arrowBox.left, top: arrowBox.top, right: arrowBox.right, bottom: arrowBox.bottom, width: arrowBox.width },
       boxSizing: getComputedStyle(arrow).boxSizing
     }
   })
   expect(savedSearchGeometry).not.toBeNull()
   expect(savedSearchGeometry.boxSizing).toBe('border-box')
+  expect(savedSearchGeometry.shell.width).toBeGreaterThan(savedSearchGeometry.arrow.width)
+  expect(savedSearchGeometry.arrow.left).toBeGreaterThanOrEqual(savedSearchGeometry.shell.left)
+  expect(savedSearchGeometry.arrow.right).toBeLessThanOrEqual(savedSearchGeometry.shell.right)
+  expect(savedSearchGeometry.arrow.top).toBeGreaterThanOrEqual(savedSearchGeometry.shell.top)
+  expect(savedSearchGeometry.arrow.bottom).toBeLessThanOrEqual(savedSearchGeometry.shell.bottom)
   expect(Math.abs(((savedSearchGeometry.arrow.top + savedSearchGeometry.arrow.bottom) / 2) - ((savedSearchGeometry.shell.top + savedSearchGeometry.shell.bottom) / 2))).toBeLessThanOrEqual(1)
   await savedTabs.getByRole('link', { name: 'Plans', exact: true }).click()
   await expect(page).toHaveURL(/\/plans\?tab=planned/)

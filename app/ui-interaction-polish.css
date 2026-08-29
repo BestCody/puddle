@@ -126,11 +126,15 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   max-height: 100dvh !important;
 }
 
-/* Discover composer uses the same viewport anchor as the Saved floating control. */
-.puddle-discover-create-dock,
-[data-testid="saved-search"] {
-  left: calc(var(--figma-shell-sidebar) + (100vw - var(--figma-shell-sidebar)) / 2) !important;
+/* Discover composer follows the measured center of the Feed/Map column. */
+.puddle-discover-create-dock {
   transform: translateX(-50%) !important;
+}
+
+@media (min-width: 761px) {
+  .puddle-discover-create-dock {
+    left: var(--puddle-feed-anchor-x) !important;
+  }
 }
 
 .puddle-discover-create-dock {
@@ -499,8 +503,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     max-height: none !important;
   }
 
-  .puddle-discover-create-dock,
-  [data-testid="saved-search"] {
+  .puddle-discover-create-dock {
     left: 50% !important;
   }
 

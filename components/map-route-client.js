@@ -14,7 +14,7 @@ const DEFAULT_MAP_CENTER = { latitude: 43.6532, longitude: -79.3832 }
 function FeedTop({ view, query }) {
   return <header className={styles.header} data-testid="feed-header">
     <Link className={styles.back} href="/discover" aria-label="Back to Swipe">‹</Link>
-    <RoutedSegment className={styles.tabs} tone="yellow" activeValue={view} ariaLabel="Feed or map" testId="feed-tabs" items={[{ value: 'feed', label: 'Feed', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]} />
+    <RoutedSegment className={styles.tabs} tone="yellow" activeValue={view} ariaLabel="Feed or map" testId="feed-tabs" layoutAnchor="feed-tabs" items={[{ value: 'feed', label: 'Feed', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]} />
     {view === 'feed' ? <DiscoverSearchOverlay initialQuery={query} /> : <span aria-hidden="true" />}
   </header>
 }
@@ -92,7 +92,7 @@ export function MapRouteClient() {
 
   return <>
     <AuthMessageClient params={params} />
-    <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-view={view}>
+    <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-layout-root="dashboard-feed" data-view={view}>
       <FeedTop view={view} query={query} />
       {view === 'map' ? <MapScreen selectingForPost={selectingForPost} query={query} /> : <SocialFeedClient
         query={query}

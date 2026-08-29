@@ -20,7 +20,7 @@ function isPlainLeftPointer(event) {
   return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
 }
 
-export function RoutedSegment({ items, activeValue, ariaLabel, className = '', tone = 'neutral', testId }) {
+export function RoutedSegment({ items, activeValue, ariaLabel, className = '', tone = 'neutral', testId, layoutAnchor }) {
   const [activeIndex, setActiveIndex] = useState(() => indexFor(items, activeValue))
   const segmentRef = useRef(null)
 
@@ -41,6 +41,7 @@ export function RoutedSegment({ items, activeValue, ariaLabel, className = '', t
     className={`figma-dashboard-segment routed-segment tone-${tone}${className ? ` ${className}` : ''}`}
     aria-label={ariaLabel}
     data-testid={testId}
+    data-layout-anchor={layoutAnchor}
     data-segment-enhanced="true"
     data-segment-count={items.length}
     style={{

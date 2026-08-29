@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
 import { useModalFocus } from '@/components/modal-focus'
 import { PhotoFrame } from '@/components/photo-frame'
@@ -25,6 +25,43 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
   const dockRef = useRef(null)
   const formRef = useRef(null)
   const titleRef = useRef(null)
+
+  useLayoutEffect(() => {
+    const dock = dockRef.current
+    const screen = dock?.closest('[data-layout-root="dashboard-feed"]')
+    const anchor = screen?.querySelector('[data-layout-anchor="feed-tabs"]')
+    if (!dock || !screen || !anchor) return undefined
+
+    let frame = 0
+    const measure = () => {
+      if (!window.matchMedia('(min-width: 761px)').matches) {
+        dock.style.removeProperty('--puddle-feed-anchor-x')
+        return
+      }
+      const bounds = anchor.getBoundingClientRect()
+      dock.style.setProperty('--puddle-feed-anchor-x', `${bounds.left + bounds.width / 2}px`)
+    }
+    const scheduleMeasure = () => {
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        measure()
+      })
+    }
+
+    measure()
+    const resizeObserver = new ResizeObserver(scheduleMeasure)
+    resizeObserver.observe(screen)
+    resizeObserver.observe(anchor)
+    window.addEventListener('resize', scheduleMeasure, { passive: true })
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', scheduleMeasure)
+      if (frame) window.cancelAnimationFrame(frame)
+      dock.style.removeProperty('--puddle-feed-anchor-x')
+    }
+  }, [])
 
   useModalFocus(formRef, titleRef, open)
 
@@ -102,7 +139,7 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
     <button className="puddle-discover-create-trigger" type="button" aria-expanded={open} aria-controls="discover-create-puddle-form" onClick={() => setOpen(true)}>
       <PhotoFrame as="span" className="puddle-discover-create-avatar" src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
       <span className="puddle-discover-create-placeholder">Create a puddle...</span>
-      <b className="puddle-discover-create-arrow" aria-hidden="true">↑</b>
+      <span className="puddle-discover-create-arrow" aria-hidden="true">↑</span>
     </button>
 
     <form ref={formRef} action={createPuddlePost} className="puddle-discover-create-form" id="discover-create-puddle-form" role="dialog" aria-modal="true" aria-label="Create a puddle" aria-hidden={!open} inert={!open} tabIndex={-1}>

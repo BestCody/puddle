@@ -39,10 +39,35 @@ async function assertFeedStructure(page) {
   await expect(composer).toBeVisible()
 
   const headerBox = await header.boundingBox()
+  const tabsBox = await tabs.boundingBox()
   const streamBox = await stream.boundingBox()
+  const composerBox = await composer.boundingBox()
   expect(headerBox).toBeTruthy()
+  expect(tabsBox).toBeTruthy()
   expect(streamBox).toBeTruthy()
+  expect(composerBox).toBeTruthy()
   expect(streamBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height - 1)
+  expect(Math.abs((tabsBox.x + tabsBox.width / 2) - (composerBox.x + composerBox.width / 2))).toBeLessThanOrEqual(1)
+}
+
+async function assertSavedSearchArrowContained(page) {
+  const savedSearch = page.getByTestId('saved-search')
+  const geometry = await savedSearch.evaluate((element) => {
+    const arrow = element.querySelector(':scope > .puddle-search-trigger-icon')
+    if (!arrow) return null
+    const shell = element.getBoundingClientRect()
+    const arrowBox = arrow.getBoundingClientRect()
+    return {
+      shell: { left: shell.left, top: shell.top, right: shell.right, bottom: shell.bottom, width: shell.width },
+      arrow: { left: arrowBox.left, top: arrowBox.top, right: arrowBox.right, bottom: arrowBox.bottom, width: arrowBox.width }
+    }
+  })
+  expect(geometry).not.toBeNull()
+  expect(geometry.shell.width).toBeGreaterThan(geometry.arrow.width)
+  expect(geometry.arrow.left).toBeGreaterThanOrEqual(geometry.shell.left)
+  expect(geometry.arrow.right).toBeLessThanOrEqual(geometry.shell.right)
+  expect(geometry.arrow.top).toBeGreaterThanOrEqual(geometry.shell.top)
+  expect(geometry.arrow.bottom).toBeLessThanOrEqual(geometry.shell.bottom)
 }
 
 test('core authenticated UI behavior works across desktop and mobile', async ({ page }, testInfo) => {
@@ -107,6 +132,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await expect(savedTabs.getByRole('link', { name: 'Saved', exact: true })).toBeVisible()
   await expect(savedTabs.getByRole('link', { name: 'Plans', exact: true })).toBeVisible()
   await assertRouteHealth(page)
+  await assertSavedSearchArrowContained(page)
   await attachRender(page, testInfo, 'saved')
   await savedTabs.getByRole('link', { name: 'Plans', exact: true }).click()
   await expect(page).toHaveURL(/\/plans\?tab=planned/)

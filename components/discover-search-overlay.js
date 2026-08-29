@@ -23,6 +23,7 @@ export function PuddleSearchOverlay({
   triggerLabel = 'Search Puddles',
   triggerVisualLabel = null,
   triggerGlyph = '\u2315',
+  compactTrigger = true,
   triggerClassName = '',
   testId = 'feed-search'
 }) {
@@ -71,16 +72,16 @@ export function PuddleSearchOverlay({
     navigate(query)
   }
 
-  const triggerClass = ['puddle-discover-search-trigger', 'puddle-search-trigger', triggerClassName].filter(Boolean).join(' ')
+  const triggerClass = [compactTrigger ? 'puddle-discover-search-trigger' : '', 'puddle-search-trigger', triggerClassName].filter(Boolean).join(' ')
 
   return <>
     <button className={triggerClass} type="button" onClick={() => setOpen(true)} data-testid={testId} aria-label={triggerLabel} aria-haspopup="dialog" aria-controls={dialogId} aria-expanded={open}>
-      <span>{triggerVisualLabel || triggerLabel}</span><b aria-hidden="true">{triggerGlyph}</b>
+      <span className="puddle-search-trigger-label">{triggerVisualLabel || triggerLabel}</span><span className="puddle-search-trigger-icon" aria-hidden="true">{triggerGlyph}</span>
     </button>
     <div ref={overlayRef} id={dialogId} className={`puddle-discover-search-overlay puddle-search-overlay${open ? ' is-open' : ''}`} role="dialog" aria-modal="true" aria-label={`${triggerLabel} dialog`} aria-hidden={!open} inert={!open} tabIndex={-1}>
       <button className="puddle-discover-search-backdrop puddle-universal-backdrop" type="button" onClick={() => setOpen(false)} aria-label="Close search" />
       <form className="puddle-discover-search-dialog puddle-search-dialog" role="search" onSubmit={submit}>
-        <span aria-hidden="true">⌕</span>
+        <span className="puddle-search-dialog-icon" aria-hidden="true">⌕</span>
         <input ref={inputRef} type="search" value={query} onChange={(event) => update(event.target.value)} placeholder={placeholder} aria-label={placeholder} autoComplete="off" />
         {query ? <button type="button" onClick={() => update('')} aria-label="Clear search">×</button> : null}
       </form>
@@ -106,6 +107,7 @@ export function SavedSearchOverlay({ initialQuery = '', category = 'all' }) {
     triggerLabel="Search Saved"
     triggerVisualLabel={'Search a saved puddle\u2026'}
     triggerGlyph={'\u2191'}
+    compactTrigger={false}
     triggerClassName="puddle-saved-search-trigger"
     testId="saved-search"
   />
