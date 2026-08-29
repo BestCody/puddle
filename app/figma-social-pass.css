@@ -1,0 +1,160 @@
+/* Product navigation accents shared by Friends and Pass. */
+.minimal-product-nav > a[href="/matches"].is-active,
+.minimal-mobile-nav > a[href="/matches"].is-active {
+  --figma-section: #78e152;
+  --figma-section-border: #4caf28;
+}
+.minimal-product-nav > a[href="/membership"].is-active,
+.minimal-mobile-nav > a[href="/membership"].is-active {
+  --figma-section: #e73668;
+  --figma-section-border: #a02044;
+}
+
+/* Pass */
+.figma-pass-page {
+  width: min(100%, 900px);
+  min-height: calc(100vh - 150px);
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+.figma-pass-segment {
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 30px;
+}
+.figma-pass-segment .is-active {
+  background: #e73668;
+  color: #fff;
+  box-shadow: 0 4px 0 rgba(0,0,0,.1);
+}
+.figma-pass-title {
+  margin: 0 auto 36px;
+  text-align: center;
+  color: #e73668;
+  font-size: 42px;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+.figma-pass-title span {
+  color: #333;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: .86em;
+  letter-spacing: -.07em;
+}
+.figma-pass-grid {
+  width: min(100%, 714px);
+  margin: 0 auto;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 20px;
+}
+.figma-pass-card {
+  position: relative;
+  height: 342px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  padding: 20px;
+  border: 2.5px solid #e6e6e6;
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 4px 0 rgba(0,0,0,.1);
+}
+.figma-pass-free { color: #b4b4b4; }
+.figma-pass-paid {
+  border-color: #a02044;
+  background: #e73668;
+  color: #fff;
+  box-shadow: 0 4px 0 rgba(0,0,0,.25), 0 0 20px rgba(231,54,104,.65);
+}
+.figma-pass-price { display: grid; gap: 2px; }
+.figma-pass-price span,
+.figma-pass-price strong {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-weight: 800;
+}
+.figma-pass-price span { font-size: 24px; }
+.figma-pass-price strong { font-size: 39px; line-height: 1; }
+.figma-pass-paid .figma-pass-price span { color: rgba(255,255,255,.72); }
+.figma-pass-paid .figma-pass-price strong { color: #fff2f8; }
+.figma-pass-features {
+  align-self: start;
+  max-width: 260px;
+  color: inherit;
+  opacity: .82;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.figma-pass-features p { margin: 0; }
+.figma-pass-features small { display: block; margin-top: 8px; }
+.figma-plan-state,
+.figma-pass-cta {
+  width: 218px;
+  max-width: 100%;
+  min-height: 50px;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  border: 0;
+  border-radius: 25px;
+  background: #eee;
+  color: #858585;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 17px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.figma-pass-cta {
+  background: rgba(255,255,255,.82);
+  color: #e73668;
+  cursor: pointer;
+}
+.figma-pass-cta:disabled { opacity: .52; cursor: not-allowed; }
+.figma-pass-disclosure {
+  max-width: 650px;
+  margin: 25px auto 0;
+  color: #858585;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.figma-pass-manage {
+  width: min(100%, 780px);
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+.figma-pass-manage > header { text-align: center; margin-bottom: 8px; }
+.figma-pass-manage > header > span { color: #e73668; font-family: monospace; font-weight: 800; }
+.figma-pass-manage h1 { margin: 5px 0; font-size: 36px; }
+.figma-pass-manage header p { margin: 0; color: #858585; }
+.figma-manage-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border: 2.5px solid #e6e6e6;
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 4px 0 rgba(0,0,0,.1);
+}
+.figma-manage-card > div:first-child { display: grid; gap: 4px; }
+.figma-manage-card small { color: #e73668; font-family: monospace; font-weight: 800; }
+.figma-manage-card strong { font-size: 22px; text-transform: capitalize; }
+.figma-manage-card span { color: #858585; font-size: 12px; }
+.figma-manage-card.global-visibility-card {
+  max-width: none;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(240px,340px);
+}
+.figma-manage-card.is-empty { display: grid; justify-items: center; text-align: center; }
+
+@media (max-width: 760px) {
+  .figma-pass-page { padding-inline: 12px; }
+  .figma-pass-title { font-size: 32px; margin-bottom: 25px; }
+  .figma-pass-grid { grid-template-columns: 1fr; width: min(100%, 360px); }
+  .figma-pass-card { height: 300px; }
+  .figma-manage-card,
+  .figma-manage-card.global-visibility-card { grid-template-columns: 1fr; display: grid; }
+}

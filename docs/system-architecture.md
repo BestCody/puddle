@@ -52,17 +52,17 @@ latest Overture Places + Foursquare bulk source
   -> vector normalization / country partitioning
   -> cross-source entity resolution
   -> stable Puddle UUID preservation
-  -> canonical B2 snapshot
+  -> existing Google-ID and photo overlays
+  -> normalized canonical B2 snapshot
   -> packed planner manifests with validated hash ledgers
   -> atomic data/search/active.json pointer activation
 ```
 
 Key durable workflows:
 
-- `global-location-data.yml`: mirrors bulk sources, builds the canonical snapshot, validates the search projections, and activates the B2 pointer.
-- `global-photo-enrichment.yml`: drains ranked, deduplicated provider candidates into canonical B2 media and publishes the photo overlay.
-- `global-wikimedia-enrichment.yml`, `global-mapillary-enrichment.yml`, and `global-kartaview-enrichment.yml`: discover provider candidates into resumable B2 manifests.
-- `sync-b2-data-runtime-auth.yml` / `sync-b2-media-runtime-auth.yml`: verify scoped B2 credentials and store runtime copies in Supabase Vault.
+- `global-bootstrap.yml`: exports current Puddle UUID/source/enrichment state and publishes immutable plus `current` bootstrap Parquet to B2.
+- `global-location-data.yml`: builds the canonical global snapshot and activates the validated planner manifest.
+- `sync-b2-data-runtime-auth.yml` / `sync-b2-media-runtime-auth.yml`: verify scoped B2 credentials and store the runtime copies in Supabase Vault.
 
 Completed dated progress/resume workflows are not part of production architecture and must not be recreated as permanent repository files.
 
@@ -87,8 +87,9 @@ Supabase Storage is not an approved open-photo byte store. It remains active onl
 
 Durable photo operations:
 
-- `global-photo-enrichment.yml`: materializes ranked Wikimedia, Mapillary, and KartaView candidates into canonical B2 media.
-- `global-kartaview-enrichment.yml`: incrementally adds KartaView candidate coverage under its request entitlement.
+- `photo-enrichment.yml`: drains the transitional existing-catalogue candidate queue into canonical B2 media.
+- `global-photo-enrichment.yml`: builds global Wikimedia/Mapillary candidates and materializes selected licensed photos into B2.
+- `global-kartaview-enrichment.yml`: incrementally fills KartaView candidate coverage under its request entitlement.
 - `sync-b2-media-runtime-auth.yml`: verifies the scoped B2 media key and stores runtime read credentials in Supabase Vault.
 
 Provider-specific B2 public URL settings and Supabase Storage open-photo compatibility are retired.
@@ -117,7 +118,7 @@ Google Places is a supplemental provider, not canonical media storage.
 
 - Stable verified Place IDs may be persisted.
 - Google photo bytes and photo resource URLs are not persisted as Puddle media identity.
-- Google photo bytes and photo resource URLs are never a serving path; canonical location images use the B2 photo route.
+- Eligible Google photo rendering is a non-persisted UI fallback.
 - Geoapify is used for configured worldwide geocoding/reverse-geocoding operations.
 
 ## 7. Product state and social system

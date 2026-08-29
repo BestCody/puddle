@@ -5,12 +5,14 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('rebuilt Figma dashboard shell keeps the authored expanded and concise sidebar states accessible', async () => {
-  const [shell, sidebar, nav, styles, flow] = await Promise.all([
+  const [shell, sidebar, nav, styles, densityStyles, finalStyles, layout] = await Promise.all([
     read('components/product-shell.js'),
     read('components/figma-dashboard-sidebar.js'),
     read('components/product-nav.js'),
     read('app/figma-dashboard-rebuild.css'),
-    read('app/figma-dashboard-flow.css')
+    read('app/responsive-density-20260822.css'),
+    read('app/sidebar-layout-followup-20260822.css'),
+    read('app/layout.js')
   ])
 
   assert.match(shell, /FigmaDashboardSidebar/)
@@ -33,13 +35,19 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
   assert.match(nav, /figma-dashboard-nav-label/)
   assert.match(nav, /figma-dashboard-mobile-nav/)
 
+  assert.match(styles, /--figma-shell-sidebar: 280px/)
   assert.match(styles, /\.figma-dashboard-sidebar\s*\{/)
+  assert.match(styles, /width: var\(--figma-shell-sidebar\)/)
   assert.match(styles, /\.figma-dashboard-nav-item\s*\{/)
-  assert.match(flow, /--figma-shell-sidebar:\s*252px/)
-  assert.match(flow, /\.figma-dashboard-sidebar\s*\{[\s\S]*width:\s*var\(--figma-shell-sidebar\)/)
-  assert.match(flow, /\.figma-dashboard-nav-item\s*\{[\s\S]*width:\s*217px[\s\S]*height:\s*53px/)
-  assert.match(flow, /\.figma-dashboard-nav\s*\{[\s\S]*left:\s*16px[\s\S]*width:\s*217px[\s\S]*gap:\s*5px[\s\S]*transform:\s*translateY\(-50%\)/)
-  assert.match(flow, /\.figma-dashboard-sidebar-logo[\s\S]*top:\s*calc\(50% - 236px\)[\s\S]*left:\s*31px/)
+  assert.match(styles, /width: 241px/)
+  assert.match(styles, /height: 56px/)
+  assert.match(densityStyles, /\.figma-dashboard-sidebar\.is-concise\s*\{[\s\S]*width:\s*92px !important/)
+  assert.match(finalStyles, /\.figma-dashboard-sidebar\.is-concise\s*\{[\s\S]*width:\s*92px !important/)
+  assert.match(finalStyles, /\.figma-dashboard-nav-item\s*\{[\s\S]*width:\s*217px !important[\s\S]*height:\s*53px !important/)
+  assert.match(finalStyles, /\.figma-dashboard-nav,[\s\S]*left:\s*16px !important[\s\S]*width:\s*217px !important[\s\S]*gap:\s*5px !important[\s\S]*transform:\s*translateY\(-50%\) !important/)
+  assert.match(finalStyles, /\.figma-dashboard-sidebar-logo,[\s\S]*top:\s*calc\(50% - 236px\) !important[\s\S]*left:\s*31px !important/)
+  assert.match(layout, /import '\.\/responsive-density-20260822\.css'/)
+  assert.match(layout, /import '\.\/sidebar-layout-followup-20260822\.css'/)
 })
 
 test('saved places hydrate canonical metadata and open details as a same-page shared-element morph', async () => {

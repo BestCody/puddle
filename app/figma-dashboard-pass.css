@@ -1,11 +1,26 @@
 /* Pass — Figma 40:312, 46:879, 60:69 */
 .figma-pass-screen {
+  min-height: 832px;
+  position: relative;
+  overflow: hidden;
   background: #f6f6f6;
+}
+.figma-pass-tabs {
+  position: absolute;
+  top: 39px;
+  left: 50%;
+  width: 167px;
+  transform: translateX(-50%);
 }
 .figma-pass-tabs > a:first-child { width: 67px; }
 .figma-pass-tabs > a:last-child { width: 88px; }
 .figma-pass-tabs > .is-active { background: #e73668; }
 .figma-pass-heading {
+  position: absolute;
+  top: 108px;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
   white-space: nowrap;
   color: #e73668;
   font: 800 46px/1 Manrope, Inter, sans-serif;
@@ -15,6 +30,16 @@
   color: #333;
   font: 800 42px/1 var(--figma-mono);
   letter-spacing: -2.5px;
+}
+.figma-pass-plan-grid {
+  position: absolute;
+  top: 220px;
+  left: 50%;
+  width: 712px;
+  display: grid;
+  grid-template-columns: 345px 345px;
+  gap: 22px;
+  transform: translateX(-50%);
 }
 .figma-pass-plan {
   height: 457px;
@@ -42,16 +67,16 @@
 .figma-pass-plan > ul,
 .figma-pass-plan-features {
   position: absolute;
+  top: 126px;
   left: 22px;
   right: 18px;
   margin: 0;
   color: inherit;
   font: 800 18.95px/1.4 Manrope, Inter, sans-serif;
 }
-.figma-pass-plan > ul { top: 126px; }
-.figma-pass-plan-features { top: 138px; }
 .figma-pass-plan > ul,
-.figma-pass-plan-features ul { padding: 0; list-style: none; }
+.figma-pass-plan-features ul { margin: 0; padding: 0; list-style: none; }
+.figma-pass-plan-features { top: 138px; }
 .figma-pass-plan-features p { margin: 0 0 6px; opacity: .6; }
 .figma-pass-plan-state,
 .figma-pass-upgrade {
@@ -75,13 +100,28 @@
 .figma-pass-upgrade { background: rgba(255,255,255,.82); color: #e73668; cursor: pointer; }
 .figma-pass-upgrade:disabled { opacity: .55; cursor: default; }
 .figma-pass-notice {
+  position: absolute;
+  top: 92px;
+  left: 50%;
+  z-index: 8;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
   border-radius: 999px;
   background: #fff;
   color: #858585;
   font: 700 12px/1.2 Manrope, sans-serif;
 }
+
+.figma-pass-manage-screen { position: absolute; inset: 0; }
 .figma-pass-current-plan {
+  position: absolute;
+  top: 111px;
+  left: 30px;
+  right: 43px;
+  height: 200px;
   overflow: hidden;
+  padding: 20px;
   border: 2.5px solid #b7b7b7;
   border-radius: 25px;
   background: #fff;
@@ -99,6 +139,14 @@
 .figma-pass-manage-screen.is-paid .figma-pass-current-plan small { color: #fff; }
 .figma-pass-current-plan strong { font: 600 37.5px/1.05 var(--figma-mono); }
 .figma-pass-current-plan > span { position: absolute; right: 18px; bottom: 18px; font: 600 16px/1 var(--figma-mono); }
+.figma-pass-manage-actions {
+  position: absolute;
+  top: 293px;
+  left: 53px;
+  z-index: 3;
+  display: flex;
+  gap: 12px;
+}
 .figma-pass-manage-actions form { margin: 0; }
 .figma-pass-manage-actions button {
   width: 165px;
@@ -113,7 +161,13 @@
 .figma-pass-manage-actions button.is-dark { border-color: #000; background: #000; color: #fff; }
 .figma-pass-manage-actions button.is-upgrade { border-color: #e73668; background: #e73668; color: #fff; }
 .figma-pass-history {
+  position: absolute;
+  top: 359px;
+  left: 28px;
+  right: 40px;
+  height: 213px;
   overflow: hidden;
+  padding: 18px;
   border: 2.5px solid #e5e5e5;
   border-radius: 25px;
   background: #fff;
@@ -147,6 +201,20 @@
 .figma-pass-history > p { margin: 45px 0 0; text-align: center; }
 
 @media (max-width: 760px) {
-  .figma-pass-screen { overflow-x: hidden; background: #fff; }
+  .figma-pass-screen { min-height: 100svh; overflow-x: hidden; background: #fff; padding-bottom: 120px; }
+  .figma-pass-tabs { top: 32px; }
+  .figma-pass-heading { top: 100px; font-size: 30px; }
+  .figma-pass-heading span { font-size: 28px; }
+  .figma-pass-plan-grid {
+    top: 165px;
+    width: min(345px, calc(100vw - 36px));
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding-bottom: 130px;
+  }
+  .figma-pass-plan { width: 100%; height: 430px; }
+  .figma-pass-current-plan { top: 105px; left: 18px; right: 18px; }
+  .figma-pass-manage-actions { top: 286px; left: 34px; }
   .figma-pass-manage-actions button { width: 135px; }
+  .figma-pass-history { top: 352px; left: 18px; right: 18px; }
 }

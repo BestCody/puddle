@@ -1,0 +1,29 @@
+/* Small product-shell fixes that must win after the imported Figma styles. */
+@media(min-width:761px){
+  .minimal-product-shell{--minimal-sidebar-width:var(--product-sidebar-live-width,288px)!important}
+  .minimal-product-sidebar{overflow:visible}
+  .minimal-sidebar-resizer{position:absolute!important;top:0!important;right:-7px!important;bottom:0!important;width:14px!important;height:auto!important;z-index:90!important;display:block!important;opacity:1!important;cursor:col-resize;touch-action:none;outline:none;background:transparent}
+  .minimal-sidebar-resizer::before{content:"";position:absolute;left:5px;top:50%;width:4px;height:48px;transform:translateY(-50%);border-radius:999px;background:#d8d8d8;box-shadow:0 0 0 1px rgba(0,0,0,.03);transition:background .14s ease,box-shadow .14s ease}
+  .minimal-sidebar-resizer:hover::before,.minimal-sidebar-resizer:focus-visible::before,.is-resizing-product-sidebar .minimal-sidebar-resizer::before{background:#4ca5f7;box-shadow:0 0 0 4px rgba(76,165,247,.14)}
+  body.is-resizing-product-sidebar{cursor:col-resize!important;user-select:none!important}
+
+  .minimal-product-sidebar .minimal-product-nav>a{min-width:0}
+  .minimal-product-sidebar .minimal-product-nav .product-nav-label{min-width:0;white-space:nowrap!important;overflow:hidden;text-overflow:clip}
+  .minimal-product-sidebar:not(.is-expanded){align-items:center;padding-left:12px;padding-right:12px}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-sidebar-logo{width:100%;justify-content:center;padding-left:0}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav{align-items:center}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav>a{position:relative!important;width:58px!important;height:58px!important;min-height:58px;padding:0!important;display:block!important;gap:0!important;margin-inline:auto}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-icon{position:absolute!important;left:50%!important;top:50%!important;width:30px!important;height:30px!important;display:grid!important;place-items:center!important;margin:0!important;padding:0!important;transform:translate(-50%,-50%)!important;line-height:0!important}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-icon>svg,
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-icon>img,
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-icon>.figma-nav-glyph{display:block!important;margin:0!important;place-self:center!important}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .figma-settings-glyph{transform:none!important}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .product-nav-label{display:none!important}
+  .minimal-product-sidebar:not(.is-expanded) .minimal-product-nav .nav-tooltip{display:block!important;left:66px}
+  .minimal-product-sidebar.is-expanded .minimal-product-nav .product-nav-label{display:flex!important;white-space:nowrap!important}
+  .minimal-product-sidebar.is-expanded .minimal-product-nav .nav-tooltip{display:none!important}
+}
+
+/* The three bars are a compact centered stack; grid auto rows used to stretch them vertically. */
+.figma-menu-icon{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:4px!important;width:100%;height:100%}
+.figma-menu-icon>i{flex:0 0 2px;margin:0!important}

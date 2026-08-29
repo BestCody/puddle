@@ -1,4 +1,5 @@
-.discover-share-trigger{position:absolute;top:50px;right:0;z-index:6;width:42px;height:42px;padding:8px;border:1px solid var(--puddle-figma-line);border-radius:50%;background:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 5px 16px rgba(23,17,20,.08)}
+.minimal-swipe-workspace{position:relative}
+.discover-share-trigger{position:absolute;top:50px;right:0;z-index:6;width:42px;height:42px;padding:8px;border:1px solid var(--minimal-line);border-radius:50%;background:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 5px 16px rgba(23,17,20,.08)}
 .discover-share-trigger img{width:24px;height:24px;object-fit:contain;display:block}
 .discover-share-trigger:hover{background:#f8f5f7}
 .discover-share-trigger:focus-visible{outline:3px solid rgba(255,79,123,.35);outline-offset:2px}

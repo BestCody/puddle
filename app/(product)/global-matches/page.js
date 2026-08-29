@@ -30,20 +30,20 @@ export default async function GlobalMatchesPage({ searchParams }) {
     const snapshot = await getGlobalConnectionsSnapshot(session)
     if (!snapshot.active || !snapshot.adult) {
       return <div className="global-connections-page">
-        <header className="product-page-header"><h1>Global likes</h1><Link href="/membership">Membership</Link></header>
+        <header className="minimal-page-header"><h1>Global likes</h1><Link href="/membership">Membership</Link></header>
         <section className="global-locked-card"><span aria-hidden="true">♡</span><h2>Included with Tinder tier</h2><p>Paid members age 18 or older can meet opt-in people worldwide who liked the same place.</p><Link className="membership-primary" href="/membership">See the two tiers</Link></section>
       </div>
     }
 
     return <div className="global-connections-page">
-      <header className="product-page-header"><div><h1>Global likes</h1><p>People who independently liked the same place.</p></div><Link href="/membership">Membership</Link></header>
+      <header className="minimal-page-header"><div><h1>Global likes</h1><p>People who independently liked the same place.</p></div><Link href="/membership">Membership</Link></header>
       <AuthMessage searchParams={searchParams} />
 
       {!snapshot.preference.discoverable ? <section className="global-locked-card"><span aria-hidden="true">◎</span><h2>Global visibility is off</h2><p>Turn it on before seeing or appearing in same-place results. It remains off by default.</p><Link className="membership-primary" href="/membership">Review privacy setting</Link></section> : null}
       {snapshot.unavailable ? <p className="membership-notice">Global connections are temporarily unavailable. Your other Puddle features still work.</p> : null}
 
-      {snapshot.preference.discoverable ? <section className="product-section">
-        <div className="product-section-title"><h2>People</h2><span>{snapshot.people.length} same-place {snapshot.people.length === 1 ? 'like' : 'likes'}</span></div>
+      {snapshot.preference.discoverable ? <section className="minimal-section">
+        <div className="minimal-section-title"><h2>People</h2><span>{snapshot.people.length} same-place {snapshot.people.length === 1 ? 'like' : 'likes'}</span></div>
         {snapshot.people.length ? <div className="global-person-grid">{snapshot.people.map((person) => {
           const avatar = mediaUrl(session, person.avatar_path)
           const cover = mediaUrl(session, person.cover_path)
@@ -58,8 +58,8 @@ export default async function GlobalMatchesPage({ searchParams }) {
         })}</div> : <EmptyState icon="♡" title="No global likes yet." description="When another opt-in Tinder tier member likes a place you saved, they can appear here." actionHref="/discover" actionLabel="Keep swiping" />}
       </section> : null}
 
-      {snapshot.threads.length ? <section className="product-section global-thread-section">
-        <div className="product-section-title"><h2>Messages</h2><span>Requests must be accepted first</span></div>
+      {snapshot.threads.length ? <section className="minimal-section global-thread-section">
+        <div className="minimal-section-title"><h2>Messages</h2><span>Requests must be accepted first</span></div>
         <div className="global-thread-list">{snapshot.threads.map((thread) => {
           const person = thread.person || {}
           const place = thread.place || {}

@@ -5,11 +5,11 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('Swipe page stacks card actions and status in normal flow', async () => {
-  const parity = await read('app/figma-visual-parity.css')
-  assert.match(parity, /\.figma-swipe-workspace\s*\{[^}]*display:\s*grid\s*!important;[\s\S]*grid-template-rows:\s*var\(--puddle-swipe-card-height\) auto auto\s*!important;/s)
-  assert.match(parity, /\.figma-swipe-card-stage\s*\{[^}]*position:\s*relative\s*!important;[^}]*top:\s*auto\s*!important;/s)
-  assert.match(parity, /\.figma-swipe-actions\s*\{[\s\S]*?position:\s*relative\s*!important;[\s\S]*?top:\s*auto\s*!important;/)
-  assert.match(parity, /\.figma-swipe-status\s*\{[^}]*position:\s*relative\s*!important;[^}]*top:\s*auto\s*!important;/s)
+  const flow = await read('app/figma-dashboard-flow.css')
+  assert.match(flow, /\.figma-swipe-workspace\s*\{[^}]*display:\s*grid;[^}]*grid-auto-rows:\s*max-content;[^}]*row-gap:\s*7px;/s)
+  assert.match(flow, /\.figma-swipe-card-stage\s*\{[^}]*position:\s*relative\s*!important;[^}]*top:\s*auto\s*!important;/s)
+  assert.match(flow, /\.figma-swipe-actions,[\s\S]*?position:\s*relative\s*!important;[\s\S]*?top:\s*auto\s*!important;/)
+  assert.match(flow, /\.figma-swipe-status\s*\{[^}]*position:\s*relative\s*!important;[^}]*top:\s*auto\s*!important;/s)
 })
 
 test('Friends Pass Profile and Settings own page geometry through Grid and flow', async () => {

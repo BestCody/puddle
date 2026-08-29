@@ -10,8 +10,12 @@ on:
       - public/figma/**
       - app/landing-demo/**
       - app/landing-phone-demo.css
+      - app/product-polish.css
+      - app/swipe-motion.css
       - app/profile/page.js
       - components/landing-phone-demo.js
+      - components/minimal-swipe-card.js
+      - components/resizable-product-sidebar.js
       - lib/security/headers.js
       - proxy.js
       - tests/integration/landing-phone-demos.test.mjs
@@ -31,8 +35,12 @@ on:
       - public/figma/**
       - app/landing-demo/**
       - app/landing-phone-demo.css
+      - app/product-polish.css
+      - app/swipe-motion.css
       - app/profile/page.js
       - components/landing-phone-demo.js
+      - components/minimal-swipe-card.js
+      - components/resizable-product-sidebar.js
       - lib/security/headers.js
       - proxy.js
       - tests/integration/landing-phone-demos.test.mjs
