@@ -20,12 +20,24 @@ export async function generateMetadata({ params }) {
   if (!market) return { title: 'City not found' }
   const { title, description } = copy(market)
   const canonical = `/places/in/${market.id}`
-  return {
+  // Same cached lookup the page body makes, so this costs nothing extra.
+  const places = await getCachedMarketPlaces(market.id)
+  const base = {
     title,
     description,
     alternates: { canonical },
-    openGraph: { type: 'website', title, description, url: canonical }
+    openGraph: {
+      type: 'website',
+      title,
+      description,
+      url: canonical,
+      images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Puddle' }]
+    }
   }
+  // A hub with nothing to list has no content of its own, only navigation. Keeping those out
+  // of the index avoids a run of near-identical listing-free pages, and crawlers still follow
+  // the city and category links. It reverses itself once the catalogue covers the combination.
+  return places.length ? base : { ...base, robots: { index: false, follow: true } }
 }
 
 export default async function MarketHubPage({ params }) {
