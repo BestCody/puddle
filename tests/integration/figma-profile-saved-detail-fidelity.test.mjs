@@ -17,8 +17,10 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
   assert.match(page, /<div className="figma-profile-identity">\s*<h1>\{displayName\}<\/h1>/)
   assert.doesNotMatch(page, /figma-profile-name-row/)
   assert.doesNotMatch(page, /figma-profile-pass-badge/)
+  assert.doesNotMatch(page, /figma-profile-edit/)
+  assert.doesNotMatch(page, /figma-profile-add-card/)
 
-  // The Figma masonry relationship is represented structurally rather than with page x/y coordinates.
+  // The profile card relationship is represented structurally rather than with page x/y coordinates.
   assert.match(page, /figma-profile-card-column figma-profile-card-column--left/)
   assert.match(page, /figma-profile-card-column figma-profile-card-column--right/)
   const leftColumn = page.indexOf('figma-profile-card-column--left')
@@ -27,9 +29,8 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
   const rightColumn = page.indexOf('figma-profile-card-column--right')
   const location = page.indexOf('figma-profile-location-card', rightColumn)
   const saves = page.indexOf('figma-profile-saves-card', location)
-  const add = page.indexOf('figma-profile-add-card', saves)
   assert.ok(leftColumn >= 0 && puddles > leftColumn && friends > puddles, 'left Figma column must be Puddles → Friends')
-  assert.ok(rightColumn > leftColumn && location > rightColumn && saves > location && add > saves, 'right Figma column must be Location → Saves → Add')
+  assert.ok(rightColumn > leftColumn && location > rightColumn && saves > location, 'right profile column must be Location → Saves')
 
   assert.match(flow, /\.figma-profile-cards\s*\{[^}]*position:\s*relative\s*!important;[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 369px\)\);/s)
   assert.match(flow, /\.figma-profile-card-column\s*\{[^}]*display:\s*grid;[^}]*gap:\s*20px;/s)
