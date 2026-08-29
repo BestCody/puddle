@@ -338,6 +338,7 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   align-items: center !important;
   gap: 8px !important;
   padding: 4px 5px 4px 17px !important;
+  box-sizing: border-box !important;
   transform: translateX(-50%) !important;
   border: 2px solid #e6e6e6 !important;
   border-radius: 25px !important;
@@ -363,11 +364,16 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   flex: 0 0 42px;
   display: grid !important;
   place-items: center;
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
   border: 2px solid #b784e4;
   border-radius: 50%;
   background: #fff;
   color: #b784e4;
   font: 800 22px/1 Manrope, sans-serif !important;
+  text-align: center;
 }
 
 [data-testid='saved-search']:focus-visible {

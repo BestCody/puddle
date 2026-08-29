@@ -135,10 +135,13 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(composer.locator('.puddle-discover-create-trigger')).toBeFocused()
 
   const feedHeader = await page.getByTestId('feed-header').boundingBox()
+  const feedTabsBox = await page.getByTestId('feed-tabs').boundingBox()
   const feedStream = await page.getByTestId('feed-stream').boundingBox()
   expect(feedHeader).toBeTruthy()
+  expect(feedTabsBox).toBeTruthy()
   expect(feedStream).toBeTruthy()
   expect(feedStream.y).toBeGreaterThanOrEqual(feedHeader.y + feedHeader.height - 1)
+  expect(Math.abs((feedTabsBox.x + feedTabsBox.width / 2) - (feedStream.x + feedStream.width / 2))).toBeLessThanOrEqual(1)
 
   await openDesktop(page, '/create/post')
   await expect(page).toHaveURL(/\/create\/post(?:\?.*)?$/)
@@ -158,7 +161,22 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(savedTabs.getByRole('link', { name: 'Plans', exact: true })).toBeVisible()
   await expectActiveSegmentHighlight(savedTabs)
   await expect(page.getByTestId('saved-categories')).toBeVisible()
-  await expect(page.getByTestId('saved-search')).toBeVisible()
+  const savedSearch = page.getByTestId('saved-search')
+  await expect(savedSearch).toBeVisible()
+  const savedSearchGeometry = await savedSearch.evaluate((element) => {
+    const arrow = element.querySelector(':scope > b')
+    if (!arrow) return null
+    const shell = element.getBoundingClientRect()
+    const arrowBox = arrow.getBoundingClientRect()
+    return {
+      shell: { top: shell.top, bottom: shell.bottom },
+      arrow: { top: arrowBox.top, bottom: arrowBox.bottom },
+      boxSizing: getComputedStyle(arrow).boxSizing
+    }
+  })
+  expect(savedSearchGeometry).not.toBeNull()
+  expect(savedSearchGeometry.boxSizing).toBe('border-box')
+  expect(Math.abs(((savedSearchGeometry.arrow.top + savedSearchGeometry.arrow.bottom) / 2) - ((savedSearchGeometry.shell.top + savedSearchGeometry.shell.bottom) / 2))).toBeLessThanOrEqual(1)
   await savedTabs.getByRole('link', { name: 'Plans', exact: true }).click()
   await expect(page).toHaveURL(/\/plans\?tab=planned/)
   await page.getByTestId('saved-tabs').getByRole('link', { name: 'Saved', exact: true }).click()
