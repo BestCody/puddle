@@ -50,7 +50,7 @@ function normalizedResult(result, source, accuracy = '') {
   }
 }
 
-export function LocationPicker({ profile = {}, error = '' }) {
+export function LocationPicker({ profile = {}, error = '', onLocationChange }) {
   const [location, setLocation] = useState(() => initialLocation(profile))
   const [query, setQuery] = useState(location.label || location.city || '')
   const [results, setResults] = useState([])
@@ -62,6 +62,11 @@ export function LocationPicker({ profile = {}, error = '' }) {
   useEffect(() => {
     setEditedAfterError(false)
   }, [error])
+
+  useEffect(() => {
+    onLocationChange?.(location)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location])
 
   function editQuery(nextQuery) {
     const next = nextQuery.slice(0, 160)

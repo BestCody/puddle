@@ -1,6 +1,5 @@
 import { AuthMessage } from '@/components/auth-message'
 import { OnboardingForm } from '@/components/onboarding-form'
-import { PuddleLogo } from '@/components/puddle-logo'
 import { signOut } from '@/app/auth/actions'
 import { completeDateOnboarding } from './actions'
 import { requireUser } from '@/lib/auth/user'
@@ -28,26 +27,20 @@ export default async function OnboardingPage({ searchParams }) {
   const { user, profile } = await requireUser()
   if (profile?.onboarding_completed_at) redirect('/discover')
 
+  // Figma: Puddle Official / Changes / Onboarding — the setup flow is a centred
+  // widget floating over a blurred view of the product.
   return (
-    <div className="app-shell onboarding-shell">
-      <header className="app-header onboarding-header">
-        <PuddleLogo />
-        <form className="onboarding-signout" action={signOut}>
-          <button type="submit"><span aria-hidden="true">↗</span> Sign out</button>
-        </form>
-      </header>
-      <main className="app-main onboarding-main">
-        <span className="eyebrow">One quick setup</span>
-        <h1 className="page-title">Build your date deck.</h1>
-        <p className="muted onboarding-intro">Tell Puddle what kinds of places you enjoy. We use your selected location and swipes to find nearby options anywhere in the world.</p>
-        <AuthMessage searchParams={searchParams} />
-        <OnboardingForm
-          action={completeDateOnboarding}
-          profile={profile || {}}
-          userDisplayName={user.user_metadata?.display_name || ''}
-          dateLocationOptions={dateLocationOptions}
-        />
-      </main>
+    <div className="pdl-onb-page">
+      <div className="pdl-onb-site" aria-hidden="true" />
+      <div className="pdl-onb-scrim" aria-hidden="true" />
+      <div className="pdl-onb-flash"><AuthMessage searchParams={searchParams} /></div>
+      <OnboardingForm
+        action={completeDateOnboarding}
+        profile={profile || {}}
+        userDisplayName={user.user_metadata?.display_name || ''}
+        dateLocationOptions={dateLocationOptions}
+        signOutAction={signOut}
+      />
     </div>
   )
 }
