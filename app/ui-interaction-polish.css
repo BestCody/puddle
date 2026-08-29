@@ -448,10 +448,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     display: none !important;
   }
 
-  [data-testid="feed-header"] {
-    grid-template-columns: minmax(0, 1fr) auto minmax(48px, 1fr) !important;
-  }
-
   [data-testid="feed-search"] {
     width: 46px !important;
     justify-content: center;

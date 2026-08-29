@@ -93,7 +93,6 @@
     padding-left: clamp(28px, 4vw, 72px) !important;
     padding-right: clamp(28px, 4vw, 72px) !important;
     box-sizing: border-box !important;
-    grid-template-columns: minmax(180px, 1fr) auto minmax(240px, 1fr) !important;
   }
 
   [data-testid="feed-search"] {
@@ -247,10 +246,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     display: grid !important;
     place-items: center !important;
     font-size: 0 !important;
-  }
-
-  [data-testid="feed-header"] {
-    grid-template-columns: minmax(80px, 1fr) auto minmax(180px, 1fr) !important;
   }
 
   [data-testid="feed-search"] {
