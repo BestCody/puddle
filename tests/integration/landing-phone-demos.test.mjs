@@ -61,6 +61,9 @@ test('landing feature phones map to the correct interactive Figma product screen
 
   // Static source checks prove the demos are wired for interaction; Playwright covers behavior in-browser.
   for (const stateSetter of ['setIndex', 'setTab', 'setCategory', 'setQuery', 'setView', 'setEditing', 'setFollowing', 'setMessageOpen']) assert(demoComponent.includes(stateSetter), `${stateSetter} interaction state must exist`)
+  assert.match(demoComponent, /function DemoBottomNav\(\{ active, onNavigate \}\)/)
+  assert.match(demoComponent, /onClick=\{\(\) => onNavigate\(view\)\}/)
+  assert.doesNotMatch(demoComponent, /<a key=\{view\}/, 'Phone navigation must not perform frame document navigation')
   assert.match(demoComponent, /useModalFocus/)
   assert.match(demoComponent, /key === 'Escape'/)
   assert.match(demoComponent, /landing-demo-dialog" role="dialog" aria-modal="true" aria-label=\{`\$\{title\} details`\} tabIndex=\{-1\}/)

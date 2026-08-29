@@ -68,6 +68,10 @@ jobs:
             --linked \
             --project-ref cegoqtvajwajczbofpep \
             --file supabase/migrations/20260826200000_global_photo_candidate_registry.sql
+          supabase db query \
+            --linked \
+            --project-ref cegoqtvajwajczbofpep \
+            --file supabase/migrations/20260828120000_bulk_photo_provider.sql
       - name: Verify database uniqueness invariants in a rollback-only transaction
         shell: bash
         run: |

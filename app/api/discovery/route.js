@@ -2,6 +2,7 @@ import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { getDiscoveryFeed } from '@/lib/app/discovery'
+import { enforceRateLimit } from '@/lib/security/rate-limit'
 import {
   SERVER_LATENCY_BUDGET_MS,
   createTraceId,
@@ -154,6 +155,8 @@ export async function POST(request) {
   if (!verifyCsrf(request)) return withTrace(NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 }), traceId)
   const auth = await authenticatedSession(traceId, request.headers)
   if (auth.error) return withTrace(auth.error, traceId)
+  const limited = await enforceRateLimit({ headers: request.headers, userId: auth.session.user.id, action: 'discovery_continuation' })
+  if (!limited.allowed) return withTrace(NextResponse.json({ error: 'Too many discovery continuation requests. Try again shortly.' }, { status: 429, headers: { 'retry-after': String(limited.retryAfter || 60) } }), traceId)
   try {
     const body = await readJsonLimited(request, 40_000)
     const filters = body?.filters && typeof body.filters === 'object' && !Array.isArray(body.filters) ? body.filters : {}

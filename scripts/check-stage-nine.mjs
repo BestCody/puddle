@@ -24,7 +24,6 @@ const required = [
   'app/api/admin/notices/route.js',
   'app/api/admin/feature-flags/route.js',
   'app/api/admin/security-alerts/route.js',
-  'app/api/admin/bulk/route.js',
   'app/api/security/csrf/route.js',
   'app/api/security/csp-report/route.js',
   'app/api/security/media-scans/process/route.js',

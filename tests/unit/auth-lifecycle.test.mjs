@@ -94,6 +94,35 @@ test('password recovery is allowed before onboarding is complete', () => {
   assert.equal(authenticatedDestination(null, '/update-password'), '/update-password')
 })
 
+test('authentication flows isolate the browser session and keep recovery links on production', async () => {
+  const actions = await readFile(new URL('../../app/auth/actions.js', import.meta.url), 'utf8')
+  const signInStart = actions.indexOf('export async function signIn(')
+  const signInSessionClear = actions.indexOf("await clearLocalAuthSession(supabase)", signInStart)
+  const signInRequest = actions.indexOf('signInWithPassword', signInStart)
+
+  assert(signInStart >= 0)
+  assert(signInSessionClear > signInStart && signInSessionClear < signInRequest, 'sign-in must clear a previous local session before checking credentials')
+  assert.match(actions, /if \(process\.env\.NODE_ENV === 'production'\) return 'https:\/\/puddle\.you'/)
+  assert.doesNotMatch(actions, /requestHeaders\.get\('origin'\) \|\| 'http:\/\/localhost:3000'/)
+})
+
+test('browser and server auth clients use the same persistent cookie policy', async () => {
+  const [cookieOptions, browserClient, serverClient, proxyClient] = await Promise.all([
+    readFile(new URL('../../lib/supabase/cookie-options.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../lib/supabase/client.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../lib/supabase/server.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../lib/supabase/proxy.js', import.meta.url), 'utf8')
+  ])
+
+  assert.match(cookieOptions, /AUTH_COOKIE_MAX_AGE_SECONDS = 400 \* 24 \* 60 \* 60/)
+  assert.match(cookieOptions, /sameSite: 'lax'/)
+  assert.match(cookieOptions, /maxAge: AUTH_COOKIE_MAX_AGE_SECONDS/)
+  assert.match(browserClient, /cookieOptions: authCookieOptions\(\)/)
+  assert.match(serverClient, /cookieOptions: authCookieOptions\(\)/)
+  assert.match(proxyClient, /cookieOptions: authCookieOptions\(\)/)
+  assert.doesNotMatch(browserClient, /persistSession:\s*false/)
+})
+
 test('birth date entry keeps only eight digits and formats them predictably', () => {
   assert.equal(formatBirthDateDigits('2000abc0219xyz999'), '2000-02-19')
   assert.equal(formatBirthDateDigits('200002'), '2000-02')

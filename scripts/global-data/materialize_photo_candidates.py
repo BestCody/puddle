@@ -57,10 +57,19 @@ parser.add_argument(
     default=None,
     help='Optional explicit pilot bound; the production drain remains uncapped when omitted.',
 )
+parser.add_argument(
+    '--bulk-manifest',
+    default=os.getenv('GLOBAL_PHOTO_BULK_MANIFEST', ''),
+    help='Optional local Parquet manifest produced by build_bulk_photo_manifest.py.',
+)
 args = parser.parse_args()
 args.snapshot = safe_partition(args.snapshot, 'snapshot')
 if args.max_locations is not None and args.max_locations < 1:
     raise ValueError('--max-locations must be positive when supplied')
+if args.bulk_manifest:
+    args.bulk_manifest = os.path.abspath(os.path.expanduser(args.bulk_manifest))
+    if not os.path.isfile(args.bulk_manifest):
+        raise RuntimeError(f'bulk photo manifest does not exist: {args.bulk_manifest}')
 
 DATA_BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
 DATA_ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
@@ -93,7 +102,7 @@ ATTEMPT_RETRY_HOURS = max(1, min(24, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_H
 CLAIM_LEASE_SECONDS = max(300, min(3600, int(os.getenv('GLOBAL_PHOTO_CLAIM_LEASE_SECONDS', '1200'))))
 MAX_BYTES = 10_000_000
 MAX_SOURCE_PIXELS = 40_000_000
-PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3}
+PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3, 'yfcc100m': 4}
 TRANSIENT_HTTP_CODES = {408, 425, 429, 500, 502, 503, 504}
 WIKIMEDIA_DOWNLOAD_CONCURRENCY = max(1, min(2, int(os.getenv('GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY', '2'))))
 WIKIMEDIA_DOWNLOAD_MBIT = max(1.0, min(25.0, float(os.getenv('GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_MBIT', '25'))))
@@ -394,6 +403,8 @@ def approved_host(provider, hostname):
         return host.endswith('.fbcdn.net') or host == 'fbcdn.net' or host.endswith('.mapillary.com') or host == 'mapillary.com'
     if provider == 'kartaview':
         return host.endswith('.openstreetcam.org') or host == 'openstreetcam.org' or host.endswith('.kartaview.org') or host == 'kartaview.org'
+    if provider == 'yfcc100m':
+        return host == 'staticflickr.com' or host.endswith('.staticflickr.com')
     return False
 
 
@@ -495,6 +506,18 @@ def download(url, provider):
                 gate.release()
     raise RuntimeError(f'{provider} image download exhausted retries')
 
+
+def read_local_image(path):
+    """Read a staged dataset image without creating another worker copy."""
+    value = os.path.abspath(os.path.expanduser(str(path or '').strip()))
+    if not value or not os.path.isfile(value):
+        raise RuntimeError('staged image file is missing')
+    with open(value, 'rb') as stream:
+        body = stream.read(MAX_BYTES + 1)
+    if not body or len(body) > MAX_BYTES:
+        raise RuntimeError('staged image is empty or exceeds 10 MB')
+    return body
+
 def dhash(image):
     gray = image.convert('L').resize((9, 8), Image.Resampling.LANCZOS)
     pixels = list(gray.getdata())
@@ -563,11 +586,74 @@ def upload_media(data, sha256):
     return key
 
 
+def inspect_canonical_media(data):
+    """Recover dimensions/fingerprints from an already canonical B2 JPEG."""
+    with Image.open(io.BytesIO(data)) as image:
+        image.load()
+        perceptual = dhash(image)
+        confirmation = average_hash(image)
+        width, height = image.width, image.height
+    return width, height, perceptual, confirmation
+
+
+def recover_materialized_candidate(row):
+    """Close the claim-to-Parquet crash window without redownloading a source."""
+    provider_code = PROVIDER_CODES.get(str(row.get('provider') or ''))
+    external_id = str(row.get('external_photo_id') or '').strip()
+    if not provider_code or not external_id:
+        return None
+    response = supabase_rpc('get_global_photo_candidate_v1', {
+        'p_provider_code': provider_code,
+        'p_provider_asset_id': external_id,
+    })
+    if not isinstance(response, list) or len(response) != 1 or not isinstance(response[0], dict):
+        return None
+    record = response[0]
+    if str(record.get('candidate_status') or '') != 'accepted':
+        return None
+    if str(record.get('location_id') or '') != str(row.get('location_id') or ''):
+        return None
+    content_hash = str(record.get('content_sha256') or '').strip().lower()
+    storage_key = str(record.get('storage_key') or '').strip()
+    if not re.fullmatch(r'[0-9a-f]{64}', content_hash):
+        raise RuntimeError('accepted candidate has an invalid content SHA-256')
+    expected_key = f'{MEDIA_PREFIX}/{content_hash[:2]}/{content_hash}.jpg'
+    if storage_key != expected_key:
+        raise RuntimeError('accepted candidate has a noncanonical B2 storage key')
+    response = s3.get_object(Bucket=MEDIA_BUCKET, Key=storage_key)
+    body_stream = response['Body']
+    try:
+        body = body_stream.read(MAX_BYTES + 1)
+    finally:
+        body_stream.close()
+    if not body or len(body) > MAX_BYTES or hashlib.sha256(body).hexdigest() != content_hash:
+        raise RuntimeError('accepted candidate B2 bytes failed recovery integrity checks')
+    head = s3.head_object(Bucket=MEDIA_BUCKET, Key=storage_key)
+    if (
+        int(head.get('ContentLength', -1)) != len(body)
+        or head.get('Metadata', {}).get('sha256') != content_hash
+        or head.get('Metadata', {}).get('purpose') != 'puddle_open_location_photo'
+        or str(head.get('ContentType') or '').lower() != 'image/jpeg'
+    ):
+        raise RuntimeError('accepted candidate B2 metadata failed recovery integrity checks')
+    width, height, perceptual, _ = inspect_canonical_media(body)
+    candidate = dict(row)
+    return {
+        'location_id': str(row['location_id']), 'provider': row['provider'], 'external_photo_id': external_id,
+        'storage_backend': 'b2', 'storage_key': storage_key, 'content_hash': content_hash,
+        'perceptual_hash': perceptual, 'byte_size': len(body), 'width': width, 'height': height,
+        'attribution': candidate.get('attribution'), 'attribution_url': candidate.get('page_url'),
+        'license': candidate.get('license'), 'license_url': candidate.get('license_url'),
+        'source_dataset': candidate.get('source_dataset'),
+        'rank_score': float(row.get('rank_score') or 0), 'verified_at': datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def prepare_candidate(row, candidate=None):
     provider = row['provider']
     candidate = dict(candidate or row)
     asset = canonical_asset_url(candidate.get('asset_url')) if provider == 'kartaview' else candidate.get('asset_url')
-    body = download(asset, provider)
+    body = read_local_image(candidate['image_path']) if candidate.get('image_path') else download(asset, provider)
     normalized, width, height, perceptual, confirmation = normalize(body)
     content_hash = hashlib.sha256(normalized).hexdigest()
     return candidate, normalized, width, height, perceptual, confirmation, content_hash
@@ -582,6 +668,13 @@ def materialize_location(candidates):
             reservation = reserve_candidate(row)
             reservation_status = str(reservation.get('reservation_status') or '')
             if reservation_status != 'reserved':
+                if reservation_status == 'seen':
+                    recovered = recover_materialized_candidate(row)
+                    if recovered:
+                        return recovered, {
+                            'location_id': location_id, 'status': 'materialized',
+                            'recovered': True, 'attempts': attempts, 'winnerRank': row['candidate_rank'],
+                        }
                 attempts.append({
                     'provider': row['provider'], 'candidateRank': row['candidate_rank'],
                     'preflight': reservation_status,
@@ -593,7 +686,10 @@ def materialize_location(candidates):
                 raise RuntimeError('candidate reservation succeeded without a token')
 
             candidate = dict(row)
-            if row['provider'] == 'mapillary':
+            # Bulk OSV/MSLS rows already carry the staged image and its source
+            # identity. Live API Mapillary rows still resolve the current CDN
+            # URL through Graph before downloading.
+            if row['provider'] == 'mapillary' and not row.get('image_path'):
                 candidate.update(mapillary_details(row['external_photo_id']))
                 binding = bind_candidate_url(candidate_token, candidate.get('asset_url'))
                 binding_status = str(binding.get('bind_status') or '')
@@ -645,6 +741,7 @@ def materialize_location(candidates):
                 'storage_backend': 'b2', 'storage_key': key, 'content_hash': content_hash, 'perceptual_hash': perceptual,
                 'byte_size': len(normalized), 'width': width, 'height': height, 'attribution': candidate.get('attribution'),
                 'attribution_url': candidate.get('page_url'), 'license': candidate.get('license'), 'license_url': candidate.get('license_url'),
+                'source_dataset': candidate.get('source_dataset'),
                 'rank_score': float(row.get('rank_score') or 0), 'verified_at': datetime.now(timezone.utc).isoformat()
             }, {'location_id': location_id, 'status': 'materialized', 'attempts': attempts, 'winnerRank': row['candidate_rank']}
         except Exception as error:
@@ -684,6 +781,15 @@ con.execute(B2_SECRET_SQL)
 def countries():
     if args.countries.strip():
         return sorted({safe_partition(v.strip().upper(), 'country') for v in args.countries.split(',') if v.strip()})
+    if args.bulk_manifest:
+        manifest = args.bulk_manifest.replace("'", "''")
+        return [
+            safe_partition(r[0], 'country')
+            for r in con.execute(
+                f"SELECT DISTINCT upper(trim(cast(country_code AS VARCHAR))) FROM read_parquet('{manifest}', union_by_name=true) ORDER BY 1"
+            ).fetchall()
+            if r[0]
+        ]
     glob = f's3://{DATA_BUCKET}/{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}/country_code=*/locations.parquet'
     return [safe_partition(r[0], 'country') for r in con.execute(f"SELECT DISTINCT country_code FROM read_parquet('{glob}',hive_partitioning=true) ORDER BY country_code").fetchall() if r[0]]
 
@@ -696,7 +802,11 @@ def candidate_batches(query, location_limit=None):
     Ranking is applied only to the current location batch, which avoids the
     unbounded global window that previously hid progress for hours.
     """
-    columns = ['location_id', 'provider', 'external_photo_id', 'asset_url', 'page_url', 'attribution', 'license', 'license_url', 'rank_score', 'candidate_rank']
+    columns = [
+        'location_id', 'provider', 'external_photo_id', 'image_path', 'asset_url',
+        'page_url', 'attribution', 'license', 'license_url', 'source_dataset',
+        'dataset_priority', 'distance_m', 'rank_score', 'candidate_rank',
+    ]
     con.execute('DROP TABLE IF EXISTS photo_candidate_queue')
     queue_started = time.monotonic()
     emitted_locations = 0
@@ -724,12 +834,14 @@ def candidate_batches(query, location_limit=None):
                 SELECT q.*,
                        row_number() OVER (
                          PARTITION BY q.location_id
-                         ORDER BY q.provider_rank,coalesce(q.rank_score,0) DESC,q.external_photo_id
+                           ORDER BY q.provider_rank,coalesce(q.rank_score,0) DESC,
+                                    coalesce(q.dataset_priority,99),coalesce(q.distance_m,1e18),q.external_photo_id
                        ) candidate_rank
                 FROM photo_candidate_queue q
                 JOIN target_locations t ON t.location_id=q.location_id
               )
-              SELECT location_id,provider,external_photo_id,asset_url,page_url,attribution,license,license_url,rank_score,candidate_rank
+              SELECT location_id,provider,external_photo_id,image_path,asset_url,page_url,attribution,license,license_url,
+                     source_dataset,dataset_priority,distance_m,rank_score,candidate_rank
               FROM ranked
               WHERE candidate_rank <= {FALLBACK_CANDIDATES}
               ORDER BY location_id,candidate_rank
@@ -770,9 +882,9 @@ def write_results(country, results):
     if not results:
         return
     con.execute('DROP TABLE IF EXISTS materialized_results')
-    con.execute('CREATE TEMP TABLE materialized_results(location_id VARCHAR,provider VARCHAR,external_photo_id VARCHAR,storage_backend VARCHAR,storage_key VARCHAR,content_hash VARCHAR,perceptual_hash VARCHAR,byte_size BIGINT,width INTEGER,height INTEGER,attribution VARCHAR,attribution_url VARCHAR,license VARCHAR,license_url VARCHAR,rank_score DOUBLE,verified_at VARCHAR)')
-    keys = ['location_id', 'provider', 'external_photo_id', 'storage_backend', 'storage_key', 'content_hash', 'perceptual_hash', 'byte_size', 'width', 'height', 'attribution', 'attribution_url', 'license', 'license_url', 'rank_score', 'verified_at']
-    con.executemany('INSERT INTO materialized_results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [tuple(r[k] for k in keys) for r in results])
+    con.execute('CREATE TEMP TABLE materialized_results(location_id VARCHAR,provider VARCHAR,external_photo_id VARCHAR,storage_backend VARCHAR,storage_key VARCHAR,content_hash VARCHAR,perceptual_hash VARCHAR,byte_size BIGINT,width INTEGER,height INTEGER,attribution VARCHAR,attribution_url VARCHAR,license VARCHAR,license_url VARCHAR,source_dataset VARCHAR,rank_score DOUBLE,verified_at VARCHAR)')
+    keys = ['location_id', 'provider', 'external_photo_id', 'storage_backend', 'storage_key', 'content_hash', 'perceptual_hash', 'byte_size', 'width', 'height', 'attribution', 'attribution_url', 'license', 'license_url', 'source_dataset', 'rank_score', 'verified_at']
+    con.executemany('INSERT INTO materialized_results VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [tuple(r[k] for k in keys) for r in results])
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     out = f's3://{DATA_BUCKET}/{DATA_PREFIX}/enrichment/photo_metadata/snapshot={args.snapshot}/country_code={country}/part-{stamp}.parquet'
     con.execute(f"COPY materialized_results TO '{out}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 100000)")
@@ -831,12 +943,22 @@ for country in countries():
     wiki_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=wikimedia-commons/snapshot={args.snapshot}/country_code={country}'
     karta_prefix = f'{DATA_PREFIX}/enrichment/photo_candidates/provider=kartaview/snapshot={args.snapshot}/country_code={country}'
     sources = []
-    if prefix_exists(map_prefix):
-        sources.append(f"SELECT location_id,provider,external_photo_id,NULL::VARCHAR asset_url,NULL::VARCHAR page_url,NULL::VARCHAR attribution,NULL::VARCHAR license,NULL::VARCHAR license_url,rank_score FROM read_parquet('s3://{DATA_BUCKET}/{map_prefix}/candidates.parquet')")
-    if prefix_exists(wiki_prefix):
-        sources.append(f"SELECT location_id,provider,external_photo_id,asset_url,page_url,attribution,license,license_url,rank_score FROM read_parquet('s3://{DATA_BUCKET}/{wiki_prefix}/candidates.parquet')")
-    if prefix_exists(karta_prefix):
-        sources.append(f"SELECT location_id,provider,external_photo_id,asset_url,page_url,attribution,license,license_url,rank_score FROM read_parquet('s3://{DATA_BUCKET}/{karta_prefix}/candidates.parquet')")
+    if args.bulk_manifest:
+        manifest = args.bulk_manifest.replace("'", "''")
+        sources.append(
+            f"SELECT cast(location_id AS VARCHAR) location_id,provider,external_photo_id,image_path,asset_url,page_url,"
+            f"attribution,license,license_url,source_dataset,cast(dataset_priority AS INTEGER) dataset_priority,"
+            f"cast(distance_m AS DOUBLE) distance_m,cast(rank_score AS DOUBLE) rank_score "
+            f"FROM read_parquet('{manifest}', union_by_name=true) "
+            f"WHERE upper(trim(cast(country_code AS VARCHAR)))='{country}'"
+        )
+    else:
+        if prefix_exists(map_prefix):
+            sources.append(f"SELECT location_id,provider,external_photo_id,NULL::VARCHAR image_path,NULL::VARCHAR asset_url,NULL::VARCHAR page_url,NULL::VARCHAR attribution,NULL::VARCHAR license,NULL::VARCHAR license_url,NULL::VARCHAR source_dataset,NULL::INTEGER dataset_priority,NULL::DOUBLE distance_m,rank_score FROM read_parquet('s3://{DATA_BUCKET}/{map_prefix}/candidates.parquet')")
+        if prefix_exists(wiki_prefix):
+            sources.append(f"SELECT location_id,provider,external_photo_id,NULL::VARCHAR image_path,asset_url,page_url,attribution,license,license_url,NULL::VARCHAR source_dataset,NULL::INTEGER dataset_priority,NULL::DOUBLE distance_m,rank_score FROM read_parquet('s3://{DATA_BUCKET}/{wiki_prefix}/candidates.parquet')")
+        if prefix_exists(karta_prefix):
+            sources.append(f"SELECT location_id,provider,external_photo_id,NULL::VARCHAR image_path,asset_url,page_url,attribution,license,license_url,NULL::VARCHAR source_dataset,NULL::INTEGER dataset_priority,NULL::DOUBLE distance_m,rank_score FROM read_parquet('s3://{DATA_BUCKET}/{karta_prefix}/candidates.parquet')")
     if not sources:
         continue
     union = ' UNION ALL '.join(sources)
@@ -895,7 +1017,8 @@ for country in countries():
           recent_photo_attempts AS ({recent_attempts_sql}),
           l AS (SELECT cast(id AS VARCHAR) location_id,category FROM read_parquet('{loc}')),
           eligible_candidates AS (
-            SELECT cast(c.location_id AS VARCHAR) location_id,c.provider,c.external_photo_id,c.asset_url,c.page_url,c.attribution,c.license,c.license_url,c.rank_score,
+            SELECT cast(c.location_id AS VARCHAR) location_id,c.provider,c.external_photo_id,c.image_path,c.asset_url,c.page_url,c.attribution,c.license,c.license_url,
+              c.source_dataset,c.dataset_priority,c.distance_m,c.rank_score,
               CASE WHEN l.category IN ('park','museum','gallery','attraction','scenic_spot')
                    THEN CASE c.provider WHEN 'wikimedia-commons' THEN 0 WHEN 'mapillary' THEN 1 WHEN 'kartaview' THEN 2 ELSE 3 END
                    ELSE CASE c.provider WHEN 'mapillary' THEN 0 WHEN 'wikimedia-commons' THEN 1 WHEN 'kartaview' THEN 2 ELSE 3 END END provider_rank
@@ -904,7 +1027,8 @@ for country in countries():
             WHERE NOT EXISTS (SELECT 1 FROM existing_photos e WHERE e.location_id=cast(c.location_id AS VARCHAR))
               AND NOT EXISTS (SELECT 1 FROM recent_photo_attempts a WHERE a.location_id=cast(c.location_id AS VARCHAR))
           )
-          SELECT location_id,provider,external_photo_id,asset_url,page_url,attribution,license,license_url,rank_score,provider_rank
+          SELECT location_id,provider,external_photo_id,image_path,asset_url,page_url,attribution,license,license_url,
+                 source_dataset,dataset_priority,distance_m,rank_score,provider_rank
           FROM eligible_candidates
         """
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
@@ -976,4 +1100,5 @@ print(json.dumps({
     'locationsSeen': locations_seen,
     'materialized': materialized_total,
     'maxLocations': args.max_locations,
+    'bulkManifest': args.bulk_manifest or None,
 }, indent=2), flush=True)

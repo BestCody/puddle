@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { normalizeOrigin, requestOrigin } from '@/lib/auth/origin'
 import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
 import { authenticatedDestination, ensureProfile } from '@/lib/auth/profile'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
@@ -23,9 +24,14 @@ function rawValue(formData, key) {
 }
 
 async function siteUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
-  const requestHeaders = await headers()
-  return (requestHeaders.get('origin') || 'http://localhost:3000').replace(/\/$/, '')
+  const configured = normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL)
+  if (configured) return configured
+  if (process.env.NODE_ENV === 'production') return 'https://puddle.you'
+  return requestOrigin(await headers(), 'http://localhost:3000')
+}
+
+async function clearLocalAuthSession(supabase) {
+  await supabase.auth.signOut({ scope: 'local' })
 }
 
 function publicError(error, fallback) {
@@ -104,6 +110,7 @@ export async function signUp(formData) {
 
   const acceptedAt = new Date().toISOString()
   const supabase = await createClient()
+  await clearLocalAuthSession(supabase)
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -145,6 +152,7 @@ export async function signIn(formData) {
   const next = safeNextPath(value(formData, 'next'))
   if (!isValidEmail(email)) redirect(pathWithMessage('/signin', 'error', 'Email or password was not accepted.', { next }))
   const supabase = await createClient()
+  await clearLocalAuthSession(supabase)
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.user) redirect(pathWithMessage('/signin', 'error', 'Email or password was not accepted.', { next }))
   const { profile, error: profileError } = await ensureProfile(supabase, data.user)
@@ -159,6 +167,7 @@ export async function sendLoginCode(formData) {
   if (!isValidEmail(email)) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', { next }))
 
   const supabase = await createClient()
+  await clearLocalAuthSession(supabase)
   const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
   if (error) redirect(pathWithMessage('/signin', 'error', publicError(error, 'We could not send a login code. Please try again.'), { next }))
   redirect(pathWithMessage('/signin', 'success', 'We emailed you a one-time login code.', { code_sent: '1', email, next }))
@@ -175,6 +184,7 @@ export async function verifyLoginCode(formData) {
   if (!/^\d{6,8}$/.test(token)) redirect(pathWithMessage('/signin', 'error', 'Enter the code from your email.', retry))
 
   const supabase = await createClient()
+  await clearLocalAuthSession(supabase)
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
   if (error || !data.user) redirect(pathWithMessage('/signin', 'error', 'That code was not accepted. Request a new code and try again.', retry))
   const { profile, error: profileError } = await ensureProfile(supabase, data.user)
@@ -189,6 +199,7 @@ export async function signInWithOAuth(formData) {
   if (provider !== 'google') redirect(pathWithMessage('/signin', 'error', 'That sign-in option is not supported.'))
   if (signupIntent && value(formData, 'terms_accepted') !== 'yes') redirect(pathWithMessage('/signup', 'error', 'Agree to the Terms and Privacy Policy before creating an account.'))
   const supabase = await createClient()
+  await clearLocalAuthSession(supabase)
   const legalQuery = signupIntent ? '&legal_consent=1' : ''
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
@@ -319,5 +330,6 @@ export async function deleteAccount(formData) {
   }
   const { error } = await admin.auth.admin.deleteUser(user.id)
   if (error) redirect(pathWithMessage('/account', 'error', 'We could not delete your account. Please try again later.'))
+  await clearLocalAuthSession(supabase)
   redirect('/?account=deleted')
 }

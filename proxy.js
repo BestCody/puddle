@@ -110,7 +110,6 @@ export async function proxy(request) {
 
   const isProtected = matchesPrefix(pathname, protectedPrefixes)
   const isAuthOnly = authOnlyPaths.includes(pathname)
-  const hasAuthFailure = request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('auth_error')
   const moderationGate = requiresModerationGate(pathname)
   const hasAuthCookie = hasSupabaseAuthCookie(request)
   const needsSession = isProtected || verifiedReadApi || (hasAuthCookie && (!pathname.startsWith('/api/') || moderationGate))
@@ -152,9 +151,6 @@ export async function proxy(request) {
     const url = new URL('/signin', request.url)
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce }), proxyStartedAt, timings)
-  }
-  if (isAuthOnly && user && !hasAuthFailure) {
-    return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   return timed(secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly), { request, nonce }), proxyStartedAt, timings)
 }

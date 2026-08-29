@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import { verifyCsrf } from '@/lib/security/csrf'
+import { enforceRateLimit } from '@/lib/security/rate-limit'
+import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,10 +27,18 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Recommendation settings are unavailable.' }, { status: 503 })
   const { supabase, user } = await session()
   if (!user) return NextResponse.json({ error: 'Sign in to manage recommendations.' }, { status: 401 })
-  const body = await request.json().catch(() => ({}))
+  const limited = await enforceRateLimit({ headers: request.headers, userId: user.id, action: 'recommendation_preferences' })
+  if (!limited.allowed) return NextResponse.json({ error: 'Too many recommendation-setting changes. Try again shortly.' }, { status: 429, headers: { 'retry-after': String(limited.retryAfter || 60) } })
+  let body
+  try {
+    body = await readJsonLimited(request, 16_000)
+  } catch (error) {
+    return NextResponse.json({ error: safeSecurityError(error, 'That recommendation-settings request is not valid.') }, { status: error?.status || 400 })
+  }
   const action = String(body.action || 'save')
 
   if (action === 'save') {

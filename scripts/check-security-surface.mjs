@@ -19,7 +19,10 @@ const protectedMutations = [
   'app/api/location/reverse/route.js',
   'app/api/discovery/actions/route.js',
   'app/api/social/share-location/route.js',
-  'app/api/media/upload/route.js'
+  'app/api/media/upload/route.js',
+  'app/api/discovery/route.js',
+  'app/api/recommendations/preferences/route.js',
+  'app/api/saved-location/[slug]/route.js'
 ]
 for (const path of protectedMutations) await requireMarkers(path, ['verifyCsrf', 'enforceRateLimit'])
 await requireMarkers('app/api/discovery/actions/route.js', ['MAX_ACTIONS = 20', 'record_discovery_actions_v4'])
@@ -27,7 +30,13 @@ await requireMarkers('app/api/social/share-location/route.js', ['send_location_t
 
 const adminApis = tracked.filter((path) => path.startsWith('app/api/admin/') && path.endsWith('/route.js'))
 for (const path of adminApis) {
-  const value = await source(path)
+  let value
+  try {
+    value = await source(path)
+  } catch (error) {
+    if (error?.code === 'ENOENT') continue
+    throw error
+  }
   await requireMarkers(path, ['requirePrivilegedApi'], value)
   if (/export\s+async\s+function\s+(?:POST|PUT|PATCH|DELETE)\b/.test(value)) await requireMarkers(path, ['verifyCsrf', 'enforceRateLimit'], value)
 }

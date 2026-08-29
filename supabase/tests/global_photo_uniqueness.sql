@@ -7,6 +7,8 @@ declare
   v_conflict uuid;
   v_kind text;
   v_bool boolean;
+  v_hash text;
+  v_storage_key text;
 begin
   select claim_status,claim_token,conflict_location_id,conflict_kind
   into v_status,v_token,v_conflict,v_kind
@@ -227,6 +229,56 @@ begin
   select public.complete_global_photo_candidate_v1(v_token,'invalid','invalid image',null,null,0) into v_bool;
   if v_bool is distinct from true then
     raise exception 'invalid candidate was not completed';
+  end if;
+
+  -- YFCC100M is a separate provider namespace; OSV/MSLS remain Mapillary and
+  -- therefore share provider-level identity with ordinary Mapillary imports.
+  select claim_status,claim_token,conflict_location_id,conflict_kind
+  into v_status,v_token,v_conflict,v_kind
+  from public.claim_global_photo_v1(
+    '12121212-1212-1212-1212-121212121212'::uuid,
+    4::smallint,
+    repeat('c',64),
+    repeat('9',64),
+    '1234567890abcdef',
+    'fedcba0987654321',
+    'photo-uniqueness-test',
+    900
+  );
+  if v_status <> 'claimed' or v_token is null then
+    raise exception 'YFCC100M provider code was not accepted: status=%, kind=%',v_status,v_kind;
+  end if;
+  select public.release_global_photo_claim_v1(v_token) into v_bool;
+  if v_bool is distinct from true then
+    raise exception 'YFCC100M pending claim did not release';
+  end if;
+
+  select reservation_status,reservation_token,prior_location_id,conflict_kind
+  into v_status,v_token,v_conflict,v_kind
+  from public.reserve_global_photo_candidate_v1(
+    '13131313-1313-1313-1313-131313131313'::uuid,
+    4::smallint,
+    'yfcc-candidate',
+    'https://farm1.staticflickr.com/1/yfcc-candidate.jpg',
+    900
+  );
+  if v_status <> 'reserved' or v_token is null then
+    raise exception 'YFCC100M candidate was not reserved: status=%, kind=%',v_status,v_kind;
+  end if;
+  select public.complete_global_photo_candidate_v1(v_token,'invalid','fixture validation',null,null,0) into v_bool;
+  if v_bool is distinct from true then
+    raise exception 'YFCC100M candidate was not completed';
+  end if;
+
+  -- A completed row can be recovered without fetching source bytes again.
+  select candidate_status,location_id,content_sha256,storage_key
+  into v_status,v_conflict,v_hash,v_storage_key
+  from public.get_global_photo_candidate_v1(
+    1::smallint,
+    'candidate-before-download'
+  );
+  if v_status <> 'accepted' or v_hash <> repeat('8',64) or v_storage_key <> 'media/photos/by-sha256/88/' || repeat('8',64) || '.jpg' then
+    raise exception 'accepted candidate recovery lookup failed: status=%, hash=%, key=%',v_status,v_hash,v_storage_key;
   end if;
 
   -- Pre-registry B2 objects are installed directly as live claims after the
