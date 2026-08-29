@@ -3,9 +3,22 @@
 import { useEffect, useState } from 'react'
 import { SwipeMapPreview } from '@/components/swipe-map-preview'
 
-const LOCATION_VISUAL_CACHE_KEY = 'puddle:location-visual-coordinates:v1'
+const LOCATION_VISUAL_CACHE_KEY = 'puddle:location-visual-coordinates:v2'
 const LOCATION_VISUAL_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const LOCATION_VISUAL_CACHE_LIMIT = 300
+
+function hasCoordinateValue(value) {
+  return value !== null && value !== undefined && String(value).trim() !== ''
+}
+
+function validCoordinates(latitude, longitude) {
+  if (!hasCoordinateValue(latitude) || !hasCoordinateValue(longitude)) return null
+  const lat = Number(latitude)
+  const lon = Number(longitude)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null
+  return { latitude: lat, longitude: lon }
+}
 
 function readCoordinateCache(slug) {
   if (typeof window === 'undefined' || !slug) return null
@@ -13,9 +26,7 @@ function readCoordinateCache(slug) {
     const parsed = JSON.parse(window.localStorage.getItem(LOCATION_VISUAL_CACHE_KEY) || '{}')
     const entry = parsed?.entries?.[slug]
     if (!entry?.cachedAt || Date.now() - entry.cachedAt > LOCATION_VISUAL_CACHE_TTL_MS) return null
-    const latitude = Number(entry.latitude)
-    const longitude = Number(entry.longitude)
-    return Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : null
+    return validCoordinates(entry.latitude, entry.longitude)
   } catch {
     return null
   }
@@ -34,12 +45,6 @@ function writeCoordinateCache(slug, coordinates) {
     )
     window.localStorage.setItem(LOCATION_VISUAL_CACHE_KEY, JSON.stringify({ entries: limited }))
   } catch {}
-}
-
-function validCoordinates(latitude, longitude) {
-  const lat = Number(latitude)
-  const lon = Number(longitude)
-  return Number.isFinite(lat) && Number.isFinite(lon) ? { latitude: lat, longitude: lon } : null
 }
 
 const frameStyle = {
