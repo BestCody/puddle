@@ -1,97 +1,6 @@
-/* Targeted UI corrections for Settings, Sidebar, Saved, Messages, and Profile. */
+/* Targeted UI corrections for Settings, Sidebar, Messages, and Profile. */
 
-/* 2. Settings: the iframe and its white window share one exact responsive boundary. */
-.puddle-settings-overlay-frame {
-  display: block !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-  background: #fff !important;
-}
-
-html:has(.figma-settings-screen.is-embedded),
-body:has(.figma-settings-screen.is-embedded) {
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  background: #fff !important;
-}
-
-body:has(.figma-settings-screen.is-embedded) .figma-dashboard-stage,
-body:has(.figma-settings-screen.is-embedded) .figma-dashboard-main,
-body:has(.figma-settings-screen.is-embedded) .figma-settings-screen.is-embedded,
-body:has(.figma-settings-screen.is-embedded) .figma-settings-window,
-body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded {
-  width: 100% !important;
-  max-width: none !important;
-  height: 100dvh !important;
-  min-height: 100dvh !important;
-  max-height: 100dvh !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  inset: auto !important;
-  transform: none !important;
-  box-sizing: border-box !important;
-}
-
-body:has(.figma-settings-screen.is-embedded) .figma-settings-window,
-body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded {
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  overflow: hidden !important;
-}
-
-body:has(.figma-settings-screen.is-embedded) .figma-settings-local-nav,
-body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-}
-
-/* 3. Settings: add separation only between major sections, not their controls. */
-.figma-settings-window .figma-settings-section + .figma-settings-section,
-.figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
-  margin-top: 28px !important;
-  padding-top: 88px !important;
-}
-
-.figma-settings-window .figma-settings-section + .figma-settings-section header,
-.figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section header {
-  margin-bottom: 42px !important;
-}
-
-/* 4. Sidebar: keep the logo's x-position, but anchor it directly above Swipe. */
-@media (min-width: 761px) {
-  .figma-dashboard-sidebar-logo,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
-    top: clamp(24px, calc(50dvh - 270px), 190px) !important;
-  }
-}
-
-/* 5. Saved > Places: one spacing token controls card gaps and the outer gutter. */
-[data-testid="saved-screen"] {
-  --puddle-saved-space: clamp(18px, 2vw, 30px);
-}
-
-[data-testid="saved-grid"] {
-  width: auto !important;
-  max-width: none !important;
-  margin-left: var(--puddle-saved-space) !important;
-  margin-right: var(--puddle-saved-space) !important;
-  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)) !important;
-  gap: var(--puddle-saved-space) !important;
-  box-sizing: border-box !important;
-}
-
-[data-testid="saved-grid"] > [data-testid="saved-card"] {
-  width: 100% !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  transform: none !important;
-}
+/* Shared overlay framing belongs to ui-targeted-fixes.css. */
 
 /* 7. Profile cards: make headings and dynamic content shrink safely with the card. */
 .figma-profile-card,
@@ -104,26 +13,11 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 
 .figma-profile-card > h2 {
   max-width: calc(100% - 42px) !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  font-size: clamp(17px, 2.1vw, 23.384px) !important;
   line-height: 1.1 !important;
 }
 
 .figma-profile-location-card > strong {
-  max-width: calc(100% - 42px) !important;
-  overflow-wrap: anywhere !important;
   word-break: normal !important;
-  font-size: clamp(18px, 2.35vw, 26px) !important;
-  line-height: 1.2 !important;
-}
-
-.figma-profile-post-preview {
-  width: calc(100% - 30px) !important;
-  max-width: none !important;
-  margin-left: 15px !important;
-  margin-right: 15px !important;
 }
 
 .figma-profile-mini-list a {
@@ -140,23 +34,12 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 }
 
 .figma-profile-counts {
-  max-width: 100% !important;
   flex-wrap: wrap !important;
   row-gap: 8px !important;
 }
 
 /* 6. Messages on mobile: list first, then a full-screen conversation with a back link. */
 @media (max-width: 760px) {
-  .figma-settings-window .figma-settings-section + .figma-settings-section,
-  .figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
-    margin-top: 18px !important;
-    padding-top: 56px !important;
-  }
-
-  [data-testid="saved-screen"] {
-    --puddle-saved-space: 14px;
-  }
-
   .figma-friends-screen.is-messages .figma-friends-message-layout {
     min-height: calc(100dvh - 110px) !important;
   }
@@ -255,13 +138,5 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 
   .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-composer {
     bottom: calc(12px + env(safe-area-inset-bottom)) !important;
-  }
-
-  .figma-profile-card > h2 {
-    font-size: clamp(18px, 5.5vw, 23.384px) !important;
-  }
-
-  .figma-profile-location-card > strong {
-    font-size: clamp(18px, 6vw, 26px) !important;
   }
 }

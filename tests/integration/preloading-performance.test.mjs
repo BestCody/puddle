@@ -112,25 +112,28 @@ test('top pills size to their labels and move their highlight before navigation 
 })
 
 test('Saved cards reflow responsively without changing their card content', async () => {
-  const [plansPage, targetedStyles] = await Promise.all([
+  const [plansPage, plansStyles, targetedStyles] = await Promise.all([
     read('app/(product)/plans/page.js'),
+    read('app/(product)/plans/Plans.module.css'),
     read('app/ui-targeted-fixes.css')
   ])
 
   assert.match(plansPage, /data-testid="saved-grid"/)
   assert.match(plansPage, /data-testid="saved-card"/)
-  assert.match(targetedStyles, /repeat\(auto-fit, minmax\(min\(260px, 100%\), 1fr\)\)/)
-  assert.match(targetedStyles, /\[data-testid="saved-grid"\] > \[data-testid="saved-card"\][\s\S]*width:\s*100% !important/)
-  assert.match(targetedStyles, /transform:\s*none !important/)
+  assert.match(plansStyles, /\.placeGrid\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(250px, 100%\), 1fr\)\);/)
+  assert.match(plansStyles, /\.placeCard\s*\{[\s\S]*width:\s*100%;[\s\S]*max-width:\s*none;/)
+  assert.doesNotMatch(targetedStyles, /\[data-testid="saved-grid"\]/)
 })
 
 test('Settings opens over the current page and Swipe locks only page scrolling', async () => {
-  const [sidebar, shell, overlay, accountPage, targetedStyles] = await Promise.all([
+  const [sidebar, shell, overlay, accountPage, targetedStyles, flowStyles, interactionStyles] = await Promise.all([
     read('components/figma-dashboard-sidebar.js'),
     read('components/product-shell.js'),
     read('components/settings-overlay.js'),
     read('app/account/page.js'),
-    read('app/ui-targeted-fixes.css')
+    read('app/ui-targeted-fixes.css'),
+    read('app/figma-dashboard-flow.css'),
+    read('app/ui-interaction-polish.css')
   ])
 
   assert.match(sidebar, /<SettingsTrigger className="figma-dashboard-settings-link">[\s\S]*figma-dashboard-settings-label">Settings<\/span>[\s\S]*<\/SettingsTrigger>/)
@@ -148,8 +151,8 @@ test('Settings opens over the current page and Swipe locks only page scrolling',
   assert.match(accountPage, /const embedded = params\?\.embedded === '1'/)
   assert.match(accountPage, /settingsOverlay=\{!embedded\}/)
   assert.match(accountPage, /figma-settings-screen\$\{embedded \? ' is-embedded' : ''\}/)
-  assert.match(targetedStyles, /backdrop-filter:\s*blur\(12px\)/)
-  assert.match(targetedStyles, /body:has\(\.figma-settings-screen\.is-embedded\) \.figma-dashboard-sidebar/)
+  assert.match(interactionStyles, /backdrop-filter:\s*blur\(14px\)/)
+  assert.match(flowStyles, /body:has\(\.figma-settings-screen\.is-embedded\) \.figma-dashboard-sidebar/)
   assert.match(targetedStyles, /\.puddle-settings-overlay-frame[\s\S]*opacity:\s*1/)
   assert.match(targetedStyles, /html:has\(\.figma-swipe-screen\)/)
   assert.match(targetedStyles, /overflow:\s*hidden !important/)

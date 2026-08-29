@@ -5,19 +5,7 @@
   overflow: hidden;
 }
 
-.figma-friends-screen.is-messages {
-  height: 100dvh;
-  min-height: 0;
-  max-height: 100dvh;
-  overflow: hidden;
-  padding-bottom: 0;
-}
-
 .figma-friends-screen.is-messages .figma-friends-message-layout {
-  top: 102px;
-  bottom: 22px;
-  height: auto;
-  min-height: 0;
   overflow: hidden;
 }
 
@@ -205,13 +193,11 @@
 }
 
 @media (max-width: 760px) {
-  .figma-friends-pass-wrapper:has(> .figma-friends-screen.is-messages),
-  .figma-friends-screen.is-messages {
+  .figma-friends-pass-wrapper:has(> .figma-friends-screen.is-messages) {
     height: 100svh;
     min-height: 0;
     max-height: 100svh;
     overflow: hidden;
-    padding-bottom: 0;
   }
 
   .figma-friends-screen.is-messages .figma-friends-message-layout {
@@ -220,7 +206,6 @@
     left: 10px;
     right: 10px;
     height: auto;
-    min-height: 0;
     display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: minmax(112px, 27%) minmax(0, 1fr);

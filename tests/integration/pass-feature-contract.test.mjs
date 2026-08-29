@@ -81,13 +81,13 @@ test('Profile identity stays faithful to Figma instead of injecting a Pass badge
 
 test('Settings is centered in both axes inside the dashboard viewport', async () => {
   const account = await read('app/account/page.js')
-  const css = await read('app/pass-feature-completion.css')
+  const css = await read('app/figma-dashboard-flow.css')
   const layout = await read('app/layout.js')
 
   assert.match(account, /section-\$\{selectedSection\}/)
-  assert.match(css, /\.figma-settings-screen[\s\S]*display: grid !important;[\s\S]*place-items: center !important;/)
-  assert.match(css, /height: 100vh;/)
-  assert.match(css, /\.figma-settings-window[\s\S]*top: auto !important;[\s\S]*transform: none !important;/)
+  assert.match(css, /\.figma-settings-screen\s*\{[\s\S]*position:\s*relative;/)
+  assert.match(css, /\.figma-settings-window,[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*210\.5px minmax\(0, 1fr\);/)
+  assert.match(css, /\.figma-settings-window,[\s\S]*top:\s*auto !important;[\s\S]*transform:\s*none !important;/)
   assert.match(layout, /import '\.\/pass-feature-completion\.css'/)
 })
 

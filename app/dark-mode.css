@@ -57,23 +57,6 @@
   color: #9da3a9;
 }
 
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-theme-toggle {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-theme-toggle img {
-  width: 56px !important;
-  height: 56px !important;
-  display: block;
-}
-
 :is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-account-menu > summary,
 :is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-account-menu .profile-menu-panel {
   background: var(--puddle-dark-raised);

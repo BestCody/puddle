@@ -171,8 +171,7 @@
 
 .figma-profile-chips span,
 .figma-profile-chips > a,
-.figma-profile-actions a,
-.figma-profile-counts > span {
+.figma-profile-actions a {
   min-width: 0 !important;
   max-width: 100% !important;
   overflow: hidden !important;

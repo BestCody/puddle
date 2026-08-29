@@ -33,12 +33,6 @@ body:has(.figma-dashboard-shell)::-webkit-scrollbar-thumb {
   background-clip: padding-box;
 }
 
-.figma-dashboard-shell,
-.figma-dashboard-stage,
-.figma-dashboard-main {
-  min-height: 100dvh;
-}
-
 body:has([data-testid='feed-screen'][data-view='map']) {
   overflow: hidden;
 }
@@ -101,17 +95,19 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   stroke-width: 1.8;
 }
 
+.figma-swipe-empty {
+  width: min(430px, calc(100% - 40px));
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  padding: 28px;
+  margin-top: 110px;
+  box-sizing: border-box;
+}
+
 @media (max-width: 760px) {
-  .figma-dashboard-main {
-    min-height: 100dvh;
-    padding-bottom: var(--puddle-mobile-content-bottom);
-  }
-
-  .figma-dashboard-mobile-nav {
-    height: var(--puddle-mobile-nav-height);
-    padding-bottom: calc(18px + env(safe-area-inset-bottom));
-  }
-
   .figma-swipe-screen {
     height: calc(100dvh - var(--puddle-mobile-content-bottom));
     min-height: calc(100dvh - var(--puddle-mobile-content-bottom));

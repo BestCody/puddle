@@ -1,14 +1,4 @@
 /* Fresh Swipe component styles. No legacy product component selectors. */
-.figma-swipe-actions {
-  position: absolute;
-  top: 666px;
-  left: 50%;
-  width: 310px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  transform: translateX(-50%);
-}
 .figma-swipe-action {
   min-width: 0;
   display: grid;
@@ -188,17 +178,6 @@
 .figma-swipe-details-actions button:disabled { opacity: .5; cursor: default; }
 
 .figma-swipe-empty {
-  position: absolute;
-  top: 210px;
-  left: 50%;
-  width: min(430px, calc(100% - 40px));
-  min-height: 250px;
-  transform: translateX(-50%);
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 16px;
-  padding: 28px;
   border: 2.5px solid #e5e5e5;
   border-radius: 25px;
   background: #fff;

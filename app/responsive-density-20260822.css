@@ -46,25 +46,6 @@
   position: relative;
 }
 
-/* Messages use both axes of the available dashboard stage. */
-.figma-friends-screen.is-messages {
-  min-height: 100dvh !important;
-  height: 100dvh !important;
-}
-
-.figma-friends-screen.is-messages .figma-friends-message-layout {
-  top: clamp(86px, 10.8dvh, 102px) !important;
-  bottom: clamp(16px, 2.2dvh, 24px) !important;
-  height: auto !important;
-  min-height: 0 !important;
-}
-
-.figma-friends-screen.is-messages .figma-friends-conversations,
-.figma-friends-screen.is-messages .figma-friends-chat {
-  min-height: 0 !important;
-  height: 100% !important;
-}
-
 .figma-friends-screen.is-messages .figma-friends-conversation-empty,
 .figma-friends-screen.is-messages .figma-friends-chat-empty {
   min-height: 100%;
@@ -73,95 +54,6 @@
 
 /* Slightly denser authenticated desktop UI, achieved through component geometry rather than CSS zoom. */
 @media (min-width: 761px) {
-  .figma-dashboard-shell {
-    font-size: 90%;
-  }
-
-  .figma-dashboard-sidebar {
-    min-height: 749px;
-  }
-
-  .figma-dashboard-sidebar.is-concise {
-    width: 92px !important;
-  }
-
-  .figma-dashboard-sidebar-logo,
-  .figma-dashboard-sidebar.is-expanded .figma-dashboard-sidebar-logo {
-    left: 31px !important;
-    width: 50px !important;
-    height: 50px !important;
-  }
-
-  .figma-dashboard-sidebar-logo .puddle-logo,
-  .figma-dashboard-sidebar-logo a,
-  .figma-dashboard-sidebar-logo img,
-  .figma-dashboard-sidebar-logo svg {
-    width: 50px !important;
-    height: 50px !important;
-  }
-
-  .figma-dashboard-nav {
-    top: clamp(218px, 31.25dvh, 234px) !important;
-    left: 18px !important;
-    width: 217px !important;
-    gap: 3px !important;
-  }
-
-  .figma-dashboard-nav-item {
-    width: 217px !important;
-    height: 50px !important;
-    gap: 8px !important;
-    padding: 0 12px 0 21px !important;
-    border-radius: 18px !important;
-    font-size: 15.3px !important;
-  }
-
-  .figma-dashboard-nav-icon {
-    width: 26px !important;
-    height: 26px !important;
-    flex-basis: 26px !important;
-  }
-
-  .figma-dashboard-nav-icon svg {
-    width: 25px !important;
-    height: 25px !important;
-  }
-
-  .figma-dashboard-avatar {
-    width: 25px !important;
-    height: 25px !important;
-  }
-
-  .figma-dashboard-settings-link {
-    left: 50px !important;
-    bottom: clamp(28px, 4.5dvh, 42px) !important;
-    font-size: 15.3px !important;
-  }
-
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
-    left: 33px !important;
-    width: 39px !important;
-    height: 39px !important;
-  }
-
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
-    width: 39px !important;
-    height: 39px !important;
-  }
-
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
-    left: 26px !important;
-    width: 54px !important;
-  }
-
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
-    width: 54px !important;
-    padding: 0 !important;
-  }
-
   .figma-dashboard-segment {
     height: 44px !important;
     min-height: 44px !important;
@@ -176,41 +68,11 @@
     font-size: 14.5px !important;
   }
 
-  .figma-dashboard-account-menu {
-    top: 32px !important;
-    right: 37px !important;
-  }
-
   .figma-dashboard-account-menu > summary {
     width: 44px !important;
     height: 40px !important;
   }
 
-  .figma-friends-screen,
-  [data-testid="saved-screen"] {
-    min-height: max(100dvh, 749px) !important;
-  }
-
-  [data-testid="saved-grid"] {
-    grid-template-columns: repeat(auto-fit, minmax(min(234px, 100%), 1fr)) !important;
-    gap: clamp(16px, 1.8vw, 27px) !important;
-  }
-
-  [data-testid="saved-grid"] > [data-testid="saved-card"] {
-    min-height: 210px !important;
-    height: 210px !important;
-    grid-template-rows: 140px minmax(0, 1fr) !important;
-    border-radius: 23px !important;
-  }
-
-  [data-testid="saved-grid"] > [data-testid="saved-card"] > a:first-child {
-    height: 140px !important;
-    border-radius: 22px !important;
-  }
-
-  [data-testid="saved-grid"] > [data-testid="saved-card"] h2 {
-    font-size: 18px !important;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

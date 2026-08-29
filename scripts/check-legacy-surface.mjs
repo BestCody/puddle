@@ -62,6 +62,9 @@ const retiredPaths = [
   'app/figma-profile-parity.css',
   'app/figma-parity-fine.css',
   'app/swipe-profile-followup.css',
+  'app/messages-stable-compat.css',
+  'app/sidebar-layout-followup-20260822.css',
+  'app/swipe-visual-alignment.css',
   'components/resizable-product-sidebar.js'
 ]
 
@@ -141,7 +144,6 @@ const activeUiStyles = await Promise.all([
   'app/figma-dashboard-flow.css',
   'app/figma-dashboard-rebuild.css',
   'app/figma-visual-parity.css',
-  'app/swipe-visual-alignment.css',
   'app/responsive-density-20260822.css',
   'app/ui-fixes-20260822.css',
   'app/ui-followup-20260822.css',
@@ -149,7 +151,6 @@ const activeUiStyles = await Promise.all([
   'app/ui-interaction-polish-fixes.css',
   'app/sidebar-swipe-polish.css',
   'app/white-stage-swipe-search-followup-20260822.css',
-  'app/sidebar-layout-followup-20260822.css',
   'app/membership.css'
 ].map(async (path) => [path, await read(path)]))
 for (const [path, source] of activeUiStyles) {
@@ -179,9 +180,7 @@ const supersededSwipeSheets = [
   'app/discover-controls.css',
   'app/figma-dashboard-fidelity.css',
   'app/responsive-density-20260822.css',
-  'app/sidebar-layout-followup-20260822.css',
   'app/sidebar-swipe-polish.css',
-  'app/swipe-visual-alignment.css',
   'app/ui-fixes-20260822.css',
   'app/white-stage-swipe-search-followup-20260822.css'
 ]

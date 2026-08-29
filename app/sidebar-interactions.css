@@ -20,15 +20,8 @@
   --segment-count: 2;
   --segment-active-index: 0;
   --segment-active-bg: #858585;
-  width: 167px !important;
-  min-width: 167px !important;
-  height: 48px !important;
-  min-height: 48px !important;
-  padding: 4px !important;
   border: 2px solid #d9d9d9 !important;
-  border-radius: 999px !important;
   background: #fff !important;
-  box-sizing: border-box !important;
 }
 
 .routed-segment {
@@ -54,37 +47,24 @@
   z-index: 1;
   top: 4px;
   bottom: 4px;
-  left: 4px;
-  width: calc((100% - 8px) / var(--segment-count));
   border-radius: 999px;
   background: var(--segment-active-bg);
   box-shadow: 0 4px 0 rgba(0,0,0,.10);
   pointer-events: none;
-  transform: translateX(calc(var(--segment-active-index) * 100%));
-  transition: transform 145ms cubic-bezier(.2,.8,.2,1);
-  will-change: transform;
 }
 
 .figma-dashboard-segment > a,
 .figma-dashboard-segment > button {
   position: relative;
   z-index: 2;
-  width: auto !important;
-  min-width: 0 !important;
-  height: 36px !important;
-  min-height: 36px !important;
   display: grid !important;
   place-items: center !important;
-  margin: 0 !important;
-  padding: 0 !important;
   border: 0 !important;
   border-radius: 999px !important;
   background: transparent !important;
   box-shadow: none !important;
   color: var(--figma-grey);
-  text-align: center !important;
   text-decoration: none;
-  box-sizing: border-box !important;
 }
 
 .figma-dashboard-segment > .is-active,
@@ -92,11 +72,6 @@
   background: transparent !important;
   color: #fff !important;
   box-shadow: none !important;
-}
-
-.routed-segment[data-segment-count="3"] > a,
-.routed-segment[data-segment-count="3"] > button {
-  font-size: 12px !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -39,7 +39,7 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
   assert.match(flow, /\.figma-profile-location-card\s*\{\s*min-height:\s*239px;/)
   assert.match(flow, /\.figma-profile-saves-card\s*\{\s*min-height:\s*494px;/)
   assert.match(flow, /\.figma-profile-friends-card\s*\{\s*min-height:\s*460px;/)
-  assert.match(flow, /@media \(max-width: 760px\)[\s\S]*\.figma-profile-cards\s*\{[^}]*grid-template-columns:\s*1fr;/)
+  assert.match(flow, /@media \(max-width: 760px\)[\s\S]*\.figma-profile-cards\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/)
 
   // Exact Figma styling remains visual-only and local to components.
   assert.match(fidelity, /\.figma-profile-hero\s*\{[^}]*border:\s*4px solid #fff;[^}]*background:\s*var\(--profile-theme, #4ca5f7\);/s)
