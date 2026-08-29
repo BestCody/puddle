@@ -4,71 +4,366 @@
  * page-level Figma x/y coordinates with normal flow, Grid, and Flexbox.
  */
 
+:root {
+  --figma-shell-sidebar: 252px;
+}
+
+/* The shell is the only owner of dashboard chrome geometry. The sidebar is
+   fixed, while the stage is a fluid sibling whose width is derived from the
+   live sidebar custom property. */
 @media (min-width: 761px) {
+  .figma-dashboard-shell {
+    min-height: 100dvh;
+  }
+
+  .figma-dashboard-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 40;
+    width: var(--figma-shell-sidebar);
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .figma-dashboard-sidebar-logo {
+    position: absolute;
+    top: calc(50% - 236px);
+    left: 31px;
+    width: 44px;
+    height: 44px;
+    display: block;
+  }
+
+  .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar-logo svg {
+    width: 44px;
+    height: 44px;
+    display: block;
+    margin: 0;
+  }
+
+  .figma-dashboard-sidebar-logo .puddle-logo-theme-toggle {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .figma-dashboard-nav {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    width: 217px;
+    display: grid;
+    gap: 5px;
+    transform: translateY(-50%);
+  }
+
+  .figma-dashboard-nav-item {
+    width: 217px;
+    height: 53px;
+    gap: 8px;
+    padding: 0 12px 0 20px;
+    border-radius: 19px;
+    box-sizing: border-box;
+  }
+
+  .figma-dashboard-nav-icon {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+    display: grid;
+    place-items: center;
+  }
+
+  .figma-dashboard-nav-icon svg {
+    width: 25px;
+    height: 25px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.65;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .figma-dashboard-avatar {
+    width: 25px;
+    height: 25px;
+  }
+
+  .figma-dashboard-settings-link {
+    position: absolute;
+    left: 42px;
+    bottom: clamp(20px, 4.5dvh, 36px);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+  }
+
+  .figma-dashboard-settings-icon {
+    display: none;
+  }
+
+  .figma-dashboard-settings-label {
+    display: inline;
+  }
+
+  .figma-dashboard-stage {
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    min-height: 100dvh;
+    margin-left: var(--figma-shell-sidebar);
+    position: relative;
+  }
+
   .figma-dashboard-main {
-    width: min(100%, 1000px);
-    margin-inline: auto;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    overflow-x: clip;
   }
+
+  .figma-dashboard-main > *,
+  .figma-dashboard-main > * > * {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
   .figma-dashboard-account-menu {
-    right: max(41px, calc((100% - 1000px) / 2 + 41px));
+    display: none;
+    z-index: 70;
+    top: 32px;
+    right: 37px;
   }
-  .figma-settings-close { display: grid !important; }
+
+  .figma-dashboard-sidebar.is-concise {
+    width: var(--figma-shell-sidebar);
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    left: 50%;
+    width: 34px;
+    height: 34px;
+    transform: translateX(-50%);
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav {
+    left: 50%;
+    width: 54px;
+    transform: translate(-50%, -50%);
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-item {
+    width: 54px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-nav-label,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-label {
+    display: none;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-link {
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    transform: translateX(-50%);
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-settings-icon {
+    width: 27px;
+    height: 27px;
+    display: grid;
+    place-items: center;
+  }
+}
+
+/* The JavaScript sidebar uses the same breakpoint. Keep the first paint in
+   the same geometry as the hydrated state, without a guessed 102px layout. */
+@media (min-width: 761px) and (max-width: 1050px) {
+  :root {
+    --figma-shell-sidebar: 92px !important;
+  }
+
+  .figma-dashboard-sidebar {
+    width: 92px;
+  }
+
+  .figma-dashboard-stage {
+    margin-left: 92px;
+  }
+
+  .figma-dashboard-sidebar-logo,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    top: calc(50% - 223px);
+    left: 50%;
+    width: 34px;
+    height: 34px;
+    transform: translateX(-50%);
+  }
+
+  .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar-logo svg,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .figma-dashboard-sidebar-logo .puddle-logo-theme-toggle {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav {
+    left: 50%;
+    width: 54px;
+    transform: translate(-50%, -50%);
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav-item {
+    width: 54px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav-label,
+  .figma-dashboard-sidebar .figma-dashboard-settings-label,
+  .figma-dashboard-sidebar-resizer {
+    display: none;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-link {
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    transform: translateX(-50%);
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-settings-icon {
+    width: 27px;
+    height: 27px;
+    display: grid;
+    place-items: center;
+  }
+
+  .figma-dashboard-account-menu {
+    display: none;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 761px) {
+  .figma-dashboard-sidebar-logo,
+  .figma-dashboard-sidebar.is-expanded .figma-dashboard-sidebar-logo {
+    top: max(20px, calc(50% - 236px));
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
+    top: max(20px, calc(50% - 223px));
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --figma-shell-sidebar: 0px !important;
+  }
+
+  .figma-dashboard-sidebar {
+    display: none;
+  }
+
+  .figma-dashboard-account-menu {
+    display: none;
+  }
+
+  .figma-dashboard-stage,
+  .figma-dashboard-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 100dvh;
+    margin-left: 0;
+    background: #fff;
+  }
+
+  .figma-dashboard-main {
+    padding-bottom: var(--puddle-mobile-content-bottom, 104px);
+  }
+
+  .figma-dashboard-mobile-nav {
+    position: fixed;
+    z-index: 90;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    align-items: center;
+    height: var(--puddle-mobile-nav-height, 104px);
+    padding: 12px 14px calc(18px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(255,255,255,0), #fff 28%, #fff 100%);
+    box-sizing: border-box;
+  }
+
+  .figma-dashboard-mobile-nav .figma-dashboard-nav-item {
+    width: 56px;
+    height: 56px;
+    justify-self: center;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 20px;
+  }
+
+  .figma-dashboard-mobile-nav .figma-dashboard-nav-icon {
+    width: 31px;
+    height: 31px;
+  }
+
+  .figma-dashboard-mobile-nav .figma-dashboard-nav-icon svg {
+    width: 31px;
+    height: 31px;
+  }
+}
+
+@media (min-width: 761px) {
+  .figma-dashboard-mobile-nav {
+    display: none;
+  }
 }
 
 /* Swipe — Figma 12:11 / 40:641. Card, actions, and status are one stack. */
-.figma-swipe-screen {
-  min-height: 832px;
-  position: relative;
-  overflow: visible;
-}
-.figma-swipe-workspace {
-  width: 100%;
-  min-height: 832px;
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-auto-rows: max-content;
-  justify-items: center;
-  align-content: start;
-  row-gap: 7px;
-  padding: 100px 24px 36px;
-  box-sizing: border-box;
-}
-.figma-swipe-card-stage {
-  position: relative !important;
-  inset: auto !important;
-  left: auto !important;
-  top: auto !important;
-  width: min(400px, 100%) !important;
-  height: 560px;
-  transform: none !important;
-}
-.figma-swipe-actions,
-.minimal-swipe-actions.figma-swipe-actions {
-  position: relative !important;
-  inset: auto !important;
-  left: auto !important;
-  top: auto !important;
-  width: min(310px, 100%);
-  transform: none !important;
-}
-.figma-swipe-status {
-  position: relative !important;
-  inset: auto !important;
-  left: auto !important;
-  top: auto !important;
-  min-height: 18px;
-  transform: none !important;
-}
-.figma-swipe-empty {
-  position: relative !important;
-  inset: auto !important;
-  left: auto !important;
-  top: auto !important;
-  transform: none !important;
-  margin-top: 110px;
-}
-
 /* Profile — Figma 40:347. The hero is one component; the cards are two grid columns. */
 .figma-profile-screen {
   min-height: 0 !important;
@@ -129,6 +424,8 @@
   inset: auto !important;
   left: auto !important;
   top: auto !important;
+  z-index: 20;
+  width: 238px;
   justify-self: center;
   transform: none !important;
 }
@@ -141,6 +438,9 @@
   width: 100%;
   height: 700px;
   min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(240px, 339px) minmax(0, 1fr);
+  gap: 13px;
 }
 .figma-friends-shared-view,
 .figma-friends-add-view {
@@ -185,8 +485,52 @@
   transform: none !important;
 }
 .figma-friends-add-view > h1 { margin: 0 9px; }
-.figma-friends-search { width: 100%; }
-.figma-friends-request-card { width: min(661px, 100%); justify-self: center; }
+.figma-friends-search {
+  width: 100%;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 5px 4px 14px;
+}
+.figma-friends-search-results {
+  position: absolute;
+  z-index: 20;
+  max-height: 250px;
+  overflow: auto;
+  padding: 8px;
+}
+.figma-friends-request-card {
+  width: min(661px, 100%);
+  min-height: 231px;
+  padding: 17px 15px;
+  justify-self: center;
+}
+.figma-friends-add-notice {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+}
+
+.figma-friends-screen.is-messages {
+  min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.figma-friends-screen.is-messages .figma-friends-message-layout {
+  height: calc(100dvh - 126px);
+  min-height: 620px;
+  margin-top: 0;
+}
+
+.figma-friends-screen.is-messages .figma-friends-conversations,
+.figma-friends-screen.is-messages .figma-friends-chat {
+  height: 100%;
+  min-height: 0;
+}
 .figma-friends-search-results {
   top: 100%;
   left: 0;
@@ -216,13 +560,16 @@
   top: auto !important;
   transform: none !important;
 }
+.figma-pass-tabs { width: 167px; }
 .figma-pass-heading { margin: 14px 0 18px; }
 .figma-pass-plan-grid {
   width: min(712px, 100%);
+  display: grid;
+  gap: 22px;
   grid-template-columns: repeat(2, minmax(0, 345px));
   justify-content: center;
 }
-.figma-pass-notice { order: -1; margin: 0; }
+.figma-pass-notice { order: -1; margin: 0; padding: 8px 14px; z-index: 8; }
 .figma-pass-manage-screen {
   position: relative !important;
   inset: auto !important;
@@ -242,9 +589,9 @@
   top: auto !important;
   right: auto !important;
 }
-.figma-pass-current-plan { width: 100%; min-height: 200px; height: auto; }
-.figma-pass-manage-actions { margin-left: 23px; }
-.figma-pass-history { width: 100%; min-height: 123px; height: auto !important; }
+.figma-pass-current-plan { width: 100%; min-height: 200px; height: auto; padding: 20px; }
+.figma-pass-manage-actions { margin-left: 23px; display: flex; gap: 12px; z-index: 3; }
+.figma-pass-history { width: 100%; min-height: 123px; height: auto !important; padding: 18px; }
 
 /* Create Post — Figma 25:79 / 65:433. The blurred post and editor overlap by
    sharing grid rows instead of being page-positioned with fixed x/y values. */
@@ -339,6 +686,7 @@
 .figma-create-post-empty {
   position: relative !important;
   inset: auto !important;
+  width: min(520px, 90%);
   margin: 20px auto 70px;
 }
 
@@ -356,8 +704,9 @@
   left: auto !important;
   top: auto !important;
   width: min(1068px, calc(100% + 346px));
-  min-height: 603px;
-  height: auto !important;
+  height: min(760px, calc(100dvh - 48px));
+  min-height: min(603px, calc(100dvh - 48px));
+  max-height: calc(100dvh - 48px);
   margin-left: -173px;
   transform: none !important;
   display: grid;
@@ -369,20 +718,27 @@
   position: relative !important;
   inset: auto !important;
   width: auto !important;
-  min-height: 603px;
-  height: auto !important;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px 26px;
 }
 .figma-settings-local-nav nav {
   position: relative !important;
   inset: auto !important;
   margin-top: 130px !important;
 }
-.figma-settings-detail,
-.figma-settings-window.is-expanded .figma-settings-detail {
+.figma-settings-detail {
+  display: block;
   min-width: 0;
-  min-height: 603px;
-  height: auto !important;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   margin-left: 0 !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .figma-settings-window.is-expanded .figma-settings-detail {
   display: grid;
@@ -394,6 +750,7 @@
 .figma-settings-window.is-expanded #profile,
 .figma-settings-window.is-expanded #security,
 .figma-settings-window.is-expanded #appearance,
+.figma-settings-window.is-expanded #notifications,
 .figma-settings-window.is-expanded #sessions,
 .figma-settings-window.is-expanded #billing,
 .figma-settings-window.is-expanded #account {
@@ -403,44 +760,123 @@
   right: auto !important;
   top: auto !important;
   min-height: 0 !important;
-  padding: 0 !important;
+}
+.figma-settings-window .figma-settings-section {
+  display: none;
+  width: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+.figma-settings-window.is-expanded.section-profile #profile,
+.figma-settings-window.is-expanded.section-security #security,
+.figma-settings-window.is-expanded.section-appearance #appearance,
+.figma-settings-window.is-expanded.section-notifications #notifications,
+.figma-settings-window.is-expanded.section-sessions #sessions,
+.figma-settings-window.is-expanded.section-billing #billing,
+.figma-settings-window.is-expanded.section-account #account {
+  display: block;
+  min-height: 100%;
+  padding: 40px 46px 56px;
 }
 .figma-settings-window.is-expanded #billing { min-height: 440px !important; }
 .figma-settings-window.is-expanded #billing::after { left: 0; right: 0; }
 
-@media (max-width: 760px) {
-  .figma-swipe-screen,
-  .figma-swipe-workspace { min-height: 770px; }
-  .figma-swipe-workspace { padding: 103px 20px 116px; row-gap: 7px; }
-  .figma-swipe-card-stage { width: min(325px, calc(100vw - 72px)) !important; height: 544px; }
-  .figma-swipe-actions,
-  .minimal-swipe-actions.figma-swipe-actions { width: min(288px, 100%); }
-  .figma-swipe-empty { margin-top: 80px; }
+html:has(.figma-settings-screen.is-embedded),
+body:has(.figma-settings-screen.is-embedded) {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+}
 
-  .figma-profile-screen { padding: 20px 16px 130px; }
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-stage,
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-main,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-screen.is-embedded,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  inset: auto;
+  transform: none;
+  box-sizing: border-box;
+}
+
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-sidebar,
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-mobile-nav,
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-account-menu,
+body:has(.figma-settings-screen.is-embedded) .puddle-settings-overlay {
+  display: none;
+}
+
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-stage,
+body:has(.figma-settings-screen.is-embedded) .figma-dashboard-main,
+body:has(.figma-settings-screen.is-embedded) .figma-settings-screen.is-embedded {
+  background: #fff;
+}
+
+@media (max-width: 760px) {
+  .figma-profile-screen {
+    width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+    padding: 20px 12px 128px;
+  }
   .figma-profile-hero { height: 290px; }
+  .figma-profile-hero {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-inline: auto;
+  }
   .figma-profile-cards {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     margin-top: 300px;
-    grid-template-columns: 1fr;
-    gap: 16px;
+    margin-left: auto;
+    margin-right: auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
   }
-  .figma-profile-card-column { gap: 16px; }
+  .figma-profile-card-column {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
   .figma-profile-card-column--right { margin-top: 0; }
   .figma-profile-puddles-card { min-height: 365px; }
   .figma-profile-location-card,
   .figma-profile-saves-card,
-  .figma-profile-friends-card,
-  .figma-profile-add-card { min-height: 180px; }
+  .figma-profile-friends-card { min-height: 180px; }
   .figma-profile-add-card { min-height: 210px; }
 
   .figma-friends-screen { min-height: 100svh; padding: 28px 12px 120px; gap: 16px; }
   .figma-friends-message-layout { height: auto; min-height: 650px; grid-template-columns: 1fr; }
+  .figma-friends-screen.is-messages {
+    height: 100svh;
+    min-height: 0;
+    max-height: 100svh;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+  .figma-friends-screen.is-messages .figma-friends-message-layout { height: auto; min-height: 650px; }
   .figma-friends-conversations { max-height: 190px; }
   .figma-friends-chat { min-height: 440px; }
   .figma-friends-shared-grid { grid-template-columns: 1fr; grid-auto-rows: minmax(190px, auto); }
   .figma-friends-add-view { padding-top: 12px; gap: 20px; }
+  .figma-friends-shared-view > h1 { font-size: 25px; }
   .figma-friends-add-view > h1 { font-size: 52px; }
+  .figma-friends-tabs { width: 235px; }
   .figma-friends-request-card { width: 100%; }
 
   .figma-pass-screen { min-height: 100svh; padding: 32px 18px 130px; gap: 18px; }
@@ -544,13 +980,10 @@
     right: auto;
     bottom: 17.5px;
   }
-
-  .figma-settings-screen { padding: 24px 12px 130px; }
   .figma-settings-window,
   .figma-settings-window.is-expanded {
     width: 100%;
     margin-left: 0;
-    grid-template-columns: 1fr;
   }
   .figma-settings-local-nav,
   .figma-settings-window.is-expanded .figma-settings-local-nav { min-height: 0; }

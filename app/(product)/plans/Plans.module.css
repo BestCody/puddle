@@ -7,6 +7,7 @@
 
 .screen {
   padding-bottom: 125px;
+  --puddle-saved-space: clamp(18px, 2vw, 30px);
 }
 
 .topbar,
@@ -132,6 +133,38 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 297px));
   gap: 25px 28px;
+}
+
+/* The grid owns its responsive geometry. Keeping these rules with the
+   component prevents global test-id selectors from competing with the page. */
+@media (min-width: 761px) {
+  .screen {
+    min-height: max(100dvh, 749px);
+  }
+
+  .placeGrid {
+    width: auto;
+    max-width: none;
+    margin-left: var(--puddle-saved-space);
+    margin-right: var(--puddle-saved-space);
+    grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+    gap: var(--puddle-saved-space);
+  }
+
+  .placeCard {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .placeGrid {
+    width: calc(100% - 24px);
+    margin-left: 12px;
+    margin-right: 12px;
+  }
 }
 
 .placeCard {

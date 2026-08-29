@@ -4,7 +4,6 @@ import { useLayoutEffect, useRef } from 'react'
 
 const PENDING_KEY = 'puddle:appearance-pending'
 const EXPLICIT_THEMES = new Set(['light', 'dark'])
-const buttonStyle = { width: 56, height: 56, display: 'grid', placeItems: 'center', padding: 0, border: 0, background: 'transparent', cursor: 'pointer' }
 
 function resolveAppearance(value) {
   if (value === 'dark') return 'dark'
@@ -44,7 +43,6 @@ export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
     ref={buttonRef}
     type="button"
     className="puddle-logo puddle-logo-theme-toggle"
-    style={buttonStyle}
     aria-label="Puddle"
   >
     <img src="/puddle-mark-outline.svg" alt="" width="44" height="44" />

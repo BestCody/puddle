@@ -5,12 +5,6 @@
   max-width: 100%;
 }
 
-.figma-dashboard-shell,
-.figma-dashboard-stage,
-.figma-dashboard-main {
-  min-height: 100dvh;
-}
-
 .figma-dashboard-main {
   overflow-x: clip;
 }
@@ -33,28 +27,6 @@
   background: rgba(20, 20, 20, .08) !important;
   backdrop-filter: blur(14px) saturate(.96) !important;
   -webkit-backdrop-filter: blur(14px) saturate(.96) !important;
-}
-
-.puddle-settings-overlay-frame {
-  overflow: hidden;
-  border: 1px solid rgba(28, 28, 28, .22) !important;
-  box-sizing: border-box;
-}
-
-/* Settings is one scroll surface. The local sidebar remains fixed while only the detail column scrolls. */
-.figma-settings-window,
-.figma-settings-window.is-expanded {
-  height: min(760px, calc(100dvh - 130px)) !important;
-  min-height: min(603px, calc(100dvh - 130px)) !important;
-  max-height: calc(100dvh - 48px);
-  overflow: hidden !important;
-}
-
-.figma-settings-local-nav,
-.figma-settings-window.is-expanded .figma-settings-local-nav {
-  min-height: 0 !important;
-  height: 100% !important;
-  overflow: hidden;
 }
 
 .figma-settings-local-nav a {
@@ -85,57 +57,14 @@
   background: currentColor;
 }
 
-.figma-settings-detail,
-.figma-settings-window.is-expanded .figma-settings-detail {
-  min-height: 0 !important;
-  height: 100% !important;
-  max-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scroll-behavior: smooth;
-  scrollbar-gutter: stable;
-}
-
-.figma-settings-window.is-expanded .figma-settings-section,
-.figma-settings-window.is-expanded #profile,
-.figma-settings-window.is-expanded #security,
-.figma-settings-window.is-expanded #appearance,
-.figma-settings-window.is-expanded #notifications,
-.figma-settings-window.is-expanded #sessions,
-.figma-settings-window.is-expanded #billing,
-.figma-settings-window.is-expanded #account {
-  min-height: 0 !important;
-  scroll-margin-top: 12px;
-}
-
-.figma-settings-window.is-expanded .figma-settings-section + .figma-settings-section {
-  padding-top: 42px !important;
-  border-top: 1px solid #ededed;
-}
-
-body:has(.figma-settings-screen.is-embedded) .figma-settings-window,
-body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded {
-  height: 100dvh !important;
-  min-height: 100dvh !important;
-  max-height: 100dvh !important;
-}
-
-body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
-  height: 100dvh !important;
-  max-height: 100dvh !important;
-}
-
 /* Discover composer uses the same viewport anchor as the Saved floating control. */
-.puddle-discover-create-dock,
-[data-testid="saved-search"] {
+.puddle-discover-create-dock {
   left: calc(var(--figma-shell-sidebar) + (100vw - var(--figma-shell-sidebar)) / 2) !important;
   transform: translateX(-50%) !important;
 }
 
 .puddle-discover-create-dock {
   position: fixed;
-  z-index: 75;
   bottom: 44px;
   width: min(420px, calc(100vw - var(--figma-shell-sidebar) - 48px));
   height: 52px;
@@ -212,9 +141,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 
 .puddle-discover-create-arrow,
 .puddle-discover-create-submit {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
   display: grid;
   place-items: center;
   padding: 0;
@@ -224,6 +150,18 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   color: #e3a800;
   font: 800 22px/1 Manrope, sans-serif;
   box-sizing: border-box;
+}
+
+.puddle-discover-create-arrow {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+}
+
+.puddle-discover-create-submit {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
 }
 
 .puddle-discover-create-form {
@@ -317,9 +255,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 }
 
 .puddle-discover-create-submit {
-  width: 38px;
-  height: 38px;
-  flex-basis: 38px;
   cursor: pointer;
 }
 
@@ -405,86 +340,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   margin: 0 0 10px;
 }
 
-/* Browser zoom reduces the CSS viewport. Condense the existing sidebar before content starts clipping. */
-@media (min-width: 761px) and (max-width: 1050px) {
-  .figma-dashboard-shell {
-    --figma-shell-sidebar: 102px;
-  }
-
-  .figma-dashboard-sidebar {
-    width: 102px !important;
-  }
-
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo {
-    top: 201px;
-    left: 37px;
-    width: 43px;
-    height: 43px;
-  }
-
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo,
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo a,
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img,
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo svg {
-    width: 43px !important;
-    height: 43px !important;
-  }
-
-  .figma-dashboard-sidebar .figma-dashboard-nav {
-    left: 29px;
-    width: 60px;
-  }
-
-  .figma-dashboard-sidebar .figma-dashboard-nav-item {
-    width: 60px;
-    padding: 0;
-    justify-content: center;
-    gap: 0;
-  }
-
-  .figma-dashboard-sidebar .figma-dashboard-nav-label,
-  .figma-dashboard-sidebar .figma-dashboard-settings-link,
-  .figma-dashboard-sidebar-resizer {
-    display: none !important;
-  }
-
-  [data-testid="feed-header"] {
-    grid-template-columns: minmax(0, 1fr) auto minmax(48px, 1fr) !important;
-  }
-
-  [data-testid="feed-search"] {
-    width: 46px !important;
-    justify-content: center;
-    padding-inline: 0 !important;
-  }
-
-  [data-testid="feed-search"] label {
-    display: none !important;
-  }
-}
-
 @media (max-width: 760px) {
-  .puddle-settings-overlay-frame {
-    width: calc(100vw - 20px) !important;
-    height: calc(100dvh - 20px) !important;
-    border-radius: 22px;
-  }
-
-  .figma-settings-window,
-  .figma-settings-window.is-expanded {
-    height: 100dvh !important;
-    min-height: 100dvh !important;
-    max-height: 100dvh !important;
-    grid-template-columns: 1fr !important;
-  }
-
-  .figma-settings-local-nav,
-  .figma-settings-window.is-expanded .figma-settings-local-nav {
-    height: auto !important;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
   .figma-settings-local-nav nav {
     display: flex !important;
     gap: 16px !important;
@@ -496,15 +352,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     display: none;
   }
 
-  .figma-settings-detail,
-  .figma-settings-window.is-expanded .figma-settings-detail {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-  }
-
-  .puddle-discover-create-dock,
-  [data-testid="saved-search"] {
+  .puddle-discover-create-dock {
     left: 50% !important;
   }
 

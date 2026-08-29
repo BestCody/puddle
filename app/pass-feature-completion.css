@@ -103,82 +103,6 @@
 .pass-notification-alert-control b { color: #58c92e; font: 800 11px/1 Manrope,sans-serif; }
 .pass-notification-alert-control.is-locked b { color: #888; }
 
-/* Settings: center the window inside the dashboard area, horizontally and vertically.
-   Expanded settings show only the selected section and scroll internally when needed. */
-@media (min-width: 761px) {
-  .figma-settings-screen {
-    min-height: 100vh !important;
-    height: 100vh;
-    display: grid !important;
-    place-items: center !important;
-    padding: 24px 35px !important;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-  .figma-settings-window,
-  .figma-settings-window.is-expanded {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    transform: none !important;
-    width: min(1068px, 100%) !important;
-    height: min(760px, calc(100vh - 48px)) !important;
-    min-height: min(603px, calc(100vh - 48px)) !important;
-    max-height: calc(100vh - 48px) !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-  }
-  .figma-settings-window.section-index { height: 603px !important; }
-  .figma-settings-window .figma-settings-local-nav,
-  .figma-settings-window.is-expanded .figma-settings-local-nav,
-  .figma-settings-window .figma-settings-detail,
-  .figma-settings-window.is-expanded .figma-settings-detail {
-    height: 100% !important;
-    min-height: 0 !important;
-  }
-  .figma-settings-window .figma-settings-detail { overflow: auto; }
-  .figma-settings-window.is-expanded .figma-settings-section { display: none !important; }
-  .figma-settings-window.section-profile #profile,
-  .figma-settings-window.section-security #security,
-  .figma-settings-window.section-appearance #appearance,
-  .figma-settings-window.section-notifications #notifications,
-  .figma-settings-window.section-sessions #sessions,
-  .figma-settings-window.section-billing #billing,
-  .figma-settings-window.section-account #account {
-    display: block !important;
-    position: relative !important;
-    inset: auto !important;
-    min-height: 100% !important;
-    padding: 40px 46px 56px !important;
-    box-sizing: border-box;
-  }
-  .figma-settings-window.is-expanded .figma-settings-section header { margin: 0 0 28px !important; }
-  .figma-settings-window.is-expanded .figma-settings-section header small { display: block !important; }
-  .figma-settings-window.is-expanded .figma-settings-section header h1 { margin-top: 8px !important; }
-  .figma-settings-window.is-expanded .figma-settings-row {
-    min-height: 58px !important;
-    grid-template-columns: 180px minmax(0,1fr) auto !important;
-    gap: 16px !important;
-    border-top: 1px solid #e7e7e7 !important;
-  }
-  .figma-settings-window.is-expanded .figma-settings-row:last-of-type { border-bottom: 1px solid #e7e7e7 !important; }
-  .figma-settings-window.is-expanded .figma-settings-row input,
-  .figma-settings-window.is-expanded .figma-settings-row textarea,
-  .figma-settings-window.is-expanded .figma-settings-row select {
-    min-height: 38px !important;
-    padding: 7px 10px !important;
-    border: 1px solid #ddd !important;
-    border-radius: 10px !important;
-    background: #fff !important;
-    text-align: left !important;
-  }
-  .figma-settings-window.is-expanded #sessions .figma-settings-row.is-tall { width: auto !important; min-height: 90px !important; display: grid !important; padding: 16px 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
-  .figma-settings-window.is-expanded #billing { min-height: 100% !important; }
-  .figma-settings-window.is-expanded #billing::after { display: none !important; }
-  .figma-settings-close { display: grid !important; }
-}
-
 @media (max-width: 760px) {
   .figma-friends-pass-wrapper { position: static; }
   .pass-message-anyone { position: relative; top: auto; right: auto; width: calc(100% - 24px); margin: 90px auto 12px; transform: none; }
@@ -186,6 +110,4 @@
   .pass-notification-alert-control { grid-template-columns: auto 1fr; }
   .pass-notification-alert-control > :last-child { grid-column: 1 / -1; justify-self: start; }
   .location-map-toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
-  .figma-settings-screen { display: block !important; height: auto !important; min-height: 100vh !important; padding: 24px 12px !important; overflow: visible !important; }
-  .figma-settings-window { position: relative !important; top: auto !important; left: auto !important; transform: none !important; width: 100% !important; }
 }

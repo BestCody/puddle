@@ -33,9 +33,7 @@ button,input,select,textarea{max-width:100%}
 :is(.splash-button,.editor-button,.public-cta,.public-secondary-cta,.primary-button,.secondary-button,.danger-button,.oauth-button,.quiet-button,.filter-actions button,.mode-tabs button,.real-card-actions button,.location-sharing-panel button){min-height:44px}
 
 /* Auth and legacy account surfaces */
-.auth-page{grid-template-columns:minmax(0,1fr) minmax(clamp(340px,38vw,620px),.84fr)}
-.auth-panel{max-width:min(760px,100%);padding:clamp(1.25rem,4vw,5rem)}
-.auth-copy{margin:clamp(2rem,6vh,5rem) 0 clamp(1.25rem,2vw,1.75rem)}
+.auth-panel{max-width:min(760px,100%)}
 .auth-art{min-width:0}
 .auth-blob-one{width:clamp(280px,31vw,480px);height:clamp(280px,31vw,480px)}
 .auth-blob-two{width:clamp(220px,24vw,340px);height:clamp(220px,24vw,340px)}

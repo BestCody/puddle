@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { PuddleLogo } from '@/components/puddle-logo'
 
 export default function NotFound() {
@@ -8,7 +7,7 @@ export default function NotFound() {
       <div className="figma-not-found-mark" aria-hidden="true">404</div>
       <h1>This puddle dried up.</h1>
       <p>The page you were looking for is not here. Head back and keep discovering places.</p>
-      <Link href="/">Back to Puddle</Link>
+      <a href="/">Back to Puddle</a>
     </div>
   </main>
 }

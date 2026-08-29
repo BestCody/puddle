@@ -15,17 +15,13 @@ Production city search uses the server-only `GEOCODING_API_KEY`. The default ada
 
 ## Place catalogue
 
-When a profile location or radius changes, migration `10017_worldwide_location_foundation.sql` queues a geographic region in `catalogue_sync_regions`. Regions are grouped into coordinate cells and refreshed when they are new or more than 30 days old.
+The scheduled `Build global location dataset` workflow mirrors the current Overture and Foursquare bulk releases into B2, normalizes and resolves them into immutable country partitions, builds the adaptive-H3 search snapshot, validates it, and atomically activates the B2 search pointer. Discovery reads that B2 snapshot directly; Supabase is not a second catalogue.
 
-The scheduled `Refresh place catalogue` workflow runs `npm run locations:catalogue:refresh`. It uses the official Overture client to download only the bounding boxes required by active Puddle regions, normalizes the place records, deduplicates them through `location_source_links`, and upserts public Puddle locations.
-
-This is intentionally a demand-driven worldwide catalogue rather than copying the entire global Places dataset into one Supabase project. Every country is supported, while storage and refresh work remain proportional to locations where Puddle has users.
+The pipeline is resumable at the workflow/job level and uses immutable snapshots plus atomic pointer activation, so a failed build never exposes a partial catalogue. A new snapshot may be built globally or for the configured active country partitions without changing the serving contract.
 
 ## Photo enrichment
 
-After a regional catalogue import, the worker can run the existing open-photo importer. It checks Wikimedia Commons, Mapillary, and KartaView using category-aware ordering and strict name, distance, camera-direction, licence, host, file-size, and file-type validation. Approved images are re-encoded and stored in `puddle-public-media` with attribution metadata.
-
-Set `CATALOGUE_PHOTO_ENRICH=false` to disable automatic photo enrichment. Mapillary requires the server-only `MAPILLARY_ACCESS_TOKEN`; Wikimedia and KartaView do not require a Puddle API credential.
+Photo candidates are discovered by the independent Wikimedia, Mapillary, and KartaView workflows. The materializer applies provider/license validation, image normalization, SHA-256 and perceptual deduplication, content-addressed B2 upload, and searchable overlay publication. KartaView adds secondary coverage; it is not a separate serving path.
 
 ## Deployment configuration
 

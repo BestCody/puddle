@@ -1,13 +1,7 @@
-/* Targeted Aug 23 polish: sidebar icon weight, profile alignment, search icon scale,
-   concise logo geometry, and responsive parity for the single shared Profile DOM. */
+/* Profile-specific alignment and responsive parity for the single shared Profile DOM. */
 
-/* Slightly bolder sidebar line icons without changing their boxes or alignment. */
-@media (min-width: 761px) {
-  .figma-dashboard-sidebar .figma-dashboard-nav-icon svg,
-  .figma-dashboard-sidebar .figma-dashboard-settings-icon svg {
-    stroke-width: 1.95 !important;
-  }
-}
+.figma-profile-top-actions { display: contents; }
+.figma-profile-settings-mobile { display: none; }
 
 /* The profile count group has only two values. Keep the group itself centered,
    instead of letting older four-column grid rules reserve two empty columns. */
@@ -40,117 +34,9 @@
   line-height: 1 !important;
 }
 
-/* Condensed sidebar logo: one square geometry for container, button, and image.
-   Centering is based on the real concise sidebar width, never a guessed x offset. */
-@media (min-width: 761px) {
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo {
-    left: 50% !important;
-    width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    transform: translateX(-50%) !important;
-    display: grid !important;
-    place-items: center !important;
-    overflow: visible !important;
-  }
-
-  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo {
-    width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    aspect-ratio: 1 / 1 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: grid !important;
-    place-items: center !important;
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    overflow: visible !important;
-  }
-
-  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle img,
-  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img {
-    width: 34px !important;
-    max-width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    max-height: 34px !important;
-    min-height: 34px !important;
-    object-fit: contain !important;
-    object-position: center !important;
-    display: block !important;
-  }
-
-  /* Settings is intentionally mobile-only in Profile. */
-  .figma-profile-settings-mobile {
-    display: none !important;
-  }
-}
-
-/* Match the pre-hydration auto-concise state so the logo never jumps during resize. */
-@media (min-width: 761px) and (max-width: 1050px) {
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo {
-    left: 50% !important;
-    width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    transform: translateX(-50%) !important;
-    display: grid !important;
-    place-items: center !important;
-  }
-
-  .figma-dashboard-sidebar .puddle-logo-theme-toggle,
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo {
-    width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    aspect-ratio: 1 / 1 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: grid !important;
-    place-items: center !important;
-  }
-
-  .figma-dashboard-sidebar .puddle-logo-theme-toggle img,
-  .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img {
-    width: 34px !important;
-    max-width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    max-height: 34px !important;
-    min-height: 34px !important;
-    object-fit: contain !important;
-    object-position: center !important;
-    display: block !important;
-  }
-}
-
 /* Mobile Profile keeps the exact same sections/components as desktop.
    Only geometry, spacing, and control sizing adapt to the smaller viewport. */
 @media (max-width: 760px) {
-  .figma-profile-screen {
-    width: 100% !important;
-    min-width: 0 !important;
-    overflow-x: clip !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-    padding-bottom: 128px !important;
-    box-sizing: border-box !important;
-  }
-
-  .figma-profile-hero {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    margin-inline: auto !important;
-  }
-
   .figma-profile-top-actions {
     position: absolute !important;
     z-index: 10 !important;
@@ -256,36 +142,7 @@
     box-sizing: border-box !important;
   }
 
-  .figma-profile-cards {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 14px !important;
-  }
-
-  .figma-profile-card-column {
-    width: 100% !important;
-    min-width: 0 !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 14px !important;
-  }
-
-  .figma-profile-card {
-    position: relative !important;
-    inset: auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
   .figma-profile-post-preview {
-    width: calc(100% - 30px) !important;
-    max-width: none !important;
     margin-left: 15px !important;
     margin-right: 15px !important;
   }

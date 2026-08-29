@@ -1,18 +1,9 @@
 /* Profile — Figma 40:347 / 65:198 */
 .figma-profile-screen {
-  min-height: 1780px;
-  position: relative;
-  overflow: hidden;
   background: linear-gradient(180deg, #dceeff 0, #eff7ff 350px, #f6f6f6 650px);
 }
 .figma-profile-hero {
-  position: absolute;
-  top: 30px;
-  left: 42px;
-  width: calc(100% - 84px);
-  height: 318px;
   border-radius: 28px;
-  background: #4ca5f7;
   box-sizing: border-box;
 }
 .figma-profile-edit {
@@ -58,7 +49,7 @@
 }
 .figma-profile-identity h1 { margin: 0; font: 800 44.5px/1.2 Manrope, sans-serif; letter-spacing: -2px; }
 .figma-profile-identity > small { display: block; margin-top: 3px; color: #858585; font: 600 18.9px/1 var(--figma-mono); }
-.figma-profile-counts { margin-top: 17px; display: flex; justify-content: center; gap: 24px; color: #858585; font: 800 16.7px/1 Manrope, sans-serif; }
+.figma-profile-counts { margin-top: 17px; font: 800 16.7px/1 Manrope, sans-serif; }
 .figma-profile-chips { margin-top: 20px; display: flex; justify-content: center; gap: 11px; }
 .figma-profile-chips span {
   min-width: 90px;
@@ -91,10 +82,7 @@
 }
 .figma-profile-actions a.is-follow { border-color: #4ca5f7; background: #4ca5f7; color: #fff; }
 
-.figma-profile-cards { position: absolute; top: 628px; left: 0; right: 0; min-height: 1100px; }
 .figma-profile-card {
-  position: absolute;
-  overflow: hidden;
   border: 2.5px solid #e5e5e5;
   border-radius: 25px;
   background: #fff;
@@ -102,19 +90,12 @@
   box-sizing: border-box;
 }
 .figma-profile-card > h2 { margin: 18px 21px 0; color: #4ca5f7; font: 600 23.4px/1.1 var(--figma-mono); }
-.figma-profile-puddles-card { left: 98px; top: 32px; width: 369px; height: 378px; }
-.figma-profile-location-card { left: 487px; top: 30px; width: 369px; height: 239px; }
-.figma-profile-saves-card { left: 489px; top: 290px; width: 369px; height: 494px; }
-.figma-profile-friends-card { left: 98px; top: 435px; width: 369px; height: 460px; }
-.figma-profile-add-card { left: 497px; top: 803px; width: 369px; height: 259px; }
-.figma-profile-location-card > strong { display: block; margin: 56px 21px 0; font: 800 26px/1.2 Manrope, sans-serif; }
+.figma-profile-location-card > strong { font: 800 26px/1.2 Manrope, sans-serif; }
 
 .figma-profile-post-preview {
-  width: 338px;
   height: 291px;
   margin: 5px 0 0 17px;
   position: relative;
-  overflow: hidden;
   border: 2px solid #ededed;
   border-radius: 19px;
   background: #fff;
@@ -126,12 +107,12 @@
 .figma-profile-post-preview header > span:last-child { display: grid; }
 .figma-profile-post-preview header strong { font: 700 15px/1 Manrope, sans-serif; }
 .figma-profile-post-preview header small { margin-top: 4px; color: #858585; font: 700 8px/1 var(--figma-mono); }
-.figma-profile-post-preview > p { position: absolute; top: 52px; left: 44px; right: 17px; margin: 0; font: 500 12px/.98 Manrope, sans-serif; }
+.figma-profile-post-preview > p { position: absolute; top: 52px; margin: 0; font: 500 12px/.98 Manrope, sans-serif; }
 .figma-profile-post-collage { position: absolute; left: 42px; right: 17px; top: 105px; height: 95px; display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: 1fr 1fr; gap: 5px; }
 .figma-profile-post-collage i { display: grid; place-items: center; overflow: hidden; border: 1.5px solid #dedede; border-radius: 15px; background: #f0f0f0; color: #858585; font: 700 20px/1 Manrope, sans-serif; font-style: normal; }
 .figma-profile-post-collage i > img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .figma-profile-post-collage i:first-child { grid-row: span 2; }
-.figma-profile-post-place { position: absolute; left: 38px; right: 16px; bottom: 18px; height: 65px; padding: 8px 44px 8px 12px; border: 1.5px solid #f0f0f0; border-radius: 15px; box-sizing: border-box; }
+.figma-profile-post-place { position: absolute; bottom: 18px; height: 65px; padding: 8px 44px 8px 12px; border: 1.5px solid #f0f0f0; border-radius: 15px; box-sizing: border-box; }
 .figma-profile-post-place small { display: block; color: #858585; font: 600 9px/1 var(--figma-mono); }
 .figma-profile-post-place strong { display: block; margin-top: 7px; font: 800 16px/1 Manrope, sans-serif; }
 .figma-profile-post-place b { position: absolute; right: 8px; bottom: 9px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #d9d9d9; color: #888; font: 400 24px/1 Manrope, sans-serif; }
@@ -156,17 +137,9 @@
 }
 
 @media (max-width: 760px) {
-  .figma-profile-screen { min-height: 1500px; background: linear-gradient(180deg,#dceeff 0,#fff 620px); }
-  .figma-profile-hero { top: 20px; left: 16px; width: calc(100% - 32px); height: 290px; }
+  .figma-profile-screen { background: linear-gradient(180deg,#dceeff 0,#fff 620px); }
   .figma-profile-edit { right: 18px; }
   .figma-profile-avatar { top: 205px; width: 112px; height: 112px; }
-  .figma-profile-identity { top: 325px; width: calc(100% - 32px); }
-  .figma-profile-identity h1 { font-size: 36px; }
-  .figma-profile-chips { flex-wrap: wrap; }
-  .figma-profile-cards { top: 610px; left: 16px; right: 16px; display: grid; gap: 16px; min-height: 800px; }
-  .figma-profile-card { position: relative; inset: auto !important; width: 100% !important; min-height: 180px; height: auto !important; }
-  .figma-profile-puddles-card { min-height: 365px; }
-  .figma-profile-post-preview { width: calc(100% - 30px); margin-left: 15px; }
-  .figma-profile-add-card { min-height: 210px; }
+  .figma-profile-identity { top: 325px; }
   .figma-profile-photo-editor { left: 50%; }
 }

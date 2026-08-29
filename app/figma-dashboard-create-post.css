@@ -1,19 +1,8 @@
 /* Feed post composer — Figma 25:79 / mobile 65:433 */
-.figma-create-post-screen {
-  min-height: 832px;
-  position: relative;
-  overflow: hidden;
-  background: #f6f6f6;
-}
 
 /* The authored desktop frame deliberately shows a blurred, fully composed post
    behind the editor. Keep it real DOM rather than a flattened Figma image. */
 .figma-create-post-blur {
-  position: absolute;
-  top: 110px;
-  left: 223px;
-  width: 469px;
-  height: 511px;
   overflow: hidden;
   border: 2.5px solid #e5e5e5;
   border-radius: 25px;
@@ -125,7 +114,6 @@
 .figma-create-post-preview-place > span,
 .figma-create-post-preview-place > small {
   position: absolute;
-  top: 13.9px;
   min-height: 25px;
   display: inline-flex;
   align-items: center;
@@ -135,7 +123,7 @@
   color: #858585;
   font: 600 13.6px/1 var(--figma-mono);
 }
-.figma-create-post-preview-place > span { left: 14px; }
+.figma-create-post-preview-place > span { top: 13.9px; left: 14px; }
 .figma-create-post-preview-place > small { top: 8.9px; right: 8px; }
 .figma-create-post-preview-place h2 {
   position: absolute;
@@ -171,13 +159,6 @@
 }
 
 .figma-create-post-card {
-  position: absolute;
-  z-index: 10;
-  top: 388px;
-  left: 50%;
-  width: 697px;
-  height: 406px;
-  transform: translateX(-50%);
   overflow: hidden;
   border: 2.5px solid #e6e6e6;
   border-radius: 25px;
@@ -312,23 +293,5 @@
 }
 
 @media (max-width: 760px) {
-  .figma-create-post-screen { min-height: 874px; background: #fff; }
-  .figma-create-post-screen::before { content:""; position:absolute; top:40px; left:27px; width:38px; height:38px; background:url('/puddle-mark-outline.svg') center/contain no-repeat; }
   .figma-create-post-screen .figma-feed-back { display: none; }
-  .figma-create-post-screen .figma-feed-tabs { top: 31px; }
-  .figma-create-post-blur {
-    top: 100px;
-    left: 15px;
-    width: calc(100% - 38px);
-    height: 396px;
-    filter: blur(8px);
-  }
-  .figma-create-post-card {
-    top: 330px;
-    width: calc(100% - 34px);
-    height: 410px;
-    border-radius: 22px;
-  }
-  .figma-create-post-title input { font-size: 39px; }
-  .figma-create-post-description textarea { height: 180px; }
 }

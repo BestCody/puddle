@@ -92,13 +92,10 @@ test('saved cards keep canonical photos and use the shared cached map fallback w
 })
 
 test('current social routes share resilient media primitives without the retired social shell', async () => {
-  const [hub, messages, layout, pass, parity, fine, dock] = await Promise.all([
+  const [hub, messages, layout, dock] = await Promise.all([
     read('components/figma-social-hub.js'),
     read('components/figma-messages-realtime.js'),
     read('app/layout.js'),
-    read('app/figma-social-pass.css'),
-    read('app/figma-parity.css'),
-    read('app/figma-parity-fine.css'),
     read('components/swipe-action-dock.js')
   ])
 
@@ -119,9 +116,6 @@ test('current social routes share resilient media primitives without the retired
   assert.doesNotMatch(dock, /label: 'Message'/)
   assert.match(layout, /import '\.\/social-primitives\.css'/)
   assert.doesNotMatch(layout, /social-hub\.css/)
-  assert.doesNotMatch(pass, /\.social-hub|\.social-tabs|\.social-messages-layout/)
-  assert.doesNotMatch(parity, /\.social-hub|\.social-messages-layout/)
-  assert.doesNotMatch(fine, /\.social-hub|\.social-tabs/)
 })
 
 test('current product media surfaces use the canonical image contract', async () => {

@@ -227,6 +227,7 @@ test('404 gives the user a working route home', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'This puddle dried up.' })).toBeVisible()
   await expect(page.getByText('404', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Back to Puddle' }).click()
+  await page.waitForLoadState('domcontentloaded')
   await expect(page).toHaveURL(/\/$/)
   await visibleLandingCanvas(page)
 })
