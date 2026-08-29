@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DISCOVERY_IMAGE_SIZES, canOptimizeDiscoveryImage } from '@/lib/media/discovery-image'
 import { useModalFocus } from '@/components/modal-focus'
+import { SwipeMapPreview } from '@/components/swipe-map-preview'
 
 const labels = {
   cafe: 'Coffee', restaurant: 'Restaurant', bar: 'Bar', park: 'Park', museum: 'Museum',
@@ -22,6 +23,10 @@ function addressLabel(item) {
 function photos(item) {
   const values = [...(item.photo_urls || []), item.photo_url, item.cover_url].filter(Boolean)
   return [...new Set(values)].slice(0, 5)
+}
+
+function hasCoordinates(item) {
+  return Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))
 }
 
 function DetailsPhoto({ url, title, index }) {
@@ -118,6 +123,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   }
 
   const showMainPhoto = Boolean(mainPhoto) && !mainPhotoFailed
+  const showMapFallback = !showMainPhoto && hasCoordinates(item)
   const locationId = item.location_id || item.content_id || item.id || ''
 
   return <>
@@ -140,7 +146,8 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       <div className="figma-swipe-card-photo">
         {optimizedMainPhoto && showMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload onError={() => setMainPhotoFailed(true)} /> : null}
         {!optimizedMainPhoto && showMainPhoto ? <img src={mainPhoto} alt={item.title} loading="eager" decoding="async" onError={() => setMainPhotoFailed(true)} /> : null}
-        {!showMainPhoto ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo is available">Photo unavailable</div> : null}
+        {showMapFallback ? <SwipeMapPreview latitude={item.latitude} longitude={item.longitude} title={item.title} /> : null}
+        {!showMainPhoto && !showMapFallback ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo or map location is available">Photo unavailable</div> : null}
       </div>
       <div className="figma-swipe-card-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
       <div className="figma-swipe-card-copy"><h1>{item.title}</h1><p>{addressLabel(item)}</p></div>
