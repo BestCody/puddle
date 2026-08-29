@@ -4,29 +4,36 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('social feed media and action controls render without corrupted glyphs or blank photo grids', async () => {
-  const [client, styles, photoFrame] = await Promise.all([
+test('social feed renders place media inside the place card with shared photo-or-map fallback', async () => {
+  const [client, visual, mapPreview, photoFrame] = await Promise.all([
     read('components/social-feed-client.js'),
-    read('app/(product)/map/MapFeed.module.css'),
+    read('components/location-visual-preview.js'),
+    read('components/swipe-map-preview.js'),
     read('components/photo-frame.js')
   ])
   const shareMenu = await read('app/(product)/map/feed-share-menu.js')
   const detailShareMenu = await read('app/(product)/plans/[slug]/detail-share-menu.js')
 
   assert.doesNotMatch(client, /[ÃÂâ]/)
-  assert.match(client, /Photo unavailable/)
+  assert.doesNotMatch(client, /Photo unavailable/)
+  assert.doesNotMatch(client, /function FeedPhotos|photoEmptyLabel|styles\.photos/)
+  assert.match(client, /LocationVisualPreview/)
+  assert.match(client, /image=\{image\}/)
+  assert.match(client, /className=\{styles\.place\}[\s\S]*LocationVisualPreview/)
   assert.match(client, /PhotoFrame/)
   assert.doesNotMatch(client, /backgroundImage/)
   assert.match(client, /CommentIcon/)
   assert.match(client, /SaveIcon/)
-  assert.match(styles, /\.photo img/)
-  assert.match(styles, /\.photo\[data-photo-state='loading'\]/)
-  assert.match(styles, /\.photoUnavailable/)
-  assert.match(styles, /\.photosEmpty/)
-  assert.match(styles, /\.photoEmptyCell/)
-  assert.match(styles, /\.photoEmptyLabel/)
-  assert.match(styles, /\.photoSingle/)
-  assert.match(styles, /\.actionIcon/)
+
+  assert.match(visual, /SwipeMapPreview/)
+  assert.match(visual, /puddle:location-visual-coordinates:v1/)
+  assert.match(visual, /localStorage/)
+  assert.match(visual, /\/api\/saved-location\//)
+  assert.match(visual, /image[\s\S]*<img/)
+  assert.match(visual, /coordinates[\s\S]*<SwipeMapPreview/)
+  assert.match(mapPreview, /tile\.openstreetmap\.org/)
+  assert.match(mapPreview, /Map showing/)
+
   assert.match(shareMenu, /Friends could not be loaded\./)
   assert.match(shareMenu, /Try again/)
   assert.match(shareMenu, /finally/)
@@ -47,10 +54,12 @@ test('social feed media and action controls render without corrupted glyphs or b
   assert.match(photoFrame, /data-photo-state=\{state\}/)
 })
 
-test('saved cards render canonical photos and explicit image failure states', async () => {
-  const [grid, options, styles, page] = await Promise.all([
+test('saved cards keep canonical photos and use the shared cached map fallback when no photo exists', async () => {
+  const [grid, options, visual, mapPreview, styles, page] = await Promise.all([
     read('components/saved-lightweight-grid.js'),
     read('app/api/saved-location-options/route.js'),
+    read('components/location-visual-preview.js'),
+    read('components/swipe-map-preview.js'),
     read('app/(product)/plans/Plans.module.css'),
     read('app/(product)/plans/page.js')
   ])
@@ -60,10 +69,20 @@ test('saved cards render canonical photos and explicit image failure states', as
   assert.match(grid, /data-saved-morph-photo/)
   assert.match(grid, /saved-place-previews:v2/)
   assert.match(grid, /PhotoFrame/)
-  assert.doesNotMatch(grid, /showImage/)
-  assert.match(grid, /Photo unavailable/)
+  assert.match(grid, /LocationVisualPreview/)
+  assert.match(grid, /if \(image\)/)
+  assert.match(grid, /<LocationVisualPreview slug=\{slug\} title=\{title\}/)
+  assert.doesNotMatch(grid, /showImage|Photo unavailable/)
   assert.match(grid, /Saved places could not be loaded\./)
   assert.match(grid, /saved-lightweight-error/)
+
+  assert.match(visual, /puddle:location-visual-coordinates:v1/)
+  assert.match(visual, /LOCATION_VISUAL_CACHE_TTL_MS/)
+  assert.match(visual, /writeCoordinateCache/)
+  assert.match(visual, /readCoordinateCache/)
+  assert.match(visual, /SwipeMapPreview/)
+  assert.match(mapPreview, /tile\.openstreetmap\.org/)
+
   assert.match(styles, /\.placePhoto > img/)
   assert.match(styles, /\.placePhoto:global\(\.is-unavailable\)/)
   assert.match(styles, /\.saved-lightweight-error/)
