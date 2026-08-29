@@ -43,6 +43,17 @@ function SaveIcon({ saved }) {
   return <svg className={`${styles.actionIcon} ${saved ? styles.actionIconFilled : ''}`} viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.6c0 5-8.8 10.4-8.8 10.4S3.2 13.6 3.2 8.6A4.6 4.6 0 0 1 12 6.7a4.6 4.6 0 0 1 8.8 1.9Z" /></svg>
 }
 
+const placeVisualStyle = {
+  position: 'relative',
+  display: 'block',
+  height: 'clamp(120px, 34vw, 170px)',
+  margin: '18px -41px 0 0',
+  overflow: 'hidden',
+  border: '2px solid #dedede',
+  borderRadius: '18px',
+  background: '#f0f0f0'
+}
+
 function FeedPost({ post }) {
   const author = post.author || {}
   const location = post.location
@@ -59,8 +70,8 @@ function FeedPost({ post }) {
     <Link className={styles.place} href={href} aria-label={`Open ${location.name}`}>
       <span className={styles.placeMeta}>{categoryLabel(location.kind)}</span>
       <small className={styles.placeArea}>{location.neighborhood || location.city || ''}</small>
-      <h2>{location.name}</h2><b className={styles.placeAdd} aria-hidden="true">+</b>
-      <span className={styles.placeVisual}>
+      <h2>{location.name}</h2><b className={styles.placeAdd} style={{ top: '69px', bottom: 'auto' }} aria-hidden="true">+</b>
+      <span style={placeVisualStyle}>
         <LocationVisualPreview slug={location.slug} title={location.name} image={image} />
       </span>
     </Link>
