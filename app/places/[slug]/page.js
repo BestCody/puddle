@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { PublicLocationView } from '@/components/public-listing'
-import { placeStructuredData } from '@/lib/app/public-content'
+import { breadcrumbStructuredData, placeStructuredData } from '@/lib/app/public-content'
 import { getCachedPublicLocation } from '@/lib/app/public-location-cache'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
@@ -29,8 +29,16 @@ export default async function PlacePage({ params }) {
   if (!result) notFound()
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'
   const structured = placeStructuredData(result.location, `${site}/places/${result.location.slug}`)
+  // Mirrors the hub trail so a place inherits the same "Puddle > Places > ..." crumb path
+  // its market hub advertises, which is what search results render above the title.
+  const breadcrumbs = breadcrumbStructuredData([
+    { label: 'Puddle', href: '/' },
+    { label: 'Places', href: '/places' },
+    { label: result.location.name, href: `/places/${result.location.slug}` }
+  ], site)
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(structured) }} />
+    {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
     <PublicLocationView {...result} />
   </>
 }

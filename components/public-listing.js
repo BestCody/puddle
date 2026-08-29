@@ -5,7 +5,7 @@ import { PhotoFrame } from './photo-frame'
 
 function human(value) { return String(value || '').replaceAll('_', ' ') }
 
-function PublicHeader() {
+export function PublicHeader() {
   return <header className="public-header">
     <PuddleLogo />
     <nav><Link href="/">Home</Link><Link href="/signin">Sign in</Link><Link className="public-primary-link" href="/signup">Register</Link></nav>
