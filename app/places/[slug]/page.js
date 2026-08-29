@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { PublicLocationView } from '@/components/public-listing'
-import { placeStructuredData } from '@/lib/app/public-content'
-import { getCachedPublicLocation } from '@/lib/app/public-location-cache'
+import { breadcrumbStructuredData, placeStructuredData } from '@/lib/app/public-content'
+import { getCachedPublicLocation, getCachedPublicLocationRecommendations } from '@/lib/app/public-location-cache'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
 export async function generateMetadata({ params }) {
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }) {
       title: location.name,
       description: location.summary || location.description,
       url: `/places/${location.slug}`,
-      images: [{ url: location.cover_url || '/og-puddle.svg', width: 1200, height: 630, alt: location.name }]
+      images: [{ url: location.cover_url || '/og.png', width: 1200, height: 630, alt: location.name }]
     }
   }
 }
@@ -27,10 +27,21 @@ export default async function PlacePage({ params }) {
   const { slug } = await params
   const result = await getCachedPublicLocation(slug)
   if (!result) notFound()
+  // Without these a place page links to no other place, so a crawler that reaches one has
+  // nowhere left to go. The lookup is cached alongside the location itself.
+  const similar = await getCachedPublicLocationRecommendations(slug)
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'
   const structured = placeStructuredData(result.location, `${site}/places/${result.location.slug}`)
+  // Mirrors the hub trail so a place inherits the same "Puddle > Places > ..." crumb path
+  // its market hub advertises, which is what search results render above the title.
+  const breadcrumbs = breadcrumbStructuredData([
+    { label: 'Puddle', href: '/' },
+    { label: 'Places', href: '/places' },
+    { label: result.location.name, href: `/places/${result.location.slug}` }
+  ], site)
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(structured) }} />
-    <PublicLocationView {...result} />
+    {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
+    <PublicLocationView {...result} similar={similar} />
   </>
 }

@@ -4,5 +4,13 @@
   "fluid": true,
   "buildCommand": "npm run vercel-build",
   "ignoreCommand": "node -e \"/* process.exit(0) */ process.exit(1)\"",
-  "regions": ["pdx1"]
+  "regions": [
+    "pdx1"
+  ],
+  "crons": [
+    {
+      "path": "/api/seo/indexnow",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

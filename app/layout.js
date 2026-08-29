@@ -74,6 +74,7 @@ import './messages-realtime-polish.css'
 import './messages-stable-compat.css'
 import './figma-visual-parity.css'
 import './onboarding-widget.css'
+import './places-hub.css'
 import { SettingsScrollBridge } from '@/components/settings-scroll-bridge'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -84,7 +85,15 @@ export const metadata = {
   description: 'Discover places, save favorites, and find somewhere worth going together.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   applicationName: 'Puddle',
-  icons: { icon: '/puddle-tab-icon.svg' }
+  icons: { icon: '/puddle-tab-icon.svg' },
+  // Routes that do not set their own card inherit the PNG. Social platforms will not render
+  // an SVG, so a page without this previews blank when it is shared.
+  openGraph: {
+    type: 'website',
+    siteName: 'Puddle',
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Puddle — discover places, see who’s there.' }]
+  },
+  twitter: { card: 'summary_large_image', images: ['/og.png'] }
 }
 
 export const viewport = {

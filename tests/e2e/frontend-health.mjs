@@ -62,8 +62,11 @@ export function trackFrontendHealth(page, { baseURL, additionalOrigins = [], str
 }
 
 export async function assertImagesLoaded(page, selector = 'img:not([src^="https://tile.openstreetmap.org/"])') {
+  // A lazy image below the fold never begins fetching, so `complete` stays false for as long as
+  // it stays offscreen. Wait only on images the browser actually started; the broken-image check
+  // below still validates every one that loaded, and skips the rest by the same currentSrc test.
   await page.waitForFunction((imageSelector) => {
-    return [...document.querySelectorAll(imageSelector)].every((image) => image.complete)
+    return [...document.querySelectorAll(imageSelector)].every((image) => image.complete || !image.currentSrc)
   }, selector)
 
   const brokenImages = await page.locator(selector).evaluateAll((images) => images
