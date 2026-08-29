@@ -155,7 +155,7 @@ img{display:block;max-width:100%}
   .brand--mobile{position:absolute;z-index:6;left:4.26%;top:4.6%;font-size:clamp(14px,3.725vw,26.223px);color:#fff}
   .brand--mobile img{width:clamp(24px,6.47vw,45.548px);height:auto;filter:brightness(0) invert(1)}
   .menu-button--mobile{position:absolute;z-index:8;right:7.39%;top:4.6%;width:clamp(32px,8.52vw,60px);height:auto;aspect-ratio:60/45}
-  .hero--mobile #mobile-title{position:absolute;z-index:5;left:2.41%;top:9.99%;width:97.92%;margin:0;color:#fff;text-align:left;font-size:clamp(28px,7.85vw,55.274px);line-height:1.2;font-weight:700;letter-spacing:0}
+  .hero--mobile h1{position:absolute;z-index:5;left:2.41%;top:9.99%;width:97.92%;margin:0;color:#fff;text-align:left;font-size:clamp(28px,7.85vw,55.274px);line-height:1.2;font-weight:700;letter-spacing:0}
   .hero-phone-composite--mobile{position:absolute;z-index:5;left:26.7%;top:23%;width:62.6%;margin:0;aspect-ratio:430/666;transform:none}
   .mobile-auth{position:absolute;z-index:7;left:9.8%;top:81.13%;display:grid;gap:clamp(12px,3.55vw,25px);width:80.4%;margin:0}
   .mobile-auth .auth-choice{min-height:0;aspect-ratio:566/68;padding:0;background-color:#fff;font-size:clamp(11px,2.84vw,20px)}

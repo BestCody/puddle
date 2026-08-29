@@ -43,7 +43,7 @@ export function GET() {
     '',
     '- Place pages live at /places/{slug}. They are reachable from the city and category hubs above.',
     '- Signed-in areas (/discover, /plans, /matches, /profile, /settings) hold personal data and are not public.',
-    '- Contact: nathan@valantir.app',
+    '- Contact: legal@puddle.you for legal enquiries, privacy@puddle.you for data requests.',
     ''
   ]
 
