@@ -8,7 +8,7 @@ import { verifyWorkerBearer } from '@/lib/security/worker-auth'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function POST(request) {
+async function submit(request) {
   if (!verifyWorkerBearer(request)) return NextResponse.json({ error: 'Not authorized.' }, { status: 401 })
   if (!isIndexNowConfigured()) return NextResponse.json({ error: 'INDEXNOW_KEY is not set.' }, { status: 503 })
   try {
@@ -19,3 +19,8 @@ export async function POST(request) {
     return NextResponse.json({ error: 'IndexNow submission failed.' }, { status: 500 })
   }
 }
+
+// Vercel Cron invokes scheduled routes with GET and supplies the CRON_SECRET bearer itself.
+// POST is kept so the same submission can be triggered by hand.
+export const GET = submit
+export const POST = submit
