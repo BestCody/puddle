@@ -8,7 +8,7 @@
   .figma-dashboard-avatar,
   .figma-dashboard-account-menu > summary,
   .figma-settings-close,
-  .minimal-filter-sheet header button,
+  .puddle-filter-sheet header button,
   .figma-swipe-details-close,
   .figma-swipe-details-button,
   .puddle-discover-create-close,
@@ -22,7 +22,7 @@
 :where(
   .figma-dashboard-account-menu > summary,
   .figma-settings-close,
-  .minimal-filter-sheet header button,
+  .puddle-filter-sheet header button,
   .figma-swipe-details-close,
   .figma-swipe-details-button,
   .puddle-discover-create-close,
@@ -32,25 +32,25 @@
   aspect-ratio: 1 / 1;
 }
 
-:where(.figma-dashboard-nav-icon svg, .figma-swipe-action svg, .minimal-swipe-action svg) {
+:where(.figma-dashboard-nav-icon svg, .figma-swipe-action svg) {
   flex: none !important;
   transform: none;
 }
 
 /* Light mode checkboxes: use a stable native accent instead of browser-black glyphs. */
-.minimal-filter-check input[type='checkbox'],
+.puddle-filter-check input[type='checkbox'],
 .figma-settings-window input[type='checkbox'] {
   accent-color: #4ca5f7 !important;
   color-scheme: light !important;
 }
 
-.minimal-filter-check input[type='checkbox']:disabled,
+.puddle-filter-check input[type='checkbox']:disabled,
 .figma-settings-window input[type='checkbox']:disabled {
   opacity: .45;
 }
 
-.figma-dashboard-shell[data-appearance='dark'] .minimal-filter-check input[type='checkbox'],
-.figma-dashboard-shell[data-resolved-appearance='dark'] .minimal-filter-check input[type='checkbox'],
+.figma-dashboard-shell[data-appearance='dark'] .puddle-filter-check input[type='checkbox'],
+.figma-dashboard-shell[data-resolved-appearance='dark'] .puddle-filter-check input[type='checkbox'],
 .figma-dashboard-shell[data-appearance='dark'] .figma-settings-window input[type='checkbox'],
 .figma-dashboard-shell[data-resolved-appearance='dark'] .figma-settings-window input[type='checkbox'] {
   accent-color: #79bdf9 !important;
@@ -58,7 +58,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .figma-dashboard-shell[data-appearance='system'] .minimal-filter-check input[type='checkbox'],
+  .figma-dashboard-shell[data-appearance='system'] .puddle-filter-check input[type='checkbox'],
   .figma-dashboard-shell[data-appearance='system'] .figma-settings-window input[type='checkbox'] {
     accent-color: #79bdf9 !important;
     color-scheme: dark !important;

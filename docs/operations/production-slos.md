@@ -11,7 +11,7 @@ Puddle emits structured production observations to Vercel Runtime Logs. The appl
 | Social feed | 99.5% | 750 ms |
 | Saved / plans / history | 99.5% | 650 ms |
 | Location detail | 99.5% | 700 ms |
-| OpenSearch dependency | 99.5% | 500 ms |
+| B2 search dependency | 99.5% | 500 ms |
 | Supabase dependency | 99.9% | 350 ms |
 
 The canonical values live in `lib/performance/server-latency.js` as `PRODUCTION_SLOS`.
@@ -26,8 +26,8 @@ Use Vercel Observability / Runtime Logs for project `puddle` and filter on:
 Create the following saved views:
 
 1. **Request SLOs** — group `puddle_slo_observation` by `operation`, chart request count, failed count, `duration_ms` p50/p95/p99, and `over_target`.
-2. **Dependency SLOs** — group by `service` and `operation`; keep `service=supabase` and `service=opensearch` visible separately.
-3. **Failure isolation** — filter `success=false` or `circuit_open=true`; verify OpenSearch failures never produce relational discovery fallback traffic.
+2. **Dependency SLOs** — group by `service` and `operation`; keep `service=supabase` and `service=b2` visible separately.
+3. **Failure isolation** — filter `success=false` or `circuit_open=true`; verify B2 search failures fail closed without relational catalogue traffic.
 4. **Tail latency** — filter `over_target=true`, grouped by `operation` and `region`.
 
 Alert when a 5-minute window falls below the configured availability target or when p95 remains above target for two consecutive 5-minute windows.
@@ -40,9 +40,9 @@ To investigate one slow request:
 
 1. Copy `x-puddle-trace-id` from the response.
 2. Search Vercel Runtime Logs for that `trace_id`.
-3. Compare the `service=vercel`, `service=supabase`, and `service=opensearch` observations.
+3. Compare the `service=vercel`, `service=supabase`, and `service=b2` observations.
 4. Use `Server-Timing` to confirm the client-visible dependency split.
-5. If Supabase dominates, inspect Supabase query performance for the named `operation`; if OpenSearch dominates, inspect search timeout/candidate metrics.
+5. If Supabase dominates, inspect Supabase query performance for the named `operation`; if B2 dominates, inspect search-object and shard metrics.
 
 `instrumentation.js` also records uncaught request failures with a fresh trace identifier and sanitized route/error metadata.
 

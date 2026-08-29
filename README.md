@@ -18,7 +18,7 @@ Current capabilities include:
 
 - Supabase authentication, onboarding, account settings, relational product data, and social state
 - global location discovery served exclusively from immutable Backblaze B2 search shards (packed planner + compact text projection + prefix postings)
-- image-rich place cards with licensed open photos and Google Places fallback
+- image-rich place cards with licensed open photos from the canonical Wikimedia, Mapillary, and KartaView pipeline
 - Pass, Save, Perfect Pick, details, filters, undo, and continuous nearby-place refill
 - Friends, friend requests, direct messages, rich shared-place messages, and places in common
 - Saved, Planned, and Past place views
@@ -60,7 +60,7 @@ User/private media
   → public or short-lived signed URL according to visibility/access policy
 ```
 
-Google Places is used for stable Place IDs and eligible non-persisted photo fallback. Google photo bytes and photo resource URLs are not canonical Puddle media.
+Google Places may supply stable provider identity metadata where configured. It never supplies a serving image; canonical location photos are served only through the B2-backed `/api/open-photo/<sha256>` route.
 
 Historical database migrations remain in `supabase/migrations/` because applied migrations are immutable deployment history even when the runtime feature they originally supported has been retired.
 
@@ -77,19 +77,23 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Location photo operations
+## Location and photo operations
+
+The resumable global data and photo pipelines run through the workflows in
+`.github/workflows/`. Their local equivalents use the current B2 commands:
 
 ```bash
-# Dry run first
-npm run locations:photos:open -- --limit=200
-
-# Persist approved results to canonical B2 media
-npm run locations:photos:open -- --limit=200 --apply
-
-# Existing enrichment / Google matching helpers
-npm run locations:photos:enrich
-npm run locations:google:match
+npm run global:index
+npm run global:index:validate
+npm run global:photos:wikimedia
+npm run global:photos:mapillary
+npm run global:photos:kartaview
+npm run global:photos:materialize
+npm run global:photos:overlay
 ```
+
+Candidate discovery, materialization, uniqueness checks, and overlay publication
+are checkpointed so an interrupted run resumes from its durable cursor.
 
 ## Validation
 

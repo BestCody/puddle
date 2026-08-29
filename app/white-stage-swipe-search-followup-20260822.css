@@ -27,16 +27,6 @@
   justify-self: center !important;
 }
 
-.puddle-saved-search-trigger {
-  position: static !important;
-  inset: auto !important;
-  grid-column: 3 !important;
-  justify-self: end !important;
-  align-self: start !important;
-  margin: 0 !important;
-  transform: none !important;
-}
-
 /* Search opens in the upper portion of the content stage, not vertical center. */
 .puddle-search-overlay,
 .puddle-discover-search-overlay {
@@ -84,8 +74,7 @@
     justify-self: center !important;
   }
 
-  .figma-swipe-actions,
-  .minimal-swipe-actions.figma-swipe-actions {
+  .figma-swipe-actions {
     position: relative !important;
     inset: auto !important;
     top: auto !important;
@@ -125,8 +114,7 @@
     margin-inline: auto !important;
   }
 
-  .figma-swipe-actions,
-  .minimal-swipe-actions.figma-swipe-actions {
+  .figma-swipe-actions {
     width: var(--puddle-swipe-action-width) !important;
     max-width: var(--puddle-swipe-card-width) !important;
     justify-self: center !important;
@@ -134,8 +122,7 @@
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   }
 
-  .figma-swipe-action,
-  .figma-swipe-actions .minimal-swipe-action {
+  .figma-swipe-action {
     min-width: 0 !important;
     width: 100% !important;
   }

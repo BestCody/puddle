@@ -3,7 +3,7 @@
 /* Keep the four action buttons circular without changing their size or spacing.
    An inset ring avoids uneven border rasterization while preserving the existing shadow. */
 .figma-swipe-action > span,
-.figma-swipe-actions .minimal-swipe-action > span {
+.figma-swipe-actions .figma-swipe-action > span {
   width: 60px !important;
   min-width: 60px !important;
   height: 60px !important;
@@ -40,7 +40,7 @@
   }
 
   .figma-swipe-card,
-  .minimal-swipe-card.figma-swipe-card {
+  .figma-swipe-card {
     width: 100% !important;
     height: 100% !important;
   }

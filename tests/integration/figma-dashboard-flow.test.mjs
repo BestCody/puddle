@@ -8,7 +8,7 @@ test('Swipe page stacks card actions and status in normal flow', async () => {
   const flow = await read('app/figma-dashboard-flow.css')
   assert.match(flow, /\.figma-swipe-workspace\s*\{[^}]*display:\s*grid;[^}]*grid-auto-rows:\s*max-content;[^}]*row-gap:\s*7px;/s)
   assert.match(flow, /\.figma-swipe-card-stage\s*\{[^}]*position:\s*relative\s*!important;[^}]*top:\s*auto\s*!important;/s)
-  assert.match(flow, /\.figma-swipe-actions,[\s\S]*?position:\s*relative\s*!important;[\s\S]*?top:\s*auto\s*!important;/)
+  assert.match(flow, /\.figma-swipe-actions\s*\{[\s\S]*?position:\s*relative\s*!important;[\s\S]*?top:\s*auto\s*!important;/)
   assert.match(flow, /\.figma-swipe-status\s*\{[^}]*position:\s*relative\s*!important;[^}]*top:\s*auto\s*!important;/s)
 })
 

@@ -127,8 +127,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 }
 
 /* Discover composer uses the same viewport anchor as the Saved floating control. */
-.puddle-discover-create-dock,
-[data-testid="saved-search"] {
+.puddle-discover-create-dock {
   left: calc(var(--figma-shell-sidebar) + (100vw - var(--figma-shell-sidebar)) / 2) !important;
   transform: translateX(-50%) !important;
 }
@@ -448,19 +447,6 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     display: none !important;
   }
 
-  [data-testid="feed-header"] {
-    grid-template-columns: minmax(0, 1fr) auto minmax(48px, 1fr) !important;
-  }
-
-  [data-testid="feed-search"] {
-    width: 46px !important;
-    justify-content: center;
-    padding-inline: 0 !important;
-  }
-
-  [data-testid="feed-search"] label {
-    display: none !important;
-  }
 }
 
 @media (max-width: 760px) {
@@ -503,8 +489,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     max-height: none !important;
   }
 
-  .puddle-discover-create-dock,
-  [data-testid="saved-search"] {
+  .puddle-discover-create-dock {
     left: 50% !important;
   }
 

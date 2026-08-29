@@ -47,7 +47,21 @@ const retiredPaths = [
   'app/api/location-google-photo/[id]/route.js',
   'app/api/location-open-photo/[id]/route.js',
   'app/api/location-photo-status/[id]/route.js',
-  'app/api/location-photos/[id]/route.js'
+  'app/api/location-photos/[id]/route.js',
+  'app/date-swipe.css',
+  'app/swipe-motion.css',
+  'app/minimal-product.css',
+  'app/dashboard-saved.css',
+  'app/sidebar-tooltips.css',
+  'app/figma-official.css',
+  'app/figma-core-pages.css',
+  'app/figma-social-pass.css',
+  'app/figma-profile-settings.css',
+  'app/product-polish.css',
+  'app/figma-parity.css',
+  'app/figma-profile-parity.css',
+  'app/figma-parity-fine.css',
+  'components/resizable-product-sidebar.js'
 ]
 
 for (const path of retiredPaths) {
@@ -119,6 +133,43 @@ for (const retired of ['OpenSearch `locations-active`','opensearch-location-sear
 const architecture = await read('docs/system-architecture.md')
 for (const required of ['B2 serving failures fail closed and never fall back to Postgres','Supabase Storage is not an approved open-photo byte store']) {
   if (!architecture.includes(required)) throw new Error(`System architecture is missing invariant: ${required}`)
+}
+
+const activeUiStyles = await Promise.all([
+  'app/discover-controls.css',
+  'app/figma-dashboard-flow.css',
+  'app/figma-dashboard-rebuild.css',
+  'app/figma-visual-parity.css',
+  'app/swipe-visual-alignment.css',
+  'app/responsive-density-20260822.css',
+  'app/ui-fixes-20260822.css',
+  'app/ui-followup-20260822.css',
+  'app/ui-interaction-polish.css',
+  'app/ui-interaction-polish-fixes.css',
+  'app/swipe-profile-followup.css',
+  'app/sidebar-swipe-polish.css',
+  'app/white-stage-swipe-search-followup-20260822.css',
+  'app/sidebar-layout-followup-20260822.css',
+  'app/membership.css'
+].map(async (path) => [path, await read(path)]))
+for (const [path, source] of activeUiStyles) {
+  if (source.includes('.minimal-') || source.includes('--minimal-')) {
+    throw new Error(`Active UI stylesheet still contains retired compatibility selectors: ${path}`)
+  }
+  if (source.includes('[data-testid="feed-header"]') || source.includes('[data-testid=\'feed-header\']')) {
+    throw new Error(`Feed header geometry must remain owned by MapFeed.module.css: ${path}`)
+  }
+  if (source.includes('.puddle-saved-search-trigger')) {
+    throw new Error(`Saved search positioning must remain owned by its canonical visual contract: ${path}`)
+  }
+}
+const savedVisual = await read('app/figma-visual-parity.css')
+for (const marker of [
+  'grid-template-columns: minmax(0, 1fr) 42px !important',
+  'padding: 3px 5px 3px 17px !important',
+  'box-sizing: border-box !important'
+]) {
+  if (!savedVisual.includes(marker)) throw new Error(`Saved search control is missing deterministic geometry: ${marker}`)
 }
 
 // Derive the retired database contract directly from the migrations that performed

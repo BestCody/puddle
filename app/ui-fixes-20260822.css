@@ -4,14 +4,12 @@
  */
 
 /* 1. Swipe action controls: keep the authored circular geometry stable at every zoom. */
-.figma-swipe-actions,
-.minimal-swipe-actions.figma-swipe-actions {
+.figma-swipe-actions {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 10px !important;
 }
 
-.figma-swipe-action,
-.figma-swipe-actions .minimal-swipe-action {
+.figma-swipe-action {
   min-width: 0 !important;
   padding: 0 !important;
   border: 0 !important;
@@ -20,8 +18,7 @@
   box-sizing: border-box !important;
 }
 
-.figma-swipe-action > span,
-.figma-swipe-actions .minimal-swipe-action > span {
+.figma-swipe-action > span {
   width: 60px !important;
   min-width: 60px !important;
   height: 60px !important;
@@ -38,8 +35,7 @@
   box-sizing: border-box !important;
 }
 
-.figma-swipe-action svg,
-.figma-swipe-actions .minimal-swipe-action svg {
+.figma-swipe-action svg {
   width: 29px !important;
   height: 29px !important;
   min-width: 29px !important;
@@ -48,8 +44,7 @@
   flex: none !important;
 }
 
-.figma-swipe-action small,
-.figma-swipe-actions .minimal-swipe-action small {
+.figma-swipe-action small {
   max-width: 100% !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -205,13 +200,11 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 
 /* 6. Messages on mobile: list first, then a full-screen conversation with a back link. */
 @media (max-width: 760px) {
-  .figma-swipe-actions,
-  .minimal-swipe-actions.figma-swipe-actions {
+  .figma-swipe-actions {
     gap: 7px !important;
   }
 
-  .figma-swipe-action > span,
-  .figma-swipe-actions .minimal-swipe-action > span {
+  .figma-swipe-action > span {
     width: 60px !important;
     min-width: 60px !important;
     height: 60px !important;
@@ -219,8 +212,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     border-radius: 50% !important;
   }
 
-  .figma-swipe-action small,
-  .figma-swipe-actions .minimal-swipe-action small {
+  .figma-swipe-action small {
     font-size: 10px !important;
   }
 

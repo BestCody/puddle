@@ -43,8 +43,7 @@
   height: 560px;
   transform: none !important;
 }
-.figma-swipe-actions,
-.minimal-swipe-actions.figma-swipe-actions {
+.figma-swipe-actions {
   position: relative !important;
   inset: auto !important;
   left: auto !important;
@@ -413,8 +412,7 @@
   .figma-swipe-workspace { min-height: 770px; }
   .figma-swipe-workspace { padding: 103px 20px 116px; row-gap: 7px; }
   .figma-swipe-card-stage { width: min(325px, calc(100vw - 72px)) !important; height: 544px; }
-  .figma-swipe-actions,
-  .minimal-swipe-actions.figma-swipe-actions { width: min(288px, 100%); }
+  .figma-swipe-actions { width: min(288px, 100%); }
   .figma-swipe-empty { margin-top: 80px; }
 
   .figma-profile-screen { padding: 20px 16px 130px; }

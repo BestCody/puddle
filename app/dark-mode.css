@@ -99,8 +99,7 @@
 }
 
 /* Swipe: leave photography untouched, but move neutral chrome and the bottom readability gradient into dark mode. */
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-card,
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .minimal-swipe-card.figma-swipe-card {
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-card {
   background: #171a1d;
   border-color: #3b4147;
 }
@@ -120,8 +119,7 @@
   color: #d8dcdf;
 }
 
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-action > span,
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-actions .minimal-swipe-action > span {
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-swipe-action > span {
   background: rgba(30,33,37,.96);
   box-shadow: 0 4px 0 rgba(0,0,0,.28);
 }

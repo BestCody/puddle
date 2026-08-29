@@ -230,7 +230,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded 
 }
 
 .figma-swipe-card,
-.minimal-swipe-card.figma-swipe-card {
+.figma-swipe-card {
   width: 100% !important;
   height: 100% !important;
 }

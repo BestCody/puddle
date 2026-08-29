@@ -112,16 +112,14 @@ body:has([data-testid='feed-screen'][data-view='map']) {
     transform: none !important;
   }
 
-  .figma-swipe-card-stage > .figma-swipe-card,
-  .figma-swipe-card-stage > .minimal-swipe-card.figma-swipe-card {
+  .figma-swipe-card-stage > .figma-swipe-card {
     width: 100% !important;
     height: 100% !important;
     max-width: none !important;
     max-height: none !important;
   }
 
-  .figma-swipe-actions,
-  .minimal-swipe-actions.figma-swipe-actions {
+  .figma-swipe-actions {
     position: relative !important;
     inset: auto !important;
     width: min(288px, calc(100% - 16px)) !important;
@@ -132,28 +130,24 @@ body:has([data-testid='feed-screen'][data-view='map']) {
     gap: clamp(5px, 2vw, 8px) !important;
   }
 
-  .figma-swipe-action,
-  .figma-swipe-actions .minimal-swipe-action {
+  .figma-swipe-action {
     min-width: 0 !important;
     width: 100% !important;
   }
 
-  .figma-swipe-action > span,
-  .figma-swipe-actions .minimal-swipe-action > span {
+  .figma-swipe-action > span {
     width: clamp(44px, min(15vw, 7.6dvh), 58px) !important;
     min-width: clamp(44px, min(15vw, 7.6dvh), 58px) !important;
     height: clamp(44px, min(15vw, 7.6dvh), 58px) !important;
     min-height: clamp(44px, min(15vw, 7.6dvh), 58px) !important;
   }
 
-  .figma-swipe-action svg,
-  .figma-swipe-actions .minimal-swipe-action svg {
+  .figma-swipe-action svg {
     width: clamp(21px, 7vw, 27px) !important;
     height: clamp(21px, 7vw, 27px) !important;
   }
 
-  .figma-swipe-action small,
-  .figma-swipe-actions .minimal-swipe-action small {
+  .figma-swipe-action small {
     font-size: clamp(8.5px, 2.6vw, 10px) !important;
   }
 
@@ -334,10 +328,12 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   width: min(420px, calc(100vw - var(--figma-shell-sidebar, 252px) - 48px)) !important;
   height: 52px !important;
   min-height: 52px !important;
-  display: flex !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 42px !important;
   align-items: center !important;
-  gap: 8px !important;
-  padding: 4px 5px 4px 17px !important;
+  column-gap: 8px !important;
+  padding: 3px 5px 3px 17px !important;
+  box-sizing: border-box !important;
   transform: translateX(-50%) !important;
   border: 2px solid #e6e6e6 !important;
   border-radius: 25px !important;
@@ -349,8 +345,8 @@ body:has([data-testid='feed-screen'][data-view='map']) {
 }
 
 [data-testid='saved-search'] > span {
+  grid-column: 1;
   min-width: 0;
-  flex: 1;
   overflow: hidden;
   color: #b0b0b0;
   text-overflow: ellipsis;
@@ -358,11 +354,18 @@ body:has([data-testid='feed-screen'][data-view='map']) {
 }
 
 [data-testid='saved-search'] > b {
+  grid-column: 2;
+  justify-self: end;
+  align-self: center;
   width: 42px !important;
   height: 42px !important;
-  flex: 0 0 42px;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  box-sizing: border-box;
   display: grid !important;
   place-items: center;
+  line-height: 0;
+  text-align: center;
   border: 2px solid #b784e4;
   border-radius: 50%;
   background: #fff;

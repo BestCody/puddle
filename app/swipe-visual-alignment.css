@@ -85,37 +85,6 @@
   }
 }
 
-/* Discover: keep the tabs centered while allowing Search Puddle to occupy the right-side space. */
-@media (min-width: 761px) {
-  [data-testid="feed-header"] {
-    width: 100% !important;
-    max-width: none !important;
-    padding-left: clamp(28px, 4vw, 72px) !important;
-    padding-right: clamp(28px, 4vw, 72px) !important;
-    box-sizing: border-box !important;
-    grid-template-columns: minmax(180px, 1fr) auto minmax(240px, 1fr) !important;
-  }
-
-  [data-testid="feed-search"] {
-    width: 100% !important;
-    max-width: 460px !important;
-    min-width: 0 !important;
-    justify-self: end !important;
-    padding-inline: 14px !important;
-  }
-
-  [data-testid="feed-search"] label {
-    display: block !important;
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-  }
-
-  [data-testid="feed-search"] input {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-}
-
 /* Settings overlay: scale with the viewport and render one clean outer shadow only. */
 .puddle-settings-overlay-frame {
   width: min(90vw, calc(100vw - 48px)) !important;
@@ -197,8 +166,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     transform: translateY(-58%) !important;
   }
 
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions {
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions {
     position: fixed !important;
     top: calc(50vh + 250px) !important;
     left: var(--figma-shell-sidebar) !important;
@@ -249,24 +217,8 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     font-size: 0 !important;
   }
 
-  [data-testid="feed-header"] {
-    grid-template-columns: minmax(80px, 1fr) auto minmax(180px, 1fr) !important;
-  }
-
-  [data-testid="feed-search"] {
-    width: 100% !important;
-    max-width: 360px !important;
-    justify-content: flex-start !important;
-    padding-inline: 12px !important;
-  }
-
-  [data-testid="feed-search"] label {
-    display: block !important;
-  }
-
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage,
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions,
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
     left: 102px !important;
   }

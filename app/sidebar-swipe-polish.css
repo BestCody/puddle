@@ -110,7 +110,6 @@
 
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage,
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions,
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-status {
     grid-column: 1 !important;
     position: relative !important;
@@ -132,7 +131,7 @@
 
   /* The visual card fills the centered stage exactly, so it cannot drift inside it. */
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage > .figma-swipe-card,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage > .minimal-swipe-card.figma-swipe-card {
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-card-stage > .figma-swipe-card {
     width: 100% !important;
     height: 100% !important;
     max-width: none !important;
@@ -140,7 +139,7 @@
   }
 
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions,
-  .figma-dashboard-stage:has(.figma-swipe-screen) .minimal-swipe-actions.figma-swipe-actions {
+  .figma-dashboard-stage:has(.figma-swipe-screen) .figma-swipe-actions {
     width: min(var(--puddle-swipe-actions-width), calc(100% - 48px)) !important;
   }
 

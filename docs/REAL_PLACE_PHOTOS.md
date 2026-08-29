@@ -1,56 +1,35 @@
 # Real place photos
 
-Puddle swipe cards must show a photograph of the actual place or a neutral Puddle placeholder. AI-generated, generic stock, scraped, or unrelated imagery must never be presented as a venue photo.
+Puddle place cards show a verified place photo or a neutral placeholder. AI-generated,
+generic stock, scraped, or unrelated imagery is never accepted as a venue photo.
 
-## Supported sources
+## Canonical pipeline
 
-Photo priority is:
+Wikimedia, Mapillary, and KartaView candidates are discovered by the scheduled B2
+workflows and written to the candidate manifest. The resumable materializer then:
 
-1. Verified venue upload stored in Puddle public media (`locations.cover_path`)
-2. Approved Puddle user photo stored in Puddle public media
-3. Licensed provider photo registered in `location_photo_sources`
-4. Properly licensed public photo for a landmark, park, or attraction
-5. Neutral placeholder
+1. validates provider identity, geography, license, host, and image type;
+2. normalizes the image and computes SHA-256 plus a perceptual hash;
+3. rejects provider, exact-content, and near-duplicate candidates;
+4. uploads accepted bytes to `media/photos/by-sha256/<prefix>/<sha256>.jpg`;
+5. registers provenance and publishes the searchable photo overlay only after upload success.
 
-Provider photos are stored as licensed references rather than silently copied into Puddle storage. The browser receives them through `/api/location-photos/[id]`, which only accepts approved HTTPS hosts configured in `LOCATION_PHOTO_ALLOWED_HOSTS`.
+The browser receives only `/api/open-photo/<sha256>`. It never receives a provider
+photo URL or a B2 public URL. A missing canonical photo renders the neutral placeholder
+until an eligible candidate is materialized.
 
-## Register provider photos
+## Local commands
 
-Set the exact image hosts and provide a JSON manifest:
+The same stages can be run from the repository with the current scripts:
 
 ```bash
-LOCATION_PHOTO_ALLOWED_HOSTS=images.example-provider.com,cdn.example-provider.com \
-  npm run locations:photos -- ./location-photos.json
+npm run global:photos:wikimedia
+npm run global:photos:mapillary
+npm run global:photos:kartaview
+npm run global:photos:materialize
+npm run global:photos:overlay
 ```
 
-Example manifest:
-
-```json
-{
-  "photos": [
-    {
-      "locationId": "00000000-0000-4000-8000-000000000000",
-      "source": "provider",
-      "provider": "example-provider",
-      "externalPhotoId": "photo-123",
-      "photoUrl": "https://images.example-provider.com/photo-123.jpg",
-      "attributionText": "Photo by Example Photographer",
-      "attributionUrl": "https://example-provider.com/photo-123",
-      "license": "provider-display-license",
-      "termsUrl": "https://example-provider.com/terms",
-      "width": 1600,
-      "height": 1000,
-      "isPrimary": true,
-      "cacheTtlSeconds": 3600
-    }
-  ]
-}
-```
-
-Only register a photo after confirming that it depicts the exact place and that Puddle is permitted to display it. Use provider IDs, address, coordinates, website, and phone matching rather than name-only matching.
-
-## Licensing and caching
-
-`cacheTtlSeconds` must reflect the provider agreement. Set it to `0` when the response must not be cached. Keep attribution and terms fields current. Expired records stop rendering automatically.
-
-Puddle does not scrape Google Maps, review sites, social networks, or venue websites for images.
+All stages are checkpointed and must be resumed through the active workflow when a
+large import is interrupted. Puddle does not scrape Google Maps, review sites, social
+networks, or venue websites for images.

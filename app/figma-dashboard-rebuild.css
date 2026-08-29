@@ -5,6 +5,20 @@
  */
 
 :root {
+  --puddle-accent: #ff4f7b;
+  --puddle-ink: #171114;
+  --puddle-muted: #6f676b;
+  --puddle-line: #e8e2e5;
+  --puddle-bg: #f7f5f6;
+  --puddle-card: #fff;
+  --puddle-figma-blue: #4ca5f7;
+  --puddle-figma-blue-border: #1c74d8;
+  --puddle-figma-red: #e73668;
+  --puddle-figma-green: #65e736;
+  --puddle-figma-yellow: #f2c035;
+  --puddle-figma-grey: #858585;
+  --puddle-figma-line: #d1d1d1;
+  --puddle-figma-bg: #f6f6f6;
   --figma-shell-sidebar: 280px;
   --figma-bg: #f6f6f6;
   --figma-grey: #858585;
@@ -21,6 +35,12 @@
   --figma-pink-border: #a02044;
   --figma-card-shadow: 0 4px 0 rgba(0,0,0,.10);
   --figma-mono: "Martian Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+body {
+  background: var(--puddle-figma-bg);
+  color: var(--puddle-ink);
+  font-family: Manrope, Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .figma-dashboard-shell {
@@ -260,8 +280,7 @@
   transform: translateX(-50%);
 }
 .figma-swipe-preview { display: none; }
-.figma-swipe-card,
-.minimal-swipe-card.figma-swipe-card {
+.figma-swipe-card {
   width: 400px;
   height: 560px;
   margin: 0;
@@ -378,8 +397,7 @@
 .figma-swipe-drag-label.is-pass { left: 22px; color: var(--figma-pink); transform: rotate(-10deg); }
 .figma-swipe-drag-label.is-save { right: 22px; color: var(--figma-green); transform: rotate(10deg); }
 
-.figma-swipe-actions,
-.minimal-swipe-actions.figma-swipe-actions {
+.figma-swipe-actions {
   position: absolute;
   top: 666px;
   left: 50%;
@@ -389,7 +407,7 @@
   gap: 10px;
   transform: translateX(-50%);
 }
-.figma-swipe-actions .minimal-swipe-action {
+.figma-swipe-actions .figma-swipe-action {
   display: grid;
   justify-items: center;
   gap: 4px;
@@ -399,7 +417,7 @@
   color: #999;
   cursor: pointer;
 }
-.figma-swipe-actions .minimal-swipe-action > span {
+.figma-swipe-actions .figma-swipe-action > span {
   width: 60px;
   height: 60px;
   display: grid;
@@ -409,7 +427,7 @@
   background: rgba(255,255,255,.92);
   box-shadow: 0 4px 0 rgba(0,0,0,.12);
 }
-.figma-swipe-actions .minimal-swipe-action svg {
+.figma-swipe-actions .figma-swipe-action svg {
   width: 29px;
   height: 29px;
   fill: none;
@@ -418,14 +436,14 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.figma-swipe-actions .minimal-swipe-action small {
+.figma-swipe-actions .figma-swipe-action small {
   font: 800 12px/1 var(--figma-mono);
 }
 .figma-swipe-actions .is-undo { color: #d6d6d6; }
 .figma-swipe-actions .is-pass { color: var(--figma-pink); }
 .figma-swipe-actions .is-save { color: var(--figma-green); }
 .figma-swipe-actions .is-perfect { color: var(--figma-yellow); }
-.figma-swipe-actions .minimal-swipe-action:disabled { opacity: .45; cursor: default; }
+.figma-swipe-actions .figma-swipe-action:disabled { opacity: .45; cursor: default; }
 .figma-swipe-status {
   position: absolute;
   top: 770px;
@@ -446,7 +464,7 @@
 }
 
 /* Keep the functional full-details dialog, but make it belong to the rebuilt card. */
-.figma-swipe-screen .minimal-details-backdrop { z-index: 100; }
+.figma-swipe-screen .figma-swipe-details-backdrop { z-index: 100; }
 
 @media (max-width: 760px) {
   :root { --figma-shell-sidebar: 0px; }
@@ -501,8 +519,7 @@
     width: min(325px, calc(100vw - 72px));
     height: 544px;
   }
-  .figma-swipe-card,
-  .minimal-swipe-card.figma-swipe-card {
+  .figma-swipe-card {
     width: 100%;
     height: 100%;
     border-width: 2.5px;
@@ -514,14 +531,13 @@
   .figma-swipe-card-meta { top: 12px; left: 13px; right: 13px; }
   .figma-swipe-card-meta span { min-height: 21px; padding: 0 8px; font-size: 11px; }
   .figma-swipe-details-button { width: 48px; height: 46px; right: 13px; bottom: 14px; background: rgba(217,217,217,.24); }
-  .figma-swipe-actions,
-  .minimal-swipe-actions.figma-swipe-actions {
+  .figma-swipe-actions {
     top: 662px;
     width: 288px;
     gap: 7px;
   }
-  .figma-swipe-actions .minimal-swipe-action > span { width: 60px; height: 48px; border-radius: 25px; }
-  .figma-swipe-actions .minimal-swipe-action small { font-size: 10px; }
+  .figma-swipe-action > span { width: 60px; height: 48px; border-radius: 25px; }
+  .figma-swipe-action small { font-size: 10px; }
   .figma-swipe-status { top: 748px; }
 }
 
