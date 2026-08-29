@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=Martian+Mono:wght@700&display=swap');
 
 :root{--ink:#171114;--paper:#fff8f3;--pink:#ff4fa3;--purple:#7c4dff;--lavender:#cbb9ff;--yellow:#ffd86b;--mint:#72e6c1;--blue:#65b8ff;--line:3px solid var(--ink);--shadow:6px 7px 0 var(--ink)}
 *{box-sizing:border-box}html{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif}body{margin:0;min-height:100vh}button,input,select,textarea{font:inherit;color:inherit}a{color:inherit}.puddle-logo{display:inline-flex;align-items:center;gap:.7rem;text-decoration:none;font:800 1.35rem 'Manrope',sans-serif}.puddle-logo img{filter:drop-shadow(2px 3px 0 rgba(23,17,20,.22))}.logo-dot{color:var(--pink)}

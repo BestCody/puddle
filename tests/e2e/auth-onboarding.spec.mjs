@@ -28,16 +28,31 @@ async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Low-key
       body: JSON.stringify({ results: [{ providerId: `test-${city.toLowerCase()}`, city, ...location, label: `${city}, ${location.region}, ${location.country}` }] })
     })
   })
+  const next = page.getByRole('button', { name: 'Next step' })
+
+  // Step 1 — Introduce yourself
   await page.locator('input[name="username"]').fill(username)
   await page.getByLabel('Birth date').fill('19940615')
   await expect(page.getByLabel('Birth date')).toHaveValue('1994-06-15')
+  await next.click()
+
+  // Step 2 — Where are you from?
   await page.getByLabel('City or town').fill(city)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page.getByRole('listbox', { name: 'Location results' }).getByRole('option').first().click()
+  await next.click()
+
+  // Step 3 — How far would you travel?
   await page.getByLabel('Search radius').fill('25')
+  await next.click()
+
+  // Step 4 — What do you like?
   await page.getByLabel('Coffee shops').check()
   await page.getByLabel('Restaurants').check()
   await page.getByLabel('Galleries').check()
+  await next.click()
+
+  // Step 5 — Set your vibe
   await page.getByLabel('Your ideal date vibe').fill(bio)
   await page.getByLabel('Profile visibility').selectOption('mutuals')
 }
@@ -57,11 +72,11 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
 
   await expect(page).toHaveURL(/\/onboarding$/)
   await expect(page.getByText(/Check your inbox/i)).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: /Build your date deck/i })).toBeVisible()
-  await expect(page.getByText(/What kinds of places do you like/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Introduce yourself/i })).toBeVisible()
+  await expect(page.getByRole('progressbar', { name: 'Step 1 of 5' })).toBeVisible()
   await expect(page.getByLabel('Profile visibility')).toHaveValue('public')
   await expect(page.getByRole('button', { name: /Save and continue later/i })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /Build my date deck/i })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Next step' })).toHaveCount(1)
 
   const user = await findUserByEmail(email)
   expect(user.email_confirmed_at).toBeTruthy()
@@ -70,7 +85,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   expect(automaticProfile.onboarding_completed_at).toBeNull()
 
   await fillOnboarding(page, { username })
-  await page.getByRole('button', { name: /Build my date deck/i }).click()
+  await page.getByRole('button', { name: /Finish setup/i }).click()
   await expect(page).toHaveURL(/\/discover\?success=/)
   await expect(page.getByText(/Your deck is ready/i)).toBeVisible()
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
@@ -130,7 +145,7 @@ test('duplicate usernames keep onboarding values in place with an inline error',
   await expect(page).toHaveURL(/\/onboarding$/)
   const bio = 'Keep these date choices even when the username conflicts.'
   await fillOnboarding(page, { username: sharedUsername, city: 'Montreal', bio })
-  await page.getByRole('button', { name: /Build my date deck/i }).click()
+  await page.getByRole('button', { name: /Finish setup/i }).click()
 
   await expect(page).toHaveURL(/\/onboarding$/)
   await expect(page.getByText(/username is already taken/i).first()).toBeVisible()
