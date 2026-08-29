@@ -1,0 +1,61 @@
+.preview {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ece9e3;
+  pointer-events: none;
+  user-select: none;
+}
+
+.tiles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.tile {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+  object-fit: none;
+  image-rendering: auto;
+  will-change: transform;
+}
+
+.marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 45px;
+  transform: translate(-50%, -88%);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.22));
+}
+
+.marker path {
+  fill: #4ca5f7;
+  stroke: #1c74d8;
+  stroke-width: 2;
+}
+
+.marker circle {
+  fill: #fff;
+}
+
+.attribution {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: rgba(255,255,255,.84);
+  color: #555;
+  font: 600 9px/1.15 ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile { will-change: auto; }
+}

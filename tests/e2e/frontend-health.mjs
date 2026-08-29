@@ -61,7 +61,7 @@ export function trackFrontendHealth(page, { baseURL, additionalOrigins = [], str
   }
 }
 
-export async function assertImagesLoaded(page, selector = 'img') {
+export async function assertImagesLoaded(page, selector = 'img:not([src^="https://tile.openstreetmap.org/"])') {
   await page.waitForFunction((imageSelector) => {
     return [...document.querySelectorAll(imageSelector)].every((image) => image.complete)
   }, selector)

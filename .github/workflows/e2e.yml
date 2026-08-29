@@ -108,20 +108,32 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> "$GITHUB_ENV"
           echo "MAILPIT_URL=$INBUCKET_URL" >> "$GITHUB_ENV"
-          echo "B2_AUTHORIZE_ENDPOINT=http://127.0.0.1:39200/b2api/v4/b2_authorize_account" >> "$GITHUB_ENV"
           echo "B2_DATA_APPLICATION_KEY_ID=e2e-key-id" >> "$GITHUB_ENV"
           echo "B2_DATA_APPLICATION_KEY=e2e-application-key" >> "$GITHUB_ENV"
           echo "B2_DATA_BUCKET_NAME=puddle-e2e-assets" >> "$GITHUB_ENV"
+      - name: Select free local B2 emulator port
+        run: |
+          b2_port="$(python - <<'PY'
+          import socket
+
+          with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+              sock.bind(('127.0.0.1', 0))
+              print(sock.getsockname()[1])
+          PY
+          )"
+          echo "E2E_GLOBAL_SEARCH_PORT=$b2_port" >> "$GITHUB_ENV"
+          echo "B2_AUTHORIZE_ENDPOINT=http://127.0.0.1:${b2_port}/b2api/v4/b2_authorize_account" >> "$GITHUB_ENV"
+          echo "Using B2 emulator port $b2_port"
       - name: Start local B2 serving emulator
         run: |
-          B2_STUB_STANDALONE=1 node tests/e2e/global-location-b2-stub.mjs > /tmp/puddle-e2e-b2-stub.log 2>&1 &
+          B2_STUB_STANDALONE=1 E2E_GLOBAL_SEARCH_PORT="$E2E_GLOBAL_SEARCH_PORT" node tests/e2e/global-location-b2-stub.mjs > /tmp/puddle-e2e-b2-stub.log 2>&1 &
           stub_pid=$!
           trap 'kill "$stub_pid" 2>/dev/null || true' EXIT
           # curl may race the server bind; under `bash -e` a bare failing curl
           # would abort the step, so keep it inside an if-condition.
           healthy=0
           for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:39200/health >/dev/null; then
+            if curl --fail --silent "http://127.0.0.1:${E2E_GLOBAL_SEARCH_PORT}/health" >/dev/null; then
               healthy=1
               break
             fi
