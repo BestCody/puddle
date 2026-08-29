@@ -34,10 +34,6 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
 
     let frame = 0
     const measure = () => {
-      if (!window.matchMedia('(min-width: 761px)').matches) {
-        dock.style.removeProperty('--puddle-feed-anchor-x')
-        return
-      }
       const bounds = anchor.getBoundingClientRect()
       dock.style.setProperty('--puddle-feed-anchor-x', `${bounds.left + bounds.width / 2}px`)
     }
