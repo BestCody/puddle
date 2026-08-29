@@ -68,7 +68,7 @@ export function SwipeMapPreview({ latitude, longitude, title }) {
         loading="lazy"
         decoding="async"
         draggable="false"
-        style={{ transform: `translate3d(calc(-50% + ${tile.x}px), calc(-50% + ${tile.y}px), 0)` }}
+        style={{ transform: `translate3d(${tile.x}px, ${tile.y}px, 0)` }}
       />)}
     </div>
     <svg className={styles.marker} viewBox="0 0 32 42" aria-hidden="true">
