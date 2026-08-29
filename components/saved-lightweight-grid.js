@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { PhotoFrame } from '@/components/photo-frame'
+import { LocationVisualPreview } from '@/components/location-visual-preview'
 
 const PREVIEW_CACHE_KEY = 'puddle:saved-place-previews:v2'
 const PREVIEW_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
@@ -45,23 +46,39 @@ function writePreviewCache(previews) {
   } catch {}
 }
 
-function SavedCardPhoto({ className, href, ready, title, image, children }) {
-  return <PhotoFrame
-    as="a"
+function SavedCardVisual({ className, href, ready, title, image, slug, children }) {
+  if (image) {
+    return <PhotoFrame
+      as="a"
+      className={className}
+      href={href}
+      src={image}
+      alt={`${title} photo`}
+      unavailableClassName="is-unavailable"
+      unavailableText="Puddle"
+      data-saved-morph-link={ready ? '' : undefined}
+      data-saved-morph-photo={ready ? '' : undefined}
+      aria-disabled={!ready}
+      onClick={(event) => { if (!ready) event.preventDefault() }}
+      aria-label={`Open ${title}`}
+    >
+      {children}
+    </PhotoFrame>
+  }
+
+  return <a
     className={className}
     href={href}
-    src={image}
-    alt={`${title} photo`}
-    unavailableClassName="is-unavailable"
-    unavailableText={image ? 'Photo unavailable' : 'Puddle'}
     data-saved-morph-link={ready ? '' : undefined}
     data-saved-morph-photo={ready ? '' : undefined}
     aria-disabled={!ready}
     onClick={(event) => { if (!ready) event.preventDefault() }}
     aria-label={`Open ${title}`}
+    style={{ position: 'relative', overflow: 'hidden' }}
   >
+    <LocationVisualPreview slug={slug} title={title} />
     {children}
-  </PhotoFrame>
+  </a>
 }
 
 export function SavedLightweightGrid({ items = [], className = '', cardClassName = '', photoClassName = '', copyClassName = '', metaClassName = '', perfectPickClassName = '' }) {
@@ -123,9 +140,9 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
         data-saved-morph-image={ready && image ? image : undefined}
         key={`saved:${item.location_id}`}
       >
-        <SavedCardPhoto className={photoClassName} href={detail} ready={ready} title={title} image={image}>
+        <SavedCardVisual className={photoClassName} href={detail} ready={ready} title={title} image={image} slug={slug}>
           {item.perfect_pick ? <b className={perfectPickClassName}>★ Perfect Pick</b> : null}
-        </SavedCardPhoto>
+        </SavedCardVisual>
         <div className={copyClassName}>
           <h2>
             <a href={detail} data-saved-morph-link={ready ? '' : undefined} onClick={(event) => { if (!ready) event.preventDefault() }}>
