@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { csrfFetch } from '@/lib/security/csrf-client'
 
 export function RecommendationSettings({ initialPreferences }) {
   const [preferences, setPreferences] = useState(initialPreferences)
@@ -12,7 +13,7 @@ export function RecommendationSettings({ initialPreferences }) {
     setBusy(true)
     setMessage('')
     try {
-      const response = await fetch('/api/recommendations/preferences', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      const response = await csrfFetch('/api/recommendations/preferences', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       const result = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(result.error || 'Recommendation settings could not be updated.')
       return result

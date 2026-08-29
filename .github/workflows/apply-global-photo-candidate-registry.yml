@@ -28,3 +28,12 @@ jobs:
             --linked \
             --project-ref cegoqtvajwajczbofpep \
             --file supabase/migrations/20260826200000_global_photo_candidate_registry.sql
+      - name: Extend the registry for bulk dataset identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          supabase db query \
+            --linked \
+            --project-ref cegoqtvajwajczbofpep \
+            --file supabase/migrations/20260828120000_bulk_photo_provider.sql

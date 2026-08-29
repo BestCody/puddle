@@ -59,7 +59,7 @@ test('existing B2 photos are reconciled once and retired identities cannot resur
   assert.match(materializer, /bind_global_photo_candidate_url_v1/)
   assert.match(materializer, /normalize_source_url/)
   assert.match(materializer, /complete_global_photo_candidate_v1/)
-  assert.ok(materializer.indexOf('reserve_candidate(row)') < materializer.indexOf('body = download('))
+  assert.ok(materializer.indexOf('reservation = reserve_candidate(row)') < materializer.indexOf('prepare_candidate(row, candidate)'))
   assert.match(materializer, /Fingerprints must describe the exact canonical bytes written to B2/)
   assert.match(materializer, /with Image\.open\(io\.BytesIO\(data\)\) as canonical/)
   assert.ok(materializer.indexOf("image.save(out, format='JPEG'") < materializer.indexOf('perceptual = dhash(canonical)'))

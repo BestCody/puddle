@@ -19,7 +19,7 @@ from botocore.client import Config
 from PIL import Image
 
 
-PROVIDER_CODES = {"wikimedia-commons": 1, "mapillary": 2, "kartaview": 3}
+PROVIDER_CODES = {"wikimedia-commons": 1, "mapillary": 2, "kartaview": 3, "yfcc100m": 4}
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 PHASH_RE = re.compile(r"^[0-9a-f]{16}$")
 UUID_RE = re.compile(r"^[0-9a-fA-F-]{16,64}$")
@@ -104,7 +104,7 @@ def fetch_rows(base_url: str, key: str, table: str) -> list[dict]:
     while True:
         params = {"select": "*", "order": "provider_code,provider_asset_id", "limit": "1000", "offset": str(offset)}
         if table == "global_photo_candidate_registry":
-            params["provider_code"] = "in.(1,2,3)"
+            params["provider_code"] = "in.(1,2,3,4)"
         request = Request(
             f"{base_url}/rest/v1/{table}?{urlencode(params)}",
             headers={

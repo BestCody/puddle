@@ -89,6 +89,13 @@ for (const marker of ['saveOnboardingDraft', 'profileWriteErrorMessage', 'ensure
 }
 assert(actions.includes('updateUserById(user.id, { email_confirm: true })'), 'Hosted signup must auto-confirm new users when Supabase still requires confirmation')
 assert(!actions.includes('/verify-email?email='), 'New signups must not be redirected to email verification')
+assert(actions.includes("if (process.env.NODE_ENV === 'production') return 'https://puddle.you'"), 'Production auth links must never point at localhost')
+assert(actions.includes('clearLocalAuthSession(supabase)'), 'New authentication attempts must clear the previous local session')
+assert(!proxy.includes("new URL('/discover', request.url)"), 'Auth pages must remain available so users can switch accounts')
+
+const accountDeletionMigration = await readFile(join(root, 'supabase/migrations/20260829130000_account_deletion_integrity.sql'), 'utf8')
+assert.match(accountDeletionMigration, /on delete set null/i, 'Account deletion must not be blocked by profile attribution records')
+assert.match(accountDeletionMigration, /drop not null/i, 'Required historical profile references must be nullable on deletion')
 
 const supabaseConfig = await readFile(join(root, 'supabase/config.toml'), 'utf8')
 assert(supabaseConfig.includes('enable_confirmations = false'), 'Local email signup confirmations must be disabled')

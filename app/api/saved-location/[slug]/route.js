@@ -5,6 +5,7 @@ import { getPublicLocation } from '@/lib/app/public-content'
 import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCsrf } from '@/lib/security/csrf'
+import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 
 export const dynamic = 'force-dynamic'
@@ -107,6 +108,8 @@ export async function POST(request, context) {
   const { slug } = await context.params
   const { supabase, user } = await requireApiUser()
   if (!user) return error('Sign in to update Saved locations.', 401)
+  const limited = await enforceRateLimit({ headers: request.headers, userId: user.id, action: 'saved_location_action' })
+  if (!limited.allowed) return error('Too many Saved-location changes. Try again shortly.', 429)
 
   let input
   try {

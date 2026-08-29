@@ -44,13 +44,10 @@ function DemoLogo({ centered = false }) {
   return <img className={`landing-demo-logo${centered ? ' is-centered' : ''}`} src="/figma/assets/logo.svg" alt="Puddle" />
 }
 
-function DemoBottomNav({ active }) {
+function DemoBottomNav({ active, onNavigate }) {
   return <nav className="landing-demo-bottom-nav" aria-label="Puddle app navigation">
     {demoNav.map(([view, label, glyph]) => {
-      // Every nav target now has a demo screen, so the preview never escapes to a real
-      // (auth-gated, and for friends/pass non-existent) product route.
-      const href = `/landing-demo/${view}`
-      return <a key={view} href={href} className={active === view ? `is-active is-${view}` : ''} aria-current={active === view ? 'page' : undefined} aria-label={label}><span aria-hidden="true">{glyph}</span></a>
+      return <button key={view} type="button" onClick={() => onNavigate(view)} className={active === view ? `is-active is-${view}` : ''} aria-current={active === view ? 'page' : undefined} aria-label={label}><span aria-hidden="true">{glyph}</span></button>
     })}
   </nav>
 }
@@ -79,7 +76,7 @@ function DemoDetails({ title, subtitle, onClose }) {
   </div>
 }
 
-function SwipeDemo() {
+function SwipeDemo({ onNavigate }) {
   const [index, setIndex] = useState(0)
   const [history, setHistory] = useState([])
   const [dragX, setDragX] = useState(0)
@@ -144,11 +141,11 @@ function SwipeDemo() {
       <button type="button" className="is-star" onClick={() => choose('star')} aria-label="Star place">☆<small>Star</small></button>
     </div>
     <div className="landing-demo-progress" aria-label={`Swipe demo place ${index + 1}`}><span style={{ width: `${((index % swipePlaces.length) + 1) / swipePlaces.length * 100}%` }} /></div>
-    <DemoBottomNav active="swipe" />
+    <DemoBottomNav active="swipe" onNavigate={onNavigate} />
   </div>
 }
 
-function SavedDemo() {
+function SavedDemo({ onNavigate }) {
   const [tab, setTab] = useState('saved')
   const [category, setCategory] = useState('All')
   const [query, setQuery] = useState('')
@@ -183,7 +180,7 @@ function SavedDemo() {
       <article><small>Saturday · 7:00 PM</small><strong>Night Gallery</strong><span>Planned with friends</span></article>
       <article><small>Sunday · 2:30 PM</small><strong>Maple Grove Park</strong><span>2 people going</span></article>
     </section>}
-    <DemoBottomNav active="save" />
+    <DemoBottomNav active="save" onNavigate={onNavigate} />
     {openItem ? <DemoDetails title={openItem.title} subtitle={`${openItem.city} · ${openItem.distance}`} onClose={() => setOpenItem(null)} /> : null}
   </div>
 }
@@ -202,7 +199,7 @@ function FeedPost({ onOpen }) {
   </article>
 }
 
-function FeedDemo() {
+function FeedDemo({ onNavigate }) {
   const [view, setView] = useState('feed')
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -219,12 +216,12 @@ function FeedDemo() {
     {searchOpen ? <label className="landing-demo-feed-search"><span className="sr-only">Search puddle</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search puddle" /><b aria-hidden="true">⌕</b></label> : null}
     {view === 'feed' ? <section className="landing-demo-feed-list" aria-label="Puddle feed">{showPost ? <FeedPost onOpen={() => setOpen(true)} /> : <p className="landing-demo-empty">No puddles found.</p>}</section> : <section className="landing-demo-map" aria-label="Interactive map preview"><span className="landing-demo-map-road road-a" /><span className="landing-demo-map-road road-b" /><button type="button" className="landing-demo-map-pin pin-a" aria-label="Open Maple Grove Park" onClick={() => setOpen(true)}>●</button><button type="button" className="landing-demo-map-pin pin-b" aria-label="Open Firehall Cool Bar Hot Grill" onClick={() => setOpen(true)}>●</button><strong>Oakville</strong></section>}
     <button className="landing-demo-compose" type="button" onClick={() => setComposing((value) => !value)}><span className="landing-demo-avatar">R</span><span>{composing ? 'Share something about this place…' : 'Create a puddle...'}</span><b>↑</b></button>
-    <DemoBottomNav active="feed" />
+    <DemoBottomNav active="feed" onNavigate={onNavigate} />
     {open ? <DemoDetails title="Maple Grove Park" subtitle="2243 Devon Road, Oakville · 208m" onClose={() => setOpen(false)} /> : null}
   </div>
 }
 
-function ProfileDemo() {
+function ProfileDemo({ onNavigate }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState('Richie Zheng')
   const [following, setFollowing] = useState(false)
@@ -259,12 +256,12 @@ function ProfileDemo() {
       <article className="is-friends"><h2>Friends</h2></article>
       <button className="landing-demo-profile-add" type="button" aria-label="Add profile section">＋</button>
     </section>
-    <DemoBottomNav active="profile" />
+    <DemoBottomNav active="profile" onNavigate={onNavigate} />
     {messageOpen ? <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setMessageOpen(false) }}><section ref={messageRef} className="landing-demo-message" role="dialog" aria-modal="true" aria-label="Message Richie Zheng" tabIndex={-1}><button ref={messageCloseRef} type="button" onClick={() => setMessageOpen(false)} aria-label="Close message">×</button><strong>Message Richie Zheng</strong><textarea aria-label="Message" placeholder="Write a message…" /><button type="button" onClick={() => setMessageOpen(false)}>Send</button></section></div> : null}
   </div>
 }
 
-function FriendsDemo() {
+function FriendsDemo({ onNavigate }) {
   const [tab, setTab] = useState('friends')
   const [query, setQuery] = useState('')
   const [following, setFollowing] = useState(() => new Set(['richie']))
@@ -313,12 +310,12 @@ function FriendsDemo() {
         <button type="button" className="landing-demo-friend-follow" onClick={() => setRequests((items) => items.filter((item) => item.id !== person.id))}>Accept</button>
       </article>) : <p className="landing-demo-empty">No pending requests.</p>}
     </section>}
-    <DemoBottomNav active="friends" />
+    <DemoBottomNav active="friends" onNavigate={onNavigate} />
     {openItem ? <DemoDetails title={openItem.name} subtitle={`${openItem.handle} · ${openItem.mutual}`} onClose={() => setOpenItem(null)} /> : null}
   </div>
 }
 
-function PassDemo() {
+function PassDemo({ onNavigate }) {
   const [subscribed, setSubscribed] = useState(false)
 
   return <div className="landing-demo-screen landing-demo-screen--pass" data-demo-screen="pass">
@@ -334,15 +331,20 @@ function PassDemo() {
         {subscribed ? 'Pass active' : 'Get Puddle Pass'}
       </button>
     </section>
-    <DemoBottomNav active="pass" />
+    <DemoBottomNav active="pass" onNavigate={onNavigate} />
   </div>
 }
 
 export function LandingPhoneDemo({ view }) {
-  if (view === 'swipe') return <main className="landing-phone-demo"><SwipeDemo /></main>
-  if (view === 'save') return <main className="landing-phone-demo"><SavedDemo /></main>
-  if (view === 'feed') return <main className="landing-phone-demo"><FeedDemo /></main>
-  if (view === 'friends') return <main className="landing-phone-demo"><FriendsDemo /></main>
-  if (view === 'pass') return <main className="landing-phone-demo"><PassDemo /></main>
-  return <main className="landing-phone-demo"><ProfileDemo /></main>
+  const [activeView, setActiveView] = useState(view)
+  const navigationProps = { onNavigate: setActiveView }
+
+  return <main className="landing-phone-demo">
+    {activeView === 'swipe' ? <SwipeDemo {...navigationProps} />
+      : activeView === 'save' ? <SavedDemo {...navigationProps} />
+        : activeView === 'feed' ? <FeedDemo {...navigationProps} />
+          : activeView === 'friends' ? <FriendsDemo {...navigationProps} />
+            : activeView === 'pass' ? <PassDemo {...navigationProps} />
+              : <ProfileDemo {...navigationProps} />}
+  </main>
 }

@@ -12,7 +12,7 @@ body:has(.landing-phone-demo){overflow:hidden}
 
 /* Shared app navigation from the mobile Figma frames. */
 .landing-demo-bottom-nav{position:sticky;z-index:8;bottom:0;display:grid;grid-template-columns:repeat(6,1fr);align-items:center;min-height:58px;margin:8px -10px 0;padding:6px 13px max(7px,env(safe-area-inset-bottom));border-top:2px solid #d7d7d7;background:rgba(246,246,246,.97);backdrop-filter:blur(8px)}
-.landing-demo-bottom-nav a{display:grid;place-items:center;width:42px;height:42px;margin:auto;border-radius:999px;color:#8d8d8d;text-decoration:none;font-size:22px;font-weight:800}.landing-demo-bottom-nav a.is-active{background:#fff;box-shadow:0 2px 0 rgba(0,0,0,.1)}.landing-demo-bottom-nav a.is-swipe{color:var(--blue)}.landing-demo-bottom-nav a.is-feed{color:#d49b00}.landing-demo-bottom-nav a.is-save{color:var(--purple)}.landing-demo-bottom-nav a.is-profile{color:#3c6e9c}
+.landing-demo-bottom-nav button{display:grid;place-items:center;width:42px;height:42px;margin:auto;border:0;border-radius:999px;background:transparent;color:#8d8d8d;font-size:22px;font-weight:800}.landing-demo-bottom-nav button.is-active{background:#fff;box-shadow:0 2px 0 rgba(0,0,0,.1)}.landing-demo-bottom-nav button.is-swipe{color:var(--blue)}.landing-demo-bottom-nav button.is-feed{color:#d49b00}.landing-demo-bottom-nav button.is-save{color:var(--purple)}.landing-demo-bottom-nav button.is-profile{color:#3c6e9c}
 
 /* Shared segmented control. */
 .landing-demo-segment{display:flex;width:max-content;margin:0 auto;padding:3px;border:2px solid #d9d9d9;border-radius:999px;background:#fff}.landing-demo-segment button{min-width:55px;padding:6px 9px;border:0;border-radius:999px;background:transparent;color:var(--grey);font-size:12px;font-weight:700}.landing-demo-segment button.is-active{color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.1)}.landing-demo-segment--purple button.is-active{background:var(--purple)}.landing-demo-segment--yellow button.is-active{background:var(--yellow)}
@@ -45,8 +45,8 @@ body:has(.landing-phone-demo){overflow:hidden}
 
 .landing-demo-segment--green button.is-active{background:var(--green)}
 .landing-demo-segment--pink button.is-active{background:var(--pink)}
-.landing-demo-bottom-nav a.is-friends{color:var(--green)}
-.landing-demo-bottom-nav a.is-pass{color:var(--pink)}
+.landing-demo-bottom-nav button.is-friends{color:var(--green)}
+.landing-demo-bottom-nav button.is-pass{color:var(--pink)}
 .landing-demo-screen--friends{display:flex;flex-direction:column;gap:10px;min-height:100svh;background:#f6f6f6}
 .landing-demo-friends-list{display:flex;flex-direction:column;gap:8px;align-content:start;flex:1}
 .landing-demo-friend-card{display:flex;align-items:center;gap:8px;padding:8px 9px;border:2.5px solid #e5e5e5;border-radius:18px;background:#fff;box-shadow:0 3px 0 rgba(0,0,0,.1)}
