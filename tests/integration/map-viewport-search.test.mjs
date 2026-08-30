@@ -94,6 +94,8 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   const mapFeedStyles = await read('app/(product)/map/MapFeed.module.css')
   assert.match(mapFeedStyles, /location-map-side\) \{[\s\S]*display: flex !important/)
   assert.match(mapFeedStyles, /location-map-side \.location-map-list\) \{[\s\S]*display: none/)
+  assert.match(mapFeedStyles, /\.mapCanvas\s*\{[^}]*container-type:\s*size;/s)
+  assert.doesNotMatch(mapFeedStyles, /\.composer\s*\{/)
   assert.doesNotMatch(mapFeedStyles, /\.map(?:Puddle|Card|Search)\b/)
 
   assert.doesNotMatch(dataSource, /public_map_location_search_v1/)

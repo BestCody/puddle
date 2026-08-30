@@ -12,7 +12,7 @@ test('rebuilt Figma dashboard shell keeps the authored expanded and concise side
     read('app/figma-dashboard-rebuild.css'),
     read('app/responsive-density-20260822.css'),
     read('app/sidebar-layout-followup-20260822.css'),
-    read('app/layout.js')
+    read('app/global.css')
   ])
 
   assert.match(shell, /FigmaDashboardSidebar/)
@@ -55,7 +55,7 @@ test('saved places hydrate canonical metadata and open details as a same-page sh
     read('app/(product)/plans/page.js'),
     read('lib/app/location-plans-data.js'),
     read('app/(product)/plans/Plans.module.css'),
-    read('app/layout.js'),
+    read('app/global.css'),
     read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql'),
     read('components/saved-location-morph-bridge.js'),
     read('app/saved-location-morph.css'),
@@ -110,8 +110,9 @@ test('saved places hydrate canonical metadata and open details as a same-page sh
   assert.match(morphApi, /export async function POST/)
   assert.match(layout, /import '\.\/saved-location-morph\.css'/)
 
-  assert.match(styles, /\.placeGrid\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 297px\)\)/s)
-  assert.match(styles, /\.placeCard\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*156px minmax\(0, 1fr\)/s)
+  assert.match(styles, /\.placeGrid\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 17\.5rem\), 1fr\)\)/s)
+  assert.match(styles, /\.placeCard\s*\{[^}]*width:\s*100%;[^}]*aspect-ratio:\s*297 \/ 233;[^}]*display:\s*grid;/s)
+  assert.doesNotMatch(styles, /\.placeCard:nth-child\(/)
   assert.match(styles, /\.placePhoto\s*\{[^}]*position:\s*relative;/s)
   assert.match(styles, /\.perfectPick\s*\{[^}]*position:\s*absolute;/s)
   assert.match(styles, /\.categories > a\.categoryActive\s*\{/)

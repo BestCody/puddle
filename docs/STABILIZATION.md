@@ -8,13 +8,13 @@ The stabilized repository now uses direct Next.js source files. The build comman
 
 ## Landing-page preservation
 
-The original landing-page blobs are retained as the canonical root files:
+The public landing files are retained as the canonical serving files:
 
-- `index.html`
-- `styles.css`
-- `app.js`
+- `public/landing.html`
+- `public/landing.css`
+- `public/app.js`
 
-The same blobs are also stored at their public serving paths. `next.config.mjs` rewrites only `/` to `/landing.html`; it does not recreate or transform the landing-page HTML, CSS, or JavaScript.
+`next.config.mjs` rewrites only `/` to `/landing.html`; it does not recreate or transform the landing-page HTML, CSS, or JavaScript.
 
 ## Deployment checks
 

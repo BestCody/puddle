@@ -126,24 +126,16 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   max-height: 100dvh !important;
 }
 
-/* Discover composer follows the measured center of the Feed/Map column. */
+/* Discover composer is centered from the dashboard shell geometry. */
 .puddle-discover-create-dock {
-  left: var(--puddle-feed-anchor-x, 50%) !important;
+  left: calc(var(--figma-shell-sidebar, 0rem) + (100vw - var(--figma-shell-sidebar, 0rem)) / 2) !important;
   transform: translateX(-50%) !important;
-}
-
-@media (min-width: 761px) {
-  .puddle-discover-create-dock {
-    left: var(--puddle-feed-anchor-x) !important;
-  }
-}
-
-.puddle-discover-create-dock {
   position: fixed;
   z-index: 75;
-  bottom: 44px;
-  width: min(420px, calc(100vw - var(--figma-shell-sidebar) - 48px));
-  height: 52px;
+  bottom: clamp(1rem, 3vw, 2.75rem);
+  width: min(26.25rem, calc(100vw - var(--figma-shell-sidebar, 0rem) - 3rem));
+  min-height: 3.25rem;
+  height: auto;
   transform-origin: bottom center;
   transition:
     width 420ms cubic-bezier(.16, 1.22, .3, 1),
@@ -151,8 +143,8 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 }
 
 .puddle-discover-create-dock.is-open {
-  width: min(697px, calc(100vw - var(--figma-shell-sidebar) - 64px));
-  height: min(406px, calc(100dvh - 92px));
+  width: min(43.5625rem, calc(100vw - var(--figma-shell-sidebar, 0rem) - 4rem));
+  height: min(25.375rem, calc(100dvh - 5.75rem));
 }
 
 .puddle-discover-create-trigger,
@@ -464,7 +456,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 47.5rem) {
   .puddle-settings-overlay-frame {
     width: calc(100vw - 20px) !important;
     height: calc(100dvh - 20px) !important;
@@ -505,17 +497,14 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   }
 
   .puddle-discover-create-dock {
-    left: var(--puddle-feed-anchor-x, 50%) !important;
-  }
-
-  .puddle-discover-create-dock {
-    bottom: 112px;
-    width: calc(100vw - 52px);
+    left: 50% !important;
+    bottom: calc(var(--puddle-mobile-nav-height, 6.5rem) + env(safe-area-inset-bottom)) ;
+    width: calc(100vw - 2rem);
   }
 
   .puddle-discover-create-dock.is-open {
-    width: calc(100vw - 34px);
-    height: min(410px, calc(100dvh - 142px));
+    width: calc(100vw - 1.5rem);
+    height: min(25.625rem, calc(100dvh - 8.875rem));
   }
 
   .puddle-discover-create-form {

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const findings = []
 
-for (const path of ['index.html', 'styles.css', 'app.js', 'public/landing-demo.js']) {
+for (const path of ['index.html', 'styles.css', 'app.js', 'public/landing-demo.js', 'public/styles.css', 'public/figma-landing-overflow-fix.css']) {
   try { await access(join(root, path)); findings.push(`${path} should not exist`) } catch (error) { if (error?.code !== 'ENOENT') throw error }
 }
 
@@ -19,6 +19,7 @@ if (Buffer.byteLength(landingScript) > 30_000) findings.push(`public/app.js exce
 
 const layout = await readFile(join(root, 'app/layout.js'), 'utf8')
 const imports = [...layout.matchAll(/import\s+["'](.+?\.css)["']/g)].map((match) => match[1])
+if (imports.length !== 1 || imports[0] !== './global.css') findings.push(`app/layout.js should import only ./global.css, found ${imports.join(', ') || 'none'}`)
 for (const duplicate of imports.filter((item, index) => imports.indexOf(item) !== index)) findings.push(`app/layout.js imports ${duplicate} more than once`)
 
 if (findings.length) throw new Error(`Duplicate asset audit failed:\n${findings.map((item) => `- ${item}`).join('\n')}`)
