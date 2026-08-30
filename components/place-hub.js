@@ -74,6 +74,23 @@ function LinkSection({ title, links }) {
 }
 
 
+// Rendered as real text rather than a collapsed widget: FAQPage markup is only valid when the
+// answer is visible, and answer engines quote what they can read in the HTML.
+function Faq({ items }) {
+  if (!items?.length) return null
+  return <section className="place-hub-faq">
+    <h2>Common questions</h2>
+    <dl>
+      {items.map((item) => <div key={item.question}>
+        <dt>{item.question}</dt>
+        <dd>{item.answer}</dd>
+      </div>)}
+    </dl>
+  </section>
+}
+
+
+
 // Paging is rendered as plain anchors so a crawler walks past the first 24 places without
 // running JavaScript. `hubPageHref` keeps page 1 on the bare path so it stays the canonical.
 export function hubPageHref(basePath, page) {
@@ -100,7 +117,7 @@ function Pagination({ basePath, page, totalPages }) {
   </nav>
 }
 
-export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [], pagination = null }) {
+export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [], pagination = null, faq = [] }) {
   return <>
     <PublicHeader />
     <main className="place-hub">
@@ -114,6 +131,7 @@ export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sec
         : emptyNote ? <p className="place-hub-empty">{emptyNote}</p> : null}
       {pagination ? <Pagination {...pagination} /> : null}
       {sections.map((section) => <LinkSection key={section.title} title={section.title} links={section.links} />)}
+      <Faq items={faq} />
     </main>
   </>
 }
