@@ -1,6 +1,15 @@
 import { notFound } from 'next/navigation'
-import { PlaceHub, categoryLinks, marketLinks } from '@/components/place-hub'
-import { PLACE_CATEGORIES, getCachedMarketPlaces, getCategory, getMarket, listMarkets, marketRegionLabel } from '@/lib/app/seo-places'
+import { PlaceHub, categoryLinks, hubPageHref, marketLinks } from '@/components/place-hub'
+import {
+  PLACE_CATEGORIES,
+  describeHubPlaces,
+  getCachedMarketPlaces,
+  getCategory,
+  getMarket,
+  listMarkets,
+  marketRegionLabel,
+  paginateHubPlaces
+} from '@/lib/app/seo-places'
 import { breadcrumbStructuredData, placeListStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
@@ -14,24 +23,28 @@ function copy(market, category) {
   }
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   const { market: marketId, category: categorySlug } = await params
   const market = getMarket(marketId)
   const category = getCategory(categorySlug)
   if (!market || !category) return { title: 'Places not found' }
   const { title, description } = copy(market, category)
-  const canonical = `/places/in/${market.id}/${category.slug}`
+  const basePath = `/places/in/${market.id}/${category.slug}`
   // Same cached lookup the page body makes, so this costs nothing extra.
   const places = await getCachedMarketPlaces(market.id, category.slug)
+  const { page, totalPages, items } = paginateHubPlaces(places, (await searchParams)?.page)
+  // Later pages list different places, so each one canonicalises to itself and says which page
+  // it is. Pointing them all at page 1 would keep everything past the first 24 out of the index.
+  const suffix = page > 1 ? ` — page ${page} of ${totalPages}` : ''
   const base = {
-    title,
-    description,
-    alternates: { canonical },
+    title: `${title}${suffix}`,
+    description: describeHubPlaces(items, { market, category }) || description,
+    alternates: { canonical: hubPageHref(basePath, page) },
     openGraph: {
       type: 'website',
-      title,
+      title: `${title}${suffix}`,
       description,
-      url: canonical,
+      url: hubPageHref(basePath, page),
       images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Puddle' }]
     }
   }
@@ -41,35 +54,40 @@ export async function generateMetadata({ params }) {
   return places.length ? base : { ...base, robots: { index: false, follow: true } }
 }
 
-export default async function MarketCategoryHubPage({ params }) {
+export default async function MarketCategoryHubPage({ params, searchParams }) {
   const { market: marketId, category: categorySlug } = await params
   const market = getMarket(marketId)
   const category = getCategory(categorySlug)
   if (!market || !category) notFound()
 
   const places = await getCachedMarketPlaces(market.id, category.slug)
+  const { items, page, totalPages } = paginateHubPlaces(places, (await searchParams)?.page)
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'
   const { title, description } = copy(market, category)
+  const basePath = `/places/in/${market.id}/${category.slug}`
   const trail = [
     { label: 'Puddle', href: '/' },
     { label: 'Places', href: '/places' },
     { label: market.name, href: `/places/in/${market.id}` },
-    { label: category.label, href: `/places/in/${market.id}/${category.slug}` }
+    { label: category.label, href: basePath }
   ]
   const breadcrumbs = breadcrumbStructuredData(trail, site)
-  const itemList = placeListStructuredData(places, site, title)
+  const itemList = placeListStructuredData(items, site, title)
   const siblings = PLACE_CATEGORIES.filter((entry) => entry.slug !== category.slug)
   const otherMarkets = listMarkets().filter((entry) => entry.id !== market.id).slice(0, 12)
+  // Naming real places stops 400+ category hubs reading as one sentence with the nouns swapped.
+  const intro = [description, describeHubPlaces(places, { market, category })].filter(Boolean).join(' ')
 
   return <>
     {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
     {itemList ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(itemList) }} /> : null}
     <PlaceHub
       trail={trail}
-      title={title}
-      intro={description}
-      places={places}
+      title={page > 1 ? `${title} — page ${page}` : title}
+      intro={intro}
+      places={items}
       emptyNote={`We have not mapped ${category.label.toLowerCase()} in ${market.name} yet. Try another category below.`}
+      pagination={{ basePath, page, totalPages }}
       sections={[
         { title: `More in ${market.name}`, links: categoryLinks(market, siblings) },
         { title: `${category.label} in other cities`, links: otherMarkets.map((entry) => ({ href: `/places/in/${entry.id}/${category.slug}`, label: `${category.label} in ${entry.name}` })) },

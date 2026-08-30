@@ -1,6 +1,14 @@
 import { notFound } from 'next/navigation'
-import { PlaceHub, categoryLinks, marketLinks } from '@/components/place-hub'
-import { PLACE_CATEGORIES, getCachedMarketPlaces, getMarket, listMarkets, marketRegionLabel } from '@/lib/app/seo-places'
+import { PlaceHub, categoryLinks, hubPageHref, marketLinks } from '@/components/place-hub'
+import {
+  PLACE_CATEGORIES,
+  describeHubPlaces,
+  getCachedMarketPlaces,
+  getMarket,
+  listMarkets,
+  marketRegionLabel,
+  paginateHubPlaces
+} from '@/lib/app/seo-places'
 import { breadcrumbStructuredData, placeListStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
@@ -14,23 +22,27 @@ function copy(market) {
   }
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   const { market: marketId } = await params
   const market = getMarket(marketId)
   if (!market) return { title: 'City not found' }
   const { title, description } = copy(market)
-  const canonical = `/places/in/${market.id}`
+  const basePath = `/places/in/${market.id}`
   // Same cached lookup the page body makes, so this costs nothing extra.
   const places = await getCachedMarketPlaces(market.id)
+  const { page, totalPages, items } = paginateHubPlaces(places, (await searchParams)?.page)
+  // Later pages list different places, so each one canonicalises to itself and says which page
+  // it is. Pointing them all at page 1 would keep everything past the first 24 out of the index.
+  const suffix = page > 1 ? ` — page ${page} of ${totalPages}` : ''
   const base = {
-    title,
-    description,
-    alternates: { canonical },
+    title: `${title}${suffix}`,
+    description: describeHubPlaces(items, { market }) || description,
+    alternates: { canonical: hubPageHref(basePath, page) },
     openGraph: {
       type: 'website',
-      title,
+      title: `${title}${suffix}`,
       description,
-      url: canonical,
+      url: hubPageHref(basePath, page),
       images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Puddle' }]
     }
   }
@@ -40,32 +52,37 @@ export async function generateMetadata({ params }) {
   return places.length ? base : { ...base, robots: { index: false, follow: true } }
 }
 
-export default async function MarketHubPage({ params }) {
+export default async function MarketHubPage({ params, searchParams }) {
   const { market: marketId } = await params
   const market = getMarket(marketId)
   if (!market) notFound()
 
   const places = await getCachedMarketPlaces(market.id)
+  const { items, page, totalPages } = paginateHubPlaces(places, (await searchParams)?.page)
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'
   const { title, description } = copy(market)
+  const basePath = `/places/in/${market.id}`
   const trail = [
     { label: 'Puddle', href: '/' },
     { label: 'Places', href: '/places' },
-    { label: market.name, href: `/places/in/${market.id}` }
+    { label: market.name, href: basePath }
   ]
   const breadcrumbs = breadcrumbStructuredData(trail, site)
-  const itemList = placeListStructuredData(places, site, title)
+  const itemList = placeListStructuredData(items, site, title)
   const otherMarkets = listMarkets().filter((entry) => entry.id !== market.id).slice(0, 12)
+  // Naming real places stops every city hub reading as the same sentence with the name swapped.
+  const intro = [description, describeHubPlaces(places, { market })].filter(Boolean).join(' ')
 
   return <>
     {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
     {itemList ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(itemList) }} /> : null}
     <PlaceHub
       trail={trail}
-      title={title}
-      intro={description}
-      places={places}
+      title={page > 1 ? `${title} — page ${page}` : title}
+      intro={intro}
+      places={items}
       emptyNote={`We are still mapping ${market.name}. Browse a category below, or try another city.`}
+      pagination={{ basePath, page, totalPages }}
       sections={[
         { title: `Browse ${market.name} by category`, links: categoryLinks(market, PLACE_CATEGORIES) },
         { title: 'Other cities', links: marketLinks(otherMarkets) }

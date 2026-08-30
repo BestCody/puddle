@@ -67,7 +67,34 @@ function LinkSection({ title, links }) {
   </section>
 }
 
-export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [] }) {
+
+// Paging is rendered as plain anchors so a crawler walks past the first 24 places without
+// running JavaScript. `hubPageHref` keeps page 1 on the bare path so it stays the canonical.
+export function hubPageHref(basePath, page) {
+  return page > 1 ? `${basePath}?page=${page}` : basePath
+}
+
+function Pagination({ basePath, page, totalPages }) {
+  if (!basePath || !totalPages || totalPages < 2) return null
+  const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
+  return <nav className="place-hub-pagination" aria-label="Pagination">
+    {page > 1
+      ? <Link className="place-hub-pagination-step" rel="prev" href={hubPageHref(basePath, page - 1)}>← Previous</Link>
+      : null}
+    <ol>
+      {pages.map((value) => <li key={value}>
+        {value === page
+          ? <span aria-current="page">{value}</span>
+          : <Link href={hubPageHref(basePath, value)}>{value}</Link>}
+      </li>)}
+    </ol>
+    {page < totalPages
+      ? <Link className="place-hub-pagination-step" rel="next" href={hubPageHref(basePath, page + 1)}>Next →</Link>
+      : null}
+  </nav>
+}
+
+export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [], pagination = null }) {
   return <>
     <PublicHeader />
     <main className="place-hub">
@@ -79,6 +106,7 @@ export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sec
       {places.length
         ? <ul className="place-hub-grid">{places.map((place) => <PlaceCard key={place.slug} place={place} />)}</ul>
         : emptyNote ? <p className="place-hub-empty">{emptyNote}</p> : null}
+      {pagination ? <Pagination {...pagination} /> : null}
       {sections.map((section) => <LinkSection key={section.title} title={section.title} links={section.links} />)}
     </main>
   </>
