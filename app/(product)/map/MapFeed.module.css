@@ -844,7 +844,7 @@
   .header {
     grid-column: 1;
     min-height: 2.5625rem;
-    grid-template-columns: 4.3125rem minmax(0, 1fr) 4.0625rem;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: start;
   }
 
@@ -1006,7 +1006,7 @@
     inset-block-start: clamp(1.5rem, 4.6dvh, 2.5rem);
     inset-inline: clamp(1rem, 4vw, 1.25rem);
     min-height: 2.5625rem;
-    grid-template-columns: 4.3125rem minmax(0, 1fr) 4.0625rem;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: start;
   }
 
