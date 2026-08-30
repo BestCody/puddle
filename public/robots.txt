@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+# Place photos are served from the API path. Without this the whole catalogue of imagery is
+# uncrawlable, and every place page points og:image and its schema image at a blocked URL.
+# A longer matching path wins over a shorter one, so this Allow beats the Disallow below.
+Allow: /api/open-photo/
 Disallow: /api/
 Disallow: /admin/
 Disallow: /studio/
