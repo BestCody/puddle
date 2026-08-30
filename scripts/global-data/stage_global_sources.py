@@ -68,17 +68,39 @@ def expr(cols, name, expression, fallback='NULL'):
 
 
 def category_case(raw_expr):
-    value = f"lower(coalesce(cast({raw_expr} as varchar), ''))"
-    excluded = "hospital|clinic|medical|dentist|school|university|college|office|warehouse|factory|police|fire_station|private_residence|government_office"
+    # Overture supplies snake_case categories while Foursquare labels arrive as human text
+    # ("Fire Station", "Dining and Drinking > Bar"), so every separator is normalised to a single
+    # underscore before matching. Without this the underscore spellings below silently never
+    # matched Foursquare rows, which is how fire stations reached the bar category.
+    value = (
+        "regexp_replace(lower(coalesce(cast(" + str(raw_expr) + " as varchar), '')), "
+        "'[^a-z0-9]+', '_', 'g')"
+    )
+    # Retail categories are excluded ahead of the venue rules because several of them collide
+    # with venue words. Home improvement chains are filed under "home_and_garden", and the park
+    # rule below matches on garden, which classified hardware stores as parks across every city.
+    excluded = (
+        "hospital|clinic|medical|dentist|school|university|college|office|warehouse|factory"
+        "|police|fire_station|private_residence|government_office"
+        "|hardware|home_improvement|home_(and_)?garden|garden_cent|building_suppl|building_cent"
+        "|lumber|plumbing|electrical_suppl|wholesale|self_storage|car_park|parking"
+        # "marketing_agency" is not a market. The shop rule matches market unanchored so that
+        # supermarket and flea_market still land there, so the exclusion carries this instead.
+        "|marketing"
+    )
     return f"""
     CASE
       WHEN regexp_matches({value}, '{excluded}') THEN NULL
-      WHEN regexp_matches({value}, 'cafe|coffee|tea_house|tea room|bakery|dessert|ice_cream|gelato|donut') THEN 'cafe'
+      WHEN regexp_matches({value}, 'cafe|coffee|tea_house|tea_room|bakery|dessert|ice_cream|gelato|donut') THEN 'cafe'
       WHEN regexp_matches({value}, 'nightclub|night_club|dance_club|karaoke') THEN 'nightlife'
-      WHEN regexp_matches({value}, 'bar|pub|brewpub|beer_garden|wine_bar|cocktail_bar|sports_bar|lounge') THEN 'bar'
+      WHEN regexp_matches({value}, '(^|_)(bar|pub|brewpub|beer_garden|wine_bar|cocktail_bar|sports_bar|lounge)(_|$)') THEN 'bar'
       WHEN regexp_matches({value}, 'arcade|bowling|miniature_golf|mini_golf|escape_room|recreation|sports_center|sports_centre|climbing_gym|trampoline|game_center|game_centre|clubhouse') THEN 'activity_venue'
       WHEN regexp_matches({value}, 'community_center|community_centre|community_space|cultural_center|cultural_centre|public_hall|social_center') THEN 'community_space'
-      WHEN regexp_matches({value}, 'park|garden|playground|nature_reserve|dog_park|waterfront_park') THEN 'park'
+      -- Ticketed park-named attractions are matched ahead of the park rule. They are already
+      -- listed under attraction below, but a rule ending in _park claims them first, which files
+      -- theme parks and water parks alongside municipal green space.
+      WHEN regexp_matches({value}, '(^|_)(amusement_park|theme_park|water_park|trampoline_park|adventure_park)(_|$)') THEN 'attraction'
+      WHEN regexp_matches({value}, '(^|_)(park|garden|playground|nature_reserve|dog_park|waterfront_park)(_|$)') THEN 'park'
       WHEN regexp_matches({value}, 'museum') THEN 'museum'
       WHEN regexp_matches({value}, 'gallery') THEN 'gallery'
       WHEN regexp_matches({value}, 'cinema|movie_theat|theater|theatre|aquarium|zoo|tourist_attraction|amusement_park|theme_park|planetarium') THEN 'attraction'
