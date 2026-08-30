@@ -67,7 +67,22 @@ function LinkSection({ title, links }) {
   </section>
 }
 
-export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [] }) {
+// Rendered as real text rather than a collapsed widget: FAQPage markup is only valid when the
+// answer is visible, and answer engines quote what they can read in the HTML.
+function Faq({ items }) {
+  if (!items?.length) return null
+  return <section className="place-hub-faq">
+    <h2>Common questions</h2>
+    <dl>
+      {items.map((item) => <div key={item.question}>
+        <dt>{item.question}</dt>
+        <dd>{item.answer}</dd>
+      </div>)}
+    </dl>
+  </section>
+}
+
+export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [], faq = [] }) {
   return <>
     <PublicHeader />
     <main className="place-hub">
@@ -80,6 +95,7 @@ export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sec
         ? <ul className="place-hub-grid">{places.map((place) => <PlaceCard key={place.slug} place={place} />)}</ul>
         : emptyNote ? <p className="place-hub-empty">{emptyNote}</p> : null}
       {sections.map((section) => <LinkSection key={section.title} title={section.title} links={section.links} />)}
+      <Faq items={faq} />
     </main>
   </>
 }
