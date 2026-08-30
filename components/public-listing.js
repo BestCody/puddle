@@ -40,7 +40,7 @@ function SimilarGrid({ items = [] }) {
   return <section className="public-section">
     <div className="public-section-heading"><span className="section-pill section-pill-mint">Keep exploring</span><h2>Similar splashes.</h2></div>
     <div className="public-similar-grid">{places.map((item) => <PhotoFrame
-      as={Link}
+      as="a"
       href={`/places/${item.slug}`}
       className="public-similar-card"
       src={item.cover_url}
