@@ -20,6 +20,9 @@ test('public Swipe phone keeps the Figma screen identity and real draggable mech
 
   const card = screen.locator('.landing-demo-swipe-card')
   await expect(card).toHaveAttribute('data-place-id', 'maple-grove')
+  await screen.getByRole('button', { name: 'Open Maple Grove Park' }).click()
+  await expect(page.getByRole('dialog', { name: 'Maple Grove Park details' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
   const box = await card.boundingBox()
   expect(box).toBeTruthy()
   await page.mouse.move(box.x + box.width * .5, box.y + box.height * .45)
