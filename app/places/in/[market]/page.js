@@ -3,6 +3,7 @@ import { PlaceHub, categoryLinks, hubPageHref, marketLinks } from '@/components/
 import {
   PLACE_CATEGORIES,
   describeHubPlaces,
+  HUB_MIN_INDEXABLE,
   getCachedMarketPlaces,
   getMarket,
   listMarkets,
@@ -49,7 +50,7 @@ export async function generateMetadata({ params, searchParams }) {
   // A hub with nothing to list has no content of its own, only navigation. Keeping those out
   // of the index avoids a run of near-identical listing-free pages, and crawlers still follow
   // the city and category links. It reverses itself once the catalogue covers the combination.
-  return places.length ? base : { ...base, robots: { index: false, follow: true } }
+  return places.length >= HUB_MIN_INDEXABLE ? base : { ...base, robots: { index: false, follow: true } }
 }
 
 export default async function MarketHubPage({ params, searchParams }) {
