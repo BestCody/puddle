@@ -443,3 +443,16 @@
     gap: 10px !important;
   }
 }
+
+/* Reserve the lower action group on genuinely short desktop viewports. */
+@media (min-width: 761px) and (max-height: 579px) {
+  .figma-dashboard-sidebar .figma-dashboard-nav {
+    top: 96px !important;
+    gap: 0 !important;
+    transform: none !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav-item {
+    height: 44px !important;
+  }
+}
