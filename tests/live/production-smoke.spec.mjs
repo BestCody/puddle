@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { completeOnboarding } from './onboarding.mjs'
 import sharp from 'sharp'
 
 async function deleteDisposableAccount(page) {
@@ -55,16 +56,7 @@ test('production Figma core UI, share, profile photo, and Stripe handoff work en
     await page.waitForURL(/\/onboarding(?:\?|$)/, { timeout: 30_000 })
     accountCreated = true
 
-    await page.locator('input[name="username"]').fill(username)
-    await page.locator('input[name="birth_date"]').fill('1990-01-01')
-    await page.getByLabel('City or town').fill('Toronto')
-    await page.getByRole('button', { name: 'Search', exact: true }).click()
-    await page.getByRole('option').filter({ hasText: 'Toronto' }).click()
-    await page.getByRole('checkbox', { name: 'Coffee shops' }).check()
-    await page.getByRole('checkbox', { name: 'Restaurants' }).check()
-    await page.getByRole('checkbox', { name: 'Parks & gardens' }).check()
-    await page.getByRole('button', { name: 'Build my date deck →' }).click()
-    await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 30_000 })
+    await completeOnboarding(page, { username })
     const discoveryCard = page.locator('.figma-swipe-card').first()
     await expect(discoveryCard).toBeVisible({ timeout: 30_000 })
     const discoveryImage = discoveryCard.locator('.figma-swipe-card-photo img')
