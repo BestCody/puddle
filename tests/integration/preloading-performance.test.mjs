@@ -134,6 +134,9 @@ test('Settings opens over the current page and Swipe locks only page scrolling',
   ])
 
   assert.match(sidebar, /<SettingsTrigger className="figma-dashboard-settings-link">[\s\S]*figma-dashboard-settings-label">Settings<\/span>[\s\S]*<\/SettingsTrigger>/)
+  assert.match(sidebar, /className="figma-dashboard-sidebar-actions"/)
+  assert.match(sidebar, /className="figma-dashboard-signout-form" action=\{signOutAction\}/)
+  assert.match(sidebar, /className="figma-dashboard-signout" type="submit">Sign out<\/button>/)
   assert.match(shell, /<SettingsOverlay \/>/)
   assert.match(shell, /<SettingsTrigger>Settings<\/SettingsTrigger>/)
   assert.match(overlay, /window\.self !== window\.top/)
@@ -168,7 +171,7 @@ test('Puddle logo keeps appearance state without toggling dark mode on click', a
   assert.match(layout, /import '\.\/ui-targeted-fixes\.css'\s*\nimport '\.\/dark-mode\.css'/)
   assert.match(layout, /colorScheme:\s*'light dark'/)
   assert.match(shell, /data-appearance=\{appearance\}/)
-  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} \/>/)
+  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} signOutAction=\{signOut\} \/>/)
   assert.match(sidebar, /<AppearanceToggleLogo initialAppearance=\{initialAppearance\} \/>/)
 
   assert.match(toggle, /shell\.dataset\.appearance = appearance/)
@@ -208,7 +211,7 @@ test('dashboard navigation keeps the shell mounted, preserves UI, and streams ro
   assert.doesNotMatch(productLayout, /requireUser|<ProductShell user=/)
   assert.match(productLoading, /puddle-main-transition-loader/)
   assert.match(shell, /import \{ MainContentTransition \} from '\.\/main-content-transition'/)
-  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{content\}<\/MainContentTransition><\/main>/)
+  assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} signOutAction=\{signOut\} \/>[\s\S]*<main className="figma-dashboard-main"><MainContentTransition>\{content\}<\/MainContentTransition><\/main>/)
 
   assert.match(renderPage, /import \{ Suspense \} from 'react'/)
   assert.match(renderPage, /function PersistentRouteFallback\(\)/)

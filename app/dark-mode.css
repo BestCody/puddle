@@ -57,6 +57,10 @@
   color: #9da3a9;
 }
 
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .figma-dashboard-signout {
+  color: #f47777;
+}
+
 :is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-theme-toggle {
   width: 56px;
   height: 56px;

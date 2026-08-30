@@ -19,18 +19,21 @@ test('desktop Figma sidebar navigates, switches to concise mode, and preserves t
   const productLinks = nav.locator('.figma-dashboard-nav-item')
   const resizer = page.getByRole('separator', { name: 'Resize navigation sidebar' })
   const settings = sidebar.locator('.figma-dashboard-settings-link')
+  const signOut = sidebar.locator('.figma-dashboard-signout')
 
   await expect(sidebar).toBeVisible()
   await expect(sidebar).toHaveClass(/is-expanded/)
   await expect(productLinks).toHaveCount(6)
   await expect(nav.locator('a[href="/discover"]')).toHaveAttribute('aria-current', 'page')
   await expect(settings).toBeVisible()
+  await expect(signOut).toBeVisible()
 
   await resizer.focus()
   await resizer.press('Home')
   await expect(sidebar).toHaveClass(/is-concise/)
   await expect(sidebar.locator('.figma-dashboard-nav-label').first()).toBeHidden()
   await expect(settings).toBeVisible()
+  await expect(signOut).toBeVisible()
   await expect(settings.locator('.figma-dashboard-settings-label')).toBeHidden()
 
   await nav.locator('a[href="/map"]').click()

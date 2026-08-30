@@ -19,6 +19,7 @@
   --figma-green-border: #4caf28;
   --figma-pink: #e73668;
   --figma-pink-border: #a02044;
+  --figma-danger: #b42318;
   --figma-card-shadow: 0 4px 0 rgba(0,0,0,.10);
   --figma-mono: "Martian Mono", "SFMono-Regular", Consolas, monospace;
 }
@@ -127,13 +128,36 @@
   display: block;
   object-fit: cover;
 }
-.figma-dashboard-settings-link {
+.figma-dashboard-sidebar-actions {
   position: absolute;
   left: 55px;
   bottom: 36px;
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+}
+.figma-dashboard-settings-link {
+  position: static;
   color: var(--figma-grey);
   font: 800 17px/1 Manrope, Inter, sans-serif;
   text-decoration: none;
+}
+.figma-dashboard-signout-form {
+  margin: 0;
+}
+.figma-dashboard-signout {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--figma-danger);
+  font: 800 17px/1 Manrope, Inter, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.figma-dashboard-signout:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .figma-dashboard-stage {
