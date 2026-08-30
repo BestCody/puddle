@@ -4,6 +4,7 @@ import {
   completeProfileDirect,
   createConfirmedUser,
   signInThroughUi,
+  signOutThroughUi,
   uniqueEmail,
   uniqueSuffix,
   waitForAuthEmailLink
@@ -43,6 +44,7 @@ test('an invalid sign-in cannot reuse the previous browser session', async ({ pa
     await signInThroughUi(page, account.email, account.password, '/account')
     await expect(page).toHaveURL(/\/account$/)
 
+    await signOutThroughUi(page)
     await page.goto('/?next=%2Faccount')
     await expect(page.locator('#landing-email')).toBeVisible()
     await page.locator('#landing-email').fill(uniqueEmail('not-an-account'))

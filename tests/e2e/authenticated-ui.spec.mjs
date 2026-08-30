@@ -4,6 +4,7 @@ import {
   assertNoHorizontalOverflow,
   completeProfileDirect,
   createConfirmedUser,
+  signInThroughApi,
   signInThroughUi
 } from './support.mjs'
 import {
@@ -79,7 +80,8 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
     strictConsole: false
   })
 
-  await signInThroughUi(page, account.email, account.password)
+  const signIn = testInfo.project.name === 'mobile-chromium' ? signInThroughApi : signInThroughUi
+  await signIn(page, account.email, account.password)
   await expect(page).toHaveURL(/\/discover$/)
   await expect(page.locator('.figma-swipe-card')).toBeVisible()
   const undo = page.getByRole('button', { name: 'Undo', exact: true })

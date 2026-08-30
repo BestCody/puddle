@@ -44,7 +44,7 @@ test('landing page uses the Figma responsive composition and real DOM content', 
 
   if (mode === 'desktop') {
     await expect(page.locator('[data-figma-node="83:76"]')).toBeVisible()
-    await expect(page.locator('.landing-sticky-left .login-panel input')).toHaveCount(2)
+    await expect(page.locator('.landing-sticky-left .login-panel input:not([type="hidden"])')).toHaveCount(2)
     await expect(page.locator('.feature-card--d-swipe')).toBeVisible()
     await expect(page.locator('.feature-card--d-profile')).toHaveCount(0)
   } else {

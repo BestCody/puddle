@@ -21,20 +21,26 @@ test('the retired sign-in route is no longer served', async ({ request }) => {
 test('callback provider failures return a useful sign-in message', async ({ page }) => {
   await page.goto('/auth/callback?error=access_denied&error_description=cancelled')
   await expect(page).toHaveURL(/\/\?.*auth_error=access_denied/)
-  await expect(page.getByText(/cancelled|not approved/i)).toBeVisible()
+  const visibleAuthMessage = page.locator('.landing-auth-message:visible').filter({ hasText: /cancelled|not approved/i })
+  await expect(visibleAuthMessage).toHaveCount(1)
+  await expect(visibleAuthMessage).toBeVisible()
   await expect(page).not.toHaveURL(/\/auth\/error/)
 })
 
 test('missing callback codes do not expose a generic error page', async ({ page }) => {
   await page.goto('/auth/callback?next=/onboarding')
   await expect(page).toHaveURL(/\/\?.*auth_error=missing_auth_code/)
-  await expect(page.getByText(/incomplete/i)).toBeVisible()
+  const visibleAuthMessage = page.locator('.landing-auth-message:visible').filter({ hasText: /incomplete/i })
+  await expect(visibleAuthMessage).toHaveCount(1)
+  await expect(visibleAuthMessage).toBeVisible()
 })
 
 test('invalid confirmation links explain how to recover', async ({ page }) => {
   await page.goto('/auth/confirm?token_hash=not-a-real-token&type=signup&next=/onboarding')
   await expect(page).toHaveURL(/\/\?.*auth_error=/)
-  await expect(page.getByText(/expired|already been used|request a new|could not be verified/i)).toBeVisible()
+  const visibleAuthMessage = page.locator('.landing-auth-message:visible').filter({ hasText: /expired|already been used|request a new|could not be verified/i })
+  await expect(visibleAuthMessage).toHaveCount(1)
+  await expect(visibleAuthMessage).toBeVisible()
   await expect(page).not.toHaveURL(/\/auth\/error/)
 })
 

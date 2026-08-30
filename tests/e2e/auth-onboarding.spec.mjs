@@ -126,7 +126,9 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await signOutThroughUi(page)
   await attemptSignInThroughUi(page, email, password)
   await expect(page).toHaveURL(/\/\?.*error=/)
-  await expect(page.getByText(/Email or password was not accepted/i)).toBeVisible()
+  const visibleAuthMessage = page.locator('.landing-auth-message:visible').filter({ hasText: /Email or password was not accepted/i })
+  await expect(visibleAuthMessage).toHaveCount(1)
+  await expect(visibleAuthMessage).toBeVisible()
 
   await signInThroughUi(page, email, newPassword)
   await expect(page).toHaveURL(/\/discover$/)
