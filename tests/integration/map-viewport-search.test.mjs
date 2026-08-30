@@ -105,3 +105,11 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(pageSource, /\/api\/map\/snapshot/)
   assert.doesNotMatch(pageSource, /Search all Puddle locations/)
 })
+
+test('selecting a map location preserves the current viewport', async () => {
+  const mapSource = await read('components/location-map.js')
+  const selectPoint = mapSource.match(/function selectPoint\(point\) \{[\s\S]*?\n  \}/)?.[0]
+
+  assert.ok(selectPoint, 'map point selection handler should exist')
+  assert.doesNotMatch(selectPoint, /setCenter\(/)
+})
