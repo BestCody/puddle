@@ -14,7 +14,7 @@
   position: relative;
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1.157fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1fr);
   align-content: start;
   padding: clamp(1.5rem, 2.55vw, 2.4375rem) clamp(1rem, 1.7vw, 1.625rem) clamp(4rem, 5.25vw, 5rem);
   background: #f6f6f6;
@@ -27,7 +27,7 @@
   grid-column: 1 / -1;
   min-height: 2.875rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1.157fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1fr);
   align-items: center;
 }
 

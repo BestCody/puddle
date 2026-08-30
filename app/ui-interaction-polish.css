@@ -498,7 +498,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
 
   .puddle-discover-create-dock {
     left: 50% !important;
-    bottom: calc(var(--puddle-mobile-nav-height, 6.5rem) + env(safe-area-inset-bottom)) ;
+    bottom: calc(var(--puddle-mobile-nav-height, 6.5rem) + env(safe-area-inset-bottom));
     width: calc(100vw - 2rem);
   }
 
