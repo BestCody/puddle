@@ -91,11 +91,24 @@ test('saved cards keep canonical photos and use the shared cached map fallback w
   assert.match(page, /<PhotoFrame[\s\S]*placePhoto/)
 })
 
+test('feed place geometry is owned by the responsive card stylesheet', async () => {
+  const [client, styles] = await Promise.all([
+    read('components/social-feed-client.js'),
+    read('app/(product)/map/MapFeed.module.css')
+  ])
+
+  assert.match(client, /className=\{styles\.placeVisual\}/)
+  assert.doesNotMatch(client, /style=\{\{\s*top:\s*['"]69px/)
+  assert.match(styles, /\.place\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:/s)
+  assert.match(styles, /\.placeVisual\s*\{[^}]*height:\s*clamp\(/s)
+  assert.doesNotMatch(styles, /\.composer\s*\{/)
+})
+
 test('current social routes share resilient media primitives without the retired social shell', async () => {
   const [hub, messages, layout, pass, parity, fine, dock] = await Promise.all([
     read('components/figma-social-hub.js'),
     read('components/figma-messages-realtime.js'),
-    read('app/layout.js'),
+    read('app/global.css'),
     read('app/figma-social-pass.css'),
     read('app/figma-parity.css'),
     read('app/figma-parity-fine.css'),
@@ -117,7 +130,7 @@ test('current social routes share resilient media primitives without the retired
   assert.match(dock, /function StarIcon/)
   assert.match(dock, /\{ key: 'perfect', label: 'Star', Icon: StarIcon \}/)
   assert.doesNotMatch(dock, /label: 'Message'/)
-  assert.match(layout, /import '\.\/social-primitives\.css'/)
+  assert.match(layout, /@import '\.\/social-primitives\.css';/)
   assert.doesNotMatch(layout, /social-hub\.css/)
   assert.doesNotMatch(pass, /\.social-hub|\.social-tabs|\.social-messages-layout/)
   assert.doesNotMatch(parity, /\.social-hub|\.social-messages-layout/)

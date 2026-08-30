@@ -80,7 +80,7 @@ test('top pills size to their labels and move their highlight before navigation 
     read('components/map-route-client.js'),
     read('app/(product)/plans/page.js'),
     read('app/(product)/membership/page.js'),
-    read('app/layout.js')
+    read('app/global.css')
   ])
 
   assert.match(routed, /useLayoutEffect/)
@@ -160,15 +160,17 @@ test('Settings opens over the current page and Swipe locks only page scrolling',
 })
 
 test('Puddle logo keeps appearance state without toggling dark mode on click', async () => {
-  const [layout, shell, sidebar, toggle, darkStyles] = await Promise.all([
+  const [layout, globalStyles, shell, sidebar, toggle, darkStyles] = await Promise.all([
     read('app/layout.js'),
+    read('app/global.css'),
     read('components/product-shell.js'),
     read('components/figma-dashboard-sidebar.js'),
     read('components/appearance-toggle-logo.js'),
     read('app/dark-mode.css')
   ])
 
-  assert.match(layout, /import '\.\/ui-targeted-fixes\.css'\s*\nimport '\.\/dark-mode\.css'/)
+  assert.match(layout, /import '\.\/global\.css'/)
+  assert.match(globalStyles, /@import '\.\/ui-targeted-fixes\.css';\s*\n@import '\.\/dark-mode\.css';/)
   assert.match(layout, /colorScheme:\s*'light dark'/)
   assert.match(shell, /data-appearance=\{appearance\}/)
   assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} signOutAction=\{signOut\} \/>/)
@@ -199,7 +201,7 @@ test('dashboard navigation keeps the shell mounted, preserves UI, and streams ro
     read('lib/app/render-product-page.js'),
     read('app/performance-loading.css'),
     read('app/sidebar-interactions.css'),
-    read('app/layout.js'),
+    read('app/global.css'),
     read('app/(product)/layout.js'),
     read('app/(product)/loading.js')
   ])

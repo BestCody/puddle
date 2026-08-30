@@ -26,7 +26,7 @@ test('Create Post preserves Figma overlap using Grid instead of page x/y coordin
   const [page, flow, layout, nextConfig] = await Promise.all([
     read('app/(product)/create/post/page.js'),
     read('app/figma-dashboard-flow.css'),
-    read('app/layout.js'),
+    read('app/global.css'),
     read('next.config.mjs')
   ])
 
