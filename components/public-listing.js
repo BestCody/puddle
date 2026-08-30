@@ -8,7 +8,7 @@ function human(value) { return String(value || '').replaceAll('_', ' ') }
 export function PublicHeader() {
   return <header className="public-header">
     <PuddleLogo />
-    <nav><Link href="/">Home</Link><Link href="/signin">Sign in</Link><Link className="public-primary-link" href="/signup">Register</Link></nav>
+    <nav><Link href="/">Home</Link><Link href="/">Sign in</Link><Link className="public-primary-link" href="/signup">Register</Link></nav>
   </header>
 }
 

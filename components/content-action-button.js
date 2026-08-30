@@ -12,7 +12,7 @@ export function ContentActionButton({ contentKind, contentId, action = 'saved', 
       body: JSON.stringify({ action, contentKind, contentId })
     })
     if (response.status === 401) {
-      window.location.assign(`/signin?next=${encodeURIComponent(window.location.pathname)}`)
+      window.location.assign(`/?next=${encodeURIComponent(window.location.pathname)}`)
       return
     }
     const result = await response.json().catch(() => ({}))

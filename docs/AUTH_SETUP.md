@@ -22,7 +22,7 @@ Copy `.env.example` to `.env.local` locally and add the same variables to the pr
 
 Never expose the Supabase secret key through a `NEXT_PUBLIC_` variable.
 
-`NEXT_PUBLIC_SITE_URL` must use the hostname that should own authentication cookies. Puddle redirects `/signin`, `/signup`, verification routes, and auth callbacks between `www.puddle.you` and `puddle.you` before starting authentication so the PKCE verifier cookie and callback always use the same host.
+`NEXT_PUBLIC_SITE_URL` must use the hostname that should own authentication cookies. Puddle uses `/` as the password sign-in entry point and redirects `/signup`, verification routes, and auth callbacks between `www.puddle.you` and `puddle.you` before starting authentication so the PKCE verifier cookie and callback always use the same host.
 
 ## 3. Supabase Auth URL configuration
 
@@ -40,20 +40,11 @@ Enable Email/Password and email confirmation for production.
 
 For Google, create OAuth credentials in Google Cloud, then add them to Supabase Auth → Providers. Use the Supabase callback URL shown in that provider panel. Puddle receives the completed PKCE flow at `/auth/callback` and exchanges the returned code for a cookie session.
 
-## 5. One-time login code email
+## 5. Sign-in and account recovery
 
-Puddle uses Supabase email OTP for passwordless sign-in. In Supabase Auth → Email Templates, edit the **Magic Link** template so it sends the token instead of a clickable magic link.
+Password sign-in starts at `/` and posts to `/api/auth/password`. Completed profiles go directly to `/discover`; incomplete profiles go to `/onboarding`.
 
-The template must contain `{{ .Token }}`. For example:
-
-```html
-<h2>Your Puddle login code</h2>
-<p>Enter this one-time code to sign in:</p>
-<p style="font-size:32px;font-weight:700;letter-spacing:8px">{{ .Token }}</p>
-<p>This code expires shortly and can only be used once.</p>
-```
-
-Do not use `{{ .ConfirmationURL }}` in that template when the product should send a code rather than a magic link.
+Google sign-in starts at `/api/auth/google?next=/discover`. Google account creation remains available from `/signup` and returns through the PKCE callback flow.
 
 The signup-confirmation and password-recovery templates can continue using the PKCE callback flow when the link is opened in the same browser. For confirmation links that should also work in another browser or device, point the template to the token-hash route:
 
@@ -65,7 +56,7 @@ Use `type=recovery&next=/update-password` for password recovery.
 
 ## 6. Troubleshooting callbacks
 
-Failed callbacks now return users to Sign In with a safe `auth_error` code instead of the generic error page. Server logs keep the matching Supabase error code without exposing tokens or provider details to the browser.
+Failed callbacks now return users to the home page with a safe `auth_error` code instead of the generic error page. Server logs keep the matching Supabase error code without exposing tokens or provider details to the browser.
 
 - `bad_code_verifier` usually means OAuth began on one hostname or browser and the callback arrived on another.
 - `missing_auth_code` means the callback URL was opened without a Supabase authorization code.
@@ -75,16 +66,18 @@ Run `npm run auth:test` after changing authentication routing.
 
 ## Implemented routes
 
+- `/` (password sign-in)
 - `/signup`
-- `/signin`
 - `/verify-email`
 - `/forgot-password`
 - `/update-password`
 - `/auth/callback`
 - `/auth/confirm`
+- `/api/auth/password`
+- `/api/auth/google`
 - `/onboarding`
 - `/dashboard`
 - `/account`
 - `/api/auth/session`
 
-`proxy.js` refreshes cookie sessions and protects dashboard, onboarding, and account routes. Auth callbacks deliberately bypass the pre-route session lookup so the one-time PKCE code can be exchanged before any session refresh runs. Sensitive pages also verify the user again server-side rather than relying only on Proxy.
+`proxy.js` refreshes cookie sessions and protects dashboard, onboarding, and account routes. Auth callbacks deliberately bypass the pre-route session lookup so the PKCE code can be exchanged before any session refresh runs. Sensitive pages also verify the user again server-side rather than relying only on Proxy.

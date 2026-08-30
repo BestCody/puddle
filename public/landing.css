@@ -46,6 +46,7 @@ img{display:block;max-width:100%}
 .login-label-row{display:flex;align-items:center;justify-content:space-between;color:var(--grey);font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
 .login-label-row a{text-decoration:none}
 .landing-login-form{display:grid;gap:17px}
+.landing-auth-message{margin:0;padding:.75rem 1rem;border:.125rem solid #c7435b;border-radius:1rem;background:#fff2f4;color:#9f263f;font-size:clamp(.8rem,1.1vw,1rem);font-weight:700;line-height:1.35}
 .landing-login-form input,.continue-button,.auth-choice{width:100%;min-height:58px;border:2px solid var(--good-grey);border-radius:15px;background:#fff;padding:0 18px;color:#111;font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
 .landing-login-form input::placeholder{color:var(--good-grey);opacity:1}
 .continue-button{border-radius:20px;background:#cecece;color:#fff;cursor:pointer}

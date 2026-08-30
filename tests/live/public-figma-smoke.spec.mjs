@@ -19,8 +19,8 @@ test('production desktop landing preserves the current responsive Figma structur
   await page.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(page.getByRole('dialog')).not.toBeVisible()
 
-  await page.locator('.login-panel a[href="/signin"]').first().click()
-  await expect(page).toHaveURL(/\/signin(?:\?|$)/)
+  await expect(page.locator('.login-panel form.landing-login-form')).toHaveAttribute('action', '/api/auth/password')
+  await expect(page.locator('.login-panel a[href="/api/auth/google?next=%2Fdiscover"]')).toHaveAttribute('aria-label', 'Continue with Google')
 })
 
 test('production mobile landing preserves the current responsive Figma structure', async ({ page }) => {

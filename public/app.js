@@ -31,12 +31,16 @@ function closeSafetyDialog() {
   backdrop.setAttribute('aria-hidden', 'true')
 }
 
-function initSignInHandoff() {
-  $$('[data-signin-handoff]').forEach((form) => {
-    form.addEventListener('submit', (event) => {
-      event.preventDefault()
-      window.location.assign('/signin')
-    })
+function initLandingAuth() {
+  const next = new URLSearchParams(window.location.search).get('next')
+  const nextField = $('.landing-login-form [name="next"]')
+  if (next && nextField) nextField.value = next
+
+  const message = new URLSearchParams(window.location.search).get('error')
+  if (!message) return
+  $$('[data-landing-auth-message]').forEach((target) => {
+    target.textContent = message
+    target.hidden = false
   })
 }
 
@@ -129,7 +133,7 @@ function initLanding() {
     if (event.key === 'Escape') closeSafetyDialog()
   })
 
-  initSignInHandoff()
+  initLandingAuth()
   initDraggablePhones()
 
   requestAnimationFrame(() => {

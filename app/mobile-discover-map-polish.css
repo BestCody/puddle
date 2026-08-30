@@ -1,4 +1,4 @@
-/* Final targeted layer for shared Profile, mobile Settings, Discover search, and map clustering. */
+/* Final targeted layer for shared Profile, mobile Settings, Discover search, and map interaction. */
 
 /* Profile keeps one markup/design on every viewport. Only placement adapts. */
 .figma-profile-top-actions { display: contents; }
@@ -103,7 +103,6 @@
   cursor: pointer;
 }
 
-/* Density clusters replace piles of individual markers while zoomed out. */
 .location-map-pan-layer {
   position: absolute;
   inset: 0;
@@ -120,33 +119,9 @@
   box-shadow: inset 0 0 0 3px rgba(255,255,255,.9);
 }
 
-.location-map-cluster {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 48px;
-  height: 48px;
-  margin: -24px 0 0 -24px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  border: 3px solid rgba(255,255,255,.92);
-  border-radius: 50%;
-  background: rgba(76,165,247,.9);
-  color: #fff;
-  pointer-events: auto;
-  z-index: 4;
-  box-shadow: 0 4px 14px rgba(0,0,0,.18);
-  cursor: pointer;
-  will-change: transform;
-}
-.location-map-cluster > span { font: 800 13px/1 Manrope, sans-serif; }
-.location-map-cluster:hover { box-shadow: 0 5px 18px rgba(0,0,0,.23); }
-
 /* Keep positioning separate from pin rotation. CSS individual transforms on a
    positioned marker rotate its map coordinates as well as its shape. */
 .location-map-marker { rotate: none; }
-.location-map-marker.is-spiderfied { z-index: 7; }
 .location-map-marker.is-selected { scale: none; }
 .location-map-marker > span { rotate: none; transform: rotate(45deg); }
 

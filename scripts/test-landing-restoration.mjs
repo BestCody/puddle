@@ -92,7 +92,7 @@ try {
   assert(await page.locator('[data-figma-node="83:76"]').isVisible(), 'desktop Figma composition is not visible')
   assert(!(await page.locator('[data-figma-node="161:116"]').isVisible()), 'mobile composition should be hidden on desktop')
   assert(await page.locator('.landing-sticky-left').isVisible(), 'desktop left sign-in column is missing')
-  assert(await page.locator('.landing-sticky-left .login-panel input').count() === 2, 'desktop login fields are not real inputs')
+  assert(await page.locator('.landing-sticky-left .login-panel input:not([type="hidden"])').count() === 2, 'desktop login fields are not real inputs')
   assert(await page.locator('.landing-sticky-left .brand--desktop').isVisible(), 'Puddle brand is missing from the left column')
   assert(await page.locator('.feature-card--d-swipe .interactive-pill').isVisible(), 'Figma Interactive pill is missing from Swipe')
   assert(await page.locator('.feature-card--d-save .interactive-pill').isVisible(), 'Figma Interactive pill is missing from Save')
@@ -147,7 +147,7 @@ try {
   for (const label of ['Explore', 'Company', 'Connect']) assert(await footer.getByRole('heading', { name: label, exact: true }).isVisible(), `${label} footer column is not visible`)
 
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'desktop page horizontally overflows')
-  for (const route of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${route}"]`).count() > 0, `${route} route link is missing`)
+  for (const route of ['/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${route}"]`).count() > 0, `${route} route link is missing`)
   await page.locator('.safety-panel--desktop [data-open-safety]').click()
   await page.waitForSelector('#safety-dialog-backdrop.is-open')
   await page.locator('[data-close-safety]').click()

@@ -14,7 +14,7 @@ export default function ForgotPasswordPage({ searchParams }) {
         <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" placeholder="you@example.com" /></label>
         <SubmitButton>Send reset link →</SubmitButton>
       </form>
-      <div className="auth-links"><Link href="/signin">Back to sign in</Link></div>
+      <div className="auth-links"><Link href="/">Back to sign in</Link></div>
     </AuthShell>
   )
 }

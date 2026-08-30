@@ -611,8 +611,8 @@
 .mapCanvas :global(.location-map-side) {
   position: absolute;
   z-index: 8;
-  inset-block-start: clamp(9.375rem, var(--location-map-selection-y, 50%), calc(100% - 7.5rem));
-  inset-inline-start: clamp(9.375rem, var(--location-map-selection-x, 50%), calc(100% - 9.375rem));
+  inset-block-start: var(--location-map-selection-y);
+  inset-inline-start: var(--location-map-selection-x);
   right: auto;
   width: clamp(14.5rem, 28cqi, 18.75rem);
   max-height: none;
@@ -1042,10 +1042,10 @@
   }
 
   .mapCanvas :global(.location-map-side) {
-    inset-block-start: auto;
-    inset-inline-start: auto;
-    inset-inline-end: clamp(.75rem, 4vw, 1rem);
-    bottom: calc(var(--puddle-mobile-nav-height, 6.5rem) + env(safe-area-inset-bottom) + 4.625rem);
+    inset-block-start: var(--location-map-selection-y);
+    inset-inline-start: var(--location-map-selection-x);
+    inset-inline-end: auto;
+    bottom: auto;
     width: min(18.9375rem, calc(100% - 2rem));
     max-height: min(7rem, calc(100% - 13.75rem));
     display: flex !important;
@@ -1054,7 +1054,7 @@
     background: #fff;
     border: .0625rem solid #e8e2e5;
     box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .16);
-    transform: none;
+    transform: translate(-50%, calc(-100% - 1.125rem));
   }
 
   .mapCanvas :global(.location-map-side .location-map-card) {

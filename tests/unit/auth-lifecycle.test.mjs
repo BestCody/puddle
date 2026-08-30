@@ -94,16 +94,38 @@ test('password recovery is allowed before onboarding is complete', () => {
   assert.equal(authenticatedDestination(null, '/update-password'), '/update-password')
 })
 
-test('authentication flows isolate the browser session and keep recovery links on production', async () => {
-  const actions = await readFile(new URL('../../app/auth/actions.js', import.meta.url), 'utf8')
-  const signInStart = actions.indexOf('export async function signIn(')
-  const signInSessionClear = actions.indexOf("await clearLocalAuthSession(supabase)", signInStart)
-  const signInRequest = actions.indexOf('signInWithPassword', signInStart)
+test('authentication flows use the landing page and keep recovery links on production', async () => {
+  const [actions, passwordAuth, passwordRoute, googleRoute] = await Promise.all([
+    readFile(new URL('../../app/auth/actions.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../lib/auth/password-sign-in.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../app/api/auth/password/route.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../app/api/auth/google/route.js', import.meta.url), 'utf8')
+  ])
+  const signInSessionClear = passwordAuth.indexOf("signOut({ scope: 'local' })")
+  const passwordRequest = passwordAuth.indexOf('signInWithPassword')
 
-  assert(signInStart >= 0)
-  assert(signInSessionClear > signInStart && signInSessionClear < signInRequest, 'sign-in must clear a previous local session before checking credentials')
+  assert(signInSessionClear >= 0 && signInSessionClear < passwordRequest, 'sign-in must clear a previous local session before checking credentials')
   assert.match(actions, /if \(process\.env\.NODE_ENV === 'production'\) return 'https:\/\/puddle\.you'/)
-  assert.doesNotMatch(actions, /requestHeaders\.get\('origin'\) \|\| 'http:\/\/localhost:3000'/)
+  assert.doesNotMatch(actions, /export async function signIn\(/)
+  assert.doesNotMatch(actions, /sendLoginCode|verifyLoginCode|signInWithOAuth/)
+  assert.doesNotMatch(actions, /\/signin/)
+  assert.match(passwordRoute, /authenticatePassword\(supabase, email, password\)/)
+  assert.match(googleRoute, /startGoogleOAuth/)
+})
+
+test('landing credential sign-in posts directly to the authenticated destination', async () => {
+  const [landing, route] = await Promise.all([
+    readFile(new URL('../../public/landing.html', import.meta.url), 'utf8'),
+    readFile(new URL('../../app/api/auth/password/route.js', import.meta.url), 'utf8')
+  ])
+
+  assert.match(landing, /<form class="landing-login-form" action="\/api\/auth\/password" method="post">/)
+  assert.match(landing, /<input type="hidden" name="next" value="\/discover" \/>/)
+  assert.doesNotMatch(landing, /data-signin-handoff/)
+  assert.doesNotMatch(landing, /\/signin/)
+  assert.match(route, /authenticatePassword\(supabase, email, password\)/)
+  assert.match(route, /authenticatedDestination\(profile, next\)/)
+  assert.match(route, /NextResponse\.redirect\(new URL\(authenticatedDestination\(profile, next\), request\.url\), 303\)/)
 })
 
 test('browser and server auth clients use the same persistent cookie policy', async () => {
