@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
 
-const actions=['assign_self','set_priority','preserve_evidence','resolve','dismiss','escalate_emergency','suspend_user','ban_user','restore_user','delist_event','cancel_event','relist_event','delist_location','relist_location','suspend_host','restore_host','freeze_payouts','unfreeze_payouts','restrict_conversation','reopen_conversation','remove_message','remove_comment','approve_host_verification','reject_host_verification','approve_verification_document','reject_verification_document','approve_location_claim','reject_location_claim','quarantine_media','approve_media','fraud_hold_order','release_fraud_hold','void_ticket','restore_ticket','approve_refund','decline_refund','uphold_appeal','overturn_appeal']
+const actions=['assign_self','set_priority','preserve_evidence','resolve','dismiss','escalate_emergency','suspend_user','ban_user','restore_user','delist_event','cancel_event','relist_event','delist_location','relist_location','suspend_host','restore_host','freeze_payouts','unfreeze_payouts','restrict_conversation','reopen_conversation','remove_message','remove_comment','approve_host_verification','reject_host_verification','approve_verification_document','reject_verification_document','approve_location_claim','reject_location_claim','quarantine_media','approve_media','fraud_hold_order','release_fraud_hold','void_ticket','restore_ticket','uphold_appeal','overturn_appeal']
 
 async function csrf() { const response=await fetch('/api/security/csrf',{cache:'no-store'}); const result=await response.json(); return result.token }
 export function ModerationCaseConsole({ caseId, currentPriority='normal' }) {

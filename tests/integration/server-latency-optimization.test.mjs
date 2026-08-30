@@ -241,6 +241,8 @@ test('Social feed uses one indexed post-page read and a shell-first API render',
   assert.match(page, /useSearchParams/)
   assert.match(client, /fetch\(`\/api\/social-feed/)
   assert.match(client, /More puddles/)
+  assert.match(client, /function FeedPagination\(/)
+  assert.match(client, /credentials: 'same-origin'/)
   assert.match(api, /getSocialFeedSnapshot/)
   assert.match(api, /getCurrentUser/)
   assert.match(api, /Cache-Control.*private, no-store/)

@@ -1,22 +1,25 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { normalizeOrigin } from '@/lib/auth/origin'
+import { normalizeOrigin, requestOrigin } from '@/lib/auth/origin'
 import { safeNextPath } from '@/lib/auth/redirect'
 import { authenticatedDestination, ensureProfile } from '@/lib/auth/profile'
 import { authLinkErrorMessage, safeAuthErrorCode } from '@/lib/auth/errors'
 
-function appOrigin() {
-  return normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL) || 'https://puddle.you'
+function appOrigin(request) {
+  const configured = normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL)
+  if (configured) return configured
+  if (process.env.NODE_ENV === 'production') return 'https://puddle.you'
+  return requestOrigin(request.headers, 'http://localhost:3000')
 }
 
-function appUrl(path) {
-  return new URL(path, appOrigin())
+function appUrl(request, path) {
+  return new URL(path, appOrigin(request))
 }
 
-function authFailure(code = 'callback_failed') {
+function authFailure(request, code = 'callback_failed') {
   const safeCode = safeAuthErrorCode(code, 'callback_failed')
-  const target = appUrl('/signin')
+  const target = appUrl(request, '/signin')
   target.searchParams.set('error', authLinkErrorMessage(safeCode))
   target.searchParams.set('auth_error', safeCode)
   return NextResponse.redirect(target)
@@ -39,7 +42,7 @@ function exchangeableCode(value) {
 
 export async function GET(request) {
   if (!isSupabaseConfigured()) {
-    return NextResponse.redirect(appUrl('/signin?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.'))
+    return NextResponse.redirect(appUrl(request, '/signin?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.'))
   }
 
   const url = new URL(request.url)
@@ -58,13 +61,13 @@ export async function GET(request) {
       status: error.status || undefined,
       providerError: providerError || undefined
     })
-    return authFailure(failureCode)
+    return authFailure(request, failureCode)
   }
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return authFailure('session_not_created')
+  if (!user) return authFailure(request, 'session_not_created')
   const { profile, error: profileError } = await ensureProfile(supabase, user)
-  if (profileError) return authFailure('profile_recovery_failed')
+  if (profileError) return authFailure(request, 'profile_recovery_failed')
 
   if (legalConsent) {
     const acceptedAt = new Date().toISOString()
@@ -76,5 +79,5 @@ export async function GET(request) {
     })
   }
 
-  return NextResponse.redirect(appUrl(authenticatedDestination(profile, next)))
+  return NextResponse.redirect(appUrl(request, authenticatedDestination(profile, next)))
 }

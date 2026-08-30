@@ -332,12 +332,15 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   bottom: clamp(20px, 5vh, 44px) !important;
   left: calc(var(--figma-shell-sidebar, 252px) + (100vw - var(--figma-shell-sidebar, 252px)) / 2) !important;
   width: min(420px, calc(100vw - var(--figma-shell-sidebar, 252px) - 48px)) !important;
+  min-width: min(420px, calc(100vw - var(--figma-shell-sidebar, 252px) - 48px)) !important;
+  max-width: min(420px, calc(100vw - var(--figma-shell-sidebar, 252px) - 48px)) !important;
   height: 52px !important;
   min-height: 52px !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
   padding: 4px 5px 4px 17px !important;
+  box-sizing: border-box !important;
   transform: translateX(-50%) !important;
   border: 2px solid #e6e6e6 !important;
   border-radius: 25px !important;
@@ -348,7 +351,7 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   text-align: left !important;
 }
 
-[data-testid='saved-search'] > span {
+[data-testid='saved-search'] > .puddle-search-trigger-label {
   min-width: 0;
   flex: 1;
   overflow: hidden;
@@ -357,17 +360,22 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   white-space: nowrap;
 }
 
-[data-testid='saved-search'] > b {
+[data-testid='saved-search'] > .puddle-search-trigger-icon {
   width: 42px !important;
   height: 42px !important;
   flex: 0 0 42px;
   display: grid !important;
   place-items: center;
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
   border: 2px solid #b784e4;
   border-radius: 50%;
   background: #fff;
   color: #b784e4;
   font: 800 22px/1 Manrope, sans-serif !important;
+  text-align: center;
 }
 
 [data-testid='saved-search']:focus-visible {
@@ -380,5 +388,7 @@ body:has([data-testid='feed-screen'][data-view='map']) {
     bottom: calc(var(--puddle-mobile-content-bottom) + 16px) !important;
     left: 50% !important;
     width: min(360px, calc(100vw - 32px)) !important;
+    min-width: min(360px, calc(100vw - 32px)) !important;
+    max-width: min(360px, calc(100vw - 32px)) !important;
   }
 }

@@ -52,7 +52,7 @@ assert.equal(canonicalPuddleAuthUrl('https://www.puddle.you/privacy', 'https://p
 
 const proxy = await readFile(join(root, 'proxy.js'), 'utf8')
 const canonicalCheck = proxy.indexOf('const canonicalTarget = (request.method')
-const publicBypass = proxy.indexOf('if (publicNoSessionPaths.has(pathname))')
+const publicBypass = proxy.indexOf('if (publicNoSessionPaths.has(pathname)')
 const sessionLookup = proxy.indexOf('await updateSession(request, requestHeaders')
 assert(canonicalCheck >= 0, 'Proxy must canonicalize auth routes')
 assert(proxy.includes('canonicalPuddleAuthUrl(request.url'), 'Proxy must use the tested canonical URL helper')
@@ -89,6 +89,15 @@ for (const marker of ['saveOnboardingDraft', 'profileWriteErrorMessage', 'ensure
 }
 assert(actions.includes('updateUserById(user.id, { email_confirm: true })'), 'Hosted signup must auto-confirm new users when Supabase still requires confirmation')
 assert(!actions.includes('/verify-email?email='), 'New signups must not be redirected to email verification')
+assert(actions.includes("if (process.env.NODE_ENV === 'production') return 'https://puddle.you'"), 'Production auth links must never point at localhost')
+assert(actions.includes('clearLocalAuthSession(supabase)'), 'New authentication attempts must clear the previous local session')
+assert(proxy.includes("pathname === '/' && user"), 'A valid session must redirect the landing route to the dashboard')
+assert(proxy.includes("new URL('/discover', request.url)"), 'The authenticated landing redirect must target the dashboard')
+assert(!proxy.includes('if (isAuthOnly && user)'), 'Auth pages must remain available so users can switch accounts')
+
+const accountDeletionMigration = await readFile(join(root, 'supabase/migrations/20260829130000_account_deletion_integrity.sql'), 'utf8')
+assert.match(accountDeletionMigration, /on delete set null/i, 'Account deletion must not be blocked by profile attribution records')
+assert.match(accountDeletionMigration, /drop not null/i, 'Required historical profile references must be nullable on deletion')
 
 const supabaseConfig = await readFile(join(root, 'supabase/config.toml'), 'utf8')
 assert(supabaseConfig.includes('enable_confirmations = false'), 'Local email signup confirmations must be disabled')

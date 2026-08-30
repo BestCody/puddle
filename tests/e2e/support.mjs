@@ -153,14 +153,10 @@ export async function signInThroughUi(page, email, password, next = '/discover')
 }
 
 export async function signOutThroughUi(page) {
-  // The current Figma composition intentionally hides the three-dot
-  // account menu. Keep auth coverage on the real production sign-out server
-  // action by submitting its rendered form instead of inventing a visible
-  // control solely for E2E. CSS locators include hidden DOM; role locators do not.
   await page.goto('/discover')
-  const button = page.locator('details.figma-dashboard-account-menu form button[type="submit"]')
-  await expect(button).toHaveCount(1)
-  await button.evaluate((element) => element.form?.requestSubmit(element))
+  const button = page.locator('.figma-dashboard-sidebar .figma-dashboard-signout')
+  await expect(button).toBeVisible()
+  await button.click()
   await expect(page).toHaveURL(/\/$/)
 }
 

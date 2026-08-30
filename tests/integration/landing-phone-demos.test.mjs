@@ -22,6 +22,8 @@ test('landing feature phones map to the correct interactive Figma product screen
   assert.match(landingHtml, /feature-card--m-profile/)
 
   for (const screenshot of ['phone-swipe.png', 'phone-save.png', 'phone-feed.png', 'phone-profile.png']) assert(!landingHtml.includes(screenshot), `${screenshot} must not be rendered as a feature-phone screenshot`)
+  assert.match(landingHtml, /hero-phone-centered\.(png|webp)/, 'hero phone must use the normalized centered asset')
+  assert.doesNotMatch(landingHtml, /hero-phone-device\.(png|webp)/, 'intermediate cropped hero asset must not remain in the landing page')
   assert.match(demoPage, /export const dynamic = 'force-dynamic'/, 'landing demos must render per request so Next can attach the CSP nonce and hydrate interactions')
   assert.doesNotMatch(demoPage, /export const dynamic = 'force-static'/)
 
@@ -34,6 +36,8 @@ test('landing feature phones map to the correct interactive Figma product screen
   assert.match(demoComponent, /aria-label="Pass place"/)
   assert.match(demoComponent, /aria-label="Save place"/)
   assert.match(demoComponent, /aria-label="Star place"/)
+  assert.match(demoComponent, /aria-label=\{`Open \$\{current\.title\}`\}/)
+  assert.match(demoComponent, /onClick=\{\(\) => setOpen\(true\)\}/)
 
   // Saved 25:180.
   assert.match(demoComponent, /data-demo-screen="save"/)
@@ -61,6 +65,10 @@ test('landing feature phones map to the correct interactive Figma product screen
 
   // Static source checks prove the demos are wired for interaction; Playwright covers behavior in-browser.
   for (const stateSetter of ['setIndex', 'setTab', 'setCategory', 'setQuery', 'setView', 'setEditing', 'setFollowing', 'setMessageOpen']) assert(demoComponent.includes(stateSetter), `${stateSetter} interaction state must exist`)
+  assert.match(demoComponent, /function DemoBottomNav\(\{ active, onNavigate \}\)/)
+  assert.match(demoComponent, /className="landing-phone-demo__screen"/)
+  assert.match(demoComponent, /onClick=\{\(\) => onNavigate\(view\)\}/)
+  assert.doesNotMatch(demoComponent, /<a key=\{view\}/, 'Phone navigation must not perform frame document navigation')
   assert.match(demoComponent, /useModalFocus/)
   assert.match(demoComponent, /key === 'Escape'/)
   assert.match(demoComponent, /landing-demo-dialog" role="dialog" aria-modal="true" aria-label=\{`\$\{title\} details`\} tabIndex=\{-1\}/)
@@ -69,8 +77,19 @@ test('landing feature phones map to the correct interactive Figma product screen
   assert.match(demoCss, /landing-demo-screen--saved/)
   assert.match(demoCss, /landing-demo-screen--feed/)
   assert.match(demoCss, /landing-demo-screen--profile/)
+  assert.match(demoCss, /\.landing-phone-demo\s*\{[^}]*container-type:inline-size;[^}]*padding:4\.5cqi;/s)
+  assert.match(demoCss, /html:has\(\.landing-phone-demo\),body:has\(\.landing-phone-demo\)\{[^}]*background:transparent;/s, 'the iframe document must not paint a rectangular background behind the rounded phone shell')
+  assert.match(demoCss, /\.landing-phone-demo::before\s*\{[^}]*left:50%;[^}]*width:28cqi;/s)
+  assert.match(demoCss, /\.landing-phone-demo__screen\s*\{[^}]*width:100%;[^}]*height:100%;[^}]*overflow:hidden;/s)
+  assert.match(demoCss, /\.landing-demo-dialog-backdrop\{[^}]*position:absolute;[^}]*inset:0;[^}]*place-items:center;/s, 'demo dialogs must stay contained and visible inside the phone screen')
+  assert.match(demoCss, /\.landing-demo-dialog,.landing-demo-message\{[^}]*max-height:calc\(100% - 4cqi\);/s, 'demo dialogs must fit within the phone screen')
   assert.match(landingCss, /\.feature-phone-demo__frame\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*border:\s*0;/s)
+  assert.match(landingCss, /\.feature-card h3\{[^}]*display:inline-flex;[^}]*align-items:center;[^}]*gap:\.16em;/s, 'feature headings must own icon alignment and spacing')
+  assert.match(landingHtml, /<h3 id="feature-save-d"><img class="feature-icon feature-icon--save"[^>]*><span>Save<\/span><\/h3>/, 'Save icon must share the heading flex row')
+  assert.match(landingHtml, /<h3 id="feature-swipe-d"><img class="feature-icon feature-icon--swipe"[^>]*><span>Swipe<\/span><\/h3>/, 'Swipe icon must share the heading flex row')
+  assert.match(landingHtml, /<h3 id="feature-feed-d"><img class="feature-icon feature-icon--feed"[^>]*><span>Feed<\/span><\/h3>/, 'Feed icon must share the heading flex row')
   assert.match(landingCss, /\.interactive-pill\s*\{/)
+  assert.match(landingCss, /\.interactive-pill\s*\{[^}]*pointer-events:\s*none;/s, 'the informational interactive pill must not block iframe controls')
 })
 
 test('product shell fixes keep compact menu bars and icon-only narrow sidebar', async () => {

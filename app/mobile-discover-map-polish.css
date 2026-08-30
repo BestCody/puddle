@@ -24,8 +24,8 @@
   cursor: pointer;
   box-sizing: border-box !important;
 }
-.puddle-discover-search-trigger > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.puddle-discover-search-trigger > b { font: 700 20px/1 Manrope, sans-serif; }
+.puddle-discover-search-trigger > .puddle-search-trigger-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.puddle-discover-search-trigger > .puddle-search-trigger-icon { font: 700 20px/1 Manrope, sans-serif; }
 
 .puddle-discover-search-overlay {
   position: fixed;

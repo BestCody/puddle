@@ -61,7 +61,7 @@ MEDIA_KEY_ID = first_env('B2_MEDIA_KEY_ID', 'B2_MEDIA_APPLICATION_KEY_ID', 'B2_K
 MEDIA_KEY = first_env('B2_MEDIA_APPLICATION_KEY', 'B2_APPLICATION_KEY', default=DATA_KEY)
 SNAPSHOT = str(os.getenv('GLOBAL_LOCATION_SNAPSHOT', '')).strip()
 CONCURRENCY = max(1, min(64, int(os.getenv('GLOBAL_PHOTO_EXISTING_RECONCILE_CONCURRENCY', '32'))))
-PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3}
+PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3, 'yfcc100m': 4}
 MAX_IMAGE_BYTES = 10_000_000
 MAX_SOURCE_PIXELS = 40_000_000
 

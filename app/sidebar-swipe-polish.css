@@ -405,3 +405,54 @@
     display: none !important;
   }
 }
+
+/* The desktop sidebar exposes one canonical sign-out action below Settings. */
+@media (min-width: 761px) {
+  .figma-dashboard-sidebar {
+    box-sizing: border-box !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+  }
+
+  .figma-dashboard-sidebar-actions {
+    position: fixed !important;
+    top: auto !important;
+    right: auto !important;
+    left: 42px !important;
+    bottom: clamp(20px, 4dvh, 36px) !important;
+    display: grid !important;
+    gap: 14px !important;
+    justify-items: start !important;
+  }
+
+  .figma-dashboard-sidebar-actions .figma-dashboard-settings-link,
+  .figma-dashboard-sidebar-actions .figma-dashboard-signout {
+    position: static !important;
+    transform: none !important;
+  }
+
+  .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-actions {
+    position: fixed !important;
+    top: auto !important;
+    right: auto !important;
+    left: 16px !important;
+    bottom: 24px !important;
+    width: 60px !important;
+    transform: none !important;
+    justify-items: center !important;
+    gap: 10px !important;
+  }
+}
+
+/* Reserve the lower action group on genuinely short desktop viewports. */
+@media (min-width: 761px) and (max-height: 579px) {
+  .figma-dashboard-sidebar .figma-dashboard-nav {
+    top: 96px !important;
+    gap: 0 !important;
+    transform: none !important;
+  }
+
+  .figma-dashboard-sidebar .figma-dashboard-nav-item {
+    height: 44px !important;
+  }
+}

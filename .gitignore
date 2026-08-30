@@ -9,3 +9,14 @@ supabase/.temp/
 npm-debug.log*
 __pycache__/
 *.py[cod]
+
+# Local browser-test artifacts and machine-specific tooling state
+.e2e-gh-artifacts/
+.e2e-local-trace-*/
+.e2e-local/
+landing-artifacts/
+test-results/
+ann2.json
+opencode.jsonc
+opencode.jsonc.backup
+supabase/.branches/

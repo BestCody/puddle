@@ -97,11 +97,6 @@ export async function proxy(request) {
     : null
   if (canonicalTarget) return secured(NextResponse.redirect(canonicalTarget, 307), { request, nonce })
 
-  if (publicNoSessionPaths.has(pathname)) {
-    const response = NextResponse.next({ request: { headers: requestHeaders } })
-    return secured(cachePolicy(response, pathname), { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
-  }
-
   const isLandingDemo = pathname === '/landing-demo' || pathname.startsWith('/landing-demo/')
   if (isLandingDemo) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
@@ -110,10 +105,15 @@ export async function proxy(request) {
 
   const isProtected = matchesPrefix(pathname, protectedPrefixes)
   const isAuthOnly = authOnlyPaths.includes(pathname)
-  const hasAuthFailure = request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('auth_error')
   const moderationGate = requiresModerationGate(pathname)
   const hasAuthCookie = hasSupabaseAuthCookie(request)
+  const shouldResolveLandingSession = pathname === '/' && hasAuthCookie
   const needsSession = isProtected || verifiedReadApi || (hasAuthCookie && (!pathname.startsWith('/api/') || moderationGate))
+
+  if (publicNoSessionPaths.has(pathname) && !shouldResolveLandingSession) {
+    const response = NextResponse.next({ request: { headers: requestHeaders } })
+    return secured(cachePolicy(response, pathname), { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
+  }
 
   if (!needsSession) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
@@ -123,6 +123,10 @@ export async function proxy(request) {
   const session = await updateSession(request, requestHeaders, { loadProfileState: moderationGate })
   const { user, profileState, profileError, configured, timings } = session
   let { response } = session
+  if ((request.method === 'GET' || request.method === 'HEAD') && pathname === '/' && user) {
+    const target = NextResponse.redirect(new URL('/discover', request.url), 307)
+    return timed(secured(cachePolicy(carriesCookies(response, target), pathname, true), { request, nonce }), proxyStartedAt, timings)
+  }
   if (user && requestHeaders.get('x-puddle-product-route') === '1') {
     // The proxy has already verified this ID with getClaims(). Strip any inbound
     // value above, then forward only the verified ID to Server Components so they
@@ -153,10 +157,7 @@ export async function proxy(request) {
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
-  if (isAuthOnly && user && !hasAuthFailure) {
-    return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(new URL('/discover', request.url))), pathname, true), { request, nonce }), proxyStartedAt, timings)
-  }
-  return timed(secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly), { request, nonce }), proxyStartedAt, timings)
+  return timed(secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly || (pathname === '/' && hasAuthCookie)), { request, nonce }), proxyStartedAt, timings)
 }
 
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)'] }

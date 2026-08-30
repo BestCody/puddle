@@ -11,7 +11,7 @@ import { signOut } from '@/app/auth/actions'
 // by the feed API after the shell is usable.
 export function StaticProductShell({ children }) {
   return <div className="figma-dashboard-shell" data-appearance="light">
-    <FigmaDashboardSidebar />
+    <FigmaDashboardSidebar signOutAction={signOut} />
 
     <div className="figma-dashboard-stage">
       <details className="figma-dashboard-account-menu">
