@@ -12,7 +12,13 @@ export const metadata = {
   title,
   description,
   alternates: { canonical: '/places' },
-  openGraph: { type: 'website', title, description, url: '/places' }
+  openGraph: {
+    type: 'website',
+    title,
+    description,
+    url: '/places',
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Puddle' }]
+  }
 }
 
 // The landing page links here and this page links to every market hub, which is what gives
