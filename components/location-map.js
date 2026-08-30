@@ -363,7 +363,6 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     setExpandedClusterKey(null)
     setSelectedPoint(point)
     setSelectedId(point.id)
-    setCenter({ latitude: point.latitude, longitude: point.longitude })
   }
   function openCluster(cluster) {
     if (zoom >= MAX_ZOOM) {
