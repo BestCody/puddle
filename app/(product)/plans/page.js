@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { RoutedSegment } from '@/components/routed-segment'
-import { SavedSearchOverlay } from '@/components/discover-search-overlay'
+import { SavedSearchInput } from '@/components/discover-search-overlay'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { SavedLightweightGrid } from '@/components/saved-lightweight-grid'
 import { PhotoFrame } from '@/components/photo-frame'
@@ -158,7 +158,7 @@ export default async function PlansPage({ searchParams }) {
             { value: 'planned', label: 'Plans', href: '/plans?tab=planned' }
           ]}
         />
-        {active === 'saved' ? <SavedSearchOverlay initialQuery={query} category={selectedCategory} /> : null}
+        {active === 'saved' ? <SavedSearchInput initialQuery={query} category={selectedCategory} /> : null}
       </header>
 
       {active === 'saved' ? <div className={styles.categoryBand}>

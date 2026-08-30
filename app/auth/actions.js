@@ -8,10 +8,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { normalizeOrigin, requestOrigin } from '@/lib/auth/origin'
 import { pathWithMessage } from '@/lib/auth/redirect'
-import { authenticatedDestination, ensureProfile } from '@/lib/auth/profile'
+import { ensureProfile } from '@/lib/auth/profile'
 import { startGoogleOAuth } from '@/lib/auth/google-oauth'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
 import { birthDateError, isValidEmail, MAX_PASSWORD_LENGTH } from '@/lib/app/input-validation'
+import { registerAccount } from '@/lib/auth/sign-up'
 
 const allowedInterests = new Set(['Live music','Nightlife','Food','Pop-ups','Art','Film','Workshops','Sports','Wellness','Markets','Comedy','Outdoors'])
 const allowedVisibility = new Set(['hidden', 'friends', 'mutuals', 'attendees', 'public'])
@@ -99,51 +100,9 @@ async function preserveOnboardingProgressWithoutUsername(supabase, payload, prof
 }
 
 export async function signUp(formData) {
-  ensureConfigured('/signup')
-  const displayName = value(formData, 'display_name')
-  const email = value(formData, 'email').toLowerCase()
-  const password = rawValue(formData, 'password')
-  const termsAccepted = value(formData, 'terms_accepted') === 'yes'
-  if (displayName.length < 1 || displayName.length > 60) redirect(pathWithMessage('/signup', 'error', 'Add a display name between 1 and 60 characters.'))
-  if (!isValidEmail(email)) redirect(pathWithMessage('/signup', 'error', 'Enter a valid email address.'))
-  if (password.length < 10 || password.length > MAX_PASSWORD_LENGTH) redirect(pathWithMessage('/signup', 'error', `Use a password from 10 to ${MAX_PASSWORD_LENGTH} characters.`))
-  if (!termsAccepted) redirect(pathWithMessage('/signup', 'error', 'Agree to the Terms and Privacy Policy before creating an account.'))
-
-  const acceptedAt = new Date().toISOString()
-  const supabase = await createClient()
-  await clearLocalAuthSession(supabase)
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { display_name: displayName, legal_consent_at: acceptedAt, legal_consent_version: 'current' } }
-  })
-  if (error || !data.user) redirect(pathWithMessage('/signup', 'error', publicError(error, 'We could not create your account. Please try again.')))
-
-  let user = data.user
-  if (!data.session) {
-    let admin
-    try {
-      admin = createAdminClient()
-    } catch {
-      redirect(pathWithMessage('/signup', 'error', 'We could not finish creating your account. Please try again.'))
-    }
-
-    const { error: confirmationError } = await admin.auth.admin.updateUserById(user.id, { email_confirm: true })
-    if (confirmationError) redirect(pathWithMessage('/signup', 'error', 'We could not finish creating your account. Please try again.'))
-
-    const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInError || !signedIn.user) redirect(pathWithMessage('/signup', 'error', 'Your account was created, but we could not sign you in. Please return to the home page.'))
-    user = signedIn.user
-  }
-
-  const { profile, error: profileError } = await ensureProfile(supabase, user)
-  if (profileError) redirect(pathWithMessage('/onboarding', 'error', 'Your account was created, but your profile could not be prepared. Please retry.'))
-  await supabase.from('security_events').insert({
-    profile_id: user.id,
-    event_type: 'legal_consent_accepted',
-    metadata: { terms: true, privacy: true, version: 'current', accepted_at: acceptedAt, source: 'email_signup' }
-  })
-  redirect(authenticatedDestination(profile, '/onboarding'))
+  const result = await registerAccount(formData)
+  if (result.error) redirect(pathWithMessage('/signup', 'error', result.error))
+  redirect(result.destination)
 }
 
 export async function startGoogleSignup(formData) {

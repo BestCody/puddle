@@ -14,6 +14,7 @@
   --desktop-right:52%;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{scroll-behavior:smooth;background:#fff}
 body{margin:0;min-width:280px;overflow-x:hidden;background:#fff;color:#111;font-family:var(--manrope)}
 button,input{font:inherit}
@@ -28,7 +29,7 @@ img{display:block;max-width:100%}
 .landing-canvas{position:relative!important;inset:auto!important;width:100%!important;height:auto!important;transform:none!important;overflow:visible;background:#fff}
 .landing-canvas--desktop{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:stretch;min-width:0}
 .landing-sticky-left{grid-column:1;grid-row:1;position:relative;z-index:20;align-self:stretch;min-width:0;min-height:100vh;overflow:visible;background:#fff}
-.landing-sticky-left__canvas{position:sticky;top:0;width:100%;height:100vh;min-height:min(680px,100vh);overflow:hidden;transform:none!important;background:#fff}
+.landing-sticky-left__canvas{position:sticky;top:0;width:100%;height:100vh;min-height:min(680px,100vh);overflow-x:hidden;overflow-y:auto;transform:none!important;background:#fff}
 
 /* Desktop hero: preserve the Figma split while allowing the composition to grow continuously. */
 .hero{position:relative;overflow:hidden}
@@ -41,21 +42,33 @@ img{display:block;max-width:100%}
 .menu-button{z-index:7;display:grid;place-items:center;width:60px;height:45px;border:1.5px solid #bec2c5;border-radius:999px;background:#fff;text-decoration:none}
 .menu-button img{width:22px;height:31px}
 .menu-button--desktop{position:absolute;top:clamp(38px,4.2vw,60px);right:clamp(28px,3.5vw,52px)}
-.login-panel{position:absolute;z-index:5;left:clamp(28px,4vw,58px);right:clamp(28px,4.8vw,70px);top:clamp(132px,12vw,188px);display:grid;gap:16px;align-content:start;background:#fff}
-.login-panel h1{margin:0 0 18px;font-size:clamp(38px,4.3vw,58px);line-height:1.2;font-weight:800;letter-spacing:-.035em}
-.login-label-row{display:flex;align-items:center;justify-content:space-between;color:var(--grey);font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
-.login-label-row a{text-decoration:none}
-.landing-login-form{display:grid;gap:17px}
+.login-panel{position:absolute;z-index:5;left:clamp(28px,4vw,58px);right:clamp(28px,4.8vw,70px);top:clamp(132px,12vw,188px);display:grid;gap:1rem;align-content:start;background:#fff}
+.login-panel[data-auth-mode="signup"]{top:clamp(112px,11vw,176px)}
+.login-panel h1{margin:0 0 1.125rem;font-size:clamp(38px,4.3vw,58px);line-height:1.2;font-weight:800;letter-spacing:-.035em}
+.login-label-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;color:var(--grey);font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
+.login-label-row a{text-decoration:none;white-space:nowrap}
+.auth-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(100%,14rem);padding:.2rem;border:.125rem solid var(--good-grey);border-radius:999px;background:#fff}
+.auth-mode-switch button{min-height:2.5rem;border:0;border-radius:999px;background:transparent;color:var(--grey);padding:.35rem .8rem;font-size:inherit;font-weight:inherit;cursor:pointer}
+.auth-mode-switch button[aria-selected="true"]{background:var(--yellow);color:#111;box-shadow:0 .15rem 0 rgba(0,0,0,.12)}
+.landing-login-form,.landing-signup-form{display:grid;gap:1rem}
+.landing-signup-form{gap:.625rem}
 .landing-auth-message{margin:0;padding:.75rem 1rem;border:.125rem solid #c7435b;border-radius:1rem;background:#fff2f4;color:#9f263f;font-size:clamp(.8rem,1.1vw,1rem);font-weight:700;line-height:1.35}
-.landing-login-form input,.continue-button,.auth-choice{width:100%;min-height:58px;border:2px solid var(--good-grey);border-radius:15px;background:#fff;padding:0 18px;color:#111;font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
-.landing-login-form input::placeholder{color:var(--good-grey);opacity:1}
-.continue-button{border-radius:20px;background:#cecece;color:#fff;cursor:pointer}
-.or-divider{display:flex;align-items:center;gap:18px;color:var(--good-grey);font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
-.or-divider span{height:2px;flex:1;background:var(--good-grey)}
+.landing-login-form input:not([type="hidden"]),.landing-signup-form input:not([type="hidden"]):not([type="checkbox"]),.continue-button,.auth-choice{width:100%;min-height:clamp(3rem,4.5vw,3.625rem);border:.125rem solid var(--good-grey);border-radius:.9375rem;background:#fff;padding:0 1.125rem;color:#111;font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
+.landing-signup-form input:not([type="hidden"]):not([type="checkbox"]),.landing-signup-form .continue-button,.landing-signup-form .auth-choice{min-height:clamp(2.75rem,4vw,3.25rem)}
+.landing-auth-form input::placeholder{color:var(--good-grey);opacity:1}
+.landing-field{display:grid;gap:.375rem;color:var(--grey);font-size:clamp(13px,1.2vw,16px);font-weight:700}
+.landing-consent{display:flex;align-items:flex-start;gap:.625rem;color:var(--grey);font-size:clamp(.8rem,1.1vw,1rem);font-weight:700;line-height:1.35}
+.landing-consent input{flex:0 0 auto;width:1.125rem;height:1.125rem;min-height:0;margin:.125rem 0 0;padding:0;accent-color:var(--yellow)}
+.landing-consent a{text-decoration:underline}
+.continue-button{border-radius:1.25rem;background:#cecece;color:#fff;cursor:pointer}
+.landing-signup-button{background:var(--yellow);color:#111}
+.landing-login-alternatives{display:grid;gap:1rem}
+.or-divider{display:flex;align-items:center;gap:1.125rem;color:var(--good-grey);font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
+.or-divider span{height:.125rem;flex:1;background:var(--good-grey)}
 .or-divider b{font-weight:700}
-.auth-choice{display:flex;align-items:center;justify-content:center;border-color:var(--grey);border-radius:20px;color:var(--grey);text-decoration:none}
+.auth-choice{display:flex;align-items:center;justify-content:center;border-color:var(--grey);border-radius:1.25rem;color:var(--grey);text-decoration:none;cursor:pointer}
 .auth-choice--google{background-image:linear-gradient(180deg,#fff 38%,rgba(255,255,255,.7) 71%,rgba(255,255,255,.4) 97%,rgba(153,153,153,0) 100%),linear-gradient(90deg,rgba(66,133,244,.14) 15%,rgba(57,165,83,.14) 34%,rgba(255,207,9,.14) 55%,rgba(252,76,83,.14) 77%)}
-.auth-choice--google img{width:26px;height:26px;object-fit:cover;margin-right:12px}
+.auth-choice--google img{width:1.625rem;height:1.625rem;object-fit:cover;margin-right:.75rem}
 .hero-phone-composite{position:absolute;z-index:4}
 .hero-phone-composite--desktop{left:50%;top:clamp(120px,9.2vw,140px);width:min(68%,var(--landing-phone-width));aspect-ratio:430/666;transform:translateX(-50%)}
 .hero-phone-screen,.hero-phone-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
@@ -211,8 +224,8 @@ img{display:block;max-width:100%}
   .landing-sticky-left__canvas{min-height:620px}
   .login-panel{left:clamp(22px,3vw,32px);right:clamp(22px,3vw,32px);top:clamp(118px,14vw,150px);gap:13px}
   .login-panel h1{margin-bottom:12px;font-size:clamp(34px,4.2vw,42px)}
-  .landing-login-form{gap:13px}
-  .landing-login-form input,.continue-button,.auth-choice{min-height:52px}
+  .landing-login-form,.landing-signup-form{gap:.8125rem}
+  .landing-login-form input:not([type="hidden"]),.landing-signup-form input:not([type="hidden"]):not([type="checkbox"]),.continue-button,.auth-choice{min-height:3.25rem}
   .hero--desktop{min-height:clamp(700px,86vw,820px)}
   .hero-phone-composite--desktop{top:clamp(118px,14vw,138px);width:min(72%,clamp(280px,38vw,350px))}
   .discovery--desktop{min-height:clamp(650px,78vw,760px)}
@@ -228,9 +241,9 @@ img{display:block;max-width:100%}
   .brand--desktop{top:clamp(24px,5vh,32px)}
   .login-panel{top:clamp(84px,15vh,96px);gap:10px}
   .login-panel h1{margin-bottom:8px;font-size:clamp(38px,3.4vw,44px);line-height:1.15}
-  .landing-login-form{gap:9px}
-  .landing-login-form input,.continue-button,.auth-choice{min-height:48px}
-  .or-divider{gap:12px}
+  .landing-login-form,.landing-signup-form{gap:.5625rem}
+  .landing-login-form input:not([type="hidden"]),.landing-signup-form input:not([type="hidden"]):not([type="checkbox"]),.continue-button,.auth-choice{min-height:3rem}
+  .or-divider{gap:.75rem}
 }
 
 /* On very wide monitors the authored composition stops at a readable width while the footer remains full bleed. */
