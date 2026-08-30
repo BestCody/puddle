@@ -31,13 +31,15 @@ export async function generateMetadata({ params, searchParams }) {
   const basePath = `/places/in/${market.id}`
   // Same cached lookup the page body makes, so this costs nothing extra.
   const places = await getCachedMarketPlaces(market.id)
-  const { page, totalPages, items } = paginateHubPlaces(places, (await searchParams)?.page)
+  const { page, totalPages } = paginateHubPlaces(places, (await searchParams)?.page)
   // Later pages list different places, so each one canonicalises to itself and says which page
   // it is. Pointing them all at page 1 would keep everything past the first 24 out of the index.
   const suffix = page > 1 ? ` — page ${page} of ${totalPages}` : ''
   const base = {
     title: `${title}${suffix}`,
-    description: describeHubPlaces(items, { market }) || description,
+    // Counts describe the whole hub, not the current page, so the snippet does not claim a
+    // city has 24 places when page 2 exists.
+    description: describeHubPlaces(places, { market }) || description,
     alternates: { canonical: hubPageHref(basePath, page) },
     openGraph: {
       type: 'website',
