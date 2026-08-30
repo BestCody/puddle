@@ -30,7 +30,7 @@ function SettingsIcon() {
   </svg>
 }
 
-export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'light' }) {
+export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'light', signOutAction }) {
   const [width, setWidth] = useState(EXPANDED_WIDTH)
   const [autoConcise, setAutoConcise] = useState(false)
   const drag = useRef(null)
@@ -96,10 +96,15 @@ export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'l
   return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`} aria-label="Puddle sidebar" data-sidebar-width={effectiveWidth}>
     <div className="figma-dashboard-sidebar-logo"><AppearanceToggleLogo initialAppearance={initialAppearance} /></div>
     <ProductNav avatarUrl={avatarUrl} />
-    <SettingsTrigger className="figma-dashboard-settings-link">
-      <span className="figma-dashboard-settings-icon"><SettingsIcon /></span>
-      <span className="figma-dashboard-settings-label">Settings</span>
-    </SettingsTrigger>
+    <div className="figma-dashboard-sidebar-actions">
+      <SettingsTrigger className="figma-dashboard-settings-link">
+        <span className="figma-dashboard-settings-icon"><SettingsIcon /></span>
+        <span className="figma-dashboard-settings-label">Settings</span>
+      </SettingsTrigger>
+      <form className="figma-dashboard-signout-form" action={signOutAction}>
+        <button className="figma-dashboard-signout" type="submit">Sign out</button>
+      </form>
+    </div>
     <div
       className="figma-dashboard-sidebar-resizer"
       role="separator"

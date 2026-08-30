@@ -91,6 +91,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
     const desktopSidebar = page.locator('.figma-dashboard-sidebar')
     await expect(desktopSidebar).toBeVisible()
     await expect(desktopSidebar.locator('.figma-dashboard-settings-link')).toBeVisible()
+    await expect(desktopSidebar.locator('.figma-dashboard-signout')).toBeVisible()
     await expect(page.locator('.figma-dashboard-account-menu summary')).toBeHidden()
     await expect(desktopSidebar.locator('.figma-dashboard-nav-item')).toHaveCount(6)
   } else {

@@ -40,7 +40,7 @@ export async function ProductShell({ user, profile, children, contentPromise = n
     : children
 
   return <div className="figma-dashboard-shell" data-appearance={appearance}>
-    <FigmaDashboardSidebar avatarUrl={avatarUrl} initialAppearance={appearance} />
+    <FigmaDashboardSidebar avatarUrl={avatarUrl} initialAppearance={appearance} signOutAction={signOut} />
 
     <div className="figma-dashboard-stage">
       <details className="figma-dashboard-account-menu">

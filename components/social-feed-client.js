@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
 import { PhotoFrame } from '@/components/photo-frame'
 import { LocationVisualPreview } from '@/components/location-visual-preview'
@@ -90,23 +90,46 @@ function FeedPost({ post }) {
   </article>
 }
 
-function nextFeedHref(query, pagination) {
+function nextFeedQuery(query, pagination) {
   if (!pagination?.hasMore || !pagination.nextBeforeCreatedAt || !pagination.nextBeforePostId) return null
   const params = new URLSearchParams()
   if (query) params.set('q', query)
   params.set('before', pagination.nextBeforeCreatedAt)
   params.set('beforeId', pagination.nextBeforePostId)
-  return `/map?${params.toString()}`
+  return params.toString()
 }
 
-function FeedStream({ feed, query }) {
-  const moreHref = nextFeedHref(query, feed.pagination)
+function FeedPagination({ query, pagination, loading, error, onLoadMore }) {
+  if (!nextFeedQuery(query, pagination)) return null
+  return <nav className={styles.pagination} aria-label="Discover pagination">
+    <button type="button" onClick={onLoadMore} disabled={loading} aria-busy={loading}>
+      {loading ? 'Loading puddles…' : 'More puddles'}
+    </button>
+    {error ? <p role="alert">{error}</p> : null}
+  </nav>
+}
+
+function FeedStream({ feed, query, loadingMore, loadMoreError, onLoadMore }) {
   return feed.items.length ? <>
     {feed.items.map((post) => <FeedPost post={post} key={post.id} />)}
-    {moreHref ? <nav aria-label="Discover pagination"><Link href={moreHref}>More puddles</Link></nav> : null}
+    <FeedPagination
+      query={query}
+      pagination={feed.pagination}
+      loading={loadingMore}
+      error={loadMoreError}
+      onLoadMore={onLoadMore}
+    />
   </> : <div className={styles.empty}>
     <strong>{query ? 'No puddles match that search on this page.' : 'No one has posted a puddle yet.'}</strong>
-    {moreHref ? <Link href={moreHref}>Search older puddles</Link> : <Link href="/map?compose=1">Create the first one</Link>}
+    {nextFeedQuery(query, feed.pagination)
+      ? <FeedPagination
+        query={query}
+        pagination={feed.pagination}
+        loading={loadingMore}
+        error={loadMoreError}
+        onLoadMore={onLoadMore}
+      />
+      : <Link href="/map?compose=1">Create the first one</Link>}
   </div>
 }
 
@@ -121,14 +144,22 @@ export function SocialFeedClient({
 }) {
   const [feed, setFeed] = useState(null)
   const [error, setError] = useState('')
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [loadMoreError, setLoadMoreError] = useState('')
   const [reload, setReload] = useState(0)
   const [identity, setIdentity] = useState({ avatarUrl, displayName })
+  const feedGenerationRef = useRef(0)
+  const loadMoreControllerRef = useRef(null)
 
   useEffect(() => {
     setIdentity({ avatarUrl, displayName })
   }, [avatarUrl, displayName])
 
   useEffect(() => {
+    const generation = feedGenerationRef.current + 1
+    feedGenerationRef.current = generation
+    loadMoreControllerRef.current?.abort()
+    loadMoreControllerRef.current = null
     const controller = new AbortController()
     const params = new URLSearchParams()
     if (query) params.set('q', query)
@@ -136,6 +167,8 @@ export function SocialFeedClient({
     if (beforePostId) params.set('beforeId', beforePostId)
     setFeed(null)
     setError('')
+    setLoadingMore(false)
+    setLoadMoreError('')
 
     fetch(`/api/social-feed${params.toString() ? `?${params}` : ''}`, { cache: 'no-store', signal: controller.signal })
       .then(async (response) => {
@@ -147,7 +180,7 @@ export function SocialFeedClient({
         return payload
       })
       .then((payload) => {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted || generation !== feedGenerationRef.current) return
         setFeed(payload)
         if (payload?.self) {
           setIdentity({
@@ -163,13 +196,71 @@ export function SocialFeedClient({
         }
       })
 
-    return () => controller.abort()
+    return () => {
+      controller.abort()
+      loadMoreControllerRef.current?.abort()
+      loadMoreControllerRef.current = null
+    }
   }, [avatarUrl, beforeCreatedAt, beforePostId, displayName, query, reload])
+
+  async function loadMore() {
+    if (loadingMore || !feed || loadMoreControllerRef.current) return
+    const nextQuery = nextFeedQuery(query, feed.pagination)
+    if (!nextQuery) return
+
+    const generation = feedGenerationRef.current
+    const controller = new AbortController()
+    loadMoreControllerRef.current = controller
+    setLoadingMore(true)
+    setLoadMoreError('')
+
+    try {
+      const response = await fetch(`/api/social-feed?${nextQuery}`, {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        signal: controller.signal
+      })
+      const payload = await response.json()
+      if (!response.ok) {
+        if (payload?.code === 'onboarding_required') window.location.assign('/onboarding')
+        throw new Error(payload?.error || `Feed returned ${response.status}`)
+      }
+      if (controller.signal.aborted || generation !== feedGenerationRef.current) return
+
+      setFeed((current) => {
+        if (!current || generation !== feedGenerationRef.current) return current
+        const mergedItems = []
+        const seenIds = new Set()
+        for (const item of [...(Array.isArray(current.items) ? current.items : []), ...(Array.isArray(payload.items) ? payload.items : [])]) {
+          if (!item?.id || seenIds.has(item.id)) continue
+          seenIds.add(item.id)
+          mergedItems.push(item)
+        }
+        return { ...current, ...payload, items: mergedItems }
+      })
+      if (payload?.self) {
+        setIdentity({
+          avatarUrl: payload.self.avatar_url || avatarUrl || null,
+          displayName: payload.self.display_name || displayName || 'Puddle person'
+        })
+      }
+    } catch (cause) {
+      if (!controller.signal.aborted && generation === feedGenerationRef.current) {
+        console.warn('Could not load more social feed posts.', { message: cause?.message || 'unknown error' })
+        setLoadMoreError('More puddles could not be loaded.')
+      }
+    } finally {
+      if (loadMoreControllerRef.current === controller) {
+        loadMoreControllerRef.current = null
+        if (generation === feedGenerationRef.current) setLoadingMore(false)
+      }
+    }
+  }
 
   return <>
     <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
       {error ? <div className={styles.empty} role="alert"><strong>Could not load posts.</strong><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button><small>Check your connection and try again.</small></div>
-        : feed ? <FeedStream feed={feed} query={query} />
+        : feed ? <FeedStream feed={feed} query={query} loadingMore={loadingMore} loadMoreError={loadMoreError} onLoadMore={loadMore} />
           : <div className={styles.empty} role="status" aria-label="Loading posts"><strong>Loading…</strong></div>}
     </section>
     <DiscoverCreatePuddle
