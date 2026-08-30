@@ -208,10 +208,11 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   health.assertHealthy()
 })
 
-test('changing a profile picture uploads and renders the actual color image after reload', async ({ page, request }) => {
+test('changing a profile picture uploads and renders the actual color image after reload', async ({ page, request }, testInfo) => {
   const account = await createConfirmedUser({ displayName: 'Profile Photo Tester' })
   await completeProfileDirect(account.user.id, { display_name: 'Profile Photo Tester' })
-  await signInThroughUi(page, account.email, account.password, '/profile')
+  const signIn = testInfo.project.name === 'mobile-chromium' ? signInThroughApi : signInThroughUi
+  await signIn(page, account.email, account.password, '/profile')
   await expect(page.locator('.figma-profile-identity h1')).toHaveText('Profile Photo Tester')
 
   const imageBuffer = await sharp({
