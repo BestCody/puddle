@@ -123,6 +123,13 @@ CATEGORY_CASES = [
     # Boundary cases for the anchored park rule: both contain the token mid-word and must not
     # be read as parks.
     ('Parkway Motel', None), ('Gardenia Florist', None),
+    # Ticketed attractions whose category ends in _park. The attraction rule already names them,
+    # but it sits below the park rule, so without an earlier branch they read as green space.
+    ('Amusement Park', 'attraction'), ('amusement_park', 'attraction'),
+    ('Theme Park', 'attraction'), ('Water Park', 'attraction'),
+    # market has to stay unanchored for supermarket and flea market, so the exclusion list is
+    # what keeps unrelated trades out of shops.
+    ('Marketing Agency', None), ('Supermarket', 'shop'), ('Flea Market', 'shop'),
     ('Park', 'park'), ('Botanical Garden', 'park'), ('Dog Park', 'park'), ('Playground', 'park'),
     ('Landmarks and Outdoors > Park', 'park'), ('Nature Reserve', 'park'),
     ('Dining and Drinking > Bar', 'bar'), ('Pub', 'bar'), ('Cocktail Bar', 'bar'),

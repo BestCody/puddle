@@ -84,6 +84,9 @@ def category_case(raw_expr):
         "|police|fire_station|private_residence|government_office"
         "|hardware|home_improvement|home_(and_)?garden|garden_cent|building_suppl|building_cent"
         "|lumber|plumbing|electrical_suppl|wholesale|self_storage|car_park|parking"
+        # "marketing_agency" is not a market. The shop rule matches market unanchored so that
+        # supermarket and flea_market still land there, so the exclusion carries this instead.
+        "|marketing"
     )
     return f"""
     CASE
@@ -93,6 +96,10 @@ def category_case(raw_expr):
       WHEN regexp_matches({value}, '(^|_)(bar|pub|brewpub|beer_garden|wine_bar|cocktail_bar|sports_bar|lounge)(_|$)') THEN 'bar'
       WHEN regexp_matches({value}, 'arcade|bowling|miniature_golf|mini_golf|escape_room|recreation|sports_center|sports_centre|climbing_gym|trampoline|game_center|game_centre|clubhouse') THEN 'activity_venue'
       WHEN regexp_matches({value}, 'community_center|community_centre|community_space|cultural_center|cultural_centre|public_hall|social_center') THEN 'community_space'
+      -- Ticketed park-named attractions are matched ahead of the park rule. They are already
+      -- listed under attraction below, but a rule ending in _park claims them first, which files
+      -- theme parks and water parks alongside municipal green space.
+      WHEN regexp_matches({value}, '(^|_)(amusement_park|theme_park|water_park|trampoline_park|adventure_park)(_|$)') THEN 'attraction'
       WHEN regexp_matches({value}, '(^|_)(park|garden|playground|nature_reserve|dog_park|waterfront_park)(_|$)') THEN 'park'
       WHEN regexp_matches({value}, 'museum') THEN 'museum'
       WHEN regexp_matches({value}, 'gallery') THEN 'gallery'
