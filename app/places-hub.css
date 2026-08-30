@@ -11,7 +11,8 @@
 .place-hub-card a:hover{border-color:var(--puddle-figma-blue);transform:translateY(-2px)}
 .place-hub-card img,.place-hub-card-placeholder{width:100%;height:150px;border-radius:12px;object-fit:cover;background:var(--puddle-figma-bg)}
 .place-hub-card strong{font-size:.98rem;line-height:1.25}
-.place-hub-card small{color:var(--puddle-figma-grey);font-size:.78rem}
+.place-hub-card small{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;color:var(--puddle-figma-grey);font-size:.78rem}
+.place-hub-card-kind{padding:.1rem .45rem;border:1px solid var(--puddle-figma-line);border-radius:999px;background:var(--puddle-figma-bg);font-size:.72rem;font-weight:600;line-height:1.5}
 .place-hub-card p{display:-webkit-box;margin:.15rem 0 0;overflow:hidden;color:var(--puddle-figma-grey);font-size:.82rem;line-height:1.4;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 .place-hub-empty{margin:0 0 2.5rem;padding:1.25rem;border:1.5px dashed var(--puddle-figma-line);border-radius:18px;color:var(--puddle-figma-grey)}
 .place-hub-section{margin-bottom:2.25rem}

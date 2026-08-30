@@ -51,7 +51,13 @@ function PlaceCard({ place }) {
           />
         : <span className="place-hub-card-placeholder" aria-hidden="true" />}
       <strong>{place.name}</strong>
-      {place.city ? <small>{place.city}</small> : null}
+      {/* Category and neighbourhood come straight from the catalogue. Without them every card on
+          every hub reads as a name over a city name, which is the shape of a page with nothing
+          of its own to say. */}
+      <small>
+        {place.categoryLabel ? <span className="place-hub-card-kind">{place.categoryLabel}</span> : null}
+        {place.area || place.city ? <span>{place.area || place.city}</span> : null}
+      </small>
       {place.summary ? <p>{place.summary}</p> : null}
     </Link>
   </li>
