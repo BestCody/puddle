@@ -43,7 +43,7 @@ img{display:block;max-width:100%}
 .menu-button img{width:22px;height:31px}
 .menu-button--desktop{position:absolute;top:clamp(38px,4.2vw,60px);right:clamp(28px,3.5vw,52px)}
 .login-panel{position:absolute;z-index:5;left:clamp(28px,4vw,58px);right:clamp(28px,4.8vw,70px);top:clamp(132px,12vw,188px);display:grid;gap:1rem;align-content:start;background:#fff}
-.login-panel[data-auth-mode="signup"]{top:clamp(112px,11vw,176px)}
+.login-panel[data-auth-mode="signup"]{top:clamp(7rem,min(9vw,13vh),9rem);padding-block-end:clamp(1rem,3vh,2rem)}
 .login-panel h1{margin:0 0 1.125rem;font-size:clamp(38px,4.3vw,58px);line-height:1.2;font-weight:800;letter-spacing:-.035em}
 .login-label-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;color:var(--grey);font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
 .login-label-row a{text-decoration:none;white-space:nowrap}
@@ -51,7 +51,7 @@ img{display:block;max-width:100%}
 .auth-mode-switch button{min-height:2.5rem;border:0;border-radius:999px;background:transparent;color:var(--grey);padding:.35rem .8rem;font-size:inherit;font-weight:inherit;cursor:pointer}
 .auth-mode-switch button[aria-selected="true"]{background:var(--yellow);color:#111;box-shadow:0 .15rem 0 rgba(0,0,0,.12)}
 .landing-login-form,.landing-signup-form{display:grid;gap:1rem}
-.landing-signup-form{gap:.625rem}
+.landing-signup-form{gap:.5rem}
 .landing-auth-message{margin:0;padding:.75rem 1rem;border:.125rem solid #c7435b;border-radius:1rem;background:#fff2f4;color:#9f263f;font-size:clamp(.8rem,1.1vw,1rem);font-weight:700;line-height:1.35}
 .landing-login-form input:not([type="hidden"]),.landing-signup-form input:not([type="hidden"]):not([type="checkbox"]),.continue-button,.auth-choice{width:100%;min-height:clamp(3rem,4.5vw,3.625rem);border:.125rem solid var(--good-grey);border-radius:.9375rem;background:#fff;padding:0 1.125rem;color:#111;font-size:clamp(13px,1.38vw,17.7px);font-weight:700}
 .landing-signup-form input:not([type="hidden"]):not([type="checkbox"]),.landing-signup-form .continue-button,.landing-signup-form .auth-choice{min-height:clamp(2.75rem,4vw,3.25rem)}
