@@ -408,7 +408,16 @@
 
 /* The desktop sidebar exposes one canonical sign-out action below Settings. */
 @media (min-width: 761px) {
+  .figma-dashboard-sidebar {
+    box-sizing: border-box !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+  }
+
   .figma-dashboard-sidebar-actions {
+    position: fixed !important;
+    top: auto !important;
+    right: auto !important;
     left: 42px !important;
     bottom: clamp(20px, 4dvh, 36px) !important;
     display: grid !important;
@@ -423,6 +432,9 @@
   }
 
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-actions {
+    position: fixed !important;
+    top: auto !important;
+    right: auto !important;
     left: 16px !important;
     bottom: 24px !important;
     width: 60px !important;
