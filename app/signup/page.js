@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
-import { signUp, signInWithOAuth } from '@/app/auth/actions'
+import { signUp, startGoogleSignup } from '@/app/auth/actions'
 
 export const metadata = { title: 'Create account' }
 
@@ -22,14 +22,14 @@ export default async function SignUpPage({ searchParams }) {
       </form>
       <div className="auth-divider">or</div>
       <div className="oauth-grid" style={{ gridTemplateColumns: '1fr' }}>
-        <form className="auth-form" action={signInWithOAuth}>
+        <form className="auth-form" action={startGoogleSignup}>
           <input type="hidden" name="provider" value="google" />
           <input type="hidden" name="signup_intent" value="1" />
           <label className="checkbox"><input type="checkbox" name="terms_accepted" value="yes" required /> <span>I agree to Puddle’s Terms and Privacy Policy before continuing with Google.</span></label>
           <SubmitButton className="oauth-button" pendingText="Opening Google…">Continue with Google</SubmitButton>
         </form>
       </div>
-      <div className="auth-links"><span>Already in?</span><Link href="/signin">Sign in</Link></div>
+      <div className="auth-links"><span>Already in?</span><Link href="/">Sign in</Link></div>
     </AuthShell>
   )
 }

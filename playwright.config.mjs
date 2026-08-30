@@ -47,7 +47,7 @@ export default defineConfig({
   ],
   webServer: {
     command: serverCommand,
-    url: `${baseURL}/signin`,
+    url: `${baseURL}/`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     stdout: 'pipe',

@@ -131,7 +131,7 @@ async function runLiveChecks() {
 
     const phone = await page.locator('.feature-card--d-swipe .feature-phone-demo').boundingBox()
     assert(phone && phone.width > 250 && phone.height > 500, 'production interactive Swipe phone has no usable viewport')
-    for (const path of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} link is missing from landing page`)
+    for (const path of ['/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${path}"]`).count() > 0, `${path} link is missing from landing page`)
 
     for (const [width, height] of [[1920,1080],[1440,900],[1366,768],[1024,768],[800,600],[761,900]]) await assertResponsiveFlow(page, width, height, 'desktop')
 

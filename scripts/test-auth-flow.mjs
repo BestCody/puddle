@@ -37,7 +37,7 @@ assert.equal(requestOrigin(spoofedOriginHeaders, 'https://puddle.you'), 'https:/
 const localHeaders = new Headers({ host: 'localhost:3000' })
 assert.equal(requestOrigin(localHeaders, 'https://puddle.you'), 'http://localhost:3000')
 
-const authPaths = new Set(['/signin', '/signup', '/auth/callback', '/auth/confirm'])
+const authPaths = new Set(['/signup', '/auth/callback', '/auth/confirm'])
 assert.equal(
   canonicalPuddleAuthUrl('https://www.puddle.you/signup?email=ava%40example.com', 'https://puddle.you', authPaths)?.toString(),
   'https://puddle.you/signup?email=ava%40example.com'
@@ -80,10 +80,24 @@ assert(confirm.includes('authenticatedDestination(profile, next)'), 'Email links
 assert(!confirm.includes("new URL('/auth/error'"), 'Email links should not dump users onto the generic error page')
 
 const actions = await readFile(join(root, 'app/auth/actions.js'), 'utf8')
+const passwordAuth = await readFile(join(root, 'lib/auth/password-sign-in.js'), 'utf8')
+const passwordRoute = await readFile(join(root, 'app/api/auth/password/route.js'), 'utf8')
+const googleRoute = await readFile(join(root, 'app/api/auth/google/route.js'), 'utf8')
+const googleOAuth = await readFile(join(root, 'lib/auth/google-oauth.js'), 'utf8')
 for (const marker of ['signInWithPassword', 'signUp({', "provider !== 'google'", 'exchangeCodeForSession']) {
-  const source = marker === 'exchangeCodeForSession' ? callback : actions
+  const source = marker === 'signInWithPassword'
+    ? passwordAuth
+    : marker === 'exchangeCodeForSession' ? callback : actions
   assert(source.includes(marker), `Authentication source is missing ${marker}`)
 }
+for (const marker of ["signOut({ scope: 'local' })", 'ensureProfile']) {
+  assert(passwordAuth.includes(marker), `Shared password authentication is missing ${marker}`)
+}
+for (const marker of ['authenticatePassword(supabase, email, password)', 'authenticatedDestination(profile, next)', 'safeNextPath']) {
+  assert(passwordRoute.includes(marker), `Landing sign-in route is missing ${marker}`)
+}
+assert(googleRoute.includes('startGoogleOAuth'), 'Direct Google sign-in route is missing')
+assert(googleOAuth.includes('signInWithOAuth'), 'Google OAuth integration is missing')
 for (const marker of ['saveOnboardingDraft', 'profileWriteErrorMessage', 'ensureProfile', 'resetPasswordForEmail', "signOut({ scope: 'local' })"]) {
   assert(actions.includes(marker), `Authentication lifecycle is missing ${marker}`)
 }
@@ -91,6 +105,13 @@ assert(actions.includes('updateUserById(user.id, { email_confirm: true })'), 'Ho
 assert(!actions.includes('/verify-email?email='), 'New signups must not be redirected to email verification')
 assert(actions.includes("if (process.env.NODE_ENV === 'production') return 'https://puddle.you'"), 'Production auth links must never point at localhost')
 assert(actions.includes('clearLocalAuthSession(supabase)'), 'New authentication attempts must clear the previous local session')
+assert(passwordRoute.includes("NextResponse.redirect(new URL(authenticatedDestination(profile, next), request.url), 303)"), 'Landing sign-in must redirect completed accounts directly to the product')
+assert(actions.includes('startGoogleSignup'), 'Signup must retain its Google OAuth entry point')
+assert(!actions.includes('sendLoginCode'), 'One-time login code action must be removed')
+assert(!actions.includes('verifyLoginCode'), 'One-time login code verification must be removed')
+assert(!actions.includes('export async function signIn('), 'The deleted sign-in page must not retain a server action')
+assert(!actions.includes('/signin'), 'Authentication actions must not link to the deleted sign-in page')
+assert(!passwordRoute.includes('/signin'), 'The landing password route must not link to the deleted sign-in page')
 assert(proxy.includes("pathname === '/' && user"), 'A valid session must redirect the landing route to the dashboard')
 assert(proxy.includes("new URL('/discover', request.url)"), 'The authenticated landing redirect must target the dashboard')
 assert(!proxy.includes('if (isAuthOnly && user)'), 'Auth pages must remain available so users can switch accounts')

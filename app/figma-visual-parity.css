@@ -191,12 +191,14 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   }
 
   [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side {
-    top: auto !important;
-    right: clamp(12px, 4vw, 16px) !important;
-    bottom: calc(var(--puddle-mobile-content-bottom) + 74px) !important;
+    inset-block-start: var(--location-map-selection-y) !important;
+    inset-inline-start: var(--location-map-selection-x) !important;
+    inset-inline-end: auto !important;
+    bottom: auto !important;
     width: min(303px, calc(100% - 32px)) !important;
     max-height: min(112px, calc(100% - 220px)) !important;
     border-radius: 16px !important;
+    transform: translate(-50%, calc(-100% - 1.125rem)) !important;
   }
 
   [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-card {

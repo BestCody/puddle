@@ -6,7 +6,7 @@ import {
   signInThroughUi
 } from './support.mjs'
 
-test('map clusters are clickable, pans on the compositor, and markers show directions', async ({ page }) => {
+test('map markers are individually clickable, pan on the compositor, and show directions', async ({ page }) => {
   test.setTimeout(60_000)
   let account
   try {
@@ -28,27 +28,7 @@ test('map clusters are clickable, pans on the compositor, and markers show direc
     await zoomOut.click()
     await expect(mapCanvas).toHaveAttribute('data-map-zoom', '12')
 
-    const clusters = map.locator('.location-map-cluster')
-    await expect.poll(() => clusters.count(), { timeout: 30_000 }).toBeGreaterThan(0)
-    let interactiveCluster = null
-    for (let index = 0; index < await clusters.count(); index += 1) {
-      const candidate = clusters.nth(index)
-      const box = await candidate.boundingBox()
-      if (!box || box.right <= canvasBox.x || box.left >= canvasBox.x + canvasBox.width || box.bottom <= canvasBox.y || box.top >= canvasBox.y + canvasBox.height) continue
-      const hitTarget = await candidate.evaluate((element) => {
-        const rect = element.getBoundingClientRect()
-        const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
-        return hit === element || hit?.closest?.('.location-map-cluster') === element
-      })
-      if (hitTarget) {
-        interactiveCluster = candidate
-        break
-      }
-    }
-    expect(interactiveCluster).toBeTruthy()
-    const beforeClusterZoom = await mapCanvas.getAttribute('data-map-zoom')
-    await interactiveCluster.click()
-    await expect.poll(() => mapCanvas.getAttribute('data-map-zoom')).not.toBe(beforeClusterZoom)
+    await expect(map.locator('.location-map-cluster')).toHaveCount(0)
 
     const markers = map.locator('.location-map-marker.is-catalogue')
     await expect.poll(() => markers.count(), { timeout: 30_000 }).toBeGreaterThan(0)
@@ -86,6 +66,27 @@ test('map clusters are clickable, pans on the compositor, and markers show direc
     await expect(markerAfterDrag).toHaveClass(/is-selected/)
     await expect(map.getByRole('link', { name: 'Directions', exact: true })).toBeVisible()
     await expect(map.getByRole('link', { name: 'Open details', exact: true })).toHaveCount(0)
+    const selectionPanel = map.locator('.location-map-pan-layer > .location-map-side')
+    await expect(selectionPanel).toBeVisible()
+    const selectionBeforeDrag = await selectionPanel.boundingBox()
+    expect(selectionBeforeDrag).toBeTruthy()
+    const dragOrigin = await mapCanvas.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      const candidates = [[.08, .18], [.92, .18], [.08, .82], [.92, .82], [.5, .9]]
+      for (const [x, y] of candidates) {
+        const point = document.elementFromPoint(rect.left + rect.width * x, rect.top + rect.height * y)
+        if (!point?.closest?.('button,a')) return { x: rect.left + rect.width * x, y: rect.top + rect.height * y }
+      }
+      return { x: rect.left + rect.width * .08, y: rect.top + rect.height * .18 }
+    })
+    await page.mouse.move(dragOrigin.x, dragOrigin.y)
+    await page.mouse.down()
+    await page.mouse.move(dragOrigin.x + 90, dragOrigin.y + 35, { steps: 6 })
+    await expect.poll(async () => {
+      const box = await selectionPanel.boundingBox()
+      return box ? Math.round(box.x) : null
+    }).not.toBe(Math.round(selectionBeforeDrag.x))
+    await page.mouse.up()
 
     await mapCanvas.focus()
     const beforeKeyboardPan = await mapCanvas.getAttribute('data-map-center-longitude')

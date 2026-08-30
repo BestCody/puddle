@@ -6,9 +6,9 @@ test('landing phone demo routes are public, same-origin frameable, and keep othe
   expect(demo.headers()['x-frame-options'] || '').toContain('SAMEORIGIN')
   expect(demo.headers()['content-security-policy'] || '').toContain("frame-ancestors 'self'")
 
-  const signin = await request.get('/signin')
-  expect(signin.headers()['x-frame-options'] || '').toContain('DENY')
-  expect(signin.headers()['content-security-policy'] || '').toContain("frame-ancestors 'none'")
+  const signup = await request.get('/signup')
+  expect(signup.headers()['x-frame-options'] || '').toContain('DENY')
+  expect(signup.headers()['content-security-policy'] || '').toContain("frame-ancestors 'none'")
 })
 
 test('public Swipe phone keeps the Figma screen identity and real draggable mechanics', async ({ page }) => {

@@ -147,7 +147,7 @@ try {
   for (const label of ['Explore', 'Company', 'Connect']) assert(await footer.getByRole('heading', { name: label, exact: true }).isVisible(), `${label} footer column is not visible`)
 
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'desktop page horizontally overflows')
-  for (const route of ['/signin', '/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${route}"]`).count() > 0, `${route} route link is missing`)
+  for (const route of ['/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${route}"]`).count() > 0, `${route} route link is missing`)
   await page.locator('.safety-panel--desktop [data-open-safety]').click()
   await page.waitForSelector('#safety-dialog-backdrop.is-open')
   await page.locator('[data-close-safety]').click()

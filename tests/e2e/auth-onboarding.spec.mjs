@@ -125,14 +125,14 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
 
   await signOutThroughUi(page)
   await attemptSignInThroughUi(page, email, password)
-  await expect(page).toHaveURL(/\/signin\?.*error=/)
+  await expect(page).toHaveURL(/\/\?.*error=/)
   await expect(page.getByText(/Email or password was not accepted/i)).toBeVisible()
 
   await signInThroughUi(page, email, newPassword)
   await expect(page).toHaveURL(/\/discover$/)
   await signOutThroughUi(page)
   await page.goto('/dashboard')
-  await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard|\/signin\?next=\/dashboard/)
+  await expect(page).toHaveURL(/\/\?next=%2Fdashboard|\/\?next=\/dashboard/)
 })
 
 test('duplicate usernames keep onboarding values in place with an inline error', async ({ page }) => {
