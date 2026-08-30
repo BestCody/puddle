@@ -1,12 +1,13 @@
 .screen,
 .detailScreen {
-  min-height: 832px;
+  container-type: inline-size;
+  min-height: 100dvh;
   background: #f6f6f6;
   color: #000;
 }
 
 .screen {
-  padding-bottom: 125px;
+  padding-bottom: clamp(4rem, 8cqi, 7.8125rem);
 }
 
 .topbar,
@@ -15,22 +16,22 @@
 }
 
 .topbar {
-  height: 108px;
+  height: 6.75rem;
   display: grid;
   place-items: start center;
-  padding-top: 40px;
+  padding-top: 2.5rem;
 }
 
 .tabs {
-  width: 147px;
+  width: 9.1875rem;
 }
 
 .tabs > a:first-child {
-  width: 74px;
+  width: 4.625rem;
 }
 
 .tabs > a:last-child {
-  width: 61px;
+  width: 3.8125rem;
 }
 
 .tabs > .active {
@@ -41,59 +42,59 @@
 .planBand,
 .detailCategoryBand {
   box-sizing: border-box;
-  border-bottom: 3px solid #c79ee9;
+  border-bottom: .1875rem solid #c79ee9;
 }
 
 .categoryBand {
-  height: 46px;
+  height: 2.875rem;
   display: flex;
   align-items: flex-end;
-  padding: 3px 19px 0;
+  padding: .1875rem 1.1875rem 0;
 }
 
 .categories {
-  height: 40px;
+  height: 2.5rem;
   display: flex;
   align-items: flex-end;
-  gap: 18px;
+  gap: 1.125rem;
   white-space: nowrap;
 }
 
 .categories > a {
   min-width: 0;
-  height: 37px;
+  height: 2.3125rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  padding: 0 7px;
+  gap: .4375rem;
+  padding: 0 .4375rem;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: #727272;
-  font: 400 20px/1.4 var(--figma-mono);
+  font: 400 1.25rem/1.4 var(--figma-mono);
   text-decoration: none;
   box-sizing: border-box;
 }
 
 .categories > a:first-child {
-  width: 81px;
+  width: 5.0625rem;
   padding: 0;
 }
 
 .categories > a.categoryActive {
-  height: 40px;
-  padding: 0 16px;
-  border: 2.5px solid #c2a3dd;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border: .15625rem solid #c2a3dd;
   border-bottom-color: #e8d8f6;
-  border-radius: 18px 18px 0 0;
+  border-radius: 1.125rem 1.125rem 0 0;
   background: #e8d8f6;
   color: #43255c;
 }
 
 .categories > a > span {
   color: #929292;
-  font: 400 20px/1 var(--figma-mono);
+  font: 400 1.25rem/1 var(--figma-mono);
 }
 
 .share > summary::-webkit-details-marker,
@@ -105,70 +106,67 @@
   position: absolute;
   z-index: 40;
   display: grid;
-  gap: 2px;
-  padding: 8px;
-  border: 2px solid #e5e5e5;
-  border-radius: 16px;
+  gap: .125rem;
+  padding: .5rem;
+  border: .125rem solid #e5e5e5;
+  border-radius: 1rem;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.12);
 }
 
 .planBand {
-  height: 46px;
+  height: 2.875rem;
   display: grid;
   place-items: start center;
 }
 
 .planHeading {
-  margin: 4px 0 0;
+  margin: .25rem 0 0;
   color: #8d5eb7;
-  font: 800 26px/1 Manrope, sans-serif;
+  font: 800 1.625rem/1 Manrope, sans-serif;
 }
 
 .placeGrid {
-  width: min(947px, calc(100% - 53px));
-  margin-left: 23px;
-  padding-top: 19px;
+  width: min(100%, 60rem);
+  margin-inline: auto;
+  padding: clamp(1rem, 2cqi, 1.5rem);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 297px));
-  gap: 25px 28px;
-}
-
-.placeCard {
-  width: 297px;
-  height: 233px;
-  display: grid;
-  grid-template-rows: 156px minmax(0, 1fr);
-  gap: 8.5px;
-  overflow: hidden;
-  padding: 4.5px 4.5px 10px;
-  border: 2.5px solid #e5e5e5;
-  border-radius: 25px;
-  background: #fff;
-  box-shadow: 0 4px 0 rgba(0,0,0,.10);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.5rem), 1fr));
+  gap: clamp(1rem, 2.2cqi, 1.75rem);
   box-sizing: border-box;
 }
 
-.placeCard:nth-child(3n + 2) {
-  transform: translateY(-2px);
-}
-
-.placeCard:nth-child(3n) {
-  transform: translateY(-4px);
+.placeCard {
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 297 / 233;
+  height: auto;
+  display: grid;
+  grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
+  gap: clamp(.5rem, 1cqi, .75rem);
+  overflow: hidden;
+  padding: clamp(.25rem, .5cqi, .5rem) clamp(.25rem, .5cqi, .5rem) clamp(.625rem, 1cqi, .75rem);
+  border: .15625rem solid #e5e5e5;
+  border-radius: 1.5625rem;
+  background: #fff;
+  box-shadow: 0 .25rem 0 rgba(0,0,0,.10);
+  box-sizing: border-box;
 }
 
 .placePhoto {
   position: relative;
   width: 100%;
-  height: 156px;
+  min-height: 0;
+  height: auto;
+  aspect-ratio: 297 / 156;
   display: grid;
   place-items: center;
   overflow: hidden;
-  border: 2px solid #dedede;
-  border-radius: 25px;
+  border: .125rem solid #dedede;
+  border-radius: 1.5625rem;
   background: #f0f0f0 center/cover no-repeat;
   color: #aaa;
-  font: 800 20px/1 var(--figma-mono);
+  font: 800 1.25rem/1 var(--figma-mono);
   text-decoration: none;
   box-sizing: border-box;
 }
@@ -190,7 +188,7 @@
 
 .placePhoto[data-photo-state='loading'] {
   color: #858585;
-  font-size: 13px;
+  font-size: .8125rem;
   text-align: center;
 }
 
@@ -204,13 +202,13 @@
 
 .placePhotoUnavailable {
   color: #858585;
-  font-size: 13px;
+  font-size: .8125rem;
   text-align: center;
 }
 
 .placePhoto:global(.is-unavailable) {
   color: #858585;
-  font-size: 13px;
+  font-size: .8125rem;
   text-align: center;
 }
 
@@ -219,19 +217,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 15px;
-  border: 2px solid #e5b8bf;
-  border-radius: 16px;
+  gap: .75rem;
+  padding: .75rem .9375rem;
+  border: .125rem solid #e5b8bf;
+  border-radius: 1rem;
   background: #fff5f6;
   color: #8b2434;
-  font: 700 13px/1.25 Manrope, sans-serif;
+  font: 700 .8125rem/1.25 Manrope, sans-serif;
 }
 
 .saved-lightweight-error button {
   flex: 0 0 auto;
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 2rem;
+  padding: 0 .75rem;
   border: 0;
   border-radius: 999px;
   background: #8b2434;
@@ -243,18 +241,18 @@
 .perfectPick {
   position: absolute;
   z-index: 2;
-  top: 10px;
-  left: 10px;
-  padding: 7px 10px;
+  top: .625rem;
+  left: .625rem;
+  padding: .4375rem .625rem;
   border-radius: 999px;
   background: #f2c035;
   color: #fff;
-  font: 800 10px/1 Manrope, sans-serif;
+  font: 800 .625rem/1 Manrope, sans-serif;
 }
 
 .placeCopy {
   min-width: 0;
-  padding: 0 6.5px;
+  padding: 0 .40625rem;
 }
 
 .placeCopy h2 {
@@ -262,8 +260,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 800 20px/1 Manrope, sans-serif;
-  letter-spacing: -1px;
+  font: 800 1.25rem/1 Manrope, sans-serif;
+  letter-spacing: -.0625rem;
 }
 
 .placeCopy h2 a {
@@ -272,11 +270,11 @@
 }
 
 .placeMeta {
-  margin-top: 8px;
+  margin-top: .5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: .625rem;
   color: #858585;
 }
 
@@ -287,7 +285,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: inherit;
-  font: 800 13px/1 var(--figma-mono);
+  font: 800 .8125rem/1 var(--figma-mono);
 }
 
 .placeMeta span {
@@ -297,19 +295,20 @@
 .floatingSearch {
   position: fixed;
   z-index: 30;
-  left: calc(50% + 110px);
-  bottom: 44px;
-  width: 420px;
-  height: 52px;
+  inset-inline-start: calc(var(--figma-shell-sidebar) + (100vw - var(--figma-shell-sidebar)) / 2);
+  bottom: clamp(1rem, 3vw, 2.75rem);
+  width: min(26.25rem, calc(100vw - var(--figma-shell-sidebar) - 3rem));
+  min-height: 3.25rem;
+  height: auto;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: .4375rem;
   transform: translateX(-50%);
-  padding: 4px 5px 4px 18px;
-  border: 2px solid #e6e6e6;
-  border-radius: 25px;
+  padding: .25rem .3125rem .25rem 1.125rem;
+  border: .125rem solid #e6e6e6;
+  border-radius: 1.5625rem;
   background: rgba(255,255,255,.97);
-  box-shadow: 0 4px 0 rgba(0,0,0,.10);
+  box-shadow: 0 .25rem 0 rgba(0,0,0,.10);
   box-sizing: border-box;
 }
 
@@ -323,7 +322,7 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font: 600 16px/1 Manrope, sans-serif;
+  font: 600 1rem/1 Manrope, sans-serif;
 }
 
 .floatingSearch input::placeholder {
@@ -331,36 +330,36 @@
 }
 
 .floatingSearch button {
-  width: 38px;
-  height: 38px;
+  width: 2.375rem;
+  height: 2.375rem;
   display: grid;
   place-items: center;
-  border: 2px solid #b784e4;
+  border: .125rem solid #b784e4;
   border-radius: 50%;
   background: #fff;
   color: #b784e4;
-  font: 800 20px/1 Manrope, sans-serif;
+  font: 800 1.25rem/1 Manrope, sans-serif;
 }
 
 .historyLink {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: .0625rem;
+  height: .0625rem;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
 }
 
 .empty {
-  width: min(420px, calc(100% - 40px));
-  min-height: 260px;
-  margin: 66px auto 0;
+  width: min(100%, 26.25rem);
+  min-height: 16.25rem;
+  margin: clamp(2rem, 6cqi, 4.125rem) auto 0;
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 14px;
-  border: 2.5px solid #e5e5e5;
-  border-radius: 25px;
+  gap: .875rem;
+  border: .15625rem solid #e5e5e5;
+  border-radius: 1.5625rem;
   background: #fff;
   color: #858585;
   box-sizing: border-box;
@@ -372,103 +371,103 @@
 }
 
 .detailScreen {
-  min-height: 1560px;
-  padding-bottom: 30px;
+  padding-bottom: clamp(1.5rem, 4cqi, 3rem);
 }
 
 .detailTopbar {
-  height: 109px;
+  height: 6.8125rem;
   display: grid;
-  grid-template-columns: 80px minmax(0, 1fr) 113px;
+  grid-template-columns: 5rem minmax(0, 1fr) 7.0625rem;
   align-items: start;
-  padding-top: 39px;
+  padding-top: 2.4375rem;
 }
 
 .detailBack {
-  width: 55px;
-  height: 41px;
+  width: 3.4375rem;
+  height: 2.5625rem;
   display: grid;
   place-items: center;
   justify-self: start;
-  margin-left: 25px;
+  margin-left: 1.5625rem;
   border: 0;
   background: transparent;
   color: #858585;
-  font: 400 32px/1 Manrope, sans-serif;
+  font: 400 2rem/1 Manrope, sans-serif;
   text-decoration: none;
 }
 
 .detailTabs {
   justify-self: center;
-  margin-top: 1px;
+  margin-top: .0625rem;
 }
 
 .detailCategoryBand {
-  height: 49px;
+  height: 3.0625rem;
   display: flex;
   align-items: flex-start;
-  padding: 10px 20px 0;
-  border-bottom-width: 2px;
+  padding: .625rem 1.25rem 0;
+  border-bottom-width: .125rem;
 }
 
 .detailCategories {
-  height: 37px;
+  height: 2.3125rem;
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: .8125rem;
   white-space: nowrap;
 }
 
 .detailCategories > a {
-  height: 37px;
+  height: 2.3125rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: .5rem;
   padding: 0;
   border: 0;
   background: transparent;
   color: #727272;
-  font: 400 20px/1.4 var(--figma-mono);
+  font: 400 1.25rem/1.4 var(--figma-mono);
   text-decoration: none;
   box-sizing: border-box;
 }
 
 .detailCategories > a.detailCategoryActive {
-  width: 81px;
-  border: 2.5px solid #c2a3dd;
+  width: 5.0625rem;
+  border: .15625rem solid #c2a3dd;
   border-bottom-color: #e8d8f6;
-  border-radius: 18px 18px 0 0;
+  border-radius: 1.125rem 1.125rem 0 0;
   background: #e8d8f6;
   color: #43255c;
 }
 
 .detailCategories > a:nth-child(2) {
-  min-width: 119px;
+  min-width: 7.4375rem;
 }
 
 .detailCategories > a:nth-child(3) {
-  min-width: 132px;
+  min-width: 8.25rem;
 }
 
 .detailCategories > a > span {
   color: #929292;
-  font: 400 20px/1 var(--figma-mono);
+  font: 400 1.25rem/1 var(--figma-mono);
 }
 
 .detailCard {
-  width: min(962px, calc(100% - 38px));
-  height: 970px;
-  margin: 15px 22px 0 16px;
+  width: min(calc(100% - 2rem), 60rem);
+  min-height: 0;
+  height: auto;
+  margin: clamp(1rem, 2cqi, 1.5rem) auto 0;
   display: grid;
-  grid-template-columns: 529px 370px;
-  column-gap: 20px;
-  overflow: hidden;
-  padding: 20.5px 23px 25px 15.5px;
-  border: 2.5px solid #e5e5e5;
-  border-radius: 25px;
+  grid-template-columns: minmax(0, 1.42fr) minmax(16rem, 1fr);
+  column-gap: clamp(1rem, 2cqi, 1.5rem);
+  overflow: visible;
+  padding: clamp(1rem, 2cqi, 1.5rem);
+  border: .15625rem solid #e5e5e5;
+  border-radius: 1.5625rem;
   background: #fff;
-  box-shadow: 0 4px 0 rgba(0,0,0,.10);
+  box-shadow: 0 .25rem 0 rgba(0,0,0,.10);
   box-sizing: border-box;
 }
 
@@ -477,16 +476,17 @@
 }
 
 .detailMedia {
-  width: 529px;
-  height: 263px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 529 / 263;
 }
 
 .detailHero {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border: 2px solid #dedede;
-  border-radius: 25px;
+  border: .125rem solid #dedede;
+  border-radius: 1.5625rem;
   background: #f0f0f0 center/cover no-repeat;
   box-sizing: border-box;
 }
@@ -502,7 +502,7 @@
   display: grid;
   place-items: center;
   color: #858585;
-  font: 700 13px/1.25 Manrope, sans-serif;
+  font: 700 .8125rem/1.25 Manrope, sans-serif;
   text-align: center;
 }
 
@@ -514,18 +514,20 @@
   display: grid;
   place-items: center;
   color: #858585;
-  font: 700 13px/1.25 Manrope, sans-serif;
+  font: 700 .8125rem/1.25 Manrope, sans-serif;
   text-align: center;
 }
 
 .detailActions {
   position: relative;
   z-index: 12;
-  height: 39px;
+  min-height: 2.4375rem;
+  height: auto;
   display: flex;
   align-items: flex-start;
-  gap: 0;
-  margin: -23px 0 0 12px;
+  flex-wrap: wrap;
+  gap: clamp(.5rem, 1cqi, .75rem);
+  margin: -1.4375rem 0 0 clamp(.5rem, 1cqi, .75rem);
 }
 
 .detailActions > form {
@@ -535,23 +537,24 @@
 
 .detailActions button,
 .share > summary {
-  height: 39px;
+  min-height: 2.4375rem;
+  height: auto;
   display: grid;
   place-items: center;
-  padding: 0;
-  border: 2px solid #c4c4c4;
-  border-radius: 25px;
+  padding: 0 1rem;
+  border: .125rem solid #c4c4c4;
+  border-radius: 1.5625rem;
   background: #f0f0f0;
   color: #000;
   box-shadow: none;
   box-sizing: border-box;
-  font: 700 20px/1 Manrope, sans-serif;
+  font: 700 1.25rem/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
 .pinButton {
-  width: 83px;
-  min-width: 83px;
+  width: 5.1875rem;
+  min-width: 5.1875rem;
   border-color: #9162bb !important;
   background: #b784e4 !important;
   color: #fff !important;
@@ -559,26 +562,27 @@
 
 .share {
   position: relative;
-  width: 54px;
-  height: 39px;
-  margin: -1px 0 0 10px;
+  width: 3.375rem;
+  min-height: 2.4375rem;
+  height: auto;
+  margin: -.0625rem 0 0;
 }
 
 .share > summary {
-  width: 54px;
-  min-width: 54px;
+  width: 3.375rem;
+  min-width: 3.375rem;
   list-style: none;
 }
 
 .share > summary img {
-  width: 22px;
-  height: 22px;
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 .share > div {
-  top: 47px;
+  top: calc(100% + .5rem);
   left: 0;
-  min-width: 200px;
+  min-width: 12.5rem;
 }
 
 .share > div form,
@@ -588,51 +592,57 @@
 
 .share > div button {
   width: 100%;
-  min-height: 34px;
+  min-height: 2.125rem;
   height: auto;
   justify-content: start;
-  padding: 7px 9px;
+  padding: .4375rem .5625rem;
   border: 0;
-  border-radius: 9px;
+  border-radius: .5625rem;
   background: transparent;
-  font-size: 13px;
+  font-size: .8125rem;
   text-align: left;
 }
 
 .detailActions > form:last-child {
-  margin-left: 8px;
+  margin-left: 0;
 }
 
 .unsaveButton {
-  width: 124px;
-  min-width: 124px;
+  width: 7.75rem;
+  min-width: 7.75rem;
 }
 
 .detailTitle {
-  width: 546px;
-  height: 150px;
+  width: 100%;
+  min-height: clamp(5rem, 10cqi, 9.375rem);
+  height: auto;
   overflow: hidden;
-  margin: 23px 0 0 6.9px;
+  margin: clamp(1rem, 2cqi, 1.5rem) 0 0;
   color: #000;
-  font: 800 64px/1 Manrope, sans-serif;
-  letter-spacing: -3.2px;
+  font: 800 clamp(2.5rem, 5.5cqi, 4rem)/1 Manrope, sans-serif;
+  letter-spacing: -.2rem;
 }
 
 .detailMeta {
-  height: 35px;
-  margin: 8px 0 0 5px;
+  height: auto;
+  margin: .5rem 0 0;
   display: grid;
-  grid-template-columns: 131px 179px 155px;
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(.5rem, 1cqi, .75rem);
 }
 
 .detailMeta > span {
-  height: 35px;
+  min-width: 0;
+  min-height: 2.1875rem;
+  height: auto;
   display: grid;
   place-items: center;
-  border-radius: 25px;
+  padding: .5rem;
+  border-radius: 1.5625rem;
   color: #000;
-  font: 600 17.208px/1 var(--figma-mono);
+  font: 600 clamp(.75rem, 1.5cqi, 1.075rem)/1 var(--figma-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -651,22 +661,24 @@
 .planVisit {
   position: relative;
   z-index: 14;
-  width: 167px;
-  height: 50px;
-  margin: 24px 0 0 5px;
+  width: max-content;
+  height: auto;
+  margin: 1.5rem 0 0;
 }
 
 .planVisit > summary {
-  width: 167px;
-  height: 50px;
+  width: max-content;
+  min-width: 10.4375rem;
+  min-height: 3.125rem;
+  height: auto;
   display: grid;
   place-items: center;
   padding: 0;
-  border: 2px solid #b7b7b7;
-  border-radius: 25px;
+  border: .125rem solid #b7b7b7;
+  border-radius: 1.5625rem;
   background: #fff;
   color: #000;
-  font: 800 20px/1 Manrope, sans-serif;
+  font: 800 1.25rem/1 Manrope, sans-serif;
   list-style: none;
   box-sizing: border-box;
   cursor: pointer;
@@ -675,77 +687,188 @@
 .planVisit form {
   position: absolute;
   z-index: 40;
-  top: 58px;
+  top: calc(100% + .5rem);
   left: 0;
-  width: 340px;
+  width: min(21.25rem, calc(100vw - 2rem));
   display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 2px solid #e5e5e5;
-  border-radius: 16px;
+  gap: .625rem;
+  padding: .875rem;
+  border: .125rem solid #e5e5e5;
+  border-radius: 1rem;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.12);
   box-sizing: border-box;
 }
 
 .planVisit form label {
   display: grid;
-  gap: 5px;
+  gap: .3125rem;
   color: #727272;
-  font: 700 12px/1.2 Manrope, sans-serif;
+  font: 700 .75rem/1.2 Manrope, sans-serif;
 }
 
 .planVisit form input {
-  min-height: 38px;
-  border: 1.5px solid #ddd;
-  border-radius: 10px;
-  padding: 0 10px;
-  font: 600 14px/1 Manrope, sans-serif;
+  min-height: 2.375rem;
+  border: .09375rem solid #ddd;
+  border-radius: .625rem;
+  padding: 0 .625rem;
+  font: 600 .875rem/1 Manrope, sans-serif;
 }
 
 .planVisit form button {
-  min-height: 40px;
+  min-height: 2.5rem;
   border: 0;
   border-radius: 999px;
   background: #b784e4;
   color: #fff;
-  font: 800 14px/1 Manrope, sans-serif;
+  font: 800 .875rem/1 Manrope, sans-serif;
 }
 
 .reviews {
   position: relative;
-  width: 533px;
-  height: 332px;
-  margin: 22px 0 0 5px;
-  border: 2.35px solid #e6e6e6;
-  border-radius: 23.498px;
+  width: 100%;
+  min-height: 20.75rem;
+  max-height: clamp(20.75rem, 45cqi, 30rem);
+  height: auto;
+  margin: 1.375rem 0 0;
+  overflow: auto;
+  border: .147rem solid #e6e6e6;
+  border-radius: 1.4686rem;
   background: #fff;
-  box-shadow: 0 3.76px 0 rgba(0,0,0,.10);
+  box-shadow: 0 .235rem 0 rgba(0,0,0,.10);
   box-sizing: border-box;
 }
 
 .reviews h2 {
-  margin: 21.67px 20.53px 0;
+  margin: 1.35rem 1.28rem 0;
   color: #b784e4;
-  font: 600 23.384px/1 var(--figma-mono);
+  font: 600 1.4615rem/1 var(--figma-mono);
 }
 
 .reviews p {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: .0625rem;
+  height: .0625rem;
   overflow: hidden;
   clip-path: inset(50%);
   margin: 0;
   white-space: nowrap;
 }
 
+.reviewEditor {
+  display: grid;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+.reviewLabel {
+  display: grid;
+  gap: .25rem;
+  color: #727272;
+  font: 700 .75rem/1.2 Manrope, sans-serif;
+}
+
+.reviewRating {
+  width: min(100%, 9.375rem);
+  min-height: 2.125rem;
+  padding: 0 .5rem;
+  border: .09375rem solid #ddd;
+  border-radius: .625rem;
+  background: #fff;
+  color: #111;
+  font: 600 .8125rem/1 Manrope, sans-serif;
+}
+
+.reviewBodyInput {
+  width: 100%;
+  min-height: 4rem;
+  resize: vertical;
+  padding: .625rem;
+  border: .09375rem solid #ddd;
+  border-radius: .625rem;
+  color: #111;
+  font: 500 .8125rem/1.35 Manrope, sans-serif;
+  box-sizing: border-box;
+}
+
+.reviewSubmitRow {
+  display: flex;
+  gap: .5rem;
+}
+
+.reviewSubmit {
+  min-height: 2rem;
+  padding: 0 .8125rem;
+  border: 0;
+  border-radius: 999px;
+  background: #b784e4;
+  color: #fff;
+  font: 800 .75rem/1 Manrope, sans-serif;
+  cursor: pointer;
+}
+
+.reviewContent {
+  padding: 0 1.25rem 1.125rem;
+}
+
+.reviewDelete {
+  margin-top: .4375rem;
+}
+
+.reviewDelete button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #777;
+  font: 700 .75rem/1.2 Manrope, sans-serif;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reviewList {
+  display: grid;
+  gap: .5625rem;
+  margin-top: .875rem;
+}
+
+.reviewItem {
+  padding-top: .5625rem;
+  border-top: .0625rem solid #ececec;
+}
+
+.reviewHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  font: 700 .8125rem/1.2 Manrope, sans-serif;
+}
+
+.reviewHeader > span {
+  color: #b784e4;
+  white-space: nowrap;
+}
+
+.reviewBodyText {
+  margin-top: .3125rem;
+  color: #555;
+  font: 500 .8125rem/1.35 Manrope, sans-serif;
+  overflow-wrap: anywhere;
+}
+
+.reviewEmpty {
+  margin-top: .875rem;
+  color: #777;
+  font: 600 .8125rem/1.3 Manrope, sans-serif;
+}
+
 .detailMap {
-  width: 370px;
-  height: 583px;
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  aspect-ratio: 370 / 583;
   overflow: hidden;
-  border: 2px solid #dedede;
-  border-radius: 25px;
+  border: .125rem solid #dedede;
+  border-radius: 1.5625rem;
   background: #f0f0f0;
   box-sizing: border-box;
 }
@@ -773,7 +896,7 @@
 }
 
 .detailMap :global(.location-map-attribution) {
-  font-size: 7px;
+  font-size: .4375rem;
 }
 
 .mapEmpty {
@@ -784,53 +907,51 @@
 }
 
 .similar {
-  width: min(967px, calc(100% - 31px));
-  margin: 23.65px 0 0 9px;
+  width: min(100%, 60rem);
+  margin: clamp(1.5rem, 3cqi, 2rem) auto 0;
+  padding-inline: clamp(1rem, 2cqi, 1.5rem);
+  box-sizing: border-box;
 }
 
 .similar > h2 {
-  margin: 0 0 17.35px 7.18px;
+  margin: 0 0 clamp(1rem, 2cqi, 1.25rem);
   color: #b784e4;
-  font: 600 30px/1 var(--figma-mono);
+  font: 600 clamp(1.5rem, 3cqi, 1.875rem)/1 var(--figma-mono);
 }
 
 .similarGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 308.435px));
-  gap: 20.775px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: clamp(1rem, 2cqi, 1.5rem);
 }
 
 .similarCard {
-  width: 308.435px;
-  height: 241.971px;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 308.435 / 241.971;
+  height: auto;
   display: grid;
-  grid-template-rows: 162.006px auto auto;
+  grid-template-rows: minmax(0, 2fr) auto auto;
   gap: 0;
   overflow: hidden;
-  padding: 4.67px 4.67px 10px;
-  border: 2.596px solid #e5e5e5;
-  border-radius: 25.963px;
+  padding: .292rem .292rem .625rem;
+  border: .16225rem solid #e5e5e5;
+  border-radius: 1.6227rem;
   background: #fff;
   color: #000;
   text-decoration: none;
-  box-shadow: 0 4.154px 0 rgba(0,0,0,.10);
+  box-shadow: 0 .2596rem 0 rgba(0,0,0,.10);
   box-sizing: border-box;
-}
-
-.similarCard:nth-child(1) {
-  transform: translateY(2.08px);
-}
-
-.similarCard:nth-child(2) {
-  transform: translateY(1.04px);
 }
 
 .similarPhoto {
   width: 100%;
-  height: 162.006px;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 308.435 / 162.006;
   display: block;
-  border: 2.077px solid #dedede;
-  border-radius: 25.963px;
+  border: .1298rem solid #dedede;
+  border-radius: 1.6227rem;
   background: #f0f0f0 center/cover no-repeat;
   box-sizing: border-box;
 }
@@ -847,7 +968,7 @@
   display: grid;
   place-items: center;
   color: #858585;
-  font: 700 12px/1.25 Manrope, sans-serif;
+  font: 700 .75rem/1.25 Manrope, sans-serif;
   text-align: center;
 }
 
@@ -859,61 +980,61 @@
   display: grid;
   place-items: center;
   color: #858585;
-  font: 700 12px/1.25 Manrope, sans-serif;
+  font: 700 .75rem/1.25 Manrope, sans-serif;
   text-align: center;
 }
 
 .similarStatus,
 .reviewStatus {
-  margin-top: 14px;
+  margin-top: .875rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: .75rem;
   color: #777;
-  font: 700 13px/1.3 Manrope, sans-serif;
+  font: 700 .8125rem/1.3 Manrope, sans-serif;
 }
 
 .similarStatusError,
 .reviewStatusError {
-  padding: 11px 12px;
-  border: 1.5px solid #e5b8bf;
-  border-radius: 12px;
+  padding: .6875rem .75rem;
+  border: .09375rem solid #e5b8bf;
+  border-radius: .75rem;
   color: #8b2434;
 }
 
 .similarStatus button,
 .reviewStatus button {
   flex: 0 0 auto;
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 2rem;
+  padding: 0 .75rem;
   border: 0;
   border-radius: 999px;
   background: #171114;
   color: #fff;
-  font: 800 12px/1 Manrope, sans-serif;
+  font: 800 .75rem/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
 .similarCard > strong {
   min-width: 0;
   overflow: hidden;
-  margin: 9.8px 7px 0;
+  margin: .6125rem .4375rem 0;
   color: #000;
-  font: 800 20.77px/1 Manrope, sans-serif;
-  letter-spacing: -.8px;
+  font: 800 clamp(1rem, 2.2cqi, 1.298rem)/1 Manrope, sans-serif;
+  letter-spacing: -.05rem;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .similarCard > small {
   min-width: 0;
-  margin: 7px 8px 0;
+  margin: .4375rem .5rem 0;
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: .625rem;
   color: #858585;
-  font: 800 13.501px/1 var(--figma-mono);
+  font: 800 .8438rem/1 var(--figma-mono);
 }
 
 .similarCard > small span {
@@ -931,11 +1052,12 @@
 
 .detailSearch {
   position: static;
-  margin: 22px 0 0 273px;
+  width: min(26.25rem, calc(100% - 2rem));
+  margin: clamp(1rem, 2cqi, 1.5rem) auto 0;
   transform: none;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 47.5rem) {
   .screen,
   .detailScreen {
     min-height: 100dvh;
@@ -943,17 +1065,19 @@
   }
 
   .screen {
-    padding-bottom: 190px;
+    padding-bottom: clamp(6rem, 20cqi, 12rem);
   }
 
   .topbar {
-    height: 96px;
-    padding-top: 31px;
+    min-height: 6rem;
+    height: auto;
+    padding-top: clamp(2rem, 8cqi, 3rem);
   }
 
   .categoryBand {
-    height: 48px;
-    padding: 0 18px;
+    min-height: 3rem;
+    height: auto;
+    padding: 0 1rem;
     overflow: visible;
   }
 
@@ -970,49 +1094,53 @@
   }
 
   .placeGrid {
-    width: calc(100% - 30px);
-    margin: 0 15px;
-    padding-top: 26px;
+    width: 100%;
+    margin: 0;
+    padding: 1.625rem 1rem;
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    gap: 1.25rem;
   }
 
   .placeCard {
     width: 100%;
-    height: 250px;
-    grid-template-rows: 168px minmax(0, 1fr);
-    transform: none !important;
+    min-height: clamp(15.5rem, 68cqi, 19rem);
+    aspect-ratio: auto;
+    grid-template-rows: minmax(0, 1fr) auto;
   }
 
   .placePhoto {
-    height: 168px;
+    height: auto;
+    min-height: clamp(9.5rem, 42cqi, 12rem);
+    aspect-ratio: 297 / 156;
   }
 
   .floatingSearch {
-    left: 50%;
-    bottom: 112px;
-    width: calc(100% - 52px);
+    inset-inline-start: 50%;
+    bottom: calc(var(--puddle-mobile-nav-height, 6.5rem) + env(safe-area-inset-bottom) + 1rem);
+    width: calc(100vw - 2rem);
   }
 
   .empty {
-    margin-top: 32px;
+    margin-top: 2rem;
   }
 
   .detailScreen {
-    padding-bottom: 120px;
+    padding-bottom: clamp(5rem, 16cqi, 8rem);
   }
 
   .detailTopbar {
-    height: 90px;
-    grid-template-columns: 64px minmax(0, 1fr) 64px;
-    padding-top: 31px;
+    min-height: 5.625rem;
+    height: auto;
+    grid-template-columns: 4rem minmax(0, 1fr) 4rem;
+    padding-top: clamp(2rem, 8cqi, 3rem);
   }
 
   .detailBack {
-    width: 42px;
-    height: 35px;
-    margin-left: 18px;
-    font-size: 30px;
+    width: 2.625rem;
+    min-height: 2.1875rem;
+    height: auto;
+    margin-left: 1.125rem;
+    font-size: 1.875rem;
   }
 
   .detailTabs {
@@ -1020,14 +1148,15 @@
   }
 
   .detailCategoryBand {
-    height: 50px;
-    padding: 10px 18px 0;
+    min-height: 3.125rem;
+    height: auto;
+    padding: .625rem 1.125rem 0;
     overflow: hidden;
   }
 
   .detailCategories {
     max-width: 100%;
-    gap: 16px;
+    gap: 1rem;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -1035,33 +1164,34 @@
   .detailCategories > a {
     flex: 0 0 auto;
     min-width: auto !important;
-    height: 37px;
-    font-size: 15px;
+    height: 2.3125rem;
+    font-size: .9375rem;
   }
 
   .detailCategories > a.detailCategoryActive {
     width: auto;
-    padding: 7px 13px;
+    padding: .4375rem .8125rem;
   }
 
   .detailCard {
-    width: calc(100% - 24px);
+    width: calc(100% - 1.5rem);
     height: auto;
-    margin: 15px 12px 0;
+    margin: 1rem .75rem 0;
     grid-template-columns: minmax(0, 1fr);
-    gap: 30px;
-    padding: 15px;
+    gap: 1.875rem;
+    padding: .9375rem;
     overflow: visible;
   }
 
   .detailMedia {
     width: 100%;
-    height: 240px;
+    height: clamp(15rem, 70cqi, 24rem);
+    aspect-ratio: auto;
   }
 
   .detailActions {
-    margin: -20px 0 0 10px;
-    gap: 8px;
+    margin: -1.25rem 0 0 .625rem;
+    gap: .5rem;
   }
 
   .detailActions > form:last-child,
@@ -1071,10 +1201,10 @@
 
   .detailActions button,
   .share > summary {
-    min-width: 72px;
+    min-width: 4.5rem;
     width: auto;
-    padding: 0 14px;
-    font-size: 15px;
+    padding: 0 .875rem;
+    font-size: .9375rem;
   }
 
   .share {
@@ -1082,72 +1212,80 @@
   }
 
   .share > summary {
-    width: 48px;
-    min-width: 48px;
+    width: 3rem;
+    min-width: 3rem;
   }
 
   .unsaveButton {
-    min-width: 86px !important;
+    min-width: 5.375rem !important;
   }
 
   .detailTitle {
-    width: auto;
+    width: 100%;
     height: auto;
-    min-height: 76px;
-    margin: 20px 3px 0;
-    font-size: 38px;
+    min-height: 0;
+    margin: 1.25rem .1875rem 0;
+    font-size: clamp(2.25rem, 10cqi, 2.875rem);
     line-height: .98;
-    letter-spacing: -2px;
+    letter-spacing: -.125rem;
   }
 
   .detailMeta {
     height: auto;
-    margin: 18px 3px 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
+    margin: 1.125rem .1875rem 0;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+    gap: .4375rem;
   }
 
   .detailMeta > span {
     width: auto;
     height: auto;
-    min-height: 32px;
-    padding: 8px 12px;
-    font-size: 12px;
+    min-height: 2rem;
+    padding: .5rem .75rem;
+    font-size: .75rem;
   }
 
   .planVisit {
-    margin: 18px 3px 0;
+    margin: 1.125rem .1875rem 0;
   }
 
   .planVisit form {
-    width: min(340px, calc(100vw - 54px));
+    width: min(21.25rem, calc(100vw - 3.375rem));
   }
 
   .reviews {
     width: 100%;
-    height: 220px;
-    margin: 22px 0 0;
+    min-height: 13.75rem;
+    max-height: clamp(13.75rem, 70cqi, 22rem);
+    height: auto;
+    margin: 1.375rem 0 0;
   }
 
   .detailMap {
     width: 100%;
-    height: 300px;
+    height: clamp(18rem, 75cqi, 24rem);
+    aspect-ratio: auto;
   }
 
   .similar {
-    width: calc(100% - 30px);
-    margin: 28px 15px 0;
+    width: 100%;
+    margin: 1.75rem 0 0;
+    padding-inline: 1rem;
   }
 
   .similarGrid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
+    gap: 1.125rem;
   }
 
   .similarCard {
     width: 100%;
-    transform: none !important;
+    min-height: 15rem;
+    aspect-ratio: auto;
+  }
+
+  .similarPhoto {
+    min-height: clamp(9rem, 45cqi, 13rem);
   }
 
   .detailSearch {

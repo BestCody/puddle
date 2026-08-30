@@ -1,6 +1,6 @@
 import { PlaceHub, marketLinks } from '@/components/place-hub'
 import { PLACE_CATEGORIES, listMarkets, marketRegionLabel } from '@/lib/app/seo-places'
-import { breadcrumbStructuredData } from '@/lib/app/public-content'
+import { breadcrumbStructuredData, faqStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
 export const revalidate = 3600
@@ -31,6 +31,27 @@ export default function PlacesIndexPage() {
     { label: 'Places', href: '/places' }
   ]
   const breadcrumbs = breadcrumbStructuredData(trail, site)
+  // The index was 144 words of navigation, which reads as thin to a crawler and gives an answer
+  // engine nothing to quote. These are the questions the index is actually the answer to.
+  const faq = [
+    {
+      question: 'What is Puddle?',
+      answer: 'Puddle is a place-discovery app for finding somewhere worth going and seeing who else is there. You swipe through nearby parks, coffee shops, restaurants, museums and nightlife, save the places you like, and plan trips with friends.'
+    },
+    {
+      question: 'Which cities does Puddle cover?',
+      answer: `Puddle covers ${markets.length} metropolitan areas across Canada and the United States, including ${markets.slice(0, 4).map((market) => market.name).join(', ')}. Each city has its own page listing places by category.`
+    },
+    {
+      question: 'What kinds of places can I browse?',
+      answer: `Every city is broken down into ${PLACE_CATEGORIES.length} categories: ${PLACE_CATEGORIES.map((category) => category.label.toLowerCase()).join(', ')}.`
+    },
+    {
+      question: 'Does Puddle cost anything?',
+      answer: 'No. Browsing places, saving them and planning with friends are free, and you can read any place page without an account.'
+    }
+  ]
+  const faqSchema = faqStructuredData(faq)
 
   const byRegion = new Map()
   for (const market of markets) {
@@ -57,11 +78,13 @@ export default function PlacesIndexPage() {
 
   return <>
     {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
+    {faqSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(faqSchema) }} /> : null}
     <PlaceHub
       trail={trail}
       title="Find somewhere worth going."
       intro={description}
       sections={sections}
+      faq={faq}
     />
   </>
 }

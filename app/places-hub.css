@@ -20,6 +20,11 @@
 .place-hub-links{display:flex;flex-wrap:wrap;gap:.5rem;margin:0;padding:0;list-style:none}
 .place-hub-links a{display:inline-block;padding:.45rem .8rem;border:1.5px solid var(--puddle-figma-line);border-radius:999px;background:#fff;color:var(--minimal-ink);font-size:.85rem;text-decoration:none;transition:border-color .15s,background .15s}
 .place-hub-links a:hover{border-color:var(--puddle-figma-blue);background:#f2f8ff}
+.place-hub-faq{margin:0 0 2.5rem;padding-top:.5rem;border-top:1.5px solid var(--puddle-figma-line)}
+.place-hub-faq h2{margin:1.25rem 0 .85rem;font-size:1.05rem;letter-spacing:-.02em}
+.place-hub-faq dl{margin:0;display:grid;gap:1rem}
+.place-hub-faq dt{margin:0 0 .3rem;font-weight:700;font-size:.95rem}
+.place-hub-faq dd{margin:0;color:var(--puddle-figma-grey);font-size:.9rem;line-height:1.5;max-width:70ch}
 .place-hub-pagination{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:.5rem;margin:0 0 2.5rem}
 .place-hub-pagination ol{display:flex;flex-wrap:wrap;gap:.35rem;margin:0;padding:0;list-style:none}
 .place-hub-pagination a,.place-hub-pagination span{display:inline-flex;align-items:center;justify-content:center;min-width:2.25rem;height:2.25rem;padding:0 .6rem;border:1.5px solid var(--puddle-figma-line);border-radius:999px;background:#fff;color:var(--minimal-ink);font-size:.85rem;text-decoration:none;transition:border-color .15s,background .15s}

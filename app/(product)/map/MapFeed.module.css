@@ -6,16 +6,17 @@
  */
 
 .screen {
-  --feed-column: 469px;
-  --feed-radius: 25px;
-  --feed-border: 2.5px solid #e5e5e5;
-  --feed-shadow: 0 4px 0 rgba(0, 0, 0, .1);
+  --feed-column: clamp(22rem, 31vw, 29.3125rem);
+  --feed-radius: 1.5625rem;
+  --feed-border: .15625rem solid #e5e5e5;
+  --feed-shadow: 0 .25rem 0 rgba(0, 0, 0, .1);
+  container-type: inline-size;
   position: relative;
-  min-height: 832px;
+  min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1.157fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1fr);
   align-content: start;
-  padding: 39px 26px 80px 24px;
+  padding: clamp(1.5rem, 2.55vw, 2.4375rem) clamp(1rem, 1.7vw, 1.625rem) clamp(4rem, 5.25vw, 5rem);
   background: #f6f6f6;
   box-sizing: border-box;
 }
@@ -24,9 +25,9 @@
   position: relative;
   z-index: 30;
   grid-column: 1 / -1;
-  min-height: 46px;
+  min-height: 2.875rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1.157fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1fr);
   align-items: center;
 }
 
@@ -37,45 +38,45 @@
 .tabs {
   grid-column: 2;
   justify-self: center;
-  width: 152px;
-  min-height: 45.76px;
+  width: 9.5rem;
+  min-height: 2.86rem;
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 4rem minmax(0, 1fr);
   align-items: center;
-  padding: 2.85px 2.66px;
-  border: 2px solid #dedede;
+  padding: .178rem .166rem;
+  border: .125rem solid #dedede;
   border-radius: 999px;
   background: #fff;
   box-sizing: border-box;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, .08);
+  box-shadow: 0 .125rem 0 rgba(0, 0, 0, .08);
 }
 
 .tab {
   min-width: 0;
-  height: 34.112px;
+  height: 2.132rem;
   display: grid;
   place-items: center;
   border-radius: 999px;
   color: #858585;
-  font: 700 14px/1 Manrope, sans-serif;
+  font: 700 .875rem/1 Manrope, sans-serif;
   text-decoration: none;
 }
 
 .tabActive {
   background: #f2c035;
   color: #fff;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, .1);
+  box-shadow: 0 .25rem 0 rgba(0, 0, 0, .1);
 }
 
 .search {
   grid-column: 3;
   justify-self: end;
-  width: 190px;
-  height: 40px;
+  width: min(100%, 12rem);
+  height: 2.5rem;
   display: flex;
   align-items: center;
-  padding: 0 10px 0 13.5px;
-  border: 2.5px solid #d9d9d9;
+  padding: 0 .625rem 0 .84375rem;
+  border: .15625rem solid #d9d9d9;
   border-radius: 999px;
   background: #fff;
   box-sizing: border-box;
@@ -92,7 +93,7 @@
   outline: 0;
   background: transparent;
   color: #333;
-  font: 600 16px/1 Manrope, sans-serif;
+  font: 600 1rem/1 Manrope, sans-serif;
 }
 
 .search input::placeholder {
@@ -105,24 +106,24 @@
   background: transparent;
   color: #111;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .stream {
   grid-column: 2;
   width: 100%;
-  margin-top: 23px;
+  margin-top: 1.4375rem;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 1.625rem;
 }
 
 .post {
   width: 100%;
-  min-height: 511px;
+  min-height: clamp(24rem, 33vw, 32rem);
   display: flex;
   flex-direction: column;
-  padding: 15px 17px 14px;
+  padding: .9375rem 1.0625rem .875rem;
   overflow: visible;
   border: var(--feed-border);
   border-radius: var(--feed-radius);
@@ -135,55 +136,55 @@
 .author {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: .875rem;
 }
 
 .avatar {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 2.75rem;
   display: grid;
   place-items: center;
   overflow: hidden;
   border-radius: 50%;
   background: #ececec center/cover no-repeat;
   color: #555;
-  font: 800 13px/1 Manrope, sans-serif;
+  font: 800 .8125rem/1 Manrope, sans-serif;
 }
 
 .authorMeta {
   min-width: 0;
   display: grid;
-  gap: 5px;
+  gap: .3125rem;
 }
 
 .author strong {
   overflow-wrap: anywhere;
-  font: 700 20px/1 Manrope, sans-serif;
+  font: 700 1.25rem/1 Manrope, sans-serif;
 }
 
 .author small {
   color: #858585;
-  font: 700 11px/1 var(--figma-mono);
+  font: 700 .6875rem/1 var(--figma-mono);
 }
 
 .copy {
-  margin: 1px 3px 0 47px;
+  margin: .0625rem .1875rem 0 2.9375rem;
   color: #000;
   overflow-wrap: anywhere;
-  font: 500 17px/.95 Manrope, sans-serif;
-  letter-spacing: .34px;
+  font: 500 1.0625rem/.95 Manrope, sans-serif;
+  letter-spacing: .02125rem;
 }
 
 .photos {
-  width: min(100%, 381px);
+  width: min(100%, 23.8125rem);
   aspect-ratio: 381 / 133;
   min-height: 0;
-  margin: 20px 10px 0 auto;
+  margin: 1.25rem .625rem 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1.52fr) minmax(0, 1fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: clamp(5px, .5vw, 7px);
+  gap: clamp(.3125rem, .5vw, .4375rem);
 }
 
 .photo {
@@ -192,11 +193,11 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  border: 2px solid #dedede;
-  border-radius: 25px;
+  border: .125rem solid #dedede;
+  border-radius: 1.5625rem;
   background: #f0f0f0 center/cover no-repeat;
   color: #858585;
-  font: 700 29px/1 Manrope, sans-serif;
+  font: 700 1.8125rem/1 Manrope, sans-serif;
   text-decoration: none;
   box-sizing: border-box;
 }
@@ -235,7 +236,7 @@
   padding: .5rem;
   color: #858585;
   text-align: center;
-  font: 700 13px/1.2 Manrope, sans-serif;
+  font: 700 .8125rem/1.2 Manrope, sans-serif;
   pointer-events: none;
 }
 
@@ -249,7 +250,7 @@
 .photo[data-photo-state='loading'] {
   color: #858585;
   text-align: center;
-  font: 700 13px/1.2 Manrope, sans-serif;
+  font: 700 .8125rem/1.2 Manrope, sans-serif;
 }
 
 .photo[data-photo-state='loading'] > img {
@@ -260,29 +261,33 @@
   padding: 1rem;
   color: #858585;
   text-align: center;
-  font: 700 13px/1.2 Manrope, sans-serif;
+  font: 700 .8125rem/1.2 Manrope, sans-serif;
 }
 
 .photoCount {
   position: absolute;
-  right: 10px;
-  bottom: 8px;
-  padding: 4px 7px;
+  right: .625rem;
+  bottom: .5rem;
+  padding: .25rem .4375rem;
   border-radius: 999px;
   background: rgba(17, 17, 17, .72);
   color: #fff;
-  font: 800 13px/1 Manrope, sans-serif;
+  font: 800 .8125rem/1 Manrope, sans-serif;
 }
 
 .place {
   position: relative;
-  width: min(100%, 391px);
-  min-height: 163px;
-  margin: 9px 8px 0 auto;
-  padding: 14px 58px 15px 17px;
+  width: min(100%, 24.4375rem);
+  min-height: 10.1875rem;
+  margin: .5625rem .5rem 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: center;
+  padding: .875rem 1.0625rem .9375rem;
   overflow: hidden;
-  border: 2px solid #f0f0f0;
-  border-radius: 25px;
+  border: .125rem solid #f0f0f0;
+  border-radius: 1.5625rem;
   background: #fff;
   color: #000;
   text-decoration: none;
@@ -291,51 +296,74 @@
 
 .placeMeta,
 .placeArea {
-  min-height: 25px;
+  min-height: 1.5625rem;
   display: inline-flex;
   align-items: center;
-  padding: 0 9px;
-  border-radius: 30px;
+  padding: 0 .5625rem;
+  border-radius: 1.875rem;
   background: #d9d9d9;
   color: #858585;
-  font: 600 13.6px/1 var(--figma-mono);
+  font: 600 .85rem/1 var(--figma-mono);
 }
 
 .placeArea {
-  position: absolute;
-  top: 9px;
-  right: 13px;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .place h2 {
-  margin: 69px 0 0;
+  grid-column: 1;
+  grid-row: 2;
+  align-self: center;
+  min-width: 0;
+  margin: 0;
   overflow-wrap: anywhere;
-  font: 800 24px/1.05 Manrope, sans-serif;
-  letter-spacing: -2px;
+  font: 800 1.5rem/1.05 Manrope, sans-serif;
+  letter-spacing: -.125rem;
 }
 
 .placeAdd {
-  position: absolute;
-  right: 10px;
-  bottom: 13px;
-  width: 41px;
-  height: 39px;
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+  width: 2.5625rem;
+  height: 2.4375rem;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: #d9d9d9;
   color: #777;
-  font: 300 30px/1 Manrope, sans-serif;
+  font: 300 1.875rem/1 Manrope, sans-serif;
+}
+
+.placeVisual {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  position: relative;
+  display: block;
+  width: 100%;
+  height: clamp(7.5rem, 34cqi, 10.625rem);
+  min-height: 0;
+  margin-top: 1rem;
+  overflow: hidden;
+  border: .125rem solid #dedede;
+  border-radius: 1.125rem;
+  background: #f0f0f0;
 }
 
 .interactions {
-  width: min(100%, 380px);
-  min-height: 30px;
-  margin: 18px auto 0 29px;
+  width: min(100%, 23.75rem);
+  min-height: 1.875rem;
+  margin: 1.125rem auto 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1rem;
   color: #858585;
 }
 
@@ -343,10 +371,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 30px;
-  min-height: 30px;
+  min-width: 1.875rem;
+  min-height: 1.875rem;
   color: #858585;
-  font: 500 26px/1 Manrope, sans-serif;
+  font: 500 1.625rem/1 Manrope, sans-serif;
   text-decoration: none;
 }
 
@@ -364,7 +392,7 @@
 }
 
 .interactions > form > button {
-  font-size: 25px;
+  font-size: 1.5625rem;
 }
 
 .saved {
@@ -376,12 +404,12 @@
 }
 
 .actionMenu > summary {
-  min-height: 30px;
+  min-height: 1.875rem;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: .25rem;
   list-style: none;
-  font-size: 23px;
+  font-size: 1.4375rem;
 }
 
 .actionMenu > summary::-webkit-details-marker {
@@ -391,17 +419,17 @@
 .actionPanel {
   position: absolute;
   z-index: 40;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + .625rem);
   left: 0;
-  width: min(340px, 76vw);
-  max-height: 360px;
+  width: min(21.25rem, 76cqi);
+  max-height: 22.5rem;
   overflow: auto;
-  padding: 14px;
-  border: 1.5px solid #d7d7d7;
-  border-radius: 17px;
+  padding: .875rem;
+  border: .09375rem solid #d7d7d7;
+  border-radius: 1.0625rem;
   background: #fff;
   color: #111;
-  box-shadow: 0 16px 50px rgba(0, 0, 0, .14);
+  box-shadow: 0 1rem 3.125rem rgba(0, 0, 0, .14);
   box-sizing: border-box;
 }
 
@@ -412,22 +440,22 @@
 
 .actionPanel form {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: .5rem;
+  margin-top: .5rem;
 }
 
 .actionPanel input {
   flex: 1;
   min-width: 0;
-  padding: 8px 10px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
+  padding: .5rem .625rem;
+  border: .0625rem solid #ccc;
+  border-radius: .625rem;
 }
 
 .actionPanel button {
-  padding: 8px 11px;
+  padding: .5rem .6875rem;
   border: 0;
-  border-radius: 10px;
+  border-radius: .625rem;
   background: #111;
   color: #fff;
   cursor: pointer;
@@ -436,15 +464,15 @@
 
 .commentList {
   display: grid;
-  gap: 9px;
-  margin-bottom: 12px;
+  gap: .5625rem;
+  margin-bottom: .75rem;
 }
 
 .commentList p {
   margin: 0;
   display: grid;
-  gap: 2px;
-  font: 600 12px/1.35 Manrope, sans-serif;
+  gap: .125rem;
+  font: 600 .75rem/1.35 Manrope, sans-serif;
 }
 
 .commentList strong {
@@ -453,12 +481,12 @@
 
 .empty {
   width: 100%;
-  min-height: 320px;
+  min-height: 20rem;
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 16px;
-  padding: 24px;
+  gap: 1rem;
+  padding: 1.5rem;
   border: var(--feed-border);
   border-radius: var(--feed-radius);
   background: #fff;
@@ -475,19 +503,19 @@
 .pagination {
   display: grid;
   justify-items: center;
-  gap: 8px;
-  padding: 2px 0 10px;
+  gap: .5rem;
+  padding: .125rem 0 .625rem;
 }
 
 .pagination button {
-  min-height: 44px;
-  padding: 0 18px;
-  border: 2px solid #dedede;
+  min-height: 2.75rem;
+  padding: 0 1.125rem;
+  border: .125rem solid #dedede;
   border-radius: 999px;
   background: #fff;
   color: #111;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, .08);
-  font: 800 14px/1 Manrope, sans-serif;
+  box-shadow: 0 .125rem 0 rgba(0, 0, 0, .08);
+  font: 800 .875rem/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
@@ -499,51 +527,8 @@
 .pagination p {
   margin: 0;
   color: #b34141;
-  font: 700 12px/1.3 Manrope, sans-serif;
+  font: 700 .75rem/1.3 Manrope, sans-serif;
   text-align: center;
-}
-
-/* Structural UI: Figma spacing is represented as flow spacing, never viewport/sidebar arithmetic. */
-.composer {
-  grid-column: 2;
-  justify-self: start;
-  width: min(100%, 420px);
-  min-height: 52px;
-  margin-top: 123px;
-  margin-left: 28px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 5px;
-  border: 2px solid #e6e6e6;
-  border-radius: 25px;
-  background: rgba(255, 255, 255, .97);
-  color: #b0b0b0;
-  font: 600 16px/1 Manrope, sans-serif;
-  text-decoration: none;
-  box-shadow: var(--feed-shadow);
-  box-sizing: border-box;
-}
-
-.composer .avatar {
-  width: 31px;
-  height: 31px;
-  flex-basis: 31px;
-}
-
-.composerText {
-  flex: 1;
-}
-
-.composerSubmit {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: 2px solid #f2c035;
-  border-radius: 50%;
-  color: #e3a800;
-  font: 700 22px/1 Manrope, sans-serif;
 }
 
 /* Map canvas and authored map callouts are intentional overlays. */
@@ -551,14 +536,14 @@
   height: 100dvh;
   min-height: 100dvh;
   overflow: hidden;
-  padding-top: 35px;
+  padding-top: 2.1875rem;
   padding-bottom: 0;
   background: #d0d0d0;
 }
 
 .mapMode .header {
-  min-height: 55px;
-  grid-template-columns: minmax(0, 1fr) 152px minmax(0, 1.031fr);
+  min-height: 3.4375rem;
+  grid-template-columns: minmax(0, 1fr) 9.5rem minmax(0, 1.031fr);
   align-items: start;
   pointer-events: none;
 }
@@ -566,35 +551,35 @@
 .mapMode .back {
   grid-column: 1;
   justify-self: start;
-  width: 55px;
-  height: 41px;
-  margin-top: 2px;
-  margin-left: 8px;
+  width: 3.4375rem;
+  height: 2.5625rem;
+  margin-top: .125rem;
+  margin-left: .5rem;
   display: grid;
   place-items: center;
-  border: 2px solid #dedede;
+  border: .125rem solid #dedede;
   border-radius: 999px;
   background: #fff;
   color: #858585;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, .08);
-  font: 300 27px/1 Manrope, sans-serif;
+  box-shadow: 0 .125rem 0 rgba(0, 0, 0, .08);
+  font: 300 1.6875rem/1 Manrope, sans-serif;
   text-decoration: none;
   pointer-events: auto;
   box-sizing: border-box;
 }
 
 .mapMode .tabs {
-  width: 152px;
-  min-height: 55px;
-  grid-template-columns: 74px 64px;
-  padding: 4.5px 4px;
-  border-width: 2.5px;
+  width: 9.5rem;
+  min-height: 3.4375rem;
+  grid-template-columns: 4.625rem 4rem;
+  padding: .28125rem .25rem;
+  border-width: .15625rem;
   pointer-events: auto;
 }
 
 .mapMode .tab {
-  height: 41px;
-  font-size: 16px;
+  height: 2.5625rem;
+  font-size: 1rem;
 }
 
 .mapScreen,
@@ -602,6 +587,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  container-type: size;
 }
 
 .mapCanvas :global(.location-map-workspace),
@@ -625,10 +611,10 @@
 .mapCanvas :global(.location-map-side) {
   position: absolute;
   z-index: 8;
-  top: clamp(150px, var(--location-map-selection-y, 50%), calc(100% - 120px));
-  left: clamp(150px, var(--location-map-selection-x, 50%), calc(100% - 150px));
+  inset-block-start: clamp(9.375rem, var(--location-map-selection-y, 50%), calc(100% - 7.5rem));
+  inset-inline-start: clamp(9.375rem, var(--location-map-selection-x, 50%), calc(100% - 9.375rem));
   right: auto;
-  width: clamp(232px, 28%, 300px);
+  width: clamp(14.5rem, 28cqi, 18.75rem);
   max-height: none;
   display: block !important;
   overflow: visible;
@@ -637,16 +623,16 @@
   background: transparent;
   box-shadow: none;
   pointer-events: auto;
-  transform: translate(-50%, calc(-100% - 18px));
+  transform: translate(-50%, calc(-100% - 1.125rem));
 }
 
 .mapCanvas :global(.location-map-side::after) {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: -7px;
-  width: 14px;
-  height: 14px;
+  bottom: -.4375rem;
+  width: .875rem;
+  height: .875rem;
   background: #73a8ed;
   transform: translateX(-50%) rotate(45deg);
   pointer-events: none;
@@ -660,10 +646,10 @@
   width: 100%;
   overflow: visible;
   border: 0;
-  border-radius: 18px;
+  border-radius: 1.125rem;
   background: #73a8ed;
   color: #fff;
-  box-shadow: 0 8px 24px rgba(38, 82, 142, .24);
+  box-shadow: 0 .5rem 1.5rem rgba(38, 82, 142, .24);
 }
 
 .mapCanvas :global(.location-map-side .location-map-card-photo) {
@@ -672,20 +658,20 @@
 
 .mapCanvas :global(.location-map-side .location-map-card > div:last-child) {
   display: grid;
-  gap: 6px;
+  gap: .375rem;
   min-width: 0;
-  padding: 14px 16px 13px;
+  padding: .875rem 1rem .8125rem;
 }
 
 .mapCanvas :global(.location-map-side .location-map-card small) {
   width: max-content;
   max-width: 100%;
   overflow: hidden;
-  padding: 4px 8px;
+  padding: .25rem .5rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, .2);
   color: rgba(255, 255, 255, .95);
-  font: 700 11px/1 Manrope, sans-serif;
+  font: 700 .6875rem/1 Manrope, sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -695,7 +681,7 @@
   overflow: hidden;
   margin: 0;
   color: #fff;
-  font: 800 clamp(15px, 1.7vw, 19px)/1.1 Manrope, sans-serif;
+  font: 800 clamp(.9375rem, 1.7cqi, 1.1875rem)/1.1 Manrope, sans-serif;
   letter-spacing: -.04em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -708,13 +694,13 @@
 }
 
 .mapCanvas :global(.location-map-side .location-map-card-actions) {
-  margin-top: 1px;
+  margin-top: .0625rem;
 }
 
 .mapCanvas :global(.location-map-side .location-map-card-actions a) {
   color: #fff;
-  font: 800 12px/1 Manrope, sans-serif;
-  text-underline-offset: 3px;
+  font: 800 .75rem/1 Manrope, sans-serif;
+  text-underline-offset: .1875rem;
 }
 
 .mapCanvas :global(.location-map-layout) {
@@ -729,14 +715,14 @@
 .mapScreen :global(.puddle-map-search-trigger) {
   position: absolute;
   z-index: 12;
-  top: clamp(88px, 12dvh, 112px);
-  right: clamp(20px, 3vw, 40px);
+  inset-block-start: clamp(5.5rem, 12dvh, 7rem);
+  inset-inline-end: clamp(1.25rem, 3vw, 2.5rem);
   pointer-events: auto;
 }
 
 .actionIcon {
-  width: 25px;
-  height: 25px;
+  width: 1.5625rem;
+  height: 1.5625rem;
   display: block;
   fill: none;
   stroke: currentColor;
@@ -760,23 +746,23 @@
   place-items: center;
   background: #eee;
   color: #858585;
-  font: 800 18px/1.3 Manrope, sans-serif;
+  font: 800 1.125rem/1.3 Manrope, sans-serif;
 }
 
 .mapSelectionNotice {
   position: absolute;
   z-index: 40;
-  top: 96px;
+  inset-block-start: clamp(4rem, 10cqi, 6rem);
   left: 50%;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 15px;
+  gap: .875rem;
+  padding: .625rem .9375rem;
   transform: translateX(-50%);
-  border-radius: 18px;
+  border-radius: 1.125rem;
   background: #fff;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .14);
-  font: 700 13px/1 Manrope, sans-serif;
+  box-shadow: 0 .5rem 1.75rem rgba(0, 0, 0, .14);
+  font: 700 .8125rem/1 Manrope, sans-serif;
 }
 
 .mapSelectionNotice a {
@@ -826,48 +812,48 @@
   }
 }
 
-@media (max-width: 1024px) and (min-width: 761px) {
+@media (max-width: 64rem) and (min-width: 47.5625rem) {
   .screen {
     grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1fr);
-    padding-inline: 20px;
+    padding-inline: 1.25rem;
   }
 
   .header {
-    grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(150px, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(9.375rem, 1fr);
   }
 
   .search {
-    width: min(190px, 100%);
+    width: min(12rem, 100%);
   }
 
   .mapMode .header {
-    grid-template-columns: minmax(0, 1fr) 152px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 9.5rem minmax(0, 1fr);
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 47.5rem) {
   .screen {
     --feed-column: 100%;
-    --feed-radius: 19.385px;
-    min-height: 874px;
+    --feed-radius: 1.211rem;
+    min-height: 100dvh;
     grid-template-columns: minmax(0, 1fr);
-    padding: 40px 19px 110px;
+    padding: 2.5rem 1.1875rem clamp(5rem, 15cqi, 6.875rem);
     background: #fff;
   }
 
   .header {
     grid-column: 1;
-    min-height: 41px;
-    grid-template-columns: 69px minmax(0, 1fr) 65px;
+    min-height: 2.5625rem;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: start;
   }
 
   .back {
     grid-column: 1;
     justify-self: start;
-    width: 37px;
-    height: 38px;
-    margin-left: 8px;
+    width: 2.3125rem;
+    height: 2.375rem;
+    margin-left: .5rem;
     display: grid;
     border: 0;
     background: url('/puddle-mark-outline.svg') center/contain no-repeat;
@@ -878,26 +864,26 @@
 
   .tabs {
     grid-column: 2;
-    width: 127.119px;
-    min-height: 38.269px;
-    grid-template-columns: 53.524px minmax(0, 1fr);
-    padding: 3.9px;
-    border-width: 1.673px;
+    width: 7.945rem;
+    min-height: 2.392rem;
+    grid-template-columns: 3.345rem minmax(0, 1fr);
+    padding: .244rem;
+    border-width: .105rem;
   }
 
   .tab {
-    height: 28.528px;
-    font-size: 13.381px;
+    height: 1.783rem;
+    font-size: .836rem;
   }
 
   .search {
     grid-column: 3;
     justify-self: start;
-    width: 55px;
-    height: 41px;
+    width: 3.4375rem;
+    height: 2.5625rem;
     justify-content: center;
     padding: 0;
-    border-width: 1.67px;
+    border-width: .104rem;
   }
 
   .search label {
@@ -905,139 +891,107 @@
   }
 
   .search button {
-    font-size: 21px;
+    font-size: 1.3125rem;
   }
 
   .stream {
     grid-column: 1;
     width: 100%;
-    margin-top: 19px;
-    gap: 20px;
+    margin-top: 1.1875rem;
+    gap: 1.25rem;
   }
 
   .post {
-    min-height: 396.234px;
-    padding: 12px 13px 10px;
-    border-width: 1.939px;
+    min-height: clamp(20rem, 85cqi, 24.765rem);
+    padding: .75rem .8125rem .625rem;
+    border-width: .121rem;
   }
 
   .author {
-    margin-left: 2.5px;
-    gap: 11px;
+    margin-left: .156rem;
+    gap: .6875rem;
   }
 
   .avatar {
-    width: 34.1px;
-    height: 34.1px;
-    flex-basis: 34.1px;
+    width: 2.131rem;
+    height: 2.131rem;
+    flex-basis: 2.131rem;
   }
 
   .author strong {
-    font-size: 15.508px;
+    font-size: .969rem;
   }
 
   .author small {
-    font-size: 8.529px;
+    font-size: .533rem;
   }
 
   .copy {
-    margin: 2px 3px 0 33px;
-    font-size: 13.182px;
-    letter-spacing: .2636px;
+    margin: .125rem .1875rem 0 2.0625rem;
+    font-size: .824rem;
+    letter-spacing: .0165rem;
   }
 
   .photos {
-    width: min(100%, 294.711px);
+    width: min(100%, 18.42rem);
     aspect-ratio: 381 / 133;
     min-height: 0;
-    margin: 1px 9px 0 auto;
+    margin: .0625rem .5625rem 0 auto;
     grid-template-columns: minmax(0, 1.52fr) minmax(0, 1fr);
     grid-template-rows: repeat(2, minmax(0, 1fr));
-    gap: 5px;
+    gap: .3125rem;
   }
 
   .photo {
-    border-width: 1.551px;
-    border-radius: 19.385px;
+    border-width: .097rem;
+    border-radius: 1.211rem;
   }
 
   .place {
-    width: min(100%, 303.185px);
-    min-height: 126.392px;
-    margin: 8px 5px 0 auto;
-    padding: 11px 45px 12px 14px;
-    border-width: 1.551px;
-    border-radius: 19.385px;
+    width: min(100%, 18.949rem);
+    min-height: 7.9rem;
+    margin: .5rem .3125rem 0 auto;
+    padding: .6875rem 2.8125rem .75rem .875rem;
+    border-width: .097rem;
+    border-radius: 1.211rem;
   }
 
   .placeMeta,
   .placeArea {
-    min-height: 19.757px;
-    padding-inline: 7px;
-    font-size: 10.557px;
-  }
-
-  .placeArea {
-    top: 7px;
-    right: 5px;
+    min-height: 1.235rem;
+    padding-inline: .4375rem;
+    font-size: .66rem;
   }
 
   .place h2 {
-    margin-top: 54px;
-    font-size: 18.61px;
-    letter-spacing: -1.5508px;
+    font-size: 1.163rem;
+    letter-spacing: -.097rem;
   }
 
   .placeAdd {
-    right: 6px;
-    bottom: 9px;
-    width: 31.442px;
-    height: 30.444px;
-    font-size: 23px;
+    width: 1.965rem;
+    height: 1.903rem;
+    font-size: 1.4375rem;
   }
 
   .interactions {
-    width: min(100%, 294.284px);
-    min-height: 20px;
-    margin: 15px auto 0 25px;
-    gap: 10px;
+    width: min(100%, 18.393rem);
+    min-height: 1.25rem;
+    margin: .9375rem auto 0;
+    gap: .625rem;
   }
 
   .interactions > a {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
 
   .interactions > form > button {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
 
   .actionMenu > summary {
-    min-height: 20px;
-    font-size: 18px;
-  }
-
-  .composer {
-    grid-column: 1;
-    justify-self: start;
-    width: min(100%, 340px);
-    min-height: 42.095px;
-    margin-top: 223.766px;
-    margin-left: 10px;
-    border-width: 1.619px;
-    border-radius: 20.238px;
-    font-size: 12.952px;
-  }
-
-  .composer .avatar {
-    width: 25.276px;
-    height: 25.276px;
-    flex-basis: 25.276px;
-  }
-
-  .composerSubmit {
-    width: 29.952px;
-    height: 29.952px;
-    font-size: 18px;
+    min-height: 1.25rem;
+    font-size: 1.125rem;
   }
 
   .mapMode {
@@ -1049,19 +1003,18 @@
   .mapMode .header {
     position: absolute;
     z-index: 20;
-    top: clamp(24px, 4.6dvh, 40px);
-    left: 19px;
-    right: 19px;
-    min-height: 41px;
-    grid-template-columns: 69px minmax(0, 1fr) 65px;
+    inset-block-start: clamp(1.5rem, 4.6dvh, 2.5rem);
+    inset-inline: clamp(1rem, 4vw, 1.25rem);
+    min-height: 2.5625rem;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: start;
   }
 
   .mapMode .back {
-    width: 37px;
-    height: 38px;
-    margin-top: 3.06px;
-    margin-left: 8px;
+    width: 2.3125rem;
+    height: 2.375rem;
+    margin-top: .1875rem;
+    margin-left: .5rem;
     border: 0;
     background: url('/puddle-mark-outline.svg') center/contain no-repeat;
     box-shadow: none;
@@ -1070,16 +1023,16 @@
   }
 
   .mapMode .tabs {
-    width: 125.623px;
-    min-height: 45.456px;
-    grid-template-columns: 58.8px 52.894px;
-    padding: 4.9px;
-    border-width: 2.066px;
+    width: min(100%, 7.851rem);
+    min-height: 2.841rem;
+    grid-template-columns: 3.675rem 3.306rem;
+    padding: .306rem;
+    border-width: .129rem;
   }
 
   .mapMode .tab {
-    height: 33.885px;
-    font-size: 13.223px;
+    height: 2.118rem;
+    font-size: .8264rem;
   }
 
   .mapCanvas :global(.location-map-workspace),
@@ -1089,26 +1042,26 @@
   }
 
   .mapCanvas :global(.location-map-side) {
-    top: auto;
-    left: auto;
-    right: clamp(12px, 4vw, 16px);
-    bottom: calc(var(--puddle-mobile-nav-height, 104px) + env(safe-area-inset-bottom) + 74px);
-    width: min(303px, calc(100% - 32px));
-    max-height: min(112px, calc(100% - 220px));
+    inset-block-start: auto;
+    inset-inline-start: auto;
+    inset-inline-end: clamp(.75rem, 4vw, 1rem);
+    bottom: calc(var(--puddle-mobile-nav-height, 6.5rem) + env(safe-area-inset-bottom) + 4.625rem);
+    width: min(18.9375rem, calc(100% - 2rem));
+    max-height: min(7rem, calc(100% - 13.75rem));
     display: flex !important;
     overflow: hidden;
-    border-radius: 16px;
+    border-radius: 1rem;
     background: #fff;
-    border: 1px solid #e8e2e5;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+    border: .0625rem solid #e8e2e5;
+    box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .16);
     transform: none;
   }
 
   .mapCanvas :global(.location-map-side .location-map-card) {
     display: grid;
-    grid-template-columns: clamp(58px, 18vw, 72px) minmax(0, 1fr);
-    min-height: 96px;
-    max-height: 112px;
+    grid-template-columns: clamp(3.625rem, 18vw, 4.5rem) minmax(0, 1fr);
+    min-height: 6rem;
+    max-height: 7rem;
     overflow: hidden;
     border-radius: 0;
     background: #fff;
@@ -1122,16 +1075,16 @@
     height: auto;
     min-height: 0;
     aspect-ratio: 1;
-    margin: 10px;
-    border-radius: 12px;
+    margin: .625rem;
+    border-radius: .75rem;
   }
 
   .mapCanvas :global(.location-map-side .location-map-card > div:last-child) {
     min-width: 0;
     display: grid;
     align-content: center;
-    gap: 3px;
-    padding: 10px 12px 10px 0;
+    gap: .1875rem;
+    padding: .625rem .75rem .625rem 0;
   }
 
   .mapCanvas :global(.location-map-side .location-map-card h2) {
@@ -1140,7 +1093,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: clamp(14px, 4vw, 18px);
+    font-size: clamp(.875rem, 4vw, 1.125rem);
     letter-spacing: -.04em;
     color: #111;
   }
@@ -1153,7 +1106,7 @@
     border-radius: 0;
     background: transparent;
     color: #777;
-    font-size: 11px;
+    font-size: .6875rem;
   }
 
   .mapCanvas :global(.location-map-side .location-map-card p),
@@ -1163,12 +1116,12 @@
   }
 
   .mapCanvas :global(.location-map-side .location-map-card-actions) {
-    margin-top: 2px;
+    margin-top: .125rem;
   }
 
   .mapCanvas :global(.location-map-side .location-map-card-actions a) {
     color: #111;
-    font-size: 12px;
+    font-size: .75rem;
   }
 
   .mapCanvas :global(.location-map-zoom) {
@@ -1176,19 +1129,19 @@
   }
 
   .mapScreen :global(.puddle-map-search-trigger) {
-    top: auto;
-    right: auto;
-    bottom: calc(var(--puddle-mobile-nav-height, 104px) + env(safe-area-inset-bottom) + 16px);
-    left: 50%;
-    width: min(220px, calc(100% - 32px)) !important;
+    inset-block-start: auto;
+    inset-inline-end: auto;
+    bottom: calc(var(--puddle-mobile-nav-height, 6.5rem) + env(safe-area-inset-bottom) + 1rem);
+    inset-inline-start: 50%;
+    width: min(13.75rem, calc(100% - 2rem)) !important;
     min-width: 0 !important;
     max-width: none !important;
-    height: 42px !important;
+    height: 2.625rem !important;
     display: flex !important;
     align-items: center;
     justify-content: flex-start !important;
-    gap: 8px;
-    padding: 0 14px !important;
+    gap: .5rem;
+    padding: 0 .875rem !important;
     transform: translateX(-50%);
   }
 
@@ -1200,7 +1153,7 @@
     clip: auto;
     white-space: nowrap;
     color: #777;
-    font: 700 13px/1 Manrope, sans-serif;
+    font: 700 .8125rem/1 Manrope, sans-serif;
   }
 
   .mapScreen :global(.puddle-map-search-trigger > b) {

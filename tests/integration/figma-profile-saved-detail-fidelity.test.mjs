@@ -10,7 +10,7 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
     read('app/figma-dashboard-profile.css'),
     read('app/figma-dashboard-fidelity.css'),
     read('app/figma-dashboard-flow.css'),
-    read('app/layout.js')
+    read('app/global.css')
   ])
 
   assert.match(page, /data-figma-node="40:347"/)
@@ -65,7 +65,7 @@ test('Saved Place Open preserves Figma 38:223 relationships through scoped struc
     read('app/(product)/plans/[slug]/detail-reviews.js'),
     read('app/(product)/plans/[slug]/detail-share-menu.js'),
     read('app/(product)/plans/Plans.module.css'),
-    read('app/layout.js')
+    read('app/global.css')
   ])
 
   assert.match(page, /import styles from '\.\.\/Plans\.module\.css'/)
@@ -95,18 +95,19 @@ test('Saved Place Open preserves Figma 38:223 relationships through scoped struc
   assert.doesNotMatch(page, /figma-saved-detail-description/)
   assert.doesNotMatch(page, /figma-saved-detail-tags/)
 
-  assert.match(styles, /\.detailTopbar\s*\{[^}]*height:\s*109px;[^}]*display:\s*grid;/s)
-  assert.match(styles, /\.detailCategoryBand\s*\{[^}]*height:\s*49px;/s)
-  assert.match(styles, /\.detailCard\s*\{[^}]*width:\s*min\(962px, calc\(100% - 38px\)\);[^}]*height:\s*970px;[^}]*margin:\s*15px 22px 0 16px;[^}]*display:\s*grid;[^}]*grid-template-columns:\s*529px 370px;/s)
-  assert.match(styles, /\.detailMedia\s*\{[^}]*width:\s*529px;[^}]*height:\s*263px;/s)
-  assert.match(styles, /\.detailActions\s*\{[^}]*margin:\s*-23px 0 0 12px;/s)
-  assert.match(styles, /\.detailTitle\s*\{[^}]*width:\s*546px;[^}]*height:\s*150px;[^}]*margin:\s*23px 0 0 6\.9px;[^}]*font:\s*800 64px\/1 Manrope/s)
-  assert.match(styles, /\.detailMeta\s*\{[^}]*grid-template-columns:\s*131px 179px 155px;/s)
-  assert.match(styles, /\.planVisit\s*\{[^}]*margin:\s*24px 0 0 5px;/s)
-  assert.match(styles, /\.reviews\s*\{[^}]*width:\s*533px;[^}]*height:\s*332px;[^}]*margin:\s*22px 0 0 5px;/s)
-  assert.match(styles, /\.detailMap\s*\{[^}]*width:\s*370px;[^}]*height:\s*583px;/s)
-  assert.match(styles, /\.similarGrid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 308\.435px\)\)/s)
-  assert.match(styles, /\.detailSearch\s*\{[^}]*position:\s*static;[^}]*margin:\s*22px 0 0 273px;/s)
+  assert.match(styles, /\.detailCard\s*\{[^}]*width:\s*min\(calc\(100% - 2rem\), 60rem\);[^}]*min-height:\s*0;[^}]*height:\s*auto;[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0, 1\.42fr\) minmax\(16rem, 1fr\);/s)
+  assert.match(styles, /\.detailMedia\s*\{[^}]*width:\s*100%;[^}]*height:\s*auto;[^}]*aspect-ratio:\s*529 \/ 263;/s)
+  assert.match(styles, /\.detailActions\s*\{[^}]*min-height:\s*2\.4375rem;[^}]*height:\s*auto;[^}]*display:\s*flex;/s)
+  assert.match(styles, /\.detailTitle\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*clamp\([^}]*font:\s*800 clamp\(/s)
+  assert.match(styles, /\.detailMeta\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s)
+  assert.match(styles, /\.planVisit\s*\{[^}]*width:\s*max-content;[^}]*height:\s*auto;/s)
+  assert.match(styles, /\.reviews\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*20\.75rem;[^}]*max-height:\s*clamp\(/s)
+  assert.match(styles, /\.detailMap\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*0;[^}]*height:\s*auto;[^}]*aspect-ratio:\s*370 \/ 583;/s)
+  assert.match(styles, /\.similarGrid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(/s)
+  assert.match(styles, /\.detailSearch\s*\{[^}]*position:\s*static;[^}]*width:\s*min\(26\.25rem, calc\(100% - 2rem\)\);/s)
+  assert.match(reviews, /className=\{styles\.reviewEditor\}/)
+  assert.match(reviews, /className=\{styles\.reviewBodyInput\}/)
+  assert.doesNotMatch(reviews, /style=\{\{/)
 
   assert.doesNotMatch(layout, /figma-dashboard-saved\.css/)
   assert.doesNotMatch(layout, /figma-dashboard-saved-detail-fidelity\.css/)

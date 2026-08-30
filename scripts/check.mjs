@@ -8,7 +8,8 @@ const read = (path) => readFile(join(root, path), 'utf8')
 
 const required = [
   'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
-  'public/landing.html','public/styles.css','public/landing.css','public/app.js','public/puddle-mark.svg',
+  'public/landing.html','public/landing.css','public/app.js','public/puddle-mark.svg',
+  'app/global.css',
   'app/layout.js','app/(product)/layout.js','app/(product)/loading.js','app/(product)/discover/page.js','app/(map)/layout.js','app/(map)/map/page.js','app/(product)/matches/page.js','app/(product)/profile/page.js','app/(product)/plans/page.js','app/(product)/plans/[slug]/page.js',
   'app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js','app/api/map/snapshot/route.js','app/api/profile/identity/route.js',
   'components/product-nav.js','components/static-product-shell.js','components/map-route-client.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js',
@@ -31,7 +32,8 @@ const removed = [
   '.github/workflows/photo-enrichment.yml','.github/workflows/google-place-discovery.yml','.github/workflows/google-place-geocode.yml','.github/workflows/google-place-match.yml',
   'app/api/location-google-photo/[id]/route.js','app/api/location-open-photo/[id]/route.js','app/api/location-photo-status/[id]/route.js','app/api/location-photos/[id]/route.js',
   'app/api/static-catalogue','lib/app/static-catalogue.js','lib/app/static-catalogue-materialization.js','lib/app/static-media-resolver.js',
-  'lib/app/open-photo-supabase.js','lib/app/open-photo-r2.js','lib/app/r2-s3.js'
+  'lib/app/open-photo-supabase.js','lib/app/open-photo-r2.js','lib/app/r2-s3.js',
+  'public/styles.css','public/figma-landing-overflow-fix.css'
 ]
 for (const path of removed) {
   try {
