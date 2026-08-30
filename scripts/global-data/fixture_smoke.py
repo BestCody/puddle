@@ -104,6 +104,70 @@ def assert_slug_collision_regression():
         assert marker in common, f'canonical slug collision projection is missing {marker}'
 
 
+# Source categories arrive in two shapes: Overture sends snake_case, Foursquare sends human
+# labels such as "Dining and Drinking > Bar". category_case normalises every separator to an
+# underscore before matching, so both spellings have to be exercised here.
+#
+# These cases are regressions, not hypotheticals. Unanchored matching once put hardware chains
+# filed under "Home & Garden" into the park category, and underscore-only exclusions never
+# matched Foursquare's "Fire Station", which put fire stations into bars. Both shipped, and the
+# wrong category is then baked into each place's generated summary by resolve_global_entities.
+CATEGORY_CASES = [
+    ('Home & Garden', None), ('Home and Garden', None), ('home_and_garden', None),
+    ('Home Garden Centre', None), ('Hardware Store', None), ('Home Improvement', None),
+    ('Building Materials Store', None), ('Lumber Yard', None), ('Electrical Supplies', None),
+    ('Plumbing Supply', None), ('Fire Station', None), ('fire_station', None),
+    ('Parking', None), ('Car Park', None), ('Self Storage', None),
+    ('Public Garden', 'park'), ('Public Hall', 'community_space'),
+    ('Barber Shop', None), ('Barbecue Restaurant', 'restaurant'), ('Supermarket', 'shop'),
+    # Boundary cases for the anchored park rule: both contain the token mid-word and must not
+    # be read as parks.
+    ('Parkway Motel', None), ('Gardenia Florist', None),
+    ('Park', 'park'), ('Botanical Garden', 'park'), ('Dog Park', 'park'), ('Playground', 'park'),
+    ('Landmarks and Outdoors > Park', 'park'), ('Nature Reserve', 'park'),
+    ('Dining and Drinking > Bar', 'bar'), ('Pub', 'bar'), ('Cocktail Bar', 'bar'),
+    ('Coffee Shop', 'cafe'), ('Tea Room', 'cafe'), ('Bakery', 'cafe'),
+    ('Museum', 'museum'), ('Art Gallery', 'gallery'), ('Restaurant', 'restaurant'),
+    ('Movie Theater', 'attraction'), ('Zoo', 'attraction'), ('Scenic Lookout', 'scenic_spot'),
+    ('Bookstore', 'shop'), ('Shopping Mall', 'shop'), ('Community Centre', 'community_space'),
+    ('Nightclub', 'nightlife'), ('Bowling Alley', 'activity_venue'),
+    ('Hospital', None), ('Dentist', None), ('University', None), ('', None),
+]
+
+
+def assert_category_mapping():
+    source = (ROOT / 'scripts' / 'global-data' / 'stage_global_sources.py').read_text(encoding='utf-8')
+    body = source[source.index('def category_case'):source.index('def clean_name')]
+
+    # Read the real patterns rather than a copy, so this fails when the SQL changes and the
+    # expectations do not. A parenthesis inside a pattern must not truncate the exclusion list.
+    start = body.index('excluded = (')
+    excluded = ''.join(re.findall(r'"([^"]*)"', body[start:body.index('\n    )', start)]))
+    rules = re.findall(r"regexp_matches\(\{value\}, '([^']*)'\) THEN '([^']*)'", body)
+    assert excluded and rules, 'category_case patterns could not be read'
+
+    # The cases below assume separators are collapsed to underscores before matching. Asserting
+    # the SQL still does that keeps this from silently testing a normalisation the pipeline
+    # stopped performing, which is how the Foursquare spellings broke in the first place.
+    normaliser = body[body.index('value = ('):body.index('# Retail categories')]
+    for marker in ('regexp_replace', "'[^a-z0-9]+', '_'", 'lower('):
+        assert marker in normaliser, f'category_case no longer normalises separators: missing {marker}'
+
+    def classify(raw):
+        value = re.sub(r'[^a-z0-9]+', '_', str(raw or '').lower())
+        if re.search(excluded, value):
+            return None
+        for pattern, category in rules:
+            if re.search(pattern, value):
+                return category
+        return None
+
+    for raw, expected in CATEGORY_CASES:
+        assert classify(raw) == expected, (
+            f'category_case({raw!r}) produced {classify(raw)!r}, expected {expected!r}'
+        )
+
+
 def main():
     fixture = json.loads(FIXTURE.read_text(encoding='utf-8'))
     namespace = uuid.UUID(fixture['namespace'])
@@ -160,6 +224,7 @@ def main():
     assert len(canonical_ids) == 3, f'fixture expected 3 canonical locations, got {len(canonical_ids)}'
 
     assert_slug_collision_regression()
+    assert_category_mapping()
 
     for case in fixture['photoPriorityCases']:
         chosen = photo_choice(case['category'], case['candidates'])
@@ -172,6 +237,7 @@ def main():
         'canonicalLocations': len(canonical_ids),
         'aliases': len(aliases),
         'slugCollisionRegression': True,
+        'categoryMappingCases': len(CATEGORY_CASES),
         'photoPriorityCases': len(fixture['photoPriorityCases']),
     }, indent=2))
 
