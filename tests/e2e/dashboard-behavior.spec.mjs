@@ -84,10 +84,13 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   const actionGeometry = await sidebar.evaluate((element) => {
     const settings = element.querySelector('.figma-dashboard-settings-link')?.getBoundingClientRect()
     const signOut = element.querySelector('.figma-dashboard-signout')?.getBoundingClientRect()
-    return settings && signOut ? { settingsBottom: settings.bottom, signOutTop: signOut.top } : null
+    return settings && signOut
+      ? { settingsBottom: settings.bottom, signOutTop: signOut.top, signOutBottom: signOut.bottom, viewportHeight: window.innerHeight }
+      : null
   })
   expect(actionGeometry).not.toBeNull()
   expect(actionGeometry.signOutTop).toBeGreaterThan(actionGeometry.settingsBottom)
+  expect(actionGeometry.signOutBottom).toBeLessThanOrEqual(actionGeometry.viewportHeight)
   const discoverUrl = page.url()
   await settingsTrigger.click()
   const settingsOverlay = page.locator('.puddle-settings-overlay')
