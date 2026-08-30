@@ -53,8 +53,9 @@ async function assertFeedStructure(page) {
 
 async function assertSavedSearchArrowContained(page) {
   const savedSearch = page.getByTestId('saved-search')
+  await expect(savedSearch.getByRole('searchbox', { name: 'Search saved puddles' })).toBeVisible()
   const geometry = await savedSearch.evaluate((element) => {
-    const arrow = element.querySelector(':scope > .puddle-search-trigger-icon')
+    const arrow = element.querySelector(':scope > button[type="submit"]')
     if (!arrow) return null
     const shell = element.getBoundingClientRect()
     const arrowBox = arrow.getBoundingClientRect()

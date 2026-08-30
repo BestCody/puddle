@@ -119,13 +119,18 @@ test('landing credential sign-in posts directly to the authenticated destination
     readFile(new URL('../../app/api/auth/password/route.js', import.meta.url), 'utf8')
   ])
 
-  assert.match(landing, /<form class="landing-login-form" action="\/api\/auth\/password" method="post">/)
+  assert.match(landing, /<form class="landing-login-form" action="\/api\/auth\/password" method="post"[^>]*>/)
   assert.match(landing, /<input type="hidden" name="next" value="\/discover" \/>/)
   assert.doesNotMatch(landing, /data-signin-handoff/)
   assert.doesNotMatch(landing, /\/signin/)
   assert.match(route, /authenticatePassword\(supabase, email, password\)/)
   assert.match(route, /authenticatedDestination\(profile, next\)/)
   assert.match(route, /NextResponse\.redirect\(new URL\(authenticatedDestination\(profile, next\), request\.url\), 303\)/)
+  assert.match(landing, /data-auth-mode="login"/)
+  assert.match(landing, /data-auth-mode="signup"/)
+  assert.match(landing, /id="landing-signup-form" class="landing-signup-form" action="\/api\/auth\/signup" method="post"/)
+  assert.match(landing, /Create my Puddle &#8594;/)
+  assert.match(landing, /formaction="\/api\/auth\/google"/)
 })
 
 test('browser and server auth clients use the same persistent cookie policy', async () => {
@@ -172,12 +177,16 @@ test('email and username normalization match the form contracts', () => {
 test('signup and onboarding enforce consent and preserve validation state', async () => {
   const signup = await readFile(new URL('../../app/signup/page.js', import.meta.url), 'utf8')
   const authActions = await readFile(new URL('../../app/auth/actions.js', import.meta.url), 'utf8')
+  const sharedSignup = await readFile(new URL('../../lib/auth/sign-up.js', import.meta.url), 'utf8')
+  const landingSignupRoute = await readFile(new URL('../../app/api/auth/signup/route.js', import.meta.url), 'utf8')
   const onboarding = await readFile(new URL('../../components/onboarding-form.js', import.meta.url), 'utf8')
   const onboardingActions = await readFile(new URL('../../app/onboarding/actions.js', import.meta.url), 'utf8')
 
   assert.match(signup, /name="terms_accepted"/)
-  assert.match(authActions, /termsAccepted/)
-  assert.match(authActions, /legal_consent_accepted/)
+  assert.match(authActions, /registerAccount\(formData\)/)
+  assert.match(sharedSignup, /termsAccepted/)
+  assert.match(sharedSignup, /legal_consent_accepted/)
+  assert.match(landingSignupRoute, /registerAccount\(await request\.formData\(\)\)/)
   assert.match(onboarding, /useActionState/)
   assert.match(onboardingActions, /Your entries have not been cleared/)
   assert.doesNotMatch(onboardingActions, /ageFromBirthDate/)

@@ -27,16 +27,6 @@
   justify-self: center !important;
 }
 
-.puddle-saved-search-trigger {
-  position: static !important;
-  inset: auto !important;
-  grid-column: 3 !important;
-  justify-self: end !important;
-  align-self: start !important;
-  margin: 0 !important;
-  transform: none !important;
-}
-
 /* Search opens in the upper portion of the content stage, not vertical center. */
 .puddle-search-overlay,
 .puddle-discover-search-overlay {

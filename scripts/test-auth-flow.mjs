@@ -80,14 +80,17 @@ assert(confirm.includes('authenticatedDestination(profile, next)'), 'Email links
 assert(!confirm.includes("new URL('/auth/error'"), 'Email links should not dump users onto the generic error page')
 
 const actions = await readFile(join(root, 'app/auth/actions.js'), 'utf8')
+const signup = await readFile(join(root, 'lib/auth/sign-up.js'), 'utf8')
 const passwordAuth = await readFile(join(root, 'lib/auth/password-sign-in.js'), 'utf8')
 const passwordRoute = await readFile(join(root, 'app/api/auth/password/route.js'), 'utf8')
 const googleRoute = await readFile(join(root, 'app/api/auth/google/route.js'), 'utf8')
+const signupRoute = await readFile(join(root, 'app/api/auth/signup/route.js'), 'utf8')
 const googleOAuth = await readFile(join(root, 'lib/auth/google-oauth.js'), 'utf8')
 for (const marker of ['signInWithPassword', 'signUp({', "provider !== 'google'", 'exchangeCodeForSession']) {
   const source = marker === 'signInWithPassword'
     ? passwordAuth
-    : marker === 'exchangeCodeForSession' ? callback : actions
+    : marker === 'exchangeCodeForSession' ? callback
+      : marker === 'signUp({' ? signup : actions
   assert(source.includes(marker), `Authentication source is missing ${marker}`)
 }
 for (const marker of ["signOut({ scope: 'local' })", 'ensureProfile']) {
@@ -101,12 +104,15 @@ assert(googleOAuth.includes('signInWithOAuth'), 'Google OAuth integration is mis
 for (const marker of ['saveOnboardingDraft', 'profileWriteErrorMessage', 'ensureProfile', 'resetPasswordForEmail', "signOut({ scope: 'local' })"]) {
   assert(actions.includes(marker), `Authentication lifecycle is missing ${marker}`)
 }
-assert(actions.includes('updateUserById(user.id, { email_confirm: true })'), 'Hosted signup must auto-confirm new users when Supabase still requires confirmation')
+assert(signup.includes('updateUserById(user.id, { email_confirm: true })'), 'Hosted signup must auto-confirm new users when Supabase still requires confirmation')
 assert(!actions.includes('/verify-email?email='), 'New signups must not be redirected to email verification')
 assert(actions.includes("if (process.env.NODE_ENV === 'production') return 'https://puddle.you'"), 'Production auth links must never point at localhost')
-assert(actions.includes('clearLocalAuthSession(supabase)'), 'New authentication attempts must clear the previous local session')
+assert(signup.includes('clearLocalAuthSession(supabase)'), 'New authentication attempts must clear the previous local session')
 assert(passwordRoute.includes("NextResponse.redirect(new URL(authenticatedDestination(profile, next), request.url), 303)"), 'Landing sign-in must redirect completed accounts directly to the product')
 assert(actions.includes('startGoogleSignup'), 'Signup must retain its Google OAuth entry point')
+assert(signupRoute.includes('registerAccount(await request.formData())'), 'Landing signup must use the shared account registration path')
+assert(googleRoute.includes('signupIntent'), 'Landing Google signup must require an explicit signup intent')
+assert(googleRoute.includes("startGoogleOAuth(supabase, request.headers, '/onboarding', true)"), 'Landing Google signup must preserve legal-consent callback state')
 assert(!actions.includes('sendLoginCode'), 'One-time login code action must be removed')
 assert(!actions.includes('verifyLoginCode'), 'One-time login code verification must be removed')
 assert(!actions.includes('export async function signIn('), 'The deleted sign-in page must not retain a server action')

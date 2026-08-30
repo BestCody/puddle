@@ -71,21 +71,41 @@
         <div class="landing-sticky-left__canvas">
           <picture><source srcset="/figma/assets/hero-left.webp" type="image/webp" /><img class="hero-photo hero-photo--left" src="/figma/assets/hero-left.png" alt="" aria-hidden="true" width="1091" height="1441" loading="eager" decoding="async" fetchpriority="high" /></picture>
           <a class="brand brand--desktop" href="/" aria-label="Puddle home"><img src="/figma/assets/logo.svg" alt="" width="39" height="40" loading="eager" decoding="async" /><span>puddle</span></a>
-          <section class="login-panel" aria-label="Log in">
+          <section class="login-panel" aria-label="Log in" data-auth-mode="login">
             <h1 id="desktop-title">Discover places.<br />See who’s there.</h1>
-            <div class="login-label-row"><strong>Log in</strong><a href="/forgot-password">Forgot password?</a></div>
-            <form class="landing-login-form" action="/api/auth/password" method="post">
+            <div class="login-label-row">
+              <div class="auth-mode-switch" role="tablist" aria-label="Account access">
+                <button type="button" role="tab" data-auth-mode="login" aria-selected="true" aria-controls="landing-login-form">Log in</button>
+                <button type="button" role="tab" data-auth-mode="signup" aria-selected="false" aria-controls="landing-signup-form">Sign up</button>
+              </div>
+              <a class="login-forgot" href="/forgot-password">Forgot password?</a>
+            </div>
+            <p class="landing-auth-message" data-landing-auth-message role="alert" aria-live="polite" hidden></p>
+            <form class="landing-login-form" action="/api/auth/password" method="post" data-auth-form="login">
               <input type="hidden" name="next" value="/discover" />
-              <p class="landing-auth-message" data-landing-auth-message role="alert" aria-live="polite" hidden></p>
               <label class="sr-only" for="landing-email">Email</label>
               <input id="landing-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="Email" />
               <label class="sr-only" for="landing-password">Password</label>
               <input id="landing-password" name="password" type="password" autocomplete="current-password" required placeholder="Password" />
               <button class="continue-button" type="submit">Continue</button>
             </form>
-            <div class="or-divider" aria-hidden="true"><span></span><b>or</b><span></span></div>
-            <a class="auth-choice auth-choice--google" href="/api/auth/google?next=%2Fdiscover" aria-label="Continue with Google"><picture><source srcset="/figma/assets/google.webp" type="image/webp" /><img src="/figma/assets/google.png" alt="" width="900" height="916" loading="lazy" decoding="async" /></picture><span>Continue with Google</span></a>
-            <a class="auth-choice" href="/signup">Continue with email</a>
+            <form id="landing-signup-form" class="landing-signup-form" action="/api/auth/signup" method="post" data-auth-form="signup" hidden>
+              <input type="hidden" name="provider" value="google" />
+              <input type="hidden" name="signup_intent" value="1" />
+              <label class="landing-field" for="landing-signup-display-name"><span>Display name</span><input id="landing-signup-display-name" name="display_name" type="text" autocomplete="name" maxlength="60" required /></label>
+              <label class="landing-field" for="landing-signup-email"><span>Email</span><input id="landing-signup-email" name="email" type="email" autocomplete="email" maxlength="254" required /></label>
+              <label class="landing-field" for="landing-signup-password"><span>Password</span><input id="landing-signup-password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required /></label>
+              <label class="landing-consent"><input type="checkbox" name="terms_accepted" value="yes" required /><span>I agree to Puddle&#8217;s <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a></span></label>
+              <button class="continue-button landing-signup-button" type="submit">Create my Puddle &#8594;</button>
+              <div class="or-divider" aria-hidden="true"><span></span><b>or</b><span></span></div>
+              <button class="auth-choice auth-choice--google" type="submit" formmethod="post" formaction="/api/auth/google" formnovalidate aria-label="Continue with Google"><picture><source srcset="/figma/assets/google.webp" type="image/webp" /><img src="/figma/assets/google.png" alt="" width="900" height="916" loading="lazy" decoding="async" /></picture><span>Continue with Google</span></button>
+              <a class="auth-choice" href="/signup">Continue with email</a>
+            </form>
+            <div class="landing-login-alternatives" data-auth-options="login">
+              <div class="or-divider" aria-hidden="true"><span></span><b>or</b><span></span></div>
+              <a class="auth-choice auth-choice--google" href="/api/auth/google?next=%2Fdiscover" aria-label="Continue with Google"><picture><source srcset="/figma/assets/google.webp" type="image/webp" /><img src="/figma/assets/google.png" alt="" width="900" height="916" loading="lazy" decoding="async" /></picture><span>Continue with Google</span></a>
+              <a class="auth-choice" href="/signup">Continue with email</a>
+            </div>
           </section>
         </div>
       </aside>

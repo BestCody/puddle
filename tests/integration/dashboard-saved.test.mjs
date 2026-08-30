@@ -76,7 +76,7 @@ test('saved places hydrate canonical metadata and open details as a same-page sh
   assert.match(plans, /function foldersFor\(items\)/)
   assert.match(plans, /const folders = new Map\(\)/)
   assert.match(plans, /SavedCategoryRail/)
-  assert.match(plans, /SavedSearchOverlay/)
+  assert.match(plans, /SavedSearchInput/)
   assert.match(plans, /className=\{styles\.categories\}/)
   assert.match(plans, /className=\{styles\.placeCard\}[\s\S]*data-testid="saved-card"/)
   assert.match(plans, /data-saved-morph-card/)
