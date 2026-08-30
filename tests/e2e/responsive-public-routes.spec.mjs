@@ -44,7 +44,7 @@ test('landing page uses the Figma responsive composition and real DOM content', 
 
   if (mode === 'desktop') {
     await expect(page.locator('[data-figma-node="83:76"]')).toBeVisible()
-    await expect(page.locator('.landing-sticky-left .login-panel input:not([type="hidden"])')).toHaveCount(2)
+    await expect(page.locator('.landing-sticky-left form.landing-login-form input:not([type="hidden"])')).toHaveCount(2)
     await expect(page.locator('.feature-card--d-swipe')).toBeVisible()
     await expect(page.locator('.feature-card--d-profile')).toHaveCount(0)
   } else {
@@ -219,7 +219,7 @@ test('landing auth controls expose direct authentication entry points', async ({
   if (await page.locator(`${authRoot} form.landing-login-form`).count()) {
     await expect(page.locator(`${authRoot} form.landing-login-form`)).toHaveAttribute('method', 'post')
   }
-  await page.locator(`${authRoot} a[href="/signup"]`).first().click()
+  await page.locator(`${authRoot} a[href="/signup"]:visible`).first().click()
   await expect(page).toHaveURL(/\/signup(?:\?|$)/)
   await expect(page.getByRole('heading', { name: 'Make plans that leave the chat.', level: 1 })).toBeVisible()
 })
