@@ -41,3 +41,8 @@
 /* The place page renders the same crumb markup inside its own wrapper, which has its own
    horizontal rhythm, so the list only needs its spacing restated here. */
 .public-breadcrumbs ol{margin-bottom:1rem}
+/* Date pages stack several small grids, so each group needs a little more air above it than a
+   plain link section and a blurb that reads as copy rather than as a caption. */
+.place-hub-group{margin-bottom:2.75rem}
+.place-hub-group h2{margin-bottom:.35rem}
+.place-hub-group-blurb{margin:0 0 1rem;max-width:60ch;color:var(--puddle-figma-grey);font-size:.92rem;line-height:1.5}
