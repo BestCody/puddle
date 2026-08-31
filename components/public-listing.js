@@ -78,10 +78,31 @@ function PublicHeroArt({ location }) {
   </PhotoFrame>
 }
 
-export function PublicLocationView({ location, similar = [], preview = false }) {
+// The page already emitted BreadcrumbList markup describing a trail that existed nowhere on the
+// page, and Google asks that the markup reflect a breadcrumb the reader can actually see. It is
+// also the only route back up: without it a crawler landing on a place page - which is now most
+// of the sitemap - can reach three sibling places and nothing else.
+function PlaceBreadcrumbs({ trail = [] }) {
+  if (trail.length < 2) return null
+  return <nav className="place-hub-breadcrumbs public-breadcrumbs" aria-label="Breadcrumb">
+    <ol>
+      {trail.map((crumb, index) => {
+        const isCurrent = index === trail.length - 1
+        return <li key={crumb.href || crumb.label}>
+          {isCurrent
+            ? <span aria-current="page">{crumb.label}</span>
+            : <Link href={crumb.href}>{crumb.label}</Link>}
+        </li>
+      })}
+    </ol>
+  </nav>
+}
+
+export function PublicLocationView({ location, similar = [], preview = false, trail = [] }) {
   const hours = Object.entries(location.opening_hours || {})
   return <div className="public-page"><PublicHeader /><main className="public-wrap">
     {preview ? <div className="preview-banner">Preview mode · only you can see this draft</div> : null}
+    <PlaceBreadcrumbs trail={trail} />
     <section className="public-listing-hero place-hero"><PublicHeroArt location={location} /><div className="public-hero-copy"><span className="section-pill section-pill-mint">Place</span><h1>{location.name}</h1><p>{location.summary || 'A place worth adding to the plan.'}</p><div className="public-meta-row"><span>{location.neighborhood || location.city}</span><span>{location.price_level ? '$'.repeat(location.price_level) : 'Price varies'}</span><span>{(location.amenities || []).slice(0, 2).join(' · ') || 'Local spot'}</span></div><div className="public-action-row"><ContentActionButton contentKind="place" contentId={location.id}>Save this place</ContentActionButton><Link className="public-secondary-cta" href={`/places/${location.slug}/plan`}>Plan a visit</Link></div></div></section>
     <section className="public-content-grid"><article className="public-story-card"><span className="section-pill">Why go?</span><h2>{location.summary || 'Worth discovering.'}</h2><p>{location.description || location.summary}</p><div className="public-tag-row">{[...(location.tags || []), ...(location.amenities || [])].slice(0, 10).map((tag) => <span key={tag}>{tag}</span>)}</div></article><aside className="public-facts-card"><HostChip host={location.host} /><dl><div><dt>Area</dt><dd>{location.address_public || [location.neighborhood, location.city].filter(Boolean).join(', ')}</dd></div><div><dt>Timezone</dt><dd>{location.timezone}</dd></div><div><dt>Comments</dt><dd>{location.comments_enabled ? 'Open' : 'Off'}</dd></div></dl></aside></section>
     <section className="public-content-grid"><article className="public-story-card"><span className="section-pill section-pill-yellow">Opening hours</span><h2>Know before you go.</h2>{hours.length ? <div className="hours-list">{hours.map(([day, value]) => <div key={day}><strong>{day}</strong><span>{value}</span></div>)}</div> : <p className="muted">Hours have not been confirmed yet.</p>}</article><article className="public-story-card"><span className="section-pill section-pill-mint">Accessibility</span><h2>Plan with confidence.</h2><AccessList accessibility={location.accessibility || {}} />{location.has_private_address ? <div className="privacy-note">The exact private address is not shown publicly.</div> : null}</article></section>
