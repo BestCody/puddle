@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { PublicLocationView } from '@/components/public-listing'
-import { breadcrumbStructuredData, placeStructuredData } from '@/lib/app/public-content'
+import { breadcrumbStructuredData, placeIsIndexable, placeStructuredData } from '@/lib/app/public-content'
 import { getCachedPublicLocation, getCachedPublicLocationRecommendations } from '@/lib/app/public-location-cache'
 import { findMarketForPoint, marketPath } from '@/lib/app/seo-places'
 import { serializeStructuredData } from '@/lib/app/structured-data'
@@ -20,7 +20,9 @@ export async function generateMetadata({ params }) {
       description: location.summary || location.description,
       url: `/places/${location.slug}`,
       images: [{ url: location.cover_url || '/og.png', width: 1200, height: 630, alt: location.name }]
-    }
+    },
+    // Places with nothing of their own stay crawlable but out of the index. See placeIsIndexable.
+    ...(placeIsIndexable(location) ? {} : { robots: { index: false, follow: true } })
   }
 }
 
