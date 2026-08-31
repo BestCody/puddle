@@ -41,3 +41,8 @@
 /* The place page renders the same crumb markup inside its own wrapper, which has its own
    horizontal rhythm, so the list only needs its spacing restated here. */
 .public-breadcrumbs ol{margin-bottom:1rem}
+/* Two plain links under the similar-places grid, styled as the hub's link pills so they read as
+   navigation rather than as body copy. */
+.public-city-links-row{display:flex;flex-wrap:wrap;gap:.5rem;margin:0}
+.public-city-links-row a{display:inline-block;padding:.45rem .8rem;border:1.5px solid var(--puddle-figma-line);border-radius:999px;background:#fff;color:var(--minimal-ink);font-size:.85rem;text-decoration:none;transition:border-color .15s,background .15s}
+.public-city-links-row a:hover{border-color:var(--puddle-figma-blue);background:#f2f8ff}
