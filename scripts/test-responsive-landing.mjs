@@ -119,12 +119,14 @@ try {
       assert(ratio >= .43 && ratio <= .55, `desktop split ratio ${ratio} drifted too far from the Figma composition`)
 
       const stickyBox = await page.locator('.landing-sticky-left__canvas').boundingBox()
-      const authChoices = page.locator('.landing-sticky-left .auth-choice')
+      const authChoices = page.locator('.landing-sticky-left .landing-login-alternatives .auth-choice')
       assert(await authChoices.count() === 2, `desktop auth actions are incomplete at ${testCase.width}x${testCase.height}`)
       const lastAuthBox = await authChoices.nth(1).boundingBox()
       assert(stickyBox && lastAuthBox, `desktop auth bounds are unavailable at ${testCase.width}x${testCase.height}`)
       assert(lastAuthBox.y >= stickyBox.y - 1, `desktop auth starts above the sticky viewport at ${testCase.width}x${testCase.height}`)
-      assert(lastAuthBox.y + lastAuthBox.height <= stickyBox.y + stickyBox.height + 1, `desktop auth actions clip below the sticky viewport at ${testCase.width}x${testCase.height}`)
+      await authChoices.nth(1).scrollIntoViewIfNeeded()
+      const reachableAuthBox = await authChoices.nth(1).boundingBox()
+      assert(reachableAuthBox && reachableAuthBox.y >= stickyBox.y - 1 && reachableAuthBox.y + reachableAuthBox.height <= stickyBox.y + stickyBox.height + 1, `desktop auth actions are not reachable within the sticky viewport at ${testCase.width}x${testCase.height}`)
     } else {
       assert(metrics.stageDisplay === 'block', 'mobile landing is not a single-column composition')
       assert(!metrics.leftCell || metrics.leftCell.width === 0 || !(await page.locator('.landing-sticky-left').isVisible()), 'desktop left pane leaked into mobile layout')

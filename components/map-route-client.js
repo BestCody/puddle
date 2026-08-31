@@ -75,6 +75,7 @@ function MapScreen({ selectingForPost, query }) {
         passActive={Boolean(snapshot.passActive) && !selectingForPost}
         loadCatalogue
         selectingForPost={selectingForPost}
+        selectionFollowsMap
       /></div>
         : <div className={styles.mapEmpty} role="status" aria-label="Loading map"><strong>Loading map…</strong></div>}
   </section>

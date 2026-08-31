@@ -4,7 +4,6 @@ import { assertImagesLoaded, trackFrontendHealth } from './frontend-health.mjs'
 
 const publicPages = [
   ['/', null],
-  ['/signin', 'Discover places. See who’s there.'],
   ['/signup', 'Make plans that leave the chat.'],
   ['/privacy', 'Privacy Policy'],
   ['/terms', 'Terms of Service']
@@ -45,7 +44,7 @@ test('landing page uses the Figma responsive composition and real DOM content', 
 
   if (mode === 'desktop') {
     await expect(page.locator('[data-figma-node="83:76"]')).toBeVisible()
-    await expect(page.locator('.landing-sticky-left .login-panel input')).toHaveCount(2)
+    await expect(page.locator('.landing-sticky-left form.landing-login-form input:not([type="hidden"])')).toHaveCount(2)
     await expect(page.locator('.feature-card--d-swipe')).toBeVisible()
     await expect(page.locator('.feature-card--d-profile')).toHaveCount(0)
   } else {
@@ -60,7 +59,8 @@ test('landing page uses the Figma responsive composition and real DOM content', 
   await expect(page.locator(`${selector} .interactive-pill`).first()).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Discover places. See who’s there.', level: 1 })).toBeVisible()
 
-  for (const path of ['/signin', '/signup']) expect(await page.locator(`${authRoot} a[href="${path}"]`).count()).toBeGreaterThan(0)
+  expect(await page.locator(`${authRoot} a[href="/signup"]`).count()).toBeGreaterThan(0)
+  expect(await page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).count()).toBeGreaterThan(0)
   for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
   await assertImagesLoaded(page)
   await assertNoHorizontalOverflow(page)
@@ -199,25 +199,27 @@ test('landing safety modal and navigation work', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.location.hash)).toBe(mode === 'desktop' ? '#footer-d' : '#footer-m')
 })
 
-test('landing exposes real auth and legal links', async ({ page }) => {
+test('landing exposes direct auth and legal links', async ({ page }) => {
   await page.goto('/')
   const { stage, authRoot } = await visibleLandingCanvas(page)
-  for (const path of ['/signin', '/signup']) expect(await page.locator(`${authRoot} a[href="${path}"]`).count()).toBeGreaterThan(0)
+  expect(await page.locator(`${authRoot} a[href="/signup"]`).count()).toBeGreaterThan(0)
+  expect(await page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).count()).toBeGreaterThan(0)
+  if (await page.locator(`${authRoot} form.landing-login-form`).count()) {
+    await expect(page.locator(`${authRoot} form.landing-login-form`)).toHaveAttribute('action', '/api/auth/password')
+  }
   for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
   await expect(page.locator('button[data-open-app]')).toHaveCount(0)
   await expect(page.locator('[data-open-modal="waitlist"]')).toHaveCount(0)
 })
 
-test('landing auth controls reach the real auth pages', async ({ page }) => {
+test('landing auth controls expose direct authentication entry points', async ({ page }) => {
   await page.goto('/')
   let { authRoot } = await visibleLandingCanvas(page)
-  await page.locator(`${authRoot} a[href="/signin"]`).first().click()
-  await expect(page).toHaveURL(/\/signin(?:\?|$)/)
-  await expect(page.getByRole('heading', { name: 'Discover places. See who’s there.', level: 1 })).toBeVisible()
-
-  await page.goto('/')
-  ;({ authRoot } = await visibleLandingCanvas(page))
-  await page.locator(`${authRoot} a[href="/signup"]`).first().click()
+  await expect(page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).first()).toHaveAttribute('aria-label', 'Continue with Google')
+  if (await page.locator(`${authRoot} form.landing-login-form`).count()) {
+    await expect(page.locator(`${authRoot} form.landing-login-form`)).toHaveAttribute('method', 'post')
+  }
+  await page.locator(`${authRoot} a[href="/signup"]:visible`).first().click()
   await expect(page).toHaveURL(/\/signup(?:\?|$)/)
   await expect(page.getByRole('heading', { name: 'Make plans that leave the chat.', level: 1 })).toBeVisible()
 })

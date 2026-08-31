@@ -19,7 +19,7 @@ function appUrl(request, path) {
 
 function authFailure(request, code = 'callback_failed') {
   const safeCode = safeAuthErrorCode(code, 'callback_failed')
-  const target = appUrl(request, '/signin')
+  const target = appUrl(request, '/')
   target.searchParams.set('error', authLinkErrorMessage(safeCode))
   target.searchParams.set('auth_error', safeCode)
   return NextResponse.redirect(target)
@@ -42,7 +42,7 @@ function exchangeableCode(value) {
 
 export async function GET(request) {
   if (!isSupabaseConfigured()) {
-    return NextResponse.redirect(appUrl(request, '/signin?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.'))
+    return NextResponse.redirect(appUrl(request, '/?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.'))
   }
 
   const url = new URL(request.url)

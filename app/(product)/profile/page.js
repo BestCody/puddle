@@ -48,6 +48,21 @@ async function queryOr(query, fallback = []) {
   }
 }
 
+async function savedLocationCountOrNull(supabase, profileId) {
+  try {
+    const { count, error } = await supabase
+      .from('user_content_states')
+      .select('location_id', { count: 'exact', head: true })
+      .eq('profile_id', profileId)
+      .eq('state', 'saved')
+      .not('location_id', 'is', null)
+    if (error || !Number.isSafeInteger(count)) return null
+    return count
+  } catch {
+    return null
+  }
+}
+
 async function globalLocationsOr(ids, traceId) {
   const unique = [...new Set(ids.map(String).filter(Boolean))]
   if (!unique.length) return []
@@ -75,7 +90,7 @@ export default async function ProfilePage({ searchParams }) {
   const customizing = params?.customize === '1'
 
   return renderProductPage(async (session) => {
-    const [postRows, saveRows, friends] = await Promise.all([
+    const [postRows, saveRows, friends, savedLocationCount] = await Promise.all([
       queryOr(session.supabase
         .from('social_posts')
         .select('id,title,body,created_at,location_id')
@@ -91,7 +106,8 @@ export default async function ProfilePage({ searchParams }) {
         .order('pinned_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(12)),
-      queryOr(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 100 }))
+      queryOr(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 100 })),
+      savedLocationCountOrNull(session.supabase, session.user.id)
     ])
 
     const globalRows = await globalLocationsOr([
@@ -132,7 +148,7 @@ export default async function ProfilePage({ searchParams }) {
         <div className="figma-profile-identity">
           <h1>{displayName}</h1>
           <small>@{username}</small>
-          <div className="figma-profile-counts" aria-label="Profile counts"><span>{friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}</span><span>{visibleSaves.length} {visibleSaves.length === 1 ? 'Save' : 'Saves'}</span></div>
+          <div className="figma-profile-counts" aria-label="Profile counts"><span>{friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}</span><span>{savedLocationCount == null ? '— Saves' : `${savedLocationCount} ${savedLocationCount === 1 ? 'Save' : 'Saves'}`}</span></div>
           <div className="figma-profile-chips" aria-label="Favorite categories">
             {chips.map((value) => <span key={value}>{value}</span>)}
             <Link href="/account?section=profile&returnTo=%2Fprofile" aria-label="Edit favorite categories">+</Link>

@@ -5,8 +5,8 @@ import { PLACE_CATEGORIES, listMarkets, marketPath } from '@/lib/app/seo-places'
 // enumerable list to walk here. The market and category hubs below are the crawlable entry
 // points into them: every hub links straight to the place pages it lists.
 //
-// /signin is deliberately omitted. It is a thin, uncrawlable-by-design form and listing it
-// only spends crawl budget on a page that can never rank.
+// Authentication is deliberately kept off the sitemap; the home page owns sign-in and signup
+// is the only standalone account-creation surface.
 const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you').replace(/\/$/, '')
 
 const staticRoutes = [

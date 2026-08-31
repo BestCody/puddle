@@ -12,3 +12,9 @@ test('swipe map tiles align their projected center under the fixed pin', async (
   assert.match(preview, /translate3d\(\$\{tile\.x\}px, \$\{tile\.y\}px, 0\)/)
   assert.doesNotMatch(preview, /calc\(-50%/)
 })
+
+test('swipe card remounts each map preview for its canonical location', async () => {
+  const card = await read('components/figma-swipe-card.js')
+
+  assert.match(card, /<SwipeMapPreview key=\{item\.content_id\} latitude=\{item\.latitude\} longitude=\{item\.longitude\}/)
+})

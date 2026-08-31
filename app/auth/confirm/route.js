@@ -9,7 +9,7 @@ const allowedTypes = new Set(['signup', 'invite', 'magiclink', 'recovery', 'emai
 
 function confirmationFailure(url, code = 'confirmation_failed') {
   const safeCode = safeAuthErrorCode(code, 'confirmation_failed')
-  const target = new URL('/signin', url)
+  const target = new URL('/', url)
   target.searchParams.set('error', authLinkErrorMessage(safeCode, 'That authentication link could not be verified. Please request a new one.'))
   target.searchParams.set('auth_error', safeCode)
   return NextResponse.redirect(target)
@@ -17,7 +17,7 @@ function confirmationFailure(url, code = 'confirmation_failed') {
 
 export async function GET(request) {
   const url = new URL(request.url)
-  if (!isSupabaseConfigured()) return NextResponse.redirect(new URL('/signin?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.', url))
+  if (!isSupabaseConfigured()) return NextResponse.redirect(new URL('/?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.', url))
 
   const tokenHash = url.searchParams.get('token_hash')
   const type = url.searchParams.get('type')
