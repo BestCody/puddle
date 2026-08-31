@@ -52,6 +52,6 @@ export default async function PlacePage({ params }) {
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(structured) }} />
     {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
-    <PublicLocationView {...result} similar={similar} trail={trail} />
+    <PublicLocationView {...result} similar={similar} trail={trail} market={market} />
   </>
 }

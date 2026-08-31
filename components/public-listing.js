@@ -98,7 +98,21 @@ function PlaceBreadcrumbs({ trail = [] }) {
   </nav>
 }
 
-export function PublicLocationView({ location, similar = [], preview = false, trail = [] }) {
+// A place page's only outbound links were three nearby places, so the pages meant to rank - the
+// city hub and its date page - were reachable from the breadcrumb alone. Every indexed place now
+// points at both, which is where the internal link equity should be going.
+function CityLinks({ market }) {
+  if (!market) return null
+  return <section className="public-section public-city-links">
+    <div className="public-section-heading"><span className="section-pill">Nearby</span><h2>More in {market.name}.</h2></div>
+    <p className="public-city-links-row">
+      <Link href={`/places/in/${market.id}`}>Things to do in {market.name}</Link>
+      <Link href={`/date-ideas/${market.id}`}>Date ideas in {market.name}</Link>
+    </p>
+  </section>
+}
+
+export function PublicLocationView({ location, similar = [], preview = false, trail = [], market = null }) {
   const hours = Object.entries(location.opening_hours || {})
   return <div className="public-page"><PublicHeader /><main className="public-wrap">
     {preview ? <div className="preview-banner">Preview mode · only you can see this draft</div> : null}
@@ -109,5 +123,6 @@ export function PublicLocationView({ location, similar = [], preview = false, tr
     <Gallery items={location.gallery} title="Get a feel for the place." />
     <section className="public-safety-bar"><div><strong>Own or manage this place?</strong><p>Submit a claim without creating a separate organizer account.</p></div><div><Link href={`/places/${location.slug}/claim`}>Claim location</Link><Link href={`/report?target_type=location&target_id=${encodeURIComponent(location.id)}&return_to=${encodeURIComponent(`/places/${location.slug}`)}`}>Report details</Link></div></section>
     <SimilarGrid items={similar} />
+    <CityLinks market={market} />
   </main></div>
 }
