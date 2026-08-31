@@ -1,3 +1,4 @@
+import { dateIdeasPath } from '@/lib/app/date-ideas'
 import {
   HUB_MAX_PAGES,
   HUB_PAGE_SIZE,
@@ -33,6 +34,7 @@ export const revalidate = 3600
 const staticRoutes = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
   { path: '/places', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/date-ideas', changeFrequency: 'weekly', priority: 0.9 },
   { path: '/signup', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.2 },
   { path: '/terms', changeFrequency: 'yearly', priority: 0.2 }
@@ -68,6 +70,12 @@ export default async function sitemap() {
     priority: 0.8
   }))
 
+  const dateRoutes = markets.map((market) => ({
+    path: dateIdeasPath(market),
+    changeFrequency: 'weekly',
+    priority: 0.8
+  }))
+
   const categoryRoutes = markets.flatMap((market) => PLACE_CATEGORIES.map((category) => ({
     path: marketPath(market, category),
     changeFrequency: 'weekly',
@@ -76,7 +84,7 @@ export default async function sitemap() {
 
   const places = await placeRoutes(markets)
 
-  return [...staticRoutes, ...marketRoutes, ...categoryRoutes, ...places].map((route) => ({
+  return [...staticRoutes, ...marketRoutes, ...dateRoutes, ...categoryRoutes, ...places].map((route) => ({
     url: `${site}${route.path}`,
     changeFrequency: route.changeFrequency,
     priority: route.priority
