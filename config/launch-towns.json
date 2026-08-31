@@ -314,6 +314,258 @@
         -80.85,
         46.56
       ]
+    },
+    {
+      "id": "kensington-market",
+      "name": "Kensington Market",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.4065,
+        43.651,
+        -79.3945,
+        43.6585
+      ]
+    },
+    {
+      "id": "distillery-district",
+      "name": "Distillery District",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.365,
+        43.647,
+        -79.354,
+        43.6535
+      ]
+    },
+    {
+      "id": "liberty-village",
+      "name": "Liberty Village",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.427,
+        43.6345,
+        -79.414,
+        43.6415
+      ]
+    },
+    {
+      "id": "the-beaches",
+      "name": "The Beaches",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.315,
+        43.665,
+        -79.282,
+        43.6775
+      ]
+    },
+    {
+      "id": "leslieville",
+      "name": "Leslieville",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.345,
+        43.658,
+        -79.323,
+        43.6675
+      ]
+    },
+    {
+      "id": "the-junction",
+      "name": "The Junction",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.481,
+        43.6605,
+        -79.4575,
+        43.67
+      ]
+    },
+    {
+      "id": "roncesvalles",
+      "name": "Roncesvalles",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.457,
+        43.64,
+        -79.443,
+        43.6535
+      ]
+    },
+    {
+      "id": "greektown",
+      "name": "Greektown",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.36,
+        43.674,
+        -79.339,
+        43.682
+      ]
+    },
+    {
+      "id": "byward-market",
+      "name": "ByWard Market",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.7,
+        45.425,
+        -75.684,
+        45.4335
+      ]
+    },
+    {
+      "id": "westboro",
+      "name": "Westboro",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.768,
+        45.387,
+        -75.738,
+        45.399
+      ]
+    },
+    {
+      "id": "kanata",
+      "name": "Kanata",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.95,
+        45.28,
+        -75.85,
+        45.34
+      ]
+    },
+    {
+      "id": "nepean",
+      "name": "Nepean",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.8,
+        45.3,
+        -75.68,
+        45.37
+      ]
+    },
+    {
+      "id": "orleans",
+      "name": "Orleans",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.58,
+        45.44,
+        -75.46,
+        45.5
+      ]
+    },
+    {
+      "id": "barrhaven",
+      "name": "Barrhaven",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.78,
+        45.25,
+        -75.69,
+        45.3
+      ]
+    },
+    {
+      "id": "dundas",
+      "name": "Dundas",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.98,
+        43.25,
+        -79.93,
+        43.28
+      ]
+    },
+    {
+      "id": "ancaster",
+      "name": "Ancaster",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -80.02,
+        43.2,
+        -79.955,
+        43.24
+      ]
+    },
+    {
+      "id": "stoney-creek",
+      "name": "Stoney Creek",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.8,
+        43.195,
+        -79.72,
+        43.24
+      ]
+    },
+    {
+      "id": "westdale",
+      "name": "Westdale",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.92,
+        43.253,
+        -79.893,
+        43.267
+      ]
+    },
+    {
+      "id": "port-credit",
+      "name": "Port Credit",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.6,
+        43.548,
+        -79.57,
+        43.56
+      ]
+    },
+    {
+      "id": "streetsville",
+      "name": "Streetsville",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.725,
+        43.579,
+        -79.695,
+        43.593
+      ]
+    },
+    {
+      "id": "square-one",
+      "name": "Square One",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.655,
+        43.586,
+        -79.629,
+        43.6
+      ]
     }
   ]
 }
