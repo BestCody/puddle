@@ -38,3 +38,6 @@
 .place-hub-pagination{gap:.4rem;margin-bottom:2rem}
 .place-hub-pagination a,.place-hub-pagination span{min-width:2rem;height:2rem;font-size:.8rem}
 }
+/* The place page renders the same crumb markup inside its own wrapper, which has its own
+   horizontal rhythm, so the list only needs its spacing restated here. */
+.public-breadcrumbs ol{margin-bottom:1rem}
