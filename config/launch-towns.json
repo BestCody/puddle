@@ -1,0 +1,199 @@
+{
+  "version": 1,
+  "scope": "golden-horseshoe-towns",
+  "note": "Suburbs and satellite towns that sit inside a metro bounding box. They exist because the metro pages cannot rank for them: nobody searching 'date ideas in Oakville' wants a Toronto page, and those SERPs are far softer than the metro ones. Bounding boxes are deliberately tight so a place resolves to the nearest town rather than the metro, since findMarketForPoint picks the smallest containing box. Priority is 5 so towns sort below every metro in shared listings.",
+  "markets": [
+    {
+      "id": "mississauga",
+      "name": "Mississauga",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.82,
+        43.47,
+        -79.53,
+        43.71
+      ]
+    },
+    {
+      "id": "brampton",
+      "name": "Brampton",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.88,
+        43.62,
+        -79.63,
+        43.83
+      ]
+    },
+    {
+      "id": "oakville",
+      "name": "Oakville",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.77,
+        43.39,
+        -79.61,
+        43.53
+      ]
+    },
+    {
+      "id": "burlington",
+      "name": "Burlington",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.93,
+        43.29,
+        -79.71,
+        43.44
+      ]
+    },
+    {
+      "id": "milton",
+      "name": "Milton",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -80.01,
+        43.46,
+        -79.83,
+        43.58
+      ]
+    },
+    {
+      "id": "markham",
+      "name": "Markham",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.41,
+        43.8,
+        -79.2,
+        43.94
+      ]
+    },
+    {
+      "id": "vaughan",
+      "name": "Vaughan",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.65,
+        43.76,
+        -79.42,
+        43.9
+      ]
+    },
+    {
+      "id": "richmond-hill",
+      "name": "Richmond Hill",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.5,
+        43.82,
+        -79.35,
+        43.93
+      ]
+    },
+    {
+      "id": "pickering",
+      "name": "Pickering",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.14,
+        43.79,
+        -78.99,
+        43.92
+      ]
+    },
+    {
+      "id": "ajax",
+      "name": "Ajax",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.09,
+        43.81,
+        -78.97,
+        43.9
+      ]
+    },
+    {
+      "id": "whitby",
+      "name": "Whitby",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.0,
+        43.83,
+        -78.86,
+        43.94
+      ]
+    },
+    {
+      "id": "oshawa",
+      "name": "Oshawa",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -78.94,
+        43.86,
+        -78.78,
+        43.97
+      ]
+    },
+    {
+      "id": "guelph",
+      "name": "Guelph",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -80.32,
+        43.49,
+        -80.15,
+        43.6
+      ]
+    },
+    {
+      "id": "barrie",
+      "name": "Barrie",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.75,
+        44.32,
+        -79.6,
+        44.43
+      ]
+    },
+    {
+      "id": "st-catharines",
+      "name": "St. Catharines",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.31,
+        43.12,
+        -79.15,
+        43.23
+      ]
+    },
+    {
+      "id": "niagara-falls",
+      "name": "Niagara Falls",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.15,
+        43.03,
+        -79.02,
+        43.14
+      ]
+    }
+  ]
+}
