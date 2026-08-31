@@ -117,7 +117,23 @@ function Pagination({ basePath, page, totalPages }) {
   </nav>
 }
 
-export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [], pagination = null, faq = [] }) {
+// Date pages group places by the kind of date rather than by catalogue category, so they render
+// several small grids with their own headings instead of one long one. Reusing PlaceCard keeps
+// the cards, their fixed image box and their crawlable anchors identical to the hubs.
+export function PlaceGroups({ groups = [] }) {
+  if (!groups.length) return null
+  return <>{groups.map((group) => (
+    <section className="place-hub-section place-hub-group" key={group.slug}>
+      <h2>{group.title}</h2>
+      {group.blurb ? <p className="place-hub-group-blurb">{group.blurb}</p> : null}
+      <ul className="place-hub-grid">
+        {group.places.map((place) => <PlaceCard key={place.slug} place={place} />)}
+      </ul>
+    </section>
+  ))}</>
+}
+
+export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [], pagination = null, faq = [], children = null }) {
   return <>
     <PublicHeader />
     <main className="place-hub">
@@ -129,6 +145,7 @@ export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sec
       {places.length
         ? <ul className="place-hub-grid">{places.map((place) => <PlaceCard key={place.slug} place={place} />)}</ul>
         : emptyNote ? <p className="place-hub-empty">{emptyNote}</p> : null}
+      {children}
       {pagination ? <Pagination {...pagination} /> : null}
       {sections.map((section) => <LinkSection key={section.title} title={section.title} links={section.links} />)}
       <Faq items={faq} />

@@ -46,3 +46,8 @@
 .public-city-links-row{display:flex;flex-wrap:wrap;gap:.5rem;margin:0}
 .public-city-links-row a{display:inline-block;padding:.45rem .8rem;border:1.5px solid var(--puddle-figma-line);border-radius:999px;background:#fff;color:var(--minimal-ink);font-size:.85rem;text-decoration:none;transition:border-color .15s,background .15s}
 .public-city-links-row a:hover{border-color:var(--puddle-figma-blue);background:#f2f8ff}
+/* Date pages stack several small grids, so each group needs a little more air above it than a
+   plain link section and a blurb that reads as copy rather than as a caption. */
+.place-hub-group{margin-bottom:2.75rem}
+.place-hub-group h2{margin-bottom:.35rem}
+.place-hub-group-blurb{margin:0 0 1rem;max-width:60ch;color:var(--puddle-figma-grey);font-size:.92rem;line-height:1.5}
