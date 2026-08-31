@@ -146,7 +146,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       <div className="figma-swipe-card-photo">
         {optimizedMainPhoto && showMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload onError={() => setMainPhotoFailed(true)} /> : null}
         {!optimizedMainPhoto && showMainPhoto ? <img src={mainPhoto} alt={item.title} loading="eager" decoding="async" onError={() => setMainPhotoFailed(true)} /> : null}
-        {showMapFallback ? <SwipeMapPreview latitude={item.latitude} longitude={item.longitude} title={item.title} /> : null}
+        {showMapFallback ? <SwipeMapPreview key={item.content_id} latitude={item.latitude} longitude={item.longitude} title={item.title} /> : null}
         {!showMainPhoto && !showMapFallback ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo is available and no map location is available">Photo unavailable</div> : null}
       </div>
       <div className="figma-swipe-card-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>

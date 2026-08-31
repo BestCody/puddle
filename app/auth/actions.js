@@ -7,10 +7,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { normalizeOrigin, requestOrigin } from '@/lib/auth/origin'
-import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
-import { authenticatedDestination, ensureProfile } from '@/lib/auth/profile'
+import { pathWithMessage } from '@/lib/auth/redirect'
+import { ensureProfile } from '@/lib/auth/profile'
+import { startGoogleOAuth } from '@/lib/auth/google-oauth'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
 import { birthDateError, isValidEmail, MAX_PASSWORD_LENGTH } from '@/lib/app/input-validation'
+import { registerAccount } from '@/lib/auth/sign-up'
 
 const allowedInterests = new Set(['Live music','Nightlife','Food','Pop-ups','Art','Film','Workshops','Sports','Wellness','Markets','Comedy','Outdoors'])
 const allowedVisibility = new Set(['hidden', 'friends', 'mutuals', 'attendees', 'public'])
@@ -48,7 +50,7 @@ function ensureConfigured(path) {
 async function authenticatedProfile(path) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/signin?next=${encodeURIComponent(path)}`)
+  if (!user) redirect(`/?next=${encodeURIComponent(path)}`)
   const { profile, error } = await ensureProfile(supabase, user)
   if (error) redirect(pathWithMessage(path, 'error', 'We could not load your profile. Refresh the page and try again.'))
   return { supabase, user, profile }
@@ -98,114 +100,20 @@ async function preserveOnboardingProgressWithoutUsername(supabase, payload, prof
 }
 
 export async function signUp(formData) {
+  const result = await registerAccount(formData)
+  if (result.error) redirect(pathWithMessage('/signup', 'error', result.error))
+  redirect(result.destination)
+}
+
+export async function startGoogleSignup(formData) {
   ensureConfigured('/signup')
-  const displayName = value(formData, 'display_name')
-  const email = value(formData, 'email').toLowerCase()
-  const password = rawValue(formData, 'password')
-  const termsAccepted = value(formData, 'terms_accepted') === 'yes'
-  if (displayName.length < 1 || displayName.length > 60) redirect(pathWithMessage('/signup', 'error', 'Add a display name between 1 and 60 characters.'))
-  if (!isValidEmail(email)) redirect(pathWithMessage('/signup', 'error', 'Enter a valid email address.'))
-  if (password.length < 10 || password.length > MAX_PASSWORD_LENGTH) redirect(pathWithMessage('/signup', 'error', `Use a password from 10 to ${MAX_PASSWORD_LENGTH} characters.`))
-  if (!termsAccepted) redirect(pathWithMessage('/signup', 'error', 'Agree to the Terms and Privacy Policy before creating an account.'))
-
-  const acceptedAt = new Date().toISOString()
-  const supabase = await createClient()
-  await clearLocalAuthSession(supabase)
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { display_name: displayName, legal_consent_at: acceptedAt, legal_consent_version: 'current' } }
-  })
-  if (error || !data.user) redirect(pathWithMessage('/signup', 'error', publicError(error, 'We could not create your account. Please try again.')))
-
-  let user = data.user
-  if (!data.session) {
-    let admin
-    try {
-      admin = createAdminClient()
-    } catch {
-      redirect(pathWithMessage('/signup', 'error', 'We could not finish creating your account. Please try again.'))
-    }
-
-    const { error: confirmationError } = await admin.auth.admin.updateUserById(user.id, { email_confirm: true })
-    if (confirmationError) redirect(pathWithMessage('/signup', 'error', 'We could not finish creating your account. Please try again.'))
-
-    const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInError || !signedIn.user) redirect(pathWithMessage('/signup', 'error', 'Your account was created, but we could not sign you in. Please use the sign-in page.'))
-    user = signedIn.user
-  }
-
-  const { profile, error: profileError } = await ensureProfile(supabase, user)
-  if (profileError) redirect(pathWithMessage('/onboarding', 'error', 'Your account was created, but your profile could not be prepared. Please retry.'))
-  await supabase.from('security_events').insert({
-    profile_id: user.id,
-    event_type: 'legal_consent_accepted',
-    metadata: { terms: true, privacy: true, version: 'current', accepted_at: acceptedAt, source: 'email_signup' }
-  })
-  redirect(authenticatedDestination(profile, '/onboarding'))
-}
-
-export async function signIn(formData) {
-  ensureConfigured('/signin')
-  const email = value(formData, 'email').toLowerCase()
-  const password = rawValue(formData, 'password')
-  const next = safeNextPath(value(formData, 'next'))
-  if (!isValidEmail(email)) redirect(pathWithMessage('/signin', 'error', 'Email or password was not accepted.', { next }))
-  const supabase = await createClient()
-  await clearLocalAuthSession(supabase)
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error || !data.user) redirect(pathWithMessage('/signin', 'error', 'Email or password was not accepted.', { next }))
-  const { profile, error: profileError } = await ensureProfile(supabase, data.user)
-  if (profileError) redirect(pathWithMessage('/signin', 'error', 'You are signed in, but your profile could not be loaded. Please retry.', { next }))
-  redirect(authenticatedDestination(profile, next))
-}
-
-export async function sendLoginCode(formData) {
-  ensureConfigured('/signin')
-  const email = value(formData, 'email').toLowerCase()
-  const next = safeNextPath(value(formData, 'next'))
-  if (!isValidEmail(email)) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', { next }))
-
-  const supabase = await createClient()
-  await clearLocalAuthSession(supabase)
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
-  if (error) redirect(pathWithMessage('/signin', 'error', publicError(error, 'We could not send a login code. Please try again.'), { next }))
-  redirect(pathWithMessage('/signin', 'success', 'We emailed you a one-time login code.', { code_sent: '1', email, next }))
-}
-
-export async function verifyLoginCode(formData) {
-  ensureConfigured('/signin')
-  const email = value(formData, 'email').toLowerCase()
-  const token = value(formData, 'token').replace(/[\s-]/g, '')
-  const next = safeNextPath(value(formData, 'next'))
-  const retry = { code_sent: '1', email, next }
-
-  if (!isValidEmail(email)) redirect(pathWithMessage('/signin', 'error', 'Enter a valid email address.', retry))
-  if (!/^\d{6,8}$/.test(token)) redirect(pathWithMessage('/signin', 'error', 'Enter the code from your email.', retry))
-
-  const supabase = await createClient()
-  await clearLocalAuthSession(supabase)
-  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
-  if (error || !data.user) redirect(pathWithMessage('/signin', 'error', 'That code was not accepted. Request a new code and try again.', retry))
-  const { profile, error: profileError } = await ensureProfile(supabase, data.user)
-  if (profileError) redirect(pathWithMessage('/signin', 'error', 'You are signed in, but your profile could not be loaded. Please retry.', { next }))
-  redirect(authenticatedDestination(profile, next))
-}
-
-export async function signInWithOAuth(formData) {
-  ensureConfigured('/signin')
   const provider = value(formData, 'provider')
   const signupIntent = value(formData, 'signup_intent') === '1'
-  if (provider !== 'google') redirect(pathWithMessage('/signin', 'error', 'That sign-in option is not supported.'))
+  if (provider !== 'google' || !signupIntent) redirect(pathWithMessage('/signup', 'error', 'That sign-in option is not supported.'))
   if (signupIntent && value(formData, 'terms_accepted') !== 'yes') redirect(pathWithMessage('/signup', 'error', 'Agree to the Terms and Privacy Policy before creating an account.'))
   const supabase = await createClient()
-  await clearLocalAuthSession(supabase)
-  const legalQuery = signupIntent ? '&legal_consent=1' : ''
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: { redirectTo: `${await siteUrl()}/auth/callback?next=/onboarding${legalQuery}` }
-  })
-  if (error || !data.url) redirect(pathWithMessage(signupIntent ? '/signup' : '/signin', 'error', publicError(error, 'That sign-in option is temporarily unavailable.')))
+  const { data, error } = await startGoogleOAuth(supabase, await headers(), '/onboarding', true)
+  if (error || !data.url) redirect(pathWithMessage('/signup', 'error', publicError(error, 'That sign-in option is temporarily unavailable.')))
   redirect(data.url)
 }
 
@@ -274,7 +182,7 @@ export async function updateProfile(formData) {
   ensureConfigured('/account')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/signin?next=/account')
+  if (!user) redirect('/?next=/account')
   const { error } = await supabase.from('profiles').update({
     display_name: value(formData, 'display_name'),
     username: value(formData, 'username').toLowerCase(),
@@ -321,7 +229,7 @@ export async function deleteAccount(formData) {
   if (value(formData, 'confirmation') !== 'DELETE') redirect(pathWithMessage('/account', 'error', 'Type DELETE exactly to remove your account.'))
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/signin')
+  if (!user) redirect('/')
   let admin
   try {
     admin = createAdminClient()

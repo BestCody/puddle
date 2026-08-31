@@ -58,6 +58,18 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
   assert.doesNotMatch(layout, /figma-dashboard-profile-fidelity\.css/)
 })
 
+test('Profile save count uses the full saved-location relation, not the preview page', async () => {
+  const page = await read('app/(product)/profile/page.js')
+  const counts = page.slice(page.indexOf('figma-profile-counts'), page.indexOf('figma-profile-chips'))
+
+  assert.match(page, /async function savedLocationCountOrNull\(supabase, profileId\)/)
+  assert.match(page, /\.select\('location_id', \{ count: 'exact', head: true \}\)/)
+  assert.match(page, /\.eq\('state', 'saved'\)/)
+  assert.match(page, /\.not\('location_id', 'is', null\)/)
+  assert.match(counts, /savedLocationCount/)
+  assert.doesNotMatch(counts, /visibleSaves\.length/)
+})
+
 test('Saved Place Open preserves Figma 38:223 relationships through scoped structural layout', async () => {
   const [page, similar, reviews, share, styles, layout] = await Promise.all([
     read('app/(product)/plans/[slug]/page.js'),

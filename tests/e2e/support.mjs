@@ -141,15 +141,28 @@ export function directConfirmationPath(verificationLink, next = '/onboarding') {
 }
 
 export async function attemptSignInThroughUi(page, email, password, next = '/discover') {
-  await page.goto(`/signin?next=${encodeURIComponent(next)}`)
-  await page.getByLabel('Email').first().fill(email)
-  await page.getByLabel('Password').fill(password)
+  await page.goto(`/?next=${encodeURIComponent(next)}`)
+  await page.locator('#landing-email').fill(email)
+  await page.locator('#landing-password').fill(password)
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
+}
+
+export async function signInThroughApi(page, email, password, next = '/discover') {
+  const response = await page.request.post('/api/auth/password', {
+    form: { email, password, next },
+    maxRedirects: 0
+  })
+  expect(response.status()).toBe(303)
+
+  const location = response.headers().location
+  if (!location) throw new Error('Password sign-in did not return a redirect location.')
+  await page.goto(location)
+  await expect(page).not.toHaveURL(/\/(?:\?.*)?$/)
 }
 
 export async function signInThroughUi(page, email, password, next = '/discover') {
   await attemptSignInThroughUi(page, email, password, next)
-  await expect(page).not.toHaveURL(/\/signin(?:\?|$)/)
+  await expect(page).not.toHaveURL(/\/(?:\?.*)?$/)
 }
 
 export async function signOutThroughUi(page) {

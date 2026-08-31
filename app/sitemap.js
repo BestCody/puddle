@@ -11,8 +11,8 @@ import {
 // a place is only ever found by walking a hub first. Listing the places themselves gives search
 // engines the URLs directly, which matters most for a catalogue this size.
 //
-// /signin is deliberately omitted. It is a thin, uncrawlable-by-design form and listing it
-// only spends crawl budget on a page that can never rank.
+// Authentication is deliberately kept off the sitemap; the home page owns sign-in and signup
+// is the only standalone account-creation surface.
 const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you').replace(/\/$/, '')
 
 // Matches what the hubs actually page through. Listing places a reader cannot reach by paging

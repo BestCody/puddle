@@ -28,7 +28,7 @@ async function accountClient() {
   if (!isSupabaseConfigured()) redirect(pathWithMessage('/account', 'error', 'Accounts are temporarily unavailable. Please try again later.'))
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/signin?next=/account')
+  if (!user) redirect('/?next=/account')
   return { supabase, user }
 }
 

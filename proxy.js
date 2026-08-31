@@ -7,10 +7,10 @@ import { SERVER_LATENCY_BUDGET_MS, appendServerTiming, elapsedMs, latencyStart, 
 
 const protectedPrefixes = ['/dashboard','/discover','/matches','/global-matches','/membership','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals','/admin']
 const productRoutePrefixes = ['/discover','/map','/plans','/matches','/membership','/profile','/global-matches','/create']
-const authOnlyPaths = ['/signin','/signup','/forgot-password']
+const authOnlyPaths = ['/signup','/forgot-password']
 const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
 const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
-const authCanonicalPaths = new Set(['/signin','/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
+const authCanonicalPaths = new Set(['/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
 const publicNoSessionPaths = new Set([...cacheablePublicPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
 const verifiedProductUserHeader = 'x-puddle-verified-user-id'
 const moderationExemptApiPrefixes = [
@@ -148,12 +148,12 @@ export async function proxy(request) {
     return timed(secured(cachePolicy(NextResponse.json({ error: 'Sign in to continue.' }, { status: 401 }), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (isProtected && !configured) {
-    const url = new URL('/signin', request.url)
+    const url = new URL('/', request.url)
     url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
     return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (isProtected && !user) {
-    const url = new URL('/signin', request.url)
+    const url = new URL('/', request.url)
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }

@@ -191,12 +191,14 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   }
 
   [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side {
-    top: auto !important;
-    right: clamp(12px, 4vw, 16px) !important;
-    bottom: calc(var(--puddle-mobile-content-bottom) + 74px) !important;
+    inset-block-start: var(--location-map-selection-y) !important;
+    inset-inline-start: var(--location-map-selection-x) !important;
+    inset-inline-end: auto !important;
+    bottom: auto !important;
     width: min(303px, calc(100% - 32px)) !important;
     max-height: min(112px, calc(100% - 220px)) !important;
     border-radius: 16px !important;
+    transform: translate(-50%, calc(-100% - 1.125rem)) !important;
   }
 
   [data-testid='feed-screen'][data-view='map'] .map-canvas .location-map-side .location-map-card {
@@ -321,9 +323,8 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   }
 }
 
-/* Saved search is a persistent content-stage action in the reference. It
-   remains a button that opens the existing dialog, but its resting state is
-   an input-shaped affordance anchored to the dashboard stage. */
+/* Saved search is a persistent content-stage action in the reference. It is
+   an inline controlled input anchored to the dashboard stage. */
 [data-testid='saved-search'] {
   position: fixed !important;
   z-index: 75 !important;
@@ -351,16 +352,30 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   text-align: left !important;
 }
 
-[data-testid='saved-search'] > .puddle-search-trigger-label {
+[data-testid='saved-search'] > label {
   min-width: 0;
   flex: 1;
-  overflow: hidden;
-  color: #b0b0b0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: block;
 }
 
-[data-testid='saved-search'] > .puddle-search-trigger-icon {
+[data-testid='saved-search'] input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+[data-testid='saved-search'] input::placeholder {
+  color: #b0b0b0;
+  opacity: 1;
+}
+
+[data-testid='saved-search'] > button {
   width: 42px !important;
   height: 42px !important;
   flex: 0 0 42px;
@@ -378,7 +393,7 @@ body:has([data-testid='feed-screen'][data-view='map']) {
   text-align: center;
 }
 
-[data-testid='saved-search']:focus-visible {
+[data-testid='saved-search']:focus-within {
   outline: 3px solid #b784e4;
   outline-offset: 3px;
 }

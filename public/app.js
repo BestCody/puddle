@@ -31,13 +31,67 @@ function closeSafetyDialog() {
   backdrop.setAttribute('aria-hidden', 'true')
 }
 
-function initSignInHandoff() {
-  $$('[data-signin-handoff]').forEach((form) => {
-    form.addEventListener('submit', (event) => {
+function initLandingAuth() {
+  const params = new URLSearchParams(window.location.search)
+  const next = params.get('next')
+  const nextField = $('.landing-login-form [name="next"]')
+  if (next && nextField) nextField.value = next
+
+  const message = params.get('error')
+  if (message) {
+    $$('[data-landing-auth-message]').forEach((target) => {
+      target.textContent = message
+      target.hidden = false
+    })
+  }
+
+  const panel = $('.login-panel')
+  if (!panel) return
+
+  const modeButtons = $$('.auth-mode-switch [data-auth-mode]', panel)
+  const loginForm = $('.landing-login-form', panel)
+  const signupForm = $('.landing-signup-form', panel)
+  const loginAlternatives = $('.landing-login-alternatives', panel)
+  const forgotLink = $('.login-forgot', panel)
+  if (!modeButtons.length || !loginForm || !signupForm) return
+
+  const setMode = (mode, focus = false) => {
+    const signup = mode === 'signup'
+    panel.dataset.authMode = signup ? 'signup' : 'login'
+    panel.setAttribute('aria-label', signup ? 'Sign up' : 'Log in')
+    loginForm.hidden = signup
+    signupForm.hidden = !signup
+    if (loginAlternatives) loginAlternatives.hidden = signup
+    if (forgotLink) forgotLink.hidden = signup
+
+    modeButtons.forEach((button) => {
+      const selected = button.dataset.authMode === (signup ? 'signup' : 'login')
+      button.setAttribute('aria-selected', String(selected))
+      button.tabIndex = selected ? 0 : -1
+    })
+
+    if (focus) {
+      const target = signup ? $('#landing-signup-display-name', signupForm) : $('#landing-email', loginForm)
+      target?.focus()
+    }
+  }
+
+  modeButtons.forEach((button, index) => {
+    button.addEventListener('click', () => setMode(button.dataset.authMode, true))
+    button.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
       event.preventDefault()
-      window.location.assign('/signin')
+      const direction = event.key === 'ArrowLeft' || event.key === 'Home' ? -1 : 1
+      const nextIndex = event.key === 'Home' || event.key === 'End'
+        ? (event.key === 'Home' ? 0 : modeButtons.length - 1)
+        : (index + direction + modeButtons.length) % modeButtons.length
+      const nextButton = modeButtons[nextIndex]
+      nextButton.focus()
+      setMode(nextButton.dataset.authMode)
     })
   })
+
+  setMode(params.get('mode') === 'signup' ? 'signup' : 'login')
 }
 
 function initPhoneDemoLoading() {
@@ -129,7 +183,7 @@ function initLanding() {
     if (event.key === 'Escape') closeSafetyDialog()
   })
 
-  initSignInHandoff()
+  initLandingAuth()
   initDraggablePhones()
 
   requestAnimationFrame(() => {

@@ -4,6 +4,7 @@ import {
   completeProfileDirect,
   createConfirmedUser,
   signInThroughUi,
+  signOutThroughUi,
   uniqueEmail,
   uniqueSuffix,
   waitForAuthEmailLink
@@ -20,6 +21,21 @@ async function removeTestUser(userId) {
   if (error && error.status !== 404) throw error
 }
 
+test('landing credential sign-in goes directly to discover', async ({ page }) => {
+  const account = await createConfirmedUser({ displayName: 'Landing Sign In' })
+  await completeProfileDirect(account.user.id)
+
+  try {
+    await page.goto('/')
+    await page.locator('#landing-email').fill(account.email)
+    await page.locator('#landing-password').fill(account.password)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await expect(page).toHaveURL(/\/discover(?:\?.*)?$/)
+  } finally {
+    await removeTestUser(account.user.id)
+  }
+})
+
 test('an invalid sign-in cannot reuse the previous browser session', async ({ page }) => {
   const account = await createConfirmedUser({ displayName: 'Session Isolation' })
   await completeProfileDirect(account.user.id)
@@ -28,15 +44,16 @@ test('an invalid sign-in cannot reuse the previous browser session', async ({ pa
     await signInThroughUi(page, account.email, account.password, '/account')
     await expect(page).toHaveURL(/\/account$/)
 
-    await page.goto('/signin?next=%2Faccount')
-    await expect(page.getByLabel('Email').first()).toBeVisible()
-    await page.getByLabel('Email').first().fill(uniqueEmail('not-an-account'))
-    await page.getByLabel('Password').fill(`wrong-${uniqueSuffix(20)}-Aa1!`)
+    await signOutThroughUi(page)
+    await page.goto('/?next=%2Faccount')
+    await expect(page.locator('#landing-email')).toBeVisible()
+    await page.locator('#landing-email').fill(uniqueEmail('not-an-account'))
+    await page.locator('#landing-password').fill(`wrong-${uniqueSuffix(20)}-Aa1!`)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
 
-    await expect(page).toHaveURL(/\/signin\?.*error=/)
+    await expect(page).toHaveURL(/\/\?.*error=/)
     await page.goto('/account')
-    await expect(page).toHaveURL(/\/signin\?next=/)
+    await expect(page).toHaveURL(/\/\?next=/)
   } finally {
     await removeTestUser(account.user.id)
   }
@@ -116,7 +133,7 @@ test('account deletion removes the auth user, profile, and browser session', asy
     }, { timeout: 12_000 }).toBeNull()
 
     await page.goto('/account')
-    await expect(page).toHaveURL(/\/signin\?next=/)
+    await expect(page).toHaveURL(/\/\?next=/)
   } finally {
     await removeTestUser(account.user.id)
   }

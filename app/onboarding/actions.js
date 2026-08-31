@@ -51,7 +51,7 @@ export async function completeDateOnboarding(previousState, maybeFormData) {
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/signin?next=/onboarding')
+  if (!user) redirect('/?next=/onboarding')
 
   const { profile, error: profileError } = await ensureProfile(supabase, user)
   if (profileError) return failure(stateful, 'We could not load your profile. Refresh the page and try again.', { form: 'Profile unavailable.' })

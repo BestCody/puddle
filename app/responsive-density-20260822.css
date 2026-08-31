@@ -2,6 +2,9 @@
 :root {
   --puddle-overlay-backdrop: rgba(245, 247, 249, .34);
   --puddle-overlay-blur: 14px;
+  --puddle-search-overlay-backdrop: rgba(245, 247, 249, .20);
+  --puddle-search-overlay-blur: .5rem;
+  --puddle-feed-search-overlay-backdrop: rgba(255, 255, 255, .18);
   --puddle-overlay-duration: 180ms;
 }
 
@@ -14,6 +17,18 @@
     opacity var(--puddle-overlay-duration) ease,
     -webkit-backdrop-filter var(--puddle-overlay-duration) ease,
     backdrop-filter var(--puddle-overlay-duration) ease !important;
+}
+
+/* Search should keep the Feed and Map context readable while the query surface is open. */
+.puddle-discover-search-backdrop {
+  --puddle-overlay-backdrop: var(--puddle-search-overlay-backdrop);
+  --puddle-overlay-blur: var(--puddle-search-overlay-blur);
+}
+
+.puddle-feed-search-overlay .puddle-discover-search-backdrop {
+  --puddle-overlay-backdrop: var(--puddle-feed-search-overlay-backdrop);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .minimal-details-backdrop.puddle-universal-backdrop {
@@ -44,13 +59,6 @@
 
 [data-testid="saved-screen"] > header:first-of-type {
   position: relative;
-}
-
-.puddle-saved-search-trigger {
-  position: absolute !important;
-  top: 36px !important;
-  right: clamp(20px, 3vw, 38px) !important;
-  z-index: 35 !important;
 }
 
 /* Messages use both axes of the available dashboard stage. */
@@ -285,11 +293,6 @@
   .puddle-search-overlay {
     left: 0 !important;
     padding: 14px !important;
-  }
-
-  .puddle-saved-search-trigger {
-    top: 28px !important;
-    right: 14px !important;
   }
 
   .figma-friends-screen.is-messages {

@@ -103,12 +103,6 @@
     margin-top: 0 !important;
   }
 
-  /* Saved search stays top-right, but belongs visually to the top pill instead of the far edge. */
-  .puddle-saved-search-trigger {
-    top: 34px !important;
-    right: max(28px, calc(50% - 300px)) !important;
-  }
-
   /* Swipe should be centered in the whole right-side stage, not the older 1000px inner cap. */
   .figma-dashboard-stage:has(.figma-swipe-screen) .figma-dashboard-main {
     width: 100% !important;
