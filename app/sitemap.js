@@ -23,6 +23,13 @@ const PLACES_PER_MARKET = HUB_PAGE_SIZE * HUB_MAX_PAGES
 // revalidation rather than issuing its own reads.
 export const revalidate = 3600
 
+// No lastmod is emitted. Every URL previously carried the render timestamp, so the whole
+// document claimed to change on each regeneration - the pattern Google names when it explains
+// that it checks whether lastmod is trustworthy and drops the field for sites where it is not.
+// Nothing here knows when a place record actually changed: the catalogue is rebuilt wholesale
+// and carries no per-row modified date. An absent lastmod reads as unknown, which is neutral;
+// a fabricated one teaches Google to distrust the file. If the catalogue ever exposes a real
+// per-place timestamp, that is the value to put here.
 const staticRoutes = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
   { path: '/places', changeFrequency: 'weekly', priority: 0.9 },
@@ -53,7 +60,6 @@ async function placeRoutes(markets) {
 }
 
 export default async function sitemap() {
-  const lastModified = new Date()
   const markets = listMarkets()
 
   const marketRoutes = markets.map((market) => ({
@@ -72,7 +78,6 @@ export default async function sitemap() {
 
   return [...staticRoutes, ...marketRoutes, ...categoryRoutes, ...places].map((route) => ({
     url: `${site}${route.path}`,
-    lastModified,
     changeFrequency: route.changeFrequency,
     priority: route.priority
   }))
