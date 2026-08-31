@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "scope": "golden-horseshoe-towns",
-  "note": "Suburbs and satellite towns that sit inside a metro bounding box. They exist because the metro pages cannot rank for them: nobody searching 'date ideas in Oakville' wants a Toronto page, and those SERPs are far softer than the metro ones. Bounding boxes are deliberately tight so a place resolves to the nearest town rather than the metro, since findMarketForPoint picks the smallest containing box. Priority is 5 so towns sort below every metro in shared listings.",
+  "scope": "ontario-towns-and-districts",
+  "note": "Suburbs, Toronto districts and Ontario cities that sit below the metro tier. They exist because the metro pages cannot rank for them: nobody searching 'date ideas in Oakville' wants a Toronto page, and those SERPs are far softer - Oakville returns a Yelp search page and Wikipedia articles about a curling tournament, which is Google admitting it has nothing better. Bounding boxes are deliberately tight so a place resolves to the nearest town rather than the metro, since findMarketForPoint picks the smallest containing box. Priority is 5 so these sort below every metro.",
   "markets": [
     {
       "id": "mississauga",
@@ -193,6 +193,126 @@
         43.03,
         -79.02,
         43.14
+      ]
+    },
+    {
+      "id": "scarborough",
+      "name": "Scarborough",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.32,
+        43.68,
+        -79.11,
+        43.83
+      ]
+    },
+    {
+      "id": "etobicoke",
+      "name": "Etobicoke",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.64,
+        43.58,
+        -79.46,
+        43.74
+      ]
+    },
+    {
+      "id": "north-york",
+      "name": "North York",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.52,
+        43.72,
+        -79.3,
+        43.83
+      ]
+    },
+    {
+      "id": "london-on",
+      "name": "London",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -81.4,
+        42.9,
+        -81.1,
+        43.06
+      ]
+    },
+    {
+      "id": "kingston",
+      "name": "Kingston",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -76.62,
+        44.17,
+        -76.38,
+        44.3
+      ]
+    },
+    {
+      "id": "windsor",
+      "name": "Windsor",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -83.12,
+        42.24,
+        -82.9,
+        42.36
+      ]
+    },
+    {
+      "id": "peterborough",
+      "name": "Peterborough",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -78.4,
+        44.25,
+        -78.24,
+        44.37
+      ]
+    },
+    {
+      "id": "cambridge-on",
+      "name": "Cambridge",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -80.42,
+        43.32,
+        -80.23,
+        43.44
+      ]
+    },
+    {
+      "id": "brantford",
+      "name": "Brantford",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -80.34,
+        43.09,
+        -80.18,
+        43.2
+      ]
+    },
+    {
+      "id": "sudbury",
+      "name": "Sudbury",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -81.1,
+        46.42,
+        -80.85,
+        46.56
       ]
     }
   ]
