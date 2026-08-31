@@ -41,6 +41,12 @@ async function placeRoutes(markets) {
     for (const place of places.slice(0, PLACES_PER_MARKET)) {
       // Markets overlap at their edges, so the same place can be returned by two cities.
       if (!place?.slug || seen.has(place.slug)) continue
+      // Place pages only stay indexable if they carry something of their own, so listing the
+      // rest would submit URLs the page itself marks noindex. Hub rows do not carry hours or
+      // amenities, so this tests the two signals they do have and stays deliberately narrower
+      // than the page's own rule: better to omit a listable place than to submit an unlistable
+      // one.
+      if (!place.coverUrl && !hasWrittenSummary(place)) continue
       seen.add(place.slug)
       routes.push({
         path: `/places/${encodeURIComponent(place.slug)}`,
