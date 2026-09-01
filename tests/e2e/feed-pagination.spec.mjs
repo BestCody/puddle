@@ -66,8 +66,8 @@ test('Feed automatically appends the next cursor page without navigating away', 
     await sentinel.scrollIntoViewIfNeeded()
 
     await expect(page.locator('[data-testid="feed-post"]')).toHaveCount(3)
-    await expect(page.getByRole('heading', { name: 'First Puddle', exact: true })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Third Puddle', exact: true })).toBeVisible()
+    await expect(page.getByTestId('feed-post').filter({ hasText: 'First Puddle' })).toBeVisible()
+    await expect(page.getByTestId('feed-post').filter({ hasText: 'Third Puddle' })).toBeVisible()
     expect(page.url()).toBe(feedUrl)
     expect(requests).toEqual([
       { isNextPage: false, beforeId: null },

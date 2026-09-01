@@ -105,7 +105,7 @@ test('authenticated desktop dashboard keeps navigation and core product behavior
   await expect(settingsOverlay).toHaveAttribute('aria-hidden', 'true')
   expect(page.url()).toBe(discoverUrl)
 
-  await expect(page.locator('.figma-swipe-card')).toBeVisible()
+  await expect(page.locator('.figma-swipe-card[data-card-role="active"]')).toBeVisible()
   const undo = page.getByRole('button', { name: 'Undo', exact: true })
   await expect(undo).toBeVisible()
   await expect(undo).toBeDisabled()
