@@ -1,0 +1,571 @@
+{
+  "version": 1,
+  "scope": "ontario-towns-and-districts",
+  "note": "Suburbs, Toronto districts and Ontario cities that sit below the metro tier. They exist because the metro pages cannot rank for them: nobody searching 'date ideas in Oakville' wants a Toronto page, and those SERPs are far softer - Oakville returns a Yelp search page and Wikipedia articles about a curling tournament, which is Google admitting it has nothing better. Bounding boxes are deliberately tight so a place resolves to the nearest town rather than the metro, since findMarketForPoint picks the smallest containing box. Priority is 5 so these sort below every metro.",
+  "markets": [
+    {
+      "id": "mississauga",
+      "name": "Mississauga",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.82,
+        43.47,
+        -79.53,
+        43.71
+      ]
+    },
+    {
+      "id": "brampton",
+      "name": "Brampton",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.88,
+        43.62,
+        -79.63,
+        43.83
+      ]
+    },
+    {
+      "id": "oakville",
+      "name": "Oakville",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.77,
+        43.39,
+        -79.61,
+        43.53
+      ]
+    },
+    {
+      "id": "burlington",
+      "name": "Burlington",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.93,
+        43.29,
+        -79.71,
+        43.44
+      ]
+    },
+    {
+      "id": "milton",
+      "name": "Milton",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -80.01,
+        43.46,
+        -79.83,
+        43.58
+      ]
+    },
+    {
+      "id": "markham",
+      "name": "Markham",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.41,
+        43.8,
+        -79.2,
+        43.94
+      ]
+    },
+    {
+      "id": "vaughan",
+      "name": "Vaughan",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.65,
+        43.76,
+        -79.42,
+        43.9
+      ]
+    },
+    {
+      "id": "richmond-hill",
+      "name": "Richmond Hill",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.5,
+        43.82,
+        -79.35,
+        43.93
+      ]
+    },
+    {
+      "id": "pickering",
+      "name": "Pickering",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.14,
+        43.79,
+        -78.99,
+        43.92
+      ]
+    },
+    {
+      "id": "ajax",
+      "name": "Ajax",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.09,
+        43.81,
+        -78.97,
+        43.9
+      ]
+    },
+    {
+      "id": "whitby",
+      "name": "Whitby",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.0,
+        43.83,
+        -78.86,
+        43.94
+      ]
+    },
+    {
+      "id": "oshawa",
+      "name": "Oshawa",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -78.94,
+        43.86,
+        -78.78,
+        43.97
+      ]
+    },
+    {
+      "id": "guelph",
+      "name": "Guelph",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -80.32,
+        43.49,
+        -80.15,
+        43.6
+      ]
+    },
+    {
+      "id": "barrie",
+      "name": "Barrie",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.75,
+        44.32,
+        -79.6,
+        44.43
+      ]
+    },
+    {
+      "id": "st-catharines",
+      "name": "St. Catharines",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.31,
+        43.12,
+        -79.15,
+        43.23
+      ]
+    },
+    {
+      "id": "niagara-falls",
+      "name": "Niagara Falls",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.15,
+        43.03,
+        -79.02,
+        43.14
+      ]
+    },
+    {
+      "id": "scarborough",
+      "name": "Scarborough",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.32,
+        43.68,
+        -79.11,
+        43.83
+      ]
+    },
+    {
+      "id": "etobicoke",
+      "name": "Etobicoke",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.64,
+        43.58,
+        -79.46,
+        43.74
+      ]
+    },
+    {
+      "id": "north-york",
+      "name": "North York",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -79.52,
+        43.72,
+        -79.3,
+        43.83
+      ]
+    },
+    {
+      "id": "london-on",
+      "name": "London",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -81.4,
+        42.9,
+        -81.1,
+        43.06
+      ]
+    },
+    {
+      "id": "kingston",
+      "name": "Kingston",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -76.62,
+        44.17,
+        -76.38,
+        44.3
+      ]
+    },
+    {
+      "id": "windsor",
+      "name": "Windsor",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -83.12,
+        42.24,
+        -82.9,
+        42.36
+      ]
+    },
+    {
+      "id": "peterborough",
+      "name": "Peterborough",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -78.4,
+        44.25,
+        -78.24,
+        44.37
+      ]
+    },
+    {
+      "id": "cambridge-on",
+      "name": "Cambridge",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -80.42,
+        43.32,
+        -80.23,
+        43.44
+      ]
+    },
+    {
+      "id": "brantford",
+      "name": "Brantford",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -80.34,
+        43.09,
+        -80.18,
+        43.2
+      ]
+    },
+    {
+      "id": "sudbury",
+      "name": "Sudbury",
+      "country": "CA",
+      "priority": 5,
+      "bbox": [
+        -81.1,
+        46.42,
+        -80.85,
+        46.56
+      ]
+    },
+    {
+      "id": "kensington-market",
+      "name": "Kensington Market",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.4065,
+        43.651,
+        -79.3945,
+        43.6585
+      ]
+    },
+    {
+      "id": "distillery-district",
+      "name": "Distillery District",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.365,
+        43.647,
+        -79.354,
+        43.6535
+      ]
+    },
+    {
+      "id": "liberty-village",
+      "name": "Liberty Village",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.427,
+        43.6345,
+        -79.414,
+        43.6415
+      ]
+    },
+    {
+      "id": "the-beaches",
+      "name": "The Beaches",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.315,
+        43.665,
+        -79.282,
+        43.6775
+      ]
+    },
+    {
+      "id": "leslieville",
+      "name": "Leslieville",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.345,
+        43.658,
+        -79.323,
+        43.6675
+      ]
+    },
+    {
+      "id": "the-junction",
+      "name": "The Junction",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.481,
+        43.6605,
+        -79.4575,
+        43.67
+      ]
+    },
+    {
+      "id": "roncesvalles",
+      "name": "Roncesvalles",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.457,
+        43.64,
+        -79.443,
+        43.6535
+      ]
+    },
+    {
+      "id": "greektown",
+      "name": "Greektown",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.36,
+        43.674,
+        -79.339,
+        43.682
+      ]
+    },
+    {
+      "id": "byward-market",
+      "name": "ByWard Market",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.7,
+        45.425,
+        -75.684,
+        45.4335
+      ]
+    },
+    {
+      "id": "westboro",
+      "name": "Westboro",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.768,
+        45.387,
+        -75.738,
+        45.399
+      ]
+    },
+    {
+      "id": "kanata",
+      "name": "Kanata",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.95,
+        45.28,
+        -75.85,
+        45.34
+      ]
+    },
+    {
+      "id": "nepean",
+      "name": "Nepean",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.8,
+        45.3,
+        -75.68,
+        45.37
+      ]
+    },
+    {
+      "id": "orleans",
+      "name": "Orleans",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.58,
+        45.44,
+        -75.46,
+        45.5
+      ]
+    },
+    {
+      "id": "barrhaven",
+      "name": "Barrhaven",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -75.78,
+        45.25,
+        -75.69,
+        45.3
+      ]
+    },
+    {
+      "id": "dundas",
+      "name": "Dundas",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.98,
+        43.25,
+        -79.93,
+        43.28
+      ]
+    },
+    {
+      "id": "ancaster",
+      "name": "Ancaster",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -80.02,
+        43.2,
+        -79.955,
+        43.24
+      ]
+    },
+    {
+      "id": "stoney-creek",
+      "name": "Stoney Creek",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.8,
+        43.195,
+        -79.72,
+        43.24
+      ]
+    },
+    {
+      "id": "westdale",
+      "name": "Westdale",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.92,
+        43.253,
+        -79.893,
+        43.267
+      ]
+    },
+    {
+      "id": "port-credit",
+      "name": "Port Credit",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.6,
+        43.548,
+        -79.57,
+        43.56
+      ]
+    },
+    {
+      "id": "streetsville",
+      "name": "Streetsville",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.725,
+        43.579,
+        -79.695,
+        43.593
+      ]
+    },
+    {
+      "id": "square-one",
+      "name": "Square One",
+      "country": "CA",
+      "priority": 7,
+      "bbox": [
+        -79.655,
+        43.586,
+        -79.629,
+        43.6
+      ]
+    }
+  ]
+}
