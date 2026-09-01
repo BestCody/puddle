@@ -70,6 +70,11 @@ export default function PlacesIndexPage() {
     // The date pages target a different question than the hubs and are the ones meant to rank for
   // it, so the index links across rather than leaving them reachable only from the footer.
   sections.push({
+    title: 'Meeting friends?',
+    links: markets.slice(0, 12).map((market) => ({ href: `/hangout-spots/${market.id}`, label: `Hangout spots in ${market.name}` }))
+  })
+
+  sections.push({
     title: 'Looking for a date?',
     links: markets.slice(0, 12).map((market) => ({ href: `/date-ideas/${market.id}`, label: `Date ideas in ${market.name}` }))
   })
