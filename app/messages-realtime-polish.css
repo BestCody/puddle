@@ -261,3 +261,30 @@
   .puddle-send-action:hover:not(:disabled) { background: #20301b !important; }
   .puddle-send-action:disabled { background: #222 !important; border-color: #444 !important; color: #777 !important; }
 }
+
+/* Only shown while a conversation is open, and only where the panes stack and the list is out
+   of reach. Above that breakpoint both panes are visible, so there is nothing to go back to. */
+.figma-friends-chat-back {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .figma-friends-chat > header .figma-friends-chat-back {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    margin-right: 2px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #4ca5f7;
+    font: 500 34px/1 Manrope, system-ui, sans-serif;
+    cursor: pointer;
+  }
+  .figma-friends-chat > header .figma-friends-chat-back:active {
+    background: rgba(76,165,247,.12);
+  }
+}
