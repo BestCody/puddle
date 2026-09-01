@@ -332,7 +332,21 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
 
       <section className="figma-friends-chat">
         {selected ? <>
-          <header><Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} /><span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span></header>
+          <header>
+            {/* A real control rather than the Message tab restyled as a chevron. That trick left
+                the tab pointing at /matches?tab=messages while the tab strip stayed mounted, so
+                the arrow was a tab wearing a back icon. This is a button so leaving a
+                conversation replaces the history entry that opening it pushed, which stops the
+                browser back button walking back through every conversation you opened. */}
+            <button
+              type="button"
+              className="figma-friends-chat-back"
+              onClick={() => router.replace('/matches?tab=messages')}
+              aria-label="Back to conversations"
+            >‹</button>
+            <Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} />
+            <span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span>
+          </header>
           <div className="figma-friends-messages" ref={messageScrollRef} aria-live="polite">
             {messagesHasMore ? <button type="button" onClick={loadOlderMessages} disabled={paging}>Load older messages</button> : null}
             {messages.length ? messages.map((item) => {

@@ -285,45 +285,11 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     box-sizing: content-box !important;
   }
 
-  /* Reuse the existing Message link as the mobile back control, so navigation stays native. */
+  /* The tab strip used to be restyled into a back arrow here. It pointed at the page it was
+     already on, so it never navigated. The chat header now renders a real button instead, and
+     the tabs are simply hidden while a conversation is open. */
   .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs {
-    position: fixed !important;
-    z-index: 510 !important;
-    top: max(14px, env(safe-area-inset-top)) !important;
-    left: 12px !important;
-    width: 46px !important;
-    min-width: 46px !important;
-    height: 44px !important;
-    min-height: 44px !important;
-    padding: 0 !important;
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    transform: none !important;
-  }
-
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs > a {
     display: none !important;
-  }
-
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs > a:first-child {
-    width: 46px !important;
-    min-width: 46px !important;
-    height: 44px !important;
-    min-height: 44px !important;
-    display: grid !important;
-    place-items: center !important;
-    padding: 0 !important;
-    border: 0 !important;
-    background: transparent !important;
-    color: #4ca5f7 !important;
-    box-shadow: none !important;
-    font-size: 0 !important;
-  }
-
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs > a:first-child::before {
-    content: "‹";
-    font: 500 40px/1 Manrope, system-ui, sans-serif;
   }
 
   .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-messages {
