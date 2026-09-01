@@ -4,7 +4,10 @@ import { listMarkets, marketRegionLabel } from '@/lib/app/seo-places'
 import { breadcrumbStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
-export const revalidate = 3600
+// Revalidation is what this page costs when nobody is asking for it: each one is a
+// function invocation, a catalogue read and a runtime cache write. lists markets, which only change on deploy, so
+// refreshing hourly spent that 3600-second budget far more often than anything changed.
+export const revalidate = 86400
 
 const title = 'Date ideas, city by city'
 const description = 'Coffee, dinner, drinks, walks, museums and things to do together - drawn from real places rather than a generic list. Pick a city to see what is near you.'

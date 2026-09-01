@@ -3,7 +3,10 @@ import { PLACE_CATEGORIES, listMarkets, marketRegionLabel } from '@/lib/app/seo-
 import { breadcrumbStructuredData, faqStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
-export const revalidate = 3600
+// Revalidation is what this page costs when nobody is asking for it: each one is a
+// function invocation, a catalogue read and a runtime cache write. lists markets, which only change on deploy, so
+// refreshing hourly spent that 3600-second budget far more often than anything changed.
+export const revalidate = 86400
 
 const title = 'Places to go, city by city'
 const description = 'Browse parks, coffee shops, restaurants, museums, and nightlife across every city on Puddle. Find somewhere worth going, then see who else is there.'
