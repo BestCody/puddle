@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { shareFeedPost } from './actions'
 import styles from './MapFeed.module.css'
 
+function ShareIcon() {
+  return <svg className={styles.actionIcon} viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5.5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="18.5" r="2.5" /><path d="m8.3 10.9 7.4-4M8.3 13.1l7.4 4" /></svg>
+}
+
 function mergeFriends(current, incoming) {
   const merged = new Map(current.map((item) => [item.id, item]))
   for (const item of incoming || []) merged.set(item.id, item)
@@ -51,7 +55,7 @@ export function FeedShareMenu({ postId, title }) {
   }
 
   return <details className={styles.actionMenu} onToggle={onToggle}>
-    <summary aria-label={`Share ${title}`}>↗</summary>
+    <summary className={styles.actionButton} aria-label={`Share ${title}`}><ShareIcon /></summary>
     <div className={`${styles.actionPanel} ${styles.sharePanel}`}>
       <strong>Share with a friend</strong>
       {friends.map((friend) => <form action={shareFeedPost} key={friend.id}>
