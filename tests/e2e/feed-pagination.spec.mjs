@@ -28,7 +28,7 @@ function feedPost(id, title) {
   }
 }
 
-test('More puddles appends the next cursor page without navigating away from the feed', async ({ page }) => {
+test('Feed automatically appends the next cursor page without navigating away', async ({ page }) => {
   const account = await createConfirmedUser({ displayName: 'Feed Pagination Tester' })
   try {
     await completeProfileDirect(account.user.id, { display_name: 'Feed Pagination Tester' })
@@ -59,14 +59,15 @@ test('More puddles appends the next cursor page without navigating away from the
 
     await page.goto('/map')
     await expect(page.locator('[data-testid="feed-post"]')).toHaveCount(2)
-    await expect(page.getByRole('button', { name: 'More puddles', exact: true })).toBeVisible()
+    const sentinel = page.getByTestId('feed-load-sentinel')
+    await expect(sentinel).toBeVisible()
 
     const feedUrl = page.url()
-    await page.getByRole('button', { name: 'More puddles', exact: true }).click()
+    await sentinel.scrollIntoViewIfNeeded()
 
     await expect(page.locator('[data-testid="feed-post"]')).toHaveCount(3)
-    await expect(page.getByRole('heading', { name: 'First Puddle', exact: true })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Third Puddle', exact: true })).toBeVisible()
+    await expect(page.getByTestId('feed-post').filter({ hasText: 'First Puddle' })).toBeVisible()
+    await expect(page.getByTestId('feed-post').filter({ hasText: 'Third Puddle' })).toBeVisible()
     expect(page.url()).toBe(feedUrl)
     expect(requests).toEqual([
       { isNextPage: false, beforeId: null },
