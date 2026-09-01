@@ -5,7 +5,10 @@ import { PLACE_CATEGORIES, listMarkets, marketPath, marketRegionLabel } from '@/
 import { breadcrumbStructuredData, placeListStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
-export const revalidate = 3600
+// Each revalidation costs a function invocation, a catalogue read and a runtime cache write,
+// and this page follows a catalogue that rebuilds once a day. Six hours keeps the page within a
+// quarter of a rebuild cycle while doing that work a sixth as often.
+export const revalidate = 21600
 
 function copy(market) {
   const region = marketRegionLabel(market)

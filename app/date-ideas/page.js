@@ -4,7 +4,10 @@ import { listMarkets, marketRegionLabel } from '@/lib/app/seo-places'
 import { breadcrumbStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
-export const revalidate = 3600
+// This page lists the markets, which only change when the site is deployed, so an hourly
+// refresh spent a function invocation and a cache write on identical output twenty-four times
+// a day.
+export const revalidate = 86400
 
 const title = 'Date ideas, city by city'
 const description = 'Coffee, dinner, drinks, walks, museums and things to do together - drawn from real places rather than a generic list. Pick a city to see what is near you.'
