@@ -13,9 +13,9 @@ import {
 import { breadcrumbStructuredData, placeListStructuredData } from '@/lib/app/public-content'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
-// Revalidation is what this page costs when nobody is asking for it: each one is a
-// function invocation, a catalogue read and a runtime cache write. follows the catalogue, which rebuilds daily, so
-// refreshing hourly spent that 3600-second budget far more often than anything changed.
+// Each revalidation costs a function invocation, a catalogue read and a runtime cache write,
+// and this page follows a catalogue that rebuilds once a day. Six hours keeps the page within a
+// quarter of a rebuild cycle while doing that work a sixth as often.
 export const revalidate = 21600
 
 function copy(market) {
