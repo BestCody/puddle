@@ -10,7 +10,7 @@ test('production desktop landing preserves the current responsive Figma structur
   await expect(page.locator('[data-figma-node="351:156"]')).not.toBeVisible()
   await expect(page.locator('img[src="/figma/landing-desktop.png"]')).toHaveCount(0)
   await expect(page.locator('img[src="/figma/landing-mobile.png"]')).toHaveCount(0)
-  await expect(page.locator('.login-panel input')).toHaveCount(2)
+  await expect(page.locator('.login-panel form.landing-login-form input:not([type="hidden"])')).toHaveCount(2)
   await expect(page.locator('.feature-card--d-swipe')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
