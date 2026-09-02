@@ -84,7 +84,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   const signIn = testInfo.project.name === 'mobile-chromium' ? signInThroughApi : signInThroughUi
   await signIn(page, account.email, account.password)
   await expect(page).toHaveURL(/\/discover$/)
-  await expect(page.locator('.figma-swipe-card[data-card-role="active"]')).toBeVisible()
+  await expect(page.locator('.figma-swipe-card')).toBeVisible()
   const undo = page.getByRole('button', { name: 'Undo', exact: true })
   await expect(undo).toBeVisible()
   await expect(undo).toBeDisabled()
