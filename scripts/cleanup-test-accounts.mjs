@@ -69,6 +69,7 @@ const exactDisplayNames = new Set([
 // place. The audit is deliberately explicit: it never scans or mutates rows
 // belonging to another profile.
 const profileRelationProbes = [
+  ['puddle_memberships', 'user_id'],
   ['organizers', 'owner_id'],
   ['conversations', 'created_by'],
   ['messages', 'sender_id'],
@@ -156,14 +157,14 @@ async function profileRelationCounts(userIds) {
     for (let offset = 0; offset < userIds.length; offset += postgrestBatchSize) {
       const batch = userIds.slice(offset, offset + postgrestBatchSize)
       if (!batch.length) continue
-      const result = await admin.from(table).select(column, { count: 'exact', head: true }).in(column, batch)
+      const result = await admin.from(table).select(column).in(column, batch)
       // Some deployments do not contain every later-stage table. Missing
       // optional relations are not a cleanup failure.
       if (result.error) {
         if (['PGRST205', 'PGRST204', '42703'].includes(result.error.code)) break
         throw result.error
       }
-      count += result.count || 0
+      count += result.data?.length || 0
     }
     if (count) counts.push({ table, column, count })
   }
