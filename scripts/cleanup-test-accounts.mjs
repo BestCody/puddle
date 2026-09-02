@@ -228,6 +228,18 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error.message || error)
+  const cause = error?.cause
+  console.error(JSON.stringify({
+    name: error?.name || 'Error',
+    message: error?.message || String(error),
+    cause: cause ? {
+      name: cause.name || null,
+      message: cause.message || null,
+      code: cause.code || null,
+      errno: cause.errno || null,
+      syscall: cause.syscall || null,
+      hostname: cause.hostname || null
+    } : null
+  }))
   process.exitCode = 1
 })
