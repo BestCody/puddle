@@ -163,8 +163,8 @@ img{display:block;max-width:100%}
   .brand--mobile{position:absolute;z-index:6;left:4.26%;top:4.6%;font-size:clamp(14px,3.725vw,26.223px);color:#fff}
   .brand--mobile img{width:clamp(24px,6.47vw,45.548px);height:auto;filter:brightness(0) invert(1)}
   .menu-button--mobile{position:absolute;z-index:8;right:7.39%;top:4.6%;width:clamp(32px,8.52vw,60px);height:auto;aspect-ratio:60/45}
-  .hero--mobile h1{position:absolute;z-index:5;left:2.41%;top:9.99%;width:97.92%;margin:0;color:#fff;text-align:left;font-size:clamp(28px,7.85vw,55.274px);line-height:1.2;font-weight:700;letter-spacing:0}
-  .hero-phone-composite--mobile{position:absolute;z-index:5;left:26.7%;top:23%;width:62.6%;margin:0;aspect-ratio:430/666;transform:none}
+  .hero--mobile h1{position:absolute;z-index:5;left:2.41%;top:9.99%;width:97.92%;margin:0;color:#fff;text-align:center;font-size:clamp(28px,7.85vw,55.274px);line-height:1.2;font-weight:700;letter-spacing:0}
+  .hero-phone-composite--mobile{position:absolute;z-index:5;left:50%;top:26.5%;width:59.15%;margin:0;aspect-ratio:430/666;transform:translateX(-50%)}
   .mobile-login-button{position:absolute;z-index:8;left:30.54%;top:94.7%;display:flex;align-items:center;justify-content:center;width:39.05%;aspect-ratio:274.885/58.309;border:.125rem solid var(--good-grey);border-radius:1rem;background:#fff;color:var(--grey);font-size:clamp(.75rem,2.84vw,1.25rem);font-weight:800;text-decoration:none}
   .mobile-divider{position:absolute;z-index:7;left:0;right:0;bottom:0;width:100%;height:auto}
 
@@ -175,7 +175,7 @@ img{display:block;max-width:100%}
   .discovery--mobile .collage-card--m-four{left:34.21%;top:9.99%;width:28.69%;aspect-ratio:201.95/273.25}
   .discovery--mobile .collage-card--m-five{left:62.5%;right:auto;top:24.54%;width:27.68%;aspect-ratio:194.85/251.58;transform:rotate(13.5deg)}
   .discovery--mobile .discovery-fade{height:56%}
-  .discovery--mobile h2{left:30.82%;right:auto;bottom:4.56%;width:73.42%;font-size:clamp(27px,6.65vw,48.525px)}
+  .discovery--mobile h2{left:50%;right:auto;bottom:4.56%;width:73.42%;transform:translateX(-50%);font-size:clamp(27px,6.65vw,48.525px)}
 
   .feature-card{width:59.16%;min-height:0;height:auto;aspect-ratio:416.492/680.018;margin:0 auto 6.67%;padding:clamp(1.625rem,6vw,2.75rem) clamp(1rem,4vw,1.75rem) 0;border-width:.1875rem;border-radius:1.5625rem}
   .feature-card h3{font-size:clamp(26px,5.94vw,43.376px);line-height:1.4}
