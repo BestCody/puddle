@@ -16,21 +16,6 @@ function protectInteractiveLayers() {
   })
 }
 
-function openSafetyDialog() {
-  const backdrop = $('#safety-dialog-backdrop')
-  if (!backdrop) return
-  backdrop.classList.add('is-open')
-  backdrop.setAttribute('aria-hidden', 'false')
-  $('[data-close-safety]', backdrop)?.focus()
-}
-
-function closeSafetyDialog() {
-  const backdrop = $('#safety-dialog-backdrop')
-  if (!backdrop) return
-  backdrop.classList.remove('is-open')
-  backdrop.setAttribute('aria-hidden', 'true')
-}
-
 function initLandingAuth() {
   const params = new URLSearchParams(window.location.search)
   const next = params.get('next')
@@ -171,17 +156,6 @@ function initDraggablePhones() {
 function initLanding() {
   protectInteractiveLayers()
   initPhoneDemoLoading()
-
-  $$('[data-open-safety]').forEach((button) => button.addEventListener('click', openSafetyDialog))
-  $$('[data-close-safety]').forEach((button) => button.addEventListener('click', closeSafetyDialog))
-
-  $('#safety-dialog-backdrop')?.addEventListener('click', (event) => {
-    if (event.target.id === 'safety-dialog-backdrop') closeSafetyDialog()
-  })
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeSafetyDialog()
-  })
 
   initLandingAuth()
   initDraggablePhones()

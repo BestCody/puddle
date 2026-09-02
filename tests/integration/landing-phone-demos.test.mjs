@@ -13,13 +13,12 @@ test('landing feature phones map to the correct interactive Figma product screen
     read('public/landing.css')
   ])
 
-  // Figma 83:76 has Swipe/Save/Feed on desktop; Figma 161:116 adds Profile on mobile.
+  // The updated Figma compositions 352:484 and 351:156 both use Swipe/Save/Feed.
   for (const view of ['swipe', 'save', 'feed']) {
     assert.equal((landingHtml.match(new RegExp(`src="/landing-demo/${view}"`, 'g')) || []).length, 2, `${view} must be embedded once in desktop and once in mobile`)
   }
-  assert.equal((landingHtml.match(/src="\/landing-demo\/profile"/g) || []).length, 1, 'Profile demo must appear only in the mobile Figma composition')
-  assert.doesNotMatch(landingHtml, /feature-card--d-profile/)
-  assert.match(landingHtml, /feature-card--m-profile/)
+  assert.equal((landingHtml.match(/src="\/landing-demo\/profile"/g) || []).length, 0, 'Profile demo must not be embedded in the updated landing compositions')
+  assert.doesNotMatch(landingHtml, /feature-card--d-profile|feature-card--m-profile/)
 
   for (const screenshot of ['phone-swipe.png', 'phone-save.png', 'phone-feed.png', 'phone-profile.png']) assert(!landingHtml.includes(screenshot), `${screenshot} must not be rendered as a feature-phone screenshot`)
   assert.match(landingHtml, /hero-phone-centered\.(png|webp)/, 'hero phone must use the normalized centered asset')

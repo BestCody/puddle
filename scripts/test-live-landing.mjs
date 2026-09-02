@@ -82,8 +82,8 @@ async function runLiveChecks() {
     await page.evaluate(() => document.fonts?.ready)
     await page.waitForFunction(() => document.querySelector('.landing-stage--desktop')?.dataset.ready === 'true')
 
-    assert(await page.locator('[data-figma-node="83:76"]').isVisible(), 'desktop Figma composition is not live')
-    assert(!(await page.locator('[data-figma-node="161:116"]').isVisible()), 'mobile composition is visible on desktop')
+    assert(await page.locator('[data-figma-node="352:484"]').isVisible(), 'desktop Figma composition is not live')
+    assert(!(await page.locator('[data-figma-node="351:156"]').isVisible()), 'mobile composition is visible on desktop')
     assert(await page.locator('img[src="/figma/landing-desktop.png"]').count() === 0, 'production renders a desktop screenshot instead of real DOM')
     assert(await page.locator('.landing-sticky-left').isVisible(), 'production desktop sign-in column is missing')
     assert(await page.locator('.landing-sticky-left .login-panel input').count() === 2, 'production login is not real form markup')
@@ -91,9 +91,11 @@ async function runLiveChecks() {
     assert(await page.locator('.feature-card--d-swipe .interactive-pill').isVisible(), 'desktop Swipe Interactive pill is missing')
     assert(await page.locator('.feature-card--d-save .interactive-pill').isVisible(), 'desktop Save Interactive pill is missing')
     assert(await page.locator('.feature-card--d-feed .interactive-pill').isVisible(), 'desktop Feed Interactive pill is missing')
-    assert(await page.locator('.feature-card--d-profile').count() === 0, 'desktop Profile card should not exist for Figma 83:76')
+    assert(await page.locator('.feature-card--d-profile').count() === 0, 'desktop Profile card should not exist for Figma 352:484')
     assert(await page.locator('.trust-heading--desktop img').getAttribute('src') === '/figma/assets/lock.svg', 'production Lock is not the Figma SVG')
     assert(await page.locator('.safety-panel--desktop .safety-heart').getAttribute('src') === '/figma/assets/heart.svg', 'production Heart is not the Figma SVG')
+    assert(await page.locator('.safety-panel--desktop h2').textContent() === 'Over 30 million locations worldwide', 'production safety copy is stale')
+    assert(await page.locator('.safety-panel--desktop .safety-post').count() === 4, 'production safety city cards are incomplete')
 
     const flow = await page.evaluate(() => {
       const selectors = ['.hero--desktop','.discovery--desktop','.feature-card--d-swipe','.feature-card--d-save','.feature-card--d-feed','.trust-heading--desktop','.safety-panel--desktop','.final-cta--desktop']
@@ -139,10 +141,11 @@ async function runLiveChecks() {
     await page.goto(`${landingUrl}${separator}figma-mobile=${Date.now()}`, { waitUntil: 'networkidle', timeout: 30000 })
     await page.evaluate(() => document.fonts?.ready)
     await page.waitForFunction(() => document.querySelector('.landing-stage--mobile')?.dataset.ready === 'true')
-    assert(await page.locator('[data-figma-node="161:116"]').isVisible(), 'mobile Figma composition is not live')
+    assert(await page.locator('[data-figma-node="351:156"]').isVisible(), 'mobile Figma composition is not live')
     assert(!(await page.locator('.landing-sticky-left').isVisible()), 'desktop sign-in column leaked into mobile')
     assert(await page.locator('.feature-card--m-swipe').isVisible(), 'production mobile Swipe card is missing')
-    assert(await page.locator('.feature-card--m-profile').isVisible(), 'production mobile Profile card is missing')
+    assert(await page.locator('.feature-card--m-profile').count() === 0, 'production mobile Profile card should not exist in the updated Figma frame')
+    assert(await page.locator('.mobile-login-button').getAttribute('href') === '/signin', 'production mobile Login action is missing')
     assert(await page.locator('.feature-card--m-swipe .interactive-pill').isVisible(), 'production mobile Interactive pill is missing')
 
     for (const [width, height] of [[760,900],[704,900],[430,932],[390,844],[320,700]]) await assertResponsiveFlow(page, width, height, 'mobile')
