@@ -86,7 +86,7 @@ async function runLiveChecks() {
     assert(!(await page.locator('[data-figma-node="351:156"]').isVisible()), 'mobile composition is visible on desktop')
     assert(await page.locator('img[src="/figma/landing-desktop.png"]').count() === 0, 'production renders a desktop screenshot instead of real DOM')
     assert(await page.locator('.landing-sticky-left').isVisible(), 'production desktop sign-in column is missing')
-    assert(await page.locator('.landing-sticky-left .login-panel input').count() === 2, 'production login is not real form markup')
+    assert(await page.locator('.landing-sticky-left .landing-login-form input:not([type="hidden"])').count() === 2, 'production login is not real form markup')
     assert(await page.locator('.hero-phone-composite--desktop').isVisible(), 'desktop Figma hero phone is hidden')
     assert(await page.locator('.feature-card--d-swipe .interactive-pill').isVisible(), 'desktop Swipe Interactive pill is missing')
     assert(await page.locator('.feature-card--d-save .interactive-pill').isVisible(), 'desktop Save Interactive pill is missing')
