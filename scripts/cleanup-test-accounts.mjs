@@ -5,6 +5,7 @@ const args = process.argv.slice(2)
 const envPath = args.find((value) => !value.startsWith('--'))
 const shouldDelete = args.includes('--delete')
 const confirmation = args.find((value) => value.startsWith('--confirm='))?.slice('--confirm='.length) || ''
+const postgrestBatchSize = 100
 
 if (envPath && !fs.existsSync(envPath)) throw new Error('The supplied production environment file does not exist.')
 
@@ -78,8 +79,8 @@ async function listUsers() {
 async function loadProfiles(users) {
   const profiles = new Map()
   const ids = users.map((user) => user.id)
-  for (let offset = 0; offset < ids.length; offset += 500) {
-    const batch = ids.slice(offset, offset + 500)
+  for (let offset = 0; offset < ids.length; offset += postgrestBatchSize) {
+    const batch = ids.slice(offset, offset + postgrestBatchSize)
     if (!batch.length) continue
     const { data, error } = await admin.from('profiles').select('id,username,display_name').in('id', batch)
     if (error) throw error
@@ -107,8 +108,8 @@ function classify(user, profile) {
 async function ownedStorageObjects(userIds) {
   if (!userIds.length) return []
   const objects = []
-  for (let offset = 0; offset < userIds.length; offset += 500) {
-    const batch = userIds.slice(offset, offset + 500)
+  for (let offset = 0; offset < userIds.length; offset += postgrestBatchSize) {
+    const batch = userIds.slice(offset, offset + postgrestBatchSize)
     const { data, error } = await admin
       .from('storage.objects')
       .select('bucket_id,name,owner')
@@ -140,6 +141,7 @@ async function removeOwnedStorage(objects) {
 
 async function main() {
   const users = await listUsers()
+  console.log(JSON.stringify({ phase: 'enumerated-auth-users', count: users.length }))
   const profiles = await loadProfiles(users)
   const domains = {}
   const candidates = []
@@ -202,8 +204,8 @@ async function main() {
     .map((user) => ({ user, profile: remainingProfiles.get(user.id), reasons: classify(user, remainingProfiles.get(user.id)) }))
     .filter(({ reasons }) => reasons.length)
   const remainingDeletedProfiles = []
-  for (let offset = 0; offset < deletedIds.length; offset += 500) {
-    const batch = deletedIds.slice(offset, offset + 500)
+  for (let offset = 0; offset < deletedIds.length; offset += postgrestBatchSize) {
+    const batch = deletedIds.slice(offset, offset + postgrestBatchSize)
     if (!batch.length) continue
     const { data, error } = await admin.from('profiles').select('id').in('id', batch)
     if (error) throw error
