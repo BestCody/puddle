@@ -64,6 +64,31 @@ const exactDisplayNames = new Set([
   'UI Friend'
 ])
 
+// These are the user-owned relations that can prevent Supabase from deleting
+// the parent profile when older migrations left a restrictive foreign key in
+// place. The audit is deliberately explicit: it never scans or mutates rows
+// belonging to another profile.
+const profileRelationProbes = [
+  ['organizers', 'owner_id'],
+  ['conversations', 'created_by'],
+  ['messages', 'sender_id'],
+  ['inventory_reservations', 'profile_id'],
+  ['orders', 'buyer_id'],
+  ['tickets', 'owner_id'],
+  ['reports', 'reporter_id'],
+  ['audit_logs', 'actor_id'],
+  ['host_announcements', 'author_id'],
+  ['event_checkins', 'checked_in_by'],
+  ['plan_stops', 'added_by'],
+  ['plan_polls', 'created_by'],
+  ['promo_redemptions', 'profile_id'],
+  ['refund_requests', 'requester_id'],
+  ['ticket_transfers', 'sender_id'],
+  ['ticket_transfers', 'recipient_id'],
+  ['ticket_checkin_events', 'staff_id'],
+  ['bulk_operations', 'requested_by']
+]
+
 async function listUsers() {
   const users = []
   for (let page = 1; page <= 100; page += 1) {
@@ -122,6 +147,27 @@ async function ownedStorageObjects(userIds) {
     })))
   }
   return objects
+}
+
+async function profileRelationCounts(userIds) {
+  const counts = []
+  for (const [table, column] of profileRelationProbes) {
+    let count = 0
+    for (let offset = 0; offset < userIds.length; offset += postgrestBatchSize) {
+      const batch = userIds.slice(offset, offset + postgrestBatchSize)
+      if (!batch.length) continue
+      const result = await admin.from(table).select(column, { count: 'exact', head: true }).in(column, batch)
+      // Some deployments do not contain every later-stage table. Missing
+      // optional relations are not a cleanup failure.
+      if (result.error) {
+        if (['PGRST205', 'PGRST204', '42703'].includes(result.error.code)) break
+        throw result.error
+      }
+      count += result.count || 0
+    }
+    if (count) counts.push({ table, column, count })
+  }
+  return counts
 }
 
 async function removeOwnedStorage(objects) {
@@ -191,6 +237,8 @@ async function main() {
     scope: 'auth users and records owned by those users'
   }, null, 2))
   const objects = await ownedStorageObjects(candidates.map(({ user }) => user.id))
+  const relationCounts = await profileRelationCounts(candidates.map(({ user }) => user.id))
+  console.log(JSON.stringify({ phase: 'audited-restrictive-profile-relations', relationCounts }))
   const removedStorageObjects = await removeOwnedStorage(objects)
   const deleted = []
   const failures = []
