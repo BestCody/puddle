@@ -24,6 +24,43 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Verify Supabase endpoint reachability
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const serviceKey = process.env.SUPABASE_SECRET_KEY
+          const parsed = new URL(baseUrl)
+          console.log(`Supabase host: ${parsed.host}`)
+          try {
+            const response = await fetch(`${parsed.origin}/auth/v1/admin/users?page=1&per_page=1`, {
+              headers: {
+                apikey: serviceKey,
+                authorization: `Bearer ${serviceKey}`
+              }
+            })
+            console.log(`Supabase admin endpoint status: ${response.status}`)
+            if (!response.ok && response.status !== 401 && response.status !== 403) {
+              throw new Error(`Unexpected Supabase status ${response.status}`)
+            }
+          } catch (error) {
+            const cause = error?.cause
+            console.error(JSON.stringify({
+              name: error?.name || 'Error',
+              message: error?.message || String(error),
+              cause: cause ? {
+                name: cause.name || null,
+                message: cause.message || null,
+                code: cause.code || null,
+                errno: cause.errno || null,
+                syscall: cause.syscall || null,
+                hostname: cause.hostname || null
+              } : null
+            }))
+            process.exitCode = 1
+          }
+          NODE
       - name: Install cleanup dependency
         run: npm ci --omit=dev --no-audit --no-fund
       - name: Audit and remove disposable accounts
