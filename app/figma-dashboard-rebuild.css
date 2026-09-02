@@ -300,22 +300,6 @@
   touch-action: pan-y;
   transition: transform .28s ease, opacity .2s ease;
 }
-.figma-swipe-card.is-active { z-index: 2; }
-.figma-swipe-card.is-preview {
-  z-index: 1;
-  transform: translateY(clamp(.5rem, 1.5vw, .75rem)) scale(.94);
-  opacity: .86;
-  pointer-events: none;
-  transition: transform .36s cubic-bezier(.2,.78,.24,1), opacity .36s ease;
-}
-.figma-swipe-card-stage.is-swiping > .figma-swipe-card.is-preview {
-  transform: translateY(0) scale(1);
-  opacity: 1;
-}
-.figma-swipe-card.is-leaving {
-  z-index: 3;
-  transition: transform .36s cubic-bezier(.16,.84,.22,1), opacity .36s ease;
-}
 .figma-swipe-card.is-dragging { transition: none; }
 .figma-swipe-card-photo {
   position: absolute;
