@@ -145,7 +145,8 @@ async function runLiveChecks() {
     assert(!(await page.locator('.landing-sticky-left').isVisible()), 'desktop sign-in column leaked into mobile')
     assert(await page.locator('.feature-card--m-swipe').isVisible(), 'production mobile Swipe card is missing')
     assert(await page.locator('.feature-card--m-profile').count() === 0, 'production mobile Profile card should not exist in the updated Figma frame')
-    assert(await page.locator('.mobile-login-button').getAttribute('href') === '/signin', 'production mobile Login action is missing')
+    assert(await page.locator('.mobile-login-button').getAttribute('href') === '/?mode=login', 'production mobile Login action is missing')
+    assert(await page.locator('.brand--mobile img').getAttribute('src') === '/figma/assets/mobile-logo-exact.svg', 'production mobile Puddle brand asset is stale')
     assert(await page.locator('.feature-card--m-swipe .interactive-pill').isVisible(), 'production mobile Interactive pill is missing')
 
     for (const [width, height] of [[760,900],[704,900],[430,932],[390,844],[320,700]]) await assertResponsiveFlow(page, width, height, 'mobile')

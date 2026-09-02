@@ -166,13 +166,19 @@
         <section class="hero hero--mobile" aria-labelledby="mobile-title">
           <picture><source srcset="/figma/assets/hero-left.webp" type="image/webp" /><img class="mobile-hero-photo mobile-hero-photo--one" src="/figma/assets/hero-left.png" alt="" aria-hidden="true" width="1091" height="1441" loading="eager" decoding="async" fetchpriority="high" /></picture>
           <picture><source srcset="/figma/assets/hero-right.webp" type="image/webp" /><img class="mobile-hero-photo mobile-hero-photo--two" src="/figma/assets/hero-right.png" alt="" aria-hidden="true" width="1024" height="1024" loading="eager" decoding="async" fetchpriority="high" /></picture>
-          <a class="brand brand--mobile" href="/" aria-label="Puddle home"><img src="/figma/assets/logo.svg" alt="" width="39" height="40" loading="eager" decoding="async" /><span>puddle</span></a>
+          <a class="brand brand--mobile" href="/" aria-label="Puddle home"><img src="/figma/assets/mobile-logo-exact.svg" alt="" width="46" height="47" loading="eager" decoding="async" /><span>puddle</span></a>
           <a class="menu-button menu-button--mobile" href="#footer-m" aria-label="Open navigation"><img src="/figma/assets/menu.svg" alt="" width="22" height="31" loading="lazy" decoding="async" /></a>
           <h1 id="mobile-title">Discover places.<br />See who’s there.</h1>
           <div class="hero-phone-composite hero-phone-composite--mobile" aria-label="Puddle swipe experience shown on a phone"><picture><source srcset="/figma/assets/hero-phone-centered.webp" type="image/webp" /><img class="hero-phone-screen" src="/figma/assets/hero-phone-centered.png" alt="The Puddle app showing a nearby park on the swipe screen" width="430" height="666" loading="eager" decoding="async" fetchpriority="high" /></picture></div>
-          <a class="mobile-login-button" href="/signin">Login</a>
+          <a class="mobile-login-button" href="/?mode=login" data-mobile-login-trigger aria-controls="mobile-login-dialog">Login</a>
           <picture><source srcset="/figma/assets/mobile-divider.webp" type="image/webp" /><img class="mobile-divider" src="/figma/assets/mobile-divider.png" alt="" aria-hidden="true" width="705" height="68" loading="lazy" decoding="async" /></picture>
         </section>
+
+        <dialog class="mobile-login-dialog" id="mobile-login-dialog" aria-label="Log in">
+          <div class="mobile-login-dialog__surface">
+            <button class="mobile-login-dialog__close" type="button" data-close-mobile-login aria-label="Close log in">&times;</button>
+          </div>
+        </dialog>
 
         <section class="discovery discovery--mobile" id="features-m" aria-labelledby="discover-heading-m">
           <figure class="collage-card collage-card--m-one"><picture><source srcset="/figma/assets/collage-1.webp" type="image/webp" /><img src="/figma/assets/collage-1.png" alt="Photos of places people saved on Puddle" width="1170" height="780" loading="lazy" decoding="async" /></picture></figure>
