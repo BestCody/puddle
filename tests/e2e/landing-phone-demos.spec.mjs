@@ -114,16 +114,12 @@ test('landing embeds the Figma phone set for each responsive composition instead
   await page.setViewportSize({ width: 704, height: 900 })
   await page.goto('/')
   await page.waitForFunction(() => document.querySelector('.landing-stage--mobile')?.dataset.ready === 'true')
-  for (const demo of ['swipe', 'save', 'feed', 'profile']) {
+  for (const demo of ['swipe', 'save', 'feed']) {
     const phone = page.locator(`.landing-canvas--mobile [data-phone-demo="${demo}"]`)
     await expect(phone).toBeAttached()
     await expect(phone.locator('iframe')).toHaveAttribute('data-src', `/landing-demo/${demo}`)
   }
-  const profilePhone = page.locator('.landing-canvas--mobile [data-phone-demo="profile"]')
-  await profilePhone.scrollIntoViewIfNeeded()
-  const profileIframe = profilePhone.locator('iframe')
-  await expect(profileIframe).toHaveAttribute('src', '/landing-demo/profile', { timeout: 15_000 })
-  await expect(profileIframe.contentFrame().getByText('@Richiezh77', { exact: true })).toBeVisible()
+  await expect(page.locator('.landing-canvas--mobile [data-phone-demo="profile"]')).toHaveCount(0)
 
   await expect(page.locator('img.feature-phone[data-draggable-phone]')).toHaveCount(0)
 })

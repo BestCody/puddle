@@ -122,7 +122,7 @@ test('landing credential sign-in posts directly to the authenticated destination
   assert.match(landing, /<form class="landing-login-form" action="\/api\/auth\/password" method="post"[^>]*>/)
   assert.match(landing, /<input type="hidden" name="next" value="\/discover" \/>/)
   assert.doesNotMatch(landing, /data-signin-handoff/)
-  assert.doesNotMatch(landing, /\/signin/)
+  assert.match(landing, /class="mobile-login-button" href="\/signin"/)
   assert.match(route, /authenticatePassword\(supabase, email, password\)/)
   assert.match(route, /authenticatedDestination\(profile, next\)/)
   assert.match(route, /NextResponse\.redirect\(new URL\(authenticatedDestination\(profile, next\), request\.url\), 303\)/)
