@@ -34,7 +34,7 @@ jobs:
           const parsed = new URL(baseUrl)
           console.log(`Supabase host: ${parsed.host}`)
           try {
-            const response = await fetch(`${parsed.origin}/auth/v1/admin/users?page=1&per_page=1`, {
+            const response = await fetch(`${parsed.origin}/auth/v1/admin/users?page=1&per_page=1000`, {
               headers: {
                 apikey: serviceKey,
                 authorization: `Bearer ${serviceKey}`
