@@ -40,10 +40,6 @@ if (!supabaseUrl || !serviceKey) {
 const admin = createClient(supabaseUrl, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 })
-const storageAdmin = createClient(supabaseUrl, serviceKey, {
-  db: { schema: 'storage' },
-  auth: { autoRefreshToken: false, persistSession: false }
-})
 
 const emailPatterns = [
   ['email:puddle-e2e', /^puddle-e2e-/],
@@ -114,12 +110,16 @@ async function ownedStorageObjects(userIds) {
   const objects = []
   for (let offset = 0; offset < userIds.length; offset += postgrestBatchSize) {
     const batch = userIds.slice(offset, offset + postgrestBatchSize)
-    const { data, error } = await storageAdmin
-      .from('objects')
-      .select('bucket_id,name,owner')
-      .in('owner', batch)
+    const { data, error } = await admin
+      .from('media_assets')
+      .select('bucket_id,object_path,owner_id')
+      .in('owner_id', batch)
     if (error) throw error
-    objects.push(...(data || []))
+    objects.push(...(data || []).map((asset) => ({
+      bucket_id: asset.bucket_id,
+      name: asset.object_path,
+      owner: asset.owner_id
+    })))
   }
   return objects
 }
