@@ -210,6 +210,24 @@ try {
   const title = await page.locator('#mobile-title').boundingBox()
   const phone = await page.locator('.hero-phone-composite--mobile').boundingBox()
   const login = await page.locator('.mobile-login-button').boundingBox()
+  const mobileAlignment = await page.evaluate(() => {
+    const rect = (selector) => document.querySelector(selector)?.getBoundingClientRect()
+    const hero = rect('.hero--mobile')
+    const phone = rect('.hero-phone-composite--mobile')
+    const discovery = rect('.discovery--mobile')
+    const heading = rect('.discovery--mobile h2')
+    const title = document.querySelector('.hero--mobile h1')
+    if (!hero || !phone || !discovery || !heading || !title) return null
+    return {
+      phoneCenterRatio: (phone.left + phone.width / 2 - hero.left) / hero.width,
+      discoveryHeadingCenterRatio: (heading.left + heading.width / 2 - discovery.left) / discovery.width,
+      discoveryHeadingBounds: {
+        leftRatio: (heading.left - discovery.left) / discovery.width,
+        rightRatio: (heading.right - discovery.left) / discovery.width
+      },
+      titleTextAlign: getComputedStyle(title).textAlign
+    }
+  })
   assert(hero && hero.height > 1000 && Math.abs(hero.width / hero.height - 704 / 1093) < .01, 'mobile hero no longer preserves Figma 351:156 local composition ratio')
   assert(await page.locator('.mobile-hero-photo--two').isVisible(), 'Figma blue landscape layer is hidden')
   assert(landscape && landscape.width > hero.width && landscape.y >= hero.y && landscape.y < hero.y + hero.height * .03, 'Figma blue landscape layer lost its local hero placement')
@@ -217,6 +235,10 @@ try {
   assert(await page.locator('#mobile-title').isVisible() && title && title.y > hero.y + hero.height * .08 && title.y < hero.y + hero.height * .16, 'mobile hero title is missing or displaced')
   assert(await page.locator('.hero-phone-composite--mobile').isVisible() && phone && phone.y > hero.y + hero.height * .2 && phone.y < hero.y + hero.height * .28, 'mobile phone is missing or displaced from the Figma hero')
   assert(await page.locator('.mobile-login-button').isVisible() && login && login.y > hero.y + hero.height * .9 && login.y < hero.y + hero.height, 'mobile Login action is missing or displaced from the Figma hero')
+  assert(mobileAlignment && Math.abs(mobileAlignment.phoneCenterRatio - .5) < .015, `mobile phone is not centered in the hero: ${mobileAlignment?.phoneCenterRatio}`)
+  assert(mobileAlignment && Math.abs(mobileAlignment.discoveryHeadingCenterRatio - .5) < .015, `mobile discovery heading is not centered in its section: ${mobileAlignment?.discoveryHeadingCenterRatio}`)
+  assert(mobileAlignment && mobileAlignment.discoveryHeadingBounds.leftRatio >= -.015 && mobileAlignment.discoveryHeadingBounds.rightRatio <= 1.015, 'mobile discovery heading extends beyond its section')
+  assert(mobileAlignment?.titleTextAlign === 'center', `mobile hero title is not centered: ${mobileAlignment?.titleTextAlign}`)
 
   await page.screenshot({ path: join(artifacts, 'mobile-real-dom.png'), fullPage: true })
 
