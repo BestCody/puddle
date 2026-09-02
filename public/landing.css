@@ -146,6 +146,7 @@ img{display:block;max-width:100%}
 .footer-bottom-art--desktop{left:0;right:0;bottom:0;width:100%;height:auto}
 .footer-glass-art--desktop-left{left:0;bottom:0;width:50%;height:72%;object-fit:fill}
 .footer-glass-art--desktop-right{right:0;bottom:0;width:50%;height:72%;object-fit:fill}
+.mobile-login-dialog{display:none}
 
 /* Mobile frame 351:156. The full page is normal document flow; only artwork inside a section overlaps. */
 @media(max-width:760px){
@@ -161,12 +162,19 @@ img{display:block;max-width:100%}
   .mobile-hero-photo--two{display:block;z-index:2;left:0;top:.16%;width:124.15%;height:79.16%;object-position:center top}
   .hero--mobile::after{display:none}
   .brand--mobile{position:absolute;z-index:6;left:4.26%;top:4.6%;font-size:clamp(14px,3.725vw,26.223px);color:#fff}
-  .brand--mobile img{width:clamp(24px,6.47vw,45.548px);height:auto;filter:brightness(0) invert(1)}
+  .brand--mobile img{width:clamp(24px,6.47vw,45.548px);height:auto;filter:none}
   .menu-button--mobile{position:absolute;z-index:8;right:7.39%;top:4.6%;width:clamp(32px,8.52vw,60px);height:auto;aspect-ratio:60/45}
   .hero--mobile h1{position:absolute;z-index:5;left:2.41%;top:9.99%;width:97.92%;margin:0;color:#fff;text-align:center;font-size:clamp(28px,7.85vw,55.274px);line-height:1.2;font-weight:700;letter-spacing:0}
   .hero-phone-composite--mobile{position:absolute;z-index:5;left:50%;top:26.5%;width:59.15%;margin:0;aspect-ratio:430/666;transform:translateX(-50%)}
   .mobile-login-button{position:absolute;z-index:8;left:30.54%;top:94.7%;display:flex;align-items:center;justify-content:center;width:39.05%;aspect-ratio:274.885/58.309;border:.125rem solid var(--good-grey);border-radius:1rem;background:#fff;color:var(--grey);font-size:clamp(.75rem,2.84vw,1.25rem);font-weight:800;text-decoration:none}
   .mobile-divider{position:absolute;z-index:7;left:0;right:0;bottom:0;width:100%;height:auto}
+  .mobile-login-dialog[open]{display:grid;place-items:center;width:min(100%,40rem);max-width:none;height:100dvh;max-height:none;margin:auto;padding:clamp(1rem,4vw,2rem);border:0;background:transparent;color:#111}
+  .mobile-login-dialog::backdrop{background:rgb(255 255 255 / .96)}
+  .mobile-login-dialog__surface{position:relative;display:grid;align-items:start;width:100%;max-height:100%;overflow:auto;padding:clamp(1.25rem,5vw,2.5rem) clamp(1rem,5vw,3rem);border:.125rem solid var(--good-grey);border-radius:clamp(1rem,5vw,2rem);background:#fff;box-shadow:0 1rem 3rem rgb(0 0 0 / .16)}
+  .mobile-login-dialog__close{position:absolute;z-index:2;top:clamp(.5rem,2vw,1rem);right:clamp(.5rem,2vw,1rem);display:grid;place-items:center;width:clamp(2rem,8vw,2.75rem);aspect-ratio:1;border:.125rem solid var(--good-grey);border-radius:50%;background:#fff;color:#111;font-size:clamp(1.25rem,5vw,1.75rem);line-height:1;cursor:pointer}
+  .mobile-login-dialog .login-panel{position:static;inset:auto;z-index:0;width:100%;max-width:36rem;margin:0 auto;padding-block:clamp(2.5rem,10vw,4rem) clamp(1rem,4vw,2rem);background:#fff}
+  .mobile-login-dialog .login-panel[data-auth-mode="signup"]{top:auto;padding-block-end:clamp(1rem,3vw,2rem)}
+  .mobile-login-dialog .login-panel h1{font-size:clamp(2rem,8vw,3.25rem)}
 
   .discovery--mobile{min-height:0;height:auto;aspect-ratio:704/666;background:repeating-linear-gradient(90deg,rgba(255,255,255,.72) 0,rgba(255,255,255,.72) 6.8%,rgba(242,242,242,.34) 6.8%,rgba(242,242,242,.34) 7.1%,rgba(255,255,255,.72) 7.1%,rgba(255,255,255,.72) 17.5%),#fff}
   .discovery--mobile .city-photo-wrap{display:none}

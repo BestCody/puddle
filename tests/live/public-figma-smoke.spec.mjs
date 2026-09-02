@@ -34,7 +34,11 @@ test('production mobile landing preserves the current responsive Figma structure
   await expect(page.locator('img[src="/figma/landing-mobile.png"]')).toHaveCount(0)
   await expect(page.locator('.feature-card--m-swipe')).toBeVisible()
   await expect(page.locator('.feature-card--m-profile')).toHaveCount(0)
-  await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/signin')
+  await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/?mode=login')
+  await expect(page.locator('.brand--mobile img')).toHaveAttribute('src', '/figma/assets/mobile-logo-exact.svg')
+  await page.locator('.mobile-login-button').click()
+  await expect(page.locator('.mobile-login-dialog[open] .landing-login-form')).toBeVisible()
+  await page.locator('[data-close-mobile-login]').click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
   await page.locator('.final-cta--mobile a[href="/signup"]').click()

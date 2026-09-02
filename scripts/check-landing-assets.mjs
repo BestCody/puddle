@@ -76,7 +76,9 @@ const requiredMarkup = [
   'class="site-footer',
   'href="/api/auth/google?next=%2Fdiscover"',
   'class="mobile-login-button"',
-  'href="/signin"',
+  'href="/?mode=login"',
+  'src="/figma/assets/mobile-logo-exact.svg"',
+  'id="mobile-login-dialog"',
   'Over 30 million locations worldwide',
   'href="/signup"'
 ]

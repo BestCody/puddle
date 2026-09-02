@@ -64,7 +64,8 @@ test('landing page uses the Figma responsive composition and real DOM content', 
     expect(await page.locator(`${authRoot} a[href="/signup"]`).count()).toBeGreaterThan(0)
     expect(await page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).count()).toBeGreaterThan(0)
   } else {
-    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/signin')
+    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/?mode=login')
+    await expect(page.locator('.brand--mobile img')).toHaveAttribute('src', '/figma/assets/mobile-logo-exact.svg')
   }
   for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
   await assertImagesLoaded(page)
@@ -209,7 +210,7 @@ test('landing exposes direct auth and legal links', async ({ page }) => {
     expect(await page.locator(`${authRoot} a[href="/signup"]`).count()).toBeGreaterThan(0)
     expect(await page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).count()).toBeGreaterThan(0)
   } else {
-    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/signin')
+    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/?mode=login')
   }
   if (await page.locator(`${authRoot} form.landing-login-form`).count()) {
     await expect(page.locator(`${authRoot} form.landing-login-form`)).toHaveAttribute('action', '/api/auth/password')
@@ -232,7 +233,8 @@ test('landing auth controls expose direct authentication entry points', async ({
     await expect(page.getByRole('heading', { name: 'Make plans that leave the chat.', level: 1 })).toBeVisible()
   } else {
     await page.locator('.mobile-login-button').click()
-    await expect(page).toHaveURL(/\/signin(?:\?|$)/)
+    await expect(page.locator('.mobile-login-dialog[open] .landing-login-form')).toBeVisible()
+    await page.locator('[data-close-mobile-login]').click()
   }
 })
 
