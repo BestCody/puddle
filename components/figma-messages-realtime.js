@@ -45,6 +45,13 @@ function mergeById(current, incoming, key = 'id') {
   return [...merged.values()]
 }
 
+function conversationPreview(conversation, openingFriendId) {
+  if (conversation.last_message_type === 'location' && conversation.last_location_name) {
+    return `Shared ${conversation.last_location_name}`
+  }
+  return conversation.last_message || (openingFriendId === conversation.friend_id ? 'Opening…' : 'Start a conversation')
+}
+
 function conversationList(snapshot, selected, source = snapshot.conversations || []) {
   const base = selected && !source.some((item) => item.conversation_id === selected.conversation_id)
     ? [selected, ...source]
@@ -438,7 +445,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           key={conversation.conversation_id || `friend:${conversation.friend_id}`}
         >
           <Avatar client={client} person={{ display_name: conversation.display_name, avatar_path: conversation.avatar_path }} />
-          <span><strong>{conversation.display_name || conversation.username || 'Friend'}</strong><small>{conversation.last_message || (openingFriendId === conversation.friend_id ? 'Opening…' : 'Start a conversation')}</small></span>
+          <span><strong>{conversation.display_name || conversation.username || 'Friend'}</strong><small>{conversationPreview(conversation, openingFriendId)}</small></span>
           {conversation.unread_count > 0 ? <b>{conversation.unread_count}</b> : null}
         </button>) : <div className="figma-friends-conversation-empty">No conversations yet</div>}
         {conversationsHasMore ? <button type="button" onClick={loadMoreConversations} disabled={paging}>Load more conversations</button> : null}
