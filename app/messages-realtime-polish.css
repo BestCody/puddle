@@ -272,16 +272,17 @@
   .figma-friends-chat > header .figma-friends-chat-back {
     display: grid;
     place-items: center;
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    margin-right: 2px;
+    width: 2.5rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    margin-inline-end: .125rem;
     padding: 0;
     border: 0;
     border-radius: 999px;
     background: transparent;
     color: #4ca5f7;
-    font: 500 34px/1 Manrope, system-ui, sans-serif;
+    font: 500 2.125rem/1 Manrope, system-ui, sans-serif;
+    text-decoration: none;
     cursor: pointer;
   }
   .figma-friends-chat > header .figma-friends-chat-back:active {

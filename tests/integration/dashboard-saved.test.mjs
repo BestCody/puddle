@@ -120,3 +120,11 @@ test('saved places hydrate canonical metadata and open details as a same-page sh
   assert.doesNotMatch(layout, /figma-dashboard-saved\.css/)
   assert.doesNotMatch(layout, /figma-dashboard-saved-detail-fidelity\.css/)
 })
+
+test('mobile saved search stays in the Saved page flow instead of a viewport-fixed slot', async () => {
+  const styles = await read('app/figma-visual-parity.css')
+
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*\[data-testid='saved-screen'\]\[data-tab='saved'\] > header:first-of-type[\s\S]*display: flex !important/s)
+  assert.match(styles, /\[data-testid='saved-search'\]\s*\{[\s\S]*position: static !important;[\s\S]*inset: auto !important;[\s\S]*transform: none !important;/s)
+  assert.match(styles, /\[data-testid='saved-search'\]\s*\{[\s\S]*min-width: 0 !important;/s)
+})

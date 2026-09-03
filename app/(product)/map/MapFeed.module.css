@@ -168,6 +168,18 @@
   font: 700 .6875rem/1 var(--figma-mono);
 }
 
+.title {
+  margin: .75rem .1875rem 0 2.9375rem;
+  color: #111;
+  overflow-wrap: anywhere;
+  font: 800 clamp(1.125rem, 2.1vw, 1.5rem)/1.1 Manrope, sans-serif;
+  letter-spacing: -.03rem;
+}
+
+.title + .copy {
+  margin-top: .375rem;
+}
+
 .copy {
   margin: .0625rem .1875rem 0 2.9375rem;
   color: #000;
@@ -780,6 +792,7 @@
   border-color: #3d3d3d;
 }
 
+:global(.figma-dashboard-shell[data-appearance='dark']) .title,
 :global(.figma-dashboard-shell[data-appearance='dark']) .copy,
 :global(.figma-dashboard-shell[data-appearance='dark']) .place,
 :global(.figma-dashboard-shell[data-appearance='dark']) .place h2,
@@ -805,6 +818,7 @@
     border-color: #3d3d3d;
   }
 
+  :global(.figma-dashboard-shell[data-appearance='system']) .title,
   :global(.figma-dashboard-shell[data-appearance='system']) .copy,
   :global(.figma-dashboard-shell[data-appearance='system']) .place,
   :global(.figma-dashboard-shell[data-appearance='system']) .place h2 {
