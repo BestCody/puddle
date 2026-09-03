@@ -333,17 +333,15 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
       <section className="figma-friends-chat">
         {selected ? <>
           <header>
-            {/* A real control rather than the Message tab restyled as a chevron. That trick left
-                the tab pointing at /matches?tab=messages while the tab strip stayed mounted, so
-                the arrow was a tab wearing a back icon. This is a button so leaving a
-                conversation replaces the history entry that opening it pushed, which stops the
-                browser back button walking back through every conversation you opened. */}
-            <button
-              type="button"
+            {/* A route link keeps the mobile back affordance a real navigation target while the
+                conversation remains in the shared Messages route. */}
+            <Link
+              href="/matches?tab=messages"
+              replace
+              scroll={false}
               className="figma-friends-chat-back"
-              onClick={() => router.replace('/matches?tab=messages')}
               aria-label="Back to conversations"
-            >‹</button>
+            >‹</Link>
             <Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} />
             <span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span>
           </header>
