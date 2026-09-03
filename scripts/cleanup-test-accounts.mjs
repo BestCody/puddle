@@ -90,6 +90,16 @@ const profileRelationProbes = [
   ['bulk_operations', 'requested_by']
 ]
 
+// These relations have delete triggers that enqueue preference embeddings.
+// Remove them explicitly while the profile still exists, then remove the
+// generated queue rows before asking Supabase Auth to delete the profile.
+// Otherwise the parent delete cascade can run the trigger after the profile
+// has disappeared and fail on embedding_jobs.profile_id.
+const candidateOwnedCleanupRelations = [
+  ['user_content_states', 'profile_id'],
+  ['embedding_jobs', 'profile_id']
+]
+
 async function listUsers() {
   const users = []
   for (let page = 1; page <= 100; page += 1) {
@@ -171,6 +181,46 @@ async function profileRelationCounts(userIds) {
   return counts
 }
 
+async function removeCandidateOwnedRelations(userIds) {
+  const removed = []
+  for (const [table, column] of candidateOwnedCleanupRelations) {
+    let count = 0
+    for (let offset = 0; offset < userIds.length; offset += postgrestBatchSize) {
+      const batch = userIds.slice(offset, offset + postgrestBatchSize)
+      if (!batch.length) continue
+      const result = await admin.from(table).delete().in(column, batch).select(column)
+      // Some deployments do not contain every later-stage table. Missing
+      // optional relations are not a cleanup failure.
+      if (result.error) {
+        if (['PGRST205', 'PGRST204', '42703'].includes(result.error.code)) break
+        throw result.error
+      }
+      count += result.data?.length || 0
+    }
+    if (count) removed.push({ table, column, count })
+  }
+  return removed
+}
+
+async function candidateOwnedRelationCounts(userIds) {
+  const counts = []
+  for (const [table, column] of candidateOwnedCleanupRelations) {
+    let count = 0
+    for (let offset = 0; offset < userIds.length; offset += postgrestBatchSize) {
+      const batch = userIds.slice(offset, offset + postgrestBatchSize)
+      if (!batch.length) continue
+      const result = await admin.from(table).select(column).in(column, batch)
+      if (result.error) {
+        if (['PGRST205', 'PGRST204', '42703'].includes(result.error.code)) break
+        throw result.error
+      }
+      count += result.data?.length || 0
+    }
+    if (count) counts.push({ table, column, count })
+  }
+  return counts
+}
+
 async function removeOwnedStorage(objects) {
   const byBucket = new Map()
   for (const object of objects) {
@@ -241,6 +291,8 @@ async function main() {
   const relationCounts = await profileRelationCounts(candidates.map(({ user }) => user.id))
   console.log(JSON.stringify({ phase: 'audited-restrictive-profile-relations', relationCounts }))
   const removedStorageObjects = await removeOwnedStorage(objects)
+  const removedCandidateRelations = await removeCandidateOwnedRelations(candidates.map(({ user }) => user.id))
+  console.log(JSON.stringify({ phase: 'removed-candidate-owned-trigger-relations', removedCandidateRelations }))
   const deleted = []
   const failures = []
   for (const { user, reasons } of candidates) {
@@ -269,17 +321,21 @@ async function main() {
     if (error) throw new Error(`Could not remove orphaned test profiles: ${error.message}`)
   }
   const remainingStorage = await ownedStorageObjects(deletedIds)
+  const remainingCandidateOwnedRelations = await candidateOwnedRelationCounts(deletedIds)
   const result = {
     ...summary,
     deletedCount: deleted.length,
     removedStorageObjects,
     removedOrphanedProfiles: remainingDeletedProfiles.length,
     remainingOwnedStorageObjects: remainingStorage.length,
+    remainingCandidateOwnedRelations,
     remainingCandidateCount: remainingCandidates.length,
     remainingCandidates: remainingCandidates.map(({ user, reasons }) => ({ id: user.id, reasons }))
   }
   console.log(JSON.stringify(result, null, 2))
-  if (remainingCandidates.length || remainingStorage.length) throw new Error('Candidate test accounts or owned storage objects remain after cleanup.')
+  if (remainingCandidates.length || remainingStorage.length || remainingCandidateOwnedRelations.length) {
+    throw new Error('Candidate test accounts, owned storage objects, or owned queue relations remain after cleanup.')
+  }
 }
 
 main().catch((error) => {
