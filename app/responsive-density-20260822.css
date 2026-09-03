@@ -61,29 +61,31 @@
   position: relative;
 }
 
-/* Messages use both axes of the available dashboard stage. */
-.figma-friends-screen.is-messages {
-  min-height: 100dvh !important;
-  height: 100dvh !important;
-}
+/* Messages use both axes of the available dashboard stage on desktop. */
+@media (min-width: 761px) {
+  .figma-friends-screen.is-messages {
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+  }
 
-.figma-friends-screen.is-messages .figma-friends-message-layout {
-  top: clamp(86px, 10.8dvh, 102px) !important;
-  bottom: clamp(16px, 2.2dvh, 24px) !important;
-  height: auto !important;
-  min-height: 0 !important;
-}
+  .figma-friends-screen.is-messages .figma-friends-message-layout {
+    top: clamp(86px, 10.8dvh, 102px) !important;
+    bottom: clamp(16px, 2.2dvh, 24px) !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
 
-.figma-friends-screen.is-messages .figma-friends-conversations,
-.figma-friends-screen.is-messages .figma-friends-chat {
-  min-height: 0 !important;
-  height: 100% !important;
-}
+  .figma-friends-screen.is-messages .figma-friends-conversations,
+  .figma-friends-screen.is-messages .figma-friends-chat {
+    min-height: 0 !important;
+    height: 100% !important;
+  }
 
-.figma-friends-screen.is-messages .figma-friends-conversation-empty,
-.figma-friends-screen.is-messages .figma-friends-chat-empty {
-  min-height: 100%;
-  align-content: center;
+  .figma-friends-screen.is-messages .figma-friends-conversation-empty,
+  .figma-friends-screen.is-messages .figma-friends-chat-empty {
+    min-height: 100%;
+    align-content: center;
+  }
 }
 
 /* Slightly denser authenticated desktop UI, achieved through component geometry rather than CSS zoom. */
@@ -293,26 +295,6 @@
   .puddle-search-overlay {
     left: 0 !important;
     padding: 14px !important;
-  }
-
-  .figma-friends-screen.is-messages {
-    min-height: 100dvh !important;
-    height: 100dvh !important;
-    padding-bottom: 0 !important;
-    overflow: hidden !important;
-  }
-
-  .figma-friends-screen.is-messages .figma-friends-message-layout {
-    top: 86px !important;
-    bottom: calc(108px + env(safe-area-inset-bottom)) !important;
-    height: auto !important;
-    min-height: 0 !important;
-  }
-
-  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-conversations {
-    min-height: 0 !important;
-    height: 100% !important;
-    max-height: none !important;
   }
 
   .figma-swipe-screen,

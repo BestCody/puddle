@@ -76,7 +76,9 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     return () => media.removeEventListener('change', sync)
   }, [])
 
+  const mobileModePending = isMobile === null && !conversationId
   const selected = isMobile === true && !conversationId ? null : initialSnapshot.selectedConversation
+  const isConversationOpen = Boolean(selected) && !mobileModePending
   const selectedId = selected?.conversation_id || null
   const placeMenuRef = useRef(null)
   const messageScrollRef = useRef(null)
@@ -323,7 +325,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     }
   }
 
-  return <div className={`figma-friends-screen is-messages${selected ? ' is-conversation-open' : ''}`}>
+  return <div className={`figma-friends-screen is-messages${isConversationOpen ? ' is-conversation-open' : ''}${mobileModePending ? ' is-mobile-mode-pending' : ''}`}>
     <MessagesTabs />
     <div className="figma-friends-message-layout">
       <aside className="figma-friends-conversations" aria-label="Conversations">
