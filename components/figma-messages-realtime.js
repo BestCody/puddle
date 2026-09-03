@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PhotoFrame } from '@/components/photo-frame'
 import { RoutedSegment } from '@/components/routed-segment'
@@ -63,6 +63,8 @@ function conversationList(snapshot, selected, source = snapshot.conversations ||
   return [...base, ...waiting]
 }
 
+const MESSAGE_PAGE_SIZE = 50
+
 export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }) {
   const client = useMemo(() => createClient(), [])
   const router = useRouter()
@@ -93,7 +95,14 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const [busy, setBusy] = useState(false)
   const [paging, setPaging] = useState(false)
   const [openingFriendId, setOpeningFriendId] = useState(null)
+  const [openingConversationId, setOpeningConversationId] = useState(null)
+  const [navigationPending, setNavigationPending] = useState(false)
   const [notice, setNotice] = useState('')
+  const messagesRefreshRef = useRef(null)
+  const conversationsRefreshRef = useRef(null)
+  const messageScrollAnchorRef = useRef(null)
+  const stickToBottomRef = useRef(true)
+  const renderedSelectedIdRef = useRef(null)
 
   useEffect(() => {
     setConversations(conversationList(initialSnapshot, selected))
@@ -106,11 +115,34 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   }, [initialSnapshot.messages, initialSnapshot.messagesHasMore, selectedId])
 
   const latestMessageId = messages.length ? messages[messages.length - 1]?.id : null
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = messageScrollRef.current
     if (!node) return
+
+    if (renderedSelectedIdRef.current !== selectedId) {
+      renderedSelectedIdRef.current = selectedId
+      messageScrollAnchorRef.current = null
+      stickToBottomRef.current = true
+      node.scrollTop = node.scrollHeight
+      return
+    }
+
+    const anchor = messageScrollAnchorRef.current
+    if (anchor) {
+      node.scrollTop = anchor.scrollTop + (node.scrollHeight - anchor.scrollHeight)
+      messageScrollAnchorRef.current = null
+      return
+    }
+
+    if (!stickToBottomRef.current) return
     node.scrollTop = node.scrollHeight
-  }, [selectedId, latestMessageId])
+  }, [selectedId, latestMessageId, messages.length])
+
+  useEffect(() => {
+    setNavigationPending(false)
+    setOpeningConversationId(null)
+    setOpeningFriendId(null)
+  }, [conversationId])
 
   async function loadShareableLocations() {
     if (shareableLocationsLoaded || shareableLocationsLoading) return
@@ -141,58 +173,103 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   }
 
   async function refreshMessages() {
-    if (!selectedId) return false
-    try {
-      const { data, error } = await client.rpc('social_messages_v2', {
-        target: selectedId,
-        before_message_id: null,
-        result_limit: 50
-      })
-      if (!error && data) {
-        setMessages(data)
-        setMessagesHasMore(data.length === 50)
-        return true
+    const targetId = selectedId
+    if (!targetId) return false
+    if (messagesRefreshRef.current?.conversationId === targetId) return messagesRefreshRef.current.promise
+
+    const request = { conversationId: targetId }
+    request.promise = (async () => {
+      try {
+        const { data, error } = await client.rpc('social_messages_v2', {
+          target: targetId,
+          before_message_id: null,
+          result_limit: MESSAGE_PAGE_SIZE
+        })
+        if (!error && Array.isArray(data) && selectedId === targetId) {
+          setMessages((current) => mergeById(current, data))
+          setMessagesHasMore((current) => current || data.length === MESSAGE_PAGE_SIZE)
+          return true
+        }
+      } catch (cause) {
+        console.warn('Could not refresh messages.', { message: cause?.message || 'unknown error' })
       }
-    } catch (cause) {
-      console.warn('Could not refresh messages.', { message: cause?.message || 'unknown error' })
+      return false
+    })()
+    messagesRefreshRef.current = request
+    try {
+      return await request.promise
+    } finally {
+      if (messagesRefreshRef.current === request) messagesRefreshRef.current = null
     }
-    return false
   }
 
   async function refreshConversations() {
+    const targetId = selectedId
+    if (conversationsRefreshRef.current?.selectedId === targetId) return conversationsRefreshRef.current.promise
+    const request = { selectedId: targetId }
+    request.promise = (async () => {
+      try {
+        const { data, error } = await client.rpc('social_conversations_v2', {
+          before_sort_at: null,
+          before_conversation_id: null,
+          result_limit: 30
+        })
+        if (!error && Array.isArray(data) && selectedId === targetId) {
+          setConversations(conversationList(initialSnapshot, selected, data))
+          setConversationsHasMore(data.length === 30)
+        }
+      } catch {}
+    })()
+    conversationsRefreshRef.current = request
     try {
-      const { data, error } = await client.rpc('social_conversations_v2', {
-        before_sort_at: null,
-        before_conversation_id: null,
-        result_limit: 30
-      })
-      if (!error && data) {
-        setConversations(conversationList(initialSnapshot, selected, data))
-        setConversationsHasMore(data.length === 30)
-      }
-    } catch {}
+      return await request.promise
+    } finally {
+      if (conversationsRefreshRef.current === request) conversationsRefreshRef.current = null
+    }
   }
 
   useEffect(() => {
+    if (isMobile !== false || conversationId || !selectedId || messages.length) return
+    void refreshMessages()
+  }, [conversationId, isMobile, selectedId, messages.length])
+
+  useEffect(() => {
     if (isMobile === null) return undefined
+
+    function refreshOnReturn() {
+      if (document.visibilityState === 'visible') void refreshConversations()
+    }
+
+    window.addEventListener('focus', refreshOnReturn)
+    document.addEventListener('visibilitychange', refreshOnReturn)
+    return () => {
+      window.removeEventListener('focus', refreshOnReturn)
+      document.removeEventListener('visibilitychange', refreshOnReturn)
+    }
+  }, [isMobile, selectedId])
+
+  useEffect(() => {
+    if (isMobile === null || !selectedId) return undefined
     let active = true
 
     async function initializeReadState() {
-      if (!selectedId || !active) return
+      if (!active) return
       await markSelectedRead()
       if (active) await refreshConversations()
     }
     initializeReadState()
 
     const channel = client
-      .channel(`figma-messages-realtime-${initialSnapshot.self.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async (payload) => {
+      .channel(`figma-messages-realtime-${initialSnapshot.self.id}-${selectedId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${selectedId}`
+      }, async () => {
         if (!active) return
-        const changedConversationId = payload?.new?.conversation_id || payload?.old?.conversation_id || null
-        if (changedConversationId === selectedId) {
-          await refreshMessages()
-          await markSelectedRead()
-        }
+        await refreshMessages()
+        await markSelectedRead()
         if (active) await refreshConversations()
       })
       .subscribe()
@@ -204,11 +281,16 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   }, [client, initialSnapshot.self.id, isMobile, selectedId])
 
   async function openConversation(conversation) {
+    if (!conversation || openingConversationId || openingFriendId) return
     if (conversation.conversation_id) {
+      if (conversation.conversation_id === selectedId) return
+      setOpeningConversationId(conversation.conversation_id)
+      setNavigationPending(true)
+      setNotice('')
       router.push(`/matches?tab=messages&conversation=${encodeURIComponent(conversation.conversation_id)}`)
       return
     }
-    if (!conversation.friend_id || openingFriendId) return
+    if (!conversation.friend_id) return
     setOpeningFriendId(conversation.friend_id)
     setNotice('')
     try {
@@ -217,6 +299,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         setNotice('Could not open that conversation.')
         return
       }
+      setNavigationPending(true)
       router.push(`/matches?tab=messages&conversation=${encodeURIComponent(data)}`)
     } catch {
       setNotice('Could not open that conversation.')
@@ -227,19 +310,23 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
 
   async function loadOlderMessages() {
     if (!selectedId || !messages.length || paging || !messagesHasMore) return
+    const targetId = selectedId
+    const node = messageScrollRef.current
+    const anchor = node ? { scrollTop: node.scrollTop, scrollHeight: node.scrollHeight } : null
     setPaging(true)
     const oldest = messages[0]
     try {
       const { data, error } = await client.rpc('social_messages_v2', {
-        target: selectedId,
+        target: targetId,
         before_message_id: oldest.id,
-        result_limit: 50
+        result_limit: MESSAGE_PAGE_SIZE
       })
-      if (!error) {
-        setMessages((current) => mergeById(data || [], current))
-        setMessagesHasMore((data || []).length === 50)
+      if (!error && Array.isArray(data) && selectedId === targetId) {
+        if (data.length && anchor) messageScrollAnchorRef.current = anchor
+        setMessages((current) => mergeById(data, current))
+        setMessagesHasMore(data.length === MESSAGE_PAGE_SIZE)
       }
-      if (error || !data) setNotice('Older messages could not be loaded.')
+      if (error || !Array.isArray(data)) setNotice('Older messages could not be loaded.')
     } catch (cause) {
       console.warn('Could not load older messages.', { message: cause?.message || 'unknown error' })
       setNotice('Older messages could not be loaded.')
@@ -294,6 +381,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         return
       }
       setDraft('')
+      stickToBottomRef.current = true
       if (!await refreshMessages()) setNotice('Message sent, but the conversation could not be refreshed.')
       await markSelectedRead()
       await refreshConversations()
@@ -315,6 +403,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         return
       }
       placeMenuRef.current?.removeAttribute('open')
+      stickToBottomRef.current = true
       await refreshMessages()
       await markSelectedRead()
       await refreshConversations()
@@ -325,15 +414,27 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     }
   }
 
-  return <div className={`figma-friends-screen is-messages${isConversationOpen ? ' is-conversation-open' : ''}${mobileModePending ? ' is-mobile-mode-pending' : ''}`}>
+  function handleMessageScroll(event) {
+    const node = event.currentTarget
+    const remaining = node.scrollHeight - node.scrollTop - node.clientHeight
+    stickToBottomRef.current = remaining <= node.clientHeight * .15
+  }
+
+  function handleBackNavigation(event) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    setNavigationPending(true)
+  }
+
+  return <div className={`figma-friends-screen is-messages${isConversationOpen ? ' is-conversation-open' : ''}${mobileModePending ? ' is-mobile-mode-pending' : ''}`} aria-busy={navigationPending || undefined}>
     <MessagesTabs />
+    {navigationPending ? <div className="figma-messages-navigation-status" role="status" aria-label="Loading conversation">Loading conversation...</div> : null}
     <div className="figma-friends-message-layout">
       <aside className="figma-friends-conversations" aria-label="Conversations">
         {conversations.length ? conversations.map((conversation) => <button
           className={selectedId && selectedId === conversation.conversation_id ? 'is-active' : ''}
           type="button"
           onClick={() => openConversation(conversation)}
-          disabled={openingFriendId === conversation.friend_id}
+          disabled={Boolean(openingConversationId || openingFriendId) || openingFriendId === conversation.friend_id}
           key={conversation.conversation_id || `friend:${conversation.friend_id}`}
         >
           <Avatar client={client} person={{ display_name: conversation.display_name, avatar_path: conversation.avatar_path }} />
@@ -352,13 +453,14 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
               href="/matches?tab=messages"
               replace
               scroll={false}
+              onClick={handleBackNavigation}
               className="figma-friends-chat-back"
               aria-label="Back to conversations"
             >‹</Link>
             <Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} />
             <span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span>
           </header>
-          <div className="figma-friends-messages" ref={messageScrollRef} aria-live="polite">
+          <div className="figma-friends-messages" ref={messageScrollRef} onScroll={handleMessageScroll} aria-live="polite">
             {messagesHasMore ? <button type="button" onClick={loadOlderMessages} disabled={paging}>Load older messages</button> : null}
             {messages.length ? messages.map((item) => {
               const mine = item.sender_id === initialSnapshot.self.id

@@ -85,6 +85,48 @@ export async function deleteProfile(userId) {
   if (error) throw error
 }
 
+export async function createDirectConversationFixture(ownerId, peerId, body = 'Mobile Messages fixture') {
+  const { error: friendshipError } = await admin.from('friendships').upsert({
+    requester_id: ownerId,
+    addressee_id: peerId,
+    state: 'accepted'
+  })
+  if (friendshipError) throw friendshipError
+
+  const { data: conversation, error: conversationError } = await admin
+    .from('conversations')
+    .insert({ kind: 'direct' })
+    .select('id')
+    .single()
+  if (conversationError) throw conversationError
+
+  const { error: membersError } = await admin.from('conversation_members').insert([
+    { conversation_id: conversation.id, profile_id: ownerId },
+    { conversation_id: conversation.id, profile_id: peerId }
+  ])
+  if (membersError) throw membersError
+
+  const { error: messageError } = await admin.from('messages').insert({
+    conversation_id: conversation.id,
+    sender_id: peerId,
+    body
+  })
+  if (messageError) throw messageError
+
+  return conversation.id
+}
+
+export async function deleteDirectConversationFixture(conversationId, ownerId, peerId) {
+  const { error: messagesError } = await admin.from('messages').delete().eq('conversation_id', conversationId)
+  if (messagesError) throw messagesError
+  const { error: membersError } = await admin.from('conversation_members').delete().eq('conversation_id', conversationId)
+  if (membersError) throw membersError
+  const { error: conversationError } = await admin.from('conversations').delete().eq('id', conversationId)
+  if (conversationError) throw conversationError
+  const { error: friendshipError } = await admin.from('friendships').delete().eq('requester_id', ownerId).eq('addressee_id', peerId)
+  if (friendshipError) throw friendshipError
+}
+
 function authVerificationLink(message, expectedType) {
   const source = `${message?.Text || ''}\n${message?.HTML || ''}`.replaceAll('&amp;', '&')
   const links = source.match(/https?:\/\/[^\s"'<>]+/g) || []

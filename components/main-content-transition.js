@@ -40,7 +40,7 @@ export function MainContentTransition({ children }) {
   }, [])
 
   return (
-    <div className={`puddle-main-transition${loading ? ' is-loading' : ''}`} aria-busy={loading || undefined}>
+    <div className={`puddle-main-transition${loading ? ' is-loading' : ''}`} data-route-path={pathname || undefined} aria-busy={loading || undefined}>
       <div className="puddle-main-transition-content">{children}</div>
       {loading ? (
         <div className="puddle-main-transition-loader" role="status" aria-label="Loading">

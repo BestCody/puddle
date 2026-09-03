@@ -14,7 +14,7 @@ export default async function FriendsPage({ searchParams }) {
   const conversationId = typeof params?.conversation === 'string' ? params.conversation : null
 
   return renderProductPage(async (session) => {
-    const snapshot = await getSocialHubSnapshot(session, conversationId)
+    const snapshot = await getSocialHubSnapshot(session, conversationId, { tab })
     return <div className="figma-friends-pass-wrapper">
       {tab === 'add' ? <PassMessageSearch enabled={snapshot.passActive} /> : null}
       {tab === 'messages'
