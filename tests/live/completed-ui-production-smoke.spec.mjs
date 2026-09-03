@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { completeOnboarding } from './onboarding.mjs'
 
 async function mockTorontoSearch(page) {
   await page.route('**/api/location/search?**', async (route) => {
@@ -32,16 +33,7 @@ async function createDisposableAccount(page, { displayName, email, password, use
   await page.getByRole('button', { name: 'Create my Puddle →' }).click()
   await page.waitForURL(/\/onboarding(?:\?|$)/, { timeout: 30_000 })
 
-  await page.locator('input[name="username"]').fill(username)
-  await page.locator('input[name="birth_date"]').fill('1990-01-01')
-  await page.getByLabel('City or town').fill('Toronto')
-  await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.getByRole('option').filter({ hasText: 'Toronto' }).click()
-  await page.getByRole('checkbox', { name: 'Coffee shops' }).check()
-  await page.getByRole('checkbox', { name: 'Restaurants' }).check()
-  await page.getByRole('checkbox', { name: 'Parks & gardens' }).check()
-  await page.getByRole('button', { name: 'Build my date deck →' }).click()
-  await page.waitForURL(/\/discover(?:\?|$)/, { timeout: 30_000 })
+  await completeOnboarding(page, { username })
 }
 
 async function deleteDisposableAccount(page) {
