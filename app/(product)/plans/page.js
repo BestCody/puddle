@@ -143,40 +143,42 @@ export default async function PlansPage({ searchParams }) {
     const selectedCategory = active === 'saved' ? requestedCategory : 'all'
     const visible = items
 
-    return <div className={styles.screen} data-testid="saved-screen" data-tab={active}>
-      <SavedLocationMorphBridge />
-      <AuthMessage searchParams={params} />
-      <header className={styles.topbar}>
-        <RoutedSegment
-          className={styles.tabs}
-          tone="purple"
-          activeValue={active === 'planned' ? 'planned' : 'saved'}
-          ariaLabel="Saved and plans"
-          testId="saved-tabs"
-          items={[
-            { value: 'saved', label: 'Saved', href: '/plans?tab=saved' },
-            { value: 'planned', label: 'Plans', href: '/plans?tab=planned' }
-          ]}
-        />
-        {active === 'saved' ? <SavedSearchInput initialQuery={query} category={selectedCategory} /> : null}
-      </header>
+    return <>
+      {active === 'saved' ? <SavedSearchInput initialQuery={query} category={selectedCategory} /> : null}
+      <div className={styles.screen} data-testid="saved-screen" data-tab={active}>
+        <SavedLocationMorphBridge />
+        <AuthMessage searchParams={params} />
+        <header className={styles.topbar}>
+          <RoutedSegment
+            className={styles.tabs}
+            tone="purple"
+            activeValue={active === 'planned' ? 'planned' : 'saved'}
+            ariaLabel="Saved and plans"
+            testId="saved-tabs"
+            items={[
+              { value: 'saved', label: 'Saved', href: '/plans?tab=saved' },
+              { value: 'planned', label: 'Plans', href: '/plans?tab=planned' }
+            ]}
+          />
+        </header>
 
-      {active === 'saved' ? <div className={styles.categoryBand}>
-        <SavedCategoryRail folders={folders} selectedCategory={selectedCategory} />
-      </div> : <div className={styles.planBand}><h1 className={styles.planHeading}>Plans</h1></div>}
+        {active === 'saved' ? <div className={styles.categoryBand}>
+          <SavedCategoryRail folders={folders} selectedCategory={selectedCategory} />
+        </div> : <div className={styles.planBand}><h1 className={styles.planHeading}>Plans</h1></div>}
 
-      {visible.length ? lightweightSaved
-        ? <SavedLightweightGrid items={visible} className={styles.placeGrid} cardClassName={styles.placeCard} photoClassName={styles.placePhoto} copyClassName={styles.placeCopy} metaClassName={styles.placeMeta} perfectPickClassName={styles.perfectPick} />
-        : <section className={styles.placeGrid} aria-label={active === 'saved' ? 'Saved places' : active === 'planned' ? 'Plans' : 'History'} data-testid="saved-grid">
-            {visible.map((item) => <SavedCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}
-          </section>
-        : <div className={styles.empty} data-testid="saved-empty"><strong>{active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong><Link href="/discover">Start swiping</Link></div>}
+        {visible.length ? lightweightSaved
+          ? <SavedLightweightGrid items={visible} className={styles.placeGrid} cardClassName={styles.placeCard} photoClassName={styles.placePhoto} copyClassName={styles.placeCopy} metaClassName={styles.placeMeta} perfectPickClassName={styles.perfectPick} />
+          : <section className={styles.placeGrid} aria-label={active === 'saved' ? 'Saved places' : active === 'planned' ? 'Plans' : 'History'} data-testid="saved-grid">
+              {visible.map((item) => <SavedCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}
+            </section>
+          : <div className={styles.empty} data-testid="saved-empty"><strong>{active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong><Link href="/discover">Start swiping</Link></div>}
 
-      {page.pagination.hasMore ? <div className={styles.historyLink}>
-        <Link data-testid="saved-next-page" href={nextPageHref({ active, category: selectedCategory, query, cursor: page.pagination.nextCursor })}>{active === 'past' ? 'Older history' : active === 'planned' ? 'More plans' : 'More saved places'}</Link>
-      </div> : null}
+        {page.pagination.hasMore ? <div className={styles.historyLink}>
+          <Link data-testid="saved-next-page" href={nextPageHref({ active, category: selectedCategory, query, cursor: page.pagination.nextCursor })}>{active === 'past' ? 'Older history' : active === 'planned' ? 'More plans' : 'More saved places'}</Link>
+        </div> : null}
 
-      <footer className={styles.historyLink}>{active === 'past' ? <Link href="/plans">Back to Saved</Link> : <Link href="/plans?tab=past">History</Link>}</footer>
-    </div>
+        <footer className={styles.historyLink}>{active === 'past' ? <Link href="/plans">Back to Saved</Link> : <Link href="/plans?tab=past">History</Link>}</footer>
+      </div>
+    </>
   })
 }
