@@ -119,6 +119,7 @@
 }
 
 .post {
+  --feed-content-indent: 2.9375rem;
   width: 100%;
   min-height: clamp(24rem, 33vw, 32rem);
   display: flex;
@@ -169,7 +170,7 @@
 }
 
 .title {
-  margin: .75rem .1875rem 0 2.9375rem;
+  margin: .75rem .1875rem 0 var(--feed-content-indent);
   color: #111;
   overflow-wrap: anywhere;
   font: 800 clamp(1.125rem, 2.1vw, 1.5rem)/1.1 Manrope, sans-serif;
@@ -181,7 +182,7 @@
 }
 
 .copy {
-  margin: .0625rem .1875rem 0 2.9375rem;
+  margin: .0625rem .1875rem 0 var(--feed-content-indent);
   color: #000;
   overflow-wrap: anywhere;
   font: 500 1.0625rem/.95 Manrope, sans-serif;
@@ -916,6 +917,7 @@
   }
 
   .post {
+    --feed-content-indent: 2.0625rem;
     min-height: clamp(20rem, 85cqi, 24.765rem);
     padding: .75rem .8125rem .625rem;
     border-width: .121rem;
@@ -941,7 +943,7 @@
   }
 
   .copy {
-    margin: .125rem .1875rem 0 2.0625rem;
+    margin-top: .125rem;
     font-size: .824rem;
     letter-spacing: .0165rem;
   }

@@ -239,34 +239,34 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     min-height: calc(100dvh - 110px) !important;
   }
 
-  .figma-friends-screen.is-messages:not(:has(.figma-friends-chat > header)) .figma-friends-chat {
+  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-chat {
     display: none !important;
   }
 
-  .figma-friends-screen.is-messages:not(:has(.figma-friends-chat > header)) .figma-friends-conversations {
+  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-conversations {
     width: 100% !important;
     max-height: none !important;
     min-height: calc(100dvh - 132px) !important;
   }
 
-  .figma-friends-screen.is-messages:not(:has(.figma-friends-chat > header)) .figma-friends-conversation-empty {
+  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-conversation-empty {
     font-size: 0 !important;
   }
 
-  .figma-friends-screen.is-messages:not(:has(.figma-friends-chat > header)) .figma-friends-conversation-empty::before {
+  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-conversation-empty::before {
     content: "No conversation yet";
     font: 700 14px/1.2 Manrope, sans-serif;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-conversations {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-conversations {
     display: none !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-message-layout {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-message-layout {
     grid-template-rows: minmax(0, 1fr) !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-chat {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-chat {
     position: relative !important;
     inset: auto !important;
     z-index: 1 !important;
@@ -283,7 +283,7 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     box-shadow: none !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-chat > header {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-chat > header {
     height: 4.5rem !important;
     padding: 0 1rem !important;
     box-sizing: border-box !important;
@@ -292,15 +292,15 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   /* The tab strip used to be restyled into a back arrow here. It pointed at the page it was
      already on, so it never navigated. The chat header now renders a real route link instead,
      and the tabs are simply hidden while a conversation is open. */
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-tabs {
     display: none !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-messages {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-messages {
     bottom: calc(76px + env(safe-area-inset-bottom)) !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-composer {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-composer {
     bottom: calc(12px + env(safe-area-inset-bottom)) !important;
   }
 
