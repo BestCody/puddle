@@ -205,6 +205,17 @@
 }
 
 @media (max-width: 760px) {
+  .puddle-main-transition[data-route-path="/matches"] {
+    height: calc(100dvh - var(--puddle-mobile-content-bottom));
+    min-height: 0;
+  }
+
+  .puddle-main-transition[data-route-path="/matches"] .puddle-main-transition-content,
+  .puddle-main-transition[data-route-path="/matches"] .puddle-main-transition-loader {
+    height: 100%;
+    min-height: 0;
+  }
+
   .figma-friends-pass-wrapper:has(> .figma-friends-screen.is-messages),
   .figma-friends-screen.is-messages {
     height: calc(100dvh - var(--puddle-mobile-content-bottom));
@@ -306,6 +317,20 @@
     width: min(300px, calc(100vw - 32px)) !important;
     max-height: 240px;
   }
+
+}
+
+.figma-messages-navigation-status {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, .72);
+  color: #777;
+  font: 800 .875rem/1.2 Manrope, sans-serif;
+  pointer-events: auto;
 }
 
 @media (prefers-color-scheme: dark) {
