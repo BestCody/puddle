@@ -18,7 +18,7 @@ export default async function FriendsPage({ searchParams }) {
     return <div className="figma-friends-pass-wrapper">
       {tab === 'add' ? <PassMessageSearch enabled={snapshot.passActive} /> : null}
       {tab === 'messages'
-        ? <FigmaMessagesRealtime initialSnapshot={snapshot} />
+        ? <FigmaMessagesRealtime initialSnapshot={snapshot} conversationId={conversationId} />
         : <FigmaSocialHub initialSnapshot={snapshot} initialTab={tab} />}
     </div>
   })

@@ -399,26 +399,11 @@ body:has([data-testid='feed-screen'][data-view='map']) {
 }
 
 @media (max-width: 760px) {
-  [data-testid='saved-screen'][data-tab='saved'] > header:first-of-type {
-    height: auto !important;
-    min-height: 0 !important;
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    padding: clamp(1.5rem, 7vw, 2.25rem) 1rem 1rem;
-  }
-
   [data-testid='saved-search'] {
-    position: static !important;
-    inset: auto !important;
-    z-index: auto !important;
-    width: min(100%, 22.5rem) !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    height: auto !important;
-    min-height: 3.25rem !important;
-    margin: 0 auto !important;
-    transform: none !important;
+    bottom: calc(var(--puddle-mobile-content-bottom) + 1rem) !important;
+    left: 50% !important;
+    width: min(22.5rem, calc(100vw - 2rem)) !important;
+    min-width: min(22.5rem, calc(100vw - 2rem)) !important;
+    max-width: min(22.5rem, calc(100vw - 2rem)) !important;
   }
 }
