@@ -400,10 +400,10 @@ body:has([data-testid='feed-screen'][data-view='map']) {
 
 @media (max-width: 760px) {
   [data-testid='saved-search'] {
-    bottom: calc(var(--puddle-mobile-content-bottom) + 16px) !important;
+    bottom: calc(var(--puddle-mobile-content-bottom) + 1rem) !important;
     left: 50% !important;
-    width: min(360px, calc(100vw - 32px)) !important;
-    min-width: min(360px, calc(100vw - 32px)) !important;
-    max-width: min(360px, calc(100vw - 32px)) !important;
+    width: min(22.5rem, calc(100vw - 2rem)) !important;
+    min-width: min(22.5rem, calc(100vw - 2rem)) !important;
+    max-width: min(22.5rem, calc(100vw - 2rem)) !important;
   }
 }

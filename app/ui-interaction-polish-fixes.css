@@ -30,15 +30,15 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded 
   overflow-y: auto !important;
 }
 
-.figma-settings-window .figma-settings-section,
-.figma-settings-window.is-expanded .figma-settings-section,
-.figma-settings-window #profile,
-.figma-settings-window #security,
-.figma-settings-window #appearance,
-.figma-settings-window #notifications,
-.figma-settings-window #sessions,
-.figma-settings-window #billing,
-.figma-settings-window #account {
+.figma-settings-window:not(.is-mobile-flow-window) .figma-settings-section,
+.figma-settings-window:not(.is-mobile-flow-window).is-expanded .figma-settings-section,
+.figma-settings-window:not(.is-mobile-flow-window) #profile,
+.figma-settings-window:not(.is-mobile-flow-window) #security,
+.figma-settings-window:not(.is-mobile-flow-window) #appearance,
+.figma-settings-window:not(.is-mobile-flow-window) #notifications,
+.figma-settings-window:not(.is-mobile-flow-window) #sessions,
+.figma-settings-window:not(.is-mobile-flow-window) #billing,
+.figma-settings-window:not(.is-mobile-flow-window) #account {
   display: block !important;
   position: relative !important;
   inset: auto !important;

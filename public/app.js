@@ -16,21 +16,6 @@ function protectInteractiveLayers() {
   })
 }
 
-function openSafetyDialog() {
-  const backdrop = $('#safety-dialog-backdrop')
-  if (!backdrop) return
-  backdrop.classList.add('is-open')
-  backdrop.setAttribute('aria-hidden', 'false')
-  $('[data-close-safety]', backdrop)?.focus()
-}
-
-function closeSafetyDialog() {
-  const backdrop = $('#safety-dialog-backdrop')
-  if (!backdrop) return
-  backdrop.classList.remove('is-open')
-  backdrop.setAttribute('aria-hidden', 'true')
-}
-
 function initLandingAuth() {
   const params = new URLSearchParams(window.location.search)
   const next = params.get('next')
@@ -47,6 +32,13 @@ function initLandingAuth() {
 
   const panel = $('.login-panel')
   if (!panel) return
+
+  const mobileLoginButton = $('[data-mobile-login-trigger]')
+  const mobileLoginDialog = $('#mobile-login-dialog')
+  const mobileLoginSurface = $('.mobile-login-dialog__surface', mobileLoginDialog)
+  const mobileLoginClose = $('[data-close-mobile-login]', mobileLoginDialog)
+  const originalPanelParent = panel.parentNode
+  const originalPanelNextSibling = panel.nextSibling
 
   const modeButtons = $$('.auth-mode-switch [data-auth-mode]', panel)
   const loginForm = $('.landing-login-form', panel)
@@ -91,7 +83,34 @@ function initLandingAuth() {
     })
   })
 
+  const restorePanel = () => {
+    if (!originalPanelParent || panel.parentNode === originalPanelParent) return
+    originalPanelParent.insertBefore(panel, originalPanelNextSibling && originalPanelNextSibling.parentNode === originalPanelParent ? originalPanelNextSibling : null)
+  }
+
+  const openMobileLogin = (focus = true) => {
+    if (!mobileLoginDialog || !mobileLoginSurface || typeof mobileLoginDialog.showModal !== 'function') return false
+    mobileLoginSurface.append(panel)
+    if (!mobileLoginDialog.open) mobileLoginDialog.showModal()
+    setMode('login', focus)
+    return true
+  }
+
+  mobileLoginButton?.addEventListener('click', (event) => {
+    if (!window.matchMedia('(max-width: 760px)').matches || !openMobileLogin()) return
+    event.preventDefault()
+  })
+  mobileLoginClose?.addEventListener('click', () => mobileLoginDialog?.close())
+  mobileLoginDialog?.addEventListener('click', (event) => {
+    if (event.target === mobileLoginDialog) mobileLoginDialog.close()
+  })
+  mobileLoginDialog?.addEventListener('close', () => {
+    restorePanel()
+    mobileLoginButton?.focus()
+  })
+
   setMode(params.get('mode') === 'signup' ? 'signup' : 'login')
+  if (params.get('mode') === 'login' && window.matchMedia('(max-width: 760px)').matches) openMobileLogin()
 }
 
 function initPhoneDemoLoading() {
@@ -171,17 +190,6 @@ function initDraggablePhones() {
 function initLanding() {
   protectInteractiveLayers()
   initPhoneDemoLoading()
-
-  $$('[data-open-safety]').forEach((button) => button.addEventListener('click', openSafetyDialog))
-  $$('[data-close-safety]').forEach((button) => button.addEventListener('click', closeSafetyDialog))
-
-  $('#safety-dialog-backdrop')?.addEventListener('click', (event) => {
-    if (event.target.id === 'safety-dialog-backdrop') closeSafetyDialog()
-  })
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeSafetyDialog()
-  })
 
   initLandingAuth()
   initDraggablePhones()

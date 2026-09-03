@@ -58,6 +58,15 @@ test('Profile follows Figma 40:347 with centered identity and a flow-driven two-
   assert.doesNotMatch(layout, /figma-dashboard-profile-fidelity\.css/)
 })
 
+test('mobile profile cards give content-driven bubbles enough vertical breathing room', async () => {
+  const styles = await read('app/profile-widget-cleanup-20260829.css')
+
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*\.figma-profile-card\s*\{[\s\S]*padding: clamp\(/s)
+  assert.match(styles, /\.figma-profile-card\s*\{[\s\S]*row-gap: clamp\(/s)
+  assert.match(styles, /\.figma-profile-location-card\s*\{[\s\S]*grid-template-rows: auto auto !important;/s)
+  assert.match(styles, /\.figma-profile-mini-list > a\s*\{[\s\S]*min-height: 2rem;[\s\S]*padding-block: \.375rem;/s)
+})
+
 test('Profile save count uses the full saved-location relation, not the preview page', async () => {
   const page = await read('app/(product)/profile/page.js')
   const counts = page.slice(page.indexOf('figma-profile-counts'), page.indexOf('figma-profile-chips'))

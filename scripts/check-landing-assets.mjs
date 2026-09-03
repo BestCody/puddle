@@ -64,16 +64,22 @@ if (missingRoutes.length) {
 }
 
 const requiredMarkup = [
-  'data-figma-node="83:76"',
-  'data-figma-node="161:116"',
+  'data-figma-node="352:484"',
+  'data-figma-node="351:156"',
   'action="/api/auth/password"',
   'method="post"',
   'name="next" value="/discover"',
   'type="password"',
   'class="feature-card',
   'class="safety-panel',
+  'class="safety-post',
   'class="site-footer',
   'href="/api/auth/google?next=%2Fdiscover"',
+  'class="mobile-login-button"',
+  'href="/?mode=login"',
+  'src="/figma/assets/mobile-logo-exact.svg"',
+  'id="mobile-login-dialog"',
+  'Over 30 million locations worldwide',
   'href="/signup"'
 ]
 for (const marker of requiredMarkup) {
@@ -90,7 +96,6 @@ const forbiddenLandingMarkers = [
   'data-open-app',
   'data-open-modal="waitlist"',
   'data-signin-handoff',
-  '/signin',
   '<button data-open-modal="privacy"',
   '<button data-open-modal="terms"'
 ]

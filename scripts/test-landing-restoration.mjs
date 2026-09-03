@@ -89,8 +89,8 @@ try {
   await page.waitForFunction(() => document.querySelector('.landing-stage--desktop')?.dataset.ready === 'true')
 
   assert(await page.title() === 'Puddle — Discover places. See who’s there.', 'landing title does not match Figma copy')
-  assert(await page.locator('[data-figma-node="83:76"]').isVisible(), 'desktop Figma composition is not visible')
-  assert(!(await page.locator('[data-figma-node="161:116"]').isVisible()), 'mobile composition should be hidden on desktop')
+  assert(await page.locator('[data-figma-node="352:484"]').isVisible(), 'desktop Figma composition is not visible')
+  assert(!(await page.locator('[data-figma-node="351:156"]').isVisible()), 'mobile composition should be hidden on desktop')
   assert(await page.locator('.landing-sticky-left').isVisible(), 'desktop left sign-in column is missing')
   assert(await page.locator('.landing-sticky-left .landing-login-form input:not([type="hidden"])').count() === 2, 'desktop login fields are not real inputs')
   assert(await page.locator('.auth-mode-switch').isVisible(), 'landing auth mode switch is missing')
@@ -115,7 +115,7 @@ try {
   assert(await page.locator('.feature-card--d-swipe .interactive-pill').isVisible(), 'Figma Interactive pill is missing from Swipe')
   assert(await page.locator('.feature-card--d-save .interactive-pill').isVisible(), 'Figma Interactive pill is missing from Save')
   assert(await page.locator('.feature-card--d-feed .interactive-pill').isVisible(), 'Figma Interactive pill is missing from Feed')
-  assert(await page.locator('.feature-card--d-profile').count() === 0, 'desktop Profile card is not present in Figma 83:76')
+  assert(await page.locator('.feature-card--d-profile').count() === 0, 'desktop Profile card is not present in Figma 352:484')
 
   const stageStyle = await page.locator('.landing-stage--desktop').evaluate((node) => getComputedStyle(node).display)
   assert(stageStyle === 'grid', `desktop landing is not a two-column grid: ${stageStyle}`)
@@ -166,22 +166,31 @@ try {
 
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'desktop page horizontally overflows')
   for (const route of ['/signup', '/privacy', '/terms']) assert(await page.locator(`a[href="${route}"]`).count() > 0, `${route} route link is missing`)
-  await page.locator('.safety-panel--desktop [data-open-safety]').click()
-  await page.waitForSelector('#safety-dialog-backdrop.is-open')
-  await page.locator('[data-close-safety]').click()
-  assert(!(await page.locator('#safety-dialog-backdrop').isVisible()), 'safety dialog did not close')
+  assert(await page.locator('.safety-panel--desktop h2').textContent() === 'Over 30 million locations worldwide', 'desktop safety copy is not from the updated Figma frame')
+  assert(await page.locator('.safety-panel--desktop .safety-post').count() === 4, 'desktop safety city cards are incomplete')
+  assert(await page.locator('.safety-panel--desktop .safety-model-button').getAttribute('href') === '/places', 'desktop safety See all link is missing')
+  assert(await page.locator('.footer-bottom-art--desktop').getAttribute('src') === '/figma/assets/footer-bottom-scenery-desktop.png', 'desktop footer must use the Figma scenic artwork')
   await page.screenshot({ path: join(artifacts, 'desktop-real-dom.png'), fullPage: true })
 
   await page.setViewportSize({ width: 704, height: 900 })
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await page.evaluate(() => document.fonts?.ready)
   await page.waitForFunction(() => document.querySelector('.landing-stage--mobile')?.dataset.ready === 'true')
-  assert(await page.locator('[data-figma-node="161:116"]').isVisible(), 'mobile Figma composition is not visible')
-  assert(!(await page.locator('[data-figma-node="83:76"]').isVisible()), 'desktop composition should be hidden on mobile')
+  assert(await page.locator('[data-figma-node="351:156"]').isVisible(), 'mobile Figma composition is not visible')
+  assert(!(await page.locator('[data-figma-node="352:484"]').isVisible()), 'desktop composition should be hidden on mobile')
   assert(!(await page.locator('.landing-sticky-left').isVisible()), 'desktop sticky pane leaked into mobile')
   assert(await page.locator('.feature-card--m-swipe .interactive-pill').isVisible(), 'mobile Swipe Interactive pill is missing')
-  assert(await page.locator('.feature-card--m-profile').isVisible(), 'mobile Profile card from Figma 161:116 is missing')
+  assert(await page.locator('.feature-card--m-profile').count() === 0, 'mobile Profile card is not part of the updated Figma composition')
+  assert(await page.locator('.mobile-login-button').isVisible(), 'mobile Login action is missing')
+  assert(await page.locator('.mobile-login-button').getAttribute('href') === '/?mode=login', 'mobile Login action does not use the landing authentication route')
+  assert(await page.locator('.brand--mobile img').getAttribute('src') === '/figma/assets/mobile-logo-exact.svg', 'mobile Puddle brand must use the exact mobile logo asset')
+  await page.locator('.mobile-login-button').click()
+  assert(await page.locator('.mobile-login-dialog[open]').isVisible(), 'mobile Login action did not open the authentication dialog')
+  assert(await page.locator('.mobile-login-dialog .landing-login-form').isVisible(), 'mobile authentication dialog does not reuse the landing login form')
+  await page.locator('[data-close-mobile-login]').click()
+  assert(await page.locator('.mobile-login-dialog[open]').count() === 0, 'mobile authentication dialog did not close')
   assert(await page.locator('.safety-panel--mobile').isVisible(), 'mobile safety panel is not visible')
+  assert(await page.locator('.safety-panel--mobile .safety-post').count() === 4, 'mobile safety city cards are incomplete')
   assert(await page.locator('.trust-heading--mobile img').getAttribute('src') === '/figma/assets/lock.svg', 'mobile Lock must use Figma SVG')
   assert(await page.locator('.footer-bottom-art--mobile').getAttribute('src') === '/figma/assets/footer-bottom-scenery-mobile.png', 'mobile footer must use the Figma scenic artwork')
   assert(await page.locator('.footer-wordmark--mobile').isVisible(), 'mobile footer wordmark is missing')
@@ -194,7 +203,6 @@ try {
     '.feature-card--m-swipe',
     '.feature-card--m-save',
     '.feature-card--m-feed',
-    '.feature-card--m-profile',
     '.trust-heading--mobile',
     '.safety-panel--mobile',
     '.final-cta--mobile',
@@ -207,14 +215,36 @@ try {
   const brand = await page.locator('.brand--mobile').boundingBox()
   const title = await page.locator('#mobile-title').boundingBox()
   const phone = await page.locator('.hero-phone-composite--mobile').boundingBox()
-  const auth = await page.locator('.mobile-auth').boundingBox()
-  assert(hero && hero.height > 1100 && Math.abs(hero.width / hero.height - 704 / 1261) < .01, 'mobile hero no longer preserves Figma 161:116 local composition ratio')
+  const login = await page.locator('.mobile-login-button').boundingBox()
+  const mobileAlignment = await page.evaluate(() => {
+    const rect = (selector) => document.querySelector(selector)?.getBoundingClientRect()
+    const hero = rect('.hero--mobile')
+    const phone = rect('.hero-phone-composite--mobile')
+    const discovery = rect('.discovery--mobile')
+    const heading = rect('.discovery--mobile h2')
+    const title = document.querySelector('.hero--mobile h1')
+    if (!hero || !phone || !discovery || !heading || !title) return null
+    return {
+      phoneCenterRatio: (phone.left + phone.width / 2 - hero.left) / hero.width,
+      discoveryHeadingCenterRatio: (heading.left + heading.width / 2 - discovery.left) / discovery.width,
+      discoveryHeadingBounds: {
+        leftRatio: (heading.left - discovery.left) / discovery.width,
+        rightRatio: (heading.right - discovery.left) / discovery.width
+      },
+      titleTextAlign: getComputedStyle(title).textAlign
+    }
+  })
+  assert(hero && hero.height > 1000 && Math.abs(hero.width / hero.height - 704 / 1093) < .01, 'mobile hero no longer preserves Figma 351:156 local composition ratio')
   assert(await page.locator('.mobile-hero-photo--two').isVisible(), 'Figma blue landscape layer is hidden')
   assert(landscape && landscape.width > hero.width && landscape.y >= hero.y && landscape.y < hero.y + hero.height * .03, 'Figma blue landscape layer lost its local hero placement')
   assert(await page.locator('.brand--mobile').isVisible() && brand && brand.y > hero.y + hero.height * .03 && brand.y < hero.y + hero.height * .08, 'mobile Puddle brand is missing from the Figma hero')
   assert(await page.locator('#mobile-title').isVisible() && title && title.y > hero.y + hero.height * .08 && title.y < hero.y + hero.height * .16, 'mobile hero title is missing or displaced')
   assert(await page.locator('.hero-phone-composite--mobile').isVisible() && phone && phone.y > hero.y + hero.height * .2 && phone.y < hero.y + hero.height * .28, 'mobile phone is missing or displaced from the Figma hero')
-  assert(await page.locator('.mobile-auth').isVisible() && auth && auth.y > hero.y + hero.height * .78 && auth.y < hero.y + hero.height * .85, 'mobile auth controls are missing or displaced from the Figma hero')
+  assert(await page.locator('.mobile-login-button').isVisible() && login && login.y > hero.y + hero.height * .9 && login.y < hero.y + hero.height, 'mobile Login action is missing or displaced from the Figma hero')
+  assert(mobileAlignment && Math.abs(mobileAlignment.phoneCenterRatio - .5) < .015, `mobile phone is not centered in the hero: ${mobileAlignment?.phoneCenterRatio}`)
+  assert(mobileAlignment && Math.abs(mobileAlignment.discoveryHeadingCenterRatio - .5) < .015, `mobile discovery heading is not centered in its section: ${mobileAlignment?.discoveryHeadingCenterRatio}`)
+  assert(mobileAlignment && mobileAlignment.discoveryHeadingBounds.leftRatio >= -.015 && mobileAlignment.discoveryHeadingBounds.rightRatio <= 1.015, 'mobile discovery heading extends beyond its section')
+  assert(mobileAlignment?.titleTextAlign === 'center', `mobile hero title is not centered: ${mobileAlignment?.titleTextAlign}`)
 
   await page.screenshot({ path: join(artifacts, 'mobile-real-dom.png'), fullPage: true })
 

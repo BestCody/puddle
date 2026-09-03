@@ -63,10 +63,20 @@ function conversationList(snapshot, selected, source = snapshot.conversations ||
   return [...base, ...waiting]
 }
 
-export function FigmaMessagesRealtime({ initialSnapshot }) {
+export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }) {
   const client = useMemo(() => createClient(), [])
   const router = useRouter()
-  const selected = initialSnapshot.selectedConversation
+  const [isMobile, setIsMobile] = useState(null)
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)')
+    const sync = () => setIsMobile(media.matches)
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
+
+  const selected = isMobile === true && !conversationId ? null : initialSnapshot.selectedConversation
   const selectedId = selected?.conversation_id || null
   const placeMenuRef = useRef(null)
   const messageScrollRef = useRef(null)
@@ -162,6 +172,7 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
   }
 
   useEffect(() => {
+    if (isMobile === null) return undefined
     let active = true
 
     async function initializeReadState() {
@@ -188,7 +199,7 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
       active = false
       client.removeChannel(channel)
     }
-  }, [client, initialSnapshot.self.id, selectedId])
+  }, [client, initialSnapshot.self.id, isMobile, selectedId])
 
   async function openConversation(conversation) {
     if (conversation.conversation_id) {
@@ -312,7 +323,7 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
     }
   }
 
-  return <div className="figma-friends-screen is-messages">
+  return <div className={`figma-friends-screen is-messages${selected ? ' is-conversation-open' : ''}`}>
     <MessagesTabs />
     <div className="figma-friends-message-layout">
       <aside className="figma-friends-conversations" aria-label="Conversations">
@@ -332,7 +343,19 @@ export function FigmaMessagesRealtime({ initialSnapshot }) {
 
       <section className="figma-friends-chat">
         {selected ? <>
-          <header><Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} /><span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span></header>
+          <header>
+            {/* A route link keeps the mobile back affordance a real navigation target while the
+                conversation remains in the shared Messages route. */}
+            <Link
+              href="/matches?tab=messages"
+              replace
+              scroll={false}
+              className="figma-friends-chat-back"
+              aria-label="Back to conversations"
+            >‹</Link>
+            <Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} />
+            <span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span>
+          </header>
           <div className="figma-friends-messages" ref={messageScrollRef} aria-live="polite">
             {messagesHasMore ? <button type="button" onClick={loadOlderMessages} disabled={paging}>Load older messages</button> : null}
             {messages.length ? messages.map((item) => {

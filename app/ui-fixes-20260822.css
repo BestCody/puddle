@@ -203,7 +203,8 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
   row-gap: 8px !important;
 }
 
-/* 6. Messages on mobile: list first, then a full-screen conversation with a back link. */
+/* 6. Messages on mobile: list first, then a conversation that uses the content area above the
+   persistent mobile navigation. */
 @media (max-width: 760px) {
   .figma-swipe-actions,
   .minimal-swipe-actions.figma-swipe-actions {
@@ -238,38 +239,43 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     min-height: calc(100dvh - 110px) !important;
   }
 
-  .figma-friends-screen.is-messages:not(:has(.figma-friends-chat > header)) .figma-friends-chat {
+  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-chat {
     display: none !important;
   }
 
-  .figma-friends-screen.is-messages:not(:has(.figma-friends-chat > header)) .figma-friends-conversations {
+  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-conversations {
     width: 100% !important;
     max-height: none !important;
     min-height: calc(100dvh - 132px) !important;
   }
 
-  .figma-friends-screen.is-messages:not(:has(.figma-friends-chat > header)) .figma-friends-conversation-empty {
+  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-conversation-empty {
     font-size: 0 !important;
   }
 
-  .figma-friends-screen.is-messages:not(:has(.figma-friends-chat > header)) .figma-friends-conversation-empty::before {
+  .figma-friends-screen.is-messages:not(.is-conversation-open) .figma-friends-conversation-empty::before {
     content: "No conversation yet";
     font: 700 14px/1.2 Manrope, sans-serif;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-conversations {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-conversations {
     display: none !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-chat {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 500 !important;
-    display: block !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    height: 100dvh !important;
-    min-height: 100dvh !important;
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-message-layout {
+    grid-template-rows: minmax(0, 1fr) !important;
+  }
+
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-chat {
+    position: relative !important;
+    inset: auto !important;
+    z-index: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
     margin: 0 !important;
     border: 0 !important;
     border-radius: 0 !important;
@@ -277,60 +283,24 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-detail {
     box-shadow: none !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-chat > header {
-    height: 72px !important;
-    padding-left: 66px !important;
-    padding-right: 16px !important;
-    padding-top: env(safe-area-inset-top) !important;
-    box-sizing: content-box !important;
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-chat > header {
+    height: 4.5rem !important;
+    padding: 0 1rem !important;
+    box-sizing: border-box !important;
   }
 
-  /* Reuse the existing Message link as the mobile back control, so navigation stays native. */
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs {
-    position: fixed !important;
-    z-index: 510 !important;
-    top: max(14px, env(safe-area-inset-top)) !important;
-    left: 12px !important;
-    width: 46px !important;
-    min-width: 46px !important;
-    height: 44px !important;
-    min-height: 44px !important;
-    padding: 0 !important;
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    transform: none !important;
-  }
-
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs > a {
+  /* The tab strip used to be restyled into a back arrow here. It pointed at the page it was
+     already on, so it never navigated. The chat header now renders a real route link instead,
+     and the tabs are simply hidden while a conversation is open. */
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-tabs {
     display: none !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs > a:first-child {
-    width: 46px !important;
-    min-width: 46px !important;
-    height: 44px !important;
-    min-height: 44px !important;
-    display: grid !important;
-    place-items: center !important;
-    padding: 0 !important;
-    border: 0 !important;
-    background: transparent !important;
-    color: #4ca5f7 !important;
-    box-shadow: none !important;
-    font-size: 0 !important;
-  }
-
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-tabs > a:first-child::before {
-    content: "‹";
-    font: 500 40px/1 Manrope, system-ui, sans-serif;
-  }
-
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-messages {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-messages {
     bottom: calc(76px + env(safe-area-inset-bottom)) !important;
   }
 
-  .figma-friends-screen.is-messages:has(.figma-friends-chat > header) .figma-friends-composer {
+  .figma-friends-screen.is-messages.is-conversation-open .figma-friends-composer {
     bottom: calc(12px + env(safe-area-inset-bottom)) !important;
   }
 

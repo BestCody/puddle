@@ -5,11 +5,12 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('social feed renders place media inside the place card with shared photo-or-map fallback', async () => {
-  const [client, visual, mapPreview, photoFrame] = await Promise.all([
+  const [client, visual, mapPreview, photoFrame, feedStyles] = await Promise.all([
     read('components/social-feed-client.js'),
     read('components/location-visual-preview.js'),
     read('components/swipe-map-preview.js'),
-    read('components/photo-frame.js')
+    read('components/photo-frame.js'),
+    read('app/(product)/map/MapFeed.module.css')
   ])
   const shareMenu = await read('app/(product)/map/feed-share-menu.js')
   const detailShareMenu = await read('app/(product)/plans/[slug]/detail-share-menu.js')
@@ -19,6 +20,9 @@ test('social feed renders place media inside the place card with shared photo-or
   assert.doesNotMatch(client, /function FeedPhotos|photoEmptyLabel|styles\.photos/)
   assert.match(client, /LocationVisualPreview/)
   assert.match(client, /image=\{image\}/)
+  assert.match(client, /className=\{styles\.title\}/)
+  assert.match(client, /post\.title \? <p className=\{styles\.title\}>\{post\.title\}<\/p>/)
+  assert.match(feedStyles, /\.title\s*\{[^}]*font:\s*800 clamp\(/s)
   assert.match(client, /className=\{styles\.place\}[\s\S]*LocationVisualPreview/)
   assert.match(client, /PhotoFrame/)
   assert.doesNotMatch(client, /backgroundImage/)

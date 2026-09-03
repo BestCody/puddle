@@ -55,6 +55,7 @@ function FeedPost({ post }) {
       <PhotoFrame as="span" src={post.author_avatar_url} alt="" className={styles.avatar} unavailableText={initials(authorName)} loadingText="" />
       <span className={styles.authorMeta}><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
     </header>
+    {post.title ? <p className={styles.title}>{post.title}</p> : null}
     {post.body ? <p className={styles.copy}>{post.body}</p> : null}
     <Link className={styles.place} href={href} aria-label={`Open ${location.name}`}>
       <span className={styles.placeMeta}>{categoryLabel(location.kind)}</span>
