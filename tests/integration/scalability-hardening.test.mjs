@@ -35,6 +35,7 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   assert.match(messagesStyles, /@media \(max-width: 760px\)[\s\S]*height: calc\(100dvh - var\(--puddle-mobile-content-bottom\)\)/s)
   assert.match(messagesStyles, /\.figma-friends-screen\.is-messages \.figma-friends-message-layout\s*\{[\s\S]*inset: auto !important;[\s\S]*grid-template-rows: minmax\(0, 1fr\);/s)
   assert.match(messagesStyles, /\.figma-friends-screen\.is-messages:not\(.is-conversation-open\) \.figma-friends-conversations\s*\{[\s\S]*height: 100%;/s)
+  assert.match(messagesStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open\s*\{[\s\S]*grid-template-rows: minmax\(0, 1fr\);[\s\S]*padding: 0;/s)
   assert.match(messagesStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open \.figma-friends-chat\s*\{[\s\S]*display: flex !important;/s)
   assert.match(messagesStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open \.figma-friends-messages\s*\{[\s\S]*bottom: 4\.75rem;/s)
   assert.match(messagesStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open \.figma-friends-composer\s*\{[\s\S]*bottom: \.75rem;/s)
