@@ -249,6 +249,12 @@
   }
 
   /* Selection and conversation are two states of the same mobile viewport. */
+  .figma-friends-screen.is-messages.is-conversation-open {
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+    padding: 0;
+  }
+
   .figma-friends-screen.is-messages.is-conversation-open .figma-friends-conversations {
     display: none !important;
   }
