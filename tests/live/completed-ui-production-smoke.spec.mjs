@@ -79,19 +79,19 @@ async function firstInteractiveViewportMarker(map, selector) {
     const marker = markers.nth(index)
     const box = await marker.boundingBox()
     if (!box || box.right <= canvasBox.x || box.left >= canvasBox.x + canvasBox.width || box.bottom <= canvasBox.y || box.top >= canvasBox.y + canvasBox.height) continue
-    const hitTarget = await marker.evaluate((element) => {
+    const point = await marker.evaluate((element) => {
       const rect = element.getBoundingClientRect()
       const samples = [
         [rect.left + rect.width / 2, rect.top + rect.height / 2],
         [rect.left + rect.width * .35, rect.top + rect.height * .35],
         [rect.left + rect.width * .65, rect.top + rect.height * .65]
       ]
-      return samples.some(([x, y]) => {
+      return samples.find(([x, y]) => {
         const hit = document.elementFromPoint(x, y)
         return hit === element || hit?.closest?.('.location-map-marker') === element
-      })
+      }) || null
     })
-    if (hitTarget) return marker
+    if (point) return { marker, point }
   }
 
   throw new Error(`No interactive ${selector} was inside the map viewport.`)
@@ -99,10 +99,17 @@ async function firstInteractiveViewportMarker(map, selector) {
 
 async function clickFirstInteractiveViewportMarker(page, map, selector) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const marker = await firstInteractiveViewportMarker(map, selector)
-    await expect(marker).toBeVisible({ timeout: 30_000 })
+    const target = await firstInteractiveViewportMarker(map, selector)
+    await expect(target.marker).toBeVisible({ timeout: 30_000 })
     try {
-      await marker.click({ timeout: 5_000 })
+      const box = await target.marker.boundingBox()
+      if (!box) throw new Error('Interactive map marker has no bounds.')
+      // The center can be covered by a later marker in a dense viewport. Use the exact
+      // point that elementFromPoint verified, preserving real pointer hit-testing.
+      await target.marker.click({
+        position: { x: target.point[0] - box.x, y: target.point[1] - box.y },
+        timeout: 5_000
+      })
       return
     } catch (error) {
       if (attempt === 4) throw error
