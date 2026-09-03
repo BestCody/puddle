@@ -108,6 +108,21 @@ test('feed place geometry is owned by the responsive card stylesheet', async () 
   assert.doesNotMatch(styles, /\.composer\s*\{/)
 })
 
+test('feed composer is outside the contained feed surface so fixed positioning tracks the viewport', async () => {
+  const [page, styles] = await Promise.all([
+    read('components/map-route-client.js'),
+    read('app/(product)/map/MapFeed.module.css')
+  ])
+
+  assert.match(styles, /\.screen\s*\{[\s\S]*container-type:\s*inline-size;/s)
+  assert.match(page, /<SocialFeedClient[\s\S]*onIdentityChange=\{setFeedIdentity\}/s)
+  const screenClose = page.indexOf('    </div>', page.indexOf('<SocialFeedClient'))
+  const composerRender = page.indexOf("{view === 'feed' ? <DiscoverCreatePuddle")
+  assert.ok(screenClose >= 0, 'feed screen must have a structural closing boundary')
+  assert.ok(composerRender > screenClose, 'feed composer must be rendered outside the contained feed surface')
+  assert.match(page.slice(composerRender), /requestedLocation=\{requestedLocation\}/s)
+})
+
 test('current social routes share resilient media primitives without the retired social shell', async () => {
   const [hub, messages, layout, pass, parity, fine, dock] = await Promise.all([
     read('components/figma-social-hub.js'),

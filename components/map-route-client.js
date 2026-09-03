@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { RoutedSegment } from '@/components/routed-segment'
 import { LocationMap } from '@/components/location-map'
+import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
 import { DiscoverSearchOverlay } from '@/components/discover-search-overlay'
 import { SocialFeedClient } from '@/components/social-feed-client'
 import styles from '@/app/(product)/map/MapFeed.module.css'
@@ -83,6 +84,7 @@ function MapScreen({ selectingForPost, query }) {
 
 export function MapRouteClient() {
   const params = useSearchParams()
+  const [feedIdentity, setFeedIdentity] = useState({ avatarUrl: null, displayName: 'Puddle person' })
   const view = params.get('view') === 'map' ? 'map' : 'feed'
   const query = params.get('q') || ''
   const selectingForPost = view === 'map' && params.get('selectForPost') === '1'
@@ -99,9 +101,14 @@ export function MapRouteClient() {
         query={query}
         beforeCreatedAt={beforeCreatedAt}
         beforePostId={beforePostId}
-        initialOpen={initialComposerOpen}
-        requestedLocation={requestedLocation}
+        onIdentityChange={setFeedIdentity}
       />}
     </div>
+    {view === 'feed' ? <DiscoverCreatePuddle
+      avatarUrl={feedIdentity.avatarUrl}
+      displayName={feedIdentity.displayName}
+      initialOpen={initialComposerOpen}
+      requestedLocation={requestedLocation}
+    /> : null}
   </>
 }

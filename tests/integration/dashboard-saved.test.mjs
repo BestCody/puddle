@@ -122,9 +122,14 @@ test('saved places hydrate canonical metadata and open details as a same-page sh
 })
 
 test('mobile saved search stays at the viewport bottom while the Saved page scrolls', async () => {
-  const styles = await read('app/figma-visual-parity.css')
+  const [styles, plans] = await Promise.all([
+    read('app/figma-visual-parity.css'),
+    read('app/(product)/plans/page.js')
+  ])
 
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*\[data-testid='saved-search'\]\s*\{[\s\S]*bottom: calc\(var\(--puddle-mobile-content-bottom\) \+ 1rem\) !important;[\s\S]*left: 50% !important;/s)
   assert.doesNotMatch(styles, /\[data-testid='saved-search'\]\s*\{[\s\S]*position: static !important;/s)
   assert.doesNotMatch(styles, /\[data-testid='saved-screen'\]\[data-tab='saved'\] > header:first-of-type[\s\S]*display: flex !important/s)
+  assert.match(plans, /return <>[\s\S]*\{active === 'saved' \? <SavedSearchInput[\s\S]*<div className=\{styles\.screen\}/s)
+  assert.doesNotMatch(plans, /<header className=\{styles\.topbar\}>[\s\S]*SavedSearchInput/s)
 })

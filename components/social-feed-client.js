@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
 import { PhotoFrame } from '@/components/photo-frame'
 import { LocationVisualPreview } from '@/components/location-visual-preview'
 import { createFeedComment, toggleFeedSave } from '@/app/(product)/map/actions'
@@ -129,21 +128,15 @@ export function SocialFeedClient({
   beforePostId = null,
   avatarUrl = null,
   displayName = 'Puddle person',
-  initialOpen = false,
-  requestedLocation = ''
+  onIdentityChange = null
 }) {
   const [feed, setFeed] = useState(null)
   const [error, setError] = useState('')
   const [loadingMore, setLoadingMore] = useState(false)
   const [loadMoreError, setLoadMoreError] = useState('')
   const [reload, setReload] = useState(0)
-  const [identity, setIdentity] = useState({ avatarUrl, displayName })
   const feedGenerationRef = useRef(0)
   const loadMoreControllerRef = useRef(null)
-
-  useEffect(() => {
-    setIdentity({ avatarUrl, displayName })
-  }, [avatarUrl, displayName])
 
   useEffect(() => {
     const generation = feedGenerationRef.current + 1
@@ -173,7 +166,7 @@ export function SocialFeedClient({
         if (controller.signal.aborted || generation !== feedGenerationRef.current) return
         setFeed(payload)
         if (payload?.self) {
-          setIdentity({
+          onIdentityChange?.({
             avatarUrl: payload.self.avatar_url || avatarUrl || null,
             displayName: payload.self.display_name || displayName || 'Puddle person'
           })
@@ -191,7 +184,7 @@ export function SocialFeedClient({
       loadMoreControllerRef.current?.abort()
       loadMoreControllerRef.current = null
     }
-  }, [avatarUrl, beforeCreatedAt, beforePostId, displayName, query, reload])
+  }, [avatarUrl, beforeCreatedAt, beforePostId, displayName, onIdentityChange, query, reload])
 
   async function loadMore() {
     if (loadingMore || !feed || loadMoreControllerRef.current) return
@@ -247,17 +240,9 @@ export function SocialFeedClient({
     }
   }
 
-  return <>
-    <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
-      {error ? <div className={styles.empty} role="alert"><strong>Could not load posts.</strong><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button><small>Check your connection and try again.</small></div>
+  return <section className={styles.stream} aria-label="Discover posts" data-testid="feed-stream">
+    {error ? <div className={styles.empty} role="alert"><strong>Could not load posts.</strong><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button><small>Check your connection and try again.</small></div>
         : feed ? <FeedStream feed={feed} query={query} loadingMore={loadingMore} loadMoreError={loadMoreError} onLoadMore={loadMore} />
           : <div className={styles.empty} role="status" aria-label="Loading posts"><strong>Loading…</strong></div>}
-    </section>
-    <DiscoverCreatePuddle
-      avatarUrl={identity.avatarUrl}
-      displayName={identity.displayName}
-      initialOpen={initialOpen}
-      requestedLocation={requestedLocation}
-    />
-  </>
+  </section>
 }
