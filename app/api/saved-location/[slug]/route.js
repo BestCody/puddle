@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { randomUUID } from 'node:crypto'
 import { createClient } from '@/lib/supabase/server'
 import { getPublicLocation } from '@/lib/app/public-content'
 import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
@@ -7,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
+import { uuid } from '@/lib/security/schema'
 
 export const dynamic = 'force-dynamic'
 
@@ -176,12 +178,19 @@ export async function POST(request, context) {
     } else if (action === 'share') {
       const friendId = clean(input.friend_id, 80)
       if (!friendId) return error('Choose a friend to share with.')
+      let requestKey
+      try {
+        requestKey = uuid(input.share_key || randomUUID(), 'share_key')
+      } catch (cause) {
+        return error(safeSecurityError(cause, 'That share request is invalid.'))
+      }
       const { error: mutationError } = await supabase.rpc('share_content_v1', {
         target_kind: 'place',
         target_id: location.id,
         recipient_profile: friendId,
         target_plan: null,
-        share_note: null
+        share_note: null,
+        request_key: requestKey
       })
       if (mutationError) return error('We could not share that place.')
       revalidatePath('/matches')

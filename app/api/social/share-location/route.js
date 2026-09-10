@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
@@ -26,10 +27,12 @@ export async function POST(request) {
     const friendId = uuid(body.friendId, 'friendId')
     const locationId = uuid(body.locationId, 'locationId')
     const note = body.note ? string(body.note, { name: 'note', max: 1000 }) : null
+    const shareKey = uuid(body.shareKey || randomUUID(), 'shareKey')
     await ensureGlobalLocationReferences(createAdminClient(), [locationId])
     const shared = await supabase.rpc('send_location_to_friend_v1', {
       target_friend: friendId,
       target_location: locationId,
+      request_key: shareKey,
       share_note: note
     })
     if (shared.error) return NextResponse.json({ error: 'That place could not be sent to this friend.' }, { status: 400 })

@@ -54,9 +54,10 @@ export function FeedShareMenu({ postId, title }) {
     <summary aria-label={`Share ${title}`}>↗</summary>
     <div className={`${styles.actionPanel} ${styles.sharePanel}`}>
       <strong>Share with a friend</strong>
-      {friends.map((friend) => <form action={shareFeedPost} key={friend.id}>
+      {friends.map((friend) => <form action={shareFeedPost} onSubmit={(event) => { const input = event.currentTarget.elements.namedItem('share_key'); if (!input.value) input.value = crypto.randomUUID() }} key={friend.id}>
         <input type="hidden" name="post_id" value={postId} />
         <input type="hidden" name="friend_id" value={friend.id} />
+        <input type="hidden" name="share_key" defaultValue="" />
         <button type="submit">{friend.display_name || friend.username || 'Friend'}</button>
       </form>)}
       {loading ? <p>Loading friends…</p> : null}

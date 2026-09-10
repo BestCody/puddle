@@ -124,7 +124,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
           <button type="button" disabled={!detail || busy} onClick={() => onAction('toggle_saved')}>{detail?.state?.saved === false ? 'Save' : 'Unsave'}</button>
           <details>
             <summary>Share</summary>
-            <div>{detail?.friends?.length ? detail.friends.map((friend) => <button type="button" disabled={busy} onClick={() => onAction('share', { friend_id: friend.id })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>) : <small>No friends to share with yet.</small>}</div>
+            <div>{detail?.friends?.length ? detail.friends.map((friend) => <button type="button" disabled={busy} onClick={() => onAction('share', { friend_id: friend.id, share_key: crypto.randomUUID() })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>) : <small>No friends to share with yet.</small>}</div>
           </details>
         </div>
 

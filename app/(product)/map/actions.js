@@ -2,8 +2,11 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { randomUUID } from 'node:crypto'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage } from '@/lib/auth/redirect'
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function value(formData, key, max = 1000) {
   return String(formData.get(key) || '').trim().slice(0, max)
@@ -57,13 +60,16 @@ export async function shareFeedPost(formData) {
   const session = await requireUser({ onboarding: true })
   const postId = value(formData, 'post_id', 80)
   const friendId = value(formData, 'friend_id', 80)
+  const requestKey = value(formData, 'share_key', 80) || randomUUID()
   if (!postId || !friendId) back('Choose a friend to share with.', 'error')
+  if (!UUID_PATTERN.test(requestKey)) back('That share request is invalid. Try again.', 'error')
   const { error } = await session.supabase.rpc('share_content_v1', {
     target_kind: 'post',
     target_id: postId,
     recipient_profile: friendId,
     target_plan: null,
-    share_note: null
+    share_note: null,
+    request_key: requestKey
   })
   if (error) back('We could not share that puddle.', 'error')
   revalidatePath('/matches')
