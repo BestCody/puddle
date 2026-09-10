@@ -323,6 +323,11 @@
   height: 100%;
   object-fit: cover;
 }
+.figma-swipe-card-photo > img {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 .figma-swipe-card-photo-empty {
   display: grid;
   place-items: center;
