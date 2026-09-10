@@ -1,6 +1,11 @@
 /* Targeted Aug 23 polish: sidebar icon weight, profile alignment, search icon scale,
    concise logo geometry, and responsive parity for the single shared Profile DOM. */
 
+/* Mobile Profile exposes the existing account action without duplicating desktop navigation. */
+.figma-profile-signout {
+  display: none;
+}
+
 /* Slightly bolder sidebar line icons without changing their boxes or alignment. */
 @media (min-width: 761px) {
   .figma-dashboard-sidebar .figma-dashboard-nav-icon svg,
@@ -184,6 +189,31 @@
 
   .figma-profile-settings-mobile {
     display: grid !important;
+  }
+
+  .figma-profile-signout {
+    display: flex;
+    width: min(100%, 22.5rem);
+    margin: clamp(2rem, 8vw, 3.5rem) auto 0;
+    padding-top: 1rem;
+    border-top: .0625rem solid rgba(0, 0, 0, .14);
+  }
+
+  .figma-profile-signout button {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: .75rem 1rem;
+    border: 0;
+    border-radius: 999rem;
+    background: transparent;
+    color: var(--figma-danger);
+    font: 700 clamp(.875rem, 3.8vw, 1rem)/1 var(--figma-mono);
+    cursor: pointer;
+  }
+
+  .figma-profile-signout button:focus-visible {
+    outline: .125rem solid currentColor;
+    outline-offset: .25rem;
   }
 
   .figma-profile-identity {
