@@ -12,6 +12,10 @@ const labels = {
   scenic_spot: 'Scenic', nightlife: 'Nightlife', shop: 'Shop', community_space: 'Community'
 }
 
+const SWIPE_EXIT_DURATION_MS = 360
+const SWIPE_ROTATION_MAX_DEG = 12
+const SWIPE_ROTATION_DISTANCE = 30
+
 function categoryLabel(value) {
   return labels[value] || String(value || 'Place').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
@@ -31,6 +35,10 @@ function hasCoordinates(item) {
 
 function preventNativeImageDrag(event) {
   event.preventDefault()
+}
+
+function rotationFor(offset) {
+  return Math.max(-SWIPE_ROTATION_MAX_DEG, Math.min(SWIPE_ROTATION_MAX_DEG, offset / SWIPE_ROTATION_DISTANCE))
 }
 
 function DetailsPhoto({ url, title, index }) {
@@ -71,12 +79,15 @@ function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
   </div>
 }
 
-export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
+export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = false, onLeavingChange, onActionHandled }) {
+  const cardRef = useRef(null)
   const pointerId = useRef(null)
   const originX = useRef(0)
   const choiceInFlight = useRef(false)
+  const dragXRef = useRef(0)
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
+  const [leaving, setLeaving] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [mainPhotoFailed, setMainPhotoFailed] = useState(false)
   const photoUrls = useMemo(() => photos(item), [item])
@@ -85,25 +96,51 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
 
   useEffect(() => setMainPhotoFailed(false), [mainPhoto])
 
+  function updateDragX(value) {
+    dragXRef.current = value
+    setDragX(value)
+  }
+
+  function exitOffset(direction) {
+    const currentOffset = dragXRef.current
+    const rect = cardRef.current.getBoundingClientRect()
+    const clearance = Math.hypot(rect.width, rect.height)
+    const targetEdge = direction < 0 ? -clearance : window.innerWidth + clearance
+    const travel = direction < 0 ? targetEdge - rect.right : targetEdge - rect.left
+    return currentOffset + travel
+  }
+
   async function choose(action) {
-    if (busy || choiceInFlight.current) return
+    if (preview || busy || choiceInFlight.current) return
     choiceInFlight.current = true
     setDragging(false)
-    setDragX(action === 'pass' ? -720 : action === 'save' ? 720 : 0)
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const duration = reduced ? 0 : action === 'save' ? 420 : action === 'pass' ? 260 : 0
+    const direction = action === 'pass' ? -1 : action === 'save' ? 1 : 0
+    const duration = reduced || !direction ? 0 : SWIPE_EXIT_DURATION_MS
+    if (direction && !reduced) {
+      setLeaving(true)
+      onLeavingChange?.(true)
+      updateDragX(exitOffset(direction))
+    } else {
+      updateDragX(0)
+    }
     try {
       if (duration) await new Promise((resolve) => window.setTimeout(resolve, duration))
       await onChoice(action, item)
     } finally {
-      setDragX(0)
+      updateDragX(0)
+      setLeaving(false)
+      onLeavingChange?.(false)
       choiceInFlight.current = false
     }
   }
 
   useEffect(() => {
-    if (actionRequest?.id) choose(actionRequest.action)
-  }, [actionRequest?.id])
+    if (!preview && actionRequest?.id) {
+      onActionHandled?.(actionRequest.id)
+      choose(actionRequest.action)
+    }
+  }, [actionRequest?.id, onActionHandled, preview])
 
   function pointerDown(event) {
     if (busy || event.button !== 0 || !event.isPrimary || event.target.closest('button,a')) return
@@ -115,7 +152,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
   }
   function pointerMove(event) {
     if (!dragging || pointerId.current !== event.pointerId) return
-    setDragX(Math.max(-180, Math.min(180, event.clientX - originX.current)))
+    updateDragX(event.clientX - originX.current)
   }
   function pointerUp(event) {
     if (pointerId.current !== event.pointerId) return
@@ -124,13 +161,13 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
     setDragging(false)
     if (delta <= -90) choose('pass')
     else if (delta >= 90) choose('save')
-    else setDragX(0)
+    else updateDragX(0)
   }
   function pointerCancel(event) {
     if (pointerId.current !== event.pointerId) return
     pointerId.current = null
     setDragging(false)
-    setDragX(0)
+    updateDragX(0)
   }
 
   const showMainPhoto = Boolean(mainPhoto) && !mainPhotoFailed
@@ -139,21 +176,24 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
 
   return <>
     <article
-      className={`figma-swipe-card${dragging ? ' is-dragging' : ''}`}
+      ref={cardRef}
+      className={`figma-swipe-card ${preview ? 'is-preview' : 'is-active'}${dragging ? ' is-dragging' : ''}${leaving ? ' is-leaving' : ''}`}
       data-location-id={locationId || undefined}
-      style={{ transform: `translateX(${dragX}px) rotate(${dragX / 30}deg)` }}
-      onPointerDown={pointerDown}
-      onPointerMove={pointerMove}
-      onPointerUp={pointerUp}
+      data-card-role={preview ? 'preview' : 'active'}
+      style={preview ? undefined : { transform: `translateX(${dragX}px) rotate(${rotationFor(dragX)}deg)` }}
+      onPointerDown={preview ? undefined : pointerDown}
+      onPointerMove={preview ? undefined : pointerMove}
+      onPointerUp={preview ? undefined : pointerUp}
       onPointerCancel={pointerCancel}
       onLostPointerCapture={pointerCancel}
-      tabIndex={0}
-      onKeyDown={(event) => {
+      tabIndex={preview ? -1 : 0}
+      onKeyDown={preview ? undefined : (event) => {
         if (event.key === 'ArrowLeft') { event.preventDefault(); choose('pass') }
         if (event.key === 'ArrowRight') { event.preventDefault(); choose('save') }
         if (event.key === 'Enter' || event.key === 'ArrowUp') { event.preventDefault(); setDetailsOpen(true) }
       }}
-      aria-label={`${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
+      aria-hidden={preview ? true : undefined}
+      aria-label={preview ? undefined : `${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
       <div className="figma-swipe-card-photo">
         {optimizedMainPhoto && showMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload draggable={false} onDragStart={preventNativeImageDrag} onError={() => setMainPhotoFailed(true)} /> : null}
@@ -163,10 +203,12 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest }) {
       </div>
       <div className="figma-swipe-card-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
       <div className="figma-swipe-card-copy"><h1>{item.title}</h1><p>{addressLabel(item)}</p></div>
-      <strong className="figma-swipe-drag-label is-pass" style={{ opacity: Math.max(0, -dragX / 90) }}>PASS</strong>
-      <strong className="figma-swipe-drag-label is-save" style={{ opacity: Math.max(0, dragX / 90) }}>SAVE</strong>
-      <button className="figma-swipe-details-button" type="button" aria-label="Open details" onClick={() => setDetailsOpen(true)} disabled={busy}>+</button>
+      {!preview ? <>
+        <strong className="figma-swipe-drag-label is-pass" style={{ opacity: Math.max(0, -dragX / 90) }}>PASS</strong>
+        <strong className="figma-swipe-drag-label is-save" style={{ opacity: Math.max(0, dragX / 90) }}>SAVE</strong>
+        <button className="figma-swipe-details-button" type="button" aria-label="Open details" onClick={() => setDetailsOpen(true)} disabled={busy}>+</button>
+      </> : null}
     </article>
-    {detailsOpen ? <DetailsDialog item={item} photoUrls={photoUrls} busy={busy} onChoice={async (action) => { setDetailsOpen(false); await choose(action) }} onClose={() => setDetailsOpen(false)} /> : null}
+    {!preview && detailsOpen ? <DetailsDialog item={item} photoUrls={photoUrls} busy={busy} onChoice={async (action) => { setDetailsOpen(false); await choose(action) }} onClose={() => setDetailsOpen(false)} /> : null}
   </>
 }
