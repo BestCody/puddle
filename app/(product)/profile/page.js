@@ -4,6 +4,7 @@ import { PhotoFrame } from '@/components/photo-frame'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
+import { signOut } from '@/app/auth/actions'
 import { updateProfileTheme } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -178,6 +179,10 @@ export default async function ProfilePage({ searchParams }) {
           <article className="figma-profile-card figma-profile-saves-card"><h2>Saves</h2>{visibleSaves.length ? <div className="figma-profile-mini-list">{visibleSaves.slice(0, 4).map((item) => <Link href={`/plans/${item.locations.slug}`} key={item.location_id}><span>{item.locations.name}</span>{item.pinned_at ? <b>PINNED</b> : null}</Link>)}</div> : <p>Nothing saved yet.</p>}<Link className="figma-profile-card-link" href="/plans">View Saved</Link></article>
         </div>
       </section>
+
+      <form className="figma-profile-signout" action={signOut}>
+        <button type="submit">Sign out</button>
+      </form>
     </div>
   })
 }

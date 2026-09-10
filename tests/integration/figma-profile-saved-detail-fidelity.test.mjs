@@ -67,6 +67,19 @@ test('mobile profile cards give content-driven bubbles enough vertical breathing
   assert.match(styles, /\.figma-profile-mini-list > a\s*\{[\s\S]*min-height: 2rem;[\s\S]*padding-block: \.375rem;/s)
 })
 
+test('mobile Profile exposes the existing sign-out action without changing desktop navigation', async () => {
+  const [page, styles] = await Promise.all([
+    read('app/(product)/profile/page.js'),
+    read('app/profile-sidebar-search-polish-20260823.css')
+  ])
+
+  assert.match(page, /import \{ signOut \} from '@\/app\/auth\/actions'/)
+  assert.match(page, /<form className="figma-profile-signout" action=\{signOut\}>\s*<button type="submit">Sign out<\/button>\s*<\/form>/)
+  assert.match(styles, /\.figma-profile-signout\s*\{\s*display: none;\s*\}/)
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*\.figma-profile-signout\s*\{[\s\S]*display: flex;/)
+  assert.match(styles, /\.figma-profile-signout button\s*\{[\s\S]*color: var\(--figma-danger\);/)
+})
+
 test('Profile save count uses the full saved-location relation, not the preview page', async () => {
   const page = await read('app/(product)/profile/page.js')
   const counts = page.slice(page.indexOf('figma-profile-counts'), page.indexOf('figma-profile-chips'))
