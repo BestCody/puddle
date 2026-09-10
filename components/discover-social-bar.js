@@ -21,10 +21,11 @@ function MiniAvatar({ client, person }) {
   return <PhotoFrame as="span" src={url} alt="" className="social-avatar" title={name} unavailableText={name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'} loadingText="" />
 }
 
-function SendSheet({ client, item, friends, friendsLoading, friendsError, onRetry, onClose, onSent }) {
+function SendSheet({ client, item, friends, friendsLoading, friendsLoadingMore, friendsHasMore, friendsError, onRetry, onLoadMore, onClose, onSent }) {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(null)
   const sheetRef = useRef(null)
+  const shareKeysRef = useRef(new Map())
   const title = item.title || item.name || 'this place'
 
   useModalFocus(sheetRef)
@@ -40,19 +41,28 @@ function SendSheet({ client, item, friends, friendsLoading, friendsError, onRetr
   async function send(friend) {
     if (busy) return
     setBusy(friend.id)
-    const response = await csrfFetch('/api/social/share-location', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        friendId: friend.id,
-        locationId: item.content_id,
-        note: note.trim() || null
+    const requestKey = shareKeysRef.current.get(friend.id) || crypto.randomUUID()
+    shareKeysRef.current.set(friend.id, requestKey)
+    try {
+      const response = await csrfFetch('/api/social/share-location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          friendId: friend.id,
+          locationId: item.content_id,
+          note: note.trim() || null,
+          shareKey: requestKey
+        })
       })
-    })
-    const result = await response.json().catch(() => ({}))
-    setBusy(null)
-    if (!response.ok) return onSent(result.error || 'Could not send that place.', false)
-    onSent(`Sent to ${friend.display_name || friend.username || 'your friend'}.`, true)
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) return onSent(result.error || 'Could not send that place.', false)
+      shareKeysRef.current.delete(friend.id)
+      onSent(`Sent to ${friend.display_name || friend.username || 'your friend'}.`, true)
+    } catch {
+      onSent('Could not send that place.', false)
+    } finally {
+      setBusy(null)
+    }
   }
 
   return <div className="social-sheet-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
@@ -67,6 +77,7 @@ function SendSheet({ client, item, friends, friendsLoading, friendsError, onRetr
           <div className="social-person-copy"><strong>{friend.display_name || 'Puddle person'}</strong>{friend.username ? <span>@{friend.username}</span> : null}</div>
           <div className="social-row-actions"><button className="is-dark" type="button" onClick={() => send(friend)} disabled={Boolean(busy)}>{busy === friend.id ? 'Sending…' : 'Send'}</button></div>
         </div>)}</div>
+        {friendsHasMore ? <button type="button" onClick={onLoadMore} disabled={friendsLoadingMore}>{friendsLoadingMore ? 'Loading more friends...' : 'More friends'}</button> : null}
       </> : <div className="social-empty"><strong>No friends yet</strong><p>Add a friend first, then you can send places directly.</p><Link href="/matches">Find friends</Link></div>}
     </section>
   </div>
@@ -76,27 +87,44 @@ export function DiscoverSocialBar({ item, onMessage }) {
   const client = useMemo(() => createClient(), [])
   const [friends, setFriends] = useState([])
   const [friendsLoading, setFriendsLoading] = useState(true)
+  const [friendsLoadingMore, setFriendsLoadingMore] = useState(false)
+  const [friendsHasMore, setFriendsHasMore] = useState(false)
   const [friendsError, setFriendsError] = useState('')
   const [friendsRetry, setFriendsRetry] = useState(0)
   const [open, setOpen] = useState(false)
+  const friendsRequestRef = useRef(0)
+
+  async function loadFriendsPage(cursor = null) {
+    const requestId = ++friendsRequestRef.current
+    const isMore = Boolean(cursor)
+    if (isMore) setFriendsLoadingMore(true)
+    else setFriendsLoading(true)
+    setFriendsError('')
+    try {
+      const { data, error } = await client.rpc('social_friends_v2', {
+        before_name: cursor?.sort_name || null,
+        before_id: cursor?.id || null,
+        result_limit: 100
+      })
+      if (error) throw error
+      if (requestId !== friendsRequestRef.current) return
+      const rows = data || []
+      setFriends((current) => isMore ? mergeFriends(current, rows) : rows)
+      setFriendsHasMore(rows.length === 100)
+    } catch {
+      if (requestId !== friendsRequestRef.current) return
+      setFriendsError('Friends could not be loaded.')
+    } finally {
+      if (requestId !== friendsRequestRef.current) return
+      if (isMore) setFriendsLoadingMore(false)
+      else setFriendsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    let active = true
-    setFriendsLoading(true)
-    setFriendsError('')
-    client.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 100 })
-      .then(({ data, error }) => {
-        if (error) throw error
-        if (active) setFriends(data || [])
-      })
-      .catch(() => {
-        if (active) {
-          setFriends([])
-          setFriendsError('Friends could not be loaded.')
-        }
-      })
-      .finally(() => { if (active) setFriendsLoading(false) })
-    return () => { active = false }
+    friendsRequestRef.current += 1
+    loadFriendsPage()
+    return () => { friendsRequestRef.current += 1 }
   }, [client, friendsRetry])
 
   function sent(message, success) {
@@ -108,6 +136,6 @@ export function DiscoverSocialBar({ item, onMessage }) {
     <button className="discover-share-trigger" type="button" aria-label="Send to" title="Send to" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
       <img src={SHARE_ICON} alt="" aria-hidden="true" />
     </button>
-    {open ? <SendSheet client={client} item={item} friends={friends} friendsLoading={friendsLoading} friendsError={friendsError} onRetry={() => setFriendsRetry((value) => value + 1)} onClose={() => setOpen(false)} onSent={sent} /> : null}
+    {open ? <SendSheet client={client} item={item} friends={friends} friendsLoading={friendsLoading} friendsLoadingMore={friendsLoadingMore} friendsHasMore={friendsHasMore} friendsError={friendsError} onRetry={() => setFriendsRetry((value) => value + 1)} onLoadMore={() => loadFriendsPage(friends[friends.length - 1])} onClose={() => setOpen(false)} onSent={sent} /> : null}
   </>
 }

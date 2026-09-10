@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { PhotoFrame } from '@/components/photo-frame'
 import { RoutedSegment } from '@/components/routed-segment'
 import { createClient } from '@/lib/supabase/client'
+import { hydrateSocialLocationRows } from '@/lib/app/social-location-metadata-client'
 
 function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
@@ -41,8 +42,37 @@ function MessagesTabs() {
 
 function mergeById(current, incoming, key = 'id') {
   const merged = new Map(current.map((item) => [item[key], item]))
-  for (const item of incoming || []) merged.set(item[key], item)
+  for (const item of incoming || []) {
+    const previous = merged.get(item[key])
+    if (!previous) {
+      merged.set(item[key], item)
+      continue
+    }
+    const locationKey = key === 'conversation_id' ? 'last_location_id' : 'location_id'
+    const metadataFields = key === 'conversation_id'
+      ? ['last_location_name', 'last_location_city', 'last_location_slug', 'last_location_cover_path']
+      : ['location_name', 'location_city', 'location_slug', 'location_cover_path']
+    const previousLocationId = previous[locationKey] || null
+    const nextLocationId = item[locationKey] || null
+    const next = { ...previous, ...item }
+    if (previousLocationId && previousLocationId === nextLocationId) {
+      for (const field of metadataFields) {
+        if (item[field] == null && previous[field] != null) next[field] = previous[field]
+      }
+    } else if (previousLocationId !== nextLocationId) {
+      for (const field of metadataFields) next[field] = item[field] || null
+    }
+    merged.set(item[key], next)
+  }
   return [...merged.values()]
+}
+
+function sortConversations(rows) {
+  return [...rows].sort((left, right) => {
+    const leftTime = Date.parse(left.sort_at || left.last_message_at || left.created_at || '') || 0
+    const rightTime = Date.parse(right.sort_at || right.last_message_at || right.created_at || '') || 0
+    return rightTime - leftTime || String(right.conversation_id || '').localeCompare(String(left.conversation_id || ''))
+  })
 }
 
 function conversationPreview(conversation, openingFriendId) {
@@ -93,6 +123,8 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const messageScrollRef = useRef(null)
   const [conversations, setConversations] = useState(() => conversationList(initialSnapshot, selected))
   const [conversationsHasMore, setConversationsHasMore] = useState(Boolean(initialSnapshot.conversationsHasMore))
+  const [friends, setFriends] = useState(initialSnapshot.friends || [])
+  const [friendsHasMore, setFriendsHasMore] = useState(Boolean(initialSnapshot.friendsHasMore))
   const [messages, setMessages] = useState(initialSnapshot.messages || [])
   const [messagesHasMore, setMessagesHasMore] = useState(Boolean(initialSnapshot.messagesHasMore))
   const [shareableLocations, setShareableLocations] = useState(initialSnapshot.shareableLocations || [])
@@ -107,18 +139,33 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const [notice, setNotice] = useState('')
   const messagesRefreshRef = useRef(null)
   const conversationsRefreshRef = useRef(null)
+  const locationShareKeysRef = useRef(new Map())
   const messageScrollAnchorRef = useRef(null)
   const stickToBottomRef = useRef(true)
   const renderedSelectedIdRef = useRef(null)
+  const snapshotConversationIdRef = useRef(selectedId)
+  const messageSnapshotConversationIdRef = useRef(selectedId)
 
   useEffect(() => {
-    setConversations(conversationList(initialSnapshot, selected))
-    setConversationsHasMore(Boolean(initialSnapshot.conversationsHasMore))
-  }, [initialSnapshot.conversations, initialSnapshot.friends, initialSnapshot.conversationsHasMore, selectedId])
+    const nextFriends = initialSnapshot.friends || []
+    setFriends(nextFriends)
+    setFriendsHasMore(Boolean(initialSnapshot.friendsHasMore))
+    setConversations((current) => {
+      const changedConversation = snapshotConversationIdRef.current !== selectedId
+      snapshotConversationIdRef.current = selectedId
+      if (changedConversation) return conversationList(initialSnapshot, selected)
+      const real = current.filter((item) => !item.is_friend_placeholder)
+      const incoming = initialSnapshot.conversations || []
+      return conversationList({ ...initialSnapshot, friends: nextFriends }, selected, sortConversations(mergeById(real, incoming, 'conversation_id')))
+    })
+    setConversationsHasMore((current) => current || Boolean(initialSnapshot.conversationsHasMore))
+  }, [initialSnapshot.conversations, initialSnapshot.friends, initialSnapshot.friendsHasMore, initialSnapshot.conversationsHasMore, selectedId])
 
   useEffect(() => {
-    setMessages(initialSnapshot.messages || [])
-    setMessagesHasMore(Boolean(initialSnapshot.messagesHasMore))
+    const changedConversation = messageSnapshotConversationIdRef.current !== selectedId
+    messageSnapshotConversationIdRef.current = selectedId
+    setMessages((current) => changedConversation ? (initialSnapshot.messages || []) : mergeById(current, initialSnapshot.messages || []))
+    setMessagesHasMore((current) => current || Boolean(initialSnapshot.messagesHasMore))
   }, [initialSnapshot.messages, initialSnapshot.messagesHasMore, selectedId])
 
   const latestMessageId = messages.length ? messages[messages.length - 1]?.id : null
@@ -174,9 +221,8 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
 
   async function markSelectedRead() {
     if (!selectedId) return
-    try {
-      await client.rpc('social_mark_conversation_read_v1', { target: selectedId, last_message: null })
-    } catch {}
+    const { error } = await client.rpc('social_mark_conversation_read_v1', { target: selectedId, last_message: null })
+    if (error) throw error
   }
 
   async function refreshMessages() {
@@ -193,12 +239,15 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           result_limit: MESSAGE_PAGE_SIZE
         })
         if (!error && Array.isArray(data) && selectedId === targetId) {
-          setMessages((current) => mergeById(current, data))
+          const hydrated = await hydrateSocialLocationRows(data)
+          setMessages((current) => mergeById(current, hydrated))
           setMessagesHasMore((current) => current || data.length === MESSAGE_PAGE_SIZE)
           return true
         }
+        if (error) throw error
       } catch (cause) {
         console.warn('Could not refresh messages.', { message: cause?.message || 'unknown error' })
+        if (selectedId === targetId) setNotice('Messages could not be refreshed.')
       }
       return false
     })()
@@ -222,10 +271,18 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           result_limit: 30
         })
         if (!error && Array.isArray(data) && selectedId === targetId) {
-          setConversations(conversationList(initialSnapshot, selected, data))
-          setConversationsHasMore(data.length === 30)
+          const hydrated = await hydrateSocialLocationRows(data, 'last_location_id')
+          setConversations((current) => {
+            const real = current.filter((item) => !item.is_friend_placeholder)
+            return conversationList({ ...initialSnapshot, friends }, selected, sortConversations(mergeById(real, hydrated, 'conversation_id')))
+          })
+          setConversationsHasMore((current) => current || data.length === 30)
         }
-      } catch {}
+        if (error) throw error
+      } catch (cause) {
+        console.warn('Could not refresh conversations.', { message: cause?.message || 'unknown error' })
+        if (selectedId === targetId) setNotice('Conversations could not be refreshed.')
+      }
     })()
     conversationsRefreshRef.current = request
     try {
@@ -261,8 +318,13 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
 
     async function initializeReadState() {
       if (!active) return
-      await markSelectedRead()
-      if (active) await refreshConversations()
+      try {
+        await markSelectedRead()
+        if (active) await refreshConversations()
+      } catch (cause) {
+        console.warn('Could not mark conversation read.', { message: cause?.message || 'unknown error' })
+        if (active) setNotice('This conversation could not be updated.')
+      }
     }
     initializeReadState()
 
@@ -276,11 +338,37 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
       }, async () => {
         if (!active) return
         await refreshMessages()
-        await markSelectedRead()
-        if (active) await refreshConversations()
+        try {
+          await markSelectedRead()
+          if (active) await refreshConversations()
+        } catch (cause) {
+          console.warn('Could not update conversation read state.', { message: cause?.message || 'unknown error' })
+          if (active) setNotice('This conversation could not be updated.')
+        }
       })
       .subscribe()
 
+    return () => {
+      active = false
+      client.removeChannel(channel)
+    }
+  }, [client, initialSnapshot.self.id, isMobile, selectedId])
+
+  useEffect(() => {
+    if (isMobile === null) return undefined
+    let active = true
+    const channel = client
+      .channel(`figma-inbox-${initialSnapshot.self.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `profile_id=eq.${initialSnapshot.self.id}`
+      }, async (payload) => {
+        if (!active || !['message', 'share'].includes(payload.new?.kind)) return
+        await refreshConversations()
+      })
+      .subscribe()
     return () => {
       active = false
       client.removeChannel(channel)
@@ -329,8 +417,9 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         result_limit: MESSAGE_PAGE_SIZE
       })
       if (!error && Array.isArray(data) && selectedId === targetId) {
-        if (data.length && anchor) messageScrollAnchorRef.current = anchor
-        setMessages((current) => mergeById(data, current))
+        const hydrated = await hydrateSocialLocationRows(data)
+        if (hydrated.length && anchor) messageScrollAnchorRef.current = anchor
+        setMessages((current) => mergeById(hydrated, current))
         setMessagesHasMore(data.length === MESSAGE_PAGE_SIZE)
       }
       if (error || !Array.isArray(data)) setNotice('Older messages could not be loaded.')
@@ -357,10 +446,11 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         result_limit: 30
       })
       if (!error) {
+        const hydrated = await hydrateSocialLocationRows(data || [], 'last_location_id')
         setConversations((current) => {
           const placeholders = current.filter((item) => item.is_friend_placeholder)
           const real = current.filter((item) => !item.is_friend_placeholder)
-          const merged = mergeById(real, data || [], 'conversation_id')
+          const merged = sortConversations(mergeById(real, hydrated, 'conversation_id'))
           const friendIds = new Set(merged.map((item) => item.friend_id).filter(Boolean))
           return [...merged, ...placeholders.filter((item) => !friendIds.has(item.friend_id))]
         })
@@ -370,6 +460,33 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     } catch (cause) {
       console.warn('Could not load more conversations.', { message: cause?.message || 'unknown error' })
       setNotice('More conversations could not be loaded.')
+    } finally {
+      setPaging(false)
+    }
+  }
+
+  async function loadMoreFriends() {
+    if (!friendsHasMore || paging) return
+    const cursor = friends[friends.length - 1]
+    if (!cursor) {
+      setFriendsHasMore(false)
+      return
+    }
+    setPaging(true)
+    try {
+      const { data, error } = await client.rpc('social_friends_v2', {
+        before_name: cursor.sort_name || String(cursor.display_name || cursor.username || '').toLowerCase(),
+        before_id: cursor.id,
+        result_limit: 100
+      })
+      if (error) throw error
+      const nextFriends = mergeById(friends, data || [])
+      setFriends(nextFriends)
+      setFriendsHasMore((data || []).length === 100)
+      setConversations((current) => conversationList({ ...initialSnapshot, friends: nextFriends }, selected, current))
+    } catch (cause) {
+      console.warn('Could not load more friends.', { message: cause?.message || 'unknown error' })
+      setNotice('More friends could not be loaded.')
     } finally {
       setPaging(false)
     }
@@ -401,15 +518,23 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
 
   async function sendLocation(locationId) {
     if (!selectedId || busy) return
+    const requestId = `${selectedId}:${locationId}`
+    const requestKey = locationShareKeysRef.current.get(requestId) || crypto.randomUUID()
+    locationShareKeysRef.current.set(requestId, requestKey)
     setBusy(true)
     setNotice('')
     try {
-      const { error } = await client.rpc('social_send_location_message_v1', { target: selectedId, target_location: locationId })
+      const { error } = await client.rpc('social_send_location_message_v1', {
+        target: selectedId,
+        target_location: locationId,
+        request_key: requestKey
+      })
       if (error) {
         setNotice('Could not attach that place.')
         return
       }
       placeMenuRef.current?.removeAttribute('open')
+      locationShareKeysRef.current.delete(requestId)
       stickToBottomRef.current = true
       await refreshMessages()
       await markSelectedRead()
@@ -449,6 +574,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           {conversation.unread_count > 0 ? <b>{conversation.unread_count}</b> : null}
         </button>) : <div className="figma-friends-conversation-empty">No conversations yet</div>}
         {conversationsHasMore ? <button type="button" onClick={loadMoreConversations} disabled={paging}>Load more conversations</button> : null}
+        {friendsHasMore ? <button type="button" onClick={loadMoreFriends} disabled={paging}>Load more friends</button> : null}
       </aside>
 
       <section className="figma-friends-chat">

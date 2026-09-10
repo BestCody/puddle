@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { PhotoFrame } from '@/components/photo-frame'
 import { RoutedSegment } from '@/components/routed-segment'
 import { createClient } from '@/lib/supabase/client'
+import { hydrateSocialLocationRows } from '@/lib/app/social-location-metadata-client'
 
 function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
@@ -41,12 +42,60 @@ function FriendsTabs({ tab }) {
 
 function SharedView({ client, snapshot }) {
   const router = useRouter()
+  const [shared, setShared] = useState(snapshot.shared || [])
+  const [hasMore, setHasMore] = useState(Boolean(snapshot.sharedHasMore))
+  const [loading, setLoading] = useState(false)
+  const [openingFriendId, setOpeningFriendId] = useState(null)
+  const [notice, setNotice] = useState('')
+
+  async function openChat(friendId) {
+    if (!friendId || openingFriendId) return
+    setOpeningFriendId(friendId)
+    setNotice('')
+    try {
+      const { data, error } = await client.rpc('social_open_direct_conversation_v1', { target: friendId })
+      if (error || !data) throw error || new Error('Conversation unavailable.')
+      router.push(`/matches?tab=messages&conversation=${encodeURIComponent(data)}`)
+    } catch (cause) {
+      console.warn('Could not open shared-place conversation.', { message: cause?.message || 'unknown error' })
+      setNotice('That conversation could not be opened.')
+    } finally {
+      setOpeningFriendId(null)
+    }
+  }
+
+  async function loadMore() {
+    if (loading || !hasMore || !shared.length) return
+    const cursor = shared[shared.length - 1]
+    setLoading(true)
+    setNotice('')
+    try {
+      const { data, error } = await client.rpc('social_shared_locations_v2', {
+        before_created_at: cursor.created_at,
+        before_share_id: cursor.share_id,
+        result_limit: 50
+      })
+      if (error) throw error
+      const hydrated = await hydrateSocialLocationRows(data || [])
+      setShared((current) => {
+        const merged = new Map(current.map((item) => [item.share_id, item]))
+        for (const item of hydrated) merged.set(item.share_id, { ...merged.get(item.share_id), ...item })
+        return [...merged.values()]
+      })
+      setHasMore((data || []).length === 50)
+    } catch (cause) {
+      console.warn('Could not load more shared places.', { message: cause?.message || 'unknown error' })
+      setNotice('More shared places could not be loaded.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return <section className="figma-friends-shared-view">
     <h1>Shared puddles</h1>
+    {notice ? <p className="figma-friends-chat-notice" role="status">{notice}</p> : null}
     <div className="figma-friends-shared-grid">
-      {snapshot.shared.length ? snapshot.shared.flatMap((item) => {
-        const conversation = snapshot.conversations.find((candidate) => candidate.friend_id === item.friend_id)
-        const chatHref = conversation ? `/matches?tab=messages&conversation=${encodeURIComponent(conversation.conversation_id)}` : '/matches?tab=messages'
+      {shared.length ? shared.flatMap((item) => {
         const placeHref = item.location_slug ? `/plans/${item.location_slug}` : '/plans'
         const placePhotoUrl = mediaUrl(client, item.location_cover_path)
         return [
@@ -55,10 +104,11 @@ function SharedView({ client, snapshot }) {
             <h2>{item.location_name || 'Shared puddle'}</h2><small>{item.location_city || ''}</small><span>{item.distance_label || ''}</span>
             <b>{item.direction === 'received' ? `Shared by ${item.friend_name || 'friend'}` : `Shared with ${item.friend_name || 'friend'}`}</b>
           </article>,
-          <article className="figma-friends-shared-chat" key={`chat:${item.share_id}`}><button type="button" onClick={() => router.push(chatHref)}>Jump to chat</button></article>
+          <article className="figma-friends-shared-chat" key={`chat:${item.share_id}`}><button type="button" onClick={() => openChat(item.friend_id)} disabled={openingFriendId === item.friend_id}>{openingFriendId === item.friend_id ? 'Opening...' : 'Jump to chat'}</button></article>
         ]
       }) : <div className="figma-friends-shared-empty">No shared puddles yet.</div>}
     </div>
+    {hasMore ? <button className="figma-friends-shared-load-more" type="button" onClick={loadMore} disabled={loading}>{loading ? 'Loading...' : 'Load more shared puddles'}</button> : null}
   </section>
 }
 
@@ -99,11 +149,14 @@ function AddView({ client, snapshot }) {
     setPendingTarget(person.id)
     setNotice('')
     try {
-      const { error } = await client.rpc('social_send_friend_request_v1', { target: person.id })
+      const { data, error } = await client.rpc('social_send_friend_request_v1', { target: person.id })
       if (error) {
         setNotice('Could not send that friend request.')
         return
       }
+      setResults((current) => current.map((item) => item.id === person.id
+        ? { ...item, is_friend: data === 'accepted', request_state: data === 'accepted' ? 'accepted' : 'pending', request_direction: data === 'accepted' ? null : 'outgoing' }
+        : item))
       setHiddenOutgoing((current) => {
         const next = new Set(current)
         next.delete(person.id)
@@ -127,6 +180,9 @@ function AddView({ client, snapshot }) {
         setNotice('Could not update that friend request.')
         return
       }
+      setResults((current) => current.map((item) => item.id === person.id
+        ? { ...item, is_friend: response === 'accept', request_state: response === 'accept' ? 'accepted' : 'declined', request_direction: null }
+        : item))
       router.refresh()
     } catch (cause) {
       console.warn('Could not update friend request.', { message: cause?.message || 'unknown error' })
@@ -146,6 +202,9 @@ function AddView({ client, snapshot }) {
         setNotice('Could not cancel that friend request.')
         return
       }
+      setResults((current) => current.map((item) => item.id === person.id
+        ? { ...item, request_state: 'removed', request_direction: null }
+        : item))
       setHiddenOutgoing((current) => new Set([...current, person.id]))
       router.refresh()
     } catch (cause) {
@@ -154,6 +213,36 @@ function AddView({ client, snapshot }) {
     } finally {
       setPendingTarget(null)
     }
+  }
+
+  async function openConversation(person) {
+    if (!person?.id || pendingTarget) return
+    setPendingTarget(person.id)
+    setNotice('')
+    try {
+      const { data, error } = await client.rpc('social_open_direct_conversation_v1', { target: person.id })
+      if (error || !data) throw error || new Error('Conversation unavailable.')
+      router.push(`/matches?tab=messages&conversation=${encodeURIComponent(data)}`)
+    } catch (cause) {
+      console.warn('Could not open friend conversation.', { message: cause?.message || 'unknown error' })
+      setNotice('That conversation could not be opened.')
+    } finally {
+      setPendingTarget(null)
+    }
+  }
+
+  function resultAction(person) {
+    const label = person.display_name || person.username || 'friend'
+    if (person.is_friend) {
+      return <button type="button" onClick={() => openConversation(person)} disabled={pendingTarget === person.id}>{pendingTarget === person.id ? 'Opening...' : 'Message'}</button>
+    }
+    if (person.request_state === 'pending' && person.request_direction === 'outgoing') {
+      return <button type="button" onClick={() => cancel(person)} disabled={pendingTarget === person.id}>{pendingTarget === person.id ? 'Updating...' : 'Pending · Cancel'}</button>
+    }
+    if (person.request_state === 'pending' && person.request_direction === 'incoming') {
+      return <span className="figma-friends-inline-request-actions"><button type="button" onClick={() => respond(person, 'accept')} disabled={pendingTarget === person.id}>Accept</button><button type="button" onClick={() => respond(person, 'decline')} disabled={pendingTarget === person.id}>Decline</button></span>
+    }
+    return <button type="button" onClick={() => request(person)} disabled={pendingTarget === person.id} aria-label={`Add ${label}`}>{pendingTarget === person.id ? 'Adding...' : '+'}</button>
   }
 
   const outgoing = snapshot.requests.filter((item) => item.direction === 'outgoing' && !hiddenOutgoing.has(item.id))
@@ -167,7 +256,7 @@ function AddView({ client, snapshot }) {
     </form>
     {notice ? <p className="figma-friends-chat-notice figma-friends-add-notice" role="alert">{notice}</p> : null}
 
-    {results.length ? <div className="figma-friends-search-results">{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}{person.mutual_count ? <small>{person.mutual_count} mutual</small> : null}</span>{person.is_friend ? <button type="button" onClick={() => router.push('/matches?tab=messages')}>Message</button> : <button type="button" onClick={() => request(person)} disabled={pendingTarget === person.id} aria-label={`Add ${person.display_name || person.username || 'friend'}`}>&#xFF0B;</button>}</div>)}</div> : null}
+    {results.length ? <div className="figma-friends-search-results">{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}{person.mutual_count ? <small>{person.mutual_count} mutual</small> : null}</span>{resultAction(person)}</div>)}</div> : null}
 
     <article className="figma-friends-request-card">
       <small>Request</small>

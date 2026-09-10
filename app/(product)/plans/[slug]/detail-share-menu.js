@@ -48,10 +48,11 @@ export function DetailShareMenu({ locationId, slug }) {
   return <details className={styles.share} onToggle={onToggle}>
     <summary aria-label="Share saved place"><img src="/figma/saved-place-share.svg" alt="" aria-hidden="true" /></summary>
     <div>
-      {friends.map((friend) => <form action={shareSavedPlace} key={friend.id}>
+      {friends.map((friend) => <form action={shareSavedPlace} onSubmit={(event) => { const input = event.currentTarget.elements.namedItem('share_key'); if (!input.value) input.value = crypto.randomUUID() }} key={friend.id}>
         <input type="hidden" name="location_id" value={locationId} />
         <input type="hidden" name="slug" value={slug} />
         <input type="hidden" name="friend_id" value={friend.id} />
+        <input type="hidden" name="share_key" defaultValue="" />
         <button type="submit">{friend.display_name || friend.username || 'Friend'}</button>
       </form>)}
       {loading ? <p>Loading friends…</p> : null}
