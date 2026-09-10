@@ -123,6 +123,8 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   const [exhausted, setExhausted] = useState(initialFeed.continuation?.hasMore === false && initialItems.length < DECK_BATCH_SIZE && initialItems.length > 0)
   const [message, setMessage] = useState('')
   const [actionRequest, setActionRequest] = useState(null)
+  const clearActionRequest = useCallback(() => setActionRequest(null), [])
+  const [cardLeaving, setCardLeaving] = useState(false)
 
   const storageKey = useMemo(() => actionStorageKey(profileId), [profileId])
   const actionBuffer = useRef([])
@@ -140,8 +142,13 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   const sessionIds = useRef(new Set(initialItems.map((item) => item.content_id)))
 
   const current = feed.items[index] || null
+  const next = feed.items[index + 1] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
   const busy = false
+
+  useEffect(() => {
+    setCardLeaving(false)
+  }, [current?.content_id])
 
   useEffect(() => {
     if (!message) return undefined
@@ -428,6 +435,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
     setFilters({ ...result.filters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE })
     setIndex(0)
     setChoices({})
+    setCardLeaving(false)
     setShowFilters(false)
     setExhausted(result.continuation?.hasMore === false && nextItems.length < DECK_BATCH_SIZE && nextItems.length > 0)
     setMessage('')
@@ -507,7 +515,10 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
       </button>
 
       {current ? <>
-        <div className="figma-swipe-card-stage"><FigmaSwipeCard item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} /></div>
+        <div className={`figma-swipe-card-stage${cardLeaving ? ' is-swiping' : ''}`}>
+          {next ? <FigmaSwipeCard key={`preview:${next.content_id}`} item={next} preview /> : null}
+          <FigmaSwipeCard key={`active:${current.content_id}`} item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} onLeavingChange={setCardLeaving} onActionHandled={clearActionRequest} />
+        </div>
         <SwipeActionDock
           onUndo={undo}
           onPass={() => requestChoice('pass')}
