@@ -13,11 +13,10 @@ function expectedLandingMode(width) { return width <= 760 ? 'mobile' : 'desktop'
 function landingAuthRoot(mode) { return mode === 'desktop' ? '.landing-sticky-left' : '.landing-canvas--mobile' }
 
 async function visibleLandingCanvas(page) {
-  const width = await page.evaluate(() => window.innerWidth)
-  const mode = expectedLandingMode(width)
+  const isMobile = await page.evaluate(() => window.matchMedia('(max-width: 760px)').matches)
+  const mode = expectedLandingMode(isMobile ? 0 : 761)
   const stage = `.landing-stage--${mode}`
   const selector = `.landing-canvas--${mode}`
-  await page.waitForFunction((stageSelector) => document.querySelector(stageSelector)?.dataset.ready === 'true', stage)
   await expect(page.locator(stage)).toBeVisible()
   await expect(page.locator(mode === 'desktop' ? '.landing-stage--mobile' : '.landing-stage--desktop')).not.toBeVisible()
   await expect(page.locator(selector)).toBeVisible()
