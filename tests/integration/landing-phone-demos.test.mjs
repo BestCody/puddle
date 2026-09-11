@@ -37,6 +37,17 @@ test('landing feature phones map to the correct interactive Figma product screen
   assert.match(demoComponent, /aria-label="Star place"/)
   assert.match(demoComponent, /aria-label=\{`Open \$\{current\.title\}`\}/)
   assert.match(demoComponent, /onClick=\{\(\) => setOpen\(true\)\}/)
+  assert.match(demoComponent, /function DemoImage\(\{ image, alt = '', className = '', loading = 'eager' \}\)/)
+  for (const asset of ['safety-toronto', 'safety-new-york', 'safety-los-angeles', 'safety-san-francisco', 'collage-1', 'collage-4', 'collage-5']) {
+    assert.match(demoComponent, new RegExp(`/figma/assets/${asset}\\.webp`), `${asset} must be available to the interactive demos`)
+    assert.match(demoComponent, new RegExp(`/figma/assets/${asset}\\.png`), `${asset} must have a browser-compatible image source`)
+  }
+  assert.match(demoComponent, /<DemoImage image=\{current\.image\} className="landing-demo-swipe-photo" \/>/)
+  assert.match(demoComponent, /<DemoImage image=\{item\.image\} className="landing-demo-saved-photo" \/>/)
+  assert.match(demoComponent, /className="landing-demo-feed-pictures"[^>]*>.*<DemoImage/s)
+  assert.match(demoComponent, /className="landing-demo-feed-place-space" \/>/)
+  assert.doesNotMatch(demoComponent, /landing-demo-swipe-photo" aria-hidden="true" \/>/, 'place photo slots must not remain empty decorative blocks')
+  assert.doesNotMatch(demoComponent, /landing-demo-saved-photo[^>]*aria-hidden="true"/, 'saved photo slots must not remain empty decorative blocks')
 
   // Saved 25:180.
   assert.match(demoComponent, /data-demo-screen="save"/)
@@ -82,6 +93,11 @@ test('landing feature phones map to the correct interactive Figma product screen
   assert.match(demoCss, /\.landing-phone-demo__screen\s*\{[^}]*width:100%;[^}]*height:100%;[^}]*overflow:hidden;/s)
   assert.match(demoCss, /\.landing-demo-dialog-backdrop\{[^}]*position:absolute;[^}]*inset:0;[^}]*place-items:center;/s, 'demo dialogs must stay contained and visible inside the phone screen')
   assert.match(demoCss, /\.landing-demo-dialog,.landing-demo-message\{[^}]*max-height:calc\(100% - 4cqi\);/s, 'demo dialogs must fit within the phone screen')
+  assert.match(demoCss, /\.landing-demo-swipe-photo>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
+  assert.match(demoCss, /\.landing-demo-saved-photo>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
+  assert.match(demoCss, /\.landing-demo-feed-pictures span>picture>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
+  assert.match(demoCss, /\.landing-demo-feed-place-space>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
+  assert.match(demoCss, /\.landing-demo-dialog-photo>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
   assert.match(landingCss, /\.feature-card\{[^}]*container-type:inline-size;/s, 'feature cards must provide the responsive container for phone geometry')
   assert.match(landingCss, /\.feature-phone\{[^}]*--phone-shell-radius:clamp\(1rem,7\.8cqi,2\.625rem\);[^}]*overflow:hidden;[^}]*border-radius:var\(--phone-shell-radius\)/s, 'the phone wrapper must own a scalable rounded clipping boundary')
   assert.match(landingCss, /\.feature-phone-demo__frame\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*border:\s*0;/s)
