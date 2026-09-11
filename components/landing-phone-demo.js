@@ -7,7 +7,6 @@ import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { SavedLightweightGrid } from '@/components/saved-lightweight-grid'
 import { SocialFeedClient } from '@/components/social-feed-client'
 import { RoutedSegment } from '@/components/routed-segment'
-import feedStyles from '@/app/(product)/map/MapFeed.module.css'
 
 const DEMO_IMAGES = Object.freeze({
   toronto: { webp: '/figma/assets/safety-toronto.webp', fallback: '/figma/assets/safety-toronto.png' },
@@ -66,11 +65,14 @@ const landingFeed = Object.freeze({
   pagination: { hasMore: false }
 })
 
-const landingFeedClasses = Object.freeze({
-  ...Object.fromEntries(Object.entries(feedStyles).map(([name, value]) => [name, `${value} landing-demo-feed-${name}`])),
-  demoAction: 'landing-demo-feed-action',
-  demoHint: 'landing-demo-feed-hint'
-})
+const landingFeedClasses = Object.freeze(Object.fromEntries([
+  'actionIcon', 'actionIconFilled', 'actionCount', 'actionMenu', 'actionPanel', 'commentList',
+  'demoAction', 'demoHint', 'empty', 'interactions', 'pagination', 'post', 'author', 'avatar',
+  'authorMeta', 'title', 'copy', 'photos', 'photo', 'photoMain', 'photoSingle', 'photoPair',
+  'photosEmpty', 'photoEmptyCell', 'photoEmptyLabel', 'photoUnavailable', 'photoCount',
+  'place', 'placeMeta', 'placeArea', 'placeAdd', 'placeVisual', 'mapEmpty', 'mapSelectionNotice',
+  'stream'
+].map((name) => [name, `landing-demo-feed-${name}`])))
 
 const demoNav = [
   ['swipe', 'Swipe', '↻'],
@@ -143,8 +145,8 @@ function SwipeDemo({ onNavigate }) {
 
   return <div className="landing-demo-screen landing-demo-screen--swipe" data-demo-screen="swipe" data-figma-screen="40:641">
     <header className="landing-demo-mobile-header landing-demo-mobile-header--swipe"><DemoLogo centered /></header>
-    <div className={`landing-demo-swipe-stack figma-swipe-card-stage${cardLeaving ? ' is-swiping' : ''}`}>
-      <FigmaSwipeCard key={`preview-${next.content_id}`} item={next} preview />
+    <div className={`landing-demo-swipe-stack${cardLeaving ? ' is-swiping' : ''}`}>
+      <FigmaSwipeCard key={`preview-${next.content_id}`} item={next} preview classPrefix="landing-demo-swipe" />
       <FigmaSwipeCard
         key={`active-${current.content_id}`}
         item={current}
@@ -152,6 +154,7 @@ function SwipeDemo({ onNavigate }) {
         busy={false}
         onLeavingChange={setCardLeaving}
         detailsButtonLabel={`Open ${current.title}`}
+        classPrefix="landing-demo-swipe"
       />
     </div>
     <SwipeActionDock
@@ -161,6 +164,7 @@ function SwipeDemo({ onNavigate }) {
       onPerfect={() => choose('perfect')}
       canUndo={history.length > 0}
       busy={false}
+      classPrefix="landing-demo-swipe"
     />
     <div className="landing-demo-progress" aria-label={'Swipe demo place ' + (index + 1)}><span style={{ width: (((index % swipeItems.length) + 1) / swipeItems.length * 100) + '%' }} /></div>
     <DemoBottomNav active="swipe" onNavigate={onNavigate} />
@@ -187,7 +191,8 @@ function SavedDemo({ onNavigate }) {
     <header className="landing-demo-mobile-header landing-demo-mobile-header--split">
       <DemoLogo />
       <RoutedSegment
-        className="landing-demo-segment landing-demo-segment--purple"
+        className="landing-demo-segment--purple"
+        rootClassName="landing-demo-segment"
         ariaLabel="Saved or plans"
         activeValue={tab}
         tone="purple"
@@ -215,6 +220,7 @@ function SavedDemo({ onNavigate }) {
         loadPreviews={false}
         imageLoading="eager"
         onOpen={openSaved}
+        classPrefix="landing-demo-saved"
       />
       <label className="landing-demo-search landing-demo-search--saved"><span className="sr-only">Search saved puddles</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a saved puddle..." /><b aria-hidden="true">↑</b></label>
     </> : <section className="landing-demo-plans" aria-label="Plans">
@@ -242,7 +248,8 @@ function FeedDemo({ onNavigate }) {
     <header className="landing-demo-feed-toolbar">
       <DemoLogo />
       <RoutedSegment
-        className="landing-demo-segment landing-demo-segment--yellow"
+        className="landing-demo-segment--yellow"
+        rootClassName="landing-demo-segment"
         ariaLabel="Feed or map"
         activeValue={view}
         tone="yellow"

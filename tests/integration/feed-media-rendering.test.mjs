@@ -79,7 +79,8 @@ test('saved cards keep canonical photos and use the shared cached map fallback w
   assert.match(grid, /<LocationVisualPreview slug=\{slug\} title=\{title\}/)
   assert.doesNotMatch(grid, /showImage|Photo unavailable/)
   assert.match(grid, /Saved places could not be loaded\./)
-  assert.match(grid, /saved-lightweight-error/)
+  assert.match(grid, /classPrefix = 'saved-lightweight'/)
+  assert.match(grid, /const errorClass = `\$\{classPrefix\}-error`/)
 
   assert.match(visual, /puddle:location-visual-coordinates:v2/)
   assert.match(visual, /LOCATION_VISUAL_CACHE_TTL_MS/)

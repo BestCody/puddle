@@ -9,7 +9,10 @@ const swipeCss = await readFile(new URL('../../app/figma-dashboard-swipe.css', i
 
 test('rebuilt Figma swipe card uses viewport exit geometry and a concurrent card stack', () => {
   assert.match(cardSource, /export function FigmaSwipeCard/)
-  assert.match(cardSource, /className=\{`figma-swipe-card/)
+  assert.match(cardSource, /const DEFAULT_CLASS_NAMES = Object\.freeze\(/)
+  assert.match(cardSource, /card: 'figma-swipe-card'/)
+  assert.match(cardSource, /classPrefix = 'figma-swipe'/)
+  assert.match(cardSource, /const cardClass = classFor\(classPrefix, 'card'\)/)
   assert.match(cardSource, /choiceInFlight/)
   assert.match(cardSource, /actionRequest\?\.id/)
   assert.match(cardSource, /const cardRef = useRef\(null\)/)

@@ -42,17 +42,40 @@ function rotationFor(offset) {
   return Math.max(-SWIPE_ROTATION_MAX_DEG, Math.min(SWIPE_ROTATION_MAX_DEG, offset / SWIPE_ROTATION_DISTANCE))
 }
 
-function DetailsPhoto({ url, title, index }) {
+const DEFAULT_CLASS_NAMES = Object.freeze({
+  card: 'figma-swipe-card',
+  cardPhoto: 'figma-swipe-card-photo',
+  cardPhotoEmpty: 'figma-swipe-card-photo-empty',
+  cardMeta: 'figma-swipe-card-meta',
+  cardCopy: 'figma-swipe-card-copy',
+  dragLabel: 'figma-swipe-drag-label',
+  detailsButton: 'figma-swipe-details-button',
+  detailsBackdrop: 'figma-swipe-details-backdrop',
+  details: 'figma-swipe-details',
+  detailsClose: 'figma-swipe-details-close',
+  detailsGallery: 'figma-swipe-details-gallery',
+  detailsPhotoEmpty: 'figma-swipe-details-photo-empty',
+  detailsKicker: 'figma-swipe-details-kicker',
+  detailsSummary: 'figma-swipe-details-summary',
+  detailsTags: 'figma-swipe-details-tags',
+  detailsActions: 'figma-swipe-details-actions'
+})
+
+function classFor(prefix, name) {
+  return prefix === 'figma-swipe' ? DEFAULT_CLASS_NAMES[name] : `${prefix}-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`
+}
+
+function DetailsPhoto({ url, title, index, classPrefix }) {
   const [failed, setFailed] = useState(false)
   const alt = index ? `${title} photo ${index + 1}` : title
-  if (failed) return <div className="figma-swipe-details-photo-empty" role="img" aria-label={`${alt}: photo unavailable`}>Photo unavailable</div>
+  if (failed) return <div className={classFor(classPrefix, 'detailsPhotoEmpty')} role="img" aria-label={`${alt}: photo unavailable`}>Photo unavailable</div>
   if (canOptimizeDiscoveryImage(url)) {
     return <Image src={url} alt={alt} width={420} height={260} sizes="(max-width: 760px) 50vw, 310px" draggable={false} onDragStart={preventNativeImageDrag} onError={() => setFailed(true)} />
   }
   return <img src={url} alt={alt} loading="lazy" decoding="async" draggable="false" onDragStart={preventNativeImageDrag} onError={() => setFailed(true)} />
 }
 
-function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
+function DetailsDialog({ item, photoUrls, onChoice, busy, onClose, classPrefix }) {
   const close = useRef(null)
   const dialog = useRef(null)
   useModalFocus(dialog, close)
@@ -62,16 +85,16 @@ function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
     return () => window.removeEventListener('keydown', keydown)
   }, [onClose])
 
-  return <div className="figma-swipe-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section ref={dialog} className="figma-swipe-details" role="dialog" aria-modal="true" aria-label={`Full details for ${item.title}`} tabIndex={-1}>
-      <button ref={close} type="button" className="figma-swipe-details-close" onClick={onClose} aria-label="Close details">×</button>
-      {photoUrls.length ? <div className="figma-swipe-details-gallery">{photoUrls.slice(0, 3).map((url, index) => <DetailsPhoto url={url} title={item.title} index={index} key={url} />)}</div> : null}
-      <span className="figma-swipe-details-kicker">{categoryLabel(item.category)}</span>
+  return <div className={classFor(classPrefix, 'detailsBackdrop')} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <section ref={dialog} className={classFor(classPrefix, 'details')} role="dialog" aria-modal="true" aria-label={`Full details for ${item.title}`} tabIndex={-1}>
+      <button ref={close} type="button" className={classFor(classPrefix, 'detailsClose')} onClick={onClose} aria-label="Close details">×</button>
+      {photoUrls.length ? <div className={classFor(classPrefix, 'detailsGallery')}>{photoUrls.slice(0, 3).map((url, index) => <DetailsPhoto classPrefix={classPrefix} url={url} title={item.title} index={index} key={url} />)}</div> : null}
+      <span className={classFor(classPrefix, 'detailsKicker')}>{categoryLabel(item.category)}</span>
       <h2>{item.title}</h2>
       <p>{addressLabel(item)}</p>
-      {item.summary ? <p className="figma-swipe-details-summary">{item.summary}</p> : null}
-      {(item.amenities || []).length ? <div className="figma-swipe-details-tags">{item.amenities.slice(0, 6).map((value) => <span key={value}>{String(value).replaceAll('_', ' ')}</span>)}</div> : null}
-      <div className="figma-swipe-details-actions">
+      {item.summary ? <p className={classFor(classPrefix, 'detailsSummary')}>{item.summary}</p> : null}
+      {(item.amenities || []).length ? <div className={classFor(classPrefix, 'detailsTags')}>{item.amenities.slice(0, 6).map((value) => <span key={value}>{String(value).replaceAll('_', ' ')}</span>)}</div> : null}
+      <div className={classFor(classPrefix, 'detailsActions')}>
         <button type="button" onClick={() => onChoice('pass')} disabled={busy}>Pass</button>
         <button type="button" onClick={() => onChoice('save')} disabled={busy}>Save</button>
         <button type="button" onClick={() => onChoice('perfect')} disabled={busy}>Star</button>
@@ -80,7 +103,7 @@ function DetailsDialog({ item, photoUrls, onChoice, busy, onClose }) {
   </div>
 }
 
-export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = false, onLeavingChange, onActionHandled, detailsButtonLabel = 'Open details' }) {
+export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = false, onLeavingChange, onActionHandled, detailsButtonLabel = 'Open details', classPrefix = 'figma-swipe' }) {
   const cardRef = useRef(null)
   const pointerId = useRef(null)
   const draggingRef = useRef(false)
@@ -186,10 +209,12 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = 
   const showMapFallback = !showMainPhoto && hasCoordinates(item)
   const locationId = item.location_id || item.content_id || item.id || ''
 
+  const cardClass = classFor(classPrefix, 'card')
+
   return <>
     <article
       ref={cardRef}
-      className={`figma-swipe-card ${preview ? 'is-preview' : 'is-active'}${dragging ? ' is-dragging' : ''}${leaving ? ' is-leaving' : ''}`}
+      className={`${cardClass} ${preview ? 'is-preview' : 'is-active'}${dragging ? ' is-dragging' : ''}${leaving ? ' is-leaving' : ''}`}
       data-location-id={locationId || undefined}
       data-card-role={preview ? 'preview' : 'active'}
       style={preview ? undefined : { transform: `translateX(${dragX}px) rotate(${rotationFor(dragX)}deg)` }}
@@ -207,20 +232,20 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = 
       aria-hidden={preview ? true : undefined}
       aria-label={preview ? undefined : `${item.title}. Swipe left to pass, right to save, or press Enter for details.`}
     >
-      <div className="figma-swipe-card-photo">
+      <div className={classFor(classPrefix, 'cardPhoto')}>
         {optimizedMainPhoto && showMainPhoto ? <Image src={optimizedMainPhoto} alt={item.title} fill sizes={DISCOVERY_IMAGE_SIZES} preload={!preview} draggable={false} onDragStart={preventNativeImageDrag} onError={() => setMainPhotoFailed(true)} /> : null}
         {!optimizedMainPhoto && showMainPhoto ? <img src={mainPhoto} alt={item.title} loading="eager" decoding="async" draggable="false" onDragStart={preventNativeImageDrag} onError={() => setMainPhotoFailed(true)} /> : null}
         {showMapFallback ? <SwipeMapPreview key={item.content_id} latitude={item.latitude} longitude={item.longitude} title={item.title} /> : null}
-        {!showMainPhoto && !showMapFallback ? <div className="figma-swipe-card-photo-empty" role="img" aria-label="No verified photo is available and no map location is available">Photo unavailable</div> : null}
+        {!showMainPhoto && !showMapFallback ? <div className={classFor(classPrefix, 'cardPhotoEmpty')} role="img" aria-label="No verified photo is available and no map location is available">Photo unavailable</div> : null}
       </div>
-      <div className="figma-swipe-card-meta"><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
-      <div className="figma-swipe-card-copy"><h1>{item.title}</h1><p>{addressLabel(item)}</p></div>
+      <div className={classFor(classPrefix, 'cardMeta')}><span>{categoryLabel(item.category)}</span>{item.distanceLabel ? <span>{item.distanceLabel}</span> : null}</div>
+      <div className={classFor(classPrefix, 'cardCopy')}><h1>{item.title}</h1><p>{addressLabel(item)}</p></div>
       {!preview ? <>
-        <strong className="figma-swipe-drag-label is-pass" style={{ opacity: Math.max(0, -dragX / commitDistance()) }}>PASS</strong>
-        <strong className="figma-swipe-drag-label is-save" style={{ opacity: Math.max(0, dragX / commitDistance()) }}>SAVE</strong>
-        <button className="figma-swipe-details-button" type="button" aria-label={detailsButtonLabel} onClick={() => setDetailsOpen(true)} disabled={busy}>+</button>
+        <strong className={`${classFor(classPrefix, 'dragLabel')} is-pass`} style={{ opacity: Math.max(0, -dragX / commitDistance()) }}>PASS</strong>
+        <strong className={`${classFor(classPrefix, 'dragLabel')} is-save`} style={{ opacity: Math.max(0, dragX / commitDistance()) }}>SAVE</strong>
+        <button className={classFor(classPrefix, 'detailsButton')} type="button" aria-label={detailsButtonLabel} onClick={() => setDetailsOpen(true)} disabled={busy}>+</button>
       </> : null}
     </article>
-    {!preview && detailsOpen ? <DetailsDialog item={item} photoUrls={photoUrls} busy={busy} onChoice={async (action) => { setDetailsOpen(false); await choose(action) }} onClose={() => setDetailsOpen(false)} /> : null}
+    {!preview && detailsOpen ? <DetailsDialog classPrefix={classPrefix} item={item} photoUrls={photoUrls} busy={busy} onChoice={async (action) => { setDetailsOpen(false); await choose(action) }} onClose={() => setDetailsOpen(false)} /> : null}
   </>
 }

@@ -20,16 +20,16 @@ const actions = [
   { key: 'perfect', label: 'Star', Icon: StarIcon }
 ]
 
-export function SwipeActionDock({ onUndo, onPass, onSave, onPerfect, canUndo, busy }) {
+export function SwipeActionDock({ onUndo, onPass, onSave, onPerfect, canUndo, busy, classPrefix = 'figma-swipe' }) {
   const handlers = { undo: onUndo, pass: onPass, save: onSave, perfect: onPerfect }
 
   function runAction(key) {
     handlers[key]?.()
   }
 
-  return <div className="figma-swipe-actions" aria-label="Swipe controls">
+  return <div className={`${classPrefix}-actions`} aria-label="Swipe controls">
     {actions.map(({ key, label, Icon }) => <button
-      className={`figma-swipe-action is-${key}`}
+      className={`${classPrefix}-action is-${key}`}
       type="button"
       onClick={(event) => runAction(key, event)}
       disabled={busy || (key === 'undo' && !canUndo)}

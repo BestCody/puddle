@@ -91,7 +91,7 @@ function SavedCardVisual({ className, href, ready, title, image, slug, children,
   </a>
 }
 
-export function SavedLightweightGrid({ items = [], className = '', cardClassName = '', photoClassName = '', copyClassName = '', metaClassName = '', perfectPickClassName = '', initialPreviews = null, loadPreviews = true, imageLoading = 'lazy', onOpen = null }) {
+export function SavedLightweightGrid({ items = [], className = '', cardClassName = '', photoClassName = '', copyClassName = '', metaClassName = '', perfectPickClassName = '', initialPreviews = null, loadPreviews = true, imageLoading = 'lazy', onOpen = null, classPrefix = 'saved-lightweight' }) {
   const ids = useMemo(() => items.map((item) => String(item.location_id || '')).filter(Boolean), [items])
   const [previews, setPreviews] = useState(() => initialPreviews && typeof initialPreviews === 'object' ? initialPreviews : {})
   const [loadError, setLoadError] = useState('')
@@ -132,8 +132,14 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
     return () => controller.abort()
   }, [ids, initialPreviews, loadPreviews, retry])
 
+  const errorClass = `${classPrefix}-error`
+  const titleClass = `${classPrefix}-title`
+  const titleSkeletonClass = `${classPrefix}-title-skeleton`
+  const metaClass = `${classPrefix}-meta`
+  const metaSkeletonClass = `${classPrefix}-meta-skeleton`
+
   return <section className={className} aria-label="Saved places" data-testid="saved-grid">
-    {loadError ? <div className="saved-lightweight-error" role="alert"><strong>{loadError}</strong><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
+    {loadError ? <div className={errorClass} role="alert"><strong>{loadError}</strong><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
     {items.map((item, index) => {
       const preview = previews[String(item.location_id)]
       const title = preview?.title || 'Saved place'
@@ -162,14 +168,14 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
           <h2>
             <a href={detail} data-saved-morph-link={ready ? '' : undefined} onClick={(event) => { if (onOpen) { event.preventDefault(); open() } else if (!ready) event.preventDefault() }}>
               {preview
-                ? <span className="saved-lightweight-title" style={{ '--saved-title-delay': titleDelay }}>{title}</span>
-                : <span className="saved-lightweight-title-skeleton" aria-hidden="true" />}
+                ? <span className={titleClass} style={{ '--saved-title-delay': titleDelay }}>{title}</span>
+                : <span className={titleSkeletonClass} aria-hidden="true" />}
             </a>
           </h2>
           <div className={metaClassName}>
             {preview
-              ? <small className="saved-lightweight-meta" style={{ '--saved-title-delay': titleDelay }}>{meta}</small>
-              : <small><span className="saved-lightweight-meta-skeleton" aria-hidden="true" /></small>}
+              ? <small className={metaClass} style={{ '--saved-title-delay': titleDelay }}>{meta}</small>
+              : <small><span className={metaSkeletonClass} aria-hidden="true" /></small>}
           </div>
         </div>
       </article>

@@ -185,13 +185,13 @@ img{display:block;max-width:100%}
   .discovery--mobile .discovery-fade{height:56%}
   .discovery--mobile h2{left:50%;right:auto;bottom:4.56%;width:73.42%;transform:translateX(-50%);font-size:clamp(27px,6.65vw,48.525px)}
 
-  .feature-card{width:59.16%;min-height:0;height:auto;aspect-ratio:416.492/680.018;margin:0 auto 6.67%;padding:clamp(1.625rem,6vw,2.75rem) clamp(1rem,4vw,1.75rem) 0;border-width:.1875rem;border-radius:1.5625rem}
-  .feature-card h3{font-size:clamp(26px,5.94vw,43.376px);line-height:1.4}
-  .feature-card>p{width:80.73%;font-size:clamp(10px,2.09vw,15.145px);line-height:1.4}
-  .feature-phone{width:71.46%;height:auto;aspect-ratio:393/852;margin-top:clamp(18px,4.3vw,30px)}
-  .interactive-pill{right:2.4%;bottom:2.65%;min-width:0;width:42%;height:clamp(32px,7.6vw,54px);overflow:hidden}
-  .interactive-pill>img{width:clamp(22px,5.8vw,41px);height:auto;margin-left:6px}
-  .interactive-pill span{min-width:0;margin:0 6px 0 5px;overflow:hidden;font-size:clamp(9px,2.25vw,15.84px);line-height:1.05;letter-spacing:-.02em}
+  .feature-card{display:flex;flex-direction:column;align-items:center;width:88%;min-height:0;height:auto;aspect-ratio:auto;margin:0 auto 6.67%;padding:clamp(1.625rem,6vw,2.75rem) clamp(1rem,4vw,1.75rem) 0;border-width:.1875rem;border-radius:1.5625rem}
+  .feature-card h3{font-size:clamp(1.625rem,5.94vw,2.711rem);line-height:1.4}
+  .feature-card>p{width:80.73%;font-size:clamp(.625rem,2.09vw,.946rem);line-height:1.4}
+  .feature-phone{flex:0 0 auto;width:68%;height:auto;aspect-ratio:393/852;margin-top:clamp(1.125rem,4.3vw,1.875rem)}
+  .interactive-pill{right:2.4%;bottom:2.65%;min-width:0;width:42%;height:clamp(2rem,7.6vw,3.375rem);overflow:hidden}
+  .interactive-pill>img{width:clamp(1.375rem,5.8vw,2.5625rem);height:auto;margin-left:1.5vw}
+  .interactive-pill span{min-width:0;margin:0 1.5vw 0 1.25vw;overflow:hidden;font-size:clamp(.5625rem,2.25vw,.99rem);line-height:1.05;letter-spacing:-.02em}
   .trust-heading{width:56.78%;margin:6.35% auto 16.7%}
   .trust-heading img{width:17.5%;height:auto;margin-bottom:4.7%}
   .trust-heading h2{font-size:clamp(26px,5.94vw,43.376px);line-height:1.4}
