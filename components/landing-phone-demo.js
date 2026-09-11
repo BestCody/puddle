@@ -3,18 +3,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useModalFocus } from '@/components/modal-focus'
 
+const DEMO_IMAGES = Object.freeze({
+  toronto: { webp: '/figma/assets/safety-toronto.webp', fallback: '/figma/assets/safety-toronto.png' },
+  newYork: { webp: '/figma/assets/safety-new-york.webp', fallback: '/figma/assets/safety-new-york.png' },
+  losAngeles: { webp: '/figma/assets/safety-los-angeles.webp', fallback: '/figma/assets/safety-los-angeles.png' },
+  sanFrancisco: { webp: '/figma/assets/safety-san-francisco.webp', fallback: '/figma/assets/safety-san-francisco.png' },
+  people: { webp: '/figma/assets/collage-1.webp', fallback: '/figma/assets/collage-1.png' },
+  places: { webp: '/figma/assets/collage-4.webp', fallback: '/figma/assets/collage-4.png' },
+  night: { webp: '/figma/assets/collage-5.webp', fallback: '/figma/assets/collage-5.png' }
+})
+
 const swipePlaces = [
-  { id: 'maple-grove', title: 'Maple Grove Park', category: 'Park', distance: '208m', address: '2243 Devon Road, Oakville' },
-  { id: 'firehall', title: 'Firehall Cool Bar Hot Grill', category: 'Bar', distance: '3.4 km', address: 'Oakville' },
-  { id: 'gallery', title: 'Night Gallery', category: 'Theatre', distance: '4.1 km', address: 'Oakville' }
+  { id: 'maple-grove', title: 'Maple Grove Park', category: 'Park', distance: '208m', address: '2243 Devon Road, Oakville', image: DEMO_IMAGES.toronto },
+  { id: 'firehall', title: 'Firehall Cool Bar Hot Grill', category: 'Bar', distance: '3.4 km', address: 'Oakville', image: DEMO_IMAGES.losAngeles },
+  { id: 'gallery', title: 'Night Gallery', category: 'Theatre', distance: '4.1 km', address: 'Oakville', image: DEMO_IMAGES.newYork }
 ]
 
 const savedPlaces = [
-  { id: 'firehall', title: 'Firehall Cool Bar Hot Grill', category: 'Courts', city: 'Oakville', distance: '3.4 km' },
-  { id: 'maple-grove', title: 'Maple Grove Park', category: 'Courts', city: 'Oakville', distance: '208m' },
-  { id: 'film-house', title: 'Film House', category: 'Theatres', city: 'Oakville', distance: '2.1 km' },
-  { id: 'night-gallery', title: 'Night Gallery', category: 'Theatres', city: 'Oakville', distance: '4.1 km' },
-  { id: 'lookout', title: 'Lake Lookout', category: 'Courts', city: 'Oakville', distance: '3.8 km' }
+  { id: 'firehall', title: 'Firehall Cool Bar Hot Grill', category: 'Courts', city: 'Oakville', distance: '3.4 km', image: DEMO_IMAGES.losAngeles },
+  { id: 'maple-grove', title: 'Maple Grove Park', category: 'Courts', city: 'Oakville', distance: '208m', image: DEMO_IMAGES.toronto },
+  { id: 'film-house', title: 'Film House', category: 'Theatres', city: 'Oakville', distance: '2.1 km', image: DEMO_IMAGES.newYork },
+  { id: 'night-gallery', title: 'Night Gallery', category: 'Theatres', city: 'Oakville', distance: '4.1 km', image: DEMO_IMAGES.night },
+  { id: 'lookout', title: 'Lake Lookout', category: 'Courts', city: 'Oakville', distance: '3.8 km', image: DEMO_IMAGES.sanFrancisco }
 ]
 
 const demoNav = [
@@ -44,6 +54,13 @@ function DemoLogo({ centered = false }) {
   return <img className={`landing-demo-logo${centered ? ' is-centered' : ''}`} src="/figma/assets/logo.svg" alt="Puddle" />
 }
 
+function DemoImage({ image, alt = '', className = '', loading = 'eager' }) {
+  return <picture className={className}>
+    <source srcSet={image.webp} type="image/webp" />
+    <img src={image.fallback} alt={alt} loading={loading} decoding="async" draggable="false" />
+  </picture>
+}
+
 function DemoBottomNav({ active, onNavigate }) {
   return <nav className="landing-demo-bottom-nav" aria-label="Puddle app navigation">
     {demoNav.map(([view, label, glyph]) => {
@@ -52,7 +69,7 @@ function DemoBottomNav({ active, onNavigate }) {
   </nav>
 }
 
-function DemoDetails({ title, subtitle, onClose }) {
+function DemoDetails({ title, subtitle, image, onClose }) {
   const dialogRef = useRef(null)
   const closeRef = useRef(null)
   useModalFocus(dialogRef, closeRef)
@@ -68,7 +85,7 @@ function DemoDetails({ title, subtitle, onClose }) {
   return <div className="landing-demo-dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section ref={dialogRef} className="landing-demo-dialog" role="dialog" aria-modal="true" aria-label={`${title} details`} tabIndex={-1}>
       <button ref={closeRef} type="button" className="landing-demo-dialog-close" onClick={onClose} aria-label="Close details">×</button>
-      <div className="landing-demo-dialog-photo" aria-hidden="true" />
+      {image ? <DemoImage image={image} className="landing-demo-dialog-photo" /> : null}
       <small>Oakville</small>
       <h2>{title}</h2>
       <p>{subtitle}</p>
@@ -143,7 +160,7 @@ function SwipeDemo({ onNavigate }) {
          onPointerCancel={() => { pointer.current = null; setDragProgress(0) }}
       >
         <header><span>{current.category}</span><span>{current.distance}</span></header>
-        <div className="landing-demo-swipe-photo" aria-hidden="true" />
+        <DemoImage image={current.image} className="landing-demo-swipe-photo" />
         <footer><h1>{current.title}</h1><p>{current.address}</p><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setOpen(true) }} aria-label={`Open ${current.title}`}>+</button></footer>
       </article>
     </div>
@@ -155,7 +172,7 @@ function SwipeDemo({ onNavigate }) {
     </div>
     <div className="landing-demo-progress" aria-label={`Swipe demo place ${index + 1}`}><span style={{ width: `${((index % swipePlaces.length) + 1) / swipePlaces.length * 100}%` }} /></div>
     <DemoBottomNav active="swipe" onNavigate={onNavigate} />
-    {open ? <DemoDetails title={current.title} subtitle={`${current.address} · ${current.distance}`} onClose={() => setOpen(false)} /> : null}
+    {open ? <DemoDetails title={current.title} subtitle={`${current.address} · ${current.distance}`} image={current.image} onClose={() => setOpen(false)} /> : null}
   </div>
 }
 
@@ -184,8 +201,8 @@ function SavedDemo({ onNavigate }) {
         <button type="button" aria-label="Add category">＋</button>
       </nav>
       <section className="landing-demo-saved-grid" aria-label="Saved places">
-        {filtered.map((item, itemIndex) => <button className="landing-demo-saved-card" type="button" onClick={() => setOpenItem(item)} key={item.id}>
-          <span className={`landing-demo-saved-photo landing-demo-saved-photo--${itemIndex % 3}`} aria-hidden="true" />
+        {filtered.map((item) => <button className="landing-demo-saved-card" type="button" onClick={() => setOpenItem(item)} key={item.id}>
+          <DemoImage image={item.image} className="landing-demo-saved-photo" />
           <strong>{item.title}</strong><small><span>{item.city}</span><span>{item.distance}</span></small>
         </button>)}
       </section>
@@ -195,7 +212,7 @@ function SavedDemo({ onNavigate }) {
       <article><small>Sunday · 2:30 PM</small><strong>Maple Grove Park</strong><span>2 people going</span></article>
     </section>}
     <DemoBottomNav active="save" onNavigate={onNavigate} />
-    {openItem ? <DemoDetails title={openItem.title} subtitle={`${openItem.city} · ${openItem.distance}`} onClose={() => setOpenItem(null)} /> : null}
+    {openItem ? <DemoDetails title={openItem.title} subtitle={`${openItem.city} · ${openItem.distance}`} image={openItem.image} onClose={() => setOpenItem(null)} /> : null}
   </div>
 }
 
@@ -203,10 +220,10 @@ function FeedPost({ onOpen }) {
   return <article className="landing-demo-feed-post">
     <header><span className="landing-demo-avatar">R</span><div><strong>Richie Zheng</strong><small>2 hours ago</small></div></header>
     <p>This place is amazing! The atmosphere is beautiful, the location feels welcoming, and there’s so much to see and do. Definitely a spot I’d come back to.</p>
-    <div className="landing-demo-feed-pictures" aria-label="Post photos"><span /><span /><span>+30</span></div>
+    <div className="landing-demo-feed-pictures" aria-label="Post photos"><span><DemoImage image={DEMO_IMAGES.people} /></span><span><DemoImage image={DEMO_IMAGES.places} /></span><span><DemoImage image={DEMO_IMAGES.night} /><b aria-hidden="true">+30</b></span></div>
     <button className="landing-demo-feed-place" type="button" onClick={onOpen}>
       <span className="landing-demo-feed-place-meta"><em>Park</em><em>208m</em></span>
-      <span className="landing-demo-feed-place-space" aria-hidden="true" />
+      <DemoImage image={DEMO_IMAGES.toronto} className="landing-demo-feed-place-space" />
       <strong>Maple Grove Park</strong><b aria-hidden="true">+</b>
     </button>
     <footer><button type="button">◯ 3</button><button type="button">♢ 21</button><button type="button">▱ 5</button><button type="button">➤ 7</button></footer>
@@ -231,7 +248,7 @@ function FeedDemo({ onNavigate }) {
     {view === 'feed' ? <section className="landing-demo-feed-list" aria-label="Puddle feed">{showPost ? <FeedPost onOpen={() => setOpen(true)} /> : <p className="landing-demo-empty">No puddles found.</p>}</section> : <section className="landing-demo-map" aria-label="Interactive map preview"><span className="landing-demo-map-road road-a" /><span className="landing-demo-map-road road-b" /><button type="button" className="landing-demo-map-pin pin-a" aria-label="Open Maple Grove Park" onClick={() => setOpen(true)}>●</button><button type="button" className="landing-demo-map-pin pin-b" aria-label="Open Firehall Cool Bar Hot Grill" onClick={() => setOpen(true)}>●</button><strong>Oakville</strong></section>}
     <button className="landing-demo-compose" type="button" onClick={() => setComposing((value) => !value)}><span className="landing-demo-avatar">R</span><span>{composing ? 'Share something about this place…' : 'Create a puddle...'}</span><b>↑</b></button>
     <DemoBottomNav active="feed" onNavigate={onNavigate} />
-    {open ? <DemoDetails title="Maple Grove Park" subtitle="2243 Devon Road, Oakville · 208m" onClose={() => setOpen(false)} /> : null}
+    {open ? <DemoDetails title="Maple Grove Park" subtitle="2243 Devon Road, Oakville · 208m" image={DEMO_IMAGES.toronto} onClose={() => setOpen(false)} /> : null}
   </div>
 }
 
@@ -265,7 +282,7 @@ function ProfileDemo({ onNavigate }) {
       <div className="landing-demo-profile-actions"><button type="button" className="is-follow" onClick={() => setFollowing((value) => !value)}>{following ? 'Following' : 'Follow'}</button><button type="button" onClick={() => setMessageOpen(true)}>◯ Message</button></div>
     </section>
       <section className="landing-demo-profile-grid">
-      <article className="is-puddles"><h2>Puddles</h2><div className="landing-demo-profile-mini-post"><span className="landing-demo-avatar">R</span><strong>Richie Zheng</strong><div /><b>Maple Grove Park</b></div></article>
+      <article className="is-puddles"><h2>Puddles</h2><div className="landing-demo-profile-mini-post"><span className="landing-demo-avatar">R</span><strong>Richie Zheng</strong><DemoImage image={DEMO_IMAGES.people} className="landing-demo-profile-mini-photo" /><b>Maple Grove Park</b></div></article>
       <article className="is-location"><h2>Location</h2></article>
       <article className="is-saves"><h2>Saves</h2></article>
       <article className="is-friends"><h2>Friends</h2></article>
@@ -327,7 +344,7 @@ function FriendsDemo({ onNavigate }) {
       </article>) : <p className="landing-demo-empty">No pending requests.</p>}
     </section>}
     <DemoBottomNav active="friends" onNavigate={onNavigate} />
-    {openItem ? <DemoDetails title={openItem.name} subtitle={`${openItem.handle} · ${openItem.mutual}`} onClose={() => setOpenItem(null)} /> : null}
+    {openItem ? <DemoDetails title={openItem.name} subtitle={`${openItem.handle} · ${openItem.mutual}`} image={DEMO_IMAGES.people} onClose={() => setOpenItem(null)} /> : null}
   </div>
 }
 
