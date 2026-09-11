@@ -125,22 +125,6 @@ test('landing phone routes render the correct Figma screen identities and hydrat
   await feed.getByPlaceholder('Search puddle').fill('not-a-puddle')
   await expect(feed.getByText('No puddles found.', { exact: true })).toBeVisible()
 
-  await page.goto('/landing-demo/profile')
-  const profile = page.locator('[data-demo-screen="profile"]')
-  await expect(profile).toBeVisible()
-  await expect(profile).toHaveAttribute('data-figma-screen', '40:347')
-  await expect(profile.getByRole('heading', { name: 'Richie Zheng', exact: true })).toBeVisible()
-  await expect(profile.getByText('@Richiezh77', { exact: true })).toBeVisible()
-  await expect(profile.locator('.landing-demo-bottom-nav').getByRole('button', { name: 'Profile', exact: true })).toHaveAttribute('aria-current', 'page')
-  await profile.getByRole('button', { name: 'Follow', exact: true }).click()
-  await expect(profile.getByRole('button', { name: 'Following', exact: true })).toBeVisible()
-  await profile.getByRole('button', { name: 'Edit', exact: true }).click()
-  await profile.getByRole('textbox', { name: 'Display name' }).fill('Richie Test')
-  await profile.getByRole('button', { name: 'Done', exact: true }).click()
-  await expect(profile.getByRole('heading', { name: 'Richie Test', exact: true })).toBeVisible()
-  await profile.getByRole('button', { name: /Message/ }).click()
-  await expect(page.getByRole('dialog', { name: 'Message Richie Zheng' })).toBeVisible()
-  await page.getByRole('button', { name: 'Close message' }).click()
 })
 
 test('landing embeds each Figma phone route in the corresponding feature card', async ({ page }) => {

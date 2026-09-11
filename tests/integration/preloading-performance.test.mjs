@@ -88,7 +88,8 @@ test('top pills size to their labels and move their highlight before navigation 
   assert.match(routed, /active\.offsetWidth/)
   assert.match(routed, /data-segment-enhanced="true"/)
   assert.match(routed, /data-segment-count/)
-  assert.match(routed, /onPointerDown=\{\(event\) =>/)
+  assert.match(routed, /onPointerDown:\s*\(event\) =>/)
+  assert.match(routed, /locallyControlled/)
   assert.doesNotMatch(layout, /segment-interaction-bridge|instant-segment/)
   assert.match(layout, /import '\.\/ui-targeted-fixes\.css'/)
 
