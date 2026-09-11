@@ -55,7 +55,7 @@ function DemoLogo({ centered = false }) {
 }
 
 function DemoImage({ image, alt = '', className = '', loading = 'eager' }) {
-  return <picture className={className}>
+  return <picture className={className || undefined}>
     <source srcSet={image.webp} type="image/webp" />
     <img src={image.fallback} alt={alt} loading={loading} decoding="async" draggable="false" />
   </picture>
