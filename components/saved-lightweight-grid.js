@@ -46,7 +46,16 @@ function writePreviewCache(previews) {
   } catch {}
 }
 
-function SavedCardVisual({ className, href, ready, title, image, slug, children }) {
+function SavedCardVisual({ className, href, ready, title, image, slug, children, onOpen, loading = 'lazy' }) {
+  function handleOpen(event) {
+    if (onOpen) {
+      event.preventDefault()
+      onOpen()
+      return
+    }
+    if (!ready) event.preventDefault()
+  }
+
   if (image) {
     return <PhotoFrame
       as="a"
@@ -54,12 +63,13 @@ function SavedCardVisual({ className, href, ready, title, image, slug, children 
       href={href}
       src={image}
       alt={`${title} photo`}
+      loading={loading}
       unavailableClassName="is-unavailable"
       unavailableText="Puddle"
       data-saved-morph-link={ready ? '' : undefined}
       data-saved-morph-photo={ready ? '' : undefined}
       aria-disabled={!ready}
-      onClick={(event) => { if (!ready) event.preventDefault() }}
+      onClick={handleOpen}
       aria-label={`Open ${title}`}
     >
       {children}
@@ -72,7 +82,7 @@ function SavedCardVisual({ className, href, ready, title, image, slug, children 
     data-saved-morph-link={ready ? '' : undefined}
     data-saved-morph-photo={ready ? '' : undefined}
     aria-disabled={!ready}
-    onClick={(event) => { if (!ready) event.preventDefault() }}
+    onClick={handleOpen}
     aria-label={`Open ${title}`}
     style={{ position: 'relative', overflow: 'hidden' }}
   >
@@ -81,9 +91,9 @@ function SavedCardVisual({ className, href, ready, title, image, slug, children 
   </a>
 }
 
-export function SavedLightweightGrid({ items = [], className = '', cardClassName = '', photoClassName = '', copyClassName = '', metaClassName = '', perfectPickClassName = '' }) {
+export function SavedLightweightGrid({ items = [], className = '', cardClassName = '', photoClassName = '', copyClassName = '', metaClassName = '', perfectPickClassName = '', initialPreviews = null, loadPreviews = true, imageLoading = 'lazy', onOpen = null }) {
   const ids = useMemo(() => items.map((item) => String(item.location_id || '')).filter(Boolean), [items])
-  const [previews, setPreviews] = useState({})
+  const [previews, setPreviews] = useState(() => initialPreviews && typeof initialPreviews === 'object' ? initialPreviews : {})
   const [loadError, setLoadError] = useState('')
   const [retry, setRetry] = useState(0)
 
@@ -91,6 +101,10 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
     if (!ids.length) return undefined
     const controller = new AbortController()
     setLoadError('')
+    if (!loadPreviews) {
+      setPreviews(initialPreviews && typeof initialPreviews === 'object' ? initialPreviews : {})
+      return () => controller.abort()
+    }
     const cached = readPreviewCache(ids)
     if (Object.keys(cached).length) setPreviews(cached)
 
@@ -116,7 +130,7 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
         }
       })
     return () => controller.abort()
-  }, [ids, retry])
+  }, [ids, initialPreviews, loadPreviews, retry])
 
   return <section className={className} aria-label="Saved places" data-testid="saved-grid">
     {loadError ? <div className="saved-lightweight-error" role="alert"><strong>{loadError}</strong><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
@@ -128,6 +142,7 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
       const image = preview?.cover_url || null
       const detail = slug ? `/plans/${slug}` : '#'
       const ready = Boolean(slug)
+      const open = () => onOpen?.(item, preview)
       const titleDelay = `${Math.min(index, 12) * 34}ms`
       return <article
         className={cardClassName}
@@ -140,12 +155,12 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
         data-saved-morph-image={ready && image ? image : undefined}
         key={`saved:${item.location_id}`}
       >
-        <SavedCardVisual className={photoClassName} href={detail} ready={ready} title={title} image={image} slug={slug}>
+        <SavedCardVisual className={photoClassName} href={detail} ready={ready} title={title} image={image} slug={slug} loading={imageLoading} onOpen={onOpen ? open : null}>
           {item.perfect_pick ? <b className={perfectPickClassName}>★ Perfect Pick</b> : null}
         </SavedCardVisual>
         <div className={copyClassName}>
           <h2>
-            <a href={detail} data-saved-morph-link={ready ? '' : undefined} onClick={(event) => { if (!ready) event.preventDefault() }}>
+            <a href={detail} data-saved-morph-link={ready ? '' : undefined} onClick={(event) => { if (onOpen) { event.preventDefault(); open() } else if (!ready) event.preventDefault() }}>
               {preview
                 ? <span className="saved-lightweight-title" style={{ '--saved-title-delay': titleDelay }}>{title}</span>
                 : <span className="saved-lightweight-title-skeleton" aria-hidden="true" />}

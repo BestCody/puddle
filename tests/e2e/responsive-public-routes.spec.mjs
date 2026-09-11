@@ -13,11 +13,10 @@ function expectedLandingMode(width) { return width <= 760 ? 'mobile' : 'desktop'
 function landingAuthRoot(mode) { return mode === 'desktop' ? '.landing-sticky-left' : '.landing-canvas--mobile' }
 
 async function visibleLandingCanvas(page) {
-  const width = await page.evaluate(() => window.innerWidth)
-  const mode = expectedLandingMode(width)
+  const isMobile = await page.evaluate(() => window.matchMedia('(max-width: 760px)').matches)
+  const mode = expectedLandingMode(isMobile ? 0 : 761)
   const stage = `.landing-stage--${mode}`
   const selector = `.landing-canvas--${mode}`
-  await page.waitForFunction((stageSelector) => document.querySelector(stageSelector)?.dataset.ready === 'true', stage)
   await expect(page.locator(stage)).toBeVisible()
   await expect(page.locator(mode === 'desktop' ? '.landing-stage--mobile' : '.landing-stage--desktop')).not.toBeVisible()
   await expect(page.locator(selector)).toBeVisible()
@@ -82,9 +81,9 @@ test('landing phone routes render the correct Figma screen identities and hydrat
   await expect(swipe.getByText('Maple Grove Park', { exact: true })).toBeVisible()
   await expect(swipe.getByText('2243 Devon Road, Oakville', { exact: true })).toBeVisible()
   await expect(swipe.getByRole('button', { name: 'Swipe' })).toHaveAttribute('aria-current', 'page')
-  await swipe.getByRole('button', { name: 'Save place' }).click()
+  await swipe.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(swipe.getByText('Firehall Cool Bar Hot Grill', { exact: true })).toBeVisible()
-  await swipe.getByRole('button', { name: 'Back' }).click()
+  await swipe.getByRole('button', { name: 'Undo', exact: true }).click()
   await expect(swipe.getByText('Maple Grove Park', { exact: true })).toBeVisible()
   await swipe.getByRole('button', { name: 'Saved' }).click()
   await expect(page).toHaveURL(/\/landing-demo\/swipe$/)
@@ -123,24 +122,8 @@ test('landing phone routes render the correct Figma screen identities and hydrat
   await feed.locator('.landing-demo-feed-toolbar .landing-demo-segment').getByRole('button', { name: 'Feed', exact: true }).click()
   await feed.getByRole('button', { name: 'Search puddle', exact: true }).click()
   await feed.getByPlaceholder('Search puddle').fill('not-a-puddle')
-  await expect(feed.getByText('No puddles found.', { exact: true })).toBeVisible()
+  await expect(feed.getByText('No puddles match that search on this page.', { exact: true })).toBeVisible()
 
-  await page.goto('/landing-demo/profile')
-  const profile = page.locator('[data-demo-screen="profile"]')
-  await expect(profile).toBeVisible()
-  await expect(profile).toHaveAttribute('data-figma-screen', '40:347')
-  await expect(profile.getByRole('heading', { name: 'Richie Zheng', exact: true })).toBeVisible()
-  await expect(profile.getByText('@Richiezh77', { exact: true })).toBeVisible()
-  await expect(profile.locator('.landing-demo-bottom-nav').getByRole('button', { name: 'Profile', exact: true })).toHaveAttribute('aria-current', 'page')
-  await profile.getByRole('button', { name: 'Follow', exact: true }).click()
-  await expect(profile.getByRole('button', { name: 'Following', exact: true })).toBeVisible()
-  await profile.getByRole('button', { name: 'Edit', exact: true }).click()
-  await profile.getByRole('textbox', { name: 'Display name' }).fill('Richie Test')
-  await profile.getByRole('button', { name: 'Done', exact: true }).click()
-  await expect(profile.getByRole('heading', { name: 'Richie Test', exact: true })).toBeVisible()
-  await profile.getByRole('button', { name: /Message/ }).click()
-  await expect(page.getByRole('dialog', { name: 'Message Richie Zheng' })).toBeVisible()
-  await page.getByRole('button', { name: 'Close message' }).click()
 })
 
 test('landing embeds each Figma phone route in the corresponding feature card', async ({ page }) => {

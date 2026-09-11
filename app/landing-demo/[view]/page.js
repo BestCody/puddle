@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { LandingPhoneDemo } from '@/components/landing-phone-demo'
 
-const views = new Set(['swipe', 'save', 'feed', 'friends', 'pass', 'profile'])
+const views = new Set(['swipe', 'save', 'feed'])
 
 // These previews must render per request so Next can attach the proxy-provided CSP nonce
 // to its scripts. A force-static page renders visually but cannot hydrate under our strict CSP.

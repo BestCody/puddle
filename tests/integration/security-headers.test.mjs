@@ -17,3 +17,17 @@ test('CSP permits only the Supabase websocket origin matching the configured tra
     else process.env.NEXT_PUBLIC_SUPABASE_URL = original
   }
 })
+
+test('development CSP supports the React overlay without weakening production CSP', () => {
+  const original = process.env.NODE_ENV
+  try {
+    process.env.NODE_ENV = 'development'
+    assert.match(cspValue({ nonce: 'test' }), /script-src[^;]*'unsafe-eval'/)
+
+    process.env.NODE_ENV = 'production'
+    assert.doesNotMatch(cspValue({ nonce: 'test' }), /script-src[^;]*'unsafe-eval'/)
+  } finally {
+    if (original === undefined) delete process.env.NODE_ENV
+    else process.env.NODE_ENV = original
+  }
+})

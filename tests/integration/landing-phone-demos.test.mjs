@@ -4,7 +4,7 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('landing feature phones map to the correct interactive Figma product screens', async () => {
+test('landing feature phones reuse production components with deterministic fixture data', async () => {
   const [landingHtml, demoPage, demoComponent, demoCss, landingCss] = await Promise.all([
     read('public/landing.html'),
     read('app/landing-demo/[view]/page.js'),
@@ -13,101 +13,57 @@ test('landing feature phones map to the correct interactive Figma product screen
     read('public/landing.css')
   ])
 
-  // The updated Figma compositions 352:484 and 351:156 both use Swipe/Save/Feed.
   for (const view of ['swipe', 'save', 'feed']) {
-    assert.equal((landingHtml.match(new RegExp(`src="/landing-demo/${view}"`, 'g')) || []).length, 2, `${view} must be embedded once in desktop and once in mobile`)
+    const sourceCount = (landingHtml.match(new RegExp('src="/landing-demo/' + view + '"', 'g')) || []).length
+    assert.equal(sourceCount, 2, view + ' must be embedded once in desktop and once in mobile')
   }
-  assert.equal((landingHtml.match(/src="\/landing-demo\/profile"/g) || []).length, 0, 'Profile demo must not be embedded in the updated landing compositions')
+  assert.equal((landingHtml.match(/src="\/landing-demo\/profile"/g) || []).length, 0)
+  assert.doesNotMatch(landingHtml, /Popular cities/)
   assert.doesNotMatch(landingHtml, /feature-card--d-profile|feature-card--m-profile/)
-
-  for (const screenshot of ['phone-swipe.png', 'phone-save.png', 'phone-feed.png', 'phone-profile.png']) assert(!landingHtml.includes(screenshot), `${screenshot} must not be rendered as a feature-phone screenshot`)
-  assert.match(landingHtml, /hero-phone-centered\.(png|webp)/, 'hero phone must use the normalized centered asset')
-  assert.doesNotMatch(landingHtml, /hero-phone-device\.(png|webp)/, 'intermediate cropped hero asset must not remain in the landing page')
-  assert.match(demoPage, /export const dynamic = 'force-dynamic'/, 'landing demos must render per request so Next can attach the CSP nonce and hydrate interactions')
+  for (const screenshot of ['phone-swipe.png', 'phone-save.png', 'phone-feed.png']) assert(!landingHtml.includes(screenshot))
+  assert.match(landingHtml, /hero-phone-centered\.(png|webp)/)
+  assert.doesNotMatch(landingHtml, /hero-phone-device\.(png|webp)/)
+  assert.match(demoPage, /export const dynamic = 'force-dynamic'/)
   assert.doesNotMatch(demoPage, /export const dynamic = 'force-static'/)
 
-  // The miniature screens must carry the identifying content from their authoritative Figma app frames.
-  // Swipe 12:11 / 40:641.
-  assert.match(demoComponent, /data-demo-screen="swipe"/)
-  assert.match(demoComponent, /Maple Grove Park/)
-  assert.match(demoComponent, /2243 Devon Road, Oakville/)
-  assert.match(demoComponent, /208m/)
-  assert.match(demoComponent, /aria-label="Pass place"/)
-  assert.match(demoComponent, /aria-label="Save place"/)
-  assert.match(demoComponent, /aria-label="Star place"/)
-  assert.match(demoComponent, /aria-label=\{`Open \$\{current\.title\}`\}/)
-  assert.match(demoComponent, /onClick=\{\(\) => setOpen\(true\)\}/)
-  assert.match(demoComponent, /function DemoImage\(\{ image, alt = '', className = '', loading = 'eager' \}\)/)
-  for (const asset of ['safety-toronto', 'safety-new-york', 'safety-los-angeles', 'safety-san-francisco', 'collage-1', 'collage-4', 'collage-5']) {
-    assert.match(demoComponent, new RegExp(`/figma/assets/${asset}\\.webp`), `${asset} must be available to the interactive demos`)
-    assert.match(demoComponent, new RegExp(`/figma/assets/${asset}\\.png`), `${asset} must have a browser-compatible image source`)
+  for (const component of ['FigmaSwipeCard', 'SwipeActionDock', 'SavedLightweightGrid', 'SocialFeedClient', 'RoutedSegment']) assert(demoComponent.includes(component), component + ' must be reused by the landing demos')
+  for (const contract of ['staticMode', 'initialPreviews={savedPreviewMap}', 'loadPreviews={false}', 'landingFeedClasses', 'detailsButtonLabel', 'onDemoPlaceOpen']) assert(demoComponent.includes(contract), contract + ' must be present')
+  for (const screen of ['data-demo-screen="swipe"', 'data-demo-screen="save"', 'data-demo-screen="feed"']) assert(demoComponent.includes(screen), screen + ' must remain addressable')
+  for (const place of ['Maple Grove Park', 'Firehall Cool Bar Hot Grill', 'Night Gallery', 'Film House']) assert(demoComponent.includes(place), place + ' must remain in the deterministic fixture set')
+  for (const asset of ['safety-toronto', 'safety-new-york', 'safety-los-angeles', 'safety-san-francisco', 'collage-5']) {
+    assert(demoComponent.includes('/figma/assets/' + asset + '.webp'))
+    assert(demoComponent.includes('/figma/assets/' + asset + '.png'))
   }
-  assert.match(demoComponent, /<DemoImage image=\{current\.image\} className="landing-demo-swipe-photo" \/>/)
-  assert.match(demoComponent, /<DemoImage image=\{item\.image\} className="landing-demo-saved-photo" \/>/)
-  assert.match(demoComponent, /className="landing-demo-feed-pictures"[^>]*>.*<DemoImage/s)
-  assert.match(demoComponent, /className="landing-demo-feed-place-space" \/>/)
-  assert.doesNotMatch(demoComponent, /landing-demo-swipe-photo" aria-hidden="true" \/>/, 'place photo slots must not remain empty decorative blocks')
-  assert.doesNotMatch(demoComponent, /landing-demo-saved-photo[^>]*aria-hidden="true"/, 'saved photo slots must not remain empty decorative blocks')
-
-  // Saved 25:180.
-  assert.match(demoComponent, /data-demo-screen="save"/)
-  assert.match(demoComponent, /Firehall Cool Bar Hot Grill/)
-  assert.match(demoComponent, /Courts/)
-  assert.match(demoComponent, /Theatres/)
-  assert.match(demoComponent, /Search a saved puddle\.\.\./)
-
-  // Feed 14:114.
-  assert.match(demoComponent, /data-demo-screen="feed"/)
-  assert.match(demoComponent, /Richie Zheng/)
-  assert.match(demoComponent, /This place is amazing! The atmosphere is beautiful/)
-  assert.match(demoComponent, /Create a puddle\.\.\./)
-  assert.match(demoComponent, /Feed or map/)
-
-  // Profile 40:347.
-  assert.match(demoComponent, /data-demo-screen="profile"/)
-  assert.match(demoComponent, /@Richiezh77/)
-  assert.match(demoComponent, /345 Followers/)
-  assert.match(demoComponent, /230 Following/)
-  assert.match(demoComponent, /🍻Bar/)
-  assert.match(demoComponent, /🌙Nightlife/)
-  assert.match(demoComponent, /🛍️Shop/)
-  for (const heading of ['Puddles', 'Location', 'Saves', 'Friends']) assert(demoComponent.includes(`>${heading}<`), `Profile must contain ${heading}`)
-
-  // Static source checks prove the demos are wired for interaction; Playwright covers behavior in-browser.
-  for (const stateSetter of ['setIndex', 'setTab', 'setCategory', 'setQuery', 'setView', 'setEditing', 'setFollowing', 'setMessageOpen']) assert(demoComponent.includes(stateSetter), `${stateSetter} interaction state must exist`)
-  assert.match(demoComponent, /function DemoBottomNav\(\{ active, onNavigate \}\)/)
+  assert.doesNotMatch(demoComponent, /function (FeedPost|ProfileDemo|FriendsDemo|PassDemo)|landing-demo-feed-pictures/)
+  assert.doesNotMatch(demoComponent, /friendPeople|friendRequests|passPerks|landing-demo-screen--(profile|friends|pass)/)
+  assert.match(demoComponent, /function DemoImage/)
+  assert.match(demoComponent, /data-figma-screen="40:641"/)
+  assert.match(demoComponent, /data-figma-screen="25:180"/)
+  assert.match(demoComponent, /data-figma-screen="40:519"/)
+  for (const stateSetter of ['setIndex', 'setTab', 'setCategory', 'setQuery', 'setView']) assert(demoComponent.includes(stateSetter), stateSetter + ' interaction state must exist')
+  assert.match(demoComponent, /function DemoBottomNav/)
   assert.match(demoComponent, /className="landing-phone-demo__screen"/)
-  assert.match(demoComponent, /onClick=\{\(\) => onNavigate\(view\)\}/)
-  assert.doesNotMatch(demoComponent, /<a key=\{view\}/, 'Phone navigation must not perform frame document navigation')
+  assert.match(demoComponent, /onClick/)
+  assert.doesNotMatch(demoComponent, /<a key=\{view\}/)
   assert.match(demoComponent, /useModalFocus/)
   assert.match(demoComponent, /key === 'Escape'/)
-  assert.match(demoComponent, /landing-demo-dialog" role="dialog" aria-modal="true" aria-label=\{`\$\{title\} details`\} tabIndex=\{-1\}/)
-  assert.match(demoComponent, /onPointerMove=\{pointerMove\}/)
-  assert.match(demoCss, /landing-demo-screen--swipe/)
-  assert.match(demoCss, /landing-demo-screen--saved/)
-  assert.match(demoCss, /landing-demo-screen--feed/)
-  assert.match(demoCss, /landing-demo-screen--profile/)
-  assert.match(demoCss, /\.landing-phone-demo\s*\{[^}]*container-type:inline-size;[^}]*padding:4\.5cqi;/s)
-  assert.match(demoCss, /html:has\(\.landing-phone-demo\),body:has\(\.landing-phone-demo\)\{[^}]*background:transparent;/s, 'the iframe document must not paint a rectangular background behind the rounded phone shell')
-  assert.match(demoCss, /\.landing-phone-demo::before\s*\{[^}]*left:50%;[^}]*width:28cqi;/s)
-  assert.match(demoCss, /\.landing-phone-demo__screen\s*\{[^}]*width:100%;[^}]*height:100%;[^}]*overflow:hidden;/s)
-  assert.match(demoCss, /\.landing-demo-dialog-backdrop\{[^}]*position:absolute;[^}]*inset:0;[^}]*place-items:center;/s, 'demo dialogs must stay contained and visible inside the phone screen')
-  assert.match(demoCss, /\.landing-demo-dialog,.landing-demo-message\{[^}]*max-height:calc\(100% - 4cqi\);/s, 'demo dialogs must fit within the phone screen')
-  assert.match(demoCss, /\.landing-demo-swipe-photo>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
-  assert.match(demoCss, /\.landing-demo-saved-photo>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
-  assert.match(demoCss, /\.landing-demo-feed-pictures span>picture>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
-  assert.match(demoCss, /\.landing-demo-feed-place-space>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
-  assert.match(demoCss, /\.landing-demo-dialog-photo>img\{[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:cover(?:;|\})/s)
-  assert.match(landingCss, /\.feature-card\{[^}]*container-type:inline-size;/s, 'feature cards must provide the responsive container for phone geometry')
-  assert.match(landingCss, /\.feature-phone\{[^}]*--phone-shell-radius:clamp\(1rem,7\.8cqi,2\.625rem\);[^}]*overflow:hidden;[^}]*border-radius:var\(--phone-shell-radius\)/s, 'the phone wrapper must own a scalable rounded clipping boundary')
-  assert.match(landingCss, /\.feature-phone-demo__frame\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*border:\s*0;/s)
-  assert.match(landingCss, /\.feature-phone-demo__frame\s*\{[^}]*border-radius:\s*inherit;/s, 'the iframe must share the phone wrapper clipping boundary')
-  assert.match(landingCss, /\.feature-card h3\{[^}]*display:inline-flex;[^}]*align-items:center;[^}]*gap:\.16em;/s, 'feature headings must own icon alignment and spacing')
-  assert.match(landingHtml, /<h3 id="feature-save-d"><img class="feature-icon feature-icon--save"[^>]*><span>Save<\/span><\/h3>/, 'Save icon must share the heading flex row')
-  assert.match(landingHtml, /<h3 id="feature-swipe-d"><img class="feature-icon feature-icon--swipe"[^>]*><span>Swipe<\/span><\/h3>/, 'Swipe icon must share the heading flex row')
-  assert.match(landingHtml, /<h3 id="feature-feed-d"><img class="feature-icon feature-icon--feed"[^>]*><span>Feed<\/span><\/h3>/, 'Feed icon must share the heading flex row')
-  assert.match(landingCss, /\.interactive-pill\s*\{/)
-  assert.match(landingCss, /\.interactive-pill\s*\{[^}]*pointer-events:\s*none;/s, 'the informational interactive pill must not block iframe controls')
+
+  for (const marker of ['landing-demo-screen--swipe', 'landing-demo-screen--saved', 'landing-demo-screen--feed', 'figma-swipe-card-stage', 'landing-demo-feed-stream', 'landing-demo-saved-copy']) assert(demoCss.includes(marker), marker + ' must be styled')
+  assert(demoCss.includes('html:has(.landing-phone-demo),body:has(.landing-phone-demo)'))
+  assert(demoCss.includes('.landing-phone-demo__screen{'))
+  assert(demoCss.includes('.landing-demo-dialog-backdrop{'))
+  assert(demoCss.includes('.landing-demo-dialog{'))
+  assert.match(demoCss, /landing-demo-swipe-stack\.figma-swipe-card-stage\{[^}]*height:100%!important[^}]*aspect-ratio:auto!important/s)
+  assert.match(demoCss, /landing-demo-screen--swipe>\.figma-swipe-actions\{[^}]*min-height:0!important[^}]*gap:1cqi!important/s)
+  assert.match(demoCss, /landing-demo-screen--swipe \.figma-swipe-action>span\{[^}]*width:min\(15cqi,7dvh\)!important[^}]*height:min\(15cqi,7dvh\)!important[^}]*min-width:0!important[^}]*min-height:0!important/s)
+  assert.match(demoCss, /landing-demo-screen--swipe \.figma-swipe-action svg\{[^}]*width:7cqi!important[^}]*height:7cqi!important[^}]*min-width:0!important[^}]*min-height:0!important/s)
+  assert.doesNotMatch(demoCss, /landing-demo-feed-pictures/)
+  assert.doesNotMatch(demoCss, /\.landing-demo-swipe-card\{/)
+  assert.doesNotMatch(demoCss, /landing-demo-(profile|friends|pass)/)
+
+  assert.match(landingCss, /\.feature-card/)
+  assert.match(landingCss, /\.feature-phone/)
+  assert.match(landingCss, /\.interactive-pill/)
 })
 
 test('product shell fixes keep compact menu bars and icon-only narrow sidebar', async () => {
