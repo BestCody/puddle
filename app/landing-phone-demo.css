@@ -1,113 +1,1440 @@
-/* Interactive phone miniatures for the landing page. Figma is the geometry/content authority. */
-html:has(.landing-phone-demo),body:has(.landing-phone-demo){margin:0;width:100%;min-width:0;min-height:100%;background:transparent;overscroll-behavior:none}
-body:has(.landing-phone-demo){overflow:hidden}
-.landing-phone-demo,.landing-phone-demo *{box-sizing:border-box}
-.landing-phone-demo{--blue:#4ca5f7;--yellow:#f2c035;--purple:#b784e4;--grey:#858585;position:relative;container-type:inline-size;width:min(100%,56svh);min-width:0;height:100svh;min-height:0;margin-inline:auto;overflow:hidden;padding:4.5cqi;border-radius:10cqi;background:#111;color:#111;font-family:Manrope,Inter,system-ui,sans-serif}
-.landing-phone-demo::before{content:"";position:absolute;z-index:9;top:1.8cqi;left:50%;width:28cqi;height:3.1cqi;transform:translateX(-50%);border-radius:999cqi;background:#111;pointer-events:none}
-.landing-phone-demo__screen{position:relative;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;border-radius:9cqi;background:#f6f6f6}
-.landing-phone-demo::-webkit-scrollbar{display:none}.landing-phone-demo button,.landing-phone-demo input,.landing-phone-demo textarea{font:inherit}.landing-phone-demo button{cursor:pointer}
-.landing-phone-demo .sr-only{position:absolute;width:0;height:0;padding:0;margin:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
-.landing-demo-screen{width:100%;height:100%;min-width:0;min-height:0;padding:2.25cqi 2.5cqi 0;position:relative}.landing-demo-screen>*{min-width:0}
-.landing-demo-logo{display:block;width:20.4cqi;height:auto;object-fit:contain}.landing-demo-logo.is-centered{width:23.4cqi;margin-inline:auto}
-.landing-demo-mobile-header{min-height:10.95cqi;display:grid;align-items:center}.landing-demo-mobile-header--swipe{place-items:center}.landing-demo-mobile-header--split{grid-template-columns:20.4cqi minmax(0,1fr) 20.4cqi;gap:1.75cqi}
-.landing-demo-header-spacer{width:20.4cqi}
+/*
+ * The landing previews are a self-contained miniature composition.
+ * They intentionally use their own class namespace so authenticated dashboard
+ * geometry can never reach the framed demos.
+ */
+html:has(.landing-phone-demo),
+body:has(.landing-phone-demo) {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  background: transparent;
+  overscroll-behavior: none;
+}
 
-/* Shared app navigation from the mobile Figma frames. */
-.landing-demo-bottom-nav{position:sticky;z-index:8;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;min-height:14.4cqi;margin:2cqi -2.5cqi 0;padding:1.5cqi 3.25cqi max(1.75cqi,env(safe-area-inset-bottom));border-top:.5cqi solid #d7d7d7;background:rgba(246,246,246,.97);backdrop-filter:blur(2cqi)}
-.landing-demo-bottom-nav button{display:grid;place-items:center;width:min(10.45cqi,100%);height:auto;aspect-ratio:1;margin:auto;border:0;border-radius:999cqi;background:transparent;color:#8d8d8d;font-size:5.5cqi;font-weight:800}.landing-demo-bottom-nav button.is-active{background:#fff;box-shadow:0 .5cqi 0 rgba(0,0,0,.1)}.landing-demo-bottom-nav button.is-swipe{color:var(--blue)}.landing-demo-bottom-nav button.is-feed{color:#d49b00}.landing-demo-bottom-nav button.is-save{color:var(--purple)}
+body:has(.landing-phone-demo) {
+  overflow: hidden;
+}
 
-/* Shared segmented control. */
-.landing-demo-segment{display:flex;width:max-content;max-width:100%;margin:0 auto;padding:.75cqi;border:.5cqi solid #d9d9d9;border-radius:999cqi;background:#fff}.landing-demo-segment button{min-width:13.7cqi;padding:1.5cqi 2.25cqi;border:0;border-radius:999cqi;background:transparent;color:var(--grey);font-size:3cqi;font-weight:700}.landing-demo-segment button.is-active{color:#fff;box-shadow:0 .5cqi 0 rgba(0,0,0,.1)}.landing-demo-segment--purple button.is-active{background:var(--purple)}.landing-demo-segment--yellow button.is-active{background:var(--yellow)}
+.landing-phone-demo,
+.landing-phone-demo * {
+  box-sizing: border-box;
+}
 
-/* Saved — Figma 25:180, responsively fitted into the landing phone shell. */
-.landing-demo-screen--saved{display:flex;flex-direction:column;gap:2.5cqi;min-height:0;height:100%;background:#f6f6f6}.landing-demo-saved-categories{display:flex;align-items:end;gap:1cqi;margin:0 -2.5cqi;padding:0 2.5cqi;border-bottom:.5cqi solid #c2a3dd;overflow-x:auto;scrollbar-width:none}.landing-demo-saved-categories::-webkit-scrollbar{display:none}.landing-demo-saved-categories button{flex:0 0 auto;padding:1.75cqi 2.25cqi 2cqi;border:0;background:transparent;color:#727272;font:500 2.75cqi/1 "Martian Mono",monospace}.landing-demo-saved-categories button.is-active{border:.5cqi solid #c2a3dd;border-bottom:0;border-radius:3.5cqi 3.5cqi 0 0;background:#e8d8f6;color:#43255c}
-.landing-demo-screen--saved>.landing-demo-saved-categories{flex:none}.landing-demo-screen--saved>.landing-demo-saved-grid{min-height:0;overflow:auto}.landing-demo-screen--saved>.landing-demo-search--saved{flex:none;margin:0 auto}
-.landing-demo-search{display:flex;align-items:center;width:calc(100% - 4cqi);margin:auto;padding:1cqi 1.25cqi 1cqi 3cqi;border:.5cqi solid #e6e6e6;border-radius:999cqi;background:#fff;box-shadow:0 .75cqi 0 rgba(0,0,0,.08)}.landing-demo-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:#111;font-size:2.75cqi}.landing-demo-search input::placeholder{color:#b0b0b0}.landing-demo-search b{width:7cqi;height:7cqi;display:grid;place-items:center;border:.5cqi solid var(--purple);border-radius:999cqi;color:var(--purple);font-size:4cqi}.landing-demo-plans{display:grid;gap:2.25cqi;align-content:start;flex:1;padding-top:2cqi}.landing-demo-plans article{display:grid;gap:1.25cqi;padding:3.25cqi;border:.5cqi solid #e6e6e6;border-radius:4.25cqi;background:#fff;box-shadow:0 .75cqi 0 rgba(0,0,0,.08)}.landing-demo-plans small,.landing-demo-plans span{color:var(--grey);font:700 2.25cqi/1.2 "Martian Mono",monospace}.landing-demo-plans strong{font-size:4.25cqi}
+.landing-phone-demo {
+  --blue: #4ca5f7;
+  --yellow: #f2c035;
+  --purple: #b784e4;
+  --green: #78e152;
+  --grey: #858585;
+  position: relative;
+  container-type: inline-size;
+  width: min(100%, 56svh);
+  height: 100svh;
+  min-width: 0;
+  min-height: 0;
+  margin-inline: auto;
+  overflow: hidden;
+  padding: 4.5cqi;
+  border-radius: 10cqi;
+  background: #111;
+  color: #111;
+  font-family: Manrope, Inter, system-ui, sans-serif;
+}
 
-/* Dialogs used by Saved and Feed interactions. */
-.landing-demo-dialog-backdrop{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:2cqi;background:rgba(0,0,0,.38)}.landing-demo-dialog{width:100%;max-height:calc(100% - 4cqi);overflow:auto;padding:3.5cqi;border-radius:5.5cqi;background:#fff;box-shadow:0 2.5cqi 7.5cqi rgba(0,0,0,.18);position:relative}.landing-demo-dialog-close{position:absolute;right:3cqi;top:3cqi;width:8.5cqi;height:8.5cqi;border:0;border-radius:999cqi;background:#fff;font-size:5.5cqi}.landing-demo-dialog-photo{display:block;width:100%;height:44.8cqi;overflow:hidden;border-radius:4cqi;background:#f0f0f0}.landing-demo-dialog-photo>img{display:block;width:100%;height:100%;object-fit:cover}.landing-demo-dialog small{display:block;margin-top:2.5cqi;color:var(--blue);font:800 2.25cqi "Martian Mono",monospace}.landing-demo-dialog h2{margin:1cqi 0;font-size:6cqi;letter-spacing:-.04em}.landing-demo-dialog p{margin:0;color:#666;font-size:3cqi}
+.landing-phone-demo::before {
+  content: '';
+  position: absolute;
+  z-index: 9;
+  top: 1.8cqi;
+  left: 50%;
+  width: 28cqi;
+  height: 3.1cqi;
+  transform: translateX(-50%);
+  border-radius: 999cqi;
+  background: #111;
+  pointer-events: none;
+}
 
-/* Landing shell adapters for the production Swipe, Saved, and Feed components. */
-.landing-demo-screen .landing-demo-segment.routed-segment{position:relative;width:max-content!important;min-width:0!important;height:auto!important;min-height:0!important;padding:.75cqi!important;overflow:hidden}
-.landing-demo-screen .landing-demo-segment.routed-segment::before{top:.75cqi;bottom:.75cqi}
-.landing-demo-screen .landing-demo-segment.routed-segment>button{position:relative;z-index:2;width:13.7cqi;min-width:13.7cqi;height:auto!important;min-height:0;padding:1.5cqi 2.25cqi;border:0;background:transparent;color:var(--grey);font:700 3cqi/1 Manrope,sans-serif}
+.landing-phone-demo__screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 9cqi;
+  background: #f6f6f6;
+}
 
-.landing-demo-screen--swipe{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto auto;gap:1.75cqi;height:100%;min-height:0;overflow:hidden;touch-action:pan-y}
-.landing-demo-screen--swipe .landing-demo-swipe-stack.figma-swipe-card-stage{position:relative!important;inset:auto!important;top:auto!important;left:auto!important;width:100%!important;height:100%!important;min-height:0;aspect-ratio:auto!important;align-self:stretch;margin:0;padding-inline:4cqi;transform:none!important;overflow:visible;display:block}
-.landing-demo-screen--swipe .figma-swipe-card,.landing-demo-screen--swipe .minimal-swipe-card.figma-swipe-card{width:100%!important;height:100%!important;min-width:0;margin:0;border:.75cqi solid #d1d1d1;border-radius:6cqi;touch-action:none}
-.landing-demo-screen--swipe .figma-swipe-card.is-preview{transform:translateY(1.5cqi) scale(.94);opacity:.86}
-.landing-demo-screen--swipe .figma-swipe-card-meta{top:3cqi;left:3cqi;right:3cqi}
-.landing-demo-screen--swipe .figma-swipe-card-meta span{min-height:5cqi;padding:0 2cqi;font-size:2.5cqi}
-.landing-demo-screen--swipe .figma-swipe-card-copy{left:3cqi;right:12cqi;bottom:3cqi}
-.landing-demo-screen--swipe .figma-swipe-card-copy h1{max-width:100%;margin-bottom:1cqi;font-size:7cqi;letter-spacing:-.35cqi}
-.landing-demo-screen--swipe .figma-swipe-card-copy p{font-size:2.5cqi;letter-spacing:-.08cqi}
-.landing-demo-screen--swipe .figma-swipe-details-button{right:3cqi;bottom:3cqi;width:8cqi;height:8cqi;font-size:5cqi}
-.landing-demo-screen--swipe>.figma-swipe-actions{position:relative!important;inset:auto!important;top:auto!important;left:auto!important;width:100%!important;min-height:0!important;margin:0;transform:none!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:1cqi!important}
-.landing-demo-screen--swipe .figma-swipe-action{min-width:0!important;width:100%;gap:.75cqi}
-.landing-demo-screen--swipe .figma-swipe-action>span{width:min(15cqi,7dvh)!important;height:min(15cqi,7dvh)!important;min-width:0!important;min-height:0!important;border:.5cqi solid currentColor!important;border-radius:50%!important}
-.landing-demo-screen--swipe .figma-swipe-action svg{width:7cqi!important;height:7cqi!important;min-width:0!important;min-height:0!important}
-.landing-demo-screen--swipe .figma-swipe-action small{max-width:100%;font-size:2cqi!important;line-height:1!important}
-.landing-demo-progress{width:calc(100% - 8cqi);height:1cqi;margin:auto;border-radius:999cqi;background:#e7e7e7;overflow:hidden}
-.landing-demo-progress span{display:block;height:100%;border-radius:inherit;background:var(--blue);transition:width .2s ease}
-.landing-demo-screen--swipe .landing-demo-bottom-nav{margin-top:0}
+.landing-phone-demo button,
+.landing-phone-demo input,
+.landing-phone-demo textarea {
+  font: inherit;
+}
 
-.landing-demo-saved-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2cqi;align-content:start;flex:1;min-height:0;overflow:auto;scrollbar-width:none}
-.landing-demo-saved-grid::-webkit-scrollbar{display:none}
-.landing-demo-saved-card{min-width:0;display:grid;grid-template-rows:minmax(22.4cqi,1fr) auto;gap:1cqi;padding:1cqi 1.25cqi 2cqi;text-align:left;border:.625cqi solid #e5e5e5;border-radius:4.5cqi;background:#fff;box-shadow:0 .75cqi 0 rgba(0,0,0,.1);overflow:hidden}
-.landing-demo-saved-photo{display:block;min-height:22.4cqi;overflow:hidden;border:.5cqi solid #dedede;border-radius:3.75cqi;background:#f0f0f0}
-.landing-demo-saved-photo>img{display:block;width:100%;height:100%;object-fit:cover}
-.landing-demo-saved-copy{min-width:0;display:grid;gap:1cqi}
-.landing-demo-saved-copy h2{min-width:0;margin:0;font-size:2.75cqi;line-height:1.05;letter-spacing:-.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.landing-demo-saved-copy h2 a{color:inherit;text-decoration:none}
-.landing-demo-saved-meta{display:flex;justify-content:space-between;gap:1cqi;color:var(--grey);font:800 2cqi/1 "Martian Mono",monospace}
+.landing-phone-demo button {
+  cursor: pointer;
+}
 
-.landing-demo-screen--feed .landing-demo-feed-stream{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;margin:0;gap:2.5cqi;overflow:auto;scrollbar-width:none}
-.landing-demo-screen--feed{display:flex;flex-direction:column;gap:2cqi;height:100%;min-height:0;overflow:hidden;background:#f6f6f6}
-.landing-demo-feed-toolbar{display:grid;grid-template-columns:18.4cqi minmax(0,1fr) 9cqi;align-items:center;gap:1.25cqi;min-height:12cqi}
-.landing-demo-feed-toolbar .landing-demo-logo{width:17.9cqi}
-.landing-demo-feed-toolbar .landing-demo-segment{margin:auto}
-.landing-demo-feed-search-toggle{width:9cqi;height:9cqi;display:grid;place-items:center;border:.5cqi solid #ddd;border-radius:999cqi;background:#fff;color:#777;font-size:4.25cqi}
-.landing-demo-feed-search{display:flex;align-items:center;width:100%;padding:1.5cqi 2cqi 1.5cqi 3cqi;border:.5cqi solid #d9d9d9;border-radius:999cqi;background:#fff}
-.landing-demo-feed-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;font-size:2.75cqi}
-.landing-demo-feed-search input::placeholder{color:#b3b3b3}
-.landing-demo-feed-search b{font-size:3.25cqi;color:#888}
-.landing-demo-screen--feed .landing-demo-feed-stream::-webkit-scrollbar{display:none}
-.landing-demo-screen--feed .landing-demo-feed-post{width:100%;min-height:0;display:flex;flex-direction:column;gap:1.5cqi;padding:2.25cqi;overflow:hidden;border:.625cqi solid #e5e5e5;border-radius:5.25cqi;background:#fff;box-shadow:0 .75cqi 0 rgba(0,0,0,.1)}
-.landing-demo-screen--feed .landing-demo-feed-author{gap:1.75cqi}
-.landing-demo-screen--feed .landing-demo-feed-avatar{width:7.5cqi;height:7.5cqi;flex-basis:7.5cqi;font-size:3.25cqi}
-.landing-demo-screen--feed .landing-demo-feed-authorMeta{gap:.5cqi}
-.landing-demo-screen--feed .landing-demo-feed-author strong{font-size:3cqi}
-.landing-demo-screen--feed .landing-demo-feed-author small{font-size:2cqi}
-.landing-demo-screen--feed .landing-demo-feed-title{margin:0 .75cqi;font-size:3.25cqi;line-height:1.05}
-.landing-demo-screen--feed .landing-demo-feed-copy{margin:0 .75cqi;font-size:2.5cqi;line-height:1.1}
-.landing-demo-screen--feed .landing-demo-feed-place{width:100%;min-height:0;margin:0;padding:1.5cqi 1.75cqi 1.75cqi;border:.5cqi solid #f0f0f0;border-radius:3.75cqi}
-.landing-demo-screen--feed .landing-demo-feed-place h2{margin:0;font-size:4cqi;letter-spacing:-.08cqi}
-.landing-demo-screen--feed .landing-demo-feed-placeMeta{gap:1cqi}
-.landing-demo-screen--feed .landing-demo-feed-placeMeta,.landing-demo-screen--feed .landing-demo-feed-placeArea{font-size:2cqi}
-.landing-demo-screen--feed .landing-demo-feed-placeAdd{width:6.5cqi;height:6.5cqi;font-size:4.5cqi}
-.landing-demo-screen--feed .landing-demo-feed-placeVisual{height:18cqi;margin-top:1cqi;border-radius:2.25cqi}
-.landing-demo-screen--feed .landing-demo-feed-placeVisual img{width:100%;height:100%;object-fit:cover}
-.landing-demo-screen--feed .landing-demo-feed-interactions{width:100%;min-height:0;margin:0;gap:1cqi}
-.landing-demo-screen--feed .landing-demo-feed-interactions>a,.landing-demo-screen--feed .landing-demo-feed-interactions>form>button,.landing-demo-screen--feed .landing-demo-feed-action{min-width:6cqi;min-height:6cqi;display:grid;place-items:center;padding:0;border:0;background:transparent;color:#858585}
-.landing-demo-screen--feed .landing-demo-feed-action{cursor:pointer}
-.landing-demo-screen--feed .landing-demo-feed-action .landing-demo-feed-actionIcon,.landing-demo-screen--feed .landing-demo-feed-interactions .landing-demo-feed-actionIcon{width:5cqi;height:5cqi}
-.landing-demo-screen--feed .landing-demo-feed-actionIcon{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.landing-demo-screen--feed .landing-demo-feed-actionMenu>summary{min-height:6cqi;font-size:2.5cqi}
-.landing-demo-screen--feed .landing-demo-feed-actionCount{font-size:2cqi}
-.landing-demo-screen--feed .landing-demo-feed-hint{margin:1cqi 0 0;color:var(--grey);font-size:2cqi}
-.landing-demo-screen--feed .landing-demo-feed-empty{min-height:0;flex:1;margin:0}
-.landing-demo-screen--feed .landing-demo-feed-search-toggle{justify-self:end}
-.landing-demo-compose{display:flex;align-items:center;gap:1.75cqi;width:calc(100% - 4.5cqi);margin:auto;padding:1cqi 1.25cqi;border:.5cqi solid #e6e6e6;border-radius:999cqi;background:#fff;box-shadow:0 .75cqi 2.5cqi rgba(0,0,0,.1);color:#b0b0b0;text-align:left}
-.landing-demo-compose>span:nth-child(2){flex:1;font-size:2.75cqi}
-.landing-demo-compose>b{width:6.75cqi;height:6.75cqi;display:grid;place-items:center;border:.5cqi solid var(--yellow);border-radius:999cqi;color:#d99c00;font-size:4cqi}
-.landing-demo-compose .landing-demo-avatar{width:6.75cqi;height:6.75cqi;font-size:2.5cqi}
-.landing-demo-map{position:relative;flex:1;min-height:0;overflow:hidden;border:.5cqi solid #d7d7d7;border-radius:5cqi;background:#dcefd7}
-.landing-demo-map-road{position:absolute;display:block;border-radius:999cqi;background:#fff}
-.landing-demo-map-road.road-a{width:17.9cqi;height:130%;left:25%;top:-12%;transform:rotate(25deg)}
-.landing-demo-map-road.road-b{width:12.9cqi;height:115%;right:20%;top:-6%;transform:rotate(-32deg)}
-.landing-demo-map-pin{position:absolute;z-index:2;width:8.5cqi;height:8.5cqi;border:.75cqi solid #fff;border-radius:999cqi;background:var(--yellow);color:#fff;box-shadow:0 .75cqi 2.25cqi rgba(0,0,0,.25)}
-.landing-demo-map-pin.pin-a{left:42%;top:30%}
-.landing-demo-map-pin.pin-b{right:17%;top:60%}
-.landing-demo-map>strong{position:absolute;z-index:1;left:50%;top:47%;transform:translate(-50%,-50%);padding:1.25cqi 2cqi;border-radius:2cqi;background:#fff;font:800 2.5cqi "Martian Mono",monospace}
-.landing-demo-empty{margin:auto;color:var(--grey);font-weight:700}
-.landing-demo-screen--feed .landing-demo-bottom-nav{margin-top:0}
+.landing-phone-demo .sr-only {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.landing-demo-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 2.25cqi 2.5cqi 0;
+}
+
+.landing-demo-screen > * {
+  min-width: 0;
+}
+
+.landing-demo-logo {
+  display: block;
+  width: 20.4cqi;
+  height: auto;
+  object-fit: contain;
+}
+
+.landing-demo-logo.is-centered {
+  width: 23.4cqi;
+  margin-inline: auto;
+}
+
+.landing-demo-mobile-header {
+  min-height: 10.95cqi;
+  display: grid;
+  align-items: center;
+}
+
+.landing-demo-mobile-header--swipe {
+  place-items: center;
+}
+
+.landing-demo-mobile-header--split {
+  grid-template-columns: 20.4cqi minmax(0, 1fr) 20.4cqi;
+  gap: 1.75cqi;
+}
+
+.landing-demo-header-spacer {
+  width: 20.4cqi;
+}
+
+.landing-demo-bottom-nav {
+  position: relative;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  min-height: 14.4cqi;
+  margin: 2cqi -2.5cqi 0;
+  padding: 1.5cqi 3.25cqi max(1.75cqi, env(safe-area-inset-bottom));
+  border-top: .5cqi solid #d7d7d7;
+  background: rgba(246, 246, 246, .97);
+}
+
+.landing-demo-bottom-nav button {
+  display: grid;
+  place-items: center;
+  width: min(10.45cqi, 100%);
+  height: auto;
+  aspect-ratio: 1;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 999cqi;
+  background: transparent;
+  color: #8d8d8d;
+  font-size: 5.5cqi;
+  font-weight: 800;
+}
+
+.landing-demo-bottom-nav button.is-active {
+  background: #fff;
+  box-shadow: 0 .5cqi 0 rgba(0, 0, 0, .1);
+}
+
+.landing-demo-bottom-nav button.is-swipe {
+  color: var(--blue);
+}
+
+.landing-demo-bottom-nav button.is-feed {
+  color: #d49b00;
+}
+
+.landing-demo-bottom-nav button.is-save {
+  color: var(--purple);
+}
+
+.landing-demo-segment {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: .75cqi;
+  border: .5cqi solid #d9d9d9;
+  border-radius: 999cqi;
+  background: #fff;
+}
+
+.landing-demo-segment button {
+  min-width: 13.7cqi;
+  padding: 1.5cqi 2.25cqi;
+  border: 0;
+  border-radius: 999cqi;
+  background: transparent;
+  color: var(--grey);
+  font-size: 3cqi;
+  font-weight: 700;
+}
+
+.landing-demo-segment button.is-active {
+  color: #fff;
+  box-shadow: 0 .5cqi 0 rgba(0, 0, 0, .1);
+}
+
+.landing-demo-segment--purple button.is-active {
+  background: var(--purple);
+}
+
+.landing-demo-segment--yellow button.is-active {
+  background: var(--yellow);
+}
+
+/* Swipe preview. The stack and every control size themselves from the phone container. */
+.landing-demo-screen--swipe {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  gap: 1.75cqi;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.landing-demo-swipe-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: visible;
+}
+
+.landing-demo-swipe-card {
+  position: absolute;
+  inset: 0 4cqi;
+  z-index: 2;
+  width: auto;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: .75cqi solid #d1d1d1;
+  border-radius: 6cqi;
+  background: #fff;
+  touch-action: none;
+  transition: transform 360ms cubic-bezier(.16, .84, .22, 1), opacity 200ms ease;
+}
+
+.landing-demo-swipe-card.is-preview {
+  z-index: 1;
+  transform: translateY(1.5cqi) scale(.94);
+  opacity: .86;
+  pointer-events: none;
+}
+
+.landing-demo-swipe-card.is-dragging {
+  transition: none;
+}
+
+.landing-demo-swipe-card.is-leaving {
+  z-index: 3;
+}
+
+.landing-demo-swipe-card-photo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #fff center / cover no-repeat;
+}
+
+.landing-demo-swipe-card-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .02) 48%, rgba(255, 255, 255, .62) 69%, #fff 87%);
+}
+
+.landing-demo-swipe-card-photo > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.landing-demo-swipe-card-photo-empty,
+.landing-demo-swipe-card-photo .photo-frame-message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 2cqi;
+  background: linear-gradient(145deg, #f1f1f1, #d9d9d9);
+  color: #686868;
+  font-size: 3cqi;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.landing-demo-swipe-card-meta {
+  position: absolute;
+  z-index: 3;
+  top: 3cqi;
+  left: 3cqi;
+  right: 3cqi;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.landing-demo-swipe-card-meta span {
+  min-height: 5cqi;
+  display: inline-flex;
+  align-items: center;
+  max-width: 46%;
+  overflow: hidden;
+  padding: 0 2cqi;
+  border-radius: 999cqi;
+  background: #d9d9d9;
+  color: #000;
+  font: 600 2.5cqi/1 var(--figma-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-demo-swipe-card-copy {
+  position: absolute;
+  z-index: 4;
+  left: 3cqi;
+  right: 13cqi;
+  bottom: 3cqi;
+}
+
+.landing-demo-swipe-card-copy h1 {
+  max-width: 100%;
+  margin: 0 0 1cqi;
+  color: #000;
+  font-size: clamp(.875rem, 7cqi, 1.75rem);
+  line-height: .98;
+  letter-spacing: -.06em;
+}
+
+.landing-demo-swipe-card-copy p {
+  margin: 0;
+  color: #000;
+  font: 600 2.5cqi/1.15 var(--figma-mono);
+  letter-spacing: -.04em;
+}
+
+.landing-demo-swipe-details-button {
+  position: absolute;
+  z-index: 5;
+  right: 3cqi;
+  bottom: 3cqi;
+  width: 8cqi;
+  height: 8cqi;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #d9d9d9;
+  color: #6c6c6c;
+  font-size: 5cqi;
+  line-height: 1;
+}
+
+.landing-demo-swipe-drag-label {
+  position: absolute;
+  z-index: 6;
+  top: 12cqi;
+  padding: 2cqi 3cqi;
+  border: .75cqi solid currentColor;
+  border-radius: 2.5cqi;
+  background: rgba(255, 255, 255, .84);
+  font-size: 5cqi;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0;
+}
+
+.landing-demo-swipe-drag-label.is-pass {
+  left: 4cqi;
+  color: #e73668;
+  transform: rotate(-10deg);
+}
+
+.landing-demo-swipe-drag-label.is-save {
+  right: 4cqi;
+  color: var(--green);
+  transform: rotate(10deg);
+}
+
+.landing-demo-swipe-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1cqi;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
+.landing-demo-swipe-action {
+  display: grid;
+  justify-items: center;
+  gap: .75cqi;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #999;
+}
+
+.landing-demo-swipe-action > span {
+  width: min(15cqi, 7dvh);
+  height: min(15cqi, 7dvh);
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  border: .5cqi solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 .5cqi 0 rgba(0, 0, 0, .12);
+}
+
+.landing-demo-swipe-action svg {
+  width: 7cqi;
+  height: 7cqi;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.landing-demo-swipe-action small {
+  max-width: 100%;
+  overflow: hidden;
+  color: currentColor;
+  font: 800 2cqi/1 var(--figma-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-demo-swipe-action.is-undo {
+  color: #d6d6d6;
+}
+
+.landing-demo-swipe-action.is-pass {
+  color: #e73668;
+}
+
+.landing-demo-swipe-action.is-save {
+  color: var(--green);
+}
+
+.landing-demo-swipe-action.is-perfect {
+  color: var(--yellow);
+}
+
+.landing-demo-swipe-action:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.landing-demo-progress {
+  width: calc(100% - 8cqi);
+  height: 1cqi;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 999cqi;
+  background: #e7e7e7;
+}
+
+.landing-demo-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+  transition: width 200ms ease;
+}
+
+/* Shared modal surface. It is absolute to the framed screen, never to the host page. */
+.landing-demo-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 2cqi;
+  background: rgba(0, 0, 0, .38);
+}
+
+.landing-demo-dialog {
+  position: relative;
+  width: 100%;
+  max-height: calc(100% - 4cqi);
+  overflow: auto;
+  padding: 3.5cqi;
+  border-radius: 5.5cqi;
+  background: #fff;
+  box-shadow: 0 2.5cqi 7.5cqi rgba(0, 0, 0, .18);
+}
+
+.landing-demo-dialog-close {
+  position: absolute;
+  top: 3cqi;
+  right: 3cqi;
+  width: 8.5cqi;
+  height: 8.5cqi;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 5.5cqi;
+  line-height: 1;
+}
+
+.landing-demo-dialog-photo {
+  display: block;
+  width: 100%;
+  height: 44.8cqi;
+  overflow: hidden;
+  border-radius: 4cqi;
+  background: #f0f0f0;
+}
+
+.landing-demo-dialog-photo > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.landing-demo-dialog small {
+  display: block;
+  margin-top: 2.5cqi;
+  color: var(--blue);
+  font: 800 2.25cqi var(--figma-mono);
+}
+
+.landing-demo-dialog h2 {
+  margin: 1cqi 0;
+  font-size: 6cqi;
+  letter-spacing: -.04em;
+}
+
+.landing-demo-dialog p {
+  margin: 0;
+  color: #666;
+  font-size: 3cqi;
+}
+
+.landing-demo-swipe-details-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 2cqi;
+  background: rgba(0, 0, 0, .38);
+}
+
+.landing-demo-swipe-details {
+  position: relative;
+  width: 100%;
+  max-height: calc(100% - 4cqi);
+  overflow: auto;
+  padding: 0 0 3.5cqi;
+  border: .5cqi solid #e5e5e5;
+  border-radius: 5.5cqi;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 2.5cqi 7.5cqi rgba(0, 0, 0, .18);
+}
+
+.landing-demo-swipe-details-close {
+  position: absolute;
+  z-index: 4;
+  top: 2cqi;
+  right: 2cqi;
+  width: 8.5cqi;
+  height: 8.5cqi;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .92);
+  color: #555;
+  font-size: 5.5cqi;
+  line-height: 1;
+  box-shadow: 0 .5cqi 0 rgba(0, 0, 0, .1);
+}
+
+.landing-demo-swipe-details-gallery {
+  height: 44.8cqi;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: .75cqi;
+  overflow: hidden;
+  border-radius: 5cqi 5cqi 0 0;
+  background: #eee;
+}
+
+.landing-demo-swipe-details-gallery img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.landing-demo-swipe-details-photo-empty {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  background: #f0f0f0;
+  color: #858585;
+  font-size: 2.25cqi;
+  text-align: center;
+}
+
+.landing-demo-swipe-details-kicker {
+  min-height: 5cqi;
+  display: inline-flex;
+  align-items: center;
+  margin: 3cqi 3cqi 0;
+  padding: 0 1.5cqi;
+  border-radius: 999cqi;
+  background: #d9d9d9;
+  color: #666;
+  font: 600 2.25cqi/1 var(--figma-mono);
+}
+
+.landing-demo-swipe-details h2 {
+  margin: 1.25cqi 3cqi .75cqi;
+  font-size: 5.5cqi;
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.landing-demo-swipe-details > p {
+  margin: 0 3cqi;
+  color: #858585;
+  font: 600 2.25cqi/1.25 var(--figma-mono);
+}
+
+.landing-demo-swipe-details > p.landing-demo-swipe-details-summary {
+  margin-top: 2.5cqi;
+  color: #333;
+  font: 600 2.5cqi/1.35 Manrope, sans-serif;
+}
+
+.landing-demo-swipe-details-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1cqi;
+  margin: 2.5cqi 3cqi 0;
+}
+
+.landing-demo-swipe-details-tags span {
+  padding: 1cqi 1.5cqi;
+  border-radius: 999cqi;
+  background: #f0f0f0;
+  color: #777;
+  font: 700 2cqi/1 Manrope, sans-serif;
+  text-transform: capitalize;
+}
+
+.landing-demo-swipe-details-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1cqi;
+  margin: 3cqi 3cqi 0;
+}
+
+.landing-demo-swipe-details-actions button {
+  min-width: 0;
+  min-height: 7cqi;
+  padding: 0 1cqi;
+  border: .5cqi solid #e5e5e5;
+  border-radius: 999cqi;
+  background: #fff;
+  color: #555;
+  font-size: 2.25cqi;
+}
+
+.landing-demo-swipe-details-actions button:nth-child(1) {
+  border-color: #e73668;
+  color: #e73668;
+}
+
+.landing-demo-swipe-details-actions button:nth-child(2) {
+  border-color: var(--green);
+  color: #4caf28;
+}
+
+.landing-demo-swipe-details-actions button:nth-child(3) {
+  border-color: var(--yellow);
+  color: #bd8b00;
+}
+
+/* Saved preview. The grid scrolls inside the screen instead of growing the iframe. */
+.landing-demo-screen--saved {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5cqi;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #f6f6f6;
+}
+
+.landing-demo-saved-categories {
+  display: flex;
+  align-items: end;
+  flex: 0 0 auto;
+  gap: 1cqi;
+  margin: 0 -2.5cqi;
+  padding: 0 2.5cqi;
+  overflow-x: auto;
+  border-bottom: .5cqi solid #c2a3dd;
+  scrollbar-width: none;
+}
+
+.landing-demo-saved-categories::-webkit-scrollbar,
+.landing-demo-saved-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.landing-demo-saved-categories button {
+  flex: 0 0 auto;
+  padding: 1.75cqi 2.25cqi 2cqi;
+  border: 0;
+  background: transparent;
+  color: #727272;
+  font: 500 2.75cqi/1 'Martian Mono', monospace;
+}
+
+.landing-demo-saved-categories button.is-active {
+  border: .5cqi solid #c2a3dd;
+  border-bottom: 0;
+  border-radius: 3.5cqi 3.5cqi 0 0;
+  background: #e8d8f6;
+  color: #43255c;
+}
+
+.landing-demo-saved-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 2cqi;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.landing-demo-saved-card {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: minmax(22.4cqi, 1fr) auto;
+  gap: 1cqi;
+  padding: 1cqi 1.25cqi 2cqi;
+  overflow: hidden;
+  border: .625cqi solid #e5e5e5;
+  border-radius: 4.5cqi;
+  background: #fff;
+  box-shadow: 0 .75cqi 0 rgba(0, 0, 0, .1);
+  text-align: left;
+}
+
+.landing-demo-saved-photo {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 22.4cqi;
+  overflow: hidden;
+  border: .5cqi solid #dedede;
+  border-radius: 3.75cqi;
+  background: #f0f0f0;
+}
+
+.landing-demo-saved-photo > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.landing-demo-saved-photo .photo-frame-message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #858585;
+  font-size: 2cqi;
+}
+
+.landing-demo-saved-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1cqi;
+}
+
+.landing-demo-saved-copy h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 2.75cqi;
+  line-height: 1.05;
+  letter-spacing: -.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-demo-saved-copy h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.landing-demo-saved-title-skeleton,
+.landing-demo-saved-meta-skeleton {
+  display: block;
+  min-height: 1em;
+  border-radius: 999cqi;
+  background: #e5e5e5;
+}
+
+.landing-demo-saved-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1cqi;
+  color: var(--grey);
+  font: 800 2cqi/1 'Martian Mono', monospace;
+}
+
+.landing-demo-search {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: calc(100% - 4cqi);
+  margin: 0 auto;
+  padding: 1cqi 1.25cqi 1cqi 3cqi;
+  border: .5cqi solid #e6e6e6;
+  border-radius: 999cqi;
+  background: #fff;
+  box-shadow: 0 .75cqi 0 rgba(0, 0, 0, .08);
+}
+
+.landing-demo-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111;
+  font-size: 2.75cqi;
+}
+
+.landing-demo-search input::placeholder {
+  color: #b0b0b0;
+}
+
+.landing-demo-search b {
+  width: 7cqi;
+  height: 7cqi;
+  display: grid;
+  place-items: center;
+  border: .5cqi solid var(--purple);
+  border-radius: 50%;
+  color: var(--purple);
+  font-size: 4cqi;
+}
+
+.landing-demo-plans {
+  display: grid;
+  align-content: start;
+  flex: 1 1 auto;
+  gap: 2.25cqi;
+  padding-top: 2cqi;
+  overflow: auto;
+}
+
+.landing-demo-plans article {
+  display: grid;
+  gap: 1.25cqi;
+  padding: 3.25cqi;
+  border: .5cqi solid #e6e6e6;
+  border-radius: 4.25cqi;
+  background: #fff;
+  box-shadow: 0 .75cqi 0 rgba(0, 0, 0, .08);
+}
+
+.landing-demo-plans small,
+.landing-demo-plans span {
+  color: var(--grey);
+  font: 700 2.25cqi/1.2 'Martian Mono', monospace;
+}
+
+.landing-demo-plans strong {
+  font-size: 4.25cqi;
+}
+
+/* Feed preview. All classes come from the landing namespace, including the feed component. */
+.landing-demo-screen--feed {
+  display: flex;
+  flex-direction: column;
+  gap: 2cqi;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #f6f6f6;
+}
+
+.landing-demo-feed-toolbar {
+  display: grid;
+  grid-template-columns: 18.4cqi minmax(0, 1fr) 9cqi;
+  align-items: center;
+  gap: 1.25cqi;
+  min-height: 12cqi;
+}
+
+.landing-demo-feed-toolbar .landing-demo-logo {
+  width: 17.9cqi;
+}
+
+.landing-demo-feed-toolbar .landing-demo-segment {
+  margin-inline: auto;
+}
+
+.landing-demo-feed-search-toggle {
+  width: 9cqi;
+  height: 9cqi;
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  padding: 0;
+  border: .5cqi solid #ddd;
+  border-radius: 50%;
+  background: #fff;
+  color: #777;
+  font-size: 4.25cqi;
+}
+
+.landing-demo-feed-search {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 1.5cqi 2cqi 1.5cqi 3cqi;
+  border: .5cqi solid #d9d9d9;
+  border-radius: 999cqi;
+  background: #fff;
+}
+
+.landing-demo-feed-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 2.75cqi;
+}
+
+.landing-demo-feed-search input::placeholder {
+  color: #b3b3b3;
+}
+
+.landing-demo-feed-search b {
+  color: #888;
+  font-size: 3.25cqi;
+}
+
+.landing-demo-feed-stream {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  gap: 2.5cqi;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.landing-demo-feed-stream::-webkit-scrollbar {
+  display: none;
+}
+
+.landing-demo-feed-post {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5cqi;
+  padding: 2.25cqi;
+  overflow: hidden;
+  border: .625cqi solid #e5e5e5;
+  border-radius: 5.25cqi;
+  background: #fff;
+  box-shadow: 0 .75cqi 0 rgba(0, 0, 0, .1);
+}
+
+.landing-demo-feed-author {
+  display: flex;
+  align-items: center;
+  gap: 1.75cqi;
+}
+
+.landing-demo-feed-avatar {
+  width: 7.5cqi;
+  height: 7.5cqi;
+  flex: 0 0 7.5cqi;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #ececec center / cover no-repeat;
+  color: #555;
+  font-size: 3.25cqi;
+  font-weight: 800;
+}
+
+.landing-demo-feed-avatar .photo-frame-message {
+  display: grid;
+  place-items: center;
+  font: inherit;
+}
+
+.landing-demo-feed-authorMeta {
+  min-width: 0;
+  display: grid;
+  gap: .5cqi;
+}
+
+.landing-demo-feed-author strong {
+  overflow-wrap: anywhere;
+  font-size: 3cqi;
+  line-height: 1;
+}
+
+.landing-demo-feed-author small {
+  color: #858585;
+  font: 700 2cqi/1 var(--figma-mono);
+}
+
+.landing-demo-feed-title {
+  margin: 0 .75cqi;
+  color: #111;
+  overflow-wrap: anywhere;
+  font-size: 3.25cqi;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.landing-demo-feed-copy {
+  margin: 0 .75cqi;
+  color: #000;
+  overflow-wrap: anywhere;
+  font-size: 2.5cqi;
+  line-height: 1.1;
+}
+
+.landing-demo-feed-place {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: center;
+  margin: 0;
+  padding: 1.5cqi 1.75cqi 1.75cqi;
+  overflow: hidden;
+  border: .5cqi solid #f0f0f0;
+  border-radius: 3.75cqi;
+  background: #fff;
+  color: #000;
+  text-decoration: none;
+}
+
+.landing-demo-feed-placeMeta,
+.landing-demo-feed-placeArea {
+  min-height: 5cqi;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 1.5cqi;
+  border-radius: 999cqi;
+  background: #d9d9d9;
+  color: #858585;
+  font: 600 2cqi/1 var(--figma-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-demo-feed-placeArea {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.landing-demo-feed-place h2 {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  align-self: center;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 4cqi;
+  line-height: 1.05;
+  letter-spacing: -.08cqi;
+}
+
+.landing-demo-feed-placeAdd {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+  width: 6.5cqi;
+  height: 6.5cqi;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d9d9d9;
+  color: #777;
+  font-size: 4.5cqi;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.landing-demo-feed-placeVisual {
+  position: relative;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: block;
+  width: 100%;
+  height: 18cqi;
+  min-height: 0;
+  margin-top: 1cqi;
+  overflow: hidden;
+  border: .5cqi solid #dedede;
+  border-radius: 2.25cqi;
+  background: #f0f0f0;
+}
+
+.landing-demo-feed-placeVisual img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.landing-demo-feed-interactions {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1cqi;
+  margin: 0;
+  color: #858585;
+}
+
+.landing-demo-feed-interactions > a,
+.landing-demo-feed-interactions > form > button,
+.landing-demo-feed-action,
+.landing-demo-feed-actionMenu > summary {
+  min-width: 6cqi;
+  min-height: 6cqi;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.landing-demo-feed-actionMenu {
+  position: relative;
+}
+
+.landing-demo-feed-actionMenu > summary {
+  list-style: none;
+  font-size: 2.5cqi;
+}
+
+.landing-demo-feed-actionMenu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.landing-demo-feed-actionIcon {
+  width: 5cqi;
+  height: 5cqi;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.landing-demo-feed-actionIconFilled {
+  fill: currentColor;
+}
+
+.landing-demo-feed-actionCount {
+  min-width: 1ch;
+  font-size: 2cqi;
+}
+
+.landing-demo-feed-actionPanel {
+  position: absolute;
+  z-index: 10;
+  bottom: calc(100% + 1.5cqi);
+  left: 0;
+  width: min(80cqi, 18rem);
+  max-height: 40cqi;
+  overflow: auto;
+  padding: 2cqi;
+  border: .5cqi solid #d7d7d7;
+  border-radius: 3cqi;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 3cqi 10cqi rgba(0, 0, 0, .14);
+}
+
+.landing-demo-feed-commentList {
+  display: grid;
+  gap: 1.25cqi;
+  margin-bottom: 1.5cqi;
+}
+
+.landing-demo-feed-commentList p {
+  display: grid;
+  gap: .5cqi;
+  margin: 0;
+  font-size: 2.25cqi;
+  line-height: 1.25;
+}
+
+.landing-demo-feed-actionPanel > p {
+  margin: 0;
+  font-size: 2.25cqi;
+}
+
+.landing-demo-feed-hint {
+  margin: 1cqi 0 0;
+  color: var(--grey);
+  font-size: 2cqi;
+}
+
+.landing-demo-feed-empty {
+  min-height: 0;
+  display: grid;
+  flex: 1;
+  place-items: center;
+  align-content: center;
+  gap: 2cqi;
+  margin: 0;
+  padding: 3cqi;
+  border: .5cqi solid #e5e5e5;
+  border-radius: 5cqi;
+  background: #fff;
+  color: var(--grey);
+  font-size: 3cqi;
+  text-align: center;
+}
+
+.landing-demo-feed-pagination {
+  display: grid;
+  justify-items: center;
+  gap: 1cqi;
+  padding: .25cqi 0 1.25cqi;
+}
+
+.landing-demo-feed-pagination button {
+  min-height: 7cqi;
+  padding: 0 3cqi;
+  border: .5cqi solid #dedede;
+  border-radius: 999cqi;
+  background: #fff;
+  color: #111;
+  font-size: 2.25cqi;
+}
+
+.landing-demo-feed-pagination p {
+  margin: 0;
+  color: #b34141;
+  font-size: 2cqi;
+  text-align: center;
+}
+
+.landing-demo-compose {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 1.75cqi;
+  width: calc(100% - 4.5cqi);
+  margin: 0 auto;
+  padding: 1cqi 1.25cqi;
+  border: .5cqi solid #e6e6e6;
+  border-radius: 999cqi;
+  background: #fff;
+  box-shadow: 0 .75cqi 2.5cqi rgba(0, 0, 0, .1);
+  color: #b0b0b0;
+  text-align: left;
+}
+
+.landing-demo-compose > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 2.75cqi;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-demo-compose > b,
+.landing-demo-compose .landing-demo-avatar {
+  width: 6.75cqi;
+  height: 6.75cqi;
+  flex: 0 0 6.75cqi;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.landing-demo-compose > b {
+  border: .5cqi solid var(--yellow);
+  color: #d99c00;
+  font-size: 4cqi;
+}
+
+.landing-demo-avatar {
+  background: #ececec;
+  color: #555;
+  font-size: 2.5cqi;
+  font-weight: 800;
+}
+
+.landing-demo-map {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border: .5cqi solid #d7d7d7;
+  border-radius: 5cqi;
+  background: #dcefd7;
+}
+
+.landing-demo-map-road {
+  position: absolute;
+  display: block;
+  border-radius: 999cqi;
+  background: #fff;
+}
+
+.landing-demo-map-road.road-a {
+  width: 17.9cqi;
+  height: 130%;
+  left: 25%;
+  top: -12%;
+  transform: rotate(25deg);
+}
+
+.landing-demo-map-road.road-b {
+  width: 12.9cqi;
+  height: 115%;
+  right: 20%;
+  top: -6%;
+  transform: rotate(-32deg);
+}
+
+.landing-demo-map-pin {
+  position: absolute;
+  z-index: 2;
+  width: 8.5cqi;
+  height: 8.5cqi;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: .75cqi solid #fff;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: #fff;
+  box-shadow: 0 .75cqi 2.25cqi rgba(0, 0, 0, .25);
+  font-size: 2cqi;
+}
+
+.landing-demo-map-pin.pin-a {
+  left: 42%;
+  top: 30%;
+}
+
+.landing-demo-map-pin.pin-b {
+  right: 17%;
+  top: 60%;
+}
+
+.landing-demo-map > strong {
+  position: absolute;
+  z-index: 1;
+  top: 47%;
+  left: 50%;
+  padding: 1.25cqi 2cqi;
+  transform: translate(-50%, -50%);
+  border-radius: 2cqi;
+  background: #fff;
+  font: 800 2.5cqi 'Martian Mono', monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-phone-demo *,
+  .landing-phone-demo *::before,
+  .landing-phone-demo *::after {
+    scroll-behavior: auto;
+    transition-duration: .01ms;
+    animation-duration: .01ms;
+  }
+}
