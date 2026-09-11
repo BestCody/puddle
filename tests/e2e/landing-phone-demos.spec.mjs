@@ -61,7 +61,7 @@ test('Saved and Feed phone demos expose their corresponding Figma interactions',
   await expect(savedDialog.getByRole('button', { name: 'Close details' })).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(savedDialog).toBeHidden()
-  await expect(saved.getByRole('button', { name: /Film House/ })).toBeFocused()
+  await expect(saved.getByRole('link', { name: 'Film House', exact: true })).toBeFocused()
 
   await page.goto('/landing-demo/feed')
   const feed = page.locator('[data-demo-screen="feed"]')

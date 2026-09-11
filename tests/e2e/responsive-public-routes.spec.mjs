@@ -123,7 +123,7 @@ test('landing phone routes render the correct Figma screen identities and hydrat
   await feed.locator('.landing-demo-feed-toolbar .landing-demo-segment').getByRole('button', { name: 'Feed', exact: true }).click()
   await feed.getByRole('button', { name: 'Search puddle', exact: true }).click()
   await feed.getByPlaceholder('Search puddle').fill('not-a-puddle')
-  await expect(feed.getByText('No puddles found.', { exact: true })).toBeVisible()
+  await expect(feed.getByText('No puddles match that search on this page.', { exact: true })).toBeVisible()
 
 })
 
