@@ -235,6 +235,7 @@ test('B2 download credentials use prefix-scoped authorization for search objects
     B2_DOWNLOAD_APPLICATION_KEY: 'download-application-key',
     B2_BUCKET_ID: 'bucket-id',
     B2_BUCKET: 'puddle-assets',
+    B2_DOWNLOAD_BASE_URL: 'https://f005.backblazeb2.com/file/puddle-assets',
     B2_DOWNLOAD_TOKEN_TTL_SECONDS: '3600'
   }
   const result = await searchB2GlobalLocations({
