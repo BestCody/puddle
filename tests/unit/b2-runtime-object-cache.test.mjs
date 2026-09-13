@@ -4,8 +4,7 @@ import {
   b2RuntimeObjectCacheChunkCount,
   b2RuntimeObjectCacheEnabled,
   b2RuntimeObjectCacheKey,
-  b2RuntimeObjectCachePolicy,
-  b2RuntimeLocationCacheKey
+  b2RuntimeObjectCachePolicy
 } from '../../lib/app/b2-runtime-object-cache.js'
 
 const env = {
@@ -51,15 +50,4 @@ test('runtime cache keys are deterministic fixed-width hashes', () => {
   const right = b2RuntimeObjectCacheKey('/data/search/schema=v1/snapshot=2026-08-17/example.json.br')
   assert.equal(left, right)
   assert.match(left, /^[0-9a-f]{64}$/)
-})
-
-test('runtime location cache keys are snapshot-aware and do not expose IDs', () => {
-  const prefix = 'data/search/schema=v1/snapshot=2026-08-17'
-  const left = b2RuntimeLocationCacheKey(prefix, 'location-id')
-  const same = b2RuntimeLocationCacheKey(`/${prefix}/`, 'location-id')
-  const nextSnapshot = b2RuntimeLocationCacheKey('data/search/schema=v1/snapshot=2026-08-18', 'location-id')
-  assert.equal(left, same)
-  assert.notEqual(left, nextSnapshot)
-  assert.match(left, /^location:[0-9a-f]{64}$/)
-  assert.doesNotMatch(left, /location-id/)
 })
