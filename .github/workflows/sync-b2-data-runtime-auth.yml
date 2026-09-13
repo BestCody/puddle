@@ -73,6 +73,17 @@ jobs:
             throw new Error('B2 data key is not authorized for the configured production bucket.')
           }
 
+          const activeKey = 'data/search/active.json'
+          const activeUrl = `${storage.downloadUrl}/file/${encodeURIComponent(process.env.B2_DATA_BUCKET_NAME)}/${activeKey.split('/').map(encodeURIComponent).join('/')}`
+          const activeResponse = await fetch(activeUrl, {
+            headers: { Authorization: b2.authorizationToken, Accept: 'application/json' },
+            redirect: 'error',
+            signal: AbortSignal.timeout(10_000)
+          })
+          if (!activeResponse.ok) throw new Error(`B2 data active pointer read failed with HTTP ${activeResponse.status}.`)
+          const active = await activeResponse.json()
+          if (!active?.manifest_key && !active?.manifestKey) throw new Error('B2 data active pointer does not contain manifest_key.')
+
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
           const serviceKey = process.env.SUPABASE_SECRET_KEY
           const vaultResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/set_b2_data_runtime_auth`, {

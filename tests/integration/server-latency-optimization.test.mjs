@@ -254,7 +254,7 @@ test('Social feed uses one indexed post-page read and a shell-first API render',
   assert.match(restore, /security invoker/i)
 })
 
-test('B2 radius serving uses compact cores and a snapshot-aware entity cache', async () => {
+test('B2 radius serving uses compact cores and immutable shard-object caching', async () => {
   const [search, shards, runtimeCache, projection, gateway] = await Promise.all([
     read('lib/app/b2-location-search.js'),
     read('lib/app/location-search-shards.js'),
@@ -264,10 +264,9 @@ test('B2 radius serving uses compact cores and a snapshot-aware entity cache', a
   ])
   assert.match(search, /projection = await fetchTextProjectionCore\(targetPlan/)
   assert.match(search, /query\.normalized[\s\S]*scoreNormalizedTextFields/)
-  assert.match(shards, /readB2RuntimeLocationCache\(prefix, values/)
-  assert.match(shards, /queueB2RuntimeLocationCacheWrite\(prefix, loaded/)
-  assert.match(runtimeCache, /LOCATION_CACHE_VERSION/)
-  assert.match(runtimeCache, /b2RuntimeLocationCacheKey/)
+  assert.match(shards, /parseObject\(`\$\{prefix\}\/id\/\$\{bucket\}\.json\.br`/)
+  assert.doesNotMatch(shards, /readB2RuntimeLocationCache|writeB2RuntimeLocationCache|queueB2RuntimeLocationCacheWrite/)
+  assert.doesNotMatch(runtimeCache, /LOCATION_CACHE_VERSION|b2RuntimeLocationCacheKey|b2-search-location/)
   assert.match(shards, /manifestInFlight/)
   assert.match(projection, /READY_IN_FLIGHT/)
   assert.match(projection, /PROJECTION_PAYLOAD_IN_FLIGHT/)
