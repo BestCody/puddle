@@ -60,25 +60,20 @@ If separate `puddle-data` and `puddle-media` buckets are desirable later, the lo
 
 The direct historical B2 download base can be used during the transition. The long-term media delivery target remains an application-owned CDN/custom domain such as `media.puddle.app`.
 
-## B2 credential compatibility
+## B2 credential model
 
-Scoped credentials take precedence, but both the application code and global workflows accept the historical names as fallbacks:
+Online location search uses the private read key configured as `B2_DOWNLOAD_KEY_ID` and
+`B2_DOWNLOAD_APPLICATION_KEY`. The server requests one B2 download authorization scoped
+to `data/search/`, then reuses that token while reading immutable search objects. The
+bucket is selected by `B2_BUCKET_ID`/`B2_BUCKET`; the key and token never reach the browser.
 
-```text
-B2_DATA_APPLICATION_KEY_ID  || B2_KEY_ID
-B2_DATA_APPLICATION_KEY     || B2_APPLICATION_KEY
-B2_DATA_BUCKET_NAME         || B2_BUCKET
-B2_DATA_S3_ENDPOINT         || B2_S3_ENDPOINT
-B2_DATA_S3_REGION           || B2_REGION
+`B2_DATA_APPLICATION_KEY_ID` and `B2_DATA_APPLICATION_KEY` remain the explicit direct-read
+source for isolated deployments and CI. `B2_KEY_ID` and `B2_APPLICATION_KEY` are trusted
+publisher credentials and are not valid search-read credentials unless their B2 capability
+set explicitly includes read access.
 
-B2_MEDIA_APPLICATION_KEY_ID || B2_KEY_ID
-B2_MEDIA_APPLICATION_KEY    || B2_APPLICATION_KEY
-B2_MEDIA_BUCKET_NAME        || B2_BUCKET
-B2_MEDIA_S3_ENDPOINT        || B2_S3_ENDPOINT
-B2_MEDIA_PUBLIC_BASE_URL    || B2_DOWNLOAD_BASE_URL
-```
-
-Current first-deployment defaults are `puddle-assets`, `us-east-005`, `B2_DATA_PREFIX=data`, and `B2_MEDIA_OPEN_PHOTO_PREFIX=media/photos/by-sha256`.
+Current first-deployment defaults are `puddle-assets`, `us-east-005`, `B2_DATA_PREFIX=data`,
+and `B2_MEDIA_OPEN_PHOTO_PREFIX=media/photos/by-sha256`.
 
 ### B2 preflight
 
