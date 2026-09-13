@@ -149,7 +149,8 @@ function fixtureFetch({ delayMs = 0, photoOverlay = false, capabilities = ['read
   }
   const counts = new Map()
 
-  const fetchFn = async (url) => {
+  const downloadAuthHeaders = []
+  const fetchFn = async (url, init = {}) => {
     const value = String(url)
     if (value === 'https://api.backblazeb2.com/b2api/v4/b2_authorize_account') {
       return Response.json({
@@ -167,13 +168,14 @@ function fixtureFetch({ delayMs = 0, photoOverlay = false, capabilities = ['read
     const marker = '/file/puddle-assets/'
     const index = value.indexOf(marker)
     if (index < 0) return new Response('', { status: 404 })
+    downloadAuthHeaders.push(init?.headers?.Authorization || init?.headers?.authorization || '')
     const key = value.slice(index + marker.length).split('/').map(decodeURIComponent).join('/')
     counts.set(key, (counts.get(key) || 0) + 1)
     if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs))
     const body = objects.get(key)
     return body ? new Response(body, { status: 200, headers: { 'content-length': String(body.length) } }) : new Response('', { status: 404 })
   }
-  return { fetchFn, projectionCandidateKey, coreKey, detailKey, counts }
+  return { fetchFn, projectionCandidateKey, coreKey, detailKey, counts, downloadAuthHeaders }
 }
 
 function reset() {
@@ -221,7 +223,7 @@ test('B2 radius search routes, filters, fuzzily matches, and ranks candidates', 
 
 test('B2 download credentials use prefix-scoped authorization for search objects', async () => {
   reset()
-  const { fetchFn } = fixtureFetch({ capabilities: ['shareFiles'] })
+  const { fetchFn, downloadAuthHeaders } = fixtureFetch({ capabilities: ['readFiles', 'shareFiles'] })
   const downloadEnv = {
     ...env,
     B2_DATA_APPLICATION_KEY_ID: '',
@@ -233,6 +235,7 @@ test('B2 download credentials use prefix-scoped authorization for search objects
     B2_DOWNLOAD_APPLICATION_KEY: 'download-application-key',
     B2_BUCKET_ID: 'bucket-id',
     B2_BUCKET: 'puddle-assets',
+    B2_DOWNLOAD_BASE_URL: 'https://f005.backblazeb2.com/file/puddle-assets',
     B2_DOWNLOAD_TOKEN_TTL_SECONDS: '3600'
   }
   const result = await searchB2GlobalLocations({
@@ -241,6 +244,8 @@ test('B2 download credentials use prefix-scoped authorization for search objects
   }, { env: downloadEnv, fetchFn })
   assert.equal(result.backend, 'b2')
   assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
+  assert.ok(downloadAuthHeaders.length > 0)
+  assert.ok(downloadAuthHeaders.every((value) => value === 'scoped-download-token'))
 })
 
 test('B2 radius search can prioritize canonical photo candidates without widening hydration', async () => {
