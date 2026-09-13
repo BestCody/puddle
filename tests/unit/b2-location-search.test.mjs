@@ -83,7 +83,7 @@ function detail(row) {
   ]
 }
 
-function fixtureFetch({ delayMs = 0, photoOverlay = false } = {}) {
+function fixtureFetch({ delayMs = 0, photoOverlay = false, capabilities = ['readFiles'] } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
@@ -156,10 +156,13 @@ function fixtureFetch({ delayMs = 0, photoOverlay = false } = {}) {
         accountId: 'account', authorizationToken: 'token',
         apiInfo: { storageApi: {
           apiUrl: 'https://api.example', downloadUrl: 'https://download.example',
-          allowed: { buckets: [{ id: 'bucket-id', name: 'puddle-assets' }], capabilities: ['readFiles'], namePrefix: null },
+          allowed: { buckets: [{ id: 'bucket-id', name: 'puddle-assets' }], capabilities, namePrefix: null },
           recommendedPartSize: 100000000
         } }
       })
+    }
+    if (value === 'https://api.example/b2api/v4/b2_get_download_authorization') {
+      return Response.json({ authorizationToken: 'scoped-download-token' })
     }
     const marker = '/file/puddle-assets/'
     const index = value.indexOf(marker)
@@ -214,6 +217,30 @@ test('B2 radius search routes, filters, fuzzily matches, and ranks candidates', 
   assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
   assert.equal(result.diagnostics.shards, 1)
   assert.equal(result.diagnostics.textProjection, false)
+})
+
+test('B2 download credentials use prefix-scoped authorization for search objects', async () => {
+  reset()
+  const { fetchFn } = fixtureFetch({ capabilities: ['shareFiles'] })
+  const downloadEnv = {
+    ...env,
+    B2_DATA_APPLICATION_KEY_ID: '',
+    B2_DATA_APPLICATION_KEY: '',
+    B2_DATA_BUCKET_NAME: '',
+    NEXT_PUBLIC_SUPABASE_URL: '',
+    SUPABASE_SECRET_KEY: '',
+    B2_DOWNLOAD_KEY_ID: 'download-key-id',
+    B2_DOWNLOAD_APPLICATION_KEY: 'download-application-key',
+    B2_BUCKET_ID: 'bucket-id',
+    B2_BUCKET: 'puddle-assets',
+    B2_DOWNLOAD_TOKEN_TTL_SECONDS: '3600'
+  }
+  const result = await searchB2GlobalLocations({
+    latitude: 43.65, longitude: -79.39, distanceKm: 25,
+    filters: { q: 'cn towr', category: 'landmark' }, candidateLimit: 20
+  }, { env: downloadEnv, fetchFn })
+  assert.equal(result.backend, 'b2')
+  assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
 })
 
 test('B2 radius search can prioritize canonical photo candidates without widening hydration', async () => {
