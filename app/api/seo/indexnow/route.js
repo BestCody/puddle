@@ -12,7 +12,7 @@ async function submit(request) {
   if (!verifyWorkerBearer(request)) return NextResponse.json({ error: 'Not authorized.' }, { status: 401 })
   if (!isIndexNowConfigured()) return NextResponse.json({ error: 'INDEXNOW_KEY is not set.' }, { status: 503 })
   try {
-    const urls = sitemap().map((entry) => entry.url)
+    const urls = (await sitemap()).map((entry) => entry.url)
     const result = await submitToIndexNow(urls)
     return NextResponse.json({ ok: true, ...result })
   } catch {
