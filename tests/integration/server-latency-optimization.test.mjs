@@ -255,18 +255,22 @@ test('Social feed uses one indexed post-page read and a shell-first API render',
 })
 
 test('B2 radius serving uses compact cores and immutable shard-object caching', async () => {
-  const [search, shards, runtimeCache, projection, gateway] = await Promise.all([
+  const [search, shards, runtimeCache, objectStore, projection, gateway] = await Promise.all([
     read('lib/app/b2-location-search.js'),
     read('lib/app/location-search-shards.js'),
     read('lib/app/b2-runtime-object-cache.js'),
+    read('lib/app/b2-search-object-store.js'),
     read('lib/app/b2-text-search-projection.js'),
     read('lib/app/global-location-search.js')
   ])
   assert.match(search, /projection = await fetchTextProjectionCore\(targetPlan/)
   assert.match(search, /query\.normalized[\s\S]*scoreNormalizedTextFields/)
-  assert.match(shards, /parseObject\(`\$\{prefix\}\/id\/\$\{bucket\}\.json\.br`/)
+  assert.match(shards, /parseObject\(manifestObjectKey\(resolvedManifest, `id\/\$\{bucket\}\.json\.br`\)/)
   assert.doesNotMatch(shards, /readB2RuntimeLocationCache|writeB2RuntimeLocationCache|queueB2RuntimeLocationCacheWrite/)
   assert.doesNotMatch(runtimeCache, /LOCATION_CACHE_VERSION|b2RuntimeLocationCacheKey|b2-search-location/)
+  assert.match(objectStore, /GLOBAL_LOCATION_SEARCH_CDN_BASE_URL/)
+  assert.match(objectStore, /Cache-Control|cache:\s*'no-store'/)
+  assert.doesNotMatch(objectStore, /unstable_cache/)
   assert.match(shards, /manifestInFlight/)
   assert.match(projection, /READY_IN_FLIGHT/)
   assert.match(projection, /PROJECTION_PAYLOAD_IN_FLIGHT/)
@@ -284,7 +288,8 @@ test('Partial caching is limited to cookie-free published public location data',
   ])
   assert.doesNotMatch(config, /cacheComponents:\s*true/)
   assert.match(cache, /unstable_cache/)
-  assert.match(cache, /revalidate:\s*300/)
+  assert.doesNotMatch(cache, /revalidate:\s*300/)
+  assert.match(cache, /revalidate:\s*3600/)
   assert.match(cache, /tags:\s*\['public-locations'\]/)
   assert.match(cache, /return \{ location, similar: \[\] \}/)
   assert.match(cache, /cachedPublicLocationRecommendations/)
@@ -292,6 +297,9 @@ test('Partial caching is limited to cookie-free published public location data',
   assert.doesNotMatch(cache, /cookies\(|headers\(/)
   assert.match(publicClient, /persistSession: false/)
   assert.match(place, /getCachedPublicLocation/)
+  assert.match(place, /revalidate = 3600/)
+  assert.match(place, /generateStaticParams/)
+  assert.match(place, /dynamicParams = true/)
   assert.doesNotMatch(place, /force-dynamic/)
   assert.match(discover, /dynamic = 'force-dynamic'/)
 })

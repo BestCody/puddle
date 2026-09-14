@@ -83,7 +83,7 @@ function detail(row) {
   ]
 }
 
-function fixtureFetch({ delayMs = 0, photoOverlay = false, capabilities = ['readFiles'] } = {}) {
+function fixtureFetch({ delayMs = 0, photoOverlay = false, photoOverlayVersion = 1, capabilities = ['readFiles'] } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
@@ -136,16 +136,33 @@ function fixtureFetch({ delayMs = 0, photoOverlay = false, capabilities = ['read
     [detailKey, zstd([1, 0, [detail(tower), detail(cafe)]])]
   ])
   if (photoOverlay) {
-    objects.set('data/search/photo-overlay-v1/active.json', Buffer.from(JSON.stringify({
-      schema_version: 1,
-      overlay_version: 1,
-      source_snapshot: '2026-08-19',
-      source_manifest_key: manifestKey,
-      object_key: overlayObjectKey,
-      object_sha256: overlayObjectKey.match(/sha256=([0-9a-f]{64})/)?.[1],
-      photo_count: 1
-    })))
-    objects.set(overlayObjectKey, overlayBody)
+    if (photoOverlayVersion === 2) {
+      const bucket = (createHash('sha256').update('loc-2').digest()[0] & 15).toString(16).padStart(2, '0')
+      const shardBody = br([2, [['loc-2', [overlayHash, 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]]]])
+      const shardDigest = createHash('sha256').update(shardBody).digest('hex')
+      const shardKey = `data/search/photo-overlay-v2/objects/sha256=${shardDigest}/bucket=${bucket}.json.br`
+      objects.set('data/search/photo-overlay-v1/active.json', Buffer.from(JSON.stringify({
+        schema_version: 1,
+        overlay_version: 2,
+        source_snapshot: '2026-08-19',
+        source_manifest_key: manifestKey,
+        bucket_count: 16,
+        shards: { [bucket]: { object_key: shardKey, object_sha256: shardDigest, photo_count: 1 } },
+        photo_count: 1
+      })))
+      objects.set(shardKey, shardBody)
+    } else {
+      objects.set('data/search/photo-overlay-v1/active.json', Buffer.from(JSON.stringify({
+        schema_version: 1,
+        overlay_version: 1,
+        source_snapshot: '2026-08-19',
+        source_manifest_key: manifestKey,
+        object_key: overlayObjectKey,
+        object_sha256: overlayObjectKey.match(/sha256=([0-9a-f]{64})/)?.[1],
+        photo_count: 1
+      })))
+      objects.set(overlayObjectKey, overlayBody)
+    }
   }
   const counts = new Map()
 
@@ -276,6 +293,18 @@ test('B2 radius search applies freshly materialized photo metadata before photo-
   assert.equal(result.candidates[0]?.id, 'loc-2')
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
   assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1, possibleCount: 2, matchedCount: 1 })
+})
+
+test('B2 photo overlay loads only the content-addressed hash shard needed by the candidates', async () => {
+  reset()
+  const { fetchFn, counts } = fixtureFetch({ photoOverlay: true, photoOverlayVersion: 2 })
+  const result = await searchB2GlobalLocations({
+    latitude: 43.65, longitude: -79.39, distanceKm: 25,
+    filters: { category: 'cafe' }, candidateLimit: 1, preferPhoto: true
+  }, { env, fetchFn })
+  assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
+  const shardReads = [...counts.keys()].filter((key) => key.startsWith('data/search/photo-overlay-v2/'))
+  assert.equal(shardReads.length, 1)
 })
 
 test('B2 dense text radius search uses compact core and hydrates winner detail', async () => {

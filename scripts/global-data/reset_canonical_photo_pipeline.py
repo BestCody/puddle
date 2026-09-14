@@ -114,6 +114,11 @@ def photo_data_matcher(data_prefix: str):
         + re.escape(data_prefix)
         + r"/search/schema=v1/snapshot=[^/]+/photo-overlay-v1(?:/|$)"
     )
+    sharded_overlay = re.compile(
+        r"^"
+        + re.escape(data_prefix)
+        + r"/search/photo-overlay-v2(?:/|$)"
+    )
     prefixes = tuple(
         f"{data_prefix}/{suffix}"
         for suffix in (
@@ -125,11 +130,12 @@ def photo_data_matcher(data_prefix: str):
             "enrichment/photo_cursors",
             "enrichment/photo_registry_state",
             "search/photo-overlay-v1",
+            "search/photo-overlay-v2",
         )
     )
 
     def match(key: str) -> bool:
-        if normalized.fullmatch(key) or snapshot_overlay.fullmatch(key):
+        if normalized.fullmatch(key) or snapshot_overlay.fullmatch(key) or sharded_overlay.fullmatch(key):
             return True
         return any(key.startswith(prefix.rstrip("/") + "/") for prefix in prefixes)
 
@@ -226,6 +232,7 @@ def main() -> int:
         f"{data_prefix}/enrichment/photo_cursors",
         f"{data_prefix}/enrichment/photo_registry_state",
         f"{data_prefix}/search/photo-overlay-v1",
+        f"{data_prefix}/search/photo-overlay-v2",
         f"{data_prefix}/search/schema=v1",
         f"{data_prefix}/normalized/schema=v1",
     ):
@@ -250,6 +257,7 @@ def main() -> int:
         f"{data_prefix}/enrichment/photo_cursors",
         f"{data_prefix}/enrichment/photo_registry_state",
         f"{data_prefix}/search/photo-overlay-v1",
+        f"{data_prefix}/search/photo-overlay-v2",
         f"{data_prefix}/search/schema=v1",
         f"{data_prefix}/normalized/schema=v1",
     ):

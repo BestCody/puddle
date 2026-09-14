@@ -169,6 +169,11 @@ def photo_data_key_matcher(data_prefix: str, snapshot: str):
         + re.escape(data_prefix)
         + r"/search/schema=v1/snapshot=[^/]+/photo-overlay-v1(?:/|$)"
     )
+    active_search_overlay_v2 = re.compile(
+        r"^"
+        + re.escape(data_prefix)
+        + r"/search/photo-overlay-v2(?:/|$)"
+    )
     prefixes = (
         f"{data_prefix}/enrichment/photo_candidates",
         f"{data_prefix}/enrichment/photo_metadata",
@@ -178,12 +183,13 @@ def photo_data_key_matcher(data_prefix: str, snapshot: str):
         f"{data_prefix}/enrichment/photo_cursors",
         f"{data_prefix}/enrichment/photo_registry_state",
         f"{data_prefix}/search/photo-overlay-v1",
+        f"{data_prefix}/search/photo-overlay-v2",
     )
 
     def matches(key: str) -> tuple[bool, str]:
         if normalized.fullmatch(key):
             return True, "normalized_photo_metadata"
-        if active_search_overlay.fullmatch(key):
+        if active_search_overlay.fullmatch(key) or active_search_overlay_v2.fullmatch(key):
             return True, "search_photo_overlay"
         for prefix in prefixes:
             if key.startswith(prefix.rstrip("/") + "/"):
@@ -391,6 +397,7 @@ def main() -> int:
         f"{data_prefix}/enrichment/photo_cursors",
         f"{data_prefix}/enrichment/photo_registry_state",
         f"{data_prefix}/search/photo-overlay-v1",
+        f"{data_prefix}/search/photo-overlay-v2",
         f"{data_prefix}/search/schema=v1",
         f"{data_prefix}/normalized/schema=v1",
     ]
@@ -530,6 +537,7 @@ def main() -> int:
                 f"{data_prefix}/enrichment/photo_cursors/",
                 f"{data_prefix}/enrichment/photo_registry_state/",
                 f"{data_prefix}/search/photo-overlay-v1/",
+                f"{data_prefix}/search/photo-overlay-v2/",
                 f"{data_prefix}/search/schema=v1/<snapshot>/photo-overlay-v1/",
             ],
             "normalizedPhotoMetadataPattern": f"{data_prefix}/normalized/schema=v1/snapshot=<snapshot>/country_code=<country>/photo_metadata.parquet",

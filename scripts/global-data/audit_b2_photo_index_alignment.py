@@ -16,6 +16,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
 
 import boto3
@@ -58,6 +59,64 @@ def decode_json(client, bucket: str, key: str):
 
 def sha256_bucket(value: object) -> str:
     return hashlib.sha256(str(value).encode()).hexdigest()[:3]
+
+
+def manifest_object_key(manifest: dict, relative: str) -> str:
+    normalized = str(relative or "").strip().lstrip("/")
+    if not normalized:
+        raise RuntimeError("search manifest relative object path is empty")
+    artifacts = manifest.get("object_index", {}).get("artifacts", {})
+    if isinstance(artifacts, dict) and normalized in artifacts:
+        key = clean(artifacts[normalized])
+        if not key:
+            raise RuntimeError(f"search manifest object mapping is empty for {normalized}")
+        return key
+    return f"{clean(manifest.get('prefix'))}/{normalized}"
+
+
+def photo_bucket(identifier: str, bucket_count: int) -> str:
+    digest = hashlib.sha256(str(identifier).encode()).digest()
+    return f"{digest[0] & (bucket_count - 1):02x}"
+
+
+def load_overlay_entries(client, bucket: str, pointer: dict) -> tuple[list, list[str]]:
+    version = int(pointer.get("overlay_version") or 0)
+    if version == 1:
+        key = clean(pointer.get("object_key"))
+        if not key:
+            raise RuntimeError("active photo overlay pointer has no object key")
+        payload = decode_json(client, bucket, key)
+        if not isinstance(payload, list) or len(payload) != 2 or int(payload[0]) != 1 or not isinstance(payload[1], list):
+            raise RuntimeError("active photo overlay has an invalid legacy schema")
+        return payload[1], [key]
+    if version != 2:
+        raise RuntimeError(f"unsupported active photo overlay version: {version}")
+    shards = pointer.get("shards")
+    bucket_count = int(pointer.get("bucket_count") or 0)
+    if not isinstance(shards, dict) or bucket_count < 2 or bucket_count > 64 or bucket_count & (bucket_count - 1):
+        raise RuntimeError("active photo overlay has invalid shard metadata")
+    entries: list = []
+    keys: list[str] = []
+    for shard_bucket, shard in sorted(shards.items()):
+        if not isinstance(shard_bucket, str) or not re.fullmatch(r"[0-9a-f]{2}", shard_bucket) or int(shard_bucket, 16) >= bucket_count or not isinstance(shard, dict):
+            raise RuntimeError("active photo overlay has an invalid shard bucket")
+        key = clean(shard.get("object_key"))
+        if not key:
+            raise RuntimeError(f"active photo overlay shard {shard_bucket} has no object key")
+        body = get_bytes(client, bucket, key)
+        expected_digest = clean(shard.get("object_sha256")).lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", expected_digest) or hashlib.sha256(body).hexdigest() != expected_digest:
+            raise RuntimeError(f"active photo overlay shard {shard_bucket} checksum is invalid")
+        payload = orjson.loads(brotli.decompress(body))
+        if not isinstance(payload, list) or len(payload) != 2 or int(payload[0]) != 2 or not isinstance(payload[1], list):
+            raise RuntimeError(f"active photo overlay shard {shard_bucket} has an invalid schema")
+        if len(payload[1]) != int(shard.get("photo_count") or 0):
+            raise RuntimeError(f"active photo overlay shard {shard_bucket} count is invalid")
+        entries.extend(payload[1])
+        keys.append(key)
+    if len(entries) != int(pointer.get("photo_count") or 0):
+        raise RuntimeError("active photo overlay shard counts do not match the pointer")
+    return entries, keys
 
 
 def bloom_may_contain(identifier: str, bloom: dict | None) -> bool:
@@ -178,14 +237,12 @@ def main() -> int:
     manifest = get_json(client, bucket, manifest_key)
     overlay_key = f"{prefix}/search/photo-overlay-v1/active.json"
     overlay_active = get_json(client, bucket, overlay_key)
-    overlay_object_key = clean(overlay_active.get("object_key"))
-    overlay_payload = orjson.loads(brotli.decompress(get_bytes(client, bucket, overlay_object_key)))
-    overlay_entries = overlay_payload[1] if isinstance(overlay_payload, list) and len(overlay_payload) == 2 else []
-    overlay_ids = {str(entry[0]) for entry in overlay_entries if isinstance(entry, list) and len(entry) == 2}
-    sampled_ids = sample_overlay_ids(overlay_entries, args.sample_size)
+    overlay_rows, overlay_object_keys = load_overlay_entries(client, bucket, overlay_active)
+    overlay_ids = {str(entry[0]) for entry in overlay_rows if isinstance(entry, list) and len(entry) == 2}
+    sampled_ids = sample_overlay_ids(overlay_rows, args.sample_size)
 
     id_prefix = clean(manifest["prefix"])
-    id_keys = {identifier: f"{id_prefix}/id/{sha256_bucket(identifier)}.json.br" for identifier in sampled_ids}
+    id_keys = {identifier: manifest_object_key(manifest, f"id/{sha256_bucket(identifier)}.json.br") for identifier in sampled_ids}
 
     def inspect_id_shard(key: str):
         try:
@@ -207,7 +264,12 @@ def main() -> int:
     directory = manifest.get("geo", {}).get("directory", {})
     tile_degrees = float(directory.get("tile_degrees") or 1)
     routing_prefix = clean(directory.get("prefix") or f"{id_prefix}/routing")
-    route_keys = [f"{routing_prefix}/{lat}/{lon}.json.br" for lat, lon in directory_tiles(bounds, tile_degrees)]
+    route_keys = [
+        manifest_object_key(manifest, f"routing/{lat}/{lon}.json.br")
+        if routing_prefix == f"{id_prefix}/routing"
+        else f"{routing_prefix}/{lat}/{lon}.json.br"
+        for lat, lon in directory_tiles(bounds, tile_degrees)
+    ]
 
     def read_optional(key: str):
         try:
@@ -245,7 +307,8 @@ def main() -> int:
         "ok": bool(id_matches or toronto_matches),
         "activeSnapshot": active.get("snapshot") or manifest.get("snapshot"),
         "activeManifestKey": manifest_key,
-        "overlayObjectKey": overlay_object_key,
+        "overlayObjectKey": overlay_object_keys[0] if len(overlay_object_keys) == 1 else None,
+        "overlayObjectKeys": overlay_object_keys,
         "overlayPhotoCount": len(overlay_ids),
         "overlayPointerPhotoCount": int(overlay_active.get("photo_count") or 0),
         "overlaySampleCount": len(sampled_ids),

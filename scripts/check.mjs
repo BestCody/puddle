@@ -108,8 +108,11 @@ for (const forbidden of ["from('locations')",'source_metadata','latitude:','long
 }
 
 const publicLocation = await read('lib/app/public-location-cache.js')
-for (const marker of ['getGlobalLocationBySlug','searchGlobalLocations','globalSimilar','public-location-recommendations-v2','isLocationSuspended']) {
+for (const marker of ['getGlobalLocationBySlug','getGlobalLocationsByIds','related_ids','public-location-recommendations-v2','isLocationSuspended']) {
   if (!publicLocation.includes(marker)) throw new Error(`Public location path is missing ${marker}`)
+}
+if (publicLocation.includes('searchGlobalLocations') || publicLocation.includes('globalSimilar')) {
+  throw new Error('Public location recommendations still perform a live similar-place search')
 }
 if (publicLocation.includes("from('locations')")) throw new Error('Public location path still reads the Supabase catalogue')
 if (publicLocation.includes("from('location_media')")) throw new Error('Public location path overrides canonical B2 media')
