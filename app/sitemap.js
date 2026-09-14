@@ -20,6 +20,13 @@ const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you').replace(
 // Matches what the hubs actually page through. Listing places a reader cannot reach by paging
 // would put URLs in the sitemap that nothing on the site links to.
 const PLACES_PER_MARKET = HUB_PAGE_SIZE * HUB_MAX_PAGES
+const DEFAULT_MARKET_CONCURRENCY = 2
+
+function marketConcurrency() {
+  const configured = Number(process.env.SEO_SITEMAP_MARKET_CONCURRENCY)
+  if (!Number.isFinite(configured)) return DEFAULT_MARKET_CONCURRENCY
+  return Math.max(1, Math.min(4, Math.trunc(configured)))
+}
 
 // The catalogue lookups are the same cached calls the hubs make, so this shares their hourly
 // revalidation rather than issuing its own reads.
@@ -38,21 +45,37 @@ const staticRoutes = [
 ]
 
 async function placeRoutes(markets) {
+  // Do not fan out every market at once. A single search can decode several large immutable
+  // projection objects; bounded workers keep sitemap generation below a serverless memory limit.
   // getCachedMarketPlaces swallows catalogue errors and returns [], so a cold or unavailable B2
   // degrades this to the hub-only sitemap it was before rather than failing the whole document.
-  const perMarket = await Promise.all(markets.map((market) => getCachedMarketPlaces(market.id)))
+  const routeSets = new Array(markets.length)
+  let cursor = 0
+  const worker = async () => {
+    while (cursor < markets.length) {
+      const index = cursor
+      cursor += 1
+      const places = await getCachedMarketPlaces(markets[index].id)
+      routeSets[index] = places
+        .slice(0, PLACES_PER_MARKET)
+        .filter((place) => place?.slug)
+        .map((place) => ({
+          path: `/places/${encodeURIComponent(place.slug)}`,
+          changeFrequency: 'monthly',
+          priority: 0.5
+        }))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(marketConcurrency(), markets.length) }, worker))
+
   const seen = new Set()
   const routes = []
-  for (const places of perMarket) {
-    for (const place of places.slice(0, PLACES_PER_MARKET)) {
+  for (const marketRoutes of routeSets) {
+    for (const route of marketRoutes || []) {
       // Markets overlap at their edges, so the same place can be returned by two cities.
-      if (!place?.slug || seen.has(place.slug)) continue
-      seen.add(place.slug)
-      routes.push({
-        path: `/places/${encodeURIComponent(place.slug)}`,
-        changeFrequency: 'monthly',
-        priority: 0.5
-      })
+      if (seen.has(route.path)) continue
+      seen.add(route.path)
+      routes.push(route)
     }
   }
   return routes
