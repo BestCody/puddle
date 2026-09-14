@@ -25,7 +25,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          endpoint="repos/${GITHUB_REPOSITORY}/code-scanning/alerts?state=open&ref=refs/heads/main&per_page=100"
+          alert_ref="refs/heads/main"
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            alert_ref="${GITHUB_REF}"
+          fi
+          endpoint="repos/${GITHUB_REPOSITORY}/code-scanning/alerts?state=open&ref=${alert_ref}&per_page=100"
           status_endpoint="repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
           run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 

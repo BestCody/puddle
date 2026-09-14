@@ -102,6 +102,15 @@ test('Public catalogue reads share short-lived immutable search results across u
   }
 })
 
+test('Sitemap generation stays out of deploy builds and shares one hourly public cache entry', async () => {
+  const sitemap = await read('app/sitemap.js')
+  assert.match(sitemap, /export const dynamic = 'force-dynamic'/)
+  assert.match(sitemap, /public-sitemap-v2/)
+  assert.match(sitemap, /revalidate: 3600/)
+  assert.match(sitemap, /tags: \['public-sitemap'\]/)
+  assert.match(sitemap, /return cachedSitemap\(\)/)
+})
+
 test('Hot cached routes load the B2 search graph only when catalogue data is needed', async () => {
   const [discovery, map, socialFeed, plans, publicLocation, publicContent, mapData] = await Promise.all([
     read('lib/app/discovery-global.js'),

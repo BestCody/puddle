@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { dateIdeasPath } from '@/lib/app/date-ideas'
 import {
   HUB_MAX_PAGES,
@@ -23,6 +24,9 @@ const PLACES_PER_MARKET = HUB_PAGE_SIZE * HUB_MAX_PAGES
 // The catalogue lookups are the same cached calls the hubs make, so this shares their hourly
 // revalidation rather than issuing its own reads.
 export const revalidate = 3600
+// Sitemap generation reads the live B2 catalogue. Keep that work out of the deployment build;
+// the complete sitemap is cached as one public artifact after the first request.
+export const dynamic = 'force-dynamic'
 
 const staticRoutes = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
@@ -54,8 +58,8 @@ async function placeRoutes(markets) {
   return routes
 }
 
-export default async function sitemap() {
-  const lastModified = new Date()
+async function buildSitemap() {
+  const lastModified = new Date().toISOString()
   const markets = listMarkets()
 
   const marketRoutes = markets.map((market) => ({
@@ -84,4 +88,13 @@ export default async function sitemap() {
     changeFrequency: route.changeFrequency,
     priority: route.priority
   }))
+}
+
+const cachedSitemap = unstable_cache(buildSitemap, ['public-sitemap-v2'], {
+  revalidate: 3600,
+  tags: ['public-sitemap']
+})
+
+export default function sitemap() {
+  return cachedSitemap()
 }
