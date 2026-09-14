@@ -51,7 +51,8 @@ test('production location media has an exact one-photo invariant', async () => {
 test('global detail serving fails closed instead of falling back to Postgres', async () => {
   const publicLocation = await read('lib/app/public-location-cache.js')
   assert.match(publicLocation, /getGlobalLocationBySlug/)
-  assert.match(publicLocation, /searchGlobalLocations/)
+  assert.match(publicLocation, /getGlobalLocationsByIds/)
+  assert.match(publicLocation, /related_ids/)
   assert.match(publicLocation, /getCachedPublicLocationRecommendations/)
   assert.match(publicLocation, /public-location-recommendations-v2/)
   assert.doesNotMatch(publicLocation, /relatedEvents|from\(['"]events['"]\)/)

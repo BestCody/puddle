@@ -37,6 +37,7 @@ Browser
 
 Discovery
   → B2-only global location serving: data/search/active.json
+    → content-addressed immutable shards through CDN/B2
     → packed planner routing tiles → immutable geo packs
     → compact text projection cores/details + prefix postings
   → serving failures fail closed; no Postgres/OpenSearch fallback

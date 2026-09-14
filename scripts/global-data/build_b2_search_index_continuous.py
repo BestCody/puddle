@@ -27,6 +27,7 @@ from build_b2_search_index import (
     CHECKPOINT_CONCURRENCY,
     HEX_BUCKETS,
     ZstdPartitionSpool,
+    artifact_index_from_hash_lines,
     brotli_json,
     cell_bounds,
     delete_prefix,
@@ -36,6 +37,7 @@ from build_b2_search_index import (
     is_missing_object,
     load_json_object,
     point_tile,
+    put_content_addressed_object,
     positive_int,
     push_top,
     put_json_object,
@@ -53,7 +55,7 @@ from location_search_common import (
     document_from_values,
 )
 
-CONTINUOUS_CHECKPOINT_VERSION = 1
+CONTINUOUS_CHECKPOINT_VERSION = 2
 PACK_MAGIC = b"PUDDLECP1"
 FILE_MAGIC = b"PUDDLEFILE1"
 _CANCEL_REQUESTED = False
@@ -487,6 +489,7 @@ def main() -> None:
 
     source = b2_source_config()
     prefix = f"{source.data_prefix}/search/schema=v1/snapshot={args.snapshot}"
+    content_prefix = f"{source.data_prefix}/search/objects/v1"
     work_root = (
         Path(args.work_dir)
         if args.work_dir
@@ -581,6 +584,7 @@ def main() -> None:
         prefix,
         hashes_path,
         append=hash_offset > 0,
+        content_prefix=content_prefix,
     )
 
     id_spool_root = work_root / "id-spool"
@@ -851,6 +855,7 @@ def main() -> None:
                     lat = document.get("latitude")
                     lon = document.get("longitude")
                     if finite_coordinate(lat, -90, 90) and finite_coordinate(lon, -180, 180):
+                        document.pop("related_ids", None)
                         root_cell = h3.latlng_to_cell(
                             float(lat),
                             float(lon),
@@ -1175,16 +1180,17 @@ def main() -> None:
                 quality=5,
                 mode=brotli.MODE_TEXT,
             )
-            hashes_key = f"{prefix}/validation/hashes.json.br"
-            hashes_digest = sha256_hex(hashes_body)
-            s3.put_object(
-                Bucket=source.bucket,
-                Key=hashes_key,
-                Body=hashes_body,
-                ContentType="application/json",
-                CacheControl="public,max-age=31536000,immutable",
-                Metadata={"sha256": hashes_digest},
+            hashes_key, hashes_digest = put_content_addressed_object(
+                s3,
+                source.bucket,
+                content_prefix,
+                hashes_body,
+                content_type="application/json",
             )
+            artifact_index = artifact_index_from_hash_lines(hash_lines, prefix)
+            counts_key = artifact_index.get("validation/counts.json.br")
+            if not counts_key:
+                raise RuntimeError("Search hash ledger is missing the validation counts artifact.")
 
             manifest = {
                 "schema_version": 1,
@@ -1192,6 +1198,11 @@ def main() -> None:
                 "source_snapshot": args.snapshot,
                 "built_at": utc_now(),
                 "prefix": prefix,
+                "object_index": {
+                    "version": 1,
+                    "prefix": content_prefix,
+                    "artifacts": artifact_index,
+                },
                 "location_count": stats["location_count"],
                 "published_count": stats["published_count"],
                 "geo_location_count": stats["geo_location_count"],
@@ -1236,7 +1247,7 @@ def main() -> None:
                     "value": "location_id",
                 },
                 "validation": {
-                    "counts_key": f"{prefix}/validation/counts.json.br",
+                    "counts_key": counts_key,
                     "hashes_key": hashes_key,
                     "hashes_sha256": hashes_digest,
                     "artifact_count": len(hash_lines),

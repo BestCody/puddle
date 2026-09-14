@@ -35,6 +35,8 @@ Discover / map API
 
 B2 serving failures fail closed and never fall back to Postgres. The global path may use its short-lived in-process success cache, but the serving boundary remains B2-only; there is no retired-backend switch left to resurrect.
 
+Search artifacts are content-addressed under `data/search/objects/v1/sha256=<prefix>/<sha256>` and each active manifest maps its logical shard paths to those objects. Configure `GLOBAL_LOCATION_SEARCH_CDN_BASE_URL` when the data bucket is exposed through the read-only CDN; immutable shard bytes then stay at the CDN edge, while Vercel Runtime Cache is limited to the active pointer and manifests. Without that setting, the same objects remain private and are read directly from B2.
+
 ### Relational mode
 
 Retired. The relational Puddle catalogue no longer participates in discovery serving, and no emergency fallback into it exists.

@@ -26,7 +26,9 @@ from botocore.exceptions import ClientError
 from location_search_common import b2_source_config, clean_prefix, configure_duckdb, first_env
 
 
-OVERLAY_VERSION = 1
+OVERLAY_VERSION = 2
+DEFAULT_BUCKET_COUNT = 16
+MAX_BUCKET_COUNT = 64
 BLOOM_BITS = 1 << 21
 BLOOM_HASHES = 7
 SNAPSHOT_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
@@ -180,14 +182,61 @@ def bloom_filter(ids: list[str]) -> str:
     return base64.b64encode(bytes(bits)).decode("ascii")
 
 
+def valid_bucket_count(value: int) -> bool:
+    return 2 <= value <= MAX_BUCKET_COUNT and value & (value - 1) == 0
+
+
+def photo_bucket(location_id: str, bucket_count: int) -> str:
+    digest = hashlib.sha256(str(location_id).encode()).digest()
+    return f"{digest[0] & (bucket_count - 1):02x}"
+
+
+def bucket_payloads(entries: list[list], bucket_count: int) -> dict[str, tuple[bytes, bytes, int]]:
+    grouped: dict[str, list[list]] = {}
+    for entry in entries:
+        grouped.setdefault(photo_bucket(str(entry[0]), bucket_count), []).append(entry)
+    payloads: dict[str, tuple[bytes, bytes, int]] = {}
+    for bucket, bucket_entries in sorted(grouped.items()):
+        raw = orjson.dumps([OVERLAY_VERSION, bucket_entries])
+        payloads[bucket] = raw, brotli.compress(raw, quality=5, mode=brotli.MODE_TEXT), len(bucket_entries)
+    return payloads
+
+
+def put_immutable_overlay_object(client, bucket: str, key: str, body: bytes, digest: str, photo_count: int) -> None:
+    try:
+        head = client.head_object(Bucket=bucket, Key=key)
+    except ClientError as error:
+        if not is_missing(error):
+            raise
+        client.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=body,
+            ContentType="application/json",
+            CacheControl="public,max-age=31536000,immutable",
+            Metadata={
+                "sha256": digest,
+                "overlay-version": str(OVERLAY_VERSION),
+                "photo-count": str(photo_count),
+            },
+        )
+        return
+    metadata = {str(name).lower(): str(value) for name, value in (head.get("Metadata") or {}).items()}
+    if int(head.get("ContentLength") or -1) != len(body) or metadata.get("sha256") != digest:
+        raise RuntimeError(f"Existing immutable photo overlay differs: {key}")
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--snapshot", required=True, type=snapshot_argument)
 parser.add_argument("--max-compressed-bytes", type=int, default=int(os.getenv("GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_BYTES", str(12 * 1024 * 1024))))
+parser.add_argument("--bucket-count", type=int, default=int(os.getenv("GLOBAL_LOCATION_PHOTO_OVERLAY_BUCKET_COUNT", str(DEFAULT_BUCKET_COUNT))))
 args = parser.parse_args()
 
 source = b2_source_config()
 if args.max_compressed_bytes < 64 * 1024 or args.max_compressed_bytes > 32 * 1024 * 1024:
-    raise RuntimeError("--max-compressed-bytes must be between 65536 and 33554432.")
+    raise RuntimeError("--max-compressed-bytes must be between 65536 and 33554432 per shard.")
+if not valid_bucket_count(args.bucket_count):
+    raise RuntimeError("--bucket-count must be a power of two between 2 and 64.")
 
 client = boto3.client(
     "s3",
@@ -351,38 +400,31 @@ for row in rows:
         ],
     ])
 
-raw = orjson.dumps([OVERLAY_VERSION, entries])
-compressed = brotli.compress(raw, quality=5, mode=brotli.MODE_TEXT)
-if len(compressed) > args.max_compressed_bytes:
-    raise RuntimeError(
-        f"Photo overlay is {len(compressed)} compressed bytes, above the configured {args.max_compressed_bytes}; "
-        "increase the explicit overlay budget or shard the overlay before publishing."
-    )
+bucket_count = args.bucket_count
+payloads = bucket_payloads(entries, bucket_count)
+while payloads and max(len(compressed) for _, compressed, _ in payloads.values()) > args.max_compressed_bytes and bucket_count < MAX_BUCKET_COUNT:
+    bucket_count *= 2
+    payloads = bucket_payloads(entries, bucket_count)
+if payloads:
+    largest_bucket, largest_payload = max(payloads.items(), key=lambda item: len(item[1][1]))
+    if len(largest_payload[1]) > args.max_compressed_bytes:
+        raise RuntimeError(
+            f"Photo overlay shard {largest_bucket} is {len(largest_payload[1])} compressed bytes, above the configured "
+            f"{args.max_compressed_bytes}; increase the per-shard budget or provide a larger bucket count."
+        )
 
-digest = sha256_hex(compressed)
-overlay_prefix = f"{source.data_prefix}/search/schema=v1/snapshot={args.snapshot}/photo-overlay-v1/sha256={digest}"
-object_key = f"{overlay_prefix}/photos.json.br"
-try:
-    head = client.head_object(Bucket=source.bucket, Key=object_key)
-except ClientError as error:
-    if not is_missing(error):
-        raise
-    client.put_object(
-        Bucket=source.bucket,
-        Key=object_key,
-        Body=compressed,
-        ContentType="application/json",
-        CacheControl="public,max-age=31536000,immutable",
-        Metadata={
-            "sha256": digest,
-            "overlay-version": str(OVERLAY_VERSION),
-            "photo-count": str(len(entries)),
-        },
-    )
-else:
-    metadata = {str(key).lower(): str(value) for key, value in (head.get("Metadata") or {}).items()}
-    if int(head.get("ContentLength") or -1) != len(compressed) or metadata.get("sha256") != digest:
-        raise RuntimeError(f"Existing immutable photo overlay differs: {object_key}")
+shards = {}
+for bucket, (raw, compressed, photo_count) in payloads.items():
+    digest = sha256_hex(compressed)
+    object_key = f"{source.data_prefix}/search/photo-overlay-v2/objects/sha256={digest}/bucket={bucket}.json.br"
+    put_immutable_overlay_object(client, source.bucket, object_key, compressed, digest, photo_count)
+    shards[bucket] = {
+        "object_key": object_key,
+        "object_sha256": digest,
+        "photo_count": photo_count,
+        "raw_bytes": len(raw),
+        "compressed_bytes": len(compressed),
+    }
 
 pointer = {
     "schema_version": 1,
@@ -390,11 +432,9 @@ pointer = {
     "source_snapshot": args.snapshot,
     "source_manifest_key": manifest_key,
     "source_manifest_sha256": sha256_hex(manifest_body),
-    "object_key": object_key,
-    "object_sha256": digest,
+    "bucket_count": bucket_count,
+    "shards": shards,
     "photo_count": len(entries),
-    "raw_bytes": len(raw),
-    "compressed_bytes": len(compressed),
     "bloom": {
         "bit_count": BLOOM_BITS,
         "hash_count": BLOOM_HASHES,
@@ -412,8 +452,8 @@ client.put_object(
 )
 print(
     f"photo_overlay_published=true snapshot={args.snapshot} photos={len(entries)} "
-    f"raw_bytes={len(raw)} compressed_bytes={len(compressed)} incompatible_files={incompatible_files} "
+    f"buckets={bucket_count} shards={len(shards)} incompatible_files={incompatible_files} "
     f"missing_media_references={missing_media_references} "
-    f"object_key={object_key} pointer_key={pointer_key}",
+    f"pointer_key={pointer_key}",
     flush=True,
 )

@@ -232,6 +232,39 @@ HAVING count(*) > 1
 
 
 CANONICAL_SQL = """
+WITH related_candidates AS (
+  SELECT
+    cast(id AS VARCHAR) AS location_id,
+    floor(try_cast(latitude AS DOUBLE) * 2) AS latitude_bucket,
+    floor(try_cast(longitude AS DOUBLE) * 2) AS longitude_bucket,
+    coalesce(cast(category AS VARCHAR), '') AS category_key,
+    coalesce(cast(city AS VARCHAR), '') AS city_key,
+    row_number() OVER (
+      PARTITION BY
+        floor(try_cast(latitude AS DOUBLE) * 2),
+        floor(try_cast(longitude AS DOUBLE) * 2),
+        coalesce(cast(category AS VARCHAR), ''),
+        coalesce(cast(city AS VARCHAR), '')
+      ORDER BY
+        coalesce(try_cast(popularity_score AS DOUBLE), 0) DESC,
+        coalesce(try_cast(quality_score AS DOUBLE), 0) DESC,
+        cast(id AS VARCHAR)
+    ) AS related_rank
+  FROM loc
+  WHERE cast(status AS VARCHAR) = 'published'
+    AND try_cast(latitude AS DOUBLE) BETWEEN -90 AND 90
+    AND try_cast(longitude AS DOUBLE) BETWEEN -180 AND 180
+), related_groups AS (
+  SELECT
+    latitude_bucket,
+    longitude_bucket,
+    category_key,
+    city_key,
+    list(location_id ORDER BY related_rank, location_id) AS related_ids
+  FROM related_candidates
+  WHERE related_rank <= 4
+  GROUP BY 1, 2, 3, 4
+)
 SELECT
   l.id,
   CASE
@@ -240,6 +273,7 @@ SELECT
     ELSE l.slug
   END AS slug,
   l.name, []::VARCHAR[] AS aliases, l.summary, NULL::VARCHAR description,
+  coalesce(r.related_ids, []::VARCHAR[]) AS related_ids,
   l.category, NULL::VARCHAR subcategory,
   l.latitude, l.longitude, l.country, l.country_code, l.region, l.region_code, l.city, l.neighborhood,
   l.postal_code, l.address, l.timezone, l.timezone_verified,
@@ -255,6 +289,11 @@ SELECT
   l.status, l.updated_at
 FROM loc l
 LEFT JOIN slug_collision_winners sc ON sc.slug=cast(l.slug AS VARCHAR)
+LEFT JOIN related_groups r
+  ON r.latitude_bucket=floor(try_cast(l.latitude AS DOUBLE) * 2)
+ AND r.longitude_bucket=floor(try_cast(l.longitude AS DOUBLE) * 2)
+ AND r.category_key=coalesce(cast(l.category AS VARCHAR), '')
+ AND r.city_key=coalesce(cast(l.city AS VARCHAR), '')
 LEFT JOIN photos p ON p.location_id=l.id
 LEFT JOIN google g ON g.location_id=l.id
 ORDER BY cast(l.id AS VARCHAR)
@@ -274,6 +313,7 @@ def document_from_values(columns: list[str], values: tuple) -> dict:
     document = {
         'id': row['id'], 'slug': row['slug'], 'name': row['name'], 'aliases': row['aliases'] or [],
         'summary': row['summary'], 'description': row['description'], 'category': row['category'], 'subcategory': row['subcategory'],
+        'related_ids': [str(value) for value in (row['related_ids'] or []) if str(value).strip()],
         'location': {'lat': row['latitude'], 'lon': row['longitude']}, 'latitude': row['latitude'], 'longitude': row['longitude'],
         'country': row['country'], 'country_code': row['country_code'], 'region': row['region'], 'region_code': row['region_code'],
         'city': row['city'], 'neighborhood': row['neighborhood'], 'postal_code': row['postal_code'], 'address': row['address'],

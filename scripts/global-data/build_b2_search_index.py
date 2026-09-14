@@ -33,9 +33,9 @@ from location_search_common import (
 )
 
 HEX_BUCKETS = 4096
-# Keep version 1 so route-spool support can reuse geo-spool checkpoints written by
-# the first resumable builder. The checkpoint config fingerprint remains unchanged.
-CHECKPOINT_VERSION = 1
+# Bump the checkpoint schema when the artifact-key contract changes so a resumed
+# job can never mix snapshot-relative and content-addressed ledgers.
+CHECKPOINT_VERSION = 2
 CHECKPOINT_CONCURRENCY = 16
 
 
@@ -122,6 +122,53 @@ def upload_file(s3, bucket: str, key: str, path: Path, content_type: str) -> Non
         key,
         ExtraArgs={'ContentType': content_type, 'CacheControl': 'no-store'},
     )
+
+
+def content_addressed_key(content_prefix: str, digest: str) -> str:
+    return f'{content_prefix.rstrip("/")}/sha256={digest[:2]}/{digest}'
+
+
+def put_content_addressed_object(s3, bucket: str, content_prefix: str, body: bytes, *, content_type: str) -> tuple[str, str]:
+    digest = sha256_hex(body)
+    key = content_addressed_key(content_prefix, digest)
+    try:
+        head = s3.head_object(Bucket=bucket, Key=key)
+    except ClientError as error:
+        if not is_missing_object(error):
+            raise
+        s3.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=body,
+            ContentType=content_type,
+            CacheControl='public,max-age=31536000,immutable',
+            Metadata={'sha256': digest},
+        )
+    else:
+        metadata = {str(name).lower(): str(value) for name, value in (head.get('Metadata') or {}).items()}
+        if int(head.get('ContentLength') or -1) != len(body) or metadata.get('sha256') != digest:
+            raise RuntimeError(f'Content-addressed search object already exists with different bytes: {key}')
+    return key, digest
+
+
+def artifact_index_from_hash_lines(hash_lines: list[bytes], prefix: str) -> dict[str, str]:
+    result: dict[str, str] = {}
+    prefix_with_slash = f'{prefix.rstrip("/")}/'
+    for line in hash_lines:
+        record = orjson.loads(line)
+        relative = str(record.get('relative') or '').strip().lstrip('/')
+        if not relative:
+            logical_key = str(record.get('logical_key') or record.get('key') or '')
+            if logical_key.startswith(prefix_with_slash):
+                relative = logical_key[len(prefix_with_slash):]
+        key = str(record.get('key') or '').strip().lstrip('/')
+        if not relative or not key:
+            raise RuntimeError('Search hash ledger contains an artifact without a logical relative path.')
+        previous = result.get(relative)
+        if previous and previous != key:
+            raise RuntimeError(f'Search hash ledger maps {relative} to conflicting content objects.')
+        result[relative] = key
+    return dict(sorted(result.items()))
 
 
 def upload_partition_checkpoint(s3, bucket: str, prefix: str, paths: list[Path]) -> tuple[list[dict], int]:
@@ -260,31 +307,37 @@ class ZstdPartitionSpool:
 
 
 class ArtifactWriter:
-    def __init__(self, s3, bucket: str, prefix: str, hashes_path: Path, *, append: bool = False):
+    def __init__(self, s3, bucket: str, prefix: str, hashes_path: Path, *, append: bool = False, content_prefix: str | None = None):
         self.s3 = s3
         self.bucket = bucket
         self.prefix = prefix.rstrip('/')
+        self.content_prefix = (content_prefix or f'{self.prefix.rsplit("/snapshot=", 1)[0]}/objects/v1').rstrip('/')
         self.hashes_path = hashes_path
         self.hashes_handle = hashes_path.open('ab' if append else 'wb')
         self.count = 0
         self.compressed_bytes = 0
+        self._content_keys_seen: set[str] = set()
 
     def key(self, relative: str) -> str:
         return f'{self.prefix}/{relative.lstrip("/")}'
 
     def put_bytes(self, relative: str, body: bytes, *, uncompressed_bytes: int, count: int | None, kind: str, content_type: str = 'application/json') -> dict:
-        key = self.key(relative)
+        logical_key = self.key(relative)
         digest = sha256_hex(body)
-        self.s3.put_object(
-            Bucket=self.bucket,
-            Key=key,
-            Body=body,
-            ContentType=content_type,
-            CacheControl='public,max-age=31536000,immutable',
-            Metadata={'sha256': digest},
-        )
+        key = content_addressed_key(self.content_prefix, digest)
+        if key not in self._content_keys_seen:
+            key, digest = put_content_addressed_object(
+                self.s3,
+                self.bucket,
+                self.content_prefix,
+                body,
+                content_type=content_type,
+            )
+            self._content_keys_seen.add(key)
         record = {
             'key': key,
+            'logical_key': logical_key,
+            'relative': relative.lstrip('/'),
             'sha256': digest,
             'compressed_bytes': len(body),
             'uncompressed_bytes': int(uncompressed_bytes),
@@ -413,6 +466,7 @@ def main() -> None:
 
     source = b2_source_config()
     prefix = f'{source.data_prefix}/search/schema=v1/snapshot={args.snapshot}'
+    content_prefix = f'{source.data_prefix}/search/objects/v1'
     work_root = Path(args.work_dir) if args.work_dir else Path(tempfile.mkdtemp(prefix='puddle-b2-search-'))
     remove_work_root = not args.work_dir
     work_root.mkdir(parents=True, exist_ok=True)
@@ -506,7 +560,7 @@ def main() -> None:
             records,
             route_spool_root,
         )
-        writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True)
+        writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True, content_prefix=content_prefix)
         print(
             f"checkpoint_resumed stage=route-spool files={len(records)} bytes={restored_bytes} "
             f"geo_shards={stats['geo_shards']}",
@@ -529,7 +583,7 @@ def main() -> None:
             records,
             geo_spool_root,
         )
-        writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True)
+        writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True, content_prefix=content_prefix)
         print(
             f"checkpoint_resumed stage=geo-spool files={len(records)} bytes={restored_bytes} "
             f"locations={stats['location_count']}",
@@ -545,14 +599,14 @@ def main() -> None:
                 raise RuntimeError('Phase-1 checkpoint is missing required metadata.')
             stats.update(restored_stats)
             slug_overrides = {str(key): str(value) for key, value in restored_overrides.items()}
-            writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True)
+            writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, append=True, content_prefix=content_prefix)
             print(
                 f"checkpoint_resumed stage=phase1 locations={stats['location_count']} "
                 f"slug_overrides={len(slug_overrides)}",
                 flush=True,
             )
         else:
-            writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path)
+            writer = ArtifactWriter(s3, source.bucket, prefix, hashes_path, content_prefix=content_prefix)
 
         con = duckdb.connect()
         configure_duckdb(con, source, int(os.getenv('GLOBAL_LOCATION_BUILD_THREADS', '8')))
@@ -689,6 +743,7 @@ def main() -> None:
                 break
             for values in rows:
                 document = apply_slug_override(document_from_values(columns, values), slug_overrides)
+                document.pop('related_ids', None)
                 lat = document.get('latitude')
                 lon = document.get('longitude')
                 if not finite_coordinate(lat, -90, 90) or not finite_coordinate(lon, -180, 180):
@@ -898,16 +953,13 @@ def main() -> None:
     hash_lines = [line for line in hashes_path.read_bytes().splitlines() if line]
     hashes_raw = b'[' + b','.join(hash_lines) + b']'
     hashes_body = brotli.compress(hashes_raw, quality=5, mode=brotli.MODE_TEXT)
-    hashes_key = f'{prefix}/validation/hashes.json.br'
-    hashes_digest = sha256_hex(hashes_body)
-    s3.put_object(
-        Bucket=source.bucket,
-        Key=hashes_key,
-        Body=hashes_body,
-        ContentType='application/json',
-        CacheControl='public,max-age=31536000,immutable',
-        Metadata={'sha256': hashes_digest},
+    hashes_key, hashes_digest = put_content_addressed_object(
+        s3, source.bucket, content_prefix, hashes_body, content_type='application/json'
     )
+    artifact_index = artifact_index_from_hash_lines(hash_lines, prefix)
+    counts_key = artifact_index.get('validation/counts.json.br')
+    if not counts_key:
+        raise RuntimeError('Search hash ledger is missing the validation counts artifact.')
 
     manifest = {
         'schema_version': 1,
@@ -915,6 +967,11 @@ def main() -> None:
         'source_snapshot': args.snapshot,
         'built_at': utc_now(),
         'prefix': prefix,
+        'object_index': {
+            'version': 1,
+            'prefix': content_prefix,
+            'artifacts': artifact_index,
+        },
         'location_count': stats['location_count'],
         'published_count': stats['published_count'],
         'geo_location_count': stats['geo_location_count'],
@@ -937,7 +994,7 @@ def main() -> None:
         'id': {'bucket_count': HEX_BUCKETS, 'hash': 'sha256-first-3-hex'},
         'slug': {'bucket_count': HEX_BUCKETS, 'hash': 'sha256-first-3-hex', 'value': 'location_id'},
         'validation': {
-            'counts_key': f'{prefix}/validation/counts.json.br',
+            'counts_key': counts_key,
             'hashes_key': hashes_key,
             'hashes_sha256': hashes_digest,
             'artifact_count': len(hash_lines),

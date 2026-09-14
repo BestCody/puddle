@@ -5,6 +5,8 @@ import { getCachedPublicLocation, getCachedPublicLocationRecommendations } from 
 import { findMarketForPoint, marketPath } from '@/lib/app/seo-places'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
+export const revalidate = 3600
+
 export async function generateMetadata({ params }) {
   const { slug } = await params
   const result = await getCachedPublicLocation(slug)

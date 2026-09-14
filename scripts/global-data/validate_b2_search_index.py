@@ -37,6 +37,17 @@ def hash_bucket(value: object) -> str:
     return hashlib.sha256(str(value).encode()).hexdigest()[:3]
 
 
+def manifest_object_key(manifest: dict, relative: str) -> str:
+    normalized = str(relative or '').strip().lstrip('/')
+    if not normalized:
+        raise RuntimeError('Manifest object relative path is required.')
+    artifacts = ((manifest.get('object_index') or {}).get('artifacts') or {})
+    key = str(artifacts.get(normalized) or '').strip()
+    if key:
+        return key
+    return f"{str(manifest.get('prefix') or '').rstrip('/')}/{normalized}"
+
+
 def json_bytes(value) -> bytes:
     return (json.dumps(value, indent=2, sort_keys=True) + '\n').encode()
 
@@ -274,7 +285,7 @@ def main() -> None:
         raise RuntimeError('ID shard key and canonical document ID disagree.')
     sample_slug = str(sample_document.get('slug') or '').strip()
     if sample_slug:
-        slug_key = f"{prefix}/slug/{hash_bucket(sample_slug)}.json.br"
+        slug_key = manifest_object_key(manifest, f"slug/{hash_bucket(sample_slug)}.json.br")
         slug_map = get_json(slug_key, compressed=True)
         if str(slug_map.get(sample_slug)) != str(sample_id):
             raise RuntimeError('Slug shard does not resolve sample slug back to its ID.')
