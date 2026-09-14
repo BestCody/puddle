@@ -6,13 +6,6 @@ import { findMarketForPoint, marketPath } from '@/lib/app/seo-places'
 import { serializeStructuredData } from '@/lib/app/structured-data'
 
 export const revalidate = 3600
-export const dynamicParams = true
-
-// The catalogue is too large to enumerate at build time. Unknown but valid
-// slugs are generated on first request and then served through the ISR cache.
-export function generateStaticParams() {
-  return []
-}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
