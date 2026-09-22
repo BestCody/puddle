@@ -8,7 +8,7 @@ import { SERVER_LATENCY_BUDGET_MS, appendServerTiming, elapsedMs, latencyStart, 
 const protectedPrefixes = ['/dashboard','/discover','/matches','/global-matches','/membership','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals','/admin']
 const productRoutePrefixes = ['/discover','/map','/plans','/matches','/membership','/profile','/global-matches','/create']
 const authOnlyPaths = ['/signup','/forgot-password']
-const staticLandingPaths = new Set(['/','/landing.html','/index.html','/responsive-landing'])
+const staticLandingPaths = new Set(['/','/maintenance.html','/landing.html','/index.html','/responsive-landing'])
 const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
 const authCanonicalPaths = new Set(['/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
 const publicNoSessionPaths = new Set([...cacheablePublicPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
@@ -107,10 +107,9 @@ export async function proxy(request) {
   const isAuthOnly = authOnlyPaths.includes(pathname)
   const moderationGate = requiresModerationGate(pathname)
   const hasAuthCookie = hasSupabaseAuthCookie(request)
-  const shouldResolveLandingSession = pathname === '/' && hasAuthCookie
   const needsSession = isProtected || verifiedReadApi || (hasAuthCookie && (!pathname.startsWith('/api/') || moderationGate))
 
-  if (publicNoSessionPaths.has(pathname) && !shouldResolveLandingSession) {
+  if (publicNoSessionPaths.has(pathname)) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
     return secured(cachePolicy(response, pathname), { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
   }
@@ -123,10 +122,6 @@ export async function proxy(request) {
   const session = await updateSession(request, requestHeaders, { loadProfileState: moderationGate })
   const { user, profileState, profileError, configured, timings } = session
   let { response } = session
-  if ((request.method === 'GET' || request.method === 'HEAD') && pathname === '/' && user) {
-    const target = NextResponse.redirect(new URL('/discover', request.url), 307)
-    return timed(secured(cachePolicy(carriesCookies(response, target), pathname, true), { request, nonce }), proxyStartedAt, timings)
-  }
   if (user && requestHeaders.get('x-puddle-product-route') === '1') {
     // The proxy has already verified this ID with getClaims(). Strip any inbound
     // value above, then forward only the verified ID to Server Components so they
@@ -148,16 +143,16 @@ export async function proxy(request) {
     return timed(secured(cachePolicy(NextResponse.json({ error: 'Sign in to continue.' }, { status: 401 }), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (isProtected && !configured) {
-    const url = new URL('/', request.url)
+    const url = new URL('/landing.html', request.url)
     url.searchParams.set('error', 'Accounts are temporarily unavailable. Please try again later.')
     return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
   if (isProtected && !user) {
-    const url = new URL('/', request.url)
+    const url = new URL('/landing.html', request.url)
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return timed(secured(cachePolicy(carriesCookies(response, NextResponse.redirect(url)), pathname, true), { request, nonce }), proxyStartedAt, timings)
   }
-  return timed(secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly || (pathname === '/' && hasAuthCookie)), { request, nonce }), proxyStartedAt, timings)
+  return timed(secured(cachePolicy(response, pathname, Boolean(user) || isProtected || isAuthOnly), { request, nonce }), proxyStartedAt, timings)
 }
 
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)'] }

@@ -86,7 +86,7 @@ test('Saved and Feed phone demos expose their corresponding Figma interactions',
 
 test('landing embeds the Figma phone set for each responsive composition instead of screenshot placeholders', async ({ page }) => {
   await page.setViewportSize({ width: 1281, height: 900 })
-  await page.goto('/')
+  await page.goto('/landing.html')
   await page.waitForFunction(() => document.querySelector('.landing-stage--desktop')?.dataset.ready === 'true')
 
   for (const demo of ['swipe', 'save', 'feed']) {
@@ -105,7 +105,7 @@ test('landing embeds the Figma phone set for each responsive composition instead
   await expect(swipeFrame.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
 
   await page.setViewportSize({ width: 704, height: 900 })
-  await page.goto('/')
+  await page.goto('/landing.html')
   await page.waitForFunction(() => document.querySelector('.landing-stage--mobile')?.dataset.ready === 'true')
   for (const demo of ['swipe', 'save', 'feed']) {
     const phone = page.locator(`.landing-canvas--mobile [data-phone-demo="${demo}"]`)
@@ -122,7 +122,7 @@ test('landing phone demos preserve usable proportions and contain their controls
 
   for (const width of widths) {
     await page.setViewportSize({ width, height: Math.round(width * 1.86) })
-    await page.goto('/')
+    await page.goto('/landing.html')
     await page.waitForFunction(() => document.querySelector('.landing-stage--mobile')?.dataset.ready === 'true')
 
     for (const view of ['swipe', 'save', 'feed']) {

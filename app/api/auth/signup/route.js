@@ -6,7 +6,7 @@ import { enforceRequestSize } from '@/lib/security/request'
 export const dynamic = 'force-dynamic'
 
 function redirectWithError(request, message) {
-  const target = new URL(pathWithMessage('/', 'error', message, { mode: 'signup' }), request.url)
+  const target = new URL(pathWithMessage('/landing.html', 'error', message, { mode: 'signup' }), request.url)
   const response = NextResponse.redirect(target, 303)
   response.headers.set('Cache-Control', 'no-store')
   return response

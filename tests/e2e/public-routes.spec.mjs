@@ -20,7 +20,7 @@ test('the retired sign-in route is no longer served', async ({ request }) => {
 
 test('callback provider failures return a useful sign-in message', async ({ page }) => {
   await page.goto('/auth/callback?error=access_denied&error_description=cancelled')
-  await expect(page).toHaveURL(/\/\?.*auth_error=access_denied/)
+  await expect(page).toHaveURL(/\/landing\.html\?.*auth_error=access_denied/)
   const visibleAuthMessage = page.locator('.landing-auth-message:visible').filter({ hasText: /cancelled|not approved/i })
   await expect(visibleAuthMessage).toHaveCount(1)
   await expect(visibleAuthMessage).toBeVisible()
@@ -29,7 +29,7 @@ test('callback provider failures return a useful sign-in message', async ({ page
 
 test('missing callback codes do not expose a generic error page', async ({ page }) => {
   await page.goto('/auth/callback?next=/onboarding')
-  await expect(page).toHaveURL(/\/\?.*auth_error=missing_auth_code/)
+  await expect(page).toHaveURL(/\/landing\.html\?.*auth_error=missing_auth_code/)
   const visibleAuthMessage = page.locator('.landing-auth-message:visible').filter({ hasText: /incomplete/i })
   await expect(visibleAuthMessage).toHaveCount(1)
   await expect(visibleAuthMessage).toBeVisible()
@@ -37,7 +37,7 @@ test('missing callback codes do not expose a generic error page', async ({ page 
 
 test('invalid confirmation links explain how to recover', async ({ page }) => {
   await page.goto('/auth/confirm?token_hash=not-a-real-token&type=signup&next=/onboarding')
-  await expect(page).toHaveURL(/\/\?.*auth_error=/)
+  await expect(page).toHaveURL(/\/landing\.html\?.*auth_error=/)
   const visibleAuthMessage = page.locator('.landing-auth-message:visible').filter({ hasText: /expired|already been used|request a new|could not be verified/i })
   await expect(visibleAuthMessage).toHaveCount(1)
   await expect(visibleAuthMessage).toBeVisible()
@@ -46,5 +46,5 @@ test('invalid confirmation links explain how to recover', async ({ page }) => {
 
 test('onboarding is protected and preserves the requested route', async ({ page }) => {
   await page.goto('/onboarding')
-  await expect(page).toHaveURL(/\/\?next=%2Fonboarding|\/\?next=\/onboarding/)
+  await expect(page).toHaveURL(/\/landing\.html\?next=%2Fonboarding|\/landing\.html\?next=\/onboarding/)
 })
