@@ -183,7 +183,7 @@ export function directConfirmationPath(verificationLink, next = '/onboarding') {
 }
 
 export async function attemptSignInThroughUi(page, email, password, next = '/discover') {
-  await page.goto(`/?next=${encodeURIComponent(next)}`)
+  await page.goto(`/landing.html?next=${encodeURIComponent(next)}`)
   await page.locator('#landing-email').fill(email)
   await page.locator('#landing-password').fill(password)
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
@@ -204,7 +204,7 @@ export async function signInThroughApi(page, email, password, next = '/discover'
 
 export async function signInThroughUi(page, email, password, next = '/discover') {
   await attemptSignInThroughUi(page, email, password, next)
-  await expect(page).not.toHaveURL(/\/(?:\?.*)?$/)
+  await expect(page).not.toHaveURL(/\/landing\.html(?:\?.*)?$/)
 }
 
 export async function signOutThroughUi(page) {

@@ -3,7 +3,8 @@ import { assertNoHorizontalOverflow } from './support.mjs'
 import { assertImagesLoaded, trackFrontendHealth } from './frontend-health.mjs'
 
 const publicPages = [
-  ['/', null],
+  ['/', '1.0 coming soon'],
+  ['/landing.html', null],
   ['/signup', 'Make plans that leave the chat.'],
   ['/privacy', 'Privacy Policy'],
   ['/terms', 'Terms of Service']
@@ -28,7 +29,7 @@ for (const [path, heading] of publicPages) {
   test(`${path} renders without frontend failures or horizontal overflow`, async ({ page }, testInfo) => {
     const health = trackFrontendHealth(page, { baseURL: testInfo.project.use.baseURL, strictConsole: path !== '/' })
     await page.goto(path)
-    if (path === '/') await visibleLandingCanvas(page)
+    if (path === '/landing.html') await visibleLandingCanvas(page)
     else await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
     await assertImagesLoaded(page)
     await assertNoHorizontalOverflow(page)
@@ -38,7 +39,7 @@ for (const [path, heading] of publicPages) {
 
 test('landing page uses the Figma responsive composition and real DOM content', async ({ page }, testInfo) => {
   const health = trackFrontendHealth(page, { baseURL: testInfo.project.use.baseURL, strictConsole: false })
-  await page.goto('/')
+  await page.goto('/landing.html')
   const { mode, stage, selector, authRoot } = await visibleLandingCanvas(page)
 
   if (mode === 'desktop') {
@@ -63,7 +64,7 @@ test('landing page uses the Figma responsive composition and real DOM content', 
     expect(await page.locator(`${authRoot} a[href="/signup"]`).count()).toBeGreaterThan(0)
     expect(await page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).count()).toBeGreaterThan(0)
   } else {
-    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/?mode=login')
+    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/landing.html?mode=login')
     await expect(page.locator('.brand--mobile img')).toHaveAttribute('src', '/figma/assets/mobile-logo-exact.svg')
   }
   for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
@@ -127,7 +128,7 @@ test('landing phone routes render the correct Figma screen identities and hydrat
 })
 
 test('landing embeds each Figma phone route in the corresponding feature card', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/landing.html')
   const { mode, selector } = await visibleLandingCanvas(page)
   const expected = [
     ['swipe', 'Maple Grove Park'],
@@ -148,7 +149,7 @@ test('landing embeds each Figma phone route in the corresponding feature card', 
 test('desktop landing sticky sign-in canvas ends before the full-width footer', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Desktop sticky-footer behavior only')
 
-  await page.goto('/')
+  await page.goto('/landing.html')
   await visibleLandingCanvas(page)
   const sticky = page.locator('.landing-sticky-left__canvas')
   const footer = page.locator('#footer-d')
@@ -175,7 +176,7 @@ test('desktop landing sticky sign-in canvas ends before the full-width footer', 
 })
 
 test('landing safety locations and navigation work', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/landing.html')
   const { mode, selector } = await visibleLandingCanvas(page)
   const safety = page.locator(`${selector} .safety-panel`)
   await expect(safety).toBeVisible()
@@ -187,13 +188,13 @@ test('landing safety locations and navigation work', async ({ page }) => {
 })
 
 test('landing exposes direct auth and legal links', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/landing.html')
   const { mode, stage, authRoot } = await visibleLandingCanvas(page)
   if (mode === 'desktop') {
     expect(await page.locator(`${authRoot} a[href="/signup"]`).count()).toBeGreaterThan(0)
     expect(await page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).count()).toBeGreaterThan(0)
   } else {
-    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/?mode=login')
+    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/landing.html?mode=login')
   }
   if (await page.locator(`${authRoot} form.landing-login-form`).count()) {
     await expect(page.locator(`${authRoot} form.landing-login-form`)).toHaveAttribute('action', '/api/auth/password')
@@ -204,7 +205,7 @@ test('landing exposes direct auth and legal links', async ({ page }) => {
 })
 
 test('landing auth controls expose direct authentication entry points', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/landing.html')
   const { mode, authRoot } = await visibleLandingCanvas(page)
   if (mode === 'desktop') {
     await expect(page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).first()).toHaveAttribute('aria-label', 'Continue with Google')
@@ -227,5 +228,5 @@ test('404 gives the user a working route home', async ({ page }) => {
   await expect(page.getByText('404', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Back to Puddle' }).click()
   await expect(page).toHaveURL(/\/$/)
-  await visibleLandingCanvas(page)
+  await expect(page.getByRole('heading', { name: '1.0 coming soon', level: 1 })).toBeVisible()
 })

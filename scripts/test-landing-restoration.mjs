@@ -182,7 +182,7 @@ try {
   assert(await page.locator('.feature-card--m-swipe .interactive-pill').isVisible(), 'mobile Swipe Interactive pill is missing')
   assert(await page.locator('.feature-card--m-profile').count() === 0, 'mobile Profile card is not part of the updated Figma composition')
   assert(await page.locator('.mobile-login-button').isVisible(), 'mobile Login action is missing')
-  assert(await page.locator('.mobile-login-button').getAttribute('href') === '/?mode=login', 'mobile Login action does not use the landing authentication route')
+  assert(await page.locator('.mobile-login-button').getAttribute('href') === '/landing.html?mode=login', 'mobile Login action does not use the preserved landing authentication route')
   assert(await page.locator('.brand--mobile img').getAttribute('src') === '/figma/assets/mobile-logo-exact.svg', 'mobile Puddle brand must use the exact mobile logo asset')
   await page.locator('.mobile-login-button').click()
   assert(await page.locator('.mobile-login-dialog[open]').isVisible(), 'mobile Login action did not open the authentication dialog')

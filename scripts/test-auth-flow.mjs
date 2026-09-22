@@ -118,8 +118,8 @@ assert(!actions.includes('verifyLoginCode'), 'One-time login code verification m
 assert(!actions.includes('export async function signIn('), 'The deleted sign-in page must not retain a server action')
 assert(!actions.includes('/signin'), 'Authentication actions must not link to the deleted sign-in page')
 assert(!passwordRoute.includes('/signin'), 'The landing password route must not link to the deleted sign-in page')
-assert(proxy.includes("pathname === '/' && user"), 'A valid session must redirect the landing route to the dashboard')
-assert(proxy.includes("new URL('/discover', request.url)"), 'The authenticated landing redirect must target the dashboard')
+assert(!proxy.includes("pathname === '/' && user"), 'The maintenance entry must not redirect a valid session into the product')
+assert(proxy.includes("'/maintenance.html'"), 'The maintenance page must remain a cacheable public route')
 assert(!proxy.includes('if (isAuthOnly && user)'), 'Auth pages must remain available so users can switch accounts')
 
 const accountDeletionMigration = await readFile(join(root, 'supabase/migrations/20260829130000_account_deletion_integrity.sql'), 'utf8')

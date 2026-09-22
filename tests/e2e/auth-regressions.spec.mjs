@@ -26,7 +26,7 @@ test('landing credential sign-in goes directly to discover', async ({ page }) =>
   await completeProfileDirect(account.user.id)
 
   try {
-    await page.goto('/')
+    await page.goto('/landing.html')
     await page.locator('#landing-email').fill(account.email)
     await page.locator('#landing-password').fill(account.password)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
@@ -45,15 +45,15 @@ test('an invalid sign-in cannot reuse the previous browser session', async ({ pa
     await expect(page).toHaveURL(/\/account$/)
 
     await signOutThroughUi(page)
-    await page.goto('/?next=%2Faccount')
+    await page.goto('/landing.html?next=%2Faccount')
     await expect(page.locator('#landing-email')).toBeVisible()
     await page.locator('#landing-email').fill(uniqueEmail('not-an-account'))
     await page.locator('#landing-password').fill(`wrong-${uniqueSuffix(20)}-Aa1!`)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
 
-    await expect(page).toHaveURL(/\/\?.*error=/)
+    await expect(page).toHaveURL(/\/landing\.html\?.*error=/)
     await page.goto('/account')
-    await expect(page).toHaveURL(/\/\?next=/)
+    await expect(page).toHaveURL(/\/landing\.html\?next=/)
   } finally {
     await removeTestUser(account.user.id)
   }
@@ -82,7 +82,7 @@ test('the auth cookie survives a browser-context restart', async ({ browser }) =
     await secondPage.goto('/account')
     await expect(secondPage).toHaveURL(/\/account$/)
     await secondPage.goto('/')
-    await expect(secondPage).toHaveURL(/\/discover(?:\?.*)?$/)
+    await expect(secondPage.getByRole('heading', { name: '1.0 coming soon', level: 1 })).toBeVisible()
   } finally {
     await secondContext?.close()
     await firstContext?.close()
@@ -133,7 +133,7 @@ test('account deletion removes the auth user, profile, and browser session', asy
     }, { timeout: 12_000 }).toBeNull()
 
     await page.goto('/account')
-    await expect(page).toHaveURL(/\/\?next=/)
+    await expect(page).toHaveURL(/\/landing\.html\?next=/)
   } finally {
     await removeTestUser(account.user.id)
   }

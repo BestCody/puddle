@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Martian+Mono:wght@600;700;800&display=swap');
+
+:root {
+  color-scheme: light;
+  font-family: 'Martian Mono', ui-monospace, 'Courier New', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body { min-block-size: 100%; }
+
+body {
+  margin: 0;
+  background: #fff;
+  color: #171114;
+}
+
+.maintenance {
+  --page-gutter: clamp(1.5rem, 7vw, 7rem);
+  --scene-width: min(100%, 65rem);
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: clamp(2.5rem, 8dvh, 6rem);
+  min-block-size: 100dvh;
+  padding: clamp(2rem, 7dvh, 6rem) var(--page-gutter);
+}
+
+.maintenance__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(.35rem, 1vw, .6rem);
+  color: inherit;
+  font-size: clamp(1.1rem, 2.3vw, 1.65rem);
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.maintenance__brand img {
+  inline-size: clamp(1.8rem, 3.4vw, 2.4rem);
+  block-size: auto;
+}
+
+.maintenance__brand span span { color: #df5ba7; }
+
+.maintenance__scene {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: var(--scene-width);
+  aspect-ratio: 1;
+  overflow: clip;
+  background: #8bc9ef;
+  isolation: isolate;
+}
+
+.maintenance__art,
+.maintenance__art img {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.maintenance__art img { object-fit: cover; }
+
+.maintenance__scene::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  content: '';
+  background: linear-gradient(180deg, rgb(19 25 75 / .06), rgb(30 4 62 / .28));
+  pointer-events: none;
+}
+
+.maintenance__message {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: clamp(.8rem, 2.4cqi, 1.5rem);
+  max-inline-size: 90%;
+  padding: clamp(1.25rem, 8cqi, 5.5rem) clamp(1rem, 6cqi, 4rem);
+  color: #fff;
+  text-align: center;
+}
+
+.maintenance__message p,
+.maintenance__message h1 { margin: 0; }
+
+.maintenance__message p {
+  font-size: clamp(.75rem, 2cqi, 1.2rem);
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+.maintenance__message h1 {
+  font-size: clamp(1.75rem, 7cqi, 4.6rem);
+  font-weight: 800;
+  letter-spacing: -.08em;
+  line-height: .98;
+}
+
+.maintenance__instagram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(.75rem, 2.3cqi, 1.25rem);
+  min-inline-size: min(100%, 16rem);
+  padding: clamp(.8rem, 2cqi, 1.15rem) clamp(1.25rem, 3.5cqi, 2rem);
+  border-radius: 999rem;
+  background: #fff;
+  color: #171114;
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-size: clamp(.85rem, 2.1cqi, 1.15rem);
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.maintenance__instagram span:last-child {
+  color: #858585;
+  font-size: 1.35em;
+  line-height: .7;
+}
+
+.maintenance__instagram:focus-visible,
+.maintenance__brand:focus-visible {
+  outline: .2rem solid #171114;
+  outline-offset: .3rem;
+}
+
+@media (max-width: 40rem) {
+  .maintenance {
+    align-content: start;
+    gap: clamp(2rem, 10dvh, 4rem);
+    padding-block: clamp(2rem, 8dvh, 4.5rem);
+  }
+
+  .maintenance__scene { inline-size: min(100%, 34rem); }
+}

@@ -125,7 +125,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
 
   await signOutThroughUi(page)
   await attemptSignInThroughUi(page, email, password)
-  await expect(page).toHaveURL(/\/\?.*error=/)
+  await expect(page).toHaveURL(/\/landing\.html\?.*error=/)
   const visibleAuthMessage = page.locator('.landing-auth-message:visible').filter({ hasText: /Email or password was not accepted/i })
   await expect(visibleAuthMessage).toHaveCount(1)
   await expect(visibleAuthMessage).toBeVisible()
@@ -134,7 +134,7 @@ test('email signup goes straight to onboarding, then sign-in, reset, and sign-ou
   await expect(page).toHaveURL(/\/discover$/)
   await signOutThroughUi(page)
   await page.goto('/dashboard')
-  await expect(page).toHaveURL(/\/\?next=%2Fdashboard|\/\?next=\/dashboard/)
+  await expect(page).toHaveURL(/\/landing\.html\?next=%2Fdashboard|\/landing\.html\?next=\/dashboard/)
 })
 
 test('duplicate usernames keep onboarding values in place with an inline error', async ({ page }) => {
