@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { authorizeB2 } from '@/lib/storage/b2-native'
-import { downloadSelfHostObject, isSelfHostObjectStore } from '@/lib/storage/self-host-object-store'
 import { createTraceId, elapsedMs, latencyStart } from '@/lib/performance/server-latency'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -132,7 +131,8 @@ export async function GET(_request, { params }) {
 
     const downloadStartedAt = latencyStart()
     let body
-    if (isSelfHostObjectStore()) {
+    if (process.env.PUDDLE_OBJECT_STORE === 's3') {
+      const { downloadSelfHostObject } = await import('@/lib/storage/self-host-object-store')
       body = await downloadSelfHostObject(canonicalStorageKey(hash), { maxBytes: 10_000_000, missingOk: true })
       if (body === null) {
         const missing = new Error('Photo not found.')
