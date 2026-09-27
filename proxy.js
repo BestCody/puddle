@@ -23,10 +23,9 @@ const moderationExemptApiPrefixes = [
   '/api/public-location',
   '/api/billing/webhook'
 ]
-// These exact read routes reuse proxy-verified claims, then perform their full
-// account-state check through the shared bounded profile cache.
-const moderationExemptApiPaths = new Set(['/api/discovery', '/api/map/viewport', '/api/map/snapshot', '/api/social-feed'])
-const verifiedReadApiPaths = new Set(['/api/discovery', '/api/map/viewport', '/api/map/snapshot', '/api/social-feed'])
+// These read routes reuse proxy-verified claims and check account state in
+// their own handlers, avoiding a redundant profile read in Proxy.
+const verifiedReadApiPaths = new Set(['/api/discovery', '/api/map/viewport', '/api/map/snapshot', '/api/social-feed', '/api/profile/identity'])
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)
@@ -37,7 +36,7 @@ function forbidden(request, nonce, message = 'Cross-site request blocked.') { re
 function hasSupabaseAuthCookie(request) { return request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(?:\.\d+)?$/i.test(name)) }
 function matchesPrefix(pathname, prefixes) { return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) }
 function requiresModerationGate(pathname) {
-  return pathname.startsWith('/api/') && !moderationExemptApiPaths.has(pathname) && !moderationExemptApiPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+  return pathname.startsWith('/api/') && !verifiedReadApiPaths.has(pathname) && !moderationExemptApiPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 function cachePolicy(response, pathname, privateResponse = false) {
   if (privateResponse) { response.headers.set('Cache-Control', 'private, no-store'); return response }

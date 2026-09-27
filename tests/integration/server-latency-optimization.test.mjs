@@ -78,8 +78,8 @@ test('Hot API routes own the account-state gate when proxy moderation is skipped
     read('app/api/map/viewport/route.js'),
     read('app/api/map/snapshot/route.js')
   ])
-  assert.match(proxy, /moderationExemptApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/map\/snapshot', '\/api\/social-feed'\]\)/)
-  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/map\/snapshot', '\/api\/social-feed'\]\)/)
+  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/map\/snapshot', '\/api\/social-feed', '\/api\/profile\/identity'\]\)/)
+  assert.match(proxy, /requiresModerationGate\(pathname\) \{[\s\S]*!verifiedReadApiPaths\.has\(pathname\)/)
   for (const source of [discovery, map]) {
     assert.match(source, /profile\?\.suspended_at/)
     assert.match(source, /Account status could not be verified/)
@@ -88,6 +88,22 @@ test('Hot API routes own the account-state gate when proxy moderation is skipped
   assert.match(snapshot, /current\.profile\.suspended_at/)
   assert.match(snapshot, /Account status could not be verified/)
   assert.match(snapshot, /This account is suspended|This account is banned/)
+})
+
+test('Navigation identity checks account state in its route after one proxy claim verification', async () => {
+  const [proxy, identity] = await Promise.all([
+    read('proxy.js'),
+    read('app/api/profile/identity/route.js')
+  ])
+  assert.match(proxy, /requestHeaders\.delete\(verifiedProductUserHeader\)/)
+  assert.match(proxy, /requestHeaders\.set\(verifiedProductUserHeader, user\.id\)/)
+  assert.match(proxy, /verifiedReadApiPaths = new Set\([^\n]*'\/api\/profile\/identity'/)
+  assert.match(proxy, /requiresModerationGate\(pathname\) \{[\s\S]*!verifiedReadApiPaths\.has\(pathname\)/)
+  assert.match(identity, /getCurrentUser\(\{ profileFields: IDENTITY_PROFILE_SELECT \}\)/)
+  assert.match(identity, /current\.profileError \|\| !current\.profile/)
+  assert.match(identity, /!current\.profile\.onboarding_completed_at/)
+  assert.match(identity, /current\.profile\.suspended_at \|\| current\.profile\.banned_at/)
+  assert.match(identity, /'Cache-Control': 'private, no-store'/)
 })
 
 test('Public catalogue reads share short-lived immutable search results across users', async () => {
