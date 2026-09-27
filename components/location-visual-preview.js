@@ -2,23 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { SwipeMapPreview } from '@/components/swipe-map-preview'
+import { validCoordinates } from '@/lib/app/optional-number'
 
 const LOCATION_VISUAL_CACHE_KEY = 'puddle:location-visual-coordinates:v2'
 const LOCATION_VISUAL_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const LOCATION_VISUAL_CACHE_LIMIT = 300
-
-function hasCoordinateValue(value) {
-  return value !== null && value !== undefined && String(value).trim() !== ''
-}
-
-function validCoordinates(latitude, longitude) {
-  if (!hasCoordinateValue(latitude) || !hasCoordinateValue(longitude)) return null
-  const lat = Number(latitude)
-  const lon = Number(longitude)
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
-  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null
-  return { latitude: lat, longitude: lon }
-}
 
 function readCoordinateCache(slug) {
   if (typeof window === 'undefined' || !slug) return null

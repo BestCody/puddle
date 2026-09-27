@@ -84,7 +84,7 @@ test('Profile save count uses the full saved-location relation, not the preview 
   const page = await read('app/(product)/profile/page.js')
   const counts = page.slice(page.indexOf('figma-profile-counts'), page.indexOf('figma-profile-chips'))
 
-  assert.match(page, /async function savedLocationCountOrNull\(supabase, profileId\)/)
+  assert.match(page, /async function readSavedLocationCount\(supabase, profileId\)/)
   assert.match(page, /\.select\('location_id', \{ count: 'exact', head: true \}\)/)
   assert.match(page, /\.eq\('state', 'saved'\)/)
   assert.match(page, /\.not\('location_id', 'is', null\)/)

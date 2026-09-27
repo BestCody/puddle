@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { DISCOVERY_IMAGE_SIZES, canOptimizeDiscoveryImage } from '@/lib/media/discovery-image'
 import { useModalFocus } from '@/components/modal-focus'
 import { SwipeMapPreview } from '@/components/swipe-map-preview'
+import { validCoordinates } from '@/lib/app/optional-number'
 
 const labels = {
   cafe: 'Coffee', restaurant: 'Restaurant', bar: 'Bar', park: 'Park', museum: 'Museum',
@@ -31,7 +32,7 @@ function photos(item) {
 }
 
 function hasCoordinates(item) {
-  return Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))
+  return Boolean(validCoordinates(item.latitude, item.longitude))
 }
 
 function preventNativeImageDrag(event) {

@@ -7,6 +7,7 @@ import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 import { object, string, uuid } from '@/lib/security/schema'
+import { validCoordinates } from '@/lib/app/optional-number'
 
 const ACTIONS = new Set(['saved', 'interested', 'dismissed', 'visited', 'undo', 'opened', 'perfect'])
 const MAX_ACTIONS = 20
@@ -47,10 +48,9 @@ function heatmapAdjustments(results, locations) {
     const delta = Number(result?.densityDelta || 0)
     if (!Number.isInteger(delta) || delta === 0) return []
     const row = byId.get(String(result?.locationId || ''))
-    const latitude = Number(row?.latitude)
-    const longitude = Number(row?.longitude)
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return []
-    return [{ latitude, longitude, delta }]
+    const coordinates = validCoordinates(row?.latitude, row?.longitude)
+    if (!coordinates) return []
+    return [{ ...coordinates, delta }]
   })
 }
 

@@ -1,6 +1,7 @@
 "use client"
 
 import styles from './swipe-map-preview.module.css'
+import { validCoordinates } from '@/lib/app/optional-number'
 
 const TILE_SIZE = 256
 const MAP_ZOOM = 15
@@ -51,11 +52,10 @@ function previewTiles(latitude, longitude) {
 }
 
 export function SwipeMapPreview({ latitude, longitude, title }) {
-  const lat = Number(latitude)
-  const lon = Number(longitude)
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+  const point = validCoordinates(latitude, longitude)
+  if (!point) return null
 
-  const tiles = previewTiles(lat, lon)
+  const tiles = previewTiles(point.latitude, point.longitude)
   return <div className={styles.preview} role="img" aria-label={`Map showing ${title || 'this place'}`}>
     <div className={styles.tiles} aria-hidden="true">
       {tiles.map((tile) => <img

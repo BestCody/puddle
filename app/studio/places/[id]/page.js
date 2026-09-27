@@ -5,6 +5,7 @@ import { MediaUploader } from '@/components/media-uploader'
 import { PhotoFrame } from '@/components/photo-frame'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getCreatorOptions, getEditableLocation } from '@/lib/app/creator-data'
+import { requiredQuery } from '@/lib/app/required-query'
 import { getMembershipSnapshot } from '@/lib/app/membership-data'
 
 export const dynamic = 'force-dynamic'
@@ -36,17 +37,20 @@ export default async function EditLocationPage({ params, searchParams }) {
     if (membership.active) {
       const cursorAt = String(messages?.savers_before || '').trim() || null
       const cursorProfile = String(messages?.savers_profile || '').trim() || null
-      const [{ data: saverRows }, { data: count }] = await Promise.all([
-        session.supabase.rpc('pass_location_savers_v2', {
+      const [saverRows, count] = await Promise.all([
+        requiredQuery(session.supabase.rpc('pass_location_savers_v2', {
           target_location: location.id,
           before_saved_at: cursorAt,
           before_profile_id: cursorProfile,
           result_limit: 50
-        }),
-        session.supabase.rpc('pass_location_saver_count_v2', { target_location: location.id })
+        })),
+        requiredQuery(session.supabase.rpc('pass_location_saver_count_v2', { target_location: location.id }))
       ])
-      savers = saverRows || []
-      saverCount = Number(count || 0)
+      if (!Array.isArray(saverRows) || count == null || !Number.isSafeInteger(Number(count)) || Number(count) < 0) {
+        throw new Error('Location saver data is unavailable.')
+      }
+      savers = saverRows
+      saverCount = Number(count)
     }
     const hasMoreSavers = savers.length === 50
     const saverCursor = savers[savers.length - 1] || null
