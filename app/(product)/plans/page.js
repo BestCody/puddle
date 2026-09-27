@@ -138,7 +138,7 @@ export default async function PlansPage({ searchParams }) {
     return <>
       {active === 'saved' ? <SavedSearchInput initialQuery={query} category={selectedCategory} /> : null}
       <div className={styles.screen} data-testid="saved-screen" data-tab={active}>
-        <SavedLocationMorphBridge />
+        {active === 'saved' ? <SavedLocationMorphBridge /> : null}
         <AuthMessage searchParams={params} />
         <header className={styles.topbar}>
           <RoutedSegment

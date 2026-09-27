@@ -6,6 +6,7 @@ import { DashboardRuntime } from './dashboard-runtime'
 import { MainContentTransition } from './main-content-transition'
 import { SettingsOverlay } from './settings-overlay'
 import { SettingsTrigger } from './settings-trigger'
+import { AppearanceSync } from './appearance-toggle-logo'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
 
@@ -24,7 +25,19 @@ function ProductContentFallback() {
   </div>
 }
 
-export async function ProductShell({ user, profile, children, contentPromise = null, settingsOverlay = true }) {
+export async function ProductShell({ user, profile, children, contentPromise = null, settingsOverlay = true, embedded = false }) {
+  const appearance = ['light', 'dark', 'system'].includes(profile?.appearance_theme) ? profile.appearance_theme : 'light'
+  const content = contentPromise
+    ? <Suspense fallback={<ProductContentFallback />}><AwaitProductContent contentPromise={contentPromise} /></Suspense>
+    : children
+
+  if (embedded) return <div className="figma-dashboard-shell" data-appearance={appearance}>
+    <AppearanceSync initialAppearance={appearance} />
+    <div className="figma-dashboard-stage">
+      <main className="figma-dashboard-main"><MainContentTransition>{content}</MainContentTransition></main>
+    </div>
+  </div>
+
   let avatarUrl = null
   if (profile?.avatar_path) {
     if (String(profile.avatar_path).startsWith('/') || String(profile.avatar_path).startsWith('http')) avatarUrl = profile.avatar_path
@@ -33,11 +46,6 @@ export async function ProductShell({ user, profile, children, contentPromise = n
       avatarUrl = client.storage.from('puddle-public-media').getPublicUrl(profile.avatar_path).data.publicUrl
     }
   }
-
-  const appearance = ['light', 'dark', 'system'].includes(profile?.appearance_theme) ? profile.appearance_theme : 'light'
-  const content = contentPromise
-    ? <Suspense fallback={<ProductContentFallback />}><AwaitProductContent contentPromise={contentPromise} /></Suspense>
-    : children
 
   return <div className="figma-dashboard-shell" data-appearance={appearance}>
     <FigmaDashboardSidebar avatarUrl={avatarUrl} initialAppearance={appearance} signOutAction={signOut} />

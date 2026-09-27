@@ -69,23 +69,39 @@ export default async function AccountPage({ searchParams }) {
   const returnTo = safeReturnTo(params?.returnTo)
   const { user, profile, supabase } = await requireUser({ onboarding: true })
   const sessionExpiry = user.aud ? 'Managed securely by Supabase Auth' : 'Active'
-  const [notificationResult, preferenceResult, passResult] = await Promise.all([
-    supabase.from('notifications').select('id,kind,title,body,href,read_at,created_at').eq('profile_id', user.id).order('created_at', { ascending: false }).limit(50),
-    supabase.from('notification_preferences').select('in_app_enabled,friend_requests,shares,messages,comments,event_reminders,event_changes,host_announcements,marketing,timezone').eq('profile_id', user.id).maybeSingle(),
-    supabase.rpc('puddle_tinder_active_v1')
-  ])
-  if (notificationResult.error || preferenceResult.error || passResult.error) {
-    console.error('Settings data could not be loaded.', {
-      notifications: notificationResult.error?.code || null,
-      preferences: preferenceResult.error?.code || null,
-      membership: passResult.error?.code || null
-    })
-    throw new Error('Settings could not be loaded. Please try again.')
+  const showSection = (section) => !mobileFlow || selectedSection === section
+  const showNotifications = showSection('notifications')
+  let notificationRows = []
+  let preferenceRow = null
+  let passActive = false
+  let unread = 0
+  if (showNotifications) {
+    const [notificationResult, preferenceResult, passResult] = await Promise.all([
+      supabase.from('notifications').select('id,kind,title,body,href,read_at,created_at').eq('profile_id', user.id).order('created_at', { ascending: false }).limit(50),
+      supabase.from('notification_preferences').select('in_app_enabled,friend_requests,shares,messages,comments,event_reminders,event_changes,host_announcements,marketing,timezone').eq('profile_id', user.id).maybeSingle(),
+      supabase.rpc('puddle_tinder_active_v1')
+    ])
+    if (notificationResult.error || preferenceResult.error || passResult.error) {
+      console.error('Settings data could not be loaded.', {
+        notifications: notificationResult.error?.code || null,
+        preferences: preferenceResult.error?.code || null,
+        membership: passResult.error?.code || null
+      })
+      throw new Error('Settings could not be loaded. Please try again.')
+    }
+    notificationRows = notificationResult.data || []
+    preferenceRow = preferenceResult.data
+    passActive = Boolean(passResult.data)
+    unread = notificationRows.filter((item) => !item.read_at).length
+  } else if (!selectedSection) {
+    const { count, error } = await supabase.from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_id', user.id)
+      .is('read_at', null)
+    if (error || !Number.isSafeInteger(count)) throw new Error('Unread notification count could not be loaded.')
+    unread = count
   }
-  const notificationRows = notificationResult.data
-  const preferenceRow = preferenceResult.data
-  const passActive = passResult.data
-  const notifications = notificationRows || []
+  const notifications = notificationRows
   const preferences = preferenceRow || {
     in_app_enabled: true,
     friend_requests: true,
@@ -98,11 +114,10 @@ export default async function AccountPage({ searchParams }) {
     marketing: false,
     timezone: profile?.timezone || 'America/Toronto'
   }
-  const unread = notifications.filter((item) => !item.read_at).length
   const windowClass = `figma-settings-window${selectedSection ? ` is-expanded section-${selectedSection}` : ' section-index'}${mobileFlow ? ' is-mobile-flow-window' : ''}`
   const mobileBackHref = selectedSection ? mobileSettingsIndexHref(returnTo) : returnTo
 
-  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded}>
+  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded} embedded={embedded}>
     <SettingsScrollBridge />
     <div className={`figma-settings-screen${embedded ? ' is-embedded' : ''}${mobileFlow ? ' is-mobile-flow' : ''}${mobileFlow && !selectedSection ? ' is-mobile-index' : ''}`}>
       <section className={windowClass} aria-label="Settings">
@@ -123,7 +138,7 @@ export default async function AccountPage({ searchParams }) {
         <div className="figma-settings-detail">
           <AuthMessage searchParams={params} />
 
-          <form className="figma-settings-section" id="profile" action={updateDateProfile}>
+          {showSection('profile') ? <form className="figma-settings-section" id="profile" action={updateDateProfile}>
             <header><small>Profile</small><h1>Profile</h1><p>Manage how your profile appears across Puddle.</p></header>
             <div className="figma-settings-section-body">
               <div className="figma-settings-row"><label htmlFor="account-display-name">Display name</label><input id="account-display-name" name="display_name" defaultValue={profile?.display_name || ''} required maxLength="60" /></div>
@@ -132,9 +147,9 @@ export default async function AccountPage({ searchParams }) {
               <div className="figma-settings-row"><label htmlFor="account-visibility">Visibility</label><select id="account-visibility" name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Shared-plan attendees</option><option value="hidden">Hidden</option></select></div>
             </div>
             <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save changes</SubmitButton></div>
-          </form>
+          </form> : null}
 
-          <section className="figma-settings-section" id="security">
+          {showSection('security') ? <section className="figma-settings-section" id="security">
             <header><small>Email / Password</small><h1>Email / Password</h1><p>Update your sign-in details and password.</p></header>
             <div className="figma-settings-section-body">
               <div className="figma-settings-row"><label>Email</label><span>{user.email || 'No email available'}</span><Link href="/change-email">Change</Link></div>
@@ -144,18 +159,18 @@ export default async function AccountPage({ searchParams }) {
                 <div className="figma-settings-submit"><SubmitButton>Change password</SubmitButton></div>
               </form>
             </div>
-          </section>
+          </section> : null}
 
-          <form className="figma-settings-section" id="appearance" action={updateAppearance}>
+          {showSection('appearance') ? <form className="figma-settings-section" id="appearance" action={updateAppearance}>
             <header><small>Appearance</small><h1>Appearance</h1><p>Choose how Puddle looks for you.</p></header>
             <div className="figma-settings-section-body">
               <div className="figma-settings-row"><label htmlFor="account-appearance-theme">Theme</label><select id="account-appearance-theme" name="appearance_theme" defaultValue={profile?.appearance_theme || 'light'}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></div>
               <div className="figma-settings-row"><label htmlFor="account-profile-theme">Profile color</label><select id="account-profile-theme" name="profile_theme" defaultValue={profile?.profile_theme || 'blue'}><option value="blue">Blue</option><option value="green">Green</option><option value="yellow">Yellow</option><option value="purple">Purple</option><option value="red">Red</option><option value="grey">Grey</option></select></div>
             </div>
             <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save appearance</SubmitButton></div>
-          </form>
+          </form> : null}
 
-          <section className="figma-settings-section" id="notifications">
+          {showNotifications ? <section className="figma-settings-section" id="notifications">
             <header><small>Notifications</small><h1>Notifications</h1><p>Control what Puddle lets you know about.</p></header>
             <div className="figma-settings-section-body figma-settings-section-body--notifications">
               <PassNotificationAlertControl enabled={Boolean(passActive)} />
@@ -181,24 +196,24 @@ export default async function AccountPage({ searchParams }) {
                 </article>
               }) : <p>No notifications yet.</p>}</div>
             </div>
-          </section>
+          </section> : null}
 
-          <section className="figma-settings-section" id="sessions">
+          {showSection('sessions') ? <section className="figma-settings-section" id="sessions">
             <header><small>Sessions</small><h1>Sessions</h1><p>Review and manage where your account is signed in.</p></header>
             <div className="figma-settings-section-body">
               <div className="figma-settings-row is-tall"><label>Current browser</label><span>{sessionExpiry}<br />Last sign-in: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Unavailable'}</span></div>
             </div>
             <form action={revokeOtherSessions}><div className="figma-settings-submit"><SubmitButton>Sign out other sessions</SubmitButton></div></form>
-          </section>
+          </section> : null}
 
-          <section className="figma-settings-section" id="billing">
+          {showSection('billing') ? <section className="figma-settings-section" id="billing">
             <header><small>Billing</small><h1>Billing</h1><p>Manage your Puddle Pass and plan.</p></header>
             <div className="figma-settings-section-body">
               <div className="figma-settings-row"><label>Puddle Pass</label><span>Membership and plan details</span><Link href="/membership" target="_top">View plans</Link></div>
             </div>
-          </section>
+          </section> : null}
 
-          <section className="figma-settings-section" id="account">
+          {showSection('account') ? <section className="figma-settings-section" id="account">
             <header><small>Account</small><h1>Account</h1><p>Account-level controls and permanent actions.</p></header>
             <div className="figma-settings-section-body figma-settings-section-body--danger">
               <p className="figma-settings-warning">Permanently delete your Puddle account and associated records.</p>
@@ -207,7 +222,7 @@ export default async function AccountPage({ searchParams }) {
                 <div className="figma-settings-submit is-danger"><SubmitButton pendingText="Deleting…">Delete my account</SubmitButton></div>
               </form>
             </div>
-          </section>
+          </section> : null}
         </div>
       </section>
     </div>

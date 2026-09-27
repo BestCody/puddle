@@ -57,8 +57,9 @@ test('desktop Figma sidebar navigates, switches to concise mode, and preserves t
   await expect(page.locator('.figma-dashboard-nav a[href="/profile"]')).toHaveAttribute('aria-current', 'page')
 
   const profileUrl = page.url()
-  await page.locator('.figma-dashboard-settings-link').click()
   const overlay = page.locator('.puddle-settings-overlay')
+  await expect(overlay.locator('iframe[title="Settings"]')).toHaveCount(0)
+  await page.locator('.figma-dashboard-settings-link').click()
   await expect(overlay).toHaveClass(/is-open/)
   await expect(overlay).toHaveAttribute('aria-hidden', 'false')
   await expect(overlay.locator('iframe[title="Settings"]')).toBeVisible()
@@ -66,6 +67,7 @@ test('desktop Figma sidebar navigates, switches to concise mode, and preserves t
   await overlay.locator('.puddle-settings-overlay-backdrop').click({ position: { x: 8, y: 8 } })
   await expect(overlay).not.toHaveClass(/is-open/)
   await expect(overlay).toHaveAttribute('aria-hidden', 'true')
+  await expect(overlay.locator('iframe[title="Settings"]')).toHaveCount(0)
   expect(page.url()).toBe(profileUrl)
   await settings.click()
   await expect(overlay).toHaveClass(/is-open/)

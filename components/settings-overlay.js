@@ -29,12 +29,16 @@ export function openSettingsOverlay() {
 export function SettingsOverlay() {
   const [enabled, setEnabled] = useState(false)
   const [open, setOpen] = useState(false)
+  const [frameLoaded, setFrameLoaded] = useState(false)
   const overlayRef = useRef(null)
   const frameRef = useRef(null)
   const frameCleanupRef = useRef(null)
 
   const closeOverlay = useCallback(() => {
     setOpen(false)
+    setFrameLoaded(false)
+    frameCleanupRef.current?.()
+    frameCleanupRef.current = null
     document.documentElement.classList.remove('puddle-settings-overlay-open')
   }, [])
 
@@ -45,6 +49,7 @@ export function SettingsOverlay() {
     setEnabled(true)
 
     function openOverlay() {
+      setFrameLoaded(false)
       setOpen(true)
       document.documentElement.classList.add('puddle-settings-overlay-open')
     }
@@ -78,7 +83,7 @@ export function SettingsOverlay() {
     const focusFrame = window.requestAnimationFrame(() => {
       const close = frame?.contentDocument?.querySelector('.figma-settings-close')
       if (close) close.focus()
-      else frame?.focus()
+      else overlay?.focus()
     })
 
     return () => {
@@ -94,6 +99,7 @@ export function SettingsOverlay() {
     const frame = frameRef.current
     const doc = frame?.contentDocument
     if (!doc) return
+    setFrameLoaded(true)
     const close = doc.querySelector('.figma-settings-close')
     const closeFromFrame = (event) => {
       event.preventDefault()
@@ -132,13 +138,14 @@ export function SettingsOverlay() {
 
   return <div ref={overlayRef} className={`puddle-settings-overlay${open ? ' is-open' : ''}`} role="dialog" aria-modal="true" aria-label="Settings" aria-hidden={!open} inert={!open} tabIndex={-1}>
     <button className="puddle-settings-overlay-backdrop puddle-universal-backdrop" type="button" onClick={requestClose} aria-label="Close settings" tabIndex={-1} />
-    <iframe
+    {open && !frameLoaded ? <div className="puddle-settings-overlay-frame" role="status"><span className="puddle-settings-overlay-loading-text">Loading settings…</span></div> : null}
+    {open ? <iframe
       ref={frameRef}
-      className="puddle-settings-overlay-frame"
+      className={`puddle-settings-overlay-frame${frameLoaded ? '' : ' is-loading'}`}
       src="/account?embedded=1&returnTo=%2Fprofile"
       title="Settings"
-      tabIndex={open ? 0 : -1}
+      tabIndex={frameLoaded ? 0 : -1}
       onLoad={prepareFrame}
-    />
+    /> : null}
   </div>
 }

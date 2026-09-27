@@ -22,11 +22,10 @@ function applyAppearance(shell, appearance) {
   shell.classList.toggle('is-dark', resolved === 'dark')
 }
 
-export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
-  const buttonRef = useRef(null)
-
+function useAppearanceSync(initialAppearance) {
+  const elementRef = useRef(null)
   useLayoutEffect(() => {
-    const shell = buttonRef.current?.closest('.figma-dashboard-shell')
+    const shell = elementRef.current?.closest('.figma-dashboard-shell')
     if (!shell) return undefined
 
     const pending = window.sessionStorage.getItem(PENDING_KEY)
@@ -39,6 +38,17 @@ export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
     media.addEventListener?.('change', syncSystemAppearance)
     return () => media.removeEventListener?.('change', syncSystemAppearance)
   }, [initialAppearance])
+
+  return elementRef
+}
+
+export function AppearanceSync({ initialAppearance = 'light' }) {
+  const elementRef = useAppearanceSync(initialAppearance)
+  return <span ref={elementRef} hidden aria-hidden="true" />
+}
+
+export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
+  const buttonRef = useAppearanceSync(initialAppearance)
 
   return <button
     ref={buttonRef}
