@@ -9,7 +9,7 @@ test('feed search filters indexed titles and bodies before cursor pagination', a
     read('lib/app/social-feed-data.js'),
     read('supabase/migrations/20260927173025_feed_search_index.sql')
   ])
-  assert.match(data, /\.textSearch\('search_document', query, \{ type: 'websearch', config: 'simple' \}\)/)
+  assert.match(data, /\.textSearch\('search_document', terms\.map\(\(term\) => `\$\{term\}:\*`\)/)
   assert.match(migration, /coalesce\(title, ''\).*coalesce\(body, ''\)/)
   assert.match(migration, /using gin\s*\(search_document\)/)
   assert.doesNotMatch(data, /\.includes\(normalizedQuery\)/)

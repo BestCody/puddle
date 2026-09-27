@@ -12,7 +12,11 @@ language sql stable security definer set search_path='public' as $$
   join public.location_ref_search_index i on i.location_id=s.location_id
   where s.profile_id=(select auth.uid()) and s.state='saved' and s.location_id is not null
     and (nullif(trim(category_filter),'') is null or i.category=category_filter)
-    and (nullif(trim(search_term),'') is null or i.search_document @@ websearch_to_tsquery('simple'::regconfig,search_term))
+    and (nullif(trim(search_term),'') is null or i.search_document @@ to_tsquery('simple'::regconfig,(
+      select string_agg(token || ':*',' & ')
+      from regexp_split_to_table(lower(left(search_term,100)), '[^[:alnum:]]+') as token
+      where token <> ''
+    )))
     and (before_sort_at is null or ((s.pinned_at is not null),coalesce(s.pinned_at,s.created_at),s.location_id)<(coalesce(before_pinned,false),before_sort_at,before_location_id))
   order by (s.pinned_at is not null) desc,coalesce(s.pinned_at,s.created_at) desc,s.location_id desc
   limit greatest(1,least(coalesce(result_limit,25),41))
