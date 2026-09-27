@@ -72,13 +72,14 @@ test('Discovery session migration uses the current relational seen-state tables'
 })
 
 test('Hot API routes own the account-state gate when proxy moderation is skipped', async () => {
-  const [proxy, discovery, map, snapshot] = await Promise.all([
+  const [proxy, discovery, map, snapshot, heatmap] = await Promise.all([
     read('proxy.js'),
     read('app/api/discovery/route.js'),
     read('app/api/map/viewport/route.js'),
-    read('app/api/map/snapshot/route.js')
+    read('app/api/map/snapshot/route.js'),
+    read('app/api/map/heatmap/route.js')
   ])
-  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/map\/snapshot', '\/api\/social-feed', '\/api\/profile\/identity'\]\)/)
+  assert.match(proxy, /verifiedReadApiPaths = new Set\(\['\/api\/discovery', '\/api\/map\/viewport', '\/api\/map\/snapshot', '\/api\/map\/heatmap', '\/api\/social-feed', '\/api\/profile\/identity'\]\)/)
   assert.match(proxy, /requiresModerationGate\(pathname\) \{[\s\S]*!verifiedReadApiPaths\.has\(pathname\)/)
   for (const source of [discovery, map]) {
     assert.match(source, /profile\?\.suspended_at/)
@@ -88,6 +89,10 @@ test('Hot API routes own the account-state gate when proxy moderation is skipped
   assert.match(snapshot, /current\.profile\.suspended_at/)
   assert.match(snapshot, /Account status could not be verified/)
   assert.match(snapshot, /This account is suspended|This account is banned/)
+  assert.match(heatmap, /getCurrentUser\(\{ profileFields: MAP_PROFILE_SELECT \}\)/)
+  assert.match(heatmap, /current\.profileError \|\| !current\.profile/)
+  assert.match(heatmap, /current\.profile\.suspended_at \|\| current\.profile\.banned_at/)
+  assert.doesNotMatch(heatmap, /auth\.getUser\(\)/)
 })
 
 test('Navigation identity checks account state in its route after one proxy claim verification', async () => {
@@ -154,6 +159,9 @@ test('Dashboard shell defers its one trusted bootstrap RPC until after critical 
   assert.match(shell, /<DashboardRuntime profileId=\{user\.id\} \/>/)
   assert.doesNotMatch(shell, /rpc\('dashboard_bootstrap_v1'\)/)
   assert.match(runtime, /rpc\('dashboard_bootstrap_v1'\)/)
+  assert.match(runtime, /menu\?\.addEventListener\('toggle', onMenuToggle\)/)
+  assert.match(runtime, /menu\?\.open \|\| window\.Notification\?\.permission === 'granted'/)
+  assert.match(runtime, /window\.addEventListener\(PERMISSION_EVENT, onPermissionChange\)/)
   assert.doesNotMatch(runtime, /known_privileged:/)
   assert.doesNotMatch(migration, /known_privileged/)
   assert.doesNotMatch(runtime, /Promise\.all\(/)

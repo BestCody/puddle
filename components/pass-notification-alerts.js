@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-const PERMISSION_EVENT = 'puddle:notification-permission'
+export const PERMISSION_EVENT = 'puddle:notification-permission'
 
 function permissionState() {
   if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported'
