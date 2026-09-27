@@ -68,11 +68,22 @@ export default async function AccountPage({ searchParams }) {
   const returnTo = safeReturnTo(params?.returnTo)
   const { user, profile, supabase } = await requireUser({ onboarding: true })
   const sessionExpiry = user.aud ? 'Managed securely by Supabase Auth' : 'Active'
-  const [{ data: notificationRows }, { data: preferenceRow }, { data: passActive }] = await Promise.all([
+  const [notificationResult, preferenceResult, passResult] = await Promise.all([
     supabase.from('notifications').select('id,kind,title,body,href,read_at,created_at').eq('profile_id', user.id).order('created_at', { ascending: false }).limit(50),
     supabase.from('notification_preferences').select('in_app_enabled,friend_requests,shares,messages,comments,event_reminders,event_changes,host_announcements,marketing,timezone').eq('profile_id', user.id).maybeSingle(),
     supabase.rpc('puddle_tinder_active_v1')
   ])
+  if (notificationResult.error || preferenceResult.error || passResult.error) {
+    console.error('Settings data could not be loaded.', {
+      notifications: notificationResult.error?.code || null,
+      preferences: preferenceResult.error?.code || null,
+      membership: passResult.error?.code || null
+    })
+    throw new Error('Settings could not be loaded. Please try again.')
+  }
+  const notificationRows = notificationResult.data
+  const preferenceRow = preferenceResult.data
+  const passActive = passResult.data
   const notifications = notificationRows || []
   const preferences = preferenceRow || {
     in_app_enabled: true,

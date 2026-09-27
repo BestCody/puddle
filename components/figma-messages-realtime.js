@@ -126,6 +126,8 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const [friends, setFriends] = useState(initialSnapshot.friends || [])
   const [friendsHasMore, setFriendsHasMore] = useState(Boolean(initialSnapshot.friendsHasMore))
   const [messages, setMessages] = useState(initialSnapshot.messages || [])
+  const [messagesLoadedForId, setMessagesLoadedForId] = useState(() => conversationId ? selectedId : null)
+  const [messagesLoadFailedForId, setMessagesLoadFailedForId] = useState(null)
   const [messagesHasMore, setMessagesHasMore] = useState(Boolean(initialSnapshot.messagesHasMore))
   const [shareableLocations, setShareableLocations] = useState(initialSnapshot.shareableLocations || [])
   const [shareableLocationsLoaded, setShareableLocationsLoaded] = useState(Boolean(initialSnapshot.shareableLocations?.length))
@@ -166,7 +168,8 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     messageSnapshotConversationIdRef.current = selectedId
     setMessages((current) => changedConversation ? (initialSnapshot.messages || []) : mergeById(current, initialSnapshot.messages || []))
     setMessagesHasMore((current) => current || Boolean(initialSnapshot.messagesHasMore))
-  }, [initialSnapshot.messages, initialSnapshot.messagesHasMore, selectedId])
+    if (conversationId && selectedId) setMessagesLoadedForId(selectedId)
+  }, [conversationId, initialSnapshot.messages, initialSnapshot.messagesHasMore, selectedId])
 
   const latestMessageId = messages.length ? messages[messages.length - 1]?.id : null
   useLayoutEffect(() => {
@@ -242,12 +245,17 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           const hydrated = await hydrateSocialLocationRows(data)
           setMessages((current) => mergeById(current, hydrated))
           setMessagesHasMore((current) => current || data.length === MESSAGE_PAGE_SIZE)
+          setMessagesLoadedForId(targetId)
+          setMessagesLoadFailedForId(null)
           return true
         }
         if (error) throw error
       } catch (cause) {
         console.warn('Could not refresh messages.', { message: cause?.message || 'unknown error' })
-        if (selectedId === targetId) setNotice('Messages could not be refreshed.')
+        if (selectedId === targetId) {
+          setMessagesLoadFailedForId(targetId)
+          setNotice('Messages could not be refreshed.')
+        }
       }
       return false
     })()
@@ -601,7 +609,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
                 {!mine ? <Avatar client={client} person={item} /> : null}
                 <div>{item.message_type === 'location' && item.location_slug ? <Link className="figma-friends-location-message" href={`/plans/${item.location_slug}`}><strong>{item.location_name || 'Shared place'}</strong><small>{item.location_city || 'Open place'}</small></Link> : <p>{item.body}</p>}</div>
               </div>
-            }) : <div className="figma-friends-chat-empty">Say hello</div>}
+            }) : <div className="figma-friends-chat-empty" role="status">{messagesLoadFailedForId === selectedId ? <><span>Messages could not be loaded.</span><button type="button" onClick={refreshMessages}>Try again</button></> : messagesLoadedForId === selectedId ? 'Say hello' : 'Loading messages…'}</div>}
           </div>
           {notice ? <p className="figma-friends-chat-notice" role="status">{notice}</p> : null}
           <form className="figma-friends-composer puddle-text-composer" onSubmit={send}>

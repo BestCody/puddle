@@ -169,6 +169,18 @@
   font: 700 .6875rem/1 var(--figma-mono);
 }
 
+.reportPost {
+  margin-left: auto;
+  color: #666;
+  font: 700 .6875rem/1.2 Manrope, sans-serif;
+  text-underline-offset: .2em;
+}
+
+.reportPost:focus-visible {
+  outline: .125rem solid #111;
+  outline-offset: .2rem;
+}
+
 .title {
   margin: .75rem .1875rem 0 var(--feed-content-indent);
   color: #111;

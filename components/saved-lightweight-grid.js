@@ -1,10 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { PhotoFrame } from '@/components/photo-frame'
 import { LocationVisualPreview } from '@/components/location-visual-preview'
 
-const PREVIEW_CACHE_KEY = 'puddle:saved-place-previews:v2'
+const PREVIEW_CACHE_KEY = 'puddle:saved-place-previews:v3'
 const PREVIEW_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const PREVIEW_CACHE_LIMIT = 300
 
@@ -46,7 +45,7 @@ function writePreviewCache(previews) {
   } catch {}
 }
 
-function SavedCardVisual({ className, href, ready, title, image, slug, children, onOpen, loading = 'lazy' }) {
+function SavedCardVisual({ className, href, ready, title, image, latitude, longitude, children, onOpen, loading = 'lazy' }) {
   function handleOpen(event) {
     if (onOpen) {
       event.preventDefault()
@@ -54,26 +53,6 @@ function SavedCardVisual({ className, href, ready, title, image, slug, children,
       return
     }
     if (!ready) event.preventDefault()
-  }
-
-  if (image) {
-    return <PhotoFrame
-      as="a"
-      className={className}
-      href={href}
-      src={image}
-      alt={`${title} photo`}
-      loading={loading}
-      unavailableClassName="is-unavailable"
-      unavailableText="Puddle"
-      data-saved-morph-link={ready ? '' : undefined}
-      data-saved-morph-photo={ready ? '' : undefined}
-      aria-disabled={!ready}
-      onClick={handleOpen}
-      aria-label={`Open ${title}`}
-    >
-      {children}
-    </PhotoFrame>
   }
 
   return <a
@@ -86,7 +65,7 @@ function SavedCardVisual({ className, href, ready, title, image, slug, children,
     aria-label={`Open ${title}`}
     style={{ position: 'relative', overflow: 'hidden' }}
   >
-    <LocationVisualPreview slug={slug} title={title} />
+    <LocationVisualPreview title={title} image={image} latitude={latitude} longitude={longitude} loading={loading} />
     {children}
   </a>
 }
@@ -165,7 +144,7 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
         data-saved-morph-image={ready && image ? image : undefined}
         key={`saved:${item.location_id}`}
       >
-        <SavedCardVisual className={photoClassName} href={detail} ready={ready} title={title} image={image} slug={slug} loading={imageLoading} onOpen={onOpen ? open : null}>
+        <SavedCardVisual className={photoClassName} href={detail} ready={ready} title={title} image={image} latitude={preview?.latitude} longitude={preview?.longitude} loading={imageLoading} onOpen={onOpen ? open : null}>
           {item.perfect_pick ? <b className={perfectPickClassName}>★ Perfect Pick</b> : null}
         </SavedCardVisual>
         <div className={copyClassName}>

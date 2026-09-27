@@ -47,8 +47,8 @@ const staticRoutes = [
 async function placeRoutes(markets) {
   // Do not fan out every market at once. A single search can decode several large immutable
   // projection objects; bounded workers keep sitemap generation below a serverless memory limit.
-  // getCachedMarketPlaces swallows catalogue errors and returns [], so a cold or unavailable B2
-  // degrades this to the hub-only sitemap it was before rather than failing the whole document.
+  // Catalogue errors remain visible to monitoring; a sitemap must not advertise
+  // places from a failed or stale lookup as if the public catalogue were healthy.
   const routeSets = new Array(markets.length)
   let cursor = 0
   const worker = async () => {

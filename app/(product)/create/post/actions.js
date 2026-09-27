@@ -2,10 +2,12 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage } from '@/lib/auth/redirect'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
+import { enforceRateLimitFromHeaders } from '@/lib/security/rate-limit'
 
 function text(formData, key, max) {
   return String(formData.get(key) || '').trim().slice(0, max)
@@ -24,6 +26,11 @@ export async function createPuddlePost(formData) {
 
   if (!title) redirect(feedMessage('error', 'Add a title before publishing.'))
   if (!locationId) redirect(feedMessage('error', 'Choose a saved place for this puddle.'))
+
+  const limited = await enforceRateLimitFromHeaders({
+    headers: await headers(), userId: session.user.id, action: 'create_puddle_post'
+  })
+  if (!limited.allowed) redirect(feedMessage('error', 'Too many puddles were published. Try again later.'))
 
   try {
     await ensureGlobalLocationReferences(createAdminClient(), [locationId])

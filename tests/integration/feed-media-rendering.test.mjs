@@ -30,10 +30,10 @@ test('social feed renders place media inside the place card with shared photo-or
   assert.match(client, /SaveIcon/)
 
   assert.match(visual, /SwipeMapPreview/)
-  assert.match(visual, /puddle:location-visual-coordinates:v2/)
   assert.match(visual, /import \{ validCoordinates \} from '@\/lib\/app\/optional-number'/)
-  assert.match(visual, /localStorage/)
-  assert.match(visual, /\/api\/saved-location\//)
+  assert.doesNotMatch(visual, /localStorage|\/api\/saved-location\//)
+  assert.match(client, /latitude=\{location\.latitude\} longitude=\{location\.longitude\}/)
+  assert.match(visual, /onError=\{\(\) => setFailedImage\(image\)\}/)
   assert.match(visual, /image[\s\S]*<img/)
   assert.match(visual, /coordinates[\s\S]*<SwipeMapPreview/)
   assert.match(mapPreview, /tile\.openstreetmap\.org/)
@@ -59,7 +59,7 @@ test('social feed renders place media inside the place card with shared photo-or
   assert.match(photoFrame, /data-photo-state=\{state\}/)
 })
 
-test('saved cards keep canonical photos and use the shared cached map fallback when no photo exists', async () => {
+test('saved cards keep canonical photos and use batched coordinates for the map preview', async () => {
   const [grid, options, visual, mapPreview, styles, page] = await Promise.all([
     read('components/saved-lightweight-grid.js'),
     read('app/api/saved-location-options/route.js'),
@@ -72,21 +72,18 @@ test('saved cards keep canonical photos and use the shared cached map fallback w
   assert.match(options, /openPhotoUrlForHash/)
   assert.match(options, /cover_url/)
   assert.match(grid, /data-saved-morph-photo/)
-  assert.match(grid, /saved-place-previews:v2/)
-  assert.match(grid, /PhotoFrame/)
+  assert.match(grid, /saved-place-previews:v3/)
   assert.match(grid, /LocationVisualPreview/)
-  assert.match(grid, /if \(image\)/)
-  assert.match(grid, /<LocationVisualPreview slug=\{slug\} title=\{title\}/)
+  assert.match(grid, /<LocationVisualPreview title=\{title\} image=\{image\} latitude=\{latitude\} longitude=\{longitude\}/)
   assert.doesNotMatch(grid, /showImage|Photo unavailable/)
   assert.match(grid, /Saved places could not be loaded\./)
   assert.match(grid, /classPrefix = 'saved-lightweight'/)
   assert.match(grid, /const errorClass = `\$\{classPrefix\}-error`/)
 
-  assert.match(visual, /puddle:location-visual-coordinates:v2/)
-  assert.match(visual, /LOCATION_VISUAL_CACHE_TTL_MS/)
+  assert.match(options, /latitude: row\.latitude \?\? null/)
+  assert.match(options, /longitude: row\.longitude \?\? null/)
   assert.match(visual, /validCoordinates\(latitude, longitude\)/)
-  assert.match(visual, /writeCoordinateCache/)
-  assert.match(visual, /readCoordinateCache/)
+  assert.doesNotMatch(visual, /writeCoordinateCache|readCoordinateCache|\/api\/saved-location\//)
   assert.match(visual, /SwipeMapPreview/)
   assert.match(mapPreview, /tile\.openstreetmap\.org/)
 

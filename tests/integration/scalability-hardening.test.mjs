@@ -116,6 +116,7 @@ test('Pass saver listing is keyset-paged and its headline count is incrementally
 
 test('social feed uses bounded RLS keyset pages, indexed top-N comment previews, and lazy friend hydration', async () => {
   const feed = await read('lib/app/social-feed-data.js')
+  const feedScan = await read('lib/app/visible-feed-page.js')
   const page = await read('components/map-route-client.js')
   const client = await read('components/social-feed-client.js')
   const share = await read('app/(product)/map/feed-share-menu.js')
@@ -127,7 +128,9 @@ test('social feed uses bounded RLS keyset pages, indexed top-N comment previews,
   assert.match(feed, /DEFAULT_PAGE_SIZE = 3/)
   assert.match(feed, /\.from\('social_posts'\)[\s\S]*profiles!social_posts_author_id_fkey/)
   assert.match(feed, /\.order\('created_at', \{ ascending: false \}\)[\s\S]*\.order\('id', \{ ascending: false \}\)/)
-  assert.match(feed, /pageSize \+ 1/)
+  assert.match(feed, /queryFeedPosts\(session, cursorAt, cursorId, limit/)
+  assert.match(feedScan, /maxBatches = 3/)
+  assert.match(feedScan, /limit: scanSize \+ 1/)
   assert.doesNotMatch(feed, /rpc\('social_feed_post_ids_v2'/)
   assert.match(feed, /rpc\('social_comment_previews_v2'/)
   assert.match(feed, /per_post: 3/)
