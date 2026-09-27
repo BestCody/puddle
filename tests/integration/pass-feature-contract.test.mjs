@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
+import { getMembershipSnapshot } from '../../lib/app/membership-data.js'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
@@ -32,8 +33,37 @@ test('creating a location is Pass-gated in the page, action, and database policy
   const migration = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
 
   assert.match(page, /membership\.active \? <LocationEditor/)
+  assert.match(page, /const membership = await getMembershipSnapshot\(session\)/)
+  assert.match(page, /const options = membership\.active \? await getCreatorOptions\(session\) : null/)
   assert.match(actions, /puddle_tinder_active_v1/)
   assert.match(migration, /create policy "pass users create locations"/)
+})
+
+test('membership reads only membership data, not unrelated global-match preferences', async () => {
+  const membership = await read('lib/app/membership-data.js')
+  assert.match(membership, /from\('puddle_memberships'\)/)
+  assert.doesNotMatch(membership, /global_connection_preferences/)
+  assert.doesNotMatch(membership, /preferenceResult/)
+
+  const tables = []
+  const session = {
+    user: { id: 'test-user' },
+    profile: { birth_date: '2000-01-01' },
+    supabase: {
+      from(table) {
+        tables.push(table)
+        return {
+          select() { return this },
+          eq() { return this },
+          async maybeSingle() { return { data: { tier: 'free', status: 'inactive' }, error: null } }
+        }
+      }
+    }
+  }
+  const snapshot = await getMembershipSnapshot(session)
+  assert.deepEqual(tables, ['puddle_memberships'])
+  assert.equal(snapshot.active, false)
+  assert.equal(snapshot.adult, true)
 })
 
 test('Message anyone uses trigram-backed Pass search and guarded direct conversations', async () => {
