@@ -40,7 +40,7 @@ async function fillOnboarding(page, { username, city = 'Toronto', bio = 'Low-key
   await page.getByLabel('City or town').fill(city)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page.getByRole('listbox', { name: 'Location results' }).getByRole('option').first().click()
-  await next.click()
+  await page.getByRole('button', { name: 'Customize your deck' }).click()
 
   // Step 3 — How far would you travel?
   await page.getByLabel('Search radius').fill('25')
@@ -168,6 +168,32 @@ test('duplicate usernames keep onboarding values in place with an inline error',
   expect(profile.bio).toBe(bio)
   expect(profile.interests).toEqual(expect.arrayContaining(['cafe', 'restaurant', 'gallery']))
   expect(profile.onboarding_completed_at).toBeNull()
+})
+
+test('new users can start discovering after choosing a location', async ({ page }) => {
+  const candidate = await createConfirmedUser({ displayName: 'Quick Start' })
+  await signInThroughUi(page, candidate.email, candidate.password)
+  await expect(page).toHaveURL(/\/onboarding$/)
+  await page.route('**/api/location/search**', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ results: [{ providerId: 'test-toronto', city: 'Toronto', ...cityData.Toronto, label: 'Toronto, Ontario, Canada' }] })
+  }))
+
+  await page.locator('input[name="username"]').fill(`quick_${uniqueSuffix(12)}`)
+  await page.getByLabel('Birth date').fill('19940615')
+  await page.getByRole('button', { name: 'Next step' }).click()
+  await page.getByLabel('City or town').fill('Toronto')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await page.getByRole('listbox', { name: 'Location results' }).getByRole('option').first().click()
+  await page.getByRole('button', { name: 'Start exploring' }).click()
+
+  await expect(page).toHaveURL(/\/discover\?success=/)
+  await expect(page.locator('.figma-swipe-card.is-active')).toBeVisible()
+  const profile = await waitForProfile(candidate.user.id)
+  expect(profile.onboarding_completed_at).toBeTruthy()
+  expect(profile.search_radius_km).toBe(10)
+  expect(profile.interests).toEqual([])
 })
 
 test('birth date rejects impossible dates before onboarding submission', async ({ page }) => {
