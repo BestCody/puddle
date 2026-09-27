@@ -1,5 +1,4 @@
 import './global.css'
-import { SettingsScrollBridge } from '@/components/settings-scroll-bridge'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
@@ -36,7 +35,6 @@ export default function RootLayout({ children }) {
     </head>
     <body>
       {children}
-      <SettingsScrollBridge />
       <ServiceWorkerCleanup />
       {vercelTelemetryEnabled ? <><SpeedInsights /><Analytics /></> : null}
     </body>

@@ -4,6 +4,7 @@ import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
 import { UsernameInput } from '@/components/username-input'
 import { PassNotificationAlertControl } from '@/components/pass-notification-alerts'
+import { SettingsScrollBridge } from '@/components/settings-scroll-bridge'
 import { deleteAccount, revokeOtherSessions, updatePassword } from '@/app/auth/actions'
 import { markAllNotificationsRead, markNotificationRead, updateAppearance, updateDateProfile, updateNotificationPreferences } from './actions'
 import { requireUser } from '@/lib/auth/user'
@@ -102,6 +103,7 @@ export default async function AccountPage({ searchParams }) {
   const mobileBackHref = selectedSection ? mobileSettingsIndexHref(returnTo) : returnTo
 
   return <ProductShell user={user} profile={profile} settingsOverlay={!embedded}>
+    <SettingsScrollBridge />
     <div className={`figma-settings-screen${embedded ? ' is-embedded' : ''}${mobileFlow ? ' is-mobile-flow' : ''}${mobileFlow && !selectedSection ? ' is-mobile-index' : ''}`}>
       <section className={windowClass} aria-label="Settings">
         {mobileFlow ? <Link className="figma-settings-mobile-back" href={mobileBackHref} aria-label={selectedSection ? 'Back to Settings' : 'Back to Profile'}>‹ <span>Back</span></Link> : <Link className="figma-settings-close" href={returnTo} aria-label="Close settings">×</Link>}

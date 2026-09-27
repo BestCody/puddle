@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { LocationMap } from '@/components/location-map'
 import { useModalFocus } from '@/components/modal-focus'
 import { PhotoFrame } from '@/components/photo-frame'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 import { validCoordinates } from '@/lib/app/optional-number'
+
+const LocationMap = dynamic(() => import('@/components/location-map').then((module) => module.LocationMap))
 
 function applyNames(card) {
   const key = card?.dataset?.savedMorphKey

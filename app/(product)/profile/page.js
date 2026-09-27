@@ -100,7 +100,7 @@ export default async function ProfilePage({ searchParams }) {
         .order('pinned_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(12)),
-      requiredQuery(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 100 })),
+      requiredQuery(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 4 })),
       readSavedLocationCount(session.supabase, session.user.id),
       readFriendCount(session.supabase)
     ])
