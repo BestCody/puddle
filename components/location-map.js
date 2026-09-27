@@ -122,6 +122,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const catalogueRequestRef = useRef(0)
   const heatmapRequestRef = useRef(0)
   const [viewport, setViewport] = useState({ width: 900, height: 620 })
+  const [viewportMeasured, setViewportMeasured] = useState(false)
   const [center, setCenter] = useState(initialCenter || { latitude: 43.6532, longitude: -79.3832 })
   const [zoom, setZoom] = useState(initialPoints.length <= 1 ? 14 : 12)
   const [filter, setFilter] = useState('all')
@@ -153,7 +154,12 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   useEffect(() => {
     const node = mapRef.current
     if (!node) return
-    const observer = new ResizeObserver(([entry]) => setViewport({ width: Math.max(280, entry.contentRect.width), height: Math.max(420, entry.contentRect.height) }))
+    const observer = new ResizeObserver(([entry]) => {
+      const width = Math.max(280, entry.contentRect.width)
+      const height = Math.max(420, entry.contentRect.height)
+      setViewport((current) => current.width === width && current.height === height ? current : { width, height })
+      setViewportMeasured(true)
+    })
     observer.observe(node)
     return () => observer.disconnect()
   }, [])
@@ -191,6 +197,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       setCatalogueState('idle')
       return undefined
     }
+    if (!viewportMeasured) return undefined
     const controller = new AbortController()
     setCatalogueState('loading')
     const timer = window.setTimeout(async () => {
@@ -228,11 +235,11 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       }
     }, 280)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [catalogueRetry, center.latitude, center.longitude, filter, loadCatalogue, selectingForPost, viewport.height, viewport.width, zoom])
+  }, [catalogueRetry, center.latitude, center.longitude, filter, loadCatalogue, selectingForPost, viewport.height, viewport.width, viewportMeasured, zoom])
 
   useEffect(() => {
     const requestId = ++heatmapRequestRef.current
-    if (!passActive || !heatmapEnabled) return undefined
+    if (!passActive || !heatmapEnabled || !viewportMeasured) return undefined
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
       const bounds = viewportBounds(center, zoom, viewport)
@@ -250,7 +257,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       }
     }, 320)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [center.latitude, center.longitude, heatmapEnabled, passActive, viewport.height, viewport.width, zoom])
+  }, [center.latitude, center.longitude, heatmapEnabled, passActive, viewport.height, viewport.width, viewportMeasured, zoom])
 
   const allPoints = useMemo(() => {
     const merged = new Map()
@@ -468,7 +475,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     <div className="location-map-layout">
       <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onKeyDown={handleMapKeyDown} data-map-zoom={zoom} data-map-center-latitude={center.latitude} data-map-center-longitude={center.longitude} tabIndex={0} aria-label="Interactive map of Puddle locations. Use arrow keys to pan and plus or minus to zoom.">
         <div className="location-map-pan-layer" ref={panLayerRef}>
-          <MapTileLayer center={center} zoom={zoom} viewport={viewport} />
+          {viewportMeasured ? <MapTileLayer center={center} zoom={zoom} viewport={viewport} /> : null}
           {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{visibleHeatmap.map((point) => {
             const projected = project(point.latitude, point.longitude, zoom)
             const x = projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2

@@ -1,14 +1,16 @@
 "use client"
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { RoutedSegment } from '@/components/routed-segment'
-import { LocationMap } from '@/components/location-map'
 import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
 import { DiscoverSearchOverlay } from '@/components/discover-search-overlay'
-import { SocialFeedClient } from '@/components/social-feed-client'
 import styles from '@/app/(product)/map/MapFeed.module.css'
+
+const LocationMap = dynamic(() => import('@/components/location-map').then((module) => module.LocationMap))
+const SocialFeedClient = dynamic(() => import('@/components/social-feed-client').then((module) => module.SocialFeedClient))
 
 const DEFAULT_MAP_CENTER = { latitude: 43.6532, longitude: -79.3832 }
 
@@ -35,6 +37,8 @@ function MapScreen({ selectingForPost, query }) {
   useEffect(() => {
     const controller = new AbortController()
     setError('')
+    // Start the map chunk while the private snapshot request is in flight.
+    void import('@/components/location-map')
     // The map page emits a credentialed fetch preload for this fixed endpoint.
     // Default cache mode lets hydration consume that preload while the API's
     // private no-store response still prevents browser persistence.
