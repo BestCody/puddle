@@ -11,10 +11,8 @@ export const metadata = { title: 'Add location' }
 export default async function CreatePlacePage({ searchParams }) {
   const params = await searchParams
   return renderProductPage(async (session) => {
-    const [options, membership] = await Promise.all([
-      getCreatorOptions(session),
-      getMembershipSnapshot(session)
-    ])
+    const membership = await getMembershipSnapshot(session)
+    const options = membership.active ? await getCreatorOptions(session) : null
     return <>
       <div className="page-heading-row">
         <div>
