@@ -1,31 +1,26 @@
-import { createClient } from '@supabase/supabase-js'
 import { getActiveSearchManifest, getLocationsByIdsFromShards } from '../lib/app/location-search-shards.js'
+import { createManagementQuery } from './supabase-management-query.mjs'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!url || !key) throw new Error('Supabase URL and service key are required.')
-
-const admin = createClient(url, key, {
-  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-})
+const querySql = createManagementQuery({ projectUrl: url, accessToken: process.env.SUPABASE_ACCESS_TOKEN })
 const checkpointId = 'global-location-ref-search-v1'
 const batchSize = 64
 const { manifest } = await getActiveSearchManifest()
-const { data: checkpoint, error: checkpointError } = await admin
-  .from('location_ref_index_checkpoint').select('last_id').eq('id', checkpointId).maybeSingle()
-if (checkpointError) throw checkpointError
+const [checkpoint] = await querySql(
+  'select last_id::text as last_id from public.location_ref_index_checkpoint where id=$1',
+  [checkpointId]
+)
 
 let cursor = process.argv.includes('--restart') ? null : checkpoint?.last_id || null
 let indexed = 0
 let missing = 0
 
 for (;;) {
-  let request = admin.from('location_refs').select('id').eq('kind', 'global')
-    .order('id', { ascending: true }).limit(batchSize)
-  if (cursor) request = request.gt('id', cursor)
-  const { data: refs, error } = await request
-  if (error) throw error
-  if (!refs?.length) break
+  const refs = await querySql(
+    'select id::text as id from public.location_refs where kind=$1 and ($2::uuid is null or id>$2::uuid) order by id limit $3',
+    ['global', cursor, batchSize]
+  )
+  if (!refs.length) break
 
   const locations = await getLocationsByIdsFromShards(refs.map((ref) => ref.id), { manifest })
   const rows = locations.map((row) => ({
@@ -36,23 +31,28 @@ for (;;) {
     city: String(row.city || '').slice(0, 160)
   }))
   if (rows.length) {
-    const { error: writeError } = await admin.from('location_ref_search_index').upsert(rows, { onConflict: 'location_id' })
-    if (writeError) throw writeError
+    await querySql(`
+      insert into public.location_ref_search_index(location_id,name,slug,category,city)
+      select x.location_id,x.name,x.slug,x.category,x.city
+      from jsonb_to_recordset($1::jsonb) as x(location_id uuid,name text,slug text,category text,city text)
+      on conflict (location_id) do update set
+        name=excluded.name,slug=excluded.slug,category=excluded.category,city=excluded.city,indexed_at=now()
+    `, [JSON.stringify(rows)])
   }
 
   indexed += rows.length
   missing += refs.length - rows.length
   cursor = refs[refs.length - 1].id
-  const { error: saveError } = await admin.from('location_ref_index_checkpoint').upsert({
-    id: checkpointId, last_id: cursor, updated_at: new Date().toISOString()
-  }, { onConflict: 'id' })
-  if (saveError) throw saveError
+  await querySql(`
+    insert into public.location_ref_index_checkpoint(id,last_id,updated_at)
+    values($1,$2::uuid,now())
+    on conflict (id) do update set last_id=excluded.last_id,updated_at=excluded.updated_at
+  `, [checkpointId, cursor])
   console.log(JSON.stringify({ cursor, indexed, missing }))
 }
 
-const { data: remaining, error: countError } = await admin.rpc('location_ref_index_progress_v1')
-if (countError) throw countError
-const remainingCount = Number(remaining)
+const [progress] = await querySql('select public.location_ref_index_progress_v1() as remaining')
+const remainingCount = Number(progress?.remaining)
 if (!Number.isSafeInteger(remainingCount)) throw new Error('Reference index progress is unavailable.')
 console.log(JSON.stringify({ complete: remainingCount === 0, indexed, missing, remaining: remainingCount }))
 if (remainingCount) throw new Error(`${remainingCount} global references still lack searchable metadata. Rerun with --restart after checking their B2 records.`)
