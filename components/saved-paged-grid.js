@@ -37,7 +37,7 @@ export function SavedPagedGrid({ initialItems, initialPagination, category, quer
   }
 
   const initialPreviews = useMemo(() => Object.fromEntries(initialItems.filter((item) => item.slug).map((item) => [String(item.location_id), {
-    title: item.title, slug: item.slug, city: item.city, category: item.category
+    title: item.title, slug: item.slug, city: item.city, category: item.category, latitude: item.latitude, longitude: item.longitude
   }])), [initialItems])
 
   return <>

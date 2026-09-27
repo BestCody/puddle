@@ -16,7 +16,7 @@ const ACTIONS = [
   'delist_event', 'cancel_event', 'relist_event', 'delist_location',
   'relist_location', 'suspend_host', 'restore_host', 'freeze_payouts',
   'unfreeze_payouts', 'restrict_conversation', 'reopen_conversation',
-  'remove_message', 'remove_comment', 'approve_host_verification',
+  'remove_message', 'remove_comment', 'remove_post', 'approve_host_verification',
   'reject_host_verification', 'approve_verification_document',
   'reject_verification_document', 'approve_location_claim',
   'reject_location_claim', 'quarantine_media', 'approve_media',
@@ -50,12 +50,21 @@ export async function POST(request) {
     const caseId = uuid(body.caseId, 'caseId')
     const action = string(body.action, { name: 'action', min: 2, max: 80, choices: ACTIONS })
     const payload = record(body.payload || {}, { name: 'payload', maxBytes: 20_000 })
-    const { data, error } = await session.supabase.rpc('admin_moderation_action_v1', {
-      target_case: caseId,
-      action_name: action,
-      action_payload: payload,
-      request_id_value: limited.requestId
-    })
+    if (action === 'remove_post' && typeof payload.reason !== 'string') {
+      return NextResponse.json({ error: 'A specific removal reason is required.' }, { status: 400 })
+    }
+    const { data, error } = action === 'remove_post'
+      ? await session.supabase.rpc('admin_remove_post_v1', {
+        target_case: caseId,
+        reason_value: string(payload.reason, { name: 'reason', min: 8, max: 2000 }),
+        request_id_value: limited.requestId
+      })
+      : await session.supabase.rpc('admin_moderation_action_v1', {
+        target_case: caseId,
+        action_name: action,
+        action_payload: payload,
+        request_id_value: limited.requestId
+      })
     if (error) throw error
 
     if (action === 'delist_location' || action === 'relist_location') {

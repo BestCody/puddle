@@ -7,7 +7,7 @@ import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
 import { verifyTurnstile } from '@/lib/security/turnstile'
 import { enforceRateLimitFromHeaders } from '@/lib/security/rate-limit'
 
-const TARGETS = new Set(['event','location','host','profile','conversation','message','comment','plan','ticket','order','payment'])
+const TARGETS = new Set(['event','location','host','profile','conversation','message','comment','post','plan','ticket','order','payment'])
 function clean(value, max) { return String(value || '').trim().slice(0, max) }
 
 export async function submitContentReport(formData) {

@@ -64,6 +64,7 @@ function FeedPost({ post, classes = styles, demo = false, onDemoPlaceOpen = null
     <header className={classes.author}>
       <PhotoFrame as="span" src={post.author_avatar_url} alt="" className={classes.avatar} unavailableText={initials(authorName)} loadingText="" />
       <span className={classes.authorMeta}><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
+      {!demo ? <Link className={classes.reportPost} href={`/report?target_type=post&target_id=${encodeURIComponent(post.id)}&return_to=%2Fmap`}>Report post</Link> : null}
     </header>
     {post.title ? <p className={classes.title}>{post.title}</p> : null}
     {post.body ? <p className={classes.copy}>{post.body}</p> : null}
@@ -72,7 +73,7 @@ function FeedPost({ post, classes = styles, demo = false, onDemoPlaceOpen = null
       <small className={classes.placeArea}>{location.neighborhood || location.city || ''}</small>
       <h2>{location.name}</h2><b className={classes.placeAdd} aria-hidden="true">+</b>
       <span className={classes.placeVisual}>
-        <LocationVisualPreview slug={location.slug} title={location.name} image={image} />
+        <LocationVisualPreview title={location.name} image={image} latitude={location.latitude} longitude={location.longitude} />
       </span>
     </Link>
     <footer className={classes.interactions} aria-label="Post actions">
@@ -121,7 +122,7 @@ function FeedStream({ feed, query, loadingMore, loadMoreError, onLoadMore, class
       classes={classes}
     />
   </> : <div className={classes.empty}>
-    <strong>{query ? 'No posts match that search.' : 'No one has posted a puddle yet.'}</strong>
+    <strong>{nextFeedQuery(query, feed.pagination) ? 'No visible puddles in this batch.' : query ? 'No posts match that search.' : 'No one has posted a puddle yet.'}</strong>
     {nextFeedQuery(query, feed.pagination)
       ? <FeedPagination
         query={query}

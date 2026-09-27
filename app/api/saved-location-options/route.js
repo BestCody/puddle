@@ -17,6 +17,8 @@ function optionShape(row) {
     slug: row.slug || null,
     city: row.city || row.region || row.country || null,
     neighborhood: row.neighborhood || null,
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
     category: row.category || row.kind || 'place',
     cover_url: openPhotoUrlForHash(photo.content_hash)
   }

@@ -45,7 +45,7 @@ jobs:
       - name: Allow production deployment to begin
         run: sleep 45
       - name: Run live product UI smoke
-        run: npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/completed-ui-production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs
+        run: npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/completed-ui-production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs tests/live/public-catalogue.spec.mjs
       - name: Run bounded production load until SLOs pass
         if: always()
         shell: bash

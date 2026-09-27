@@ -6,6 +6,7 @@ export async function GET() {
   return Response.json(
     {
       ok: true,
+      scope: 'liveness',
       service: 'puddle',
       phase: 'authentication',
       authConfigured: isSupabaseConfigured(),

@@ -225,7 +225,7 @@ test('Latency migration adds bootstrap RPC, friendship indexes, and RLS init-pla
   assert.doesNotMatch(migration, /security definer/i)
 })
 
-test('Social feed uses one indexed post-page read and a shell-first API render', async () => {
+test('Social feed uses bounded indexed scans and parallel page hydration', async () => {
   const [feed, page, client, api, restore] = await Promise.all([
     read('lib/app/social-feed-data.js'),
     read('components/map-route-client.js'),
