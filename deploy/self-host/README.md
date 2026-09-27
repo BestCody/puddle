@@ -222,6 +222,9 @@ exposes no host port; Caddy terminates TLS and removes untrusted
 client-IP headers before proxying. Do not place an additional unconfigured
 reverse proxy in front of it. If using a CDN later, configure trusted proxy
 ranges and firewall rules together, then retest rate limiting.
+Keep managed B2 credentials and endpoints out of `.env.selfhost`; the preflight
+rejects them. The one-time source transfer uses a separate private rclone
+configuration, not the running app's environment.
 
 Run `npm ci && npm run check` in CI or a trusted checkout before building the
 image. Repository checks use `git ls-files`, so the Docker build intentionally

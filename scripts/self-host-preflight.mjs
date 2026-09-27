@@ -38,6 +38,11 @@ export function validateSelfHostEnv(env) {
   if (env.PUDDLE_OBJECT_STORE !== 's3') {
     problems.push('PUDDLE_OBJECT_STORE=s3 is required for the full self-hosted stack.')
   }
+  const managedObjectCredentials = Object.keys(env).filter((name) =>
+    /^B2_(?:.*(?:KEY|TOKEN|APPLICATION_KEY|ENDPOINT)|DOWNLOAD_BASE_URL)$/.test(name) && configured(env[name]))
+  if (managedObjectCredentials.length) {
+    problems.push(`Remove Backblaze credentials and endpoints from the host app environment: ${managedObjectCredentials.sort().join(', ')}. Use a separate private rclone config for the one-time transfer.`)
+  }
   try {
     selfHostObjectConfig(env)
   } catch (error) {

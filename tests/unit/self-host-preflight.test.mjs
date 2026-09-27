@@ -53,3 +53,14 @@ test('self-host preflight requires a separate Supabase hostname matching its pub
   assert.ok(problems.some((problem) => problem.includes('distinct hostnames')))
   assert.ok(problems.some((problem) => problem.includes('NEXT_PUBLIC_SUPABASE_URL')))
 })
+
+test('self-host app refuses managed B2 credentials even when local S3 is configured', () => {
+  const problems = validateSelfHostEnv({
+    ...valid,
+    B2_DATA_APPLICATION_KEY: 'old-managed-secret',
+    B2_DATA_S3_ENDPOINT: 'https://s3.example.invalid'
+  })
+  assert.ok(problems.some((problem) => problem.includes('B2_DATA_APPLICATION_KEY')))
+  assert.ok(problems.some((problem) => problem.includes('B2_DATA_S3_ENDPOINT')))
+  assert.ok(problems.every((problem) => !problem.includes('old-managed-secret')))
+})
