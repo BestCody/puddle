@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url'
 
 export const SUPABASE_RELEASE = 'self-hosted/v0.8.2'
 export const SUPABASE_COMMIT = '564eab8ad7840b13324f68b1bfac074ef8d51c21'
+export const SUPABASE_VERSION_STAMP = `ref=${SUPABASE_RELEASE}\n`
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, { cwd, stdio: 'inherit' })
@@ -49,6 +50,8 @@ export function installSupabase(destination) {
     run('git', ['sparse-checkout', 'set', 'docker'], source)
     cpSync(join(source, 'docker'), target, { recursive: true, errorOnExist: true, force: false })
     writeFileSync(join(target, '.puddle-supabase-source'), `${SUPABASE_RELEASE}\n${SUPABASE_COMMIT}\n`, { flag: 'wx' })
+    // The official update.sh needs this base ref for its three-way vendor merge.
+    writeFileSync(join(target, '.supabase-version'), SUPABASE_VERSION_STAMP, { flag: 'wx' })
     copyFileSync(join(target, '.env.example'), join(target, '.env'))
     chmodSync(join(target, '.env'), 0o600)
     try {

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
-import { createReadStream, createWriteStream, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs'
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -11,6 +11,32 @@ function privateConfig(path) {
   }
 }
 
+function configuredRemotes(path) {
+  const remotes = new Map()
+  let current
+  for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+    const section = line.match(/^\s*\[([^\]]+)\]\s*$/)
+    if (section) {
+      if (remotes.has(section[1])) throw new Error(`RCLONE_CONFIG repeats remote ${section[1]}.`)
+      current = new Map()
+      remotes.set(section[1], current)
+      continue
+    }
+    if (!current || /^\s*[#;]/.test(line)) continue
+    const field = line.match(/^\s*([a-zA-Z0-9_]+)\s*=\s*(.*?)\s*$/)
+    if (field) current.set(field[1].toLowerCase(), field[2])
+  }
+  return remotes
+}
+
+function endpointUrl(value) {
+  try {
+    const url = new URL(value.includes('://') ? value : `https://${value}`)
+    if (url.username || url.password || url.search || url.hash || url.pathname !== '/') return null
+    return url
+  } catch { return null }
+}
+
 export function validateObjectMigrationEnv(env) {
   const problems = []
   try { privateConfig(env.RCLONE_CONFIG || '') } catch (error) { problems.push(error.message) }
@@ -19,6 +45,31 @@ export function validateObjectMigrationEnv(env) {
   if (!/^[a-zA-Z][a-zA-Z0-9_-]*:[a-zA-Z0-9._-]+$/.test(source)) problems.push('PUDDLE_SOURCE_OBJECT_REMOTE must be a bucket root, such as source:puddle-assets.')
   if (!/^[a-zA-Z][a-zA-Z0-9_-]*:[a-zA-Z0-9._-]+$/.test(target)) problems.push('PUDDLE_TARGET_OBJECT_REMOTE must be a bucket root, such as target:puddle-assets.')
   if (source && target && source === target) problems.push('Object source and destination must differ.')
+  const remoteOverrides = Object.keys(env).filter((name) => /^RCLONE_(?:CONFIG_|S3_)[A-Z0-9_]+$/i.test(name))
+  if (remoteOverrides.length) problems.push('Remove RCLONE_CONFIG_* and RCLONE_S3_* overrides; migration endpoints must come from the verified private config.')
+  if (problems.length === 0) {
+    try {
+      const remotes = configuredRemotes(env.RCLONE_CONFIG)
+      const [sourceName, sourceBucket] = source.split(':')
+      const [targetName, targetBucket] = target.split(':')
+      const sourceConfig = remotes.get(sourceName)
+      const targetConfig = remotes.get(targetName)
+      const sourceEndpoint = endpointUrl(sourceConfig?.get('endpoint') || '')
+      const targetEndpoint = endpointUrl(targetConfig?.get('endpoint') || '')
+      if (sourceConfig?.get('type') !== 's3' || sourceEndpoint?.protocol !== 'https:' ||
+          !/^s3\.[a-z0-9-]+\.backblazeb2\.com$/.test(sourceEndpoint.hostname) || sourceEndpoint.port) {
+        problems.push('Source remote must be an S3 remote on an HTTPS Backblaze B2 endpoint.')
+      }
+      if (targetConfig?.get('type') !== 's3' || targetEndpoint?.origin !== 'http://127.0.0.1:8333') {
+        problems.push('Target remote must be an S3 remote on the loopback-only object endpoint.')
+      }
+      if (!env.OBJECT_STORAGE_BUCKET || sourceBucket !== targetBucket || targetBucket !== env.OBJECT_STORAGE_BUCKET) {
+        problems.push('Source and target bucket names must match OBJECT_STORAGE_BUCKET used by the host app.')
+      }
+    } catch (error) {
+      problems.push(error.message)
+    }
+  }
   const reportRoot = String(env.PUDDLE_MIGRATION_REPORT_DIR || '')
   if (!isAbsolute(reportRoot) || reportRoot === '/' || resolve(reportRoot) === resolve('/')) {
     problems.push('PUDDLE_MIGRATION_REPORT_DIR must be a dedicated absolute directory.')
