@@ -64,7 +64,7 @@ test('mobile profile cards give content-driven bubbles enough vertical breathing
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*\.figma-profile-card\s*\{[\s\S]*padding: clamp\(/s)
   assert.match(styles, /\.figma-profile-card\s*\{[\s\S]*row-gap: clamp\(/s)
   assert.match(styles, /\.figma-profile-location-card\s*\{[\s\S]*grid-template-rows: auto auto !important;/s)
-  assert.match(styles, /\.figma-profile-mini-list > a\s*\{[\s\S]*min-height: 2rem;[\s\S]*padding-block: \.375rem;/s)
+  assert.match(styles, /\.figma-profile-mini-list > :is\(a, button\)\s*\{[\s\S]*min-height: 2rem;[\s\S]*padding-block: \.375rem;/s)
 })
 
 test('mobile Profile exposes the existing sign-out action without changing desktop navigation', async () => {

@@ -94,6 +94,8 @@ export function PuddleSearchOverlay({
 export function DiscoverSearchOverlay({ initialQuery = '', mapMode = false }) {
   return <PuddleSearchOverlay
     initialQuery={initialQuery}
+    placeholder={mapMode ? 'Search places' : 'Search post titles and text'}
+    triggerLabel={mapMode ? 'Search places' : 'Search posts'}
     fixedParams={mapMode ? { view: 'map' } : {}}
     triggerClassName={mapMode ? 'puddle-map-search-trigger' : ''}
     overlayClassName={mapMode ? '' : 'puddle-feed-search-overlay'}

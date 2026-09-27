@@ -77,7 +77,6 @@ export async function completeDateOnboarding(previousState, maybeFormData) {
   if (!Number.isFinite(radius) || !Number.isInteger(radius) || radius < 1 || radius > 100) {
     fieldErrors.search_radius_km = 'Choose a whole-number search radius from 1 to 100 km.'
   }
-  if (dateLocations.length < 3) fieldErrors.date_locations = 'Choose at least three kinds of places you like for dates.'
   if (bio.length > 500) fieldErrors.bio = 'Keep your date vibe to 500 characters or fewer.'
   if (!allowedVisibility.has(requestedVisibility)) fieldErrors.profile_visibility = 'Choose a valid profile visibility.'
 

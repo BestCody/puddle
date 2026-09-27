@@ -106,29 +106,33 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
       return () => controller.abort()
     }
     const cached = readPreviewCache(ids)
-    if (Object.keys(cached).length) setPreviews(cached)
+    if (Object.keys(cached).length) setPreviews((current) => ({ ...current, ...cached }))
 
     const missingIds = ids.filter((id) => !cached[id])
     if (!missingIds.length) return () => controller.abort()
 
-    fetch(`/api/saved-location-options?ids=${encodeURIComponent(missingIds.join(','))}`, { cache: 'no-store', signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`Saved locations returned ${response.status}`)
-        return response.json()
-      })
-      .then((payload) => {
-        const next = {}
-        for (const item of payload?.items || []) next[String(item.id)] = item
-        if (!Object.keys(next).length) return
-        setPreviews((current) => ({ ...current, ...next }))
-        writePreviewCache(next)
-      })
-      .catch((cause) => {
+    async function fetchPreviews() {
+      try {
+        for (let offset = 0; offset < missingIds.length; offset += 50) {
+          const batch = missingIds.slice(offset, offset + 50)
+          const response = await fetch(`/api/saved-location-options?ids=${encodeURIComponent(batch.join(','))}`, { cache: 'no-store', signal: controller.signal })
+          if (!response.ok) throw new Error(`Saved locations returned ${response.status}`)
+          const payload = await response.json()
+          const next = {}
+          for (const item of payload?.items || []) next[String(item.id)] = item
+          if (Object.keys(next).length) {
+            setPreviews((current) => ({ ...current, ...next }))
+            writePreviewCache(next)
+          }
+        }
+      } catch (cause) {
         if (!controller.signal.aborted) {
           console.warn('Could not load saved place previews.', { message: cause?.message || 'unknown error' })
           setLoadError('Saved places could not be loaded.')
         }
-      })
+      }
+    }
+    fetchPreviews()
     return () => controller.abort()
   }, [ids, initialPreviews, loadPreviews, retry])
 
@@ -141,7 +145,7 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
   return <section className={className} aria-label="Saved places" data-testid="saved-grid">
     {loadError ? <div className={errorClass} role="alert"><strong>{loadError}</strong><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
     {items.map((item, index) => {
-      const preview = previews[String(item.location_id)]
+      const preview = previews[String(item.location_id)] || (item.slug ? item : null)
       const title = preview?.title || 'Saved place'
       const meta = preview?.city || categoryLabel(preview?.category)
       const slug = preview?.slug || null

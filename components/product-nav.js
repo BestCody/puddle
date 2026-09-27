@@ -73,7 +73,7 @@ function shouldAvoidIdlePrefetch() {
   )
 }
 
-function NavItems({ mobile = false, avatarUrl = null }) {
+function NavItems({ avatarUrl = null }) {
   const pathname = usePathname()
   const router = useRouter()
   const routeActiveHref = items.find((item) => isActive(pathname, item.href))?.href ?? null
@@ -183,13 +183,13 @@ function NavItems({ mobile = false, avatarUrl = null }) {
       key={item.href}
     >
       <span className="figma-dashboard-nav-icon"><NavIcon type={item.icon} avatarUrl={resolvedAvatarUrl} /></span>
-      {mobile ? null : <span className="figma-dashboard-nav-label">{item.label}</span>}
+      <span className="figma-dashboard-nav-label">{item.label}</span>
     </Link>
   })
 }
 
 export function ProductNav({ mobile = false, avatarUrl = null }) {
   return mobile
-    ? <nav className="figma-dashboard-mobile-nav" aria-label="Puddle mobile navigation"><NavItems mobile avatarUrl={avatarUrl} /></nav>
+    ? <nav className="figma-dashboard-mobile-nav" aria-label="Puddle mobile navigation"><NavItems avatarUrl={avatarUrl} /></nav>
     : <nav className="figma-dashboard-nav" aria-label="Puddle navigation"><NavItems avatarUrl={avatarUrl} /></nav>
 }

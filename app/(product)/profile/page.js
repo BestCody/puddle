@@ -6,6 +6,7 @@ import { renderProductPage } from '@/lib/app/render-product-page'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { requiredQuery } from '@/lib/app/required-query'
 import { signOut } from '@/app/auth/actions'
+import { ProfileFriendButton } from '@/components/profile-friend-button'
 import { updateProfileTheme } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -53,6 +54,13 @@ async function readSavedLocationCount(supabase, profileId) {
   return count
 }
 
+async function readFriendCount(supabase) {
+  const { data: count, error } = await supabase.rpc('social_friend_count_v1')
+  if (error) throw error
+  if (!Number.isSafeInteger(count)) throw new Error('Friend count is unavailable.')
+  return count
+}
+
 async function globalLocations(ids, traceId) {
   const unique = [...new Set(ids.map(String).filter(Boolean))]
   if (!unique.length) return []
@@ -76,7 +84,7 @@ export default async function ProfilePage({ searchParams }) {
   const customizing = params?.customize === '1'
 
   return renderProductPage(async (session) => {
-    const [postRows, saveRows, friends, savedLocationCount] = await Promise.all([
+    const [postRows, saveRows, friends, savedLocationCount, friendCount] = await Promise.all([
       requiredQuery(session.supabase
         .from('social_posts')
         .select('id,title,body,created_at,location_id')
@@ -93,7 +101,8 @@ export default async function ProfilePage({ searchParams }) {
         .order('created_at', { ascending: false })
         .limit(12)),
       requiredQuery(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 100 })),
-      readSavedLocationCount(session.supabase, session.user.id)
+      readSavedLocationCount(session.supabase, session.user.id),
+      readFriendCount(session.supabase)
     ])
 
     const globalRows = await globalLocations([
@@ -134,7 +143,7 @@ export default async function ProfilePage({ searchParams }) {
         <div className="figma-profile-identity">
           <h1>{displayName}</h1>
           <small>@{username}</small>
-          <div className="figma-profile-counts" aria-label="Profile counts"><span>{friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}</span><span>{savedLocationCount} {savedLocationCount === 1 ? 'Save' : 'Saves'}</span></div>
+          <div className="figma-profile-counts" aria-label="Profile counts"><span>{friendCount} {friendCount === 1 ? 'Friend' : 'Friends'}</span><span>{savedLocationCount} {savedLocationCount === 1 ? 'Save' : 'Saves'}</span></div>
           <div className="figma-profile-chips" aria-label="Favorite categories">
             {chips.map((value) => <span key={value}>{value}</span>)}
             <Link href="/account?section=profile&returnTo=%2Fprofile" aria-label="Edit favorite categories">+</Link>
@@ -157,7 +166,7 @@ export default async function ProfilePage({ searchParams }) {
               <div className="figma-profile-post-place"><small>{String(recentLocation?.kind || 'Place').replaceAll('_', ' ')}</small><strong>{recentLocation?.name || recentPost.title}</strong><b>+</b></div>
             </Link> : <div className="figma-profile-card-empty"><p>No puddles posted yet.</p><Link href="/create/post">Create one</Link></div>}
           </article>
-          <article className="figma-profile-card figma-profile-friends-card"><h2>Friends</h2>{friends.length ? <div className="figma-profile-mini-list">{friends.slice(0, 4).map((friend) => <Link href="/matches?tab=messages" key={friend.id}><span>{friend.display_name || friend.username || 'Friend'}</span></Link>)}</div> : <p>No friends yet.</p>}<Link className="figma-profile-card-link" href="/matches?tab=add">Manage Friends</Link></article>
+          <article className="figma-profile-card figma-profile-friends-card"><h2>Friends</h2>{friends.length ? <div className="figma-profile-mini-list">{friends.slice(0, 4).map((friend) => <ProfileFriendButton friendId={friend.id} name={friend.display_name || friend.username || 'Friend'} key={friend.id} />)}</div> : <p>No friends yet.</p>}<Link className="figma-profile-card-link" href="/matches?tab=add">Manage Friends</Link></article>
         </div>
         <div className="figma-profile-card-column figma-profile-card-column--right">
           <article className="figma-profile-card figma-profile-location-card"><h2>Location</h2><strong>{locationLabel}</strong></article>

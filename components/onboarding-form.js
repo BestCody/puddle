@@ -303,9 +303,10 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
 
       <div className="pdl-onb-foot">
         <small className="pdl-onb-count" aria-live="polite">{blocker || `Step ${step + 1} of ${STEPS.length}`}</small>
+        {step === 1 ? <SubmitButton className="pdl-onb-submit" pendingText="Building your deck…" disabled={!values || Boolean(blocker)}>Start exploring</SubmitButton> : null}
         {isLastStep
           ? <SubmitButton className="pdl-onb-submit" pendingText="Building your deck…" disabled={!values || Boolean(blocker)}>Finish setup</SubmitButton>
-          : <button className="pdl-onb-next" type="button" onClick={() => goTo(step + 1)} disabled={!values || Boolean(blocker)} aria-label="Next step"><ArrowRight /></button>}
+          : <button className="pdl-onb-next" type="button" onClick={() => goTo(step + 1)} disabled={!values || Boolean(blocker)} aria-label={step === 1 ? 'Customize your deck' : 'Next step'}><ArrowRight /></button>}
       </div>
     </form>
 

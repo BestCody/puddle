@@ -350,6 +350,28 @@
   white-space: nowrap;
 }
 
+.loadMore {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1rem 2rem;
+}
+
+.loadMore button {
+  min-height: 2.75rem;
+  padding-inline: 1.25rem;
+  border: 0.125rem solid currentColor;
+  border-radius: 999rem;
+  background: #fff;
+  color: #7347a5;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.loadMore button:disabled { opacity: 0.6; cursor: wait; }
+.loadMore button:focus-visible { outline: 0.1875rem solid currentColor; outline-offset: 0.1875rem; }
+
 .empty {
   width: min(100%, 26.25rem);
   min-height: 16.25rem;

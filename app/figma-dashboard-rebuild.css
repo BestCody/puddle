@@ -510,22 +510,29 @@
     bottom: 0;
     height: 104px;
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     align-items: center;
-    padding: 12px 14px 18px;
+    padding: 12px max(0.5rem, env(safe-area-inset-right)) 18px max(0.5rem, env(safe-area-inset-left));
     background: linear-gradient(180deg, rgba(255,255,255,0), #fff 28%, #fff 100%);
   }
   .figma-dashboard-mobile-nav .figma-dashboard-nav-item {
-    width: 56px;
-    height: 56px;
+    width: min(100%, 3.5rem);
+    min-height: 3.5rem;
     justify-self: center;
     display: grid;
-    place-items: center;
+    align-content: center;
+    justify-items: center;
+    gap: 0.1rem;
     padding: 0;
-    border-radius: 20px;
+    border-radius: 1.25rem;
   }
-  .figma-dashboard-mobile-nav .figma-dashboard-nav-icon { width: 31px; height: 31px; }
-  .figma-dashboard-mobile-nav .figma-dashboard-nav-icon svg { width: 31px; height: 31px; }
+  .figma-dashboard-mobile-nav .figma-dashboard-nav-icon { width: 1.75rem; height: 1.75rem; }
+  .figma-dashboard-mobile-nav .figma-dashboard-nav-icon svg { width: 1.75rem; height: 1.75rem; }
+  .figma-dashboard-mobile-nav .figma-dashboard-nav-label {
+    font-size: clamp(0.55rem, 2.2vw, 0.7rem);
+    line-height: 1;
+    white-space: nowrap;
+  }
   .figma-dashboard-mobile-nav .figma-dashboard-nav-item.is-active {
     color: #fff;
     box-shadow: 0 4px 0 rgba(0,0,0,.25), inset 0 4px 0 rgba(0,0,0,.08);
