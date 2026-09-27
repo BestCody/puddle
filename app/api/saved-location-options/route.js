@@ -55,7 +55,8 @@ export async function GET(request) {
       .not('location_id', 'is', null)
       .order('created_at', { ascending: false })
       .limit(SAVED_OPTION_LIMIT)
-    if (error || !savedRows?.length) return NextResponse.json({ items: [] })
+    if (error) return NextResponse.json({ error: 'Saved places are unavailable.' }, { status: 503 })
+    if (!savedRows?.length) return NextResponse.json({ items: [] })
     ids = [...new Set(savedRows.map((row) => String(row.location_id || '')).filter(Boolean))]
   }
 

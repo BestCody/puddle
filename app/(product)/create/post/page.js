@@ -6,6 +6,7 @@ import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
+import { validCoordinates } from '@/lib/app/optional-number'
 import { createPuddlePost } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,8 @@ function categoryLabel(value) {
 
 function pointFromGlobalLocation(location) {
   if (!location) return null
+  const coordinates = validCoordinates(location.latitude, location.longitude)
+  if (!coordinates) return null
   const category = location.category || location.kind || 'location'
   const photoHash = location.primary_photo && typeof location.primary_photo === 'object'
     ? location.primary_photo.content_hash
@@ -40,8 +43,7 @@ function pointFromGlobalLocation(location) {
     category,
     neighborhood: location.neighborhood || null,
     city: location.city || null,
-    latitude: Number(location.latitude),
-    longitude: Number(location.longitude),
+    ...coordinates,
     href: location.slug ? `/plans/${location.slug}` : null,
     photo_url: openPhotoUrlForHash(photoHash),
     states: [],
@@ -52,14 +54,10 @@ function pointFromGlobalLocation(location) {
 
 async function requestedSwipePoint(session, requestedLocation) {
   if (!requestedLocation) return null
-  try {
-    const rows = await getGlobalLocationsByIds([requestedLocation], { traceId: session.traceId || null })
-    const location = rows?.[0]
-    if (!location || location.status !== 'published') return null
-    return pointFromGlobalLocation(location)
-  } catch {
-    return null
-  }
+  const rows = await getGlobalLocationsByIds([requestedLocation], { traceId: session.traceId || null })
+  const location = rows?.[0]
+  if (!location || location.status !== 'published') return null
+  return pointFromGlobalLocation(location)
 }
 
 function CreatePostPreview({ avatar, name, point }) {

@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { csrfFetch } from '@/lib/security/csrf-client'
+import { optionalNumber } from '@/lib/app/optional-number'
 
 function initialLocation(profile = {}) {
-  const latitude = Number(profile.latitude)
-  const longitude = Number(profile.longitude)
+  const latitude = optionalNumber(profile.latitude)
+  const longitude = optionalNumber(profile.longitude)
   return {
     city: profile.city || '',
     region: profile.region || '',

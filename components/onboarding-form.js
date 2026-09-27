@@ -6,6 +6,7 @@ import { LocationPicker } from '@/components/location-picker'
 import { SubmitButton } from '@/components/submit-button'
 import { UsernameInput } from '@/components/username-input'
 import { birthDateError } from '@/lib/app/input-validation'
+import { validCoordinates } from '@/lib/app/optional-number'
 
 const INITIAL_STATE = { message: '', fieldErrors: {}, submittedAt: 0 }
 
@@ -60,9 +61,7 @@ function stepBlocker(step, values) {
     return ''
   }
   if (step === 1) {
-    const latitude = Number(values.latitude)
-    const longitude = Number(values.longitude)
-    if (!values.city || values.latitude === '' || values.longitude === '' || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    if (!values.city || !validCoordinates(values.latitude, values.longitude)) {
       return 'Choose a city or use your current location.'
     }
     return ''

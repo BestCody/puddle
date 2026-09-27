@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache'
 import { headers } from 'next/headers'
 import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overlay'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
+import { validCoordinates } from '@/lib/app/optional-number'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -68,9 +69,8 @@ function finiteParam(params, name) {
 }
 
 function mapPoint(row) {
-  const latitude = Number(row.latitude)
-  const longitude = Number(row.longitude)
-  if (!row.id || !row.slug || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+  const coordinates = validCoordinates(row.latitude, row.longitude)
+  if (!row.id || !row.slug || !coordinates) return null
   const kind = row.category || 'location'
   return {
     id: row.id,
@@ -80,8 +80,7 @@ function mapPoint(row) {
     category: kind,
     neighborhood: row.neighborhood || null,
     city: row.city || null,
-    latitude,
-    longitude,
+    ...coordinates,
     href: `/plans/${row.slug}`,
     photo_url: openPhotoUrlForHash(row.primary_photo?.content_hash),
     states: ['catalogue'],

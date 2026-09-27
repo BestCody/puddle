@@ -74,9 +74,11 @@ async function authenticatedSession(traceId, requestHeaders) {
   if (profile?.suspended_at || profile?.banned_at) {
     return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
   }
-  const preloadedSeenLocationIds = Array.isArray(sessionResult.data?.seen_location_ids)
-    ? sessionResult.data.seen_location_ids.filter((id) => typeof id === 'string' && UUID_PATTERN.test(id))
-    : []
+  const seenLocationIds = sessionResult.data?.seen_location_ids
+  if (!Array.isArray(seenLocationIds) || !seenLocationIds.every((id) => typeof id === 'string' && UUID_PATTERN.test(id))) {
+    return { error: NextResponse.json({ error: 'Discovery history could not be verified.' }, { status: 503 }) }
+  }
+  const preloadedSeenLocationIds = seenLocationIds
   return { session: { supabase, user, profile: profile || {}, traceId, authMs, preloadedSeenLocationIds } }
 }
 

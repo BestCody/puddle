@@ -7,6 +7,7 @@ import { LocationMap } from '@/components/location-map'
 import { useModalFocus } from '@/components/modal-focus'
 import { PhotoFrame } from '@/components/photo-frame'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
+import { validCoordinates } from '@/lib/app/optional-number'
 
 function applyNames(card) {
   const key = card?.dataset?.savedMorphKey
@@ -62,9 +63,8 @@ function initials(name) {
 }
 
 function mapPoint(location, state) {
-  const latitude = Number(location?.latitude)
-  const longitude = Number(location?.longitude)
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return []
+  const coordinates = validCoordinates(location?.latitude, location?.longitude)
+  if (!coordinates) return []
   return [{
     id: location.id,
     location_id: location.id,
@@ -73,8 +73,7 @@ function mapPoint(location, state) {
     category: location.kind,
     neighborhood: location.neighborhood,
     city: location.city,
-    latitude,
-    longitude,
+    ...coordinates,
     href: '#',
     photo_url: location.cover_url || location.gallery?.[0]?.url || null,
     states: [state?.saved ? 'saved' : 'catalogue'],

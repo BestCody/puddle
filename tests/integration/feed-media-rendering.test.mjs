@@ -31,7 +31,7 @@ test('social feed renders place media inside the place card with shared photo-or
 
   assert.match(visual, /SwipeMapPreview/)
   assert.match(visual, /puddle:location-visual-coordinates:v2/)
-  assert.match(visual, /hasCoordinateValue/)
+  assert.match(visual, /import \{ validCoordinates \} from '@\/lib\/app\/optional-number'/)
   assert.match(visual, /localStorage/)
   assert.match(visual, /\/api\/saved-location\//)
   assert.match(visual, /image[\s\S]*<img/)
@@ -84,7 +84,7 @@ test('saved cards keep canonical photos and use the shared cached map fallback w
 
   assert.match(visual, /puddle:location-visual-coordinates:v2/)
   assert.match(visual, /LOCATION_VISUAL_CACHE_TTL_MS/)
-  assert.match(visual, /hasCoordinateValue/)
+  assert.match(visual, /validCoordinates\(latitude, longitude\)/)
   assert.match(visual, /writeCoordinateCache/)
   assert.match(visual, /readCoordinateCache/)
   assert.match(visual, /SwipeMapPreview/)

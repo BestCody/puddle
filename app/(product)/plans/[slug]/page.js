@@ -8,6 +8,7 @@ import { renderProductPage } from '@/lib/app/render-product-page'
 import { getPublicLocation } from '@/lib/app/public-content'
 import { getLocationPlanStatus } from '@/lib/app/location-plans-data'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
+import { validCoordinates } from '@/lib/app/optional-number'
 import { planPlaceVisit, togglePinnedPlace, toggleSavedPlace } from './actions'
 import { DetailReviews } from './detail-reviews'
 import { DetailShareMenu } from './detail-share-menu'
@@ -66,7 +67,8 @@ export default async function SavedPlacePage({ params, searchParams }) {
     const folders = [location.kind].filter(Boolean)
     const transitionNames = savedLocationTransitionNames(location.id)
 
-    const mapPoint = Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude)) ? [{
+    const coordinates = validCoordinates(location.latitude, location.longitude)
+    const mapPoint = coordinates ? [{
       id: location.id,
       location_id: location.id,
       title: location.name,
@@ -74,8 +76,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
       category: location.kind,
       neighborhood: location.neighborhood,
       city: location.city,
-      latitude: Number(location.latitude),
-      longitude: Number(location.longitude),
+      ...coordinates,
       href: `/plans/${location.slug}`,
       photo_url: location.cover_url || location.gallery?.[0]?.url || null,
       states: mapStates.length ? mapStates : ['catalogue'],
