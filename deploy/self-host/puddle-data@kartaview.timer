@@ -1,0 +1,10 @@
+[Unit]
+Description=Puddle KartaView discovery hourly
+
+[Timer]
+OnCalendar=*-*-* *:11:00 UTC
+Persistent=false
+Unit=puddle-data@kartaview.service
+
+[Install]
+WantedBy=timers.target

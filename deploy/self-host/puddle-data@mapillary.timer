@@ -1,0 +1,10 @@
+[Unit]
+Description=Puddle Mapillary discovery every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:07:00 UTC
+Persistent=false
+Unit=puddle-data@mapillary.service
+
+[Install]
+WantedBy=timers.target

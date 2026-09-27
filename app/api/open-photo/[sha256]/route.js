@@ -129,12 +129,24 @@ export async function GET(_request, { params }) {
       return response
     }
 
-    const configStartedAt = latencyStart()
-    const config = await runtimeConfig(createAdminClient())
-    timings.push({ name: 'config', durationMs: elapsedMs(configStartedAt) })
     const downloadStartedAt = latencyStart()
-    const body = await downloadPrivateObject(config, canonicalStorageKey(hash))
-    timings.push({ name: 'b2', durationMs: elapsedMs(downloadStartedAt) })
+    let body
+    if (process.env.PUDDLE_OBJECT_STORE === 's3') {
+      const { downloadSelfHostObject } = await import('@/lib/storage/self-host-object-store')
+      body = await downloadSelfHostObject(canonicalStorageKey(hash), { maxBytes: 10_000_000, missingOk: true })
+      if (body === null) {
+        const missing = new Error('Photo not found.')
+        missing.status = 404
+        throw missing
+      }
+      timings.push({ name: 'object', durationMs: elapsedMs(downloadStartedAt) })
+    } else {
+      const configStartedAt = latencyStart()
+      const config = await runtimeConfig(createAdminClient())
+      timings.push({ name: 'config', durationMs: elapsedMs(configStartedAt) })
+      body = await downloadPrivateObject(config, canonicalStorageKey(hash))
+      timings.push({ name: 'b2', durationMs: elapsedMs(downloadStartedAt) })
+    }
     const verifyStartedAt = latencyStart()
     const actualHash = createHash('sha256').update(body).digest('hex')
     if (actualHash !== hash) throw new Error('Private B2 media failed canonical SHA256 verification.')

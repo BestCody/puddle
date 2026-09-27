@@ -3,6 +3,11 @@ node_modules
 .env
 .env.local
 .env.*.local
+.env.selfhost
+.env.jobs
+.env.backup
+.env.migration
+.venv/
 .vercel
 supabase/.temp/
 .DS_Store

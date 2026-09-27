@@ -1,0 +1,14 @@
+[Unit]
+Description=Back up Puddle Postgres to an encrypted off-machine restic repository
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/puddle
+EnvironmentFile=/opt/puddle/.env.backup
+ExecStart=/usr/bin/node /opt/puddle/scripts/self-host-backup-postgres.mjs
+TimeoutStartSec=0
+NoNewPrivileges=true
+PrivateTmp=true

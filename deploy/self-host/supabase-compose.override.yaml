@@ -1,0 +1,41 @@
+# Layer on top of the pinned official Supabase Docker Compose release.
+# Compose v2.24.4+ is required for !override.
+services:
+  api-gw:
+    ports: !override
+      - "127.0.0.1:${API_GW_HTTP_PORT:-8000}:8000/tcp"
+    networks:
+      default:
+        aliases:
+          - envoy
+          - kong
+      puddle_edge:
+        aliases:
+          - puddle-supabase-gateway
+  supavisor:
+    ports: !override
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432/tcp"
+      - "127.0.0.1:${POOLER_PROXY_PORT_TRANSACTION:-6543}:6543/tcp"
+  auth:
+    depends_on:
+      templates-server:
+        condition: service_started
+    environment:
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED:-false}
+      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET:-}
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://templates-server/confirm-signup.html
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: http://templates-server/reset-password.html
+      GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: http://templates-server/change-email-address.html
+  templates-server:
+    image: caddy:2.11.4-alpine
+    command: ["caddy", "file-server", "-r", "/templates", "--listen", ":80"]
+    volumes:
+      - ${PUDDLE_REPO_DIR:?set PUDDLE_REPO_DIR}/supabase/email-templates:/templates:ro
+    restart: unless-stopped
+
+networks:
+  puddle_edge:
+    external: true
+    name: puddle_edge

@@ -1,0 +1,26 @@
+{
+  email {$ACME_EMAIL}
+}
+
+{$PUDDLE_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy app:3000 {
+    # The app uses forwarded IPs for abuse protection; never pass client-supplied IP headers.
+    header_up -CF-Connecting-IP
+    header_up -X-Real-IP
+  }
+}
+
+{$SUPABASE_DOMAIN} {
+  encode zstd gzip
+  @api path /auth/v1/* /rest/v1/* /realtime/v1/* /storage/v1/* /functions/v1/*
+  handle @api {
+    reverse_proxy puddle-supabase-gateway:8000 {
+      header_up -CF-Connecting-IP
+      header_up -X-Real-IP
+    }
+  }
+  handle {
+    respond "Not Found" 404
+  }
+}

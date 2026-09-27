@@ -1,0 +1,10 @@
+[Unit]
+Description=Puddle Wikimedia discovery every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:03:00 UTC
+Persistent=false
+Unit=puddle-data@wikimedia.service
+
+[Install]
+WantedBy=timers.target
