@@ -16,14 +16,15 @@ test('feed search filters indexed titles and bodies before cursor pagination', a
 })
 
 test('saved searches and categories filter the entire owned relation before keyset limit', async () => {
-  const [migration, expansion, data, page, endpoint, collection, backfill] = await Promise.all([
+  const [migration, expansion, data, page, endpoint, collection, backfill, references] = await Promise.all([
     read('supabase/migrations/20260927175508_saved_search_filter_cutover.sql'),
     read('supabase/migrations/20260927174500_saved_reference_search.sql'),
     read('lib/app/location-plans-data.js'),
     read('app/(product)/plans/page.js'),
     read('app/api/saved-page/route.js'),
     read('components/saved-paged-grid.js'),
-    read('scripts/backfill-location-ref-search.mjs')
+    read('scripts/backfill-location-ref-search.mjs'),
+    read('lib/app/global-location-reference.js')
   ])
   const savedFunction = migration.split('create or replace function public.location_saved_page_v1(')[1]
   assert.ok(savedFunction.indexOf('i.search_document @@') < savedFunction.indexOf('limit greatest'))
@@ -41,6 +42,8 @@ test('saved searches and categories filter the entire owned relation before keys
   assert.match(backfill, /getLocationsByIdsFromShards/)
   assert.match(backfill, /location_ref_index_checkpoint/)
   assert.match(backfill, /location_ref_index_progress_v1/)
+  assert.match(references, /Promise\.all\(\[/)
+  assert.match(references, /from\('location_ref_search_index'\)/)
 })
 
 test('profile friends open their own conversation and mobile navigation names every destination', async () => {
