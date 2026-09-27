@@ -1,0 +1,10 @@
+[Unit]
+Description=Puddle canonical photo materialization hourly
+
+[Timer]
+OnCalendar=*-*-* *:31:00 UTC
+Persistent=false
+Unit=puddle-data@materialize.service
+
+[Install]
+WantedBy=timers.target

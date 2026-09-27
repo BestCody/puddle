@@ -1,0 +1,12 @@
+.git
+.next
+node_modules
+.env*
+.vercel
+.e2e-local
+.e2e-gh-artifacts
+landing-artifacts
+test-results
+*.log
+__pycache__
+*.pyc

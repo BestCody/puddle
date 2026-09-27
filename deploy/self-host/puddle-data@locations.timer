@@ -1,0 +1,10 @@
+[Unit]
+Description=Puddle global catalogue build daily
+
+[Timer]
+OnCalendar=*-*-* 05:23:00 UTC
+Persistent=true
+Unit=puddle-data@locations.service
+
+[Install]
+WantedBy=timers.target

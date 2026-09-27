@@ -1,0 +1,9 @@
+[Unit]
+Description=Submit Puddle sitemap to IndexNow
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/puddle
+ExecStart=/usr/bin/docker compose --env-file .env.selfhost -f deploy/self-host/compose.yaml exec -T app node scripts/self-host-submit-indexnow.mjs

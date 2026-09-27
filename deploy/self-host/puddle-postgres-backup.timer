@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Puddle Postgres off-machine backup
+
+[Timer]
+OnCalendar=*-*-* 02:15:00 UTC
+Persistent=true
+Unit=puddle-postgres-backup.service
+
+[Install]
+WantedBy=timers.target

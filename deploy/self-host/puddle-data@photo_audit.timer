@@ -1,0 +1,10 @@
+[Unit]
+Description=Puddle full photo inventory audit weekly
+
+[Timer]
+OnCalendar=Mon *-*-* 04:17:00 UTC
+Persistent=true
+Unit=puddle-data@photo_audit.service
+
+[Install]
+WantedBy=timers.target

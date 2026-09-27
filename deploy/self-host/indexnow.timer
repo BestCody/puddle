@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Puddle IndexNow submission daily
+
+[Timer]
+OnCalendar=*-*-* 06:00:00 UTC
+Persistent=true
+Unit=indexnow.service
+
+[Install]
+WantedBy=timers.target

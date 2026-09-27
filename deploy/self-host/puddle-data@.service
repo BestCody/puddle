@@ -1,0 +1,22 @@
+[Unit]
+Description=Puddle data job %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=puddle
+Group=puddle
+WorkingDirectory=/opt/puddle
+EnvironmentFile=/opt/puddle/.env.jobs
+Environment=DUCKDB_TEMP_DIRECTORY=/var/lib/puddle-jobs
+Environment=GLOBAL_LOCATION_SEARCH_WORK_DIR=/var/lib/puddle-jobs/search
+Environment=PYTHON_BIN=/opt/puddle/.venv/bin/python
+StateDirectory=puddle-jobs
+ExecStart=/usr/bin/flock -n /var/lib/puddle-jobs/%i.lock /usr/bin/node /opt/puddle/scripts/self-host-run-data-job.mjs %i
+TimeoutStartSec=0
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/puddle-jobs

@@ -1,0 +1,86 @@
+services:
+  objects:
+    image: chrislusf/seaweedfs:4.47
+    command: ["mini", "-dir=/data", "-master.volumeSizeLimitMB=30000", "-admin.ui=false"]
+    user: "10001:10001"
+    environment:
+      AWS_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID:?set OBJECT_STORAGE_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY:?set OBJECT_STORAGE_SECRET_ACCESS_KEY}
+      S3_BUCKET: ${OBJECT_STORAGE_BUCKET:?set OBJECT_STORAGE_BUCKET}
+    volumes:
+      - ${PUDDLE_OBJECT_DATA_DIR:?set PUDDLE_OBJECT_DATA_DIR}:/data
+    ports:
+      - "127.0.0.1:8333:8333"
+    init: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/self-host/Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?set NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+    env_file:
+      - ../../.env.selfhost
+    depends_on:
+      objects:
+        condition: service_started
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    expose:
+      - "3000"
+    volumes:
+      - next_cache:/app/.next/cache
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(async response => { const body = await response.json(); if (!response.ok || !body.ok || !body.authConfigured) process.exit(1) }).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  proxy:
+    image: caddy:2.11.4-alpine
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      PUDDLE_DOMAIN: ${PUDDLE_DOMAIN:?set PUDDLE_DOMAIN}
+      SUPABASE_DOMAIN: ${SUPABASE_DOMAIN:?set SUPABASE_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - default
+      - puddle_edge
+
+volumes:
+  next_cache:
+  caddy_data:
+  caddy_config:
+
+networks:
+  puddle_edge:
+    external: true
+    name: puddle_edge
