@@ -3,10 +3,10 @@ import { AuthMessage } from '@/components/auth-message'
 import { RoutedSegment } from '@/components/routed-segment'
 import { SavedSearchInput } from '@/components/discover-search-overlay'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
-import { SavedLightweightGrid } from '@/components/saved-lightweight-grid'
+import { SavedPagedGrid } from '@/components/saved-paged-grid'
 import { PhotoFrame } from '@/components/photo-frame'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getLocationPlansPage } from '@/lib/app/location-plans-data'
+import { getLocationPlansPage, getSavedCategories } from '@/lib/app/location-plans-data'
 import styles from './Plans.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -36,17 +36,6 @@ function categoryGlyph(value) {
   if (key.includes('bar') || key.includes('night')) return '☾'
   if (key.includes('shop')) return '□'
   return '○'
-}
-
-function foldersFor(items) {
-  const folders = new Map()
-  for (const item of items) {
-    const category = item.category || 'other'
-    const list = folders.get(category) || []
-    list.push(item)
-    folders.set(category, list)
-  }
-  return [...folders.entries()].sort(([left], [right]) => categoryLabel(left).localeCompare(categoryLabel(right)))
 }
 
 function SavedCard({ item, session, active }) {
@@ -128,18 +117,21 @@ export default async function PlansPage({ searchParams }) {
   const requestedCategory = typeof params?.category === 'string' ? params.category : 'all'
   const query = typeof params?.q === 'string' ? params.q.trim() : ''
   const cursor = typeof params?.cursor === 'string' ? params.cursor : null
-  const lightweightSaved = active === 'saved' && requestedCategory === 'all' && !query
+  const lightweightSaved = active === 'saved'
 
   return renderProductPage(async (session) => {
-    const page = await getLocationPlansPage(session, {
-      tab: active,
-      cursor,
-      category: active === 'saved' ? requestedCategory : null,
-      query: active === 'saved' ? query : '',
-      lightweightSaved
-    })
+    const [page, categories] = await Promise.all([
+      getLocationPlansPage(session, {
+        tab: active,
+        cursor,
+        category: active === 'saved' ? requestedCategory : null,
+        query: active === 'saved' ? query : '',
+        lightweightSaved
+      }),
+      active === 'saved' ? getSavedCategories(session) : Promise.resolve([])
+    ])
     const items = page.items
-    const folders = lightweightSaved ? [] : foldersFor(items)
+    const folders = categories.map((row) => [row.category, row.place_count])
     const selectedCategory = active === 'saved' ? requestedCategory : 'all'
     const visible = items
 
@@ -166,15 +158,15 @@ export default async function PlansPage({ searchParams }) {
           <SavedCategoryRail folders={folders} selectedCategory={selectedCategory} />
         </div> : <div className={styles.planBand}><h1 className={styles.planHeading}>Plans</h1></div>}
 
-        {visible.length ? lightweightSaved
-          ? <SavedLightweightGrid items={visible} className={styles.placeGrid} cardClassName={styles.placeCard} photoClassName={styles.placePhoto} copyClassName={styles.placeCopy} metaClassName={styles.placeMeta} perfectPickClassName={styles.perfectPick} />
+        {visible.length ? active === 'saved'
+          ? <SavedPagedGrid key={`${selectedCategory}:${query}`} initialItems={visible} initialPagination={page.pagination} category={selectedCategory} query={query} classes={{ grid: styles.placeGrid, card: styles.placeCard, photo: styles.placePhoto, copy: styles.placeCopy, meta: styles.placeMeta, perfectPick: styles.perfectPick, loadMore: styles.loadMore }} />
           : <section className={styles.placeGrid} aria-label={active === 'saved' ? 'Saved places' : active === 'planned' ? 'Plans' : 'History'} data-testid="saved-grid">
               {visible.map((item) => <SavedCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}
             </section>
           : <div className={styles.empty} data-testid="saved-empty"><strong>{active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong><Link href="/discover">Start swiping</Link></div>}
 
-        {page.pagination.hasMore ? <div className={styles.historyLink}>
-          <Link data-testid="saved-next-page" href={nextPageHref({ active, category: selectedCategory, query, cursor: page.pagination.nextCursor })}>{active === 'past' ? 'Older history' : active === 'planned' ? 'More plans' : 'More saved places'}</Link>
+        {active !== 'saved' && page.pagination.hasMore ? <div className={styles.historyLink}>
+          <Link data-testid="saved-next-page" href={nextPageHref({ active, category: selectedCategory, query, cursor: page.pagination.nextCursor })}>{active === 'past' ? 'Older history' : 'More plans'}</Link>
         </div> : null}
 
         <footer className={styles.historyLink}>{active === 'past' ? <Link href="/plans">Back to Saved</Link> : <Link href="/plans?tab=past">History</Link>}</footer>

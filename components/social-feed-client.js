@@ -121,7 +121,7 @@ function FeedStream({ feed, query, loadingMore, loadMoreError, onLoadMore, class
       classes={classes}
     />
   </> : <div className={classes.empty}>
-    <strong>{query ? 'No puddles match that search on this page.' : 'No one has posted a puddle yet.'}</strong>
+    <strong>{query ? 'No posts match that search.' : 'No one has posted a puddle yet.'}</strong>
     {nextFeedQuery(query, feed.pagination)
       ? <FeedPagination
         query={query}

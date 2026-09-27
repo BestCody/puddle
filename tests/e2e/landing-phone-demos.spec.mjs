@@ -80,7 +80,7 @@ test('Saved and Feed phone demos expose their corresponding Figma interactions',
   await feed.locator('.landing-demo-feed-toolbar .landing-demo-segment').getByRole('button', { name: 'Feed', exact: true }).click()
   await feed.getByRole('button', { name: 'Search puddle', exact: true }).click()
   await feed.getByPlaceholder('Search puddle').fill('not-a-puddle')
-  await expect(feed.getByText('No puddles match that search on this page.', { exact: true })).toBeVisible()
+  await expect(feed.getByText('No posts match that search.', { exact: true })).toBeVisible()
 
 })
 
