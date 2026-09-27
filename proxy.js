@@ -25,7 +25,7 @@ const moderationExemptApiPrefixes = [
 ]
 // These read routes reuse proxy-verified claims and check account state in
 // their own handlers, avoiding a redundant profile read in Proxy.
-const verifiedReadApiPaths = new Set(['/api/discovery', '/api/map/viewport', '/api/map/snapshot', '/api/social-feed', '/api/profile/identity'])
+const verifiedReadApiPaths = new Set(['/api/discovery', '/api/map/viewport', '/api/map/snapshot', '/api/map/heatmap', '/api/social-feed', '/api/profile/identity'])
 
 function carriesCookies(source, target) {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie.name, cookie.value, cookie)

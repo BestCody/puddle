@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
+import { getCurrentUser } from '@/lib/auth/user'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
+const MAP_PROFILE_SELECT = 'id,suspended_at,banned_at'
 
 function finiteParam(params, name) {
   const value = Number(params.get(name))
@@ -15,9 +16,14 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Map heatmap is unavailable.' }, { status: 503 })
   }
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Sign in to browse the map heatmap.' }, { status: 401 })
+  const current = await getCurrentUser({ profileFields: MAP_PROFILE_SELECT })
+  if (!current.user) return NextResponse.json({ error: 'Sign in to browse the map heatmap.' }, { status: 401 })
+  if (current.profileError || !current.profile) {
+    return NextResponse.json({ error: 'Account status could not be verified.' }, { status: 503 })
+  }
+  if (current.profile.suspended_at || current.profile.banned_at) {
+    return NextResponse.json({ error: current.profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 })
+  }
 
   try {
     const params = request.nextUrl.searchParams
@@ -30,7 +36,7 @@ export async function GET(request) {
     if (south > north) throw new RangeError('Map bounds are invalid.')
 
     const started = performance.now()
-    const { data, error } = await supabase.rpc('pass_location_heatmap_viewport_v2', {
+    const { data, error } = await current.supabase.rpc('pass_location_heatmap_viewport_v2', {
       north,
       south,
       east,
