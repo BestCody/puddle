@@ -105,6 +105,7 @@ button.figma-dashboard-settings-link {
 
 .puddle-settings-overlay-frame {
   position: relative;
+  grid-area: 1 / 1;
   z-index: 1;
   width: min(1068px, calc(100vw - 70px));
   height: min(760px, calc(100vh - 48px));
@@ -113,6 +114,16 @@ button.figma-dashboard-settings-link {
   background: #fff;
   box-shadow: 0 18px 60px rgba(0, 0, 0, .16);
   opacity: 1;
+}
+
+.puddle-settings-overlay-frame.is-loading { visibility: hidden; }
+
+.puddle-settings-overlay-loading-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
 }
 
 html.puddle-settings-overlay-open,

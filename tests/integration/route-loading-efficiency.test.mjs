@@ -45,3 +45,30 @@ test('Settings scroll observation is mounted only on Settings', async () => {
   assert.match(account, /import \{ SettingsScrollBridge \} from '@\/components\/settings-scroll-bridge'/)
   assert.match(account, /<SettingsScrollBridge \/>/)
 })
+
+test('Settings iframe and embedded dashboard work load only when opened', async () => {
+  const [overlay, shell, account, plans] = await Promise.all([
+    read('components/settings-overlay.js'),
+    read('components/product-shell.js'),
+    read('app/account/page.js'),
+    read('app/(product)/plans/page.js')
+  ])
+
+  assert.match(overlay, /\{open \? <iframe[\s\S]*src="\/account\?embedded=1&returnTo=%2Fprofile"/)
+  assert.match(overlay, /\{open && !frameLoaded \? <div[\s\S]*puddle-settings-overlay-loading-text[\s\S]*Loading settings/)
+  assert.match(shell, /if \(embedded\) return[\s\S]*<AppearanceSync initialAppearance=\{appearance\} \/>[\s\S]*<MainContentTransition>\{content\}<\/MainContentTransition>/)
+  assert.match(account, /<ProductShell[^>]*embedded=\{embedded\}/)
+  assert.match(plans, /\{active === 'saved' \? <SavedLocationMorphBridge \/> : null\}/)
+})
+
+test('mobile Settings fetches full notification data only for its notification section', async () => {
+  const account = await read('app/account/page.js')
+  assert.match(account, /const showSection = \(section\) => !mobileFlow \|\| selectedSection === section/)
+  assert.match(account, /const showNotifications = showSection\('notifications'\)/)
+  assert.match(account, /if \(showNotifications\) \{[\s\S]*notification_preferences[\s\S]*puddle_tinder_active_v1/)
+  assert.match(account, /else if \(!selectedSection\) \{[\s\S]*count: 'exact', head: true[\s\S]*\.is\('read_at', null\)/)
+  assert.match(account, /\{showNotifications \? <section className="figma-settings-section" id="notifications">/)
+  for (const section of ['profile', 'security', 'appearance', 'sessions', 'billing', 'account']) {
+    assert.match(account, new RegExp(`\\{showSection\\('${section}'\\) \\? <(?:section|form) className="figma-settings-section" id="${section}"`))
+  }
+})
