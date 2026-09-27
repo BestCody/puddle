@@ -17,6 +17,8 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   const conversationPreview = await read('supabase/migrations/20260903090000_conversation_location_preview.sql')
 
   assert.match(data, /social_conversations_v2/)
+  assert.match(data, /tab === 'messages' \? rpcRequired\(session, 'social_conversations_v2'/)
+  assert.doesNotMatch(data, /\['messages', 'shared'\]\.includes\(tab\)/)
   assert.match(data, /social_messages_v2/)
   assert.doesNotMatch(data, /social_conversations_v1/)
   assert.doesNotMatch(data, /social_messages_v1/)
