@@ -16,24 +16,31 @@ test('feed search filters indexed titles and bodies before cursor pagination', a
 })
 
 test('saved searches and categories filter the entire owned relation before keyset limit', async () => {
-  const [migration, expansion, data, page, endpoint, collection] = await Promise.all([
-    read('supabase/migrations/20260927174853_saved_filter_cutover.sql'),
+  const [migration, expansion, data, page, endpoint, collection, backfill] = await Promise.all([
+    read('supabase/migrations/20260927175508_saved_search_filter_cutover.sql'),
     read('supabase/migrations/20260927174500_saved_reference_search.sql'),
     read('lib/app/location-plans-data.js'),
     read('app/(product)/plans/page.js'),
     read('app/api/saved-page/route.js'),
-    read('components/saved-paged-grid.js')
+    read('components/saved-paged-grid.js'),
+    read('scripts/backfill-location-ref-search.mjs')
   ])
   const savedFunction = migration.split('create or replace function public.location_saved_page_v1(')[1]
-  assert.ok(savedFunction.indexOf('r.search_document @@') < savedFunction.indexOf('limit greatest'))
-  assert.ok(savedFunction.indexOf('r.category=category_filter') < savedFunction.indexOf('limit greatest'))
+  assert.ok(savedFunction.indexOf('i.search_document @@') < savedFunction.indexOf('limit greatest'))
+  assert.ok(savedFunction.indexOf('i.category=category_filter') < savedFunction.indexOf('limit greatest'))
   assert.match(migration, /s.profile_id=\(select auth.uid\(\)\)/)
   assert.match(expansion, /public.location_saved_categories_v1/)
+  const separation = await read('supabase/migrations/20260927175506_saved_search_index_separation.sql')
+  assert.match(separation, /public.location_ref_search_index/)
+  assert.match(separation, /drop column if exists name/)
   assert.match(data, /rawRows\(session, active, decodedCursor, requested, active === 'saved' \? \{ category, query \} : undefined\)/)
   assert.match(page, /getSavedCategories\(session\)/)
   assert.match(endpoint, /supabase.auth.getUser\(\)/)
   assert.match(collection, /setItems\(\(current\) =>/)
   assert.match(collection, /data-testid="saved-next-page"/)
+  assert.match(backfill, /getLocationsByIdsFromShards/)
+  assert.match(backfill, /location_ref_index_checkpoint/)
+  assert.match(backfill, /location_ref_index_progress_v1/)
 })
 
 test('profile friends open their own conversation and mobile navigation names every destination', async () => {

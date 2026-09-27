@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { getGlobalLocationsByIds } from '../lib/app/global-location-search.js'
+import { getActiveSearchManifest, getLocationsByIdsFromShards } from '../lib/app/location-search-shards.js'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -10,6 +10,7 @@ const admin = createClient(url, key, {
 })
 const checkpointId = 'global-location-ref-search-v1'
 const batchSize = 64
+const { manifest } = await getActiveSearchManifest()
 const { data: checkpoint, error: checkpointError } = await admin
   .from('location_ref_index_checkpoint').select('last_id').eq('id', checkpointId).maybeSingle()
 if (checkpointError) throw checkpointError
@@ -26,17 +27,16 @@ for (;;) {
   if (error) throw error
   if (!refs?.length) break
 
-  const locations = await getGlobalLocationsByIds(refs.map((ref) => ref.id))
+  const locations = await getLocationsByIdsFromShards(refs.map((ref) => ref.id), { manifest })
   const rows = locations.map((row) => ({
-    id: row.id,
-    kind: 'global',
+    location_id: row.id,
     name: String(row.name || '').slice(0, 300),
     slug: String(row.slug || '').slice(0, 400),
     category: String(row.category || row.kind || 'other').slice(0, 80),
     city: String(row.city || '').slice(0, 160)
   }))
   if (rows.length) {
-    const { error: writeError } = await admin.from('location_refs').upsert(rows, { onConflict: 'id' })
+    const { error: writeError } = await admin.from('location_ref_search_index').upsert(rows, { onConflict: 'location_id' })
     if (writeError) throw writeError
   }
 
@@ -50,8 +50,9 @@ for (;;) {
   console.log(JSON.stringify({ cursor, indexed, missing }))
 }
 
-const { count: remaining, error: countError } = await admin.from('location_refs')
-  .select('id', { count: 'exact', head: true }).eq('kind', 'global').is('name', null)
+const { data: remaining, error: countError } = await admin.rpc('location_ref_index_progress_v1')
 if (countError) throw countError
-console.log(JSON.stringify({ complete: remaining === 0, indexed, missing, remaining }))
-if (remaining) throw new Error(`${remaining} global references still lack searchable metadata. Rerun with --restart after checking their B2 records.`)
+const remainingCount = Number(remaining)
+if (!Number.isSafeInteger(remainingCount)) throw new Error('Reference index progress is unavailable.')
+console.log(JSON.stringify({ complete: remainingCount === 0, indexed, missing, remaining: remainingCount }))
+if (remainingCount) throw new Error(`${remainingCount} global references still lack searchable metadata. Rerun with --restart after checking their B2 records.`)
