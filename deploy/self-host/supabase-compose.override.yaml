@@ -5,6 +5,10 @@ services:
     ports: !override
       - "127.0.0.1:${API_GW_HTTP_PORT:-8000}:8000/tcp"
     networks:
+      default:
+        aliases:
+          - envoy
+          - kong
       puddle_edge:
         aliases:
           - puddle-supabase-gateway
