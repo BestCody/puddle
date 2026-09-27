@@ -50,3 +50,26 @@ test('host jobs translate only local S3 credentials for the existing boto3 worke
   assert.equal(translated.B2_BUCKET, 'puddle-assets')
   assert.equal(translated.B2_DATA_KEY_ID, 'local-id')
 })
+
+test('host jobs reject a stale managed Supabase URL despite cutover flags', () => {
+  const env = {
+    PUDDLE_JOBS_ENABLED: 'true',
+    PUDDLE_STORAGE_CUTOVER_COMPLETE: 'true',
+    PUDDLE_SUPABASE_CUTOVER_COMPLETE: 'true',
+    PUDDLE_OBJECT_STORE: 's3',
+    OBJECT_STORAGE_ENDPOINT: 'http://127.0.0.1:8333',
+    OBJECT_STORAGE_ACCESS_KEY_ID: 'local-id',
+    OBJECT_STORAGE_SECRET_ACCESS_KEY: 'local-secret',
+    OBJECT_STORAGE_BUCKET: 'puddle-assets',
+    OBJECT_STORAGE_REGION: 'us-east-1',
+    SUPABASE_DOMAIN: 'supabase.puddle.you',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://old-project.supabase.co',
+    SUPABASE_SECRET_KEY: 'local-key'
+  }
+  assert.throws(() => validateJob('materialize', env), /managed source/)
+  env.NEXT_PUBLIC_SUPABASE_URL = 'https://supabase.puddle.you'
+  env.SUPABASE_URL = 'https://old-project.supabase.co'
+  assert.throws(() => validateJob('materialize', env), /different Supabase project/)
+  env.SUPABASE_URL = 'https://supabase.puddle.you'
+  assert.doesNotThrow(() => validateJob('materialize', env))
+})

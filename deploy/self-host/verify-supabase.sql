@@ -16,6 +16,14 @@ select schemaname, tablename
 from pg_tables
 where schemaname = 'public'
 order by tablename;
+-- Generate safely quoted, read-only exact counts for every public base table.
+-- Run on both databases after the write freeze and compare each result.
+select format('select %L as table_name, count(*) as row_count from %I.%I;',
+              schemaname || '.' || tablename, schemaname, tablename)
+from pg_tables
+where schemaname = 'public'
+order by schemaname, tablename
+\gexec
 select n.nspname as schema_name, c.relname as table_name
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace

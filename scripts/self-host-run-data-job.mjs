@@ -23,8 +23,22 @@ export function validateJob(job, env) {
     if (!env[key]) throw new Error(`${key} is required for host data jobs.`)
   }
   if (env.OBJECT_STORAGE_ENDPOINT !== 'http://127.0.0.1:8333') throw new Error('Host data jobs must use the loopback-only object endpoint.')
+  const domain = String(env.SUPABASE_DOMAIN || '').trim().toLowerCase()
+  if (!/^(?=.{4,253}$)[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(domain)) {
+    throw new Error('SUPABASE_DOMAIN must be the self-hosted Supabase hostname for data jobs.')
+  }
+  let supabaseUrl
+  try { supabaseUrl = new URL(env.NEXT_PUBLIC_SUPABASE_URL) } catch { /* rejected below */ }
+  if (!supabaseUrl || supabaseUrl.protocol !== 'https:' || supabaseUrl.origin !== `https://${domain}` ||
+      supabaseUrl.pathname !== '/' || supabaseUrl.search || supabaseUrl.hash ||
+      supabaseUrl.username || supabaseUrl.password) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL must be the HTTPS origin for SUPABASE_DOMAIN, not the managed source.')
+  }
+  if (env.SUPABASE_URL && env.SUPABASE_URL !== supabaseUrl.origin && env.SUPABASE_URL !== `${supabaseUrl.origin}/`) {
+    throw new Error('SUPABASE_URL must not point to a different Supabase project.')
+  }
   if (job === 'materialize') {
-    for (const key of ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_KEY']) {
+    for (const key of ['SUPABASE_SECRET_KEY']) {
       if (!env[key]) throw new Error(`${key} is required for materialization.`)
     }
   }

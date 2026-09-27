@@ -75,7 +75,9 @@ The installer copies the official `self-hosted/v0.8.2` Docker release at commit
 `564eab8ad7840b13324f68b1bfac074ef8d51c21` into a **new** destination,
 then generates unique JWT/API/database/storage keys. It refuses to overwrite
 an existing installation, suppresses generator output containing secrets, and
-sets `.env` to owner-only permissions. It does not start containers or touch
+sets `.env` to owner-only permissions. It also writes the official
+`.supabase-version` marker so future `update.sh` runs know the pinned base
+release for a three-way merge. It does not start containers or touch
 the managed project. On the Linux host:
 
 ```sh
@@ -122,7 +124,9 @@ availability on the target **before** import. Use Supabase's supported
 `supabase db dump` roles/schema/data export and restore into staging; do not
 apply the repository's migration history again over the restored schema. Run
 `verify-supabase.sql` against both source and destination and compare counts,
-extensions, buckets, and RLS. A new signing key invalidates existing sessions:
+extensions, buckets, every public table's exact row count, and RLS. Run the
+read-only count report after the final write freeze so concurrent source writes
+cannot produce false mismatches. A new signing key invalidates existing sessions:
 users will have to sign in again after cutover.
 Vault-encrypted runtime credentials are not assumed portable across projects;
 re-provision only the credentials still needed by the final object-store path
@@ -250,8 +254,10 @@ activation: no job can run until `PUDDLE_JOBS_ENABLED`,
 all exactly `true` in an owner-only `/opt/puddle/.env.jobs`. Set the same
 `PUDDLE_OBJECT_STORE`, bucket, region and credentials as the app, but set
 `OBJECT_STORAGE_ENDPOINT=http://127.0.0.1:8333` because systemd workers run
-on the host. The runner translates the historical boto3 variable names to
-these local S3 credentials. **Do not enable** the timers before the full copy,
+on the host. Set `SUPABASE_DOMAIN` and `NEXT_PUBLIC_SUPABASE_URL` to the new
+host's matching HTTPS hostname; the runner refuses a stale managed-project URL
+even if the cutover flags are set. The runner translates the historical boto3
+variable names to these local S3 credentials. **Do not enable** the timers before the full copy,
 staging E2E checks and scheduler handoff. Install Python 3.13 in
 `/opt/puddle/.venv` with the combined packages from the six current Actions
 workflows (boto3, duckdb, pillow, brotli, orjson, urllib3, numpy, h3,
@@ -294,9 +300,12 @@ restore to a disposable target has been verified.
    `target` (loopback SeaweedFS S3) remotes. Set `RCLONE_CONFIG`,
    `PUDDLE_SOURCE_OBJECT_REMOTE=source:puddle-assets`,
    `PUDDLE_TARGET_OBJECT_REMOTE=target:puddle-assets`, and a private absolute
-   `PUDDLE_MIGRATION_REPORT_DIR`. Run
-   `node scripts/self-host-migrate-objects.mjs`. It inventories both sides,
-   performs a resumable non-deleting copy, then runs an exhaustive
+   `PUDDLE_MIGRATION_REPORT_DIR`. Also set `OBJECT_STORAGE_BUCKET` to the same
+   canonical bucket name configured for the host app. Run
+   `node scripts/self-host-migrate-objects.mjs`. It first requires the private
+   rclone config to identify an HTTPS B2 source and loopback S3 target with
+   the same canonical bucket name. It then inventories both sides, performs
+   a resumable non-deleting copy, and runs an exhaustive
    `rclone check --download` byte comparison. This may read another ~304 GB
    across source/destination after the initial ~152 GB transfer; budget time,
    bandwidth and request cost. Preserve the private reports. Repeat after
