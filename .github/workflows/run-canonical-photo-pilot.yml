@@ -56,7 +56,7 @@ jobs:
       - id: active
         name: Resolve active snapshot
         run: python scripts/global-data/active_snapshot.py
-      - uses: supabase/setup-cli@v3.0.0
+      - uses: supabase/setup-cli@v3.0.1
         with:
           version: latest
       - name: Ensure candidate identity constraints are deployed
