@@ -44,7 +44,7 @@ jobs:
       - name: Confirm the pipeline is frozen
         shell: bash
         run: test '${{ vars.GLOBAL_PHOTO_PIPELINE_ENABLED }}' != 'true'
-      - uses: supabase/setup-cli@v3.0.0
+      - uses: supabase/setup-cli@v3.0.1
         with:
           version: latest
       - name: Delete scoped Supabase photo records transactionally
