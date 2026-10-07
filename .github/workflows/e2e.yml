@@ -103,6 +103,7 @@ jobs:
         run: |
           eval "$(supabase status -o env)"
           echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_INTERNAL_URL=$API_URL" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> "$GITHUB_ENV"
           echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> "$GITHUB_ENV"
