@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { randomUUID } from 'node:crypto'
 import { AuthMessage } from '@/components/auth-message'
 import { LocationEditor } from '@/components/location-editor'
 import { renderProductPage } from '@/lib/app/render-product-page'
@@ -22,7 +23,7 @@ export default async function CreatePlacePage({ searchParams }) {
         </div>
       </div>
       <AuthMessage searchParams={params} />
-      {membership.active ? <LocationEditor {...options} /> : <section className="pass-location-create-lock">
+      {membership.active ? <LocationEditor {...options} newDraftId={randomUUID()} /> : <section className="pass-location-create-lock">
         <span>PASS</span>
         <h2>Create your location</h2>
         <p>Adding a new place to Puddle is included with Puddle Pass.</p>

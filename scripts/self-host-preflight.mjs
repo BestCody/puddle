@@ -24,10 +24,13 @@ export function validateSelfHostEnv(env) {
     'ACME_EMAIL',
     'NEXT_PUBLIC_SITE_URL',
     'NEXT_PUBLIC_SUPABASE_URL',
+    'SUPABASE_INTERNAL_URL',
     'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
     'SUPABASE_SECRET_KEY',
+    'PUDDLE_BUILD_SHA',
     'CRON_SECRET',
     'SECURITY_HASH_SECRET',
+    'MALWARE_SCANNER_ENDPOINT',
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
     'STRIPE_TINDER_PRICE_ID'
@@ -35,13 +38,8 @@ export function validateSelfHostEnv(env) {
   for (const name of required) {
     if (!configured(env[name])) problems.push(`${name} must be configured.`)
   }
-  if (env.PUDDLE_OBJECT_STORE !== 's3') {
-    problems.push('PUDDLE_OBJECT_STORE=s3 is required for the full self-hosted stack.')
-  }
-  const managedObjectCredentials = Object.keys(env).filter((name) =>
-    /^B2_(?:.*(?:KEY|TOKEN|APPLICATION_KEY|ENDPOINT)|DOWNLOAD_BASE_URL)$/.test(name) && configured(env[name]))
-  if (managedObjectCredentials.length) {
-    problems.push(`Remove Backblaze credentials and endpoints from the host app environment: ${managedObjectCredentials.sort().join(', ')}. Use a separate private rclone config for the one-time transfer.`)
+  if (configured(env.PUDDLE_BUILD_SHA) && !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(String(env.PUDDLE_BUILD_SHA))) {
+    problems.push('PUDDLE_BUILD_SHA must be the full committed Git revision.')
   }
   try {
     selfHostObjectConfig(env)
@@ -80,8 +78,21 @@ export function validateSelfHostEnv(env) {
   if (!supabaseUrl || supabaseUrl.pathname !== '/' || (supabaseDomain && supabaseUrl.hostname !== supabaseDomain)) {
     problems.push('NEXT_PUBLIC_SUPABASE_URL must be the HTTPS origin for SUPABASE_DOMAIN.')
   }
+  if (env.SUPABASE_INTERNAL_URL !== 'http://puddle-supabase-gateway:8000') {
+    problems.push('SUPABASE_INTERNAL_URL must use the private Compose gateway.')
+  }
   if (String(env.SECURITY_HASH_SECRET || '').trim().length < 32) {
     problems.push('SECURITY_HASH_SECRET must contain at least 32 characters.')
+  }
+  if (configured(env.MALWARE_SCANNER_ENDPOINT)) {
+    try {
+      const scanner = new URL(env.MALWARE_SCANNER_ENDPOINT)
+      if (!['http:', 'https:'].includes(scanner.protocol) || !scanner.hostname || scanner.username || scanner.password) {
+        problems.push('MALWARE_SCANNER_ENDPOINT must be an HTTP(S) URL without embedded credentials.')
+      }
+    } catch {
+      problems.push('MALWARE_SCANNER_ENDPOINT must be an HTTP(S) URL without embedded credentials.')
+    }
   }
   if (String(env.TURNSTILE_REQUIRED || '').trim().toLowerCase() !== 'false') {
     for (const name of ['NEXT_PUBLIC_TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY']) {

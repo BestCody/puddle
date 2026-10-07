@@ -3,7 +3,7 @@
 
 The command is intentionally fail-closed. It requires a completed recovery
 manifest, verifies that no new object appeared after the freeze, runs only
-against the exact canonical B2 media prefix and photo-data patterns, and then
+against the exact canonical Object storage media prefix and photo-data patterns, and then
 confirms those scopes are empty. Supabase rows are removed by the companion
 transactional SQL file in the reset workflow.
 """
@@ -46,9 +46,9 @@ def required(value: str, label: str) -> str:
 def client(endpoint: str, key_id: str, application_key: str, region: str, pool_size: int):
     return boto3.client(
         "s3",
-        endpoint_url=required(endpoint, "B2 S3 endpoint"),
-        aws_access_key_id=required(key_id, "B2 application key ID"),
-        aws_secret_access_key=required(application_key, "B2 application key"),
+        endpoint_url=required(endpoint, "Object storage S3 endpoint"),
+        aws_access_key_id=required(key_id, "Object storage application key ID"),
+        aws_secret_access_key=required(application_key, "Object storage application key"),
         region_name=region or None,
         config=Config(
             retries={"max_attempts": 10, "mode": "adaptive"},
@@ -153,7 +153,7 @@ def delete_in_batches(s3, bucket: str, keys: list[str]) -> int:
         errors = response.get("Errors") or []
         if errors:
             sample = "; ".join(f"{error.get('Key')}: {error.get('Code')}" for error in errors[:5])
-            raise RuntimeError(f"B2 delete failed for {len(errors)} objects: {sample}")
+            raise RuntimeError(f"Object storage delete failed for {len(errors)} objects: {sample}")
         deleted += len(batch)
     return deleted
 
@@ -166,31 +166,31 @@ def main() -> int:
     if args.confirm != "DELETE_CANONICAL_PHOTO_PIPELINE":
         raise RuntimeError("exact deletion confirmation is required")
 
-    data_bucket = first_env("B2_DATA_BUCKET_NAME", "B2_BUCKET", default="puddle-assets")
-    data_endpoint = first_env("B2_DATA_S3_ENDPOINT", "B2_S3_ENDPOINT")
-    data_key_id = first_env("B2_DATA_KEY_ID", "B2_DATA_APPLICATION_KEY_ID", "B2_KEY_ID")
-    data_key = first_env("B2_DATA_APPLICATION_KEY", "B2_APPLICATION_KEY")
-    data_region = first_env("B2_DATA_S3_REGION", "B2_REGION", default="us-east-005")
-    data_prefix = clean_prefix(first_env("B2_DATA_PREFIX", default="data"))
-    media_bucket = first_env("B2_MEDIA_BUCKET_NAME", "B2_DATA_BUCKET_NAME", "B2_BUCKET", default=data_bucket)
-    media_endpoint = first_env("B2_MEDIA_S3_ENDPOINT", "B2_DATA_S3_ENDPOINT", "B2_S3_ENDPOINT", default=data_endpoint)
+    data_bucket = first_env("OBJECT_STORAGE_BUCKET", default="puddle-assets")
+    data_endpoint = first_env("OBJECT_STORAGE_ENDPOINT")
+    data_key_id = first_env("OBJECT_STORAGE_ACCESS_KEY_ID")
+    data_key = first_env("OBJECT_STORAGE_SECRET_ACCESS_KEY")
+    data_region = first_env("OBJECT_STORAGE_REGION", default="us-east-1")
+    data_prefix = clean_prefix(first_env("PUDDLE_DATA_PREFIX", default="data"))
+    media_bucket = first_env("OBJECT_STORAGE_BUCKET", default=data_bucket)
+    media_endpoint = first_env("OBJECT_STORAGE_ENDPOINT", default=data_endpoint)
     media_key_id = first_env(
-        "B2_MEDIA_KEY_ID",
-        "B2_MEDIA_APPLICATION_KEY_ID",
-        "B2_DATA_KEY_ID",
-        "B2_DATA_APPLICATION_KEY_ID",
-        "B2_KEY_ID",
+        "OBJECT_STORAGE_ACCESS_KEY_ID",
+        "OBJECT_STORAGE_ACCESS_KEY_ID",
+        "OBJECT_STORAGE_ACCESS_KEY_ID",
+        "OBJECT_STORAGE_ACCESS_KEY_ID",
+        "OBJECT_STORAGE_ACCESS_KEY_ID",
         default=data_key_id,
     )
     media_key = first_env(
-        "B2_MEDIA_APPLICATION_KEY",
-        "B2_DATA_APPLICATION_KEY",
-        "B2_KEY",
-        "B2_APPLICATION_KEY",
+        "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+        "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+        "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+        "OBJECT_STORAGE_SECRET_ACCESS_KEY",
         default=data_key,
     )
-    media_region = first_env("B2_MEDIA_S3_REGION", "B2_DATA_S3_REGION", "B2_REGION", default=data_region)
-    media_prefix = clean_prefix(first_env("B2_MEDIA_OPEN_PHOTO_PREFIX", default=CANONICAL_MEDIA_PREFIX))
+    media_region = first_env("OBJECT_STORAGE_REGION", default=data_region)
+    media_prefix = clean_prefix(first_env("PUDDLE_OPEN_PHOTO_PREFIX", default=CANONICAL_MEDIA_PREFIX))
 
     if media_prefix != CANONICAL_MEDIA_PREFIX:
         raise RuntimeError("reset refuses a media prefix other than the canonical Puddle photo prefix")
@@ -201,9 +201,9 @@ def main() -> int:
     media_s3 = client(media_endpoint, media_key_id, media_key, media_region, 64)
     manifest = read_manifest(data_s3, data_bucket, args.manifest_key)
     if manifest.get("dataBucket") != data_bucket or manifest.get("dataPrefix") != data_prefix:
-        raise RuntimeError("manifest data scope does not match the current B2 configuration")
+        raise RuntimeError("manifest data scope does not match the current Object storage configuration")
     if manifest.get("mediaBucket") != media_bucket or manifest.get("mediaPrefix") != media_prefix:
-        raise RuntimeError("manifest media scope does not match the current B2 configuration")
+        raise RuntimeError("manifest media scope does not match the current Object storage configuration")
 
     media_manifest_records = read_manifest_records(data_s3, data_bucket, manifest, "mediaObjects")
     data_manifest_records = read_manifest_records(data_s3, data_bucket, manifest, "dataObjects")
@@ -219,7 +219,7 @@ def main() -> int:
     actual_media = set(list_keys(media_s3, media_bucket, media_prefix))
     if not actual_media.issubset(expected_media):
         new_keys = sorted(actual_media - expected_media)[:10]
-        raise RuntimeError(f"new B2 media appeared after the freeze; refusing reset: {new_keys}")
+        raise RuntimeError(f"new Object storage media appeared after the freeze; refusing reset: {new_keys}")
 
     matcher = photo_data_matcher(data_prefix)
     actual_data: set[str] = set()
@@ -241,7 +241,7 @@ def main() -> int:
                 actual_data.add(key)
     if not actual_data.issubset(expected_data):
         new_keys = sorted(actual_data - expected_data)[:10]
-        raise RuntimeError(f"new B2 photo data appeared after the freeze; refusing reset: {new_keys}")
+        raise RuntimeError(f"new Object storage photo data appeared after the freeze; refusing reset: {new_keys}")
 
     deleted_media = delete_in_batches(media_s3, media_bucket, sorted(actual_media))
     deleted_data = delete_in_batches(data_s3, data_bucket, sorted(actual_data))

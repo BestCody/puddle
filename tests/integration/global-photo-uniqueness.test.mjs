@@ -6,25 +6,24 @@ async function source(path) {
   return readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 }
 
-test('existing B2 photos are reconciled once and retired identities cannot resurface', async () => {
-  const workflow = await source('.github/workflows/global-photo-enrichment.yml')
+test('existing canonical photos are reconciled once and retired identities cannot resurface', async () => {
+  const runner = await source('scripts/self-host-run-data-job.mjs')
   const reconcile = await source('scripts/global-data/reconcile_existing_global_photo_claims.py')
   const materializer = await source('scripts/global-data/materialize_photo_candidates.py')
   const canonicalSearch = await source('scripts/global-data/location_search_common.py')
-  const b2Indexer = await source('scripts/global-data/build_b2_search_index.py')
+  const indexer = await source('scripts/global-data/build_object_search_index.py')
   const registration = await source('supabase/migrations/10079_reconcile_existing_global_photo_claims.sql')
   const candidateRegistry = await source('supabase/migrations/20260826200000_global_photo_candidate_registry.sql')
   const retirement = await source('supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql')
 
-  assert.doesNotMatch(workflow, /sync_retired_photo_exclusions\.py/)
-  assert.doesNotMatch(workflow, /backfill_global_photo_fingerprints\.py/)
-  assert.match(workflow, /reconcile_existing_global_photo_claims\.py/)
-  assert.ok(workflow.indexOf('reconcile_existing_global_photo_claims.py') < workflow.indexOf('materialize_photo_candidates.py'))
+  assert.doesNotMatch(runner, /sync_retired_photo_exclusions\.py|backfill_global_photo_fingerprints\.py/)
+  assert.match(runner, /reconcile_existing_global_photo_claims\.py/)
+  assert.ok(runner.indexOf('reconcile_existing_global_photo_claims.py') < runner.indexOf('materialize_photo_candidates.py'))
 
   assert.match(reconcile, /existing-global-reconciled-v1\.json/)
   assert.match(reconcile, /state_complete\(\)/)
   assert.match(reconcile, /JOIN read_parquet\('\{loc\}'\) l ON cast\(l\.id AS VARCHAR\)=cast\(p\.location_id AS VARCHAR\)/)
-  assert.match(reconcile, /B2 SHA-256 mismatch/)
+  assert.match(reconcile, /Object storage SHA-256 mismatch/)
   assert.match(reconcile, /register_existing_global_photo_v1/)
   assert.match(reconcile, /noncanonical_existing_global_photo/)
   assert.match(reconcile, /existing-global-\{safe\}\.parquet/)
@@ -60,15 +59,15 @@ test('existing B2 photos are reconciled once and retired identities cannot resur
   assert.match(materializer, /normalize_source_url/)
   assert.match(materializer, /complete_global_photo_candidate_v1/)
   assert.ok(materializer.indexOf('reservation = reserve_candidate(row)') < materializer.indexOf('prepare_candidate(row, candidate)'))
-  assert.match(materializer, /Fingerprints must describe the exact canonical bytes written to B2/)
+  assert.match(materializer, /Fingerprints must describe the exact canonical bytes written to Object storage/)
   assert.match(materializer, /with Image\.open\(io\.BytesIO\(data\)\) as canonical/)
   assert.ok(materializer.indexOf("image.save(out, format='JPEG'") < materializer.indexOf('perceptual = dhash(canonical)'))
 
-  // B2 serving consumes the shared canonical projection so photo retirement semantics cannot drift.
+  // Serving consumes the shared canonical projection so photo retirement semantics cannot drift.
   assert.match(canonicalSearch, /photo_exclusion_glob/)
   assert.match(canonicalSearch, /photo_union_raw/)
   assert.match(canonicalSearch, /x\.location_id=cast\(p\.location_id AS VARCHAR\)/)
   assert.match(canonicalSearch, /x\.content_hash=lower\(cast\(p\.content_hash AS VARCHAR\)\)/)
-  assert.match(b2Indexer, /canonical_query/)
-  assert.match(b2Indexer, /document_from_values/)
+  assert.match(indexer, /canonical_query/)
+  assert.match(indexer, /document_from_values/)
 })

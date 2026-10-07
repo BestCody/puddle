@@ -1,0 +1,10 @@
+[Unit]
+Description=Remove deleted Puddle media objects every five minutes
+
+[Timer]
+OnCalendar=*-*-* *:2/5:00 UTC
+Persistent=false
+Unit=media-objects.service
+
+[Install]
+WantedBy=timers.target

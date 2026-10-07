@@ -17,7 +17,8 @@ test('Feed, map, and Saved detail load interactive map code only when needed', a
   assert.doesNotMatch(route, /import \{ (?:LocationMap|SocialFeedClient) \} from/)
 
   assert.match(saved, /dynamic\(\(\) => import\('@\/components\/location-map'\)/)
-  assert.match(saved, /detail && point\.length \? <LocationMap/)
+  assert.match(saved, /ready && nearViewport \? <LocationMap/)
+  assert.match(saved, /<SavedInlineMap ready=\{Boolean\(detail\)\}/)
   assert.doesNotMatch(saved, /import \{ LocationMap \} from/)
 })
 
@@ -71,4 +72,61 @@ test('mobile Settings fetches full notification data only for its notification s
   for (const section of ['profile', 'security', 'appearance', 'sessions', 'billing', 'account']) {
     assert.match(account, new RegExp(`\\{showSection\\('${section}'\\) \\? <(?:section|form) className="figma-settings-section" id="${section}"`))
   }
+})
+
+test('Saved recommendations load near the viewport and public place reads overlap', async () => {
+  const [savedSimilar, placePage] = await Promise.all([
+    read('app/(product)/plans/[slug]/similar-places.js'),
+    read('app/places/[slug]/page.js')
+  ])
+  assert.match(savedSimilar, /new IntersectionObserver/)
+  assert.match(savedSimilar, /rootMargin: '25%'/)
+  assert.match(savedSimilar, /if \(!nearViewport\) return undefined[\s\S]*fetch\(`/)
+  assert.match(placePage, /Promise\.all\(\[\s*getCachedPublicLocation\(slug\),\s*getCachedPublicLocationRecommendations\(slug\)/)
+})
+
+test('Friends loads only the active tab UI, and Profile defers photo controls until opened', async () => {
+  const [friendsPage, friendsRoute, profilePage, avatarEditor] = await Promise.all([
+    read('app/(product)/matches/page.js'),
+    read('components/friends-route-content.js'),
+    read('app/(product)/profile/page.js'),
+    read('components/profile-avatar-editor.js')
+  ])
+  assert.doesNotMatch(friendsPage, /from '@\/components\/(?:figma-messages-realtime|figma-social-hub|pass-message-search)'/)
+  for (const component of ['figma-messages-realtime', 'figma-social-hub', 'pass-message-search']) {
+    assert.match(friendsRoute, new RegExp(`dynamic\\(\\(\\) => import\\('./${component}'\\)`))
+  }
+  assert.match(friendsRoute, /tab === 'add' && snapshot\.passActive \? <PassMessageSearch enabled \/>/)
+  assert.match(friendsRoute, /tab === 'messages'[\s\S]*<FigmaMessagesRealtime/)
+  assert.doesNotMatch(profilePage, /from '@\/components\/profile-photo-editor'/)
+  assert.match(profilePage, /<ProfileAvatarEditor/)
+  assert.match(avatarEditor, /if \(event\.currentTarget\.open\) setRequested\(true\)/)
+  assert.match(avatarEditor, /\{requested \? <ProfilePhotoEditor/)
+})
+
+test('Profile overlaps place hydration with independent friend and count reads', async () => {
+  const profilePage = await read('app/(product)/profile/page.js')
+  assert.match(profilePage, /const globalRowsPromise = Promise\.all\(\[postRowsPromise, saveRowsPromise\]\)\.then/)
+  assert.match(profilePage, /friendCountPromise, globalRowsPromise\s*\]/)
+  assert.doesNotMatch(profilePage, /const globalRows = await globalLocations/)
+})
+
+test('Messages starts thread and place reads without waiting for the friend list', async () => {
+  const socialHub = await read('lib/app/social-hub-data.js')
+  assert.match(socialHub, /const threadPromise = conversationsPromise\.then/)
+  assert.match(socialHub, /const locationsPromise = Promise\.all\(\[conversationsPromise, sharedRowsPromise, threadPromise\]\)/)
+  assert.match(socialHub, /friendsPromise, conversationsPromise, sharedRowsPromise, passActivePromise, threadPromise, locationsPromise/)
+})
+
+test('map place hydration overlaps membership and Swipe-selected post skips the map snapshot', async () => {
+  const [mapData, createPost, chooser] = await Promise.all([
+    read('lib/app/location-map-data.js'),
+    read('app/(product)/create/post/page.js'),
+    read('app/(product)/create/post/post-place-chooser.js')
+  ])
+  assert.match(mapData, /const locationsPromise = plansPromise\.then/)
+  assert.match(mapData, /Promise\.all\(\[plansPromise, passActivePromise, locationsPromise\]\)/)
+  assert.match(createPost, /const snapshot = directPoint \? null : await getLocationMapSnapshot\(session\)/)
+  assert.match(chooser, /if \(event\.currentTarget\.open\) void loadPlaces\(\)/)
+  assert.match(chooser, /fetch\('\/api\/map\/snapshot'/)
 })

@@ -35,7 +35,9 @@ export async function POST(request) {
       request_key: shareKey,
       share_note: note
     })
-    if (shared.error) return NextResponse.json({ error: 'That place could not be sent to this friend.' }, { status: 400 })
+    if (shared.error || !shared.data?.conversationId || !shared.data?.messageId || !shared.data?.shareId) {
+      return NextResponse.json({ error: 'That place could not be sent to this friend.' }, { status: 400 })
+    }
     return NextResponse.json({ ok: true, ...shared.data })
   } catch (error) {
     return NextResponse.json({ error: safeSecurityError(error, 'That share request is not valid.') }, { status: error?.status || 400 })

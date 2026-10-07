@@ -4,7 +4,7 @@
 The manifest builder never uploads media and never decodes image bytes. It
 filters dataset metadata, maps candidates to the active canonical location
 catalogue with a bounded spatial join, and writes only candidates that can be
-processed by the canonical B2 materializer. The materializer then reads local
+processed by the canonical Object storage materializer. The materializer then reads local
 OSV/MSLS files (or an explicitly allowed YFCC source URL) into memory, applies
 the existing JPEG/hash/claim/upload contract, and publishes searchable
 references through the normal photo overlay.
@@ -31,7 +31,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import duckdb
 
-from location_search_common import b2_source_config, configure_duckdb
+from location_search_common import object_source_config, configure_duckdb
 
 
 CELL_DEGREES = 0.0005
@@ -806,7 +806,7 @@ WHERE candidate_rank <= {max_candidates_per_location}
 def parser() -> argparse.ArgumentParser:
     command = argparse.ArgumentParser(description=__doc__)
     command.add_argument("--snapshot", required=True, help="Active canonical location snapshot date (YYYY-MM-DD).")
-    command.add_argument("--locations-uri", default="", help="Local Parquet path/glob or B2 s3:// location snapshot.")
+    command.add_argument("--locations-uri", default="", help="Local Parquet path/glob or Object storage s3:// location snapshot.")
     command.add_argument("--output", required=True, help="Local Parquet manifest path.")
     command.add_argument("--osv-root", default="", help="Extracted OSV-5M dataset root.")
     command.add_argument("--msls-root", default="", help="Extracted MSLS dataset root.")
@@ -841,7 +841,7 @@ def main(argv: list[str] | None = None) -> int:
     output = Path(args.output).expanduser().resolve()
     locations_uri = str(args.locations_uri or "").strip()
     if not locations_uri:
-        source = b2_source_config()
+        source = object_source_config()
         locations_uri = (
             f"s3://{source.bucket}/{source.data_prefix}/normalized/schema=v1/"
             f"snapshot={args.snapshot}/country_code=*/locations.parquet"
@@ -854,7 +854,7 @@ def main(argv: list[str] | None = None) -> int:
     con = duckdb.connect(str(work_db))
     con.execute(f"SET threads TO {max(1, min(32, int(args.threads)))}")
     if locations_uri.lower().startswith("s3://"):
-        configure_duckdb(con, b2_source_config(), max(1, min(32, int(args.threads))))
+        configure_duckdb(con, object_source_config(), max(1, min(32, int(args.threads))))
 
     indexes: list[LocalAssetIndex] = []
     hash_index: YfccHashIndex | None = None

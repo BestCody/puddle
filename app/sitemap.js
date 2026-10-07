@@ -31,7 +31,7 @@ function marketConcurrency() {
 // The catalogue lookups are the same cached calls the hubs make, so this shares their hourly
 // revalidation rather than issuing its own reads.
 export const revalidate = 3600
-// Sitemap generation reads the live B2 catalogue. Keep that work out of the deployment build;
+// Sitemap generation reads the live object store catalogue. Keep that work out of the deployment build;
 // the complete sitemap is cached as one public artifact after the first request.
 export const dynamic = 'force-dynamic'
 

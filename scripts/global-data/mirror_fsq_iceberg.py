@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror an FSQ OS bulk release into B2.
+"""Mirror an FSQ OS bulk release into Object storage.
 
 The historical FSQ_OS_CONNECTION_SQL secret is supported first so an already-working
 Foursquare connection does not have to be re-provisioned. The newer Iceberg token
@@ -40,13 +40,13 @@ TABLE = first_env('FSQ_OS_TABLE', 'FSQ_ICEBERG_TABLE')
 DELTA_TABLE = first_env('FSQ_ICEBERG_DELTA_TABLE')
 RELEASE = first_env('FSQ_RELEASE_LABEL')
 RELEASE_LABEL_SOURCE = 'configured' if RELEASE else 'mirror_date'
-DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
-B2_ENDPOINT_URL = required(first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT'), 'B2 S3 endpoint')
-B2_ENDPOINT = B2_ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
-B2_KEY_ID = required(first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID'), 'B2 key ID')
-B2_KEY = required(first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY'), 'B2 application key')
-B2_BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-B2_REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
+DATA_PREFIX = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
+OBJECT_ENDPOINT_URL = required(first_env('OBJECT_STORAGE_ENDPOINT'), 'Object storage S3 endpoint')
+OBJECT_ENDPOINT = OBJECT_ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
+OBJECT_KEY_ID = required(first_env('OBJECT_STORAGE_ACCESS_KEY_ID'), 'Object storage key ID')
+OBJECT_KEY = required(first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY'), 'Object storage application key')
+OBJECT_BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+OBJECT_REGION = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
 
 identifier = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*){0,2}$')
 
@@ -95,14 +95,14 @@ else:
     connection_mode = 'iceberg_token'
 
 con.execute(f"""
-CREATE OR REPLACE SECRET b2_data_secret (
+CREATE OR REPLACE SECRET object_data_secret (
   TYPE S3,
-  KEY_ID '{B2_KEY_ID.replace("'", "''")}',
-  SECRET '{B2_KEY.replace("'", "''")}',
-  REGION '{B2_REGION.replace("'", "''")}',
-  ENDPOINT '{B2_ENDPOINT.replace("'", "''")}',
+  KEY_ID '{OBJECT_KEY_ID.replace("'", "''")}',
+  SECRET '{OBJECT_KEY.replace("'", "''")}',
+  REGION '{OBJECT_REGION.replace("'", "''")}',
+  ENDPOINT '{OBJECT_ENDPOINT.replace("'", "''")}',
   URL_STYLE 'path',
-  USE_SSL true
+  USE_SSL {'true' if OBJECT_ENDPOINT_URL.startswith('https://') else 'false'}
 );
 """)
 
@@ -137,11 +137,11 @@ if not columns.intersection(id_candidates) or 'name' not in columns:
 
 # date_refreshed is a per-place freshness field, not a dataset release identifier.
 # If the operator has not provided an FSQ release label, use the mirror date so the
-# B2 raw prefix describes when Puddle captured this bulk snapshot.
+# Object storage raw prefix describes when Puddle captured this bulk snapshot.
 if not RELEASE:
     RELEASE = datetime.now(timezone.utc).date().isoformat()
 
-raw_prefix = f's3://{B2_BUCKET}/{DATA_PREFIX}/raw/fsq/release={RELEASE}/places'
+raw_prefix = f's3://{OBJECT_BUCKET}/{DATA_PREFIX}/raw/fsq/release={RELEASE}/places'
 con.execute(f"""
 COPY (SELECT * FROM {qualified})
 TO '{raw_prefix}'
@@ -153,7 +153,7 @@ if DELTA_TABLE and connection_mode == 'iceberg_token':
     qualified_delta = f'fsq_catalog.{delta}' if delta.count('.') == 1 else delta
     con.execute(f"""
     COPY (SELECT * FROM {qualified_delta})
-    TO 's3://{B2_BUCKET}/{DATA_PREFIX}/raw/fsq/release={RELEASE}/deltas'
+    TO 's3://{OBJECT_BUCKET}/{DATA_PREFIX}/raw/fsq/release={RELEASE}/deltas'
     (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 250000, PER_THREAD_OUTPUT true, OVERWRITE_OR_IGNORE true);
     """)
 
@@ -170,10 +170,10 @@ manifest = {
 manifest_json = json.dumps(manifest, separators=(',', ':'))
 escaped = manifest_json.replace("'", "''")
 con.execute(
-    f"COPY (SELECT '{escaped}' AS json) TO 's3://{B2_BUCKET}/{DATA_PREFIX}/raw/fsq/release={RELEASE}/manifest.parquet' "
+    f"COPY (SELECT '{escaped}' AS json) TO 's3://{OBJECT_BUCKET}/{DATA_PREFIX}/raw/fsq/release={RELEASE}/manifest.parquet' "
     "(FORMAT PARQUET, COMPRESSION ZSTD, OVERWRITE_OR_IGNORE true)"
 )
 print(json.dumps(manifest, indent=2))
-if os.getenv('GITHUB_OUTPUT'):
-    with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
-        output.write('fsq_release=' + str(RELEASE) + '\n')
+if os.getenv('PUDDLE_JOB_OUTPUT'):
+    with open(os.environ['PUDDLE_JOB_OUTPUT'], 'x', encoding='utf-8') as output:
+        json.dump({'fsq_release': str(RELEASE)}, output)

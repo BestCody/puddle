@@ -4,11 +4,10 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('Vercel compute is pinned beside the Supabase us-west-2 database', async () => {
-  const vercel = JSON.parse(await read('vercel.json'))
-  assert.deepEqual(vercel.regions, ['pdx1'])
-  assert.equal(vercel.fluid, true)
-  assert.doesNotMatch(await read('vercel.json'), /b2-production-selftest/)
+test('self-hosted Next output replaces the retired Vercel deployment configuration', async () => {
+  const config = await read('next.config.mjs')
+  assert.match(config, /output: 'standalone'/)
+  await assert.rejects(read('vercel.json'), { code: 'ENOENT' })
   await assert.rejects(read('app/api/internal/b2-production-selftest/route.js'), { code: 'ENOENT' })
 })
 
@@ -111,16 +110,16 @@ test('Navigation identity checks account state in its route after one proxy clai
   assert.match(identity, /'Cache-Control': 'private, no-store'/)
 })
 
-test('Public catalogue reads share short-lived immutable search results across users', async () => {
+test('Discovery shares public searches while map avoids high-cardinality viewport cache writes', async () => {
   const [discovery, map] = await Promise.all([
     read('lib/app/discovery-global.js'),
     read('app/api/map/viewport/route.js')
   ])
-  for (const source of [discovery, map]) {
-    assert.match(source, /unstable_cache/)
-    assert.match(source, /revalidate: 30/)
-    assert.match(source, /tags: \['global-location-search'\]/)
-  }
+  assert.match(discovery, /unstable_cache/)
+  assert.match(discovery, /revalidate: 30/)
+  assert.match(discovery, /tags: \['global-location-search'\]/)
+  assert.doesNotMatch(map, /unstable_cache|cachedPublicViewportSearch/)
+  assert.match(map, /searchGlobalLocationsInViewport\(viewport, \{ traceId: null \}\)/)
 })
 
 test('Sitemap generation stays out of deploy builds and shares one hourly public cache entry', async () => {
@@ -205,7 +204,7 @@ test('Production timing separates parallel auth and catalogue reads', async () =
   ])
   assert.match(viewport, /authStarted = latencyStart\(\)/)
   assert.match(viewport, /searchStarted = latencyStart\(\)/)
-  assert.match(viewport, /b2Search;dur=\$\{searchDuration\}/)
+  assert.match(viewport, /catalogueSearch;dur=\$\{searchDuration\}/)
   assert.match(viewport, /auth;dur=\$\{authDuration\}/)
   assert.match(discovery, /searchMs = Number\(feed\.infrastructure\?\.timings\?\.searchMs/)
   assert.match(discovery, /seenMs = Number\(feed\.infrastructure\?\.timings\?\.seenMs/)
@@ -220,7 +219,7 @@ test('Discovery exposes its compute region for privacy-safe real-user profiling'
   ])
   assert.match(route, /response\.headers\.set\('x-puddle-region', deploymentRegion\(\)\)/)
   assert.match(page, /initialRegion=\{deploymentRegion\(\)\}/)
-  assert.match(region, /process\.env\.VERCEL_REGION/)
+  assert.match(region, /process\.env\.PUDDLE_REGION/)
 })
 
 test('Map snapshots only load map-relevant relationship IDs before one B2 hydration', async () => {
@@ -287,23 +286,19 @@ test('Social feed uses bounded indexed scans and parallel page hydration', async
   assert.match(restore, /security invoker/i)
 })
 
-test('B2 radius serving uses compact cores and immutable shard-object caching', async () => {
-  const [search, shards, runtimeCache, objectStore, projection, gateway] = await Promise.all([
-    read('lib/app/b2-location-search.js'),
+test('object-store radius serving uses compact cores and bounded shard caching', async () => {
+  const [search, shards, objectStore, projection, gateway] = await Promise.all([
+    read('lib/app/object-location-search.js'),
     read('lib/app/location-search-shards.js'),
-    read('lib/app/b2-runtime-object-cache.js'),
-    read('lib/app/b2-search-object-store.js'),
-    read('lib/app/b2-text-search-projection.js'),
+    read('lib/app/search-object-store.js'),
+    read('lib/app/text-search-projection.js'),
     read('lib/app/global-location-search.js')
   ])
   assert.match(search, /projection = await fetchTextProjectionCore\(targetPlan/)
   assert.match(search, /query\.normalized[\s\S]*scoreNormalizedTextFields/)
   assert.match(shards, /parseObject\(manifestObjectKey\(resolvedManifest, `id\/\$\{bucket\}\.json\.br`\)/)
-  assert.doesNotMatch(shards, /readB2RuntimeLocationCache|writeB2RuntimeLocationCache|queueB2RuntimeLocationCacheWrite/)
-  assert.doesNotMatch(runtimeCache, /LOCATION_CACHE_VERSION|b2RuntimeLocationCacheKey|b2-search-location/)
-  assert.match(objectStore, /GLOBAL_LOCATION_SEARCH_CDN_BASE_URL/)
-  assert.match(objectStore, /Cache-Control|cache:\s*'no-store'/)
-  assert.doesNotMatch(objectStore, /unstable_cache/)
+  assert.match(objectStore, /downloadSelfHostObject/)
+  assert.doesNotMatch(objectStore, /authorizeB2|unstable_cache/)
   assert.match(shards, /manifestInFlight/)
   assert.match(projection, /READY_IN_FLIGHT/)
   assert.match(projection, /PROJECTION_PAYLOAD_IN_FLIGHT/)
@@ -331,7 +326,7 @@ test('Partial caching is limited to cookie-free published public location data',
   assert.match(publicClient, /persistSession: false/)
   assert.match(place, /getCachedPublicLocation/)
   assert.match(place, /revalidate = 3600/)
-  assert.doesNotMatch(place, /generateStaticParams/)
+  assert.match(place, /generateStaticParams\(\) \{\s*return \[\]\s*\}/)
   assert.doesNotMatch(place, /dynamicParams = false/)
   assert.doesNotMatch(place, /force-dynamic/)
   assert.match(discover, /dynamic = 'force-dynamic'/)
@@ -369,7 +364,7 @@ test('Server latency budgets emit structured metrics without user identifiers', 
   const metrics = await read('lib/performance/server-latency.js')
   assert.match(metrics, /SERVER_LATENCY_BUDGET_MS/)
   assert.match(metrics, /puddle_server_latency/)
-  assert.match(metrics, /VERCEL_REGION/)
+  assert.match(metrics, /PUDDLE_REGION/)
   assert.match(metrics, /over_budget/)
   assert.doesNotMatch(metrics, /userId|email|profileId/)
 })

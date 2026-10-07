@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Register global B2 photos created before the uniqueness registry existed.
+"""Register global Object storage photos created before the uniqueness registry existed.
 
-This is a one-time-per-snapshot bridge. It verifies existing immutable B2 JPEGs,
+This is a one-time-per-snapshot bridge. It verifies existing immutable Object storage JPEGs,
 registers the best globally unique photo for each real canonical location through
 the same MIH locks used by new imports, and publishes exclusions for every stale
-or conflicting metadata row. A B2 completion marker makes subsequent hourly runs
+or conflicting metadata row. A Object storage completion marker makes subsequent hourly runs
 O(1) for the same snapshot.
 """
 import concurrent.futures
@@ -48,17 +48,17 @@ def safe_partition(value, label):
 
 SUPABASE_URL = first_env('NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL').rstrip('/')
 SUPABASE_KEY = first_env('SUPABASE_SECRET_KEY')
-DATA_BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-DATA_ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
+DATA_BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+DATA_ENDPOINT_URL = first_env('OBJECT_STORAGE_ENDPOINT').rstrip('/')
 DATA_ENDPOINT = DATA_ENDPOINT_URL.replace('https://', '').replace('http://', '')
-DATA_KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-DATA_KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-DATA_REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
-DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
-MEDIA_BUCKET = first_env('B2_MEDIA_BUCKET_NAME', 'B2_BUCKET', default=DATA_BUCKET)
-MEDIA_ENDPOINT = first_env('B2_MEDIA_S3_ENDPOINT', 'B2_S3_ENDPOINT', default=DATA_ENDPOINT_URL).rstrip('/')
-MEDIA_KEY_ID = first_env('B2_MEDIA_KEY_ID', 'B2_MEDIA_APPLICATION_KEY_ID', 'B2_KEY_ID', default=DATA_KEY_ID)
-MEDIA_KEY = first_env('B2_MEDIA_APPLICATION_KEY', 'B2_APPLICATION_KEY', default=DATA_KEY)
+DATA_KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+DATA_KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+DATA_REGION = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
+DATA_PREFIX = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
+MEDIA_BUCKET = first_env('OBJECT_STORAGE_BUCKET', default=DATA_BUCKET)
+MEDIA_ENDPOINT = first_env('OBJECT_STORAGE_ENDPOINT', default=DATA_ENDPOINT_URL).rstrip('/')
+MEDIA_KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID', default=DATA_KEY_ID)
+MEDIA_KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY', default=DATA_KEY)
 SNAPSHOT = str(os.getenv('GLOBAL_LOCATION_SNAPSHOT', '')).strip()
 CONCURRENCY = max(1, min(64, int(os.getenv('GLOBAL_PHOTO_EXISTING_RECONCILE_CONCURRENCY', '32'))))
 PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3, 'yfcc100m': 4}
@@ -68,9 +68,9 @@ MAX_SOURCE_PIXELS = 40_000_000
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError('Supabase URL and service secret are required.')
 if not DATA_ENDPOINT_URL or not DATA_KEY_ID or not DATA_KEY:
-    raise RuntimeError('B2 data credentials are required.')
+    raise RuntimeError('Object storage data credentials are required.')
 if not MEDIA_ENDPOINT or not MEDIA_KEY_ID or not MEDIA_KEY:
-    raise RuntimeError('B2 media credentials are required.')
+    raise RuntimeError('Object storage media credentials are required.')
 if not SNAPSHOT:
     raise RuntimeError('GLOBAL_LOCATION_SNAPSHOT is required.')
 if not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', SNAPSHOT):
@@ -175,7 +175,7 @@ def verify_and_register(row):
         raise RuntimeError('existing global photo body size verification failed')
     actual = hashlib.sha256(body).hexdigest()
     if actual != expected:
-        raise RuntimeError(f'B2 SHA-256 mismatch for {row["location_id"]}: expected {expected}, got {actual}')
+        raise RuntimeError(f'Object storage SHA-256 mismatch for {row["location_id"]}: expected {expected}, got {actual}')
     with Image.open(io.BytesIO(body)) as original:
         if original.width * original.height > MAX_SOURCE_PIXELS:
             raise RuntimeError('existing global photo has too many pixels')
@@ -268,7 +268,7 @@ con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
 con.execute(f"SET threads TO {max(1, min(16, CONCURRENCY))}")
-con.execute(f"""CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{DATA_KEY_ID.replace("'","''")}',SECRET '{DATA_KEY.replace("'","''")}',REGION '{DATA_REGION.replace("'","''")}',ENDPOINT '{DATA_ENDPOINT.replace("'","''")}',URL_STYLE 'path',USE_SSL true);""")
+con.execute(f"""CREATE OR REPLACE SECRET object_data_secret (TYPE S3,KEY_ID '{DATA_KEY_ID.replace("'","''")}',SECRET '{DATA_KEY.replace("'","''")}',REGION '{DATA_REGION.replace("'","''")}',ENDPOINT '{DATA_ENDPOINT.replace("'","''")}',URL_STYLE 'path',USE_SSL {'true' if DATA_ENDPOINT_URL.startswith('https://') else 'false'});""")
 
 if not prefix_exists(PHOTO_PREFIX):
     summary = {'version': 1, 'complete': True, 'snapshot': SNAPSHOT, 'locations': 0, 'metadataRows': 0, 'excluded': 0, 'completedAt': datetime.now(timezone.utc).isoformat()}

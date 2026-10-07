@@ -7,6 +7,7 @@ import { PhotoFrame } from '@/components/photo-frame'
 import { RoutedSegment } from '@/components/routed-segment'
 import { createClient } from '@/lib/supabase/client'
 import { hydrateSocialLocationRows } from '@/lib/app/social-location-metadata-client'
+import { lastInboxCursor } from '@/lib/app/social-inbox-cursor'
 
 function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
@@ -123,6 +124,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const messageScrollRef = useRef(null)
   const [conversations, setConversations] = useState(() => conversationList(initialSnapshot, selected))
   const [conversationsHasMore, setConversationsHasMore] = useState(Boolean(initialSnapshot.conversationsHasMore))
+  const inboxCursorRef = useRef(lastInboxCursor(initialSnapshot.conversations))
   const [friends, setFriends] = useState(initialSnapshot.friends || [])
   const [friendsHasMore, setFriendsHasMore] = useState(Boolean(initialSnapshot.friendsHasMore))
   const [messages, setMessages] = useState(initialSnapshot.messages || [])
@@ -150,17 +152,23 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
 
   useEffect(() => {
     const nextFriends = initialSnapshot.friends || []
+    const changedConversation = snapshotConversationIdRef.current !== selectedId
+    snapshotConversationIdRef.current = selectedId
+    if (changedConversation) {
+      inboxCursorRef.current = lastInboxCursor(initialSnapshot.conversations)
+      setConversationsHasMore(Boolean(initialSnapshot.conversationsHasMore))
+    } else if (!inboxCursorRef.current) {
+      inboxCursorRef.current = lastInboxCursor(initialSnapshot.conversations)
+    }
     setFriends(nextFriends)
     setFriendsHasMore(Boolean(initialSnapshot.friendsHasMore))
     setConversations((current) => {
-      const changedConversation = snapshotConversationIdRef.current !== selectedId
-      snapshotConversationIdRef.current = selectedId
       if (changedConversation) return conversationList(initialSnapshot, selected)
       const real = current.filter((item) => !item.is_friend_placeholder)
       const incoming = initialSnapshot.conversations || []
       return conversationList({ ...initialSnapshot, friends: nextFriends }, selected, sortConversations(mergeById(real, incoming, 'conversation_id')))
     })
-    setConversationsHasMore((current) => current || Boolean(initialSnapshot.conversationsHasMore))
+    if (!changedConversation) setConversationsHasMore((current) => current || Boolean(initialSnapshot.conversationsHasMore))
   }, [initialSnapshot.conversations, initialSnapshot.friends, initialSnapshot.friendsHasMore, initialSnapshot.conversationsHasMore, selectedId])
 
   useEffect(() => {
@@ -250,6 +258,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           return true
         }
         if (error) throw error
+        throw new Error('Message response was invalid.')
       } catch (cause) {
         console.warn('Could not refresh messages.', { message: cause?.message || 'unknown error' })
         if (selectedId === targetId) {
@@ -285,12 +294,15 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
             return conversationList({ ...initialSnapshot, friends }, selected, sortConversations(mergeById(real, hydrated, 'conversation_id')))
           })
           setConversationsHasMore((current) => current || data.length === 30)
+          return true
         }
         if (error) throw error
+        throw new Error('Conversation response was invalid.')
       } catch (cause) {
         console.warn('Could not refresh conversations.', { message: cause?.message || 'unknown error' })
         if (selectedId === targetId) setNotice('Conversations could not be refreshed.')
       }
+      return false
     })()
     conversationsRefreshRef.current = request
     try {
@@ -441,7 +453,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
 
   async function loadMoreConversations() {
     if (!conversationsHasMore || paging) return
-    const cursor = [...conversations].reverse().find((item) => item.sort_at && item.conversation_id)
+    const cursor = inboxCursorRef.current
     if (!cursor) {
       setConversationsHasMore(false)
       return
@@ -453,18 +465,17 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         before_conversation_id: cursor.conversation_id,
         result_limit: 30
       })
-      if (!error) {
-        const hydrated = await hydrateSocialLocationRows(data || [], 'last_location_id')
-        setConversations((current) => {
-          const placeholders = current.filter((item) => item.is_friend_placeholder)
-          const real = current.filter((item) => !item.is_friend_placeholder)
-          const merged = sortConversations(mergeById(real, hydrated, 'conversation_id'))
-          const friendIds = new Set(merged.map((item) => item.friend_id).filter(Boolean))
-          return [...merged, ...placeholders.filter((item) => !friendIds.has(item.friend_id))]
-        })
-        setConversationsHasMore((data || []).length === 30)
-      }
-      if (error || !data) setNotice('More conversations could not be loaded.')
+      if (error || !Array.isArray(data)) throw error || new Error('Conversation page was invalid.')
+      const hydrated = await hydrateSocialLocationRows(data, 'last_location_id')
+      setConversations((current) => {
+        const placeholders = current.filter((item) => item.is_friend_placeholder)
+        const real = current.filter((item) => !item.is_friend_placeholder)
+        const merged = sortConversations(mergeById(real, hydrated, 'conversation_id'))
+        const friendIds = new Set(merged.map((item) => item.friend_id).filter(Boolean))
+        return [...merged, ...placeholders.filter((item) => !friendIds.has(item.friend_id))]
+      })
+      if (data.length) inboxCursorRef.current = lastInboxCursor(data)
+      setConversationsHasMore(data.length === 30)
     } catch (cause) {
       console.warn('Could not load more conversations.', { message: cause?.message || 'unknown error' })
       setNotice('More conversations could not be loaded.')
@@ -487,10 +498,10 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         before_id: cursor.id,
         result_limit: 100
       })
-      if (error) throw error
-      const nextFriends = mergeById(friends, data || [])
+      if (error || !Array.isArray(data)) throw error || new Error('Friend page was invalid.')
+      const nextFriends = mergeById(friends, data)
       setFriends(nextFriends)
-      setFriendsHasMore((data || []).length === 100)
+      setFriendsHasMore(data.length === 100)
       setConversations((current) => conversationList({ ...initialSnapshot, friends: nextFriends }, selected, current))
     } catch (cause) {
       console.warn('Could not load more friends.', { message: cause?.message || 'unknown error' })
@@ -507,20 +518,45 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     setBusy(true)
     setNotice('')
     try {
-      const { error } = await client.rpc('social_send_message_v1', { target: selectedId, message_body: body })
-      if (error) {
-        setNotice('Could not send that message.')
-        return
-      }
+      const { data, error } = await client.rpc('social_send_message_v1', { target: selectedId, message_body: body })
+      if (error || !data) throw error || new Error('Message was not accepted.')
       setDraft('')
       stickToBottomRef.current = true
-      if (!await refreshMessages()) setNotice('Message sent, but the conversation could not be refreshed.')
-      await markSelectedRead()
-      await refreshConversations()
-    } catch {
+    } catch (cause) {
+      console.warn('Could not send message.', { message: cause?.message || 'unknown error' })
       setNotice('Could not send that message.')
+      setBusy(false)
+      return
+    }
+    try {
+      await reconcileSentMessage()
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function reconcileSentMessage() {
+    let messagesUpdated = false
+    let readUpdated = true
+    let conversationsUpdated = false
+    try {
+      messagesUpdated = await refreshMessages()
+    } catch (cause) {
+      console.warn('Could not refresh sent message.', { message: cause?.message || 'unknown error' })
+    }
+    try {
+      await markSelectedRead()
+    } catch (cause) {
+      readUpdated = false
+      console.warn('Could not update sent-message read state.', { message: cause?.message || 'unknown error' })
+    }
+    try {
+      conversationsUpdated = await refreshConversations()
+    } catch (cause) {
+      console.warn('Could not refresh conversation after sending.', { message: cause?.message || 'unknown error' })
+    }
+    if (!messagesUpdated || !conversationsUpdated || !readUpdated) {
+      setNotice('Sent, but the conversation could not be fully refreshed. Reopen it to see the latest state.')
     }
   }
 
@@ -532,23 +568,23 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     setBusy(true)
     setNotice('')
     try {
-      const { error } = await client.rpc('social_send_location_message_v1', {
+      const { data, error } = await client.rpc('social_send_location_message_v1', {
         target: selectedId,
         target_location: locationId,
         request_key: requestKey
       })
-      if (error) {
-        setNotice('Could not attach that place.')
-        return
-      }
+      if (error || !data) throw error || new Error('Place was not attached.')
       placeMenuRef.current?.removeAttribute('open')
       locationShareKeysRef.current.delete(requestId)
       stickToBottomRef.current = true
-      await refreshMessages()
-      await markSelectedRead()
-      await refreshConversations()
-    } catch {
+    } catch (cause) {
+      console.warn('Could not attach place.', { message: cause?.message || 'unknown error' })
       setNotice('Could not attach that place.')
+      setBusy(false)
+      return
+    }
+    try {
+      await reconcileSentMessage()
     } finally {
       setBusy(false)
     }

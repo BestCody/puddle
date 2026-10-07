@@ -37,16 +37,16 @@ parser.add_argument('--source-snapshot', required=True, type=snapshot_argument)
 parser.add_argument('--target-snapshot', required=True, type=snapshot_argument)
 args = parser.parse_args()
 
-BUCKET = os.getenv('B2_DATA_BUCKET_NAME', '').strip()
-ENDPOINT = os.getenv('B2_DATA_S3_ENDPOINT', '').strip()
-KEY_ID = os.getenv('B2_DATA_APPLICATION_KEY_ID', '').strip()
-KEY = os.getenv('B2_DATA_APPLICATION_KEY', '').strip()
-REGION = os.getenv('B2_DATA_S3_REGION', 'us-east-005').strip()
-DATA_PREFIX = clean_prefix(os.getenv('B2_DATA_PREFIX', 'data'))
+BUCKET = os.getenv('OBJECT_STORAGE_BUCKET', '').strip()
+ENDPOINT = os.getenv('OBJECT_STORAGE_ENDPOINT', '').strip()
+KEY_ID = os.getenv('OBJECT_STORAGE_ACCESS_KEY_ID', '').strip()
+KEY = os.getenv('OBJECT_STORAGE_SECRET_ACCESS_KEY', '').strip()
+REGION = os.getenv('OBJECT_STORAGE_REGION', 'us-east-1').strip()
+DATA_PREFIX = clean_prefix(os.getenv('PUDDLE_DATA_PREFIX', 'data'))
 COPY_CONCURRENCY = max(1, min(64, int(os.getenv('GLOBAL_PHOTO_CARRY_CONCURRENCY', '16'))))
 
 if not BUCKET or not ENDPOINT or not KEY_ID or not KEY:
-    raise RuntimeError('B2 data endpoint and credentials are required.')
+    raise RuntimeError('Object storage data endpoint and credentials are required.')
 
 client = boto3.client(
     's3',

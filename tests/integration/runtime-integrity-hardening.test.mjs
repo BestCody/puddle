@@ -62,19 +62,14 @@ test('discovery cards use canonical B2 photo URLs without a relational catalogue
   assert.doesNotMatch(discovery, /getRelationalDiscoveryFeed|discovery-relational|from\(['"]locations['"]\)/)
 })
 
-test('photo enrichment builds a global candidate lake and materializes canonical B2 media', async () => {
-  const workflow = await read('.github/workflows/global-photo-enrichment.yml')
+test('photo enrichment builds a global candidate lake and materializes canonical media', async () => {
+  const runner = await read('scripts/self-host-run-data-job.mjs')
   const materializer = await read('scripts/global-data/materialize_photo_candidates.py')
 
-  assert.match(workflow, /workflow_dispatch:/)
-  assert.match(workflow, /\bschedule:/)
-  assert.match(workflow, /B2_MEDIA_APPLICATION_KEY_ID/)
-  assert.match(workflow, /B2_MEDIA_APPLICATION_KEY/)
-  assert.match(workflow, /build_wikimedia_candidates\.py/)
-  assert.match(workflow, /build_mapillary_candidates\.py/)
-  assert.match(workflow, /materialize_photo_candidates\.py/)
-  assert.match(workflow, /media\/photos\/by-sha256/)
-  assert.doesNotMatch(workflow, /PHOTO_ENRICH_SYNC_MEDIA|B2_INFRA_ENABLED|R2_CONFIG|R2_PUBLIC_BASE_URL/)
+  assert.match(runner, /build_wikimedia_candidates\.py/)
+  assert.match(runner, /build_mapillary_candidates\.py/)
+  assert.match(runner, /materialize_photo_candidates\.py/)
+  assert.match(runner, /PUDDLE_STORAGE_CUTOVER_COMPLETE/)
   assert.match(materializer, /sha256/i)
-  assert.match(materializer, /B2_MEDIA_OPEN_PHOTO_PREFIX/)
+  assert.match(materializer, /PUDDLE_OPEN_PHOTO_PREFIX/)
 })

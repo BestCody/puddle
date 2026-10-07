@@ -1,28 +1,18 @@
 name: Live production smoke
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-    paths:
-      - 'lib/app/location-plans-data.js'
-      - 'lib/app/public-location-cache.js'
-      - 'lib/app/social-feed-data.js'
-      - 'lib/performance/server-latency.js'
-      - 'app/api/discovery/route.js'
-      - 'app/api/map/viewport/route.js'
-      - 'supabase/migrations/10070_location_history_single_photo.sql'
-      - 'tests/live/production-load.spec.mjs'
-      - '.github/workflows/live-production-smoke.yml'
   workflow_dispatch:
+    inputs:
+      deployed_sha:
+        description: Full commit SHA reported by the self-hosted deployment after its health gate passes
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   production-smoke:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -31,6 +21,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.deployed_sha }}
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
@@ -42,12 +34,18 @@ jobs:
         run: npm install --no-save --package-lock=false @playwright/test@1.56.1
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Allow production deployment to begin
-        run: sleep 45
+      - name: Confirm the requested revision is actually deployed
+        env:
+          DEPLOYED_SHA: ${{ inputs.deployed_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOYED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          health="$(curl --fail --silent --show-error https://puddle.you/api/health)"
+          HEALTH="$health" node -e 'const health = JSON.parse(process.env.HEALTH); if (!health.ok || health.buildSha !== process.env.DEPLOYED_SHA) process.exit(1)'
       - name: Run live product UI smoke
         run: npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/completed-ui-production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs tests/live/public-catalogue.spec.mjs
       - name: Run bounded production load until SLOs pass
-        if: always()
         shell: bash
         run: |
           set +e
@@ -69,43 +67,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: live-production-smoke-report
-          path: |
-            playwright-report
-            test-results
-          if-no-files-found: ignore
-          retention-days: 14
-
-  production-load:
-    # The live URL is the already-deployed main site, not a PR preview. Keep
-    # this as an explicit post-deploy gate so a PR cannot fail on unrelated
-    # production variance while preserving the real production measurement.
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      LIVE_BASE_URL: https://puddle.you
-      NEXT_TELEMETRY_DISABLED: 1
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install application dependencies
-        run: npm ci --no-audit --no-fund
-      - name: Install Playwright test runner
-        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-      - name: Run bounded production load gate
-        run: npx playwright test --config=playwright.live.config.mjs tests/live/production-load.spec.mjs
-      - name: Upload load diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: production-load-report
           path: |
             playwright-report
             test-results

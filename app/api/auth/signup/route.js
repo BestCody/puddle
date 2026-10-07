@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server'
 import { pathWithMessage } from '@/lib/auth/redirect'
 import { registerAccount } from '@/lib/auth/sign-up'
 import { enforceRequestSize } from '@/lib/security/request'
+import { siteUrl } from '@/lib/auth/origin'
 
 export const dynamic = 'force-dynamic'
 
 function redirectWithError(request, message) {
-  const target = new URL(pathWithMessage('/landing.html', 'error', message, { mode: 'signup' }), request.url)
+  const target = siteUrl(request.headers, pathWithMessage('/landing.html', 'error', message, { mode: 'signup' }))
   const response = NextResponse.redirect(target, 303)
   response.headers.set('Cache-Control', 'no-store')
   return response
@@ -18,7 +19,7 @@ export async function POST(request) {
     const result = await registerAccount(await request.formData())
     if (result.error) return redirectWithError(request, result.error)
 
-    const response = NextResponse.redirect(new URL(result.destination, request.url), 303)
+    const response = NextResponse.redirect(siteUrl(request.headers, result.destination), 303)
     response.headers.set('Cache-Control', 'no-store')
     return response
   } catch {

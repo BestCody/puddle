@@ -5,12 +5,13 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('landing feature phones reuse production components with deterministic fixture data', async () => {
-  const [landingHtml, demoPage, demoComponent, demoCss, landingCss] = await Promise.all([
+  const [landingHtml, demoPage, demoComponent, demoCss, landingCss, globalCss] = await Promise.all([
     read('public/landing.html'),
     read('app/landing-demo/[view]/page.js'),
     read('components/landing-phone-demo.js'),
     read('app/landing-phone-demo.css'),
-    read('public/landing.css')
+    read('public/landing.css'),
+    read('app/global.css')
   ])
 
   for (const view of ['swipe', 'save', 'feed']) {
@@ -24,6 +25,8 @@ test('landing feature phones reuse production components with deterministic fixt
   assert.match(landingHtml, /hero-phone-centered\.(png|webp)/)
   assert.doesNotMatch(landingHtml, /hero-phone-device\.(png|webp)/)
   assert.match(demoPage, /export const dynamic = 'force-dynamic'/)
+  assert.match(demoPage, /import '@\/app\/landing-phone-demo\.css'/)
+  assert.doesNotMatch(globalCss, /landing-phone-demo\.css/)
   assert.doesNotMatch(demoPage, /export const dynamic = 'force-static'/)
 
   for (const component of ['FigmaSwipeCard', 'SwipeActionDock', 'SavedLightweightGrid', 'SocialFeedClient', 'RoutedSegment']) assert(demoComponent.includes(component), component + ' must be reused by the landing demos')

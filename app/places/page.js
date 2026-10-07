@@ -22,7 +22,7 @@ export const metadata = {
 }
 
 // The landing page links here and this page links to every market hub, which is what gives
-// crawlers a route into the per-place records served out of the B2 catalogue.
+// crawlers a route into the per-place records served out of the object store catalogue.
 export default function PlacesIndexPage() {
   const markets = listMarkets()
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'

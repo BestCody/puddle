@@ -1,25 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { normalizeOrigin, requestOrigin } from '@/lib/auth/origin'
+import { siteUrl } from '@/lib/auth/origin'
 import { safeNextPath } from '@/lib/auth/redirect'
 import { authenticatedDestination, ensureProfile } from '@/lib/auth/profile'
 import { authLinkErrorMessage, safeAuthErrorCode } from '@/lib/auth/errors'
 
-function appOrigin(request) {
-  const configured = normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL)
-  if (configured) return configured
-  if (process.env.NODE_ENV === 'production') return 'https://puddle.you'
-  return requestOrigin(request.headers, 'http://localhost:3000')
-}
-
-function appUrl(request, path) {
-  return new URL(path, appOrigin(request))
-}
-
 function authFailure(request, code = 'callback_failed') {
   const safeCode = safeAuthErrorCode(code, 'callback_failed')
-  const target = appUrl(request, '/landing.html')
+  const target = siteUrl(request.headers, '/landing.html')
   target.searchParams.set('error', authLinkErrorMessage(safeCode))
   target.searchParams.set('auth_error', safeCode)
   return NextResponse.redirect(target)
@@ -42,7 +31,7 @@ function exchangeableCode(value) {
 
 export async function GET(request) {
   if (!isSupabaseConfigured()) {
-    return NextResponse.redirect(appUrl(request, '/landing.html?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.'))
+    return NextResponse.redirect(siteUrl(request.headers, '/landing.html?error=Accounts+are+temporarily+unavailable.+Please+try+again+later.'))
   }
 
   const url = new URL(request.url)
@@ -79,5 +68,5 @@ export async function GET(request) {
     })
   }
 
-  return NextResponse.redirect(appUrl(request, authenticatedDestination(profile, next)))
+  return NextResponse.redirect(siteUrl(request.headers, authenticatedDestination(profile, next)))
 }

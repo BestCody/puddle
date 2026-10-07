@@ -30,12 +30,14 @@ test('Pass heatmap uses incremental density tiles and viewport requests', async 
 test('creating a location is Pass-gated in the page, action, and database policy', async () => {
   const page = await read('app/(product)/create/place/page.js')
   const actions = await read('app/(product)/create/actions.js')
+  const draftWriter = await read('lib/app/location-draft-write.js')
   const migration = await read('supabase/migrations/10059_pass_feature_entitlements.sql')
 
   assert.match(page, /membership\.active \? <LocationEditor/)
   assert.match(page, /const membership = await getMembershipSnapshot\(session\)/)
   assert.match(page, /const options = membership\.active \? await getCreatorOptions\(session\) : null/)
-  assert.match(actions, /puddle_tinder_active_v1/)
+  assert.match(actions, /saveLocationSubmission/)
+  assert.match(draftWriter, /puddle_tinder_active_v1/)
   assert.match(migration, /create policy "pass users create locations"/)
 })
 

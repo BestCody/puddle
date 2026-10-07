@@ -7,6 +7,16 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const read = (path) => readFile(join(root, path), 'utf8')
 
 const retiredPaths = [
+  'vercel.json',
+  'scripts/supabase-management-query.mjs',
+  '.github/workflows/apply-account-deletion-integrity.yml',
+  '.github/workflows/apply-conversation-location-preview.yml',
+  '.github/workflows/apply-discovery-session-bundle.yml',
+  '.github/workflows/apply-global-photo-candidate-registry.yml',
+  '.github/workflows/apply-internal-table-rls.yml',
+  '.github/workflows/apply-review-delete-contract.yml',
+  '.github/workflows/apply-social-feed-hot-path.yml',
+  '.github/workflows/apply-social-sharing-consistency.yml',
   '.github/workflows/global-location-progress.yml',
   '.github/workflows/global-location-resume.yml',
   '.github/workflows/global-bootstrap.yml',
@@ -80,11 +90,6 @@ for (const required of ['NEXT_PUBLIC_SUPABASE_URL','/storage/v1/object/**']) {
   if (!nextConfig.includes(required)) throw new Error(`next.config.mjs is missing active Supabase user-media configuration: ${required}`)
 }
 
-const b2Storage = await read('lib/storage/b2-native.js')
-for (const retired of ['b2PublicUrl','publicBaseUrl','B2_MEDIA_PUBLIC_BASE_URL','B2_DOWNLOAD_BASE_URL']) {
-  if (b2Storage.includes(retired)) throw new Error(`B2 storage helper restored retired public delivery API: ${retired}`)
-}
-
 const discovery = await read('lib/app/discovery.js')
 for (const retired of ['getRelationalDiscoveryFeed','discovery-relational','GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK']) {
   if (discovery.includes(retired)) throw new Error(`Discovery restored retired Postgres fallback: ${retired}`)
@@ -94,8 +99,8 @@ const publicLocation = await read('lib/app/public-location-cache.js')
 if (publicLocation.includes("from('locations')")) throw new Error('Public location serving restored the Supabase catalogue.')
 
 const openPhoto = await read('app/api/open-photo/[sha256]/route.js')
-if (openPhoto.includes("from('media_objects')")) throw new Error('Canonical B2 open-photo delivery restored Supabase media registration coupling.')
-if (!openPhoto.includes('media/photos/by-sha256/')) throw new Error('Canonical B2 open-photo key derivation is missing.')
+if (openPhoto.includes("from('media_objects')")) throw new Error('Canonical open-photo delivery restored Supabase media registration coupling.')
+if (!openPhoto.includes('media/photos/by-sha256/')) throw new Error('Canonical open-photo key derivation is missing.')
 
 const cutover = await read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql')
 if (!cutover.includes('drop table public.locations')) throw new Error('Supabase catalogue retirement is missing from the cutover migration.')
@@ -109,7 +114,7 @@ for (const stale of [
 ]) {
   if (readme.includes(stale)) throw new Error(`README restored stale architecture statement: ${stale}`)
 }
-for (const required of ['B2-only global location serving','/api/open-photo/<sha256>','docs/system-architecture.md']) {
+for (const required of ['private object-store global location serving','/api/open-photo/<sha256>','docs/system-architecture.md']) {
   if (!readme.includes(required)) throw new Error(`README is missing canonical architecture marker: ${required}`)
 for (const retired of ['OpenSearch `locations-active`','opensearch-location-search.js','GLOBAL_LOCATION_SEARCH_BACKEND']) {
   if (readme.includes(retired)) throw new Error(`README restored retired OpenSearch architecture: ${retired}`)
@@ -117,7 +122,7 @@ for (const retired of ['OpenSearch `locations-active`','opensearch-location-sear
 }
 
 const architecture = await read('docs/system-architecture.md')
-for (const required of ['B2 serving failures fail closed and never fall back to Postgres','Supabase Storage is not an approved open-photo byte store']) {
+for (const required of ['Object-store serving failures fail closed and never fall back to Postgres','Supabase Storage is not an approved open-photo byte store']) {
   if (!architecture.includes(required)) throw new Error(`System architecture is missing invariant: ${required}`)
 }
 
@@ -148,7 +153,7 @@ retiredDatabaseIdentifiers.delete('locations')
 const activeTrackedFiles = execFileSync('git', [
   'ls-files', '-z',
   'app', 'components', 'lib', 'scripts', '.github/workflows',
-  'package.json', '.env.example', 'vercel.json', 'next.config.mjs', 'proxy.js'
+  'package.json', '.env.example', 'next.config.mjs', 'proxy.js'
 ], { cwd: root })
   .toString()
   .split('\0')

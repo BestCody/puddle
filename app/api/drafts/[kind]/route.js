@@ -1,29 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { locationPayload, validateLocation } from '@/lib/app/content-input'
+import { LocationDraftError, saveLocationSubmission } from '@/lib/app/location-draft-write'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
 import { readJsonLimited, safeSecurityError } from '@/lib/security/request'
 
 export const dynamic = 'force-dynamic'
-
-function message(error, fallback) {
-  const value = String(error?.message || '').trim()
-  return value && !/policy|permission|schema cache|relation|supabase/i.test(value) ? value : fallback
-}
-
-async function savePrivateDetail(supabase, id, exactAddress, userId) {
-  if (exactAddress) {
-    return supabase.from('location_private_details').upsert({
-      location_id: id,
-      exact_address: exactAddress,
-      updated_by: userId,
-      updated_at: new Date().toISOString()
-    })
-  }
-  return supabase.from('location_private_details').delete().eq('location_id', id)
-}
 
 export async function POST(request, context) {
   if (!verifyCsrf(request)) return NextResponse.json({ error: 'Security token is invalid.' }, { status: 403 })
@@ -50,34 +33,16 @@ export async function POST(request, context) {
     return NextResponse.json({ error: safeSecurityError(error, 'The draft could not be read.') }, { status: error?.status || 400 })
   }
 
-  const id = String(input.id || '').trim()
-  let existing = null
-  if (id) {
-    const result = await supabase.from('location_submissions').select('*').eq('id', id).maybeSingle()
-    existing = result.data
-    if (!existing) return NextResponse.json({ error: 'Draft not found.' }, { status: 404 })
+  try {
+    const draft = await saveLocationSubmission(supabase, user.id, input)
+    return NextResponse.json({ saved: true, draft })
+  } catch (error) {
+    if (!(error instanceof LocationDraftError)) {
+      return NextResponse.json({ error: 'Draft saving is temporarily unavailable.' }, { status: 503 })
+    }
+    const status = error.code === 'validation' ? 422
+      : error.code === 'not_found' ? 404
+        : error.code === 'pass_required' ? 403 : 503
+    return NextResponse.json({ saved: false, waiting: error.code === 'validation', error: error.message }, { status })
   }
-
-  const payload = locationPayload(input, user.id, existing)
-  const errors = validateLocation(payload)
-  if (errors.length) return NextResponse.json({ saved: false, waiting: true, error: errors[0] }, { status: 422 })
-
-  const privateAddress = payload.private_address
-  const writable = { ...payload }
-  delete writable.private_address
-  if (existing) {
-    delete writable.created_by
-    delete writable.slug
-  }
-  const query = existing
-    ? supabase.from('location_submissions').update(writable).eq('id', id).select('id,slug,status,autosaved_at').single()
-    : supabase.from('location_submissions').insert(writable).select('id,slug,status,autosaved_at').single()
-  const { data, error } = await query
-  if (error || !data) return NextResponse.json({ error: message(error, 'Draft could not be saved.') }, { status: 400 })
-
-  const privateResult = await savePrivateDetail(supabase, data.id, privateAddress, user.id)
-  if (privateResult.error) {
-    return NextResponse.json({ error: 'The draft saved, but its private address could not be secured.' }, { status: 400 })
-  }
-  return NextResponse.json({ saved: true, draft: data })
 }

@@ -1,31 +1,13 @@
 import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
-import { authorizeB2 } from '@/lib/storage/b2-native'
 import { createTraceId, elapsedMs, latencyStart } from '@/lib/performance/server-latency'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { downloadSelfHostObject } from '@/lib/storage/self-host-object-store'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
-
 const HASH_RE = /^[0-9a-f]{64}$/
-const RETRYABLE = new Set([401, 408, 425, 429, 500, 502, 503, 504])
-const CONFIG_TTL_MS = 5 * 60 * 1000
-const AUTH_TTL_MS = 60 * 60 * 1000
-const MEDIA_PREFIX = String(process.env.B2_MEDIA_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256/')
+const MEDIA_PREFIX = String(process.env.PUDDLE_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256/')
   .replace(/^\/+|\/+$/g, '')
-let configCache = null
-let authCache = null
-let configInFlight = null
-let authInFlight = null
-
-function sleep(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(milliseconds) || 0)))
-}
-
-function encodeB2Key(key) {
-  return String(key || '').split('/').map((part) => encodeURIComponent(part)).join('/')
-}
 
 function canonicalStorageKey(hash) {
   return `${MEDIA_PREFIX}/${hash.slice(0, 2)}/${hash}.jpg`
@@ -35,84 +17,6 @@ function serverTiming(entries, totalMs) {
   return [...entries, { name: 'total', durationMs: totalMs }]
     .map(({ name, durationMs }) => `${name};dur=${Math.max(0, Number(durationMs) || 0)}`)
     .join(',')
-}
-
-async function runtimeConfig(admin) {
-  if (configCache?.expiresAt > Date.now()) return configCache.value
-  if (configInFlight) return configInFlight
-  const promise = (async () => {
-    const { data, error } = await admin.rpc('get_b2_media_runtime_auth')
-    if (error) throw error
-    const value = data && typeof data === 'object' ? data : null
-    if (!value?.keyId || !value?.applicationKey || !value?.bucketName) {
-      const unavailable = new Error('Private media runtime authentication is unavailable.')
-      unavailable.status = 503
-      throw unavailable
-    }
-    configCache = { value, expiresAt: Date.now() + CONFIG_TTL_MS }
-    return value
-  })()
-  configInFlight = promise
-  try {
-    return await promise
-  } finally {
-    if (configInFlight === promise) configInFlight = null
-  }
-}
-
-async function authorization(config, force = false) {
-  const cacheKey = `${config.keyId}:${config.bucketId || ''}:${config.bucketName}`
-  if (!force && authCache?.expiresAt > Date.now() && authCache.key === cacheKey) {
-    return authCache.value
-  }
-  if (!force && authInFlight?.key === cacheKey) return authInFlight.promise
-  const promise = (async () => {
-    const value = await authorizeB2({ keyId: config.keyId, applicationKey: config.applicationKey })
-    const capabilities = new Set(value.allowed?.capabilities || [])
-    const buckets = Array.isArray(value.allowed?.buckets) ? value.allowed.buckets : []
-    if (capabilities.size && !capabilities.has('readFiles')) throw new Error('B2 media key lacks readFiles capability.')
-    const matchingBucket = buckets.find((bucket) => {
-      const idMatches = !config.bucketId || bucket?.id === config.bucketId
-      return idMatches && bucket?.name === config.bucketName
-    })
-    if (buckets.length && !matchingBucket) {
-      throw new Error('B2 media key is not authorized for the configured bucket.')
-    }
-    authCache = { value, key: cacheKey, bucketId: config.bucketId || matchingBucket?.id || null, expiresAt: Date.now() + AUTH_TTL_MS }
-    return value
-  })()
-  if (!force) authInFlight = { key: cacheKey, promise }
-  try {
-    return await promise
-  } finally {
-    if (authInFlight?.promise === promise) authInFlight = null
-  }
-}
-
-async function downloadPrivateObject(config, key) {
-  let auth = await authorization(config)
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    let response
-    try {
-      response = await fetch(`${auth.downloadUrl}/file/${encodeURIComponent(config.bucketName)}/${encodeB2Key(key)}`, {
-        headers: { Authorization: auth.authorizationToken, Accept: 'image/jpeg' },
-        cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(20_000)
-      })
-    } catch (error) {
-      if (attempt === 4) throw error
-      await sleep(Math.min(5000, 300 * (2 ** attempt)))
-      continue
-    }
-    if (response.ok) return Buffer.from(await response.arrayBuffer())
-    if (!RETRYABLE.has(response.status) || attempt === 4) {
-      const error = new Error(`Private B2 media download failed with HTTP ${response.status}.`)
-      error.status = response.status === 404 ? 404 : 502
-      throw error
-    }
-    if (response.status === 401) auth = await authorization(config, true)
-    await sleep(Math.min(5000, 300 * (2 ** attempt)))
-  }
-  throw new Error('Private B2 media download failed after retries.')
 }
 
 export async function GET(_request, { params }) {
@@ -130,26 +34,16 @@ export async function GET(_request, { params }) {
     }
 
     const downloadStartedAt = latencyStart()
-    let body
-    if (process.env.PUDDLE_OBJECT_STORE === 's3') {
-      const { downloadSelfHostObject } = await import('@/lib/storage/self-host-object-store')
-      body = await downloadSelfHostObject(canonicalStorageKey(hash), { maxBytes: 10_000_000, missingOk: true })
-      if (body === null) {
-        const missing = new Error('Photo not found.')
-        missing.status = 404
-        throw missing
-      }
-      timings.push({ name: 'object', durationMs: elapsedMs(downloadStartedAt) })
-    } else {
-      const configStartedAt = latencyStart()
-      const config = await runtimeConfig(createAdminClient())
-      timings.push({ name: 'config', durationMs: elapsedMs(configStartedAt) })
-      body = await downloadPrivateObject(config, canonicalStorageKey(hash))
-      timings.push({ name: 'b2', durationMs: elapsedMs(downloadStartedAt) })
+    const body = await downloadSelfHostObject(canonicalStorageKey(hash), { maxBytes: 10_000_000, missingOk: true })
+    if (body === null) {
+      const missing = new Error('Photo not found.')
+      missing.status = 404
+      throw missing
     }
+    timings.push({ name: 'object', durationMs: elapsedMs(downloadStartedAt) })
     const verifyStartedAt = latencyStart()
     const actualHash = createHash('sha256').update(body).digest('hex')
-    if (actualHash !== hash) throw new Error('Private B2 media failed canonical SHA256 verification.')
+    if (actualHash !== hash) throw new Error('Canonical photo failed SHA-256 verification.')
     timings.push({ name: 'verify', durationMs: elapsedMs(verifyStartedAt) })
 
     return new Response(body, {

@@ -1,0 +1,10 @@
+[Unit]
+Description=Process Puddle quarantined media every five minutes
+
+[Timer]
+OnCalendar=*-*-* *:0/5:00 UTC
+Persistent=false
+Unit=media-scans.service
+
+[Install]
+WantedBy=timers.target

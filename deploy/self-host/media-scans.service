@@ -1,0 +1,10 @@
+[Unit]
+Description=Process Puddle quarantined media scans
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/puddle
+ExecStart=/usr/bin/docker compose --env-file .env.selfhost -f deploy/self-host/compose.yaml exec -T app node scripts/self-host-process-media-scans.mjs
+TimeoutStartSec=20min

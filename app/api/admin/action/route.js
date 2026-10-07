@@ -68,7 +68,7 @@ export async function POST(request) {
     if (error) throw error
 
     if (action === 'delist_location' || action === 'relist_location') {
-      for (const tag of ['location-moderation', 'public-locations', 'public-location-recommendations']) {
+      for (const tag of ['location-moderation', 'public-locations', 'public-location-recommendations', 'public-sitemap']) {
         revalidateTag(tag, { expire: 0 })
       }
     }

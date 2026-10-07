@@ -84,6 +84,86 @@ function mapPoint(location, state) {
   }]
 }
 
+function SavedInlineSimilar({ slug, initialItems = [] }) {
+  const sectionRef = useRef(null)
+  const [nearViewport, setNearViewport] = useState(Boolean(initialItems.length))
+  const [items, setItems] = useState(initialItems)
+  const [loaded, setLoaded] = useState(Boolean(initialItems.length))
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
+
+  useEffect(() => {
+    if (nearViewport) return undefined
+    if (!('IntersectionObserver' in window)) {
+      setNearViewport(true)
+      return undefined
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setNearViewport(true)
+    }, { rootMargin: '25% 0px' })
+    observer.observe(sectionRef.current)
+    return () => observer.disconnect()
+  }, [nearViewport])
+
+  useEffect(() => {
+    if (!nearViewport || initialItems.length) return undefined
+    const controller = new AbortController()
+    setLoading(true)
+    setError('')
+    async function load() {
+      try {
+        const response = await fetch(`/api/public-location/${encodeURIComponent(slug)}/similar`, { signal: controller.signal })
+        if (!response.ok) throw new Error(`Similar places returned ${response.status}`)
+        const payload = await response.json()
+        if (!Array.isArray(payload?.items)) throw new Error('Similar places returned invalid data')
+        if (!controller.signal.aborted) {
+          setItems(payload.items.filter((item) => item?.content_kind !== 'event' && item?.slug).slice(0, 3))
+          setLoaded(true)
+        }
+      } catch (cause) {
+        if (!controller.signal.aborted) setError('Similar places could not be loaded.')
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }
+    void load()
+    return () => controller.abort()
+  }, [slug, retry, nearViewport, initialItems.length])
+
+  if (nearViewport && loaded && !items.length) return null
+  return <div ref={sectionRef} className="saved-inline-detail-similar">
+    <h2>Similar splashes</h2>
+    {loading ? <p role="status">Loading similar places…</p> : null}
+    {error ? <p role="alert">{error} <button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></p> : null}
+    {items.map((item) => { const title = item.title || item.name || 'Puddle'; return <a href={`/places/${encodeURIComponent(item.slug)}`} key={`place:${item.id || item.slug}`}><PhotoFrame as="span" src={item.cover_url} alt={`${title} photo`} className="saved-inline-detail-similar-photo" /><strong>{title}</strong></a> })}
+  </div>
+}
+
+function SavedInlineMap({ ready, point, center }) {
+  const containerRef = useRef(null)
+  const [nearViewport, setNearViewport] = useState(false)
+
+  useEffect(() => {
+    if (nearViewport) return undefined
+    if (!('IntersectionObserver' in window)) {
+      setNearViewport(true)
+      return undefined
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setNearViewport(true)
+    }, { rootMargin: '25% 0px' })
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [nearViewport])
+
+  return <div ref={containerRef} className="saved-inline-detail-map">
+    {ready && !point.length ? <div className="saved-inline-detail-map-empty">Map unavailable</div>
+      : ready && nearViewport ? <LocationMap initialPoints={point} initialCenter={center} />
+        : <div className="saved-inline-detail-map-loading" aria-label="Loading map" />}
+  </div>
+}
+
 function SamePageSavedDetail({ preview, detail, busy, message, detailError, names, onClose, onRetry, onAction }) {
   const detailRef = useRef(null)
   const closeRef = useRef(null)
@@ -100,7 +180,6 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
   const point = mapPoint(location, detail?.state)
   const center = point.length ? { latitude: point[0].latitude, longitude: point[0].longitude } : null
   const posts = detail?.posts || []
-  const similarPlaces = (detail?.similar || []).filter((item) => item?.content_kind !== 'event' && item?.slug)
 
   useModalFocus(detailRef, closeRef)
 
@@ -172,9 +251,9 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
       </div>
 
       <aside className="saved-inline-detail-side">
-        <div className="saved-inline-detail-map">{detail && point.length ? <LocationMap initialPoints={point} initialCenter={center} /> : detail ? <div className="saved-inline-detail-map-empty">Map unavailable</div> : <div className="saved-inline-detail-map-loading" />}</div>
+        <SavedInlineMap ready={Boolean(detail)} point={point} center={center} />
         {location.summary || location.description ? <p className="saved-inline-detail-summary">{location.summary || location.description}</p> : null}
-        {similarPlaces.length ? <div className="saved-inline-detail-similar"><h2>Similar splashes</h2>{similarPlaces.map((item) => { const title = item.title || item.name || 'Puddle'; return <a href={`/places/${encodeURIComponent(item.slug)}`} key={`place:${item.id || item.slug}`}><PhotoFrame as="span" src={item.cover_url} alt={`${title} photo`} className="saved-inline-detail-similar-photo" /><strong>{title}</strong></a> })}</div> : null}
+        {detail ? <SavedInlineSimilar key={location.slug} slug={location.slug} initialItems={detail.similar || []} /> : null}
       </aside>
     </article>
   </div>
@@ -189,6 +268,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
   const [detailError, setDetailError] = useState('')
   const sourceCardRef = useRef(null)
   const requestRef = useRef(0)
+  const detailRequestRef = useRef(null)
   const detailLoaderRef = useRef(null)
   const needsRefreshRef = useRef(false)
   const transitionReadyRef = useRef(false)
@@ -198,23 +278,19 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
     if (detailLocationId) return undefined
 
     async function loadDetail(nextPreview, requestId) {
+      const controller = new AbortController()
+      detailRequestRef.current = controller
       try {
-        const response = await fetch(`/api/saved-location/${encodeURIComponent(nextPreview.slug)}`, { cache: 'no-store' })
+        const response = await fetch(`/api/saved-location/${encodeURIComponent(nextPreview.slug)}`, { cache: 'no-store', signal: controller.signal })
         const payload = await response.json()
         if (!response.ok) throw new Error(payload?.error || 'Could not load Saved details.')
-        if (requestRef.current !== requestId) return
+        if (controller.signal.aborted || requestRef.current !== requestId) return
         if (transitionReadyRef.current) setDetail(payload)
         else pendingDetailRef.current = payload
-
-        const similarResponse = await fetch(`/api/public-location/${encodeURIComponent(nextPreview.slug)}/similar`)
-        const similarPayload = await similarResponse.json()
-        if (!similarResponse.ok) throw new Error(similarPayload?.error || 'Could not load similar places.')
-        if (requestRef.current !== requestId) return
-        const similar = Array.isArray(similarPayload?.items) ? similarPayload.items.slice(0, 3) : []
-        if (transitionReadyRef.current) setDetail((current) => current ? { ...current, similar } : current)
-        else if (pendingDetailRef.current) pendingDetailRef.current = { ...pendingDetailRef.current, similar }
       } catch {
-        if (requestRef.current === requestId) setDetailError('Saved details could not be loaded.')
+        if (!controller.signal.aborted && requestRef.current === requestId) setDetailError('Saved details could not be loaded.')
+      } finally {
+        if (detailRequestRef.current === controller) detailRequestRef.current = null
       }
     }
 
@@ -232,6 +308,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
       }
       const names = applyNames(card)
       if (!names) return
+      detailRequestRef.current?.abort()
       sourceCardRef.current = card
       needsRefreshRef.current = false
       transitionReadyRef.current = false
@@ -277,6 +354,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
 
     document.addEventListener('click', onClick, true)
     return () => {
+      detailRequestRef.current?.abort()
       if (detailLoaderRef.current === loadDetail) detailLoaderRef.current = null
       document.removeEventListener('click', onClick, true)
     }
@@ -284,6 +362,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
 
   async function close() {
     if (!preview) return
+    detailRequestRef.current?.abort()
     requestRef.current += 1
     transitionReadyRef.current = false
     pendingDetailRef.current = null
@@ -313,6 +392,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
 
   function retryDetail() {
     if (!preview || busy || !detailLoaderRef.current) return
+    detailRequestRef.current?.abort()
     requestRef.current += 1
     pendingDetailRef.current = null
     setDetail(null)

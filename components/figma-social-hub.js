@@ -75,14 +75,14 @@ function SharedView({ client, snapshot }) {
         before_share_id: cursor.share_id,
         result_limit: 50
       })
-      if (error) throw error
-      const hydrated = await hydrateSocialLocationRows(data || [])
+      if (error || !Array.isArray(data)) throw error || new Error('Shared-place page was invalid.')
+      const hydrated = await hydrateSocialLocationRows(data)
       setShared((current) => {
         const merged = new Map(current.map((item) => [item.share_id, item]))
         for (const item of hydrated) merged.set(item.share_id, { ...merged.get(item.share_id), ...item })
         return [...merged.values()]
       })
-      setHasMore((data || []).length === 50)
+      setHasMore(data.length === 50)
     } catch (cause) {
       console.warn('Could not load more shared places.', { message: cause?.message || 'unknown error' })
       setNotice('More shared places could not be loaded.')
@@ -130,12 +130,8 @@ function AddView({ client, snapshot }) {
     setSearching(true)
     try {
       const { data, error } = await client.rpc('social_friend_search_v2', { search_term: term, result_limit: 30 })
-      if (error) {
-        setResults([])
-        setNotice('Friend search could not be completed.')
-        return
-      }
-      setResults(data || [])
+      if (error || !Array.isArray(data)) throw error || new Error('Friend search response was invalid.')
+      setResults(data)
     } catch (cause) {
       console.warn('Could not search for friends.', { message: cause?.message || 'unknown error' })
       setResults([])
@@ -146,11 +142,12 @@ function AddView({ client, snapshot }) {
   }
 
   async function request(person) {
+    if (!person?.id || pendingTarget) return
     setPendingTarget(person.id)
     setNotice('')
     try {
       const { data, error } = await client.rpc('social_send_friend_request_v1', { target: person.id })
-      if (error) {
+      if (error || !['accepted', 'pending'].includes(data)) {
         setNotice('Could not send that friend request.')
         return
       }
@@ -172,11 +169,12 @@ function AddView({ client, snapshot }) {
   }
 
   async function respond(person, response) {
+    if (!person?.id || pendingTarget) return
     setPendingTarget(person.id)
     setNotice('')
     try {
-      const { error } = await client.rpc('social_respond_friend_request_v1', { target: person.id, response })
-      if (error) {
+      const { data, error } = await client.rpc('social_respond_friend_request_v1', { target: person.id, response })
+      if (error || data !== (response === 'accept' ? 'accepted' : 'declined')) {
         setNotice('Could not update that friend request.')
         return
       }
@@ -197,8 +195,8 @@ function AddView({ client, snapshot }) {
     setPendingTarget(person.id)
     setNotice('')
     try {
-      const { error } = await client.rpc('social_cancel_friend_request_v1', { target: person.id })
-      if (error) {
+      const { data, error } = await client.rpc('social_cancel_friend_request_v1', { target: person.id })
+      if (error || data !== true) {
         setNotice('Could not cancel that friend request.')
         return
       }
@@ -234,15 +232,15 @@ function AddView({ client, snapshot }) {
   function resultAction(person) {
     const label = person.display_name || person.username || 'friend'
     if (person.is_friend) {
-      return <button type="button" onClick={() => openConversation(person)} disabled={pendingTarget === person.id}>{pendingTarget === person.id ? 'Opening...' : 'Message'}</button>
+      return <button type="button" onClick={() => openConversation(person)} disabled={Boolean(pendingTarget)}>{pendingTarget === person.id ? 'Opening...' : 'Message'}</button>
     }
     if (person.request_state === 'pending' && person.request_direction === 'outgoing') {
-      return <button type="button" onClick={() => cancel(person)} disabled={pendingTarget === person.id}>{pendingTarget === person.id ? 'Updating...' : 'Pending · Cancel'}</button>
+      return <button type="button" onClick={() => cancel(person)} disabled={Boolean(pendingTarget)}>{pendingTarget === person.id ? 'Updating...' : 'Pending · Cancel'}</button>
     }
     if (person.request_state === 'pending' && person.request_direction === 'incoming') {
-      return <span className="figma-friends-inline-request-actions"><button type="button" onClick={() => respond(person, 'accept')} disabled={pendingTarget === person.id}>Accept</button><button type="button" onClick={() => respond(person, 'decline')} disabled={pendingTarget === person.id}>Decline</button></span>
+      return <span className="figma-friends-inline-request-actions"><button type="button" onClick={() => respond(person, 'accept')} disabled={Boolean(pendingTarget)}>Accept</button><button type="button" onClick={() => respond(person, 'decline')} disabled={Boolean(pendingTarget)}>Decline</button></span>
     }
-    return <button type="button" onClick={() => request(person)} disabled={pendingTarget === person.id} aria-label={`Add ${label}`}>{pendingTarget === person.id ? 'Adding...' : '+'}</button>
+    return <button type="button" onClick={() => request(person)} disabled={Boolean(pendingTarget)} aria-label={`Add ${label}`}>{pendingTarget === person.id ? 'Adding...' : '+'}</button>
   }
 
   const outgoing = snapshot.requests.filter((item) => item.direction === 'outgoing' && !hiddenOutgoing.has(item.id))
@@ -260,10 +258,10 @@ function AddView({ client, snapshot }) {
 
     <article className="figma-friends-request-card">
       <small>Request</small>
-      {incoming.length ? incoming.map((person) => <div className="figma-friends-request-row" key={`in:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button className="is-accept" type="button" onClick={() => respond(person, 'accept')} disabled={pendingTarget === person.id} aria-label={`Accept friend request from ${person.display_name || person.username || 'friend'}`}>&#x2713;</button><button className="is-decline" type="button" onClick={() => respond(person, 'decline')} disabled={pendingTarget === person.id} aria-label={`Decline friend request from ${person.display_name || person.username || 'friend'}`}>&#x00D7;</button></div></div>) : <p>No requests</p>}
+      {incoming.length ? incoming.map((person) => <div className="figma-friends-request-row" key={`in:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button className="is-accept" type="button" onClick={() => respond(person, 'accept')} disabled={Boolean(pendingTarget)} aria-label={`Accept friend request from ${person.display_name || person.username || 'friend'}`}>&#x2713;</button><button className="is-decline" type="button" onClick={() => respond(person, 'decline')} disabled={Boolean(pendingTarget)} aria-label={`Decline friend request from ${person.display_name || person.username || 'friend'}`}>&#x00D7;</button></div></div>) : <p>No requests</p>}
       <hr />
       <small>Sent</small>
-      {outgoing.length ? outgoing.map((person) => <div className="figma-friends-request-row" key={`out:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button type="button" onClick={() => cancel(person)} disabled={pendingTarget === person.id} aria-label={`Cancel friend request to ${person.display_name || person.username || 'Puddle person'}`}>&#x2212;</button></div></div>) : <p>No sent requests</p>}
+      {outgoing.length ? outgoing.map((person) => <div className="figma-friends-request-row" key={`out:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button type="button" onClick={() => cancel(person)} disabled={Boolean(pendingTarget)} aria-label={`Cancel friend request to ${person.display_name || person.username || 'Puddle person'}`}>&#x2212;</button></div></div>) : <p>No sent requests</p>}
     </article>
   </section>
 }

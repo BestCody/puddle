@@ -19,6 +19,24 @@ def clean_prefix(value: object) -> str:
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
+def disambiguated_slug(slug: str, identifier: str) -> str:
+    """Return a deterministic collision-only slug without changing normal slugs."""
+    compact_id = str(identifier).replace('-', '').lower()
+    if not compact_id:
+        raise ValueError('Cannot disambiguate a slug without a location id.')
+    return f'{slug}-{compact_id}'
+
+
+def resolved_slug_entries(slug: str, identifiers) -> list[tuple[str, str]]:
+    """Keep one stable winner on the original slug and rewrite only collision losers."""
+    ordered = sorted({str(identifier) for identifier in identifiers if str(identifier)})
+    if not ordered:
+        return []
+    entries = [(str(slug), ordered[0])]
+    entries.extend((disambiguated_slug(str(slug), identifier), identifier) for identifier in ordered[1:])
+    return entries
+
+
 def json_object(value: object) -> dict:
     if value is None:
         return {}
@@ -34,7 +52,7 @@ def json_object(value: object) -> dict:
 
 
 @dataclass(frozen=True)
-class B2SourceConfig:
+class ObjectSourceConfig:
     bucket: str
     endpoint_url: str
     endpoint_host: str
@@ -44,36 +62,36 @@ class B2SourceConfig:
     data_prefix: str
 
 
-def b2_source_config() -> B2SourceConfig:
-    endpoint_url = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
+def object_source_config() -> ObjectSourceConfig:
+    endpoint_url = first_env('OBJECT_STORAGE_ENDPOINT')
     endpoint_host = endpoint_url.replace('https://', '').replace('http://', '').rstrip('/')
-    config = B2SourceConfig(
-        bucket=first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets'),
+    config = ObjectSourceConfig(
+        bucket=first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets'),
         endpoint_url=endpoint_url,
         endpoint_host=endpoint_host,
-        key_id=first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID'),
-        application_key=first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY'),
-        region=first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005'),
-        data_prefix=clean_prefix(first_env('B2_DATA_PREFIX', default='data')),
+        key_id=first_env('OBJECT_STORAGE_ACCESS_KEY_ID'),
+        application_key=first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY'),
+        region=first_env('OBJECT_STORAGE_REGION', default='us-east-1'),
+        data_prefix=clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data')),
     )
     if not config.endpoint_host or not config.key_id or not config.application_key:
-        raise RuntimeError('B2 endpoint and credentials are required.')
+        raise RuntimeError('Object storage endpoint and credentials are required.')
     return config
 
 
-def configure_duckdb(con, source: B2SourceConfig, threads: int = 8) -> None:
+def configure_duckdb(con, source: ObjectSourceConfig, threads: int = 8) -> None:
     con.execute('INSTALL httpfs; LOAD httpfs;')
     con.execute('SET preserve_insertion_order=false')
     con.execute(f'SET threads TO {max(1, min(32, int(threads)))}')
     con.execute(f"""
-CREATE OR REPLACE SECRET b2_data_secret (
+CREATE OR REPLACE SECRET object_data_secret (
   TYPE S3,
   KEY_ID '{source.key_id.replace("'", "''")}',
   SECRET '{source.application_key.replace("'", "''")}',
   REGION '{source.region.replace("'", "''")}',
   ENDPOINT '{source.endpoint_host.replace("'", "''")}',
   URL_STYLE 'path',
-  USE_SSL true
+  USE_SSL {'true' if source.endpoint_url.startswith('https://') else 'false'}
 );
 """)
 
@@ -115,7 +133,7 @@ def _photo_source_sql(glob: str, columns: set[str], *, hive_partitioning: bool =
     )
 
 
-def create_canonical_views(con, snapshot: str, source: B2SourceConfig) -> None:
+def create_canonical_views(con, snapshot: str, source: ObjectSourceConfig) -> None:
     root = f's3://{source.bucket}/{source.data_prefix}'
     locations_glob = f'{root}/normalized/schema=v1/snapshot={snapshot}/country_code=*/locations.parquet'
     photo_glob = f'{root}/normalized/schema=v1/snapshot={snapshot}/country_code=*/photo_metadata.parquet'

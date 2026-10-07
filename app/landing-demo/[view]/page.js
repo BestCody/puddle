@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { LandingPhoneDemo } from '@/components/landing-phone-demo'
+import '@/app/landing-phone-demo.css'
 
 const views = new Set(['swipe', 'save', 'feed'])
 

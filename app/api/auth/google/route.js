@@ -4,11 +4,12 @@ import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createClient } from '@/lib/supabase/server'
 import { enforceRequestSize } from '@/lib/security/request'
+import { siteUrl } from '@/lib/auth/origin'
 
 export const dynamic = 'force-dynamic'
 
 function redirectWithError(request, message, next = '/discover', extra = {}) {
-  const target = new URL(pathWithMessage('/', 'error', message, { next, ...extra }), request.url)
+  const target = siteUrl(request.headers, pathWithMessage('/', 'error', message, { next, ...extra }))
   const response = NextResponse.redirect(target, 303)
   response.headers.set('Cache-Control', 'no-store')
   return response

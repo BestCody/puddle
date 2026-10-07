@@ -1,8 +1,8 @@
 import { getActiveSearchManifest, getLocationsByIdsFromShards } from '../lib/app/location-search-shards.js'
-import { createManagementQuery } from './supabase-management-query.mjs'
+import { connectSelfHostPostgres } from './self-host-postgres-query.mjs'
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const querySql = createManagementQuery({ projectUrl: url, accessToken: process.env.SUPABASE_ACCESS_TOKEN })
+const { querySql, close } = await connectSelfHostPostgres({ connectionString: process.env.PUDDLE_SELF_HOST_DB_URL })
+try {
 const checkpointId = 'global-location-ref-search-v1'
 const batchSize = 64
 const { manifest } = await getActiveSearchManifest()
@@ -55,4 +55,7 @@ const [progress] = await querySql('select public.location_ref_index_progress_v1(
 const remainingCount = Number(progress?.remaining)
 if (!Number.isSafeInteger(remainingCount)) throw new Error('Reference index progress is unavailable.')
 console.log(JSON.stringify({ complete: remainingCount === 0, indexed, missing, remaining: remainingCount }))
-if (remainingCount) throw new Error(`${remainingCount} global references still lack searchable metadata. Rerun with --restart after checking their B2 records.`)
+if (remainingCount) throw new Error(`${remainingCount} global references still lack searchable metadata. Rerun with --restart after checking their object-store records.`)
+} finally {
+  await close()
+}

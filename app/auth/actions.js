@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
-import { normalizeOrigin, requestOrigin } from '@/lib/auth/origin'
+import { siteOrigin } from '@/lib/auth/origin'
 import { pathWithMessage } from '@/lib/auth/redirect'
 import { ensureProfile } from '@/lib/auth/profile'
 import { startGoogleOAuth } from '@/lib/auth/google-oauth'
@@ -26,10 +26,7 @@ function rawValue(formData, key) {
 }
 
 async function siteUrl() {
-  const configured = normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL)
-  if (configured) return configured
-  if (process.env.NODE_ENV === 'production') return 'https://puddle.you'
-  return requestOrigin(await headers(), 'http://localhost:3000')
+  return siteOrigin(await headers())
 }
 
 async function clearLocalAuthSession(supabase) {

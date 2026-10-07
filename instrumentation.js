@@ -1,15 +1,13 @@
 import { createTraceId, recordSloObservation } from './lib/performance/server-latency.js'
 
-// B2 is the only runtime location-serving backend. Credential material arrives
-// through the scoped B2_DATA_* sources (environment or Supabase Vault) inside
-// the storage layer; there is no legacy search backend left to hydrate here.
+// The private object store is the only runtime location-serving backend.
 
 export async function register() {
   console.info('[puddle_observability]', JSON.stringify({
     event: 'puddle_observability_boot',
-    service: 'vercel',
-    region: process.env.VERCEL_REGION || 'local',
-    location_search_backend: 'b2'
+    service: 'self-hosted',
+    region: process.env.PUDDLE_REGION || 'local',
+    location_search_backend: 'object-store'
   }))
 }
 
@@ -18,7 +16,7 @@ export function onRequestError(error, request, context) {
   const route = context?.routePath || context?.routeType || 'unknown'
   recordSloObservation('requestError', 0, false, {
     trace_id: traceId,
-    service: 'vercel',
+    service: 'self-hosted',
     route: String(route).slice(0, 160),
     method: String(request?.method || '').slice(0, 12),
     error_name: String(error?.name || 'Error').slice(0, 120),

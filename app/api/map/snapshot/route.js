@@ -47,7 +47,7 @@ export async function GET() {
     const totalMs = elapsedMs(startedAt)
     recordSloObservation('mapSnapshot', totalMs, true, {
       trace_id: traceId,
-      service: 'vercel',
+      service: 'self-hosted',
       point_count: Array.isArray(snapshot.points) ? snapshot.points.length : 0
     })
     return response({
@@ -64,7 +64,7 @@ export async function GET() {
   } catch (error) {
     console.error(`Map snapshot failed trace=${traceId}: ${error?.message || 'unknown error'}`)
     const totalMs = elapsedMs(startedAt)
-    recordSloObservation('mapSnapshot', totalMs, false, { trace_id: traceId, service: 'vercel' })
+    recordSloObservation('mapSnapshot', totalMs, false, { trace_id: traceId, service: 'self-hosted' })
     return response({ error: 'The map could not be loaded.' }, { status: 503, traceId, startedAt })
   }
 }

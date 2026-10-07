@@ -7,6 +7,12 @@ import { serializeStructuredData } from '@/lib/app/structured-data'
 
 export const revalidate = 3600
 
+// The catalogue is too large to enumerate during builds. Generate each place
+// on its first request and retain the result with on-demand ISR.
+export async function generateStaticParams() {
+  return []
+}
+
 export async function generateMetadata({ params }) {
   const { slug } = await params
   const result = await getCachedPublicLocation(slug)
@@ -30,11 +36,15 @@ export async function generateMetadata({ params }) {
 
 export default async function PlacePage({ params }) {
   const { slug } = await params
-  const result = await getCachedPublicLocation(slug)
+  // Location and recommendation caches are independent. Start both reads
+  // together so a warm location lookup does not delay a cold related set.
+  const [result, similar] = await Promise.all([
+    getCachedPublicLocation(slug),
+    getCachedPublicLocationRecommendations(slug)
+  ])
   if (!result) notFound()
   // Without these a place page links to no other place, so a crawler that reaches one has
   // nowhere left to go. The lookup is cached alongside the location itself.
-  const similar = await getCachedPublicLocationRecommendations(slug)
   const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://puddle.you'
   const structured = placeStructuredData(result.location, `${site}/places/${result.location.slug}`)
   // The trail is rendered on the page as well as in the markup. Google asks that BreadcrumbList

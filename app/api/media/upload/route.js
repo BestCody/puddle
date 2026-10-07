@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mediaObjectPath, mediaPolicy, processMediaFile } from '@/lib/media/pipeline'
+import { attachMediaAsset } from '@/lib/media/attach-asset'
 import { storageUploadBody } from '@/lib/media/storage-upload-body'
 import { verifyCsrf } from '@/lib/security/csrf'
 import { enforceRateLimit } from '@/lib/security/rate-limit'
@@ -22,41 +23,6 @@ function targetTypeForPurpose(purpose) {
   if (purpose === 'chat_image') return 'conversation'
   if (purpose === 'verification_document') return 'verification'
   return null
-}
-
-async function attachAsset(supabase, user, asset, purpose, targetId, sortOrder) {
-  if (purpose === 'profile_photo') {
-    const { error } = await supabase.from('profiles').update({ avatar_path: asset.object_path }).eq('id', user.id)
-    if (error) throw error
-    return
-  }
-  if (!targetId && purpose !== 'verification_document') throw new Error('Choose what this upload belongs to.')
-  if (purpose === 'event_cover') {
-    const { error } = await supabase.from('events').update({ cover_path: asset.object_path }).eq('id', targetId)
-    if (error) throw error
-  } else if (purpose === 'event_gallery') {
-    const { error } = await supabase.from('event_media').insert({ event_id: targetId, media_asset_id: asset.id, sort_order: sortOrder })
-    if (error) throw error
-  } else if (purpose === 'location_cover') {
-    // A cover upload belongs to an authored Puddle submission. Published global
-    // catalogue photos are canonical B2 data and are never overwritten here.
-    const { error } = await supabase.from('location_submissions').update({ cover_path: asset.object_path }).eq('id', targetId)
-    if (error) throw error
-  } else if (purpose === 'location_gallery') {
-    // User/host-contributed gallery media is relational product state. The
-    // location ID itself points at a lazy location_ref, not a copied catalogue row.
-    const { error } = await supabase.from('location_media').insert({ location_id: targetId, media_asset_id: asset.id, sort_order: sortOrder })
-    if (error) throw error
-  } else if (purpose === 'host_logo') {
-    const { error } = await supabase.from('host_profiles').update({ logo_path: asset.object_path }).eq('id', targetId)
-    if (error) throw error
-  } else if (purpose === 'chat_image') {
-    const { data } = await supabase.from('conversation_members').select('conversation_id').eq('conversation_id', targetId).eq('profile_id', user.id).maybeSingle()
-    if (!data) throw new Error('You cannot add media to that conversation.')
-  } else if (purpose === 'verification_document') {
-    const { error } = await supabase.from('verification_documents').insert({ profile_id: user.id, host_profile_id: targetId || null, media_asset_id: asset.id, document_kind: 'supporting_document' })
-    if (error) throw error
-  }
 }
 
 export async function POST(request) {
@@ -79,7 +45,7 @@ export async function POST(request) {
 
   const file = form.get('file')
   const purpose = String(form.get('purpose') || '')
-  const targetId = String(form.get('target_id') || '').trim() || null
+  const targetId = purpose === 'profile_photo' ? user.id : String(form.get('target_id') || '').trim() || null
   const sortOrder = Math.max(0, Math.min(999, Number.parseInt(String(form.get('sort_order') || '0'), 10) || 0))
 
   if (purpose === 'verification_document') {
@@ -137,8 +103,11 @@ export async function POST(request) {
     }
 
     try {
-      await attachAsset(supabase, user, asset, purpose, targetId, sortOrder)
-      if (processed.scanStatus === 'pending') await admin.rpc('queue_media_scan_job_v1', { target_asset: asset.id })
+      if (processed.scanStatus === 'pending') {
+        const { data: jobId, error: queueError } = await admin.rpc('queue_media_scan_job_v1', { target_asset: asset.id })
+        if (queueError || !jobId) throw queueError || new Error('Media scanning could not be queued.')
+      }
+      await attachMediaAsset(supabase, user, asset, purpose, targetId, sortOrder)
     } catch (error) {
       await admin.storage.from(processed.bucket).remove([objectPath])
       await admin.from('media_assets').delete().eq('id', asset.id)

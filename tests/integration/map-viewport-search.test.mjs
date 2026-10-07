@@ -5,9 +5,9 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('map catalogue loading is viewport-bounded through the selected global search backend', async () => {
-  const [facadeSource, b2Source, shardSource, routeSource, snapshotSource, mapSource, mapStyles, dataSource, pageSource] = await Promise.all([
+  const [facadeSource, objectSource, shardSource, routeSource, snapshotSource, mapSource, mapStyles, dataSource, pageSource] = await Promise.all([
     read('lib/app/global-location-search.js'),
-    read('lib/app/b2-location-search.js'),
+    read('lib/app/object-location-search.js'),
     read('lib/app/location-search-shards.js'),
     read('app/api/map/viewport/route.js'),
     read('app/api/map/snapshot/route.js'),
@@ -19,12 +19,12 @@ test('map catalogue loading is viewport-bounded through the selected global sear
 
   assert.doesNotMatch(facadeSource, /GLOBAL_LOCATION_SEARCH_BACKEND|opensearch/i)
   assert.match(facadeSource, /searchGlobalLocationsInViewport/)
-  assert.match(facadeSource, /searchB2GlobalLocationsInViewport/)
+  assert.match(facadeSource, /searchObjectGlobalLocationsInViewport/)
   assert.match(facadeSource, /fails closed/)
-  assert.match(b2Source, /normalizeGlobalLocationViewport/)
-  assert.match(b2Source, /fetchCoarseViewportDocuments/)
-  assert.match(b2Source, /resolveGeoShardPlan/)
-  assert.match(b2Source, /pointInBounds/)
+  assert.match(objectSource, /normalizeGlobalLocationViewport/)
+  assert.match(objectSource, /fetchCoarseViewportDocuments/)
+  assert.match(objectSource, /resolveGeoShardPlan/)
+  assert.match(objectSource, /pointInBounds/)
   assert.match(shardSource, /GLOBAL_LOCATION_MAX_DIRECTORY_TILES/)
   assert.match(shardSource, /GLOBAL_LOCATION_MAX_SHARDS/)
   assert.match(shardSource, /GLOBAL_LOCATION_MAX_COMPRESSED_BYTES/)

@@ -17,7 +17,7 @@ $$;
 create temporary table photo_reset_media_ids on commit drop as
 select id
 from public.media_objects
-where lower(storage_backend)='b2'
+where lower(storage_backend)='object_store'
   and storage_key ~ '^media/photos/by-sha256/[0-9a-f]{2}/[0-9a-f]{64}\.jpg$'
   and split_part(storage_key,'/',4)=substr(split_part(storage_key,'/',5),1,2);
 
@@ -61,7 +61,7 @@ begin
   if to_regclass('public.location_photo_sources') is not null then
     execute $sql$
       delete from public.location_photo_sources
-      where lower(coalesce(storage_backend,''))='b2'
+      where lower(coalesce(storage_backend,''))='object_store'
     $sql$;
   end if;
 end;

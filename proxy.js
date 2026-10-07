@@ -3,6 +3,7 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue } from '@/lib/security/headers'
 import { isUnsafeMethod } from '@/lib/security/request'
 import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
+import { isPublicCataloguePath, isPublicRecommendationPath } from '@/lib/security/public-cache-path'
 import { SERVER_LATENCY_BUDGET_MS, appendServerTiming, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
 
 const protectedPrefixes = ['/dashboard','/discover','/matches','/global-matches','/membership','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals','/admin']
@@ -17,6 +18,7 @@ const moderationExemptApiPrefixes = [
   '/api/appeals',
   '/api/auth',
   '/api/security',
+  '/api/telemetry',
   '/api/health',
   '/api/system',
   '/api/location-photos',
@@ -40,6 +42,9 @@ function requiresModerationGate(pathname) {
 }
 function cachePolicy(response, pathname, privateResponse = false) {
   if (privateResponse) { response.headers.set('Cache-Control', 'private, no-store'); return response }
+  // Catalogue pages and recommendations own their success/error cache policy.
+  // Proxy runs before rendering and cannot safely mark a future 500 cacheable.
+  if (isPublicCataloguePath(pathname) || isPublicRecommendationPath(pathname)) return response
   if (staticLandingPaths.has(pathname)) {
     response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate')
     response.headers.set('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60')
@@ -108,7 +113,7 @@ export async function proxy(request) {
   const hasAuthCookie = hasSupabaseAuthCookie(request)
   const needsSession = isProtected || verifiedReadApi || (hasAuthCookie && (!pathname.startsWith('/api/') || moderationGate))
 
-  if (publicNoSessionPaths.has(pathname)) {
+  if (publicNoSessionPaths.has(pathname) || isPublicCataloguePath(pathname)) {
     const response = NextResponse.next({ request: { headers: requestHeaders } })
     return secured(cachePolicy(response, pathname), { request, nonce, staticScripts: staticLandingPaths.has(pathname) })
   }

@@ -8,9 +8,10 @@ const valid = {
   ACME_EMAIL: 'operator@example.com',
   NEXT_PUBLIC_SITE_URL: 'https://staging.example.com',
   NEXT_PUBLIC_SUPABASE_URL: 'https://database.example.com',
+  SUPABASE_INTERNAL_URL: 'http://puddle-supabase-gateway:8000',
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-test',
   SUPABASE_SECRET_KEY: 'server-secret-test',
-  PUDDLE_OBJECT_STORE: 's3',
+  PUDDLE_BUILD_SHA: 'a'.repeat(40),
   PUDDLE_OBJECT_DATA_DIR: process.platform === 'win32' ? 'C:\\puddle\\objects' : '/srv/puddle/objects',
   OBJECT_STORAGE_ENDPOINT: 'http://objects:8333',
   OBJECT_STORAGE_REGION: 'us-east-1',
@@ -19,6 +20,7 @@ const valid = {
   OBJECT_STORAGE_SECRET_ACCESS_KEY: 'local-secret',
   CRON_SECRET: 'worker-secret',
   SECURITY_HASH_SECRET: 'a'.repeat(32),
+  MALWARE_SCANNER_ENDPOINT: 'http://scanner:3001/scan',
   STRIPE_SECRET_KEY: 'stripe-secret',
   STRIPE_WEBHOOK_SECRET: 'webhook-secret',
   STRIPE_TINDER_PRICE_ID: 'price-test',
@@ -54,13 +56,19 @@ test('self-host preflight requires a separate Supabase hostname matching its pub
   assert.ok(problems.some((problem) => problem.includes('NEXT_PUBLIC_SUPABASE_URL')))
 })
 
-test('self-host app refuses managed B2 credentials even when local S3 is configured', () => {
-  const problems = validateSelfHostEnv({
-    ...valid,
-    B2_DATA_APPLICATION_KEY: 'old-managed-secret',
-    B2_DATA_S3_ENDPOINT: 'https://s3.example.invalid'
-  })
-  assert.ok(problems.some((problem) => problem.includes('B2_DATA_APPLICATION_KEY')))
-  assert.ok(problems.some((problem) => problem.includes('B2_DATA_S3_ENDPOINT')))
-  assert.ok(problems.every((problem) => !problem.includes('old-managed-secret')))
+test('self-host preflight requires private server transport without exposing the gateway to browsers', () => {
+  const problems = validateSelfHostEnv({ ...valid, SUPABASE_INTERNAL_URL: 'https://database.example.com' })
+  assert.ok(problems.some((problem) => problem.includes('SUPABASE_INTERNAL_URL')))
+})
+
+test('self-host preflight requires a scanner before verification uploads can enter review', () => {
+  const absent = validateSelfHostEnv({ ...valid, MALWARE_SCANNER_ENDPOINT: '' })
+  assert.ok(absent.some((problem) => problem.includes('MALWARE_SCANNER_ENDPOINT')))
+  const malformed = validateSelfHostEnv({ ...valid, MALWARE_SCANNER_ENDPOINT: 'file:///tmp/scanner' })
+  assert.ok(malformed.some((problem) => problem.includes('HTTP(S) URL')))
+})
+
+test('self-host preflight rejects the temporary pre-DNS image revision', () => {
+  const problems = validateSelfHostEnv({ ...valid, PUDDLE_BUILD_SHA: 'pre-dns-uncommitted' })
+  assert.ok(problems.some((problem) => problem.includes('full committed Git revision')))
 })

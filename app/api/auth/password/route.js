@@ -6,11 +6,12 @@ import { isValidEmail } from '@/lib/app/input-validation'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { createClient } from '@/lib/supabase/server'
 import { enforceRequestSize } from '@/lib/security/request'
+import { siteUrl } from '@/lib/auth/origin'
 
 export const dynamic = 'force-dynamic'
 
 function redirectWithError(request, message, next = '/discover') {
-  const target = new URL(pathWithMessage('/landing.html', 'error', message, { next }), request.url)
+  const target = siteUrl(request.headers, pathWithMessage('/landing.html', 'error', message, { next }))
   const response = NextResponse.redirect(target, 303)
   response.headers.set('Cache-Control', 'no-store')
   return response
@@ -34,7 +35,7 @@ export async function POST(request) {
     if (error || !user) return redirectWithError(request, 'Email or password was not accepted.', next)
     if (profileError || !profile) return redirectWithError(request, 'You are signed in, but your profile could not be loaded. Please retry.', next)
 
-    const response = NextResponse.redirect(new URL(authenticatedDestination(profile, next), request.url), 303)
+    const response = NextResponse.redirect(siteUrl(request.headers, authenticatedDestination(profile, next)), 303)
     response.headers.set('Cache-Control', 'no-store')
     return response
   } catch {

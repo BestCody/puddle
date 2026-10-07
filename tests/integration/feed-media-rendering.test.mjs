@@ -72,7 +72,7 @@ test('saved cards keep canonical photos and use batched coordinates for the map 
   assert.match(options, /openPhotoUrlForHash/)
   assert.match(options, /cover_url/)
   assert.match(grid, /data-saved-morph-photo/)
-  assert.match(grid, /saved-place-previews:v3/)
+  assert.doesNotMatch(grid, /saved-place-previews|localStorage/)
   assert.match(grid, /LocationVisualPreview/)
   assert.match(grid, /<LocationVisualPreview title=\{title\} image=\{image\} latitude=\{latitude\} longitude=\{longitude\}/)
   assert.doesNotMatch(grid, /showImage|Photo unavailable/)

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { unstable_cache } from 'next/cache'
 import { headers } from 'next/headers'
 import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overlay'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
@@ -22,12 +21,6 @@ async function searchGlobalLocationsInViewport(input, options = {}) {
   const search = await import('@/lib/app/global-location-search')
   return search.searchGlobalLocationsInViewport(input, options)
 }
-
-const cachedPublicViewportSearch = unstable_cache(
-  async (serializedViewport) => searchGlobalLocationsInViewport(JSON.parse(serializedViewport), { traceId: null }),
-  ['global-location-viewport-v1'],
-  { revalidate: 30, tags: ['global-location-search'] }
-)
 
 async function requireUser(traceId) {
   if (!isSupabaseConfigured()) {
@@ -117,7 +110,7 @@ export async function GET(request) {
     // Authentication and catalogue search are independent network reads. Run them in
     // parallel so map latency is bounded by the slower backend rather than their sum.
     // Measure each promise independently; measuring after Promise.all would
-    // label the slower auth read as B2 time and make production profiling
+    // label the slower auth read as catalogue time and make production profiling
     // misleading.
     const authStarted = latencyStart()
     const authPromise = requireUser(traceId).then((value) => ({
@@ -125,7 +118,10 @@ export async function GET(request) {
       durationMs: elapsedMs(authStarted)
     }))
     const searchStarted = latencyStart()
-    const searchPromise = cachedPublicViewportSearch(JSON.stringify(viewport)).then((value) => ({
+    // Viewport bounds are continuous coordinates: nearly every pan produces a
+    // distinct key. Reuse cached catalogue shards and the map's bounded client cache,
+    // not a short-lived server entry for each individual camera position.
+    const searchPromise = searchGlobalLocationsInViewport(viewport, { traceId: null }).then((value) => ({
       value,
       durationMs: elapsedMs(searchStarted)
     }))
@@ -136,7 +132,7 @@ export async function GET(request) {
 
     if (auth.error) {
       auth.error.headers.set('x-puddle-trace-id', traceId)
-      recordSloObservation('mapViewport', elapsedMs(requestStarted), false, { trace_id: traceId, service: 'vercel' })
+      recordSloObservation('mapViewport', elapsedMs(requestStarted), false, { trace_id: traceId, service: 'self-hosted' })
       return auth.error
     }
 
@@ -145,7 +141,7 @@ export async function GET(request) {
     const moderationDuration = elapsedMs(moderationStarted)
     recordSloObservation('globalLocationSearch', searchDuration, !result.timedOut, {
       trace_id: traceId,
-      service: 'b2',
+      service: 'object-store',
       search_took_ms: Math.max(0, Number(result.tookMs) || 0),
       candidate_count: candidates.length,
       timed_out: Boolean(result.timedOut)
@@ -155,7 +151,7 @@ export async function GET(request) {
     const totalMs = elapsedMs(requestStarted)
     recordSloObservation('mapViewport', totalMs, true, {
       trace_id: traceId,
-      service: 'vercel',
+      service: 'self-hosted',
       point_count: points.length
     })
     return tracedJson(
@@ -163,7 +159,7 @@ export async function GET(request) {
       {
         traceId,
         headers: {
-          'server-timing': `auth;dur=${authDuration}, b2Search;dur=${searchDuration}, moderation;dur=${moderationDuration}, total;dur=${totalMs}`
+          'server-timing': `auth;dur=${authDuration}, catalogueSearch;dur=${searchDuration}, moderation;dur=${moderationDuration}, total;dur=${totalMs}`
         }
       }
     )
@@ -172,7 +168,7 @@ export async function GET(request) {
     if (!invalid) console.error(`Map viewport search failed trace=${traceId}: ${error?.message || 'unknown error'}`)
     recordSloObservation('mapViewport', elapsedMs(requestStarted), invalid, {
       trace_id: traceId,
-      service: 'vercel',
+      service: 'self-hosted',
       invalid_request: invalid
     })
     return tracedJson(

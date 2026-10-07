@@ -32,22 +32,22 @@ def clean_prefix(value):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
-parser.add_argument('--bootstrap-prefix', default=os.getenv('GLOBAL_BOOTSTRAP_B2_PREFIX', 'data/snapshots/bootstrap/current'))
+parser.add_argument('--bootstrap-prefix', default=os.getenv('GLOBAL_BOOTSTRAP_PREFIX', 'data/snapshots/bootstrap/current'))
 parser.add_argument('--countries', default=os.getenv('GLOBAL_LOCATION_COUNTRIES', ''))
 args = parser.parse_args()
 
-BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
+BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+ENDPOINT_URL = first_env('OBJECT_STORAGE_ENDPOINT').rstrip('/')
 ENDPOINT = ENDPOINT_URL.replace('https://', '').replace('http://', '')
-KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
-DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+REGION = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
+DATA_PREFIX = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
 STAGED_PREFIX = f'{DATA_PREFIX}/staged/places/schema=v1/snapshot={args.snapshot}'
 OUTPUT_PREFIX = f'{DATA_PREFIX}/normalized/schema=v1/snapshot={args.snapshot}'
 NAMESPACE = uuid.UUID(os.getenv('PUDDLE_LOCATION_UUID_NAMESPACE', '4cc1f63b-1a05-5ca2-9f15-5c860930f7d7'))
 if not ENDPOINT_URL or not KEY_ID or not KEY:
-    raise RuntimeError('B2 endpoint and credentials are required.')
+    raise RuntimeError('Object storage endpoint and credentials are required.')
 
 s3 = boto3.client(
     's3',
@@ -142,14 +142,14 @@ temp_dir = os.getenv('DUCKDB_TEMP_DIRECTORY', '.duckdb-tmp')
 os.makedirs(temp_dir, exist_ok=True)
 con.execute(f"SET temp_directory='{temp_dir.replace("'", "''")}'")
 con.execute(f"""
-CREATE OR REPLACE SECRET b2_data_secret (
+CREATE OR REPLACE SECRET object_data_secret (
   TYPE S3,
   KEY_ID '{KEY_ID.replace("'", "''")}',
   SECRET '{KEY.replace("'", "''")}',
   REGION '{REGION.replace("'", "''")}',
   ENDPOINT '{ENDPOINT.replace("'", "''")}',
   URL_STYLE 'path',
-  USE_SSL true
+  USE_SSL {'true' if ENDPOINT_URL.startswith('https://') else 'false'}
 );
 """)
 

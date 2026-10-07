@@ -83,24 +83,3 @@ jobs:
           path: landing-artifacts/
           if-no-files-found: ignore
           retention-days: 14
-
-  live-production-test:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: browser-test
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - name: Install landing verification dependencies
-        run: |
-          npm install --no-save --package-lock=false playwright@1.54.1
-          npx playwright install --with-deps chromium
-      - name: Wait for deployment and verify production
-        env:
-          LANDING_URL: https://puddle.you/
-          LANDING_TEST_ATTEMPTS: 3
-          LANDING_TEST_DELAY_MS: 10000
-        run: node scripts/test-live-landing.mjs

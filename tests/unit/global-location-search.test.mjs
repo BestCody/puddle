@@ -8,27 +8,29 @@ import {
   viewportLocationLimit
 } from '../../lib/app/global-location-search.js'
 
-const b2Env = {
-  B2_DATA_APPLICATION_KEY_ID: 'key-id',
-  B2_DATA_APPLICATION_KEY: 'application-key',
-  B2_DATA_BUCKET_NAME: 'puddle-assets',
+const objectEnv = {
+  OBJECT_STORAGE_ENDPOINT: 'http://127.0.0.1:8333',
+  OBJECT_STORAGE_REGION: 'us-east-1',
+  OBJECT_STORAGE_BUCKET: 'puddle-assets',
+  OBJECT_STORAGE_ACCESS_KEY_ID: 'key-id',
+  OBJECT_STORAGE_SECRET_ACCESS_KEY: 'application-key',
   NEXT_PUBLIC_SUPABASE_URL: '',
   SUPABASE_SECRET_KEY: ''
 }
 
-test('global location serving is B2-only and reports its configuration', () => {
-  const config = globalLocationSearchConfig(b2Env)
-  assert.equal(config.backend, 'b2')
-  assert.equal(config.index, 'b2-active')
-  assert.equal(isGlobalLocationSearchConfigured(b2Env), true)
-  assert.equal(isGlobalLocationSearchConfigured({ ...b2Env, B2_DATA_APPLICATION_KEY: '' }), false)
+test('global location serving requires the object store', () => {
+  const config = globalLocationSearchConfig(objectEnv)
+  assert.equal(config.backend, 'object-store')
+  assert.equal(config.index, 'active')
+  assert.equal(isGlobalLocationSearchConfigured(objectEnv), true)
+  assert.equal(isGlobalLocationSearchConfigured({ ...objectEnv, OBJECT_STORAGE_SECRET_ACCESS_KEY: '' }), false)
 })
 
-test('serving fails closed instead of falling back when B2 is unconfigured', async () => {
+test('serving fails closed when object storage is unconfigured', async () => {
   await assert.rejects(
     () => searchGlobalLocations(
       { latitude: 43.65, longitude: -79.39, distanceKm: 25, candidateLimit: 20 },
-      { env: { ...b2Env, B2_DATA_APPLICATION_KEY: '', SUPABASE_SECRET_KEY: '' } }
+      { env: { ...objectEnv, OBJECT_STORAGE_SECRET_ACCESS_KEY: '', SUPABASE_SECRET_KEY: '' } }
     ),
     /not configured/
   )
