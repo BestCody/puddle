@@ -45,3 +45,9 @@ test('provider-specific runtime integrations and managed-only jobs are retired',
   assert.doesNotMatch(env, /\.supabase\.co|stored in B2/)
   await assert.rejects(read('vercel.json'), { code: 'ENOENT' })
 })
+
+test('isolated browser E2E configures an explicit internal Supabase route', async () => {
+  const workflow = await read('.github/workflows/e2e.yml')
+  assert.match(workflow, /echo "NEXT_PUBLIC_SUPABASE_URL=\$API_URL" >> "\$GITHUB_ENV"/)
+  assert.match(workflow, /echo "SUPABASE_INTERNAL_URL=\$API_URL" >> "\$GITHUB_ENV"/)
+})
