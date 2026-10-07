@@ -2,7 +2,7 @@ name: Landing restoration
 
 on:
   push:
-    branches: [main, landing-restoration-tested]
+    branches: [main]
     paths:
       - public/app.js
       - public/landing.html

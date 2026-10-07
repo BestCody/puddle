@@ -2,7 +2,7 @@ name: Validate Supabase migrations
 
 on:
   push:
-    branches-ignore:
+    branches:
       - main
     paths:
       - 'supabase/**'
