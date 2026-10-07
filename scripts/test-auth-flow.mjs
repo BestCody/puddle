@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { authCallbackUrl, canonicalPuddleAuthUrl, normalizeOrigin, requestOrigin } from '../lib/auth/origin.js'
+import { canonicalPuddleAuthUrl, normalizeOrigin, requestOrigin, siteUrl } from '../lib/auth/origin.js'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 
@@ -16,7 +16,17 @@ const wwwHeaders = new Headers({
   'x-forwarded-proto': 'https'
 })
 assert.equal(requestOrigin(wwwHeaders, 'https://puddle.you'), 'https://www.puddle.you')
-assert.equal(authCallbackUrl(wwwHeaders, '/auth/callback?next=/onboarding', 'https://puddle.you'), 'https://www.puddle.you/auth/callback?next=/onboarding')
+const originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL
+try {
+  process.env.NEXT_PUBLIC_SITE_URL = 'https://staging.puddle.you'
+  assert.equal(siteUrl(wwwHeaders, '/auth/callback?next=/onboarding').toString(), 'https://staging.puddle.you/auth/callback?next=/onboarding')
+  assert.equal(siteUrl(new Headers({ host: '0.0.0.0:3000' }), '/landing.html').toString(), 'https://staging.puddle.you/landing.html')
+  assert.throws(() => siteUrl(wwwHeaders, '//attacker.example/path'), /local path/)
+  assert.throws(() => siteUrl(wwwHeaders, '/\\attacker.example/path'), /local path/)
+} finally {
+  if (originalSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL
+  else process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl
+}
 
 const apexHeaders = new Headers({
   origin: 'https://puddle.you',
@@ -106,9 +116,13 @@ for (const marker of ['saveOnboardingDraft', 'profileWriteErrorMessage', 'ensure
 }
 assert(signup.includes('updateUserById(user.id, { email_confirm: true })'), 'Hosted signup must auto-confirm new users when Supabase still requires confirmation')
 assert(!actions.includes('/verify-email?email='), 'New signups must not be redirected to email verification')
-assert(actions.includes("if (process.env.NODE_ENV === 'production') return 'https://puddle.you'"), 'Production auth links must never point at localhost')
+assert(actions.includes('siteOrigin(await headers())'), 'Auth links must use the configured public origin')
 assert(signup.includes('clearLocalAuthSession(supabase)'), 'New authentication attempts must clear the previous local session')
-assert(passwordRoute.includes("NextResponse.redirect(new URL(authenticatedDestination(profile, next), request.url), 303)"), 'Landing sign-in must redirect completed accounts directly to the product')
+assert(passwordRoute.includes('NextResponse.redirect(siteUrl(request.headers, authenticatedDestination(profile, next)), 303)'), 'Landing sign-in must redirect completed accounts directly to the product')
+for (const source of [callback, confirm, passwordRoute, signupRoute, googleRoute]) {
+  assert(source.includes('siteUrl(request.headers,'), 'Auth routes must redirect through the configured public origin')
+  assert(!/NextResponse\.redirect\(new URL\([^\n]*request\.url/.test(source), 'Auth routes must not build redirects from the internal listener URL')
+}
 assert(actions.includes('startGoogleSignup'), 'Signup must retain its Google OAuth entry point')
 assert(signupRoute.includes('registerAccount(await request.formData())'), 'Landing signup must use the shared account registration path')
 assert(googleRoute.includes('signupIntent'), 'Landing Google signup must require an explicit signup intent')

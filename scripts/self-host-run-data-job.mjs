@@ -18,7 +18,6 @@ export function validateJob(job, env) {
   for (const flag of ['PUDDLE_JOBS_ENABLED', 'PUDDLE_STORAGE_CUTOVER_COMPLETE', 'PUDDLE_SUPABASE_CUTOVER_COMPLETE']) {
     if (env[flag] !== 'true') throw new Error(`${flag}=true is required before running data jobs.`)
   }
-  if (env.PUDDLE_OBJECT_STORE !== 's3') throw new Error('PUDDLE_OBJECT_STORE=s3 is required for host data jobs.')
   for (const key of ['OBJECT_STORAGE_ENDPOINT', 'OBJECT_STORAGE_ACCESS_KEY_ID', 'OBJECT_STORAGE_SECRET_ACCESS_KEY', 'OBJECT_STORAGE_BUCKET', 'OBJECT_STORAGE_REGION']) {
     if (!env[key]) throw new Error(`${key} is required for host data jobs.`)
   }
@@ -53,32 +52,11 @@ export function validateJob(job, env) {
   }
 }
 
-export function objectWorkerEnv(env) {
-  const endpoint = env.OBJECT_STORAGE_ENDPOINT
-  const keyId = env.OBJECT_STORAGE_ACCESS_KEY_ID
-  const secret = env.OBJECT_STORAGE_SECRET_ACCESS_KEY
-  const bucket = env.OBJECT_STORAGE_BUCKET
-  const region = env.OBJECT_STORAGE_REGION
-  // The existing boto3 workers are S3-compatible; translate their historical
-  // environment names at the process boundary, never source B2 credentials.
-  return {
-    B2_BUCKET: bucket, B2_S3_ENDPOINT: endpoint, B2_REGION: region,
-    B2_KEY_ID: keyId, B2_APPLICATION_KEY: secret,
-    B2_DATA_PREFIX: env.PUDDLE_DATA_PREFIX || 'data',
-    B2_MEDIA_OPEN_PHOTO_PREFIX: env.PUDDLE_OPEN_PHOTO_PREFIX || 'media/photos/by-sha256',
-    B2_DATA_BUCKET_NAME: bucket, B2_DATA_S3_ENDPOINT: endpoint, B2_DATA_S3_REGION: region,
-    B2_DATA_KEY_ID: keyId, B2_DATA_APPLICATION_KEY_ID: keyId, B2_DATA_APPLICATION_KEY: secret,
-    B2_MEDIA_BUCKET_NAME: bucket, B2_MEDIA_S3_ENDPOINT: endpoint, B2_MEDIA_S3_REGION: region,
-    B2_MEDIA_KEY_ID: keyId, B2_MEDIA_APPLICATION_KEY_ID: keyId, B2_MEDIA_APPLICATION_KEY: secret
-  }
-}
-
 function python(file, args = [], extraEnv = {}, capture = false) {
   const executable = process.env.PYTHON_BIN || 'python3'
   const result = spawnSync(executable, [`scripts/global-data/${file}`, ...args], {
     env: {
-      ...Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('B2_'))),
-      ...objectWorkerEnv(process.env),
+      ...process.env,
       PYTHONUNBUFFERED: '1',
       ...extraEnv
     },
@@ -103,11 +81,8 @@ function outputStep(file, args = []) {
   const scratch = mkdtempSync(join(tmpdir(), 'puddle-job-output-'))
   try {
     const output = join(scratch, 'output')
-    python(file, args, { GITHUB_OUTPUT: output })
-    return Object.fromEntries(readFileSync(output, 'utf8').trim().split(/\r?\n/).map((line) => {
-      const equals = line.indexOf('=')
-      return [line.slice(0, equals), line.slice(equals + 1)]
-    }))
+    python(file, args, { PUDDLE_JOB_OUTPUT: output })
+    return JSON.parse(readFileSync(output, 'utf8'))
   } finally {
     rmSync(scratch, { recursive: true, force: true })
   }
@@ -135,7 +110,7 @@ export function runJob(job) {
       GLOBAL_PHOTO_CLAIM_CONCURRENCY: process.env.GLOBAL_PHOTO_CLAIM_CONCURRENCY || '8',
       GLOBAL_PHOTO_RUN_BUDGET_SECONDS: process.env.GLOBAL_PHOTO_RUN_BUDGET_SECONDS || '19800'
     })
-    python('build_b2_photo_search_overlay.py', [`--snapshot=${snapshot}`])
+    python('build_object_photo_search_overlay.py', [`--snapshot=${snapshot}`])
   } else if (job === 'locations') {
     const previous = activeSnapshot()
     const snapshot = new Date().toISOString().slice(0, 10)
@@ -147,12 +122,12 @@ export function runJob(job) {
     python('resolve_global_entities.py', [`--snapshot=${snapshot}`, '--bootstrap-prefix=data/snapshots/bootstrap/current'])
     python('carry_photo_enrichment.py', [`--source-snapshot=${previous}`, `--target-snapshot=${snapshot}`])
     python('build_bootstrap_overlays.py', [`--snapshot=${snapshot}`, '--bootstrap-prefix=data/snapshots/bootstrap/current'])
-    python('build_b2_search_index.py', [`--snapshot=${snapshot}`])
-    python('validate_b2_search_index.py', [`--snapshot=${snapshot}`])
-    python('validate_b2_search_index.py', [`--snapshot=${snapshot}`, '--activate'])
-    python('build_b2_photo_search_overlay.py', [`--snapshot=${snapshot}`])
+    python('build_object_search_index.py', [`--snapshot=${snapshot}`])
+    python('validate_object_search_index.py', [`--snapshot=${snapshot}`])
+    python('validate_object_search_index.py', [`--snapshot=${snapshot}`, '--activate'])
+    python('build_object_photo_search_overlay.py', [`--snapshot=${snapshot}`])
   } else if (job === 'photo_audit') {
-    python('audit_b2_photo_inventory.py')
+    python('audit_object_photo_inventory.py')
   }
 }
 

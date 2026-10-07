@@ -105,7 +105,7 @@ test('authentication flows use the landing page and keep recovery links on produ
   const passwordRequest = passwordAuth.indexOf('signInWithPassword')
 
   assert(signInSessionClear >= 0 && signInSessionClear < passwordRequest, 'sign-in must clear a previous local session before checking credentials')
-  assert.match(actions, /if \(process\.env\.NODE_ENV === 'production'\) return 'https:\/\/puddle\.you'/)
+  assert.match(actions, /siteOrigin\(await headers\(\)\)/)
   assert.doesNotMatch(actions, /export async function signIn\(/)
   assert.doesNotMatch(actions, /sendLoginCode|verifyLoginCode|signInWithOAuth/)
   assert.doesNotMatch(actions, /\/signin/)
@@ -126,7 +126,7 @@ test('landing credential sign-in posts directly to the authenticated destination
   assert.match(landing, /id="mobile-login-dialog"/)
   assert.match(route, /authenticatePassword\(supabase, email, password\)/)
   assert.match(route, /authenticatedDestination\(profile, next\)/)
-  assert.match(route, /NextResponse\.redirect\(new URL\(authenticatedDestination\(profile, next\), request\.url\), 303\)/)
+  assert.match(route, /NextResponse\.redirect\(siteUrl\(request\.headers, authenticatedDestination\(profile, next\)\), 303\)/)
   assert.match(landing, /data-auth-mode="login"/)
   assert.match(landing, /data-auth-mode="signup"/)
   assert.match(landing, /id="landing-signup-form" class="landing-signup-form" action="\/api\/auth\/signup" method="post"/)

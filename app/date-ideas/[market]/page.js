@@ -7,6 +7,10 @@ import { serializeStructuredData } from '@/lib/app/structured-data'
 
 export const revalidate = 3600
 
+export async function generateStaticParams() {
+  return []
+}
+
 function copy(market) {
   const region = marketRegionLabel(market)
   return {
@@ -74,7 +78,7 @@ export default async function DateIdeasPage({ params }) {
       trail={trail}
       title={title}
       intro={[summarise(market, groups, total), description].filter(Boolean).join(' ')}
-      emptyNote={`We are still mapping ${market.name}. Try another city below.`}
+      emptyNote={total === 0 ? `We are still mapping ${market.name}. Try another city below.` : null}
       sections={[
         { title: `Browse ${market.name} by category`, links: PLACE_CATEGORIES.map((category) => ({ href: marketPath(market, category), label: `${category.label} in ${market.name}` })) },
         { title: 'Date ideas in other cities', links: otherMarkets.map((entry) => ({ href: dateIdeasPath(entry), label: `Date ideas in ${entry.name}` })) },

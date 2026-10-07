@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { JOBS, objectWorkerEnv, validateJob } from '../../scripts/self-host-run-data-job.mjs'
+import { JOBS, validateJob } from '../../scripts/self-host-run-data-job.mjs'
 
-test('host scheduler mirrors all six existing data schedules', () => {
+test('host scheduler installs all six data schedules', () => {
   assert.deepEqual(JOBS, {
     kartaview: '11 * * * *',
     wikimedia: '3 */6 * * *',
@@ -12,17 +12,9 @@ test('host scheduler mirrors all six existing data schedules', () => {
     locations: '23 5 * * *',
     photo_audit: '17 4 * * 1'
   })
-  const workflows = {
-    kartaview: 'global-kartaview-enrichment',
-    wikimedia: 'global-wikimedia-enrichment',
-    mapillary: 'global-mapillary-enrichment',
-    materialize: 'global-photo-enrichment',
-    locations: 'global-location-data',
-    photo_audit: 'audit-b2-photo-inventory'
-  }
-  for (const [job, workflow] of Object.entries(workflows)) {
-    const source = readFileSync(new URL(`../../.github/workflows/${workflow}.yml`, import.meta.url), 'utf8')
-    assert.ok(source.includes(`cron: '${JOBS[job]}'`), `${job} differs from the current GitHub schedule`)
+  for (const job of Object.keys(JOBS)) {
+    const timer = readFileSync(new URL(`../../deploy/self-host/puddle-data@${job}.timer`, import.meta.url), 'utf8')
+    assert.ok(timer.includes(`Unit=puddle-data@${job}.service`), `${job} has no matching host service`)
   }
 })
 
@@ -33,22 +25,22 @@ test('data jobs remain fail-closed before every cutover gate is explicit', () =>
     PUDDLE_JOBS_ENABLED: 'true',
     PUDDLE_STORAGE_CUTOVER_COMPLETE: 'true',
     PUDDLE_SUPABASE_CUTOVER_COMPLETE: 'true'
-  }), /PUDDLE_OBJECT_STORE/)
+  }), /OBJECT_STORAGE_ENDPOINT/)
 })
 
-test('host jobs translate only local S3 credentials for the existing boto3 workers', () => {
-  const translated = objectWorkerEnv({
-    OBJECT_STORAGE_ENDPOINT: 'http://127.0.0.1:8333',
-    OBJECT_STORAGE_REGION: 'us-east-1',
-    OBJECT_STORAGE_BUCKET: 'puddle-assets',
-    OBJECT_STORAGE_ACCESS_KEY_ID: 'local-id',
-    OBJECT_STORAGE_SECRET_ACCESS_KEY: 'local-secret',
-    B2_DATA_KEY_ID: 'must-not-use-source'
-  })
-  assert.equal(translated.B2_DATA_S3_ENDPOINT, 'http://127.0.0.1:8333')
-  assert.equal(translated.B2_MEDIA_APPLICATION_KEY, 'local-secret')
-  assert.equal(translated.B2_BUCKET, 'puddle-assets')
-  assert.equal(translated.B2_DATA_KEY_ID, 'local-id')
+test('non-root data worker has a pinned Python environment and offline preflight', () => {
+  const service = readFileSync(new URL('../../deploy/self-host/puddle-data@.service', import.meta.url), 'utf8')
+  const direct = readFileSync(new URL('../../deploy/self-host/data-jobs-requirements.in', import.meta.url), 'utf8')
+  const locked = readFileSync(new URL('../../deploy/self-host/data-jobs-requirements.txt', import.meta.url), 'utf8')
+  const verifier = readFileSync(new URL('../../deploy/self-host/verify-data-worker.py', import.meta.url), 'utf8')
+  assert.match(service, /^User=puddle$/m)
+  assert.match(service, /^Environment=PYTHON_BIN=\/opt\/puddle\/\.venv\/bin\/python$/m)
+  for (const line of direct.split(/\r?\n/)) {
+    const match = /^([a-z][a-z0-9-]*)[<>=]/i.exec(line)
+    if (match) assert.match(locked, new RegExp(`^${match[1]}==[^\\s]+$`, 'im'), `${match[1]} is not locked`)
+  }
+  assert.match(verifier, /sys\.version_info\[:2\] != \(3, 13\)/)
+  assert.match(verifier, /duckdb\.sql/)
 })
 
 test('host jobs reject a stale managed Supabase URL despite cutover flags', () => {
@@ -56,7 +48,6 @@ test('host jobs reject a stale managed Supabase URL despite cutover flags', () =
     PUDDLE_JOBS_ENABLED: 'true',
     PUDDLE_STORAGE_CUTOVER_COMPLETE: 'true',
     PUDDLE_SUPABASE_CUTOVER_COMPLETE: 'true',
-    PUDDLE_OBJECT_STORE: 's3',
     OBJECT_STORAGE_ENDPOINT: 'http://127.0.0.1:8333',
     OBJECT_STORAGE_ACCESS_KEY_ID: 'local-id',
     OBJECT_STORAGE_SECRET_ACCESS_KEY: 'local-secret',

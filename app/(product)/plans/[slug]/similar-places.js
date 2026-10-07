@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { PhotoFrame } from '@/components/photo-frame'
 import styles from '../Plans.module.css'
@@ -22,10 +22,26 @@ function itemLocation(item) {
 }
 
 export function SimilarPlaces({ slug }) {
+  const sectionRef = useRef(null)
+  const [nearViewport, setNearViewport] = useState(false)
   const [state, setState] = useState({ loading: true, items: [], error: null })
   const [retry, setRetry] = useState(0)
 
   useEffect(() => {
+    if (nearViewport) return undefined
+    if (!('IntersectionObserver' in window)) {
+      setNearViewport(true)
+      return undefined
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setNearViewport(true)
+    }, { rootMargin: '25%' })
+    observer.observe(sectionRef.current)
+    return () => observer.disconnect()
+  }, [nearViewport])
+
+  useEffect(() => {
+    if (!nearViewport) return undefined
     const controller = new AbortController()
     setState({ loading: true, items: [], error: null })
     async function load() {
@@ -42,12 +58,12 @@ export function SimilarPlaces({ slug }) {
     }
     load()
     return () => controller.abort()
-  }, [slug, retry])
+  }, [slug, retry, nearViewport])
 
   const places = state.items.filter((item) => item?.content_kind !== 'event' && item?.slug).slice(0, 3)
   if (!state.loading && !state.error && !places.length) return null
 
-  return <section className={styles.similar} data-testid="saved-similar" aria-busy={state.loading || undefined}>
+  return <section ref={sectionRef} className={styles.similar} data-testid="saved-similar" aria-busy={state.loading || undefined}>
     <h2>Similar splashes</h2>
     {state.loading ? <div className={styles.similarStatus} role="status">Loading similar places…</div> : null}
     {state.error ? <div className={`${styles.similarStatus} ${styles.similarStatusError}`} role="alert"><span>{state.error}</span><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}

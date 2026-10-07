@@ -2,6 +2,8 @@
 
 Puddle is a place-discovery product for finding somewhere worth going, saving places you like, and sharing them with people you know.
 
+The architecture below is the **uncommitted self-hosted target**. The live deployment remains on its current providers until the host is provisioned and the migration gates in `deploy/self-host/README.md` pass.
+
 ## Active product
 
 The primary flow is:
@@ -17,8 +19,8 @@ location preferences
 Current capabilities include:
 
 - Supabase authentication, onboarding, account settings, relational product data, and social state
-- global location discovery served exclusively from immutable Backblaze B2 search shards (packed planner + compact text projection + prefix postings)
-- image-rich place cards with licensed open photos and Google Places fallback
+- global location discovery served from immutable private object-store search shards (packed planner + compact text projection + prefix postings)
+- image-rich place cards with licensed canonical open photos
 - Pass, Save, Perfect Pick, details, filters, undo, and continuous nearby-place refill
 - Friends, friend requests, direct messages, rich shared-place messages, and places in common
 - Saved, Planned, and Past place views
@@ -27,32 +29,32 @@ Current capabilities include:
 
 The active browser path does not depend on the retired shared pair/group deck system, static catalogue, R2 media runtime, OpenSearch, or Supabase Storage for canonical open-location photos.
 
-## Production architecture
+## Target architecture
 
 ```text
 Browser
-  → Next.js / Vercel
+  → self-hosted Next.js
     → security + Supabase session proxy
     → product APIs and pages
 
 Discovery
-  → B2-only global location serving: data/search/active.json
-    → content-addressed immutable shards through CDN/B2
+  → private object-store global location serving: data/search/active.json
+    → content-addressed immutable shards
     → packed planner routing tiles → immutable geo packs
     → compact text projection cores/details + prefix postings
   → serving failures fail closed; no Postgres/OpenSearch fallback
 
 Global data build
   → Overture + Foursquare bulk sources
-  → normalized/resolved Parquet in Backblaze B2
+  → normalized/resolved Parquet in the private object store
   → existing Puddle metadata/photo overlays
   → packed planner manifests with validated hash ledgers
 
 Approved open-location photos
   → Wikimedia / Mapillary / KartaView
   → normalized JPEG + SHA-256
-  → content-addressed private Backblaze B2 object
-  → Supabase `media_objects` metadata/provenance
+  → content-addressed private object-store object
+  → canonical photo claims and metadata
   → same-origin `/api/open-photo/<sha256>` delivery
 
 User/private media
@@ -61,7 +63,7 @@ User/private media
   → public or short-lived signed URL according to visibility/access policy
 ```
 
-Google Places is used for stable Place IDs and eligible non-persisted photo fallback. Google photo bytes and photo resource URLs are not canonical Puddle media.
+Google Places is used for stable Place IDs. Google photo bytes and photo resource URLs are not canonical Puddle media.
 
 Historical database migrations remain in `supabase/migrations/` because applied migrations are immutable deployment history even when the runtime feature they originally supported has been retired.
 
@@ -81,15 +83,10 @@ Open `http://localhost:3000`.
 ## Location photo operations
 
 ```bash
-# Dry run first
-npm run locations:photos:open -- --limit=200
-
-# Persist approved results to canonical B2 media
-npm run locations:photos:open -- --limit=200 --apply
-
-# Existing enrichment / Google matching helpers
-npm run locations:photos:enrich
-npm run locations:google:match
+# Host scheduler and private object-store credentials are required.
+npm run global:photos:wikimedia
+npm run global:photos:materialize
+npm run global:photos:overlay
 ```
 
 ## Validation

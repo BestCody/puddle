@@ -11,6 +11,10 @@
   }
 }
 
+{$PUDDLE_WWW_DOMAIN} {
+  redir {$PUDDLE_SITE_URL}{uri} permanent
+}
+
 {$SUPABASE_DOMAIN} {
   encode zstd gzip
   @api path /auth/v1/* /rest/v1/* /realtime/v1/* /storage/v1/* /functions/v1/*

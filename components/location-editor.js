@@ -11,36 +11,83 @@ import { RevisionHistory } from './revision-history'
 const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
 const kinds = ['cafe','restaurant','bar','park','museum','gallery','attraction','activity_venue','study_spot','scenic_spot','nightlife','shop','community_space','other']
 
-export function LocationEditor({ location = null, identities = [] }) {
+export function LocationEditor({ location = null, identities = [], newDraftId = '' }) {
   const formRef = useRef(null)
   const [draftId, setDraftId] = useState(location?.id || '')
   const [autosave, setAutosave] = useState(location?.id ? 'Saved draft loaded' : 'Start typing to create a draft')
   const [version, setVersion] = useState(0)
+  const draftIdRef = useRef(location?.id || '')
+  const newDraftIdRef = useRef(newDraftId)
+  const latestInputRef = useRef(0)
+  const requestRef = useRef(null)
+  const submittingRef = useRef(false)
+  const replaySubmitRef = useRef(false)
 
-  useEffect(() => {
-    if (!version || !formRef.current) return
-    const timer = window.setTimeout(async () => {
-      const payload = Object.fromEntries(new FormData(formRef.current).entries())
-      payload.id = draftId
-      setAutosave('Saving…')
+  async function flushAutosave() {
+    if (submittingRef.current || requestRef.current || !formRef.current) return
+    const revision = latestInputRef.current
+    const payload = Object.fromEntries(new FormData(formRef.current).entries())
+    payload.id = draftIdRef.current
+    setAutosave('Saving…')
+    requestRef.current = (async () => {
       try {
         const response = await csrfFetch('/api/drafts/place', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         const result = await response.json()
+        if (!formRef.current?.isConnected) return false
         if (!response.ok || !result.saved) {
           setAutosave(result.waiting ? 'Add the required basics to autosave' : result.error || 'Autosave paused')
-          return
+          return false
         }
-        if (!draftId && result.draft?.id) {
+        if (!result.draft?.id) throw new Error('The saved draft ID is missing.')
+        if (!draftIdRef.current) {
+          draftIdRef.current = result.draft.id
+          const idInput = formRef.current?.elements.namedItem('id')
+          if (idInput) idInput.value = result.draft.id
           setDraftId(result.draft.id)
           window.history.replaceState(null, '', `/studio/places/${result.draft.id}`)
         }
         setAutosave(`Saved ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`)
+        return true
       } catch {
         setAutosave('Offline — changes remain in this form')
+        return false
       }
-    }, 1100)
+    })()
+    const saved = await requestRef.current
+    requestRef.current = null
+    if (saved && !submittingRef.current && latestInputRef.current > revision) {
+      setVersion((current) => current + 1)
+    }
+  }
+
+  useEffect(() => {
+    if (!version) return
+    const timer = window.setTimeout(() => { void flushAutosave() }, 1100)
     return () => window.clearTimeout(timer)
-  }, [version, draftId])
+  }, [version])
+
+  function handleSubmit(event) {
+    if (replaySubmitRef.current) {
+      replaySubmitRef.current = false
+      return
+    }
+    if (submittingRef.current) {
+      event.preventDefault()
+      return
+    }
+    submittingRef.current = true
+    if (!requestRef.current) return
+    event.preventDefault()
+    const form = event.currentTarget
+    const submitter = event.nativeEvent.submitter || undefined
+    void requestRef.current.then(() => {
+      if (!form.isConnected) return
+      const idInput = form.elements.namedItem('id')
+      if (idInput) idInput.value = draftIdRef.current
+      replaySubmitRef.current = true
+      form.requestSubmit(submitter)
+    })
+  }
 
   const accessibility = location?.accessibility || {}
   const contact = location?.contact_links || {}
@@ -49,8 +96,9 @@ export function LocationEditor({ location = null, identities = [] }) {
 
   return (
     <div className="editor-layout">
-      <form ref={formRef} className="content-editor" action={saveLocationDraft} onInput={() => setVersion((value) => value + 1)}>
+      <form ref={formRef} className="content-editor" action={saveLocationDraft} onInput={() => { latestInputRef.current += 1; setVersion((value) => value + 1) }} onSubmit={handleSubmit}>
         <input type="hidden" name="id" value={draftId} readOnly />
+        <input type="hidden" name="new_draft_id" value={newDraftIdRef.current} readOnly />
         <div className="editor-topbar">
           <div><span className={`status-dot status-${currentStatus}`} /> <strong>{currentStatus.replaceAll('_', ' ')}</strong><small>{autosave}</small></div>
           <div className="editor-actions">

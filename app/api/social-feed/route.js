@@ -59,14 +59,14 @@ export async function GET(request) {
     })
     recordSloObservation('socialFeed', elapsedMs(startedAt), true, {
       trace_id: traceId,
-      service: 'vercel',
+      service: 'self-hosted',
       route: '/api/social-feed',
       item_count: Array.isArray(feed.items) ? feed.items.length : 0
     })
     return response(feed, { traceId, startedAt, serverTiming: feedServerTiming(feed, authMs, elapsedMs(startedAt)) })
   } catch (error) {
     console.error(`Social feed failed trace=${traceId}: ${error?.message || 'unknown error'}`)
-    recordSloObservation('socialFeed', elapsedMs(startedAt), false, { trace_id: traceId, service: 'vercel', route: '/api/social-feed' })
+    recordSloObservation('socialFeed', elapsedMs(startedAt), false, { trace_id: traceId, service: 'self-hosted', route: '/api/social-feed' })
     return response({ error: 'The feed could not be loaded.' }, { status: 503, traceId, startedAt })
   }
 }

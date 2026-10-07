@@ -2,7 +2,7 @@
 """Build Mapillary photo candidates coverage-first from zoom-14 vector tiles.
 
 The worker uses the documented 50,000 vector-tile requests/day allowance as a
-shared UTC-day budget, checkpoints progress in B2, and never spends requests on
+shared UTC-day budget, checkpoints progress in object store, and never spends requests on
 tiles that were already completed for the same location snapshot. Candidate
 files are merged rather than overwritten so partial runs accumulate coverage.
 """
@@ -55,15 +55,15 @@ args = parser.parse_args()
 args.snapshot = safe_partition(args.snapshot, 'snapshot')
 
 TOKEN = os.environ['MAPILLARY_ACCESS_TOKEN']
-BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
+BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+ENDPOINT_URL = first_env('OBJECT_STORAGE_ENDPOINT')
 ENDPOINT = ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
-KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
-DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+REGION = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
+DATA_PREFIX = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
 if not ENDPOINT or not KEY_ID or not KEY:
-    raise RuntimeError('B2 endpoint and credentials are required.')
+    raise RuntimeError('Object storage endpoint and credentials are required.')
 
 ZOOM = max(14, min(14, args.zoom))
 CONCURRENCY = max(1, min(256, int(os.getenv('MAPILLARY_TILE_CONCURRENCY', '96'))))
@@ -285,9 +285,9 @@ con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
 con.execute(f"SET threads TO {max(1, min(32, int(os.getenv('GLOBAL_PHOTO_THREADS', '8'))))}")
 con.execute(f"""
-CREATE OR REPLACE SECRET b2_data_secret (
+CREATE OR REPLACE SECRET object_data_secret (
  TYPE S3, KEY_ID '{KEY_ID.replace("'", "''")}', SECRET '{KEY.replace("'", "''")}',
- REGION '{REGION.replace("'", "''")}', ENDPOINT '{ENDPOINT.replace("'", "''")}', URL_STYLE 'path', USE_SSL true
+ REGION '{REGION.replace("'", "''")}', ENDPOINT '{ENDPOINT.replace("'", "''")}', URL_STYLE 'path', USE_SSL {'true' if ENDPOINT_URL.startswith('https://') else 'false'}
 );
 """)
 con.create_function('map_tile_x', lambda lat, lon: tile_xy(lat, lon)[0], ['DOUBLE', 'DOUBLE'], 'BIGINT')

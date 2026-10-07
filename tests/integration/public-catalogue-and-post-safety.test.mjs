@@ -17,6 +17,16 @@ test('public catalogue has a live route smoke rather than configuration-only hea
   assert.match(health, /scope: 'liveness'/)
 })
 
+test('location moderation invalidates the independently cached public sitemap', async () => {
+  const [admin, sitemap] = await Promise.all([
+    read('app/api/admin/action/route.js'),
+    read('app/sitemap.js')
+  ])
+  assert.match(sitemap, /tags: \['public-sitemap'\]/)
+  assert.match(admin, /'public-location-recommendations', 'public-sitemap'/)
+  assert.match(admin, /revalidateTag\(tag, \{ expire: 0 \}\)/)
+})
+
 test('post reports preserve evidence and moderator removal is enforced by RLS', async () => {
   const [migration, report, feed, admin, consoleSource, create] = await Promise.all([
     read('supabase/migrations/20260927211856_moderate_social_posts.sql'),

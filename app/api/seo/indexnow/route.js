@@ -20,7 +20,5 @@ async function submit(request) {
   }
 }
 
-// Vercel Cron invokes scheduled routes with GET and supplies the CRON_SECRET bearer itself.
-// POST is kept so the same submission can be triggered by hand.
-export const GET = submit
+// The self-hosted timer invokes this protected POST route.
 export const POST = submit

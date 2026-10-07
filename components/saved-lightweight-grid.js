@@ -1,48 +1,11 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { LocationVisualPreview } from '@/components/location-visual-preview'
-
-const PREVIEW_CACHE_KEY = 'puddle:saved-place-previews:v3'
-const PREVIEW_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
-const PREVIEW_CACHE_LIMIT = 300
+import { resolveSavedPreviewBatch } from '@/lib/app/saved-preview-results'
 
 function categoryLabel(value) {
   return String(value || 'Saved place').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
-function readPreviewCache(ids) {
-  if (typeof window === 'undefined') return {}
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(PREVIEW_CACHE_KEY) || '{}')
-    const entries = parsed?.entries && typeof parsed.entries === 'object' ? parsed.entries : {}
-    const now = Date.now()
-    const previews = {}
-    for (const id of ids) {
-      const entry = entries[id]
-      if (!entry?.preview || !entry.cachedAt || now - entry.cachedAt > PREVIEW_CACHE_TTL_MS) continue
-      previews[id] = entry.preview
-    }
-    return previews
-  } catch {
-    return {}
-  }
-}
-
-function writePreviewCache(previews) {
-  if (typeof window === 'undefined' || !Object.keys(previews).length) return
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(PREVIEW_CACHE_KEY) || '{}')
-    const entries = parsed?.entries && typeof parsed.entries === 'object' ? parsed.entries : {}
-    const now = Date.now()
-    for (const [id, preview] of Object.entries(previews)) entries[id] = { preview, cachedAt: now }
-    const limited = Object.fromEntries(
-      Object.entries(entries)
-        .sort(([, left], [, right]) => Number(right?.cachedAt || 0) - Number(left?.cachedAt || 0))
-        .slice(0, PREVIEW_CACHE_LIMIT)
-    )
-    window.localStorage.setItem(PREVIEW_CACHE_KEY, JSON.stringify({ entries: limited }))
-  } catch {}
 }
 
 function SavedCardVisual({ className, href, ready, title, image, latitude, longitude, children, onOpen, loading = 'lazy' }) {
@@ -55,6 +18,9 @@ function SavedCardVisual({ className, href, ready, title, image, latitude, longi
     if (!ready) event.preventDefault()
   }
 
+  const content = <><LocationVisualPreview title={title} image={image} latitude={latitude} longitude={longitude} loading={loading} />{children}</>
+  if (!ready && !onOpen) return <div className={className} style={{ position: 'relative', overflow: 'hidden' }}>{content}</div>
+
   return <a
     className={className}
     href={href}
@@ -65,54 +31,93 @@ function SavedCardVisual({ className, href, ready, title, image, latitude, longi
     aria-label={`Open ${title}`}
     style={{ position: 'relative', overflow: 'hidden' }}
   >
-    <LocationVisualPreview title={title} image={image} latitude={latitude} longitude={longitude} loading={loading} />
-    {children}
+    {content}
   </a>
 }
 
 export function SavedLightweightGrid({ items = [], className = '', cardClassName = '', photoClassName = '', copyClassName = '', metaClassName = '', perfectPickClassName = '', initialPreviews = null, loadPreviews = true, imageLoading = 'lazy', onOpen = null, classPrefix = 'saved-lightweight' }) {
   const ids = useMemo(() => items.map((item) => String(item.location_id || '')).filter(Boolean), [items])
-  const [previews, setPreviews] = useState(() => initialPreviews && typeof initialPreviews === 'object' ? initialPreviews : {})
+  const gridRef = useRef(null)
+  const resolvedIdsRef = useRef(new Set())
+  const [previews, setPreviews] = useState(() => !loadPreviews && initialPreviews && typeof initialPreviews === 'object' ? initialPreviews : {})
   const [loadError, setLoadError] = useState('')
   const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     if (!ids.length) return undefined
-    const controller = new AbortController()
+    let active = true
+    let controller = null
+    let scheduled = null
+    let fetching = false
+    const queued = new Set()
+    const knownIds = new Set(ids)
     setLoadError('')
     if (!loadPreviews) {
       setPreviews(initialPreviews && typeof initialPreviews === 'object' ? initialPreviews : {})
-      return () => controller.abort()
+      return undefined
     }
-    const cached = readPreviewCache(ids)
-    if (Object.keys(cached).length) setPreviews((current) => ({ ...current, ...cached }))
-
-    const missingIds = ids.filter((id) => !cached[id])
-    if (!missingIds.length) return () => controller.abort()
-
-    async function fetchPreviews() {
-      try {
-        for (let offset = 0; offset < missingIds.length; offset += 50) {
-          const batch = missingIds.slice(offset, offset + 50)
+    async function fetchQueued() {
+      if (fetching || !active) return
+      fetching = true
+      while (active && queued.size) {
+        const batch = [...queued].slice(0, 50)
+        for (const id of batch) queued.delete(id)
+        controller = new AbortController()
+        try {
           const response = await fetch(`/api/saved-location-options?ids=${encodeURIComponent(batch.join(','))}`, { cache: 'no-store', signal: controller.signal })
           if (!response.ok) throw new Error(`Saved locations returned ${response.status}`)
           const payload = await response.json()
-          const next = {}
-          for (const item of payload?.items || []) next[String(item.id)] = item
+          if (!Array.isArray(payload?.items)) throw new Error('Saved locations returned invalid data')
+          if (!active) break
+          const { previews: next, missingIds } = resolveSavedPreviewBatch(batch, payload.items)
+          for (const id of batch) resolvedIdsRef.current.add(id)
           if (Object.keys(next).length) {
             setPreviews((current) => ({ ...current, ...next }))
-            writePreviewCache(next)
           }
-        }
-      } catch (cause) {
-        if (!controller.signal.aborted) {
-          console.warn('Could not load saved place previews.', { message: cause?.message || 'unknown error' })
-          setLoadError('Saved places could not be loaded.')
+          if (missingIds.length) setLoadError('Some saved places could not be loaded.')
+        } catch (cause) {
+          if (active && cause?.name !== 'AbortError') {
+            console.warn('Could not load saved place previews.', { message: cause?.message || 'unknown error' })
+            setLoadError('Saved places could not be loaded.')
+          }
+          break
+        } finally {
+          controller = null
         }
       }
+      fetching = false
     }
-    fetchPreviews()
-    return () => controller.abort()
+
+    function queueVisible(id) {
+      if (!knownIds.has(id) || resolvedIdsRef.current.has(id)) return
+      queued.add(id)
+      if (scheduled === null) {
+        scheduled = window.setTimeout(() => {
+          scheduled = null
+          void fetchQueued()
+        }, 0)
+      }
+    }
+
+    const cards = gridRef.current?.querySelectorAll('[data-saved-preview-id]') || []
+    const observer = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const id = entry.target.dataset.savedPreviewId
+        observer.unobserve(entry.target)
+        if (id) queueVisible(id)
+      }
+    }, { rootMargin: '25% 0px' }) : null
+    for (const card of cards) {
+      if (observer) observer.observe(card)
+      else queueVisible(card.dataset.savedPreviewId)
+    }
+    return () => {
+      active = false
+      observer?.disconnect()
+      if (scheduled !== null) window.clearTimeout(scheduled)
+      controller?.abort()
+    }
   }, [ids, initialPreviews, loadPreviews, retry])
 
   const errorClass = `${classPrefix}-error`
@@ -121,10 +126,14 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
   const metaClass = `${classPrefix}-meta`
   const metaSkeletonClass = `${classPrefix}-meta-skeleton`
 
-  return <section className={className} aria-label="Saved places" data-testid="saved-grid">
-    {loadError ? <div className={errorClass} role="alert"><strong>{loadError}</strong><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
+  return <section ref={gridRef} className={className} aria-label="Saved places" data-testid="saved-grid">
+    {loadError ? <div className={errorClass} role="alert"><strong>{loadError}</strong><button type="button" onClick={() => {
+      resolvedIdsRef.current.clear()
+      setPreviews((current) => Object.fromEntries(Object.entries(current).filter(([, value]) => !value?.unavailable)))
+      setRetry((value) => value + 1)
+    }}>Try again</button></div> : null}
     {items.map((item, index) => {
-      const preview = previews[String(item.location_id)] || (item.slug ? item : null)
+      const preview = previews[String(item.location_id)] || (!loadPreviews && item.slug ? item : null)
       const title = preview?.title || 'Saved place'
       const meta = preview?.city || categoryLabel(preview?.category)
       const slug = preview?.slug || null
@@ -136,6 +145,7 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
       return <article
         className={cardClassName}
         data-testid="saved-card"
+        data-saved-preview-id={item.location_id}
         data-saved-morph-card={ready ? '' : undefined}
         data-saved-morph-key={ready ? item.location_id : undefined}
         data-saved-morph-slug={ready ? slug : undefined}
@@ -148,12 +158,11 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
           {item.perfect_pick ? <b className={perfectPickClassName}>★ Perfect Pick</b> : null}
         </SavedCardVisual>
         <div className={copyClassName}>
-          <h2>
-            <a href={detail} data-saved-morph-link={ready ? '' : undefined} onClick={(event) => { if (onOpen) { event.preventDefault(); open() } else if (!ready) event.preventDefault() }}>
-              {preview
-                ? <span className={titleClass} style={{ '--saved-title-delay': titleDelay }}>{title}</span>
-                : <span className={titleSkeletonClass} aria-hidden="true" />}
-            </a>
+          <h2>{ready || onOpen
+            ? <a href={detail} data-saved-morph-link={ready ? '' : undefined} onClick={(event) => { if (onOpen) { event.preventDefault(); open() } else if (!ready) event.preventDefault() }}>
+                {preview ? <span className={titleClass} style={{ '--saved-title-delay': titleDelay }}>{title}</span> : <span className={titleSkeletonClass} aria-hidden="true" />}
+              </a>
+            : preview ? <span className={titleClass} style={{ '--saved-title-delay': titleDelay }}>{title}</span> : <span className={titleSkeletonClass} aria-hidden="true" />}
           </h2>
           <div className={metaClassName}>
             {preview

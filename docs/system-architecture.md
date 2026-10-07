@@ -1,179 +1,28 @@
-# Puddle system architecture
+# Puddle target architecture (uncommitted migration)
 
-This document is the canonical repository-level map of the current Puddle production system. It describes durable runtime paths and deliberately excludes completed migration orchestration.
+This is the repository's **self-hosted target**, not a description of the still-live deployment. Do not deploy this branch until the host, restored database, copied objects, and end-to-end cutover gates in [`deploy/self-host/README.md`](../deploy/self-host/README.md) pass.
 
-## 1. Runtime boundary
-
-Puddle is a Next.js application deployed through Vercel.
+## Runtime
 
 ```text
-browser
-  -> Next.js routes / API routes
-  -> proxy.js security + session boundary
-  -> Supabase auth/database, Backblaze B2, Stripe, and approved external APIs
+Browser -> Caddy -> Next.js app
+                   -> self-hosted Supabase Auth/Postgres/Realtime/Storage
+                   -> private S3-compatible object store
+                   -> Stripe and approved external providers
 ```
 
-`proxy.js` owns the common request boundary: security headers, origin/unsafe-method checks, request-size limits, protected-route authentication, account moderation gates, cache policy, and server timing.
+`proxy.js` enforces security headers, origin checks, account/session gates, and request limits. Supabase is still the product's Auth, relational, user-upload and realtime software; its managed cloud instance is replaced by the self-hosted stack. The private object store holds global catalogue/search shards and licensed canonical photos. There is no second catalogue or photo serving backend.
 
-Supabase remains the identity and relational product system. It is not a legacy dependency.
+## Discovery and photos
 
-## 2. Discovery serving
+Search reads `data/search/active.json`, then immutable planner, geographic, text and photo-overlay objects from the private S3 endpoint. Object-store serving failures fail closed and never fall back to Postgres. Product-state overlays are read from self-hosted Postgres only when required by the route.
 
-`lib/app/discovery.js` is the serving selector.
+The global-data workers normalize and resolve Overture/Foursquare data into Parquet and activate a validated search manifest. Licensed Wikimedia, Mapillary and KartaView images are filtered, normalized, deduplicated and stored at content-addressed `media/photos/by-sha256/<prefix>/<sha256>.jpg` keys. The same-origin `/api/open-photo/<sha256>` route verifies the returned SHA-256 before delivering bytes. Object identities, location mapping and provider provenance remain in the canonical registry and photo overlays.
 
-### Global mode
+User-owned uploads are a separate path: `/api/media/upload` validates/authenticates, stores through self-hosted Supabase Storage, and records `media_assets`. Private assets use signed URLs after access checks. Supabase Storage is not an approved open-photo byte store.
 
-```text
-Discover / map API
-  -> global discovery layer
-  -> B2-only location serving (data/search/active.json)
-     -> packed planner routing tiles -> immutable geo packs
-     -> compact text projection cores/details + prefix postings
-  -> ranked published locations
-  -> Puddle product/social overlays where needed
-```
+## Operations
 
-B2 serving failures fail closed and never fall back to Postgres. The global path may use its short-lived in-process success cache, but the serving boundary remains B2-only; there is no retired-backend switch left to resurrect.
+`deploy/self-host/compose.yaml` hosts Next.js and the private object service. The pinned self-hosted Supabase stack runs alongside it. Six disabled-by-default host timers replace the retired photo/index GitHub workflows; `scripts/self-host-run-data-job.mjs` enforces cutover gates before running them. Postgres and object storage need off-machine backups and a tested restore. Search/photo object copy is a verified, non-deleting S3-to-S3 migration, not a live dual-read.
 
-Search artifacts are content-addressed under `data/search/objects/v1/sha256=<prefix>/<sha256>` and each active manifest maps its logical shard paths to those objects. Configure `GLOBAL_LOCATION_SEARCH_CDN_BASE_URL` when the data bucket is exposed through the read-only CDN; immutable shard bytes then stay at the CDN edge, while Vercel Runtime Cache is limited to the active pointer and manifests. Without that setting, the same objects remain private and are read directly from B2.
-
-### Relational mode
-
-Retired. The relational Puddle catalogue no longer participates in discovery serving, and no emergency fallback into it exists.
-
-## 3. Global location data pipeline
-
-The durable bulk pipeline is `.github/workflows/global-location-data.yml`.
-
-```text
-current Puddle bootstrap metadata
-  -> immutable/current bootstrap Parquet in B2
-
-latest Overture Places + Foursquare bulk source
-  -> raw B2 lake
-  -> vector normalization / country partitioning
-  -> cross-source entity resolution
-  -> stable Puddle UUID preservation
-  -> existing Google-ID and photo overlays
-  -> normalized canonical B2 snapshot
-  -> packed planner manifests with validated hash ledgers
-  -> atomic data/search/active.json pointer activation
-```
-
-Key durable workflows:
-
-- `global-bootstrap.yml`: exports current Puddle UUID/source/enrichment state and publishes immutable plus `current` bootstrap Parquet to B2.
-- `global-location-data.yml`: builds the canonical global snapshot and activates the validated planner manifest.
-- `sync-b2-data-runtime-auth.yml` / `sync-b2-media-runtime-auth.yml`: verify scoped B2 credentials and store the runtime copies in Supabase Vault.
-
-Completed dated progress/resume workflows are not part of production architecture and must not be recreated as permanent repository files.
-
-## 4. Open-location photo pipeline
-
-Approved open-location photos use Backblaze B2 as the canonical private byte store.
-
-```text
-Wikimedia / Mapillary / KartaView candidate
-  -> source/license/host validation
-  -> image normalization
-  -> SHA-256 content identity
-  -> B2 `media/photos/by-sha256/<prefix>/<sha256>.jpg`
-  -> Supabase `media_objects` registration
-  -> provenance link from `location_photo_sources`
-  -> client URL `/api/open-photo/<sha256>`
-```
-
-The browser never needs a B2 public URL. `/api/open-photo/<sha256>` authorizes private B2 access using runtime credentials from Supabase Vault, validates the canonical key, byte size, and SHA-256, and returns cacheable JPEG bytes.
-
-Supabase Storage is not an approved open-photo byte store. It remains active only for the separate user/private-media path described below.
-
-Durable photo operations:
-
-- `photo-enrichment.yml`: drains the transitional existing-catalogue candidate queue into canonical B2 media.
-- `global-photo-enrichment.yml`: builds global Wikimedia/Mapillary candidates and materializes selected licensed photos into B2.
-- `global-kartaview-enrichment.yml`: incrementally fills KartaView candidate coverage under its request entitlement.
-- `sync-b2-media-runtime-auth.yml`: verifies the scoped B2 media key and stores runtime read credentials in Supabase Vault.
-
-Provider-specific B2 public URL settings and Supabase Storage open-photo compatibility are retired.
-
-## 5. User and private media
-
-User-generated/product-owned uploads are a separate media path and still legitimately use Supabase Storage.
-
-```text
-/api/media/upload
-  -> authentication + CSRF + rate limit
-  -> media policy / transform / validation
-  -> optional malware scanning
-  -> Supabase Storage object
-  -> `media_assets` relational record
-  -> attach to profile/event/location/chat/verification target
-```
-
-Public approved assets can return a Supabase public URL. Private assets use access checks and short-lived signed URLs through `/api/media/[id]/signed-url`.
-
-Do not confuse this active user-media path with the retired Supabase Storage path for licensed open-location photos.
-
-## 6. Google Places and geocoding
-
-Google Places is a supplemental provider, not canonical media storage.
-
-- Stable verified Place IDs may be persisted.
-- Google photo bytes and photo resource URLs are not persisted as Puddle media identity.
-- Eligible Google photo rendering is a non-persisted UI fallback.
-- Geoapify is used for configured worldwide geocoding/reverse-geocoding operations.
-
-## 7. Product state and social system
-
-Supabase/Postgres remains the source of truth for application state such as:
-
-- authentication/profile/onboarding state
-- discovery actions and seen state
-- saves/plans and product interactions
-- friends, requests, conversations, messages, and shared locations
-- user contributions and moderation state
-- administrative/security records
-
-Historical SQL migrations stay in `supabase/migrations/` even when the runtime feature described by an old migration has been removed. Migration history is not runtime legacy code.
-
-## 8. Billing
-
-Stripe is the server-side billing provider for the optional paid Tinder-tier membership. Secrets and webhook verification remain server-only.
-
-## 9. Security and operations
-
-The repository retains dedicated controls for:
-
-- Supabase session handling
-- CSRF/origin protections
-- security headers and CORS
-- request/rate limits
-- Turnstile verification
-- malware scanning hooks
-- moderation/background job processing
-- security-event auditing and alerting
-- CI checks for secrets, client/server boundaries, bundle size, duplicate assets, legal pages, auth lifecycle, integrations, and production smoke paths
-
-## 10. Deployment and CI
-
-Vercel builds with `npm run build`, which runs repository checks before `next build` and then validates bundle size.
-
-GitHub Actions owns data pipelines, credential synchronization, security validation, browser/E2E checks, and production smoke workflows. Durable jobs use schedules, relevant source/config changes, or `workflow_dispatch`; marker files whose sole purpose was to force a one-off run are not part of the supported architecture.
-
-## 11. Retired systems
-
-The repository should reject reintroduction of these runtime patterns:
-
-- shared pair/group date-deck runtime and `/date-match` / `/hangout` paths
-- static-catalogue runtime/materialization and its client hooks
-- R2 open-photo/storage compatibility
-- Supabase Storage as the canonical open-location-photo byte store
-- Supabase-named open-photo compatibility shims and completed B2 migration/cleanup scripts
-- provider-specific public B2 URL identity/delivery settings
-- OpenSearch serving backend, query DSL, runtime credentials, and OpenSearch-to-Postgres emergency fallback
-- dated one-off global-location progress/resume workflows
-- marker-file workflow triggers used only to force GitHub Actions runs
-
-## 12. Cleanup rule
-
-A path is safe to remove only when it is both superseded and no longer part of a durable runtime, operational, migration-history, or recovery contract. Names such as `legacy`, `stage`, `fallback`, or `migration` are not sufficient evidence by themselves.
+Historical SQL migrations remain immutable deployment history. They may mention retired providers; they are not runtime configuration. The restored host database receives `deploy/self-host/object-backend-cutover.sql` only after the object copy has passed byte verification. Source systems remain intact through acceptance.

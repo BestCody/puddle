@@ -1,0 +1,10 @@
+# Direct imports used by scripts/global-data; resolve and lock on Linux/Python 3.13.
+boto3>=1.35,<2
+Brotli>=1.1,<2
+duckdb>=1.5,<2
+h3>=4.1,<5
+mapbox-vector-tile>=2.2,<3
+orjson>=3.10,<4
+Pillow>=11,<13
+urllib3>=2.2,<3
+zstandard>=0.23,<1

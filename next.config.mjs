@@ -37,7 +37,7 @@ function mediaRemotePatterns() {
 }
 
 const nextConfig = {
-  ...(process.env.PUDDLE_SELF_HOST_BUILD === '1' ? { output: 'standalone' } : {}),
+  output: 'standalone',
   poweredByHeader: false,
   compress: true,
   images: { formats: ['image/avif', 'image/webp'], minimumCacheTTL: 86400, remotePatterns: mediaRemotePatterns() },

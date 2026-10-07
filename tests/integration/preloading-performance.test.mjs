@@ -25,12 +25,13 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   assert.match(workspace, /remaining <= REFILL_THRESHOLD\) loadMore\(\)/)
   assert.match(workspace, /<DiscoveryPhotoPreloader items=\{feed\.items\} index=\{index\} ahead=\{PHOTO_PRELOAD_AHEAD\} \/>/)
 
-  assert.match(rum, /import \{ track \} from '@vercel\/analytics'/)
-  assert.match(rum, /track\('discovery_rum', properties\)/)
-  assert.match(rum, /DISCOVERY_RUM_SAMPLE_RATE = 0\.1/)
+  assert.match(rum, /sendClientTelemetry\(properties\)/)
+  assert.match(await read('lib/performance/send-client-telemetry.js'), /SAMPLE_RATE = 0\.1/)
   assert.match(rum, /x-puddle-region/)
   assert.match(rum, /server_\$\{name\}_ms/)
   assert.match(rum, /reportInitialDiscoveryNavigation/)
+  assert.match(rum, /catch \(error\)/)
+  assert.match(rum, /throw error/)
 
   assert.match(preloader, /item\.photo_urls/)
   assert.match(preloader, /item\.photo_url/)
@@ -44,7 +45,7 @@ test('Discover keeps a bounded rolling preload window and refills before the dec
   assert.match(preloader, /image\.srcset = source\.srcSet/)
 })
 
-test('dashboard navigation warms intent targets plus at most two bounded idle hints', async () => {
+test('dashboard navigation warms only routes with navigation intent', async () => {
   const nav = await read('components/product-nav.js')
 
   assert.match(nav, /useEffect, useRef, useState/)
@@ -54,10 +55,8 @@ test('dashboard navigation warms intent targets plus at most two bounded idle hi
   assert.match(nav, /onMouseEnter=\{\(\) => warmRoute\(item\.href\)\}/)
   assert.match(nav, /onFocus=\{\(\) => warmRoute\(item\.href\)\}/)
   assert.match(nav, /onPointerDown=\{\(event\) => \{[\s\S]*warmRoute\(item\.href\)/)
-  assert.match(nav, /const IDLE_ROUTE_HINTS = \{/)
-  assert.match(nav, /const IDLE_PREFETCH_DELAY_MS = 900/)
-  assert.match(nav, /\.slice\(0, 2\)/)
-  assert.match(nav, /requestIdleCallback/)
+  assert.doesNotMatch(nav, /IDLE_ROUTE_HINTS|IDLE_PREFETCH_DELAY_MS|requestIdleCallback/)
+  assert.match(nav, /prefetchedRoutes\.has\(href\) \|\| shouldAvoidPrefetch\(\)/)
   assert.match(nav, /connection\?\.saveData/)
   assert.match(nav, /effectiveType === 'slow-2g'/)
   assert.doesNotMatch(nav, /backgroundWarmupStarted|items\s*\.map\(\(item\) => item\.href\)/)
@@ -242,5 +241,6 @@ test('dashboard navigation keeps the shell mounted, preserves UI, and streams ro
   assert.match(styles, /\.puddle-main-transition\.is-loading \.puddle-main-transition-content/)
   assert.match(styles, /\.puddle-main-transition-loader/)
   assert.match(styles, /\.puddle-main-spinner/)
+  assert.match(styles, /\.puddle-route-stream-placeholder\{[\s\S]*min-height:100dvh[\s\S]*display:grid[\s\S]*place-items:center/)
   assert.doesNotMatch(styles, /\.product-route-loading-/)
 })

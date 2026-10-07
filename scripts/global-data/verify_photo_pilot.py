@@ -46,9 +46,9 @@ def required(value: str, label: str) -> str:
 def make_client(endpoint: str, key_id: str, application_key: str, region: str, pool_size: int):
     return boto3.client(
         "s3",
-        endpoint_url=required(endpoint, "B2 S3 endpoint"),
-        aws_access_key_id=required(key_id, "B2 application key ID"),
-        aws_secret_access_key=required(application_key, "B2 application key"),
+        endpoint_url=required(endpoint, "Object storage S3 endpoint"),
+        aws_access_key_id=required(key_id, "Object storage application key ID"),
+        aws_secret_access_key=required(application_key, "Object storage application key"),
         region_name=region or None,
         config=Config(retries={"max_attempts": 10, "mode": "adaptive"}, max_pool_connections=pool_size),
     )
@@ -74,7 +74,7 @@ def read_bytes(s3, bucket: str, key: str) -> bytes:
 def json_object(s3, bucket: str, key: str) -> dict:
     payload = json.loads(read_bytes(s3, bucket, key))
     if not isinstance(payload, dict):
-        raise RuntimeError(f"B2 object is not a JSON object: {key}")
+        raise RuntimeError(f"Object storage object is not a JSON object: {key}")
     return payload
 
 
@@ -149,14 +149,14 @@ def configure_duckdb(con, bucket: str, endpoint: str, key_id: str, application_k
     quote = lambda value: str(value).replace("'", "''")
     con.execute(
         f"""
-CREATE OR REPLACE SECRET b2_photo_pilot_secret (
+CREATE OR REPLACE SECRET object_photo_pilot_secret (
   TYPE S3,
   KEY_ID '{quote(key_id)}',
   SECRET '{quote(application_key)}',
   REGION '{quote(region)}',
   ENDPOINT '{quote(endpoint_host)}',
   URL_STYLE 'path',
-  USE_SSL true
+  USE_SSL {'true' if endpoint.startswith('https://') else 'false'}
 );
 """
     )
@@ -248,18 +248,18 @@ def main() -> int:
     parser.add_argument("--report", default="pilot-verification.json")
     args = parser.parse_args()
 
-    data_bucket = first_env("B2_DATA_BUCKET_NAME", "B2_BUCKET", default="puddle-assets")
-    data_endpoint = first_env("B2_DATA_S3_ENDPOINT", "B2_S3_ENDPOINT")
-    data_key_id = first_env("B2_DATA_KEY_ID", "B2_DATA_APPLICATION_KEY_ID", "B2_KEY_ID")
-    data_key = first_env("B2_DATA_APPLICATION_KEY", "B2_APPLICATION_KEY")
-    data_region = first_env("B2_DATA_S3_REGION", "B2_REGION", default="us-east-005")
-    data_prefix = clean_prefix(first_env("B2_DATA_PREFIX", default="data"))
-    media_bucket = first_env("B2_MEDIA_BUCKET_NAME", "B2_DATA_BUCKET_NAME", "B2_BUCKET", default=data_bucket)
-    media_endpoint = first_env("B2_MEDIA_S3_ENDPOINT", "B2_DATA_S3_ENDPOINT", "B2_S3_ENDPOINT", default=data_endpoint)
-    media_key_id = first_env("B2_MEDIA_KEY_ID", "B2_MEDIA_APPLICATION_KEY_ID", "B2_DATA_KEY_ID", "B2_KEY_ID", default=data_key_id)
-    media_key = first_env("B2_MEDIA_APPLICATION_KEY", "B2_DATA_APPLICATION_KEY", default=data_key)
-    media_region = first_env("B2_MEDIA_S3_REGION", "B2_DATA_S3_REGION", "B2_REGION", default=data_region)
-    media_prefix = clean_prefix(first_env("B2_MEDIA_OPEN_PHOTO_PREFIX", default="media/photos/by-sha256"))
+    data_bucket = first_env("OBJECT_STORAGE_BUCKET", default="puddle-assets")
+    data_endpoint = first_env("OBJECT_STORAGE_ENDPOINT")
+    data_key_id = first_env("OBJECT_STORAGE_ACCESS_KEY_ID")
+    data_key = first_env("OBJECT_STORAGE_SECRET_ACCESS_KEY")
+    data_region = first_env("OBJECT_STORAGE_REGION", default="us-east-1")
+    data_prefix = clean_prefix(first_env("PUDDLE_DATA_PREFIX", default="data"))
+    media_bucket = first_env("OBJECT_STORAGE_BUCKET", default=data_bucket)
+    media_endpoint = first_env("OBJECT_STORAGE_ENDPOINT", default=data_endpoint)
+    media_key_id = first_env("OBJECT_STORAGE_ACCESS_KEY_ID", default=data_key_id)
+    media_key = first_env("OBJECT_STORAGE_SECRET_ACCESS_KEY", default=data_key)
+    media_region = first_env("OBJECT_STORAGE_REGION", default=data_region)
+    media_prefix = clean_prefix(first_env("PUDDLE_OPEN_PHOTO_PREFIX", default="media/photos/by-sha256"))
     supabase_url = first_env("NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL").rstrip("/")
     supabase_key = first_env("SUPABASE_SECRET_KEY")
     required(supabase_url, "Supabase URL")
@@ -367,23 +367,23 @@ def main() -> int:
                 head = media_s3.head_object(Bucket=media_bucket, Key=expected_key)
                 body = read_bytes(media_s3, media_bucket, expected_key)
                 if hashlib.sha256(body).hexdigest() != content_hash:
-                    errors.append("b2_content_hash_mismatch")
+                    errors.append("object_content_hash_mismatch")
                 if str((head.get("Metadata") or {}).get("sha256") or "").lower() != content_hash:
-                    errors.append("b2_sha256_metadata_mismatch")
+                    errors.append("object_sha256_metadata_mismatch")
                 if str((head.get("Metadata") or {}).get("purpose") or "") != "puddle_open_location_photo":
-                    errors.append("b2_purpose_metadata_mismatch")
+                    errors.append("object_purpose_metadata_mismatch")
                 if str(head.get("ContentType") or "").lower() != "image/jpeg":
-                    errors.append("b2_content_type_mismatch")
+                    errors.append("object_content_type_mismatch")
                 cache = str(head.get("CacheControl") or "").lower()
                 if "max-age=31536000" not in cache or "immutable" not in cache:
-                    errors.append("b2_cache_policy_mismatch")
+                    errors.append("object_cache_policy_mismatch")
                 with Image.open(io.BytesIO(body)) as image:
                     image.verify()
                 with Image.open(io.BytesIO(body)) as image:
                     if dhash(image) != perceptual_hash:
                         errors.append("perceptual_hash_mismatch")
             except Exception:
-                errors.append("canonical_b2_object_missing_or_unreadable")
+                errors.append("canonical_object_object_missing_or_unreadable")
 
         entry = overlay_entries.get(location_id)
         if not entry or not isinstance(entry, list) or not entry or str(entry[0]).lower() != content_hash:

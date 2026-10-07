@@ -25,6 +25,13 @@
   color:#111;
 }
 
+.puddle-route-stream-placeholder{
+  width:100%;
+  min-height:100dvh;
+  display:grid;
+  place-items:center;
+}
+
 .figma-dashboard-shell[data-appearance="dark"] .puddle-main-transition-loader{
   background:#111;
   color:#fff;

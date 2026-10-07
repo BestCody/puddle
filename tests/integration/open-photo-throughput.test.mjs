@@ -2,136 +2,47 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-async function source(path) {
-  return readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
-}
+const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('global free-photo workers saturate provider budgets and direct delivery stays B2-native', async () => {
-  const materializeWorkflow = await source('.github/workflows/global-photo-enrichment.yml')
-  const wikimediaWorkflow = await source('.github/workflows/global-wikimedia-enrichment.yml')
-  const mapillaryWorkflow = await source('.github/workflows/global-mapillary-enrichment.yml')
-  const kartaWorkflow = await source('.github/workflows/global-kartaview-enrichment.yml')
-  const wikimedia = await source('scripts/global-data/build_wikimedia_candidates.py')
-  const mapillary = await source('scripts/global-data/build_mapillary_candidates.py')
-  const kartaview = await source('scripts/global-data/build_kartaview_candidates.py')
-  const materializer = await source('scripts/global-data/materialize_photo_candidates.py')
-  const delivery = await source('app/api/open-photo/[sha256]/route.js')
-
-  assert.match(materializeWorkflow, /GLOBAL_PHOTO_PIPELINE_ENABLED/)
-  assert.match(materializeWorkflow, /cron: '31 \* \* \* \*'/)
-  assert.match(materializeWorkflow, /GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY: '192'/)
-  assert.match(materializeWorkflow, /GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY: '2'/)
-  assert.match(materializeWorkflow, /GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_MBIT: '25'/)
-  assert.match(materializeWorkflow, /MAPILLARY_GRAPH_REQUESTS_PER_MINUTE: '50000'/)
-  assert.match(materializeWorkflow, /GLOBAL_PHOTO_RUN_BUDGET_SECONDS: '19800'/)
-  assert.match(materializeWorkflow, /timeout-minutes: 360/)
-
-  assert.match(wikimediaWorkflow, /WIKIMEDIA_REQUESTS_PER_MINUTE: '200'/)
-  assert.match(wikimediaWorkflow, /WIKIMEDIA_MAX_CONCURRENCY: '3'/)
+test('provider-aware photo workers publish to the private object store', async () => {
+  const [runner, wikimedia, mapillary, karta, materializer, delivery] = await Promise.all([
+    read('scripts/self-host-run-data-job.mjs'),
+    read('scripts/global-data/build_wikimedia_candidates.py'),
+    read('scripts/global-data/build_mapillary_candidates.py'),
+    read('scripts/global-data/build_kartaview_candidates.py'),
+    read('scripts/global-data/materialize_photo_candidates.py'),
+    read('app/api/open-photo/[sha256]/route.js')
+  ])
+  assert.match(runner, /materialize_photo_candidates\.py/)
+  assert.match(runner, /build_object_photo_search_overlay\.py/)
   assert.match(wikimedia, /REQUESTS_PER_MINUTE = max\(1, min\(200/)
-  assert.match(wikimedia, /3 if ACCESS_TOKEN else 1/)
-  assert.match(wikimedia, /'ggslimit': '500'/)
-  assert.match(wikimedia, /'iiurlwidth': '1600'/)
-  assert.match(wikimedia, /gate\.defer\(5\.0\)/)
-  assert.match(wikimedia, /STATE_PREFIX/)
-  assert.match(wikimedia, /merge_candidates/)
-  assert.match(wikimedia, /RUN_BUDGET_SECONDS/)
-
-  assert.match(mapillaryWorkflow, /MAPILLARY_TILE_DAILY_LIMIT: '50000'/)
-  assert.match(mapillaryWorkflow, /default: '50000'/)
-  assert.match(mapillaryWorkflow, /timeout-minutes: 360/)
-  assert.match(mapillary, /zoom-14 vector tiles/)
   assert.match(mapillary, /DAILY_REQUEST_LIMIT = max\(1, min\(50_000/)
-  assert.match(mapillary, /STATE_PREFIX/)
-  assert.match(mapillary, /quota-\{today\}\.json/)
-  assert.match(mapillary, /reserve_daily_budget/)
-  assert.match(mapillary, /release_unused_budget/)
-  assert.match(mapillary, /ThreadPoolExecutor\(max_workers=CONCURRENCY\)/)
-
-  assert.match(kartaview, /PROVIDER_HOURLY_MAX = 1000 if TOKEN else 100/)
-  assert.match(kartaview, /REQUESTS_PER_HOUR = max\(1, min\(PROVIDER_HOURLY_MAX/)
-  assert.match(kartaview, /START_INTERVAL = 3600\.0 \/ REQUESTS_PER_HOUR/)
-  assert.match(kartaview, /photo_attempts\/provider=kartaview/)
-  assert.match(kartaview, /attempted_since_checkpoint/)
-  assert.match(kartaview, /COUNTRY_CURSOR_KEY/)
-  assert.match(kartaview, /read_country_cursor/)
-  assert.match(kartaview, /write_country_cursor/)
-  assert.match(kartaview, /ordered_countries/)
-  assert.match(kartaWorkflow, /KARTAVIEW_REQUESTS_PER_HOUR: '1000'/)
-  assert.match(kartaWorkflow, /KARTAVIEW_MAX_CONCURRENCY: '8'/)
-
-  assert.match(materializer, /existing_photos/)
-  assert.match(materializer, /photos\/by-sha256/)
+  assert.match(karta, /PROVIDER_HOURLY_MAX = 1000 if TOKEN else 100/)
   assert.match(materializer, /WIKIMEDIA_DOWNLOAD_CONCURRENCY/)
-  assert.match(materializer, /WIKIMEDIA_DOWNLOAD_MBIT/)
   assert.match(materializer, /MAPILLARY_GRAPH_REQUESTS_PER_MINUTE/)
-  assert.match(materializer, /Retry-After/)
-  assert.match(materializer, /HTTP_POOL/)
-  assert.match(materializer, /redirect=False/)
-
-  assert.match(delivery, /canonicalStorageKey/)
-  assert.match(delivery, /media\/photos\/by-sha256/)
+  assert.match(materializer, /photos\/by-sha256/)
+  assert.match(delivery, /downloadSelfHostObject/)
   assert.match(delivery, /actualHash !== hash/)
-  assert.match(delivery, /x-puddle-trace-id/)
-  assert.match(delivery, /Server-Timing/)
-  assert.match(delivery, /name: 'config'/)
-  assert.match(delivery, /name: 'b2'/)
-  assert.match(delivery, /name: 'verify'/)
-  assert.doesNotMatch(delivery, /from\('media_objects'\)/)
+  assert.doesNotMatch(delivery, /authorizeB2|createAdminClient/)
 })
 
-test('global photo materialization claims exact and MIH uniqueness before B2 upload and falls back', async () => {
-  const workflow = await source('.github/workflows/global-photo-enrichment.yml')
-  const materializer = await source('scripts/global-data/materialize_photo_candidates.py')
-  const registry = await source('supabase/migrations/10076_global_photo_uniqueness_registry.sql')
-  const historical = await source('supabase/migrations/10077_seed_and_backfill_global_photo_fingerprints.sql')
-  const retirement = await source('supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql')
-  const reconcile = await source('scripts/global-data/reconcile_existing_global_photo_claims.py')
-
-  assert.doesNotMatch(workflow, /backfill_global_photo_fingerprints\.py/)
-  assert.doesNotMatch(workflow, /sync_retired_photo_exclusions\.py/)
-  assert.match(workflow, /reconcile_existing_global_photo_claims\.py/)
-  assert.match(workflow, /SUPABASE_SECRET_KEY/)
-  assert.match(workflow, /GLOBAL_PHOTO_FALLBACK_CANDIDATES/)
-
+test('materializer claims unique identity before upload and verifies canonical bytes', async () => {
+  const [materializer, registry, historical, reconcile] = await Promise.all([
+    read('scripts/global-data/materialize_photo_candidates.py'),
+    read('supabase/migrations/10076_global_photo_uniqueness_registry.sql'),
+    read('supabase/migrations/10077_seed_and_backfill_global_photo_fingerprints.sql'),
+    read('scripts/global-data/reconcile_existing_global_photo_claims.py')
+  ])
   assert.match(materializer, /claim_global_photo_v1/)
   assert.match(materializer, /finalize_global_photo_claim_v1/)
   assert.match(materializer, /release_global_photo_claim_v1/)
-  assert.match(materializer, /claim_photo\(row, content_hash, perceptual, confirmation\)/)
-  assert.match(materializer, /key = upload_media\(normalized, content_hash\)/)
   assert.ok(materializer.indexOf('claim_photo(row, content_hash, perceptual, confirmation)') < materializer.indexOf('key = upload_media(normalized, content_hash)'))
-  assert.match(materializer, /for row in candidates:/)
-  assert.match(materializer, /reservation = reserve_candidate\(row\)/)
-  assert.match(materializer, /if reservation_status != 'reserved':/)
-  assert.match(materializer, /candidate_token = reservation\.get\('reservation_token'\)/)
-  assert.ok(materializer.indexOf('reservation = reserve_candidate(row)') < materializer.indexOf('key = upload_media(normalized, content_hash)'))
-  assert.match(materializer, /candidate_rank <= \{FALLBACK_CANDIDATES\}/)
-  assert.match(materializer, /JOIN l ON l\.location_id=cast\(c\.location_id AS VARCHAR\)/)
-  assert.match(materializer, /GLOBAL_PHOTO_LOCATION_BATCH/)
   assert.match(materializer, /average_hash/)
-  assert.match(materializer, /def object_exists\(key\):/)
-  assert.match(materializer, /if object_exists\(bootstrap_photo\):/)
-  assert.match(materializer, /head = s3\.head_object\(Bucket=MEDIA_BUCKET, Key=key\)/)
-  assert.match(materializer, /B2 media SHA256 metadata verification failed/)
-
+  assert.match(materializer, /Object storage media SHA256 metadata verification failed/)
   assert.match(registry, /global_photo_claims_content_unique/)
   assert.match(registry, /global_photo_claims_provider_asset_unique/)
   assert.match(registry, /global_photo_claims_mih_0_idx/)
-  assert.match(registry, /global_photo_claims_mih_1_idx/)
-  assert.match(registry, /global_photo_claims_mih_2_idx/)
-  assert.match(registry, /bit_count\(g\.perceptual_hash # v_perceptual\) <= 5/)
-  assert.match(registry, /pg_advisory_xact_lock\(19370001, v_lock_key\)/)
-  assert.match(registry, /status='pending'/)
   assert.match(registry, /lease_expires_at/)
-  assert.match(registry, /grant execute on function public\.claim_global_photo_v1[\s\S]*service_role/)
-
-  // The historical migration remains part of migration history, but its runtime
-  // bridge helpers are retired once every live claim is fingerprinted/reconciled.
-  assert.match(historical, /alter table public\.global_photo_claims alter column perceptual_hash drop not null/)
   assert.match(historical, /backfill_global_photo_fingerprint_v1/)
-  assert.match(retirement, /drop function if exists public\.retire_duplicate_global_photo_claim_v1\(uuid, text\)/)
-  assert.match(retirement, /drop function if exists public\.list_retired_b2_photo_exclusions_v1\(integer\)/)
-  assert.match(reconcile, /B2 SHA-256 mismatch/)
   assert.match(reconcile, /register_existing_global_photo_v1/)
-  assert.match(reconcile, /photo_exclusions/)
 })

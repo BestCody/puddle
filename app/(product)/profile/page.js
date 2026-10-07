@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ProfilePhotoEditor } from '@/components/profile-photo-editor'
+import { ProfileAvatarEditor } from '@/components/profile-avatar-editor'
 import { PhotoFrame } from '@/components/photo-frame'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
 import { renderProductPage } from '@/lib/app/render-product-page'
@@ -84,31 +84,33 @@ export default async function ProfilePage({ searchParams }) {
   const customizing = params?.customize === '1'
 
   return renderProductPage(async (session) => {
-    const [postRows, saveRows, friends, savedLocationCount, friendCount] = await Promise.all([
-      requiredQuery(session.supabase
-        .from('social_posts')
-        .select('id,title,body,created_at,location_id')
-        .eq('author_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(6)),
-      requiredQuery(session.supabase
-        .from('user_content_states')
-        .select('location_id,pinned_at,created_at')
-        .eq('profile_id', session.user.id)
-        .eq('state', 'saved')
-        .not('location_id', 'is', null)
-        .order('pinned_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-        .limit(12)),
-      requiredQuery(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 4 })),
-      readSavedLocationCount(session.supabase, session.user.id),
-      readFriendCount(session.supabase)
-    ])
-
-    const globalRows = await globalLocations([
+    const postRowsPromise = requiredQuery(session.supabase
+      .from('social_posts')
+      .select('id,title,body,created_at,location_id')
+      .eq('author_id', session.user.id)
+      .order('created_at', { ascending: false })
+      .limit(6))
+    const saveRowsPromise = requiredQuery(session.supabase
+      .from('user_content_states')
+      .select('location_id,pinned_at,created_at')
+      .eq('profile_id', session.user.id)
+      .eq('state', 'saved')
+      .not('location_id', 'is', null)
+      .order('pinned_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(12))
+    const friendsPromise = requiredQuery(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 4 }))
+    const savedCountPromise = readSavedLocationCount(session.supabase, session.user.id)
+    const friendCountPromise = readFriendCount(session.supabase)
+    // Location hydration depends on the two lists, not on the independent
+    // friend/count reads. Start it as soon as the list IDs are available.
+    const globalRowsPromise = Promise.all([postRowsPromise, saveRowsPromise]).then(([postRows, saveRows]) => globalLocations([
       ...postRows.map((row) => row.location_id),
       ...saveRows.map((row) => row.location_id)
-    ], session.traceId || null)
+    ], session.traceId || null))
+    const [postRows, saveRows, friends, savedLocationCount, friendCount, globalRows] = await Promise.all([
+      postRowsPromise, saveRowsPromise, friendsPromise, savedCountPromise, friendCountPromise, globalRowsPromise
+    ])
     const locations = new Map(globalRows.map((row) => [String(row.id), profileLocationShape(row)]))
     const posts = postRows.map((post) => ({ ...post, locations: locations.get(String(post.location_id)) || null }))
     const saves = saveRows.map((item) => ({ ...item, locations: locations.get(String(item.location_id)) || null }))
@@ -133,12 +135,13 @@ export default async function ProfilePage({ searchParams }) {
           <Link className="figma-profile-customize-done" href="/profile" aria-label="Done customizing">✓</Link>
         </div> : <div className="figma-profile-top-actions"><Link className="figma-profile-settings-mobile" href="/account?mobile=1&returnTo=%2Fprofile">Settings</Link></div>}
 
-        <details className="figma-profile-avatar-editor">
-          <summary aria-label="Change profile photo">
-            <PhotoFrame as="span" className="figma-profile-avatar" src={avatarUrl} alt={`${displayName} profile`} unavailableText={initials(displayName)} loadingText="" />
-          </summary>
-          <div className="figma-profile-photo-editor"><ProfilePhotoEditor userId={session.user.id} currentPath={session.profile.avatar_path || null} displayName={displayName} /></div>
-        </details>
+        <ProfileAvatarEditor
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          fallbackInitials={initials(displayName)}
+          userId={session.user.id}
+          currentPath={session.profile.avatar_path || null}
+        />
 
         <div className="figma-profile-identity">
           <h1>{displayName}</h1>

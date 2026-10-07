@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the production bootstrap Parquet schema directly in B2.
+"""Validate the production bootstrap Parquet schema directly in Object storage.
 
 This is a cheap preflight for the canonical global location build. It checks
 exactly the bootstrap files consumed by entity resolution and overlay projection
@@ -22,24 +22,24 @@ def clean_prefix(value):
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
-BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
+BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+ENDPOINT_URL = first_env('OBJECT_STORAGE_ENDPOINT')
 ENDPOINT = ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
-KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
-BOOTSTRAP_PREFIX = clean_prefix(first_env('GLOBAL_BOOTSTRAP_B2_PREFIX', default='data/snapshots/bootstrap/current'))
+KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+REGION = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
+BOOTSTRAP_PREFIX = clean_prefix(first_env('GLOBAL_BOOTSTRAP_PREFIX', default='data/snapshots/bootstrap/current'))
 
 if not ENDPOINT or not KEY_ID or not KEY:
-    raise RuntimeError('B2 endpoint and credentials are required.')
+    raise RuntimeError('Object storage endpoint and credentials are required.')
 
 BOOT = f"s3://{BUCKET}/{BOOTSTRAP_PREFIX}"
 con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute(f"""
-CREATE OR REPLACE SECRET b2_data_secret (
+CREATE OR REPLACE SECRET object_data_secret (
  TYPE S3, KEY_ID '{KEY_ID.replace("'", "''")}', SECRET '{KEY.replace("'", "''")}',
- REGION '{REGION.replace("'", "''")}', ENDPOINT '{ENDPOINT.replace("'", "''")}', URL_STYLE 'path', USE_SSL true
+ REGION '{REGION.replace("'", "''")}', ENDPOINT '{ENDPOINT.replace("'", "''")}', URL_STYLE 'path', USE_SSL {'true' if ENDPOINT_URL.startswith('https://') else 'false'}
 );
 """)
 

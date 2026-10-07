@@ -8,9 +8,11 @@ export async function GET() {
       ok: true,
       scope: 'liveness',
       service: 'puddle',
+      buildSha: process.env.PUDDLE_BUILD_SHA || null,
       phase: 'authentication',
       authConfigured: isSupabaseConfigured(),
-      locationSearchBackend: String(process.env.GLOBAL_LOCATION_SEARCH_BACKEND || 'b2').trim().toLowerCase()
+      supabaseTransportConfigured: Boolean(process.env.SUPABASE_INTERNAL_URL),
+      locationSearchBackend: 'object-store'
     },
     { headers: { 'Cache-Control': 'no-store' } }
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { SavedLightweightGrid } from '@/components/saved-lightweight-grid'
 
 export function SavedPagedGrid({ initialItems, initialPagination, category, query, classes }) {
@@ -22,7 +22,9 @@ export function SavedPagedGrid({ initialItems, initialPagination, category, quer
       const response = await fetch(`/api/saved-page?${params}`, { cache: 'no-store' })
       if (!response.ok) throw new Error('Saved page unavailable')
       const page = await response.json()
-      if (!Array.isArray(page.items) || !page.pagination) throw new Error('Invalid saved page')
+      if (!Array.isArray(page.items) || typeof page.pagination?.hasMore !== 'boolean' || (page.pagination.hasMore && (!page.pagination.nextCursor || page.pagination.nextCursor === pagination.nextCursor))) {
+        throw new Error('Invalid saved page')
+      }
       setItems((current) => {
         const seen = new Set(current.map((item) => item.location_id))
         return [...current, ...page.items.filter((item) => !seen.has(item.location_id))]
@@ -36,10 +38,6 @@ export function SavedPagedGrid({ initialItems, initialPagination, category, quer
     }
   }
 
-  const initialPreviews = useMemo(() => Object.fromEntries(initialItems.filter((item) => item.slug).map((item) => [String(item.location_id), {
-    title: item.title, slug: item.slug, city: item.city, category: item.category, latitude: item.latitude, longitude: item.longitude
-  }])), [initialItems])
-
   return <>
     <SavedLightweightGrid
       items={items}
@@ -49,7 +47,6 @@ export function SavedPagedGrid({ initialItems, initialPagination, category, quer
       copyClassName={classes.copy}
       metaClassName={classes.meta}
       perfectPickClassName={classes.perfectPick}
-      initialPreviews={initialPreviews}
     />
     {pagination.hasMore ? <div className={classes.loadMore}>
       <button type="button" onClick={loadMore} disabled={loading} data-testid="saved-next-page">

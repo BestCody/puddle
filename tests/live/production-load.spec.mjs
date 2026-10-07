@@ -129,8 +129,6 @@ async function timedGet(page, path, cookieHeader) {
       bodyDurationMs: performance.now() - bodyStarted,
       traceId: response.headers.get('x-puddle-trace-id') || null,
       puddleRegion: response.headers.get('x-puddle-region') || null,
-      vercelId: response.headers.get('x-vercel-id') || null,
-      cacheStatus: response.headers.get('x-vercel-cache') || null,
       serverTiming: parseServerTiming(response.headers.get('server-timing')),
       bodyText,
       bodyPreview: bodyText.slice(0, 240)
@@ -144,8 +142,6 @@ async function timedGet(page, path, cookieHeader) {
       firstByteDurationMs: null,
       bodyDurationMs: null,
       puddleRegion: null,
-      vercelId: null,
-      cacheStatus: null,
       error: String(error?.message || error)
     }
   } finally {
@@ -210,8 +206,6 @@ async function runScenario(page, cookieHeader, name, path, { allowUnavailable503
       ])
     ),
     puddle_regions: [...new Set(samples.map((sample) => sample.puddleRegion).filter(Boolean))],
-    vercel_ids: [...new Set(samples.map((sample) => sample.vercelId).filter(Boolean))].slice(0, 5),
-    cache_statuses: [...new Set(samples.map((sample) => sample.cacheStatus).filter(Boolean))],
     stages: STAGES
   }
   console.info(JSON.stringify(summary))

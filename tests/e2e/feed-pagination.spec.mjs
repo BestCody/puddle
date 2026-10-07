@@ -35,6 +35,10 @@ test('More puddles appends the next cursor page without navigating away from the
     await signInThroughUi(page, account.email, account.password)
 
     const requests = []
+    const friendPickerRequests = []
+    page.on('request', (request) => {
+      if (request.url().includes('/rest/v1/rpc/social_friend_picker_v2')) friendPickerRequests.push(request.url())
+    })
     await page.route('**/api/social-feed*', async (route) => {
       const url = new URL(route.request().url())
       const isNextPage = url.searchParams.has('before') && url.searchParams.has('beforeId')
@@ -60,6 +64,13 @@ test('More puddles appends the next cursor page without navigating away from the
     await page.goto('/map')
     await expect(page.locator('[data-testid="feed-post"]')).toHaveCount(2)
     await expect(page.getByRole('button', { name: 'More puddles', exact: true })).toBeVisible()
+    expect(friendPickerRequests).toHaveLength(0)
+
+    const shareToggle = page.locator('summary[aria-label="Share First Puddle"]')
+    await shareToggle.click()
+    await expect(page.getByText('Add a friend before sharing.')).toBeVisible()
+    await expect(shareToggle.locator('..')).toHaveAttribute('open', '')
+    expect(friendPickerRequests).toHaveLength(1)
 
     const feedUrl = page.url()
     await page.getByRole('button', { name: 'More puddles', exact: true }).click()
@@ -68,10 +79,13 @@ test('More puddles appends the next cursor page without navigating away from the
     await expect(page.getByRole('heading', { name: 'First Puddle', exact: true })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Third Puddle', exact: true })).toBeVisible()
     expect(page.url()).toBe(feedUrl)
-    expect(requests).toEqual([
+    // React development Strict Mode can start and immediately abort the first
+    // initial-page fetch; cursor identity is the pagination behavior under test.
+    expect([...new Map(requests.map((request) => [request.beforeId, request])).values()]).toEqual([
       { isNextPage: false, beforeId: null },
       { isNextPage: true, beforeId: 'post-2' }
     ])
+    expect(requests.filter((request) => request.isNextPage)).toHaveLength(1)
   } finally {
     await admin.auth.admin.deleteUser(account.user.id)
   }

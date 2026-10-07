@@ -8,6 +8,7 @@ import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { validCoordinates } from '@/lib/app/optional-number'
 import { createPuddlePost } from './actions'
+import { PostPlaceChooser } from './post-place-chooser'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Create a puddle' }
@@ -88,14 +89,11 @@ export default async function CreatePostPage({ searchParams }) {
     const avatar = profilePhotoUrl(session, session.profile?.avatar_path)
     const name = session.profile?.display_name || 'Puddle person'
     const requestedLocation = typeof params?.location === 'string' ? params.location : null
-    const [snapshot, directPoint] = await Promise.all([
-      getLocationMapSnapshot(session),
-      requestedSwipePoint(session, requestedLocation)
-    ])
-    const selectedPoint = snapshot.points.find((point) => point.id === requestedLocation) || directPoint || snapshot.points[0] || null
-    const selectablePoints = directPoint && !snapshot.points.some((point) => point.id === directPoint.id)
-      ? [directPoint, ...snapshot.points]
-      : snapshot.points
+    const directPoint = await requestedSwipePoint(session, requestedLocation)
+    // A Swipe-selected place is sufficient to render the composer. Saved and
+    // planned places are only needed if the attach-place menu is opened.
+    const snapshot = directPoint ? null : await getLocationMapSnapshot(session)
+    const selectedPoint = directPoint || snapshot?.points[0] || null
 
     return <div className="figma-create-post-screen" data-figma-node="25:79">
       <AuthMessage searchParams={params} />
@@ -126,16 +124,7 @@ export default async function CreatePostPage({ searchParams }) {
           <button className="figma-create-post-submit" type="submit" disabled={!selectedPoint} aria-label="Publish post">↑</button>
           <label className="figma-create-post-title"><input aria-label="Title" name="title" maxLength="80" required placeholder="Title" /></label>
           <label className="figma-create-post-description"><textarea aria-label="Description" name="description" maxLength="1000" placeholder="Description" /></label>
-          <details className="figma-create-post-add">
-            <summary aria-label="Open add menu">＋</summary>
-            <div className="figma-create-post-add-menu">
-              <strong>Attach a place</strong>
-              {selectablePoints.length ? <div className="figma-create-post-location-options">
-                {selectablePoints.slice(0, 12).map((point) => <Link className={selectedPoint?.id === point.id ? 'is-selected' : ''} href={`/create/post?location=${encodeURIComponent(point.id)}`} key={point.id}><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
-              </div> : <p>Choose a place from Swipe, Saved, or the map.</p>}
-            </div>
-            <div className="figma-create-post-add-footer"><span>{selectedPoint ? selectedPoint.title : 'No place selected'}</span></div>
-          </details>
+          <PostPlaceChooser key={selectedPoint?.id || 'none'} selectedPoint={selectedPoint} initialPoints={snapshot?.points ?? null} />
           <Link className="figma-create-post-map" href="/map?view=map&selectForPost=1" aria-label="Choose a place from the map">⌑</Link>
         </form>
       </section>

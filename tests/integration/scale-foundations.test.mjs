@@ -62,7 +62,7 @@ test('global detail serving fails closed instead of falling back to Postgres', a
   assert.doesNotMatch(publicLocation, /from\(['"]locations['"]\)|loadRelationalPublicLocation|useGlobal/)
 })
 
-test('production SLO observations and trace IDs cover Vercel, Supabase, and B2', async () => {
+test('production SLO observations and trace IDs cover app, Supabase, and object storage', async () => {
   const [metrics, discovery, map, instrumentation, docs] = await Promise.all([
     read('lib/performance/server-latency.js'),
     read('app/api/discovery/route.js'),
@@ -75,10 +75,10 @@ test('production SLO observations and trace IDs cover Vercel, Supabase, and B2',
   assert.match(metrics, /puddle_slo_observation/)
   assert.match(metrics, /createTraceId/)
   assert.match(discovery, /x-puddle-trace-id/)
-  assert.match(discovery, /service: 'b2'/)
+  assert.match(discovery, /service: 'object-store'/)
   assert.match(discovery, /service: 'supabase'/)
   assert.match(map, /x-puddle-trace-id/)
-  assert.match(map, /service: 'b2'/)
+  assert.match(map, /service: 'object-store'/)
   assert.match(instrumentation, /onRequestError/)
   assert.match(docs, /Request SLOs/)
   assert.match(docs, /Dependency SLOs/)
@@ -94,14 +94,10 @@ test('CI E2E Supabase reserves a free port block instead of assuming fixed host 
   }
 })
 
-test('the production social-feed repair is a targeted authenticated migration', async () => {
-  const workflow = await read('.github/workflows/apply-social-feed-hot-path.yml')
-  assert.match(workflow, /SUPABASE_ACCESS_TOKEN/)
-  assert.match(workflow, /supabase db query/)
-  assert.match(workflow, /--linked/)
-  assert.match(workflow, /--project-ref cegoqtvajwajczbofpep/)
-  assert.match(workflow, /20260825024000_restore_social_feed_hot_path\.sql/)
-  assert.doesNotMatch(workflow, /db push/)
+test('historical social-feed migration remains available without a managed-only apply workflow', async () => {
+  const migration = await read('supabase/migrations/20260825024000_restore_social_feed_hot_path.sql')
+  assert.match(migration, /social_feed/i)
+  await assert.rejects(read('.github/workflows/apply-social-feed-hot-path.yml'), { code: 'ENOENT' })
 })
 
 test('the live production gate load-tests every critical read path with bounded concurrency', async () => {
@@ -115,10 +111,10 @@ test('the live production gate load-tests every critical read path with bounded 
     assert.match(load, new RegExp(`'${scenario}'`))
   }
   assert.match(load, /puddle_production_load_result/)
-  assert.match(workflow, /production-load:/)
   assert.match(workflow, /workflow_dispatch/)
-  assert.match(workflow, /github\.event_name == 'workflow_dispatch'/)
-  assert.doesNotMatch(workflow, /if: github\.event_name == 'pull_request'/)
+  assert.match(workflow, /deployed_sha:/)
+  assert.match(workflow, /health\.buildSha !== process\.env\.DEPLOYED_SHA/)
+  assert.doesNotMatch(workflow, /sleep 45|branches: \[main\]/)
   assert.match(workflow, /Run live product UI smoke/)
   assert.match(workflow, /Run bounded production load until SLOs pass/)
   assert.match(workflow, /tests\/live\/production-load\.spec\.mjs/)

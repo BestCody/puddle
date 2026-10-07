@@ -43,7 +43,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
   const { slug } = await params
   const query = await searchParams
   // Public catalogue data and the authenticated session are independent. Start
-  // the cached location read before authentication so cold B2 work overlaps the
+  // the cached location read before authentication so cold object store work overlaps the
   // profile lookup instead of forming a request waterfall.
   const resultPromise = getPublicLocation(slug)
 
@@ -51,7 +51,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
     const result = await resultPromise
     if (!result) notFound()
     const { location } = result
-    const [{ data: savedState }, plannedItem] = await Promise.all([
+    const [{ data: savedState, error: savedStateError }, plannedItem] = await Promise.all([
       session.supabase
         .from('user_content_states')
         .select('pinned_at')
@@ -121,9 +121,9 @@ export default async function SavedPlacePage({ params, searchParams }) {
           </section>
 
           <div className={styles.detailActions} aria-label="Saved place actions">
-            <form action={togglePinnedPlace}><HiddenLocation location={location} slug={slug} /><button className={styles.pinButton} type="submit">{isPinned ? 'Unpin' : 'Pin'}</button></form>
+            {savedStateError ? <p className={styles.detailStateError} role="alert">Saved status is unavailable. Refresh to try again.</p> : <form action={togglePinnedPlace}><HiddenLocation location={location} slug={slug} /><button className={styles.pinButton} type="submit">{isPinned ? 'Unpin' : 'Pin'}</button></form>}
             <DetailShareMenu locationId={location.id} slug={slug} />
-            <form action={toggleSavedPlace}><HiddenLocation location={location} slug={slug} /><button className={styles.unsaveButton} type="submit">{isSaved ? 'Unsave' : 'Save'}</button></form>
+            {!savedStateError ? <form action={toggleSavedPlace}><HiddenLocation location={location} slug={slug} /><button className={styles.unsaveButton} type="submit">{isSaved ? 'Unsave' : 'Save'}</button></form> : null}
           </div>
 
           <h1 className={styles.detailTitle} style={{ viewTransitionName: transitionNames.title }}>{location.name}</h1>

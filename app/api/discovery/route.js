@@ -98,7 +98,7 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
     })
   } catch (error) {
     console.error(`Discovery refresh failed trace=${traceId}: ${error?.message || 'unknown error'}`)
-    recordSloObservation('discovery', elapsedMs(started), false, { trace_id: traceId, service: 'vercel' })
+    recordSloObservation('discovery', elapsedMs(started), false, { trace_id: traceId, service: 'self-hosted' })
     return withTrace(NextResponse.json(
       { error: 'Could not load nearby places. Please try again.' },
       { status: 503, headers: { 'Cache-Control': 'private, no-store' } }
@@ -121,14 +121,14 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
   if (String(feed.infrastructure?.source || '').startsWith('global-location')) {
     recordSloObservation('globalLocationSearch', searchMs, !feed.infrastructure?.searchTimedOut, {
       trace_id: traceId,
-      service: 'b2',
+      service: 'object-store',
       search_took_ms: Number(feed.infrastructure?.searchTookMs || 0),
       candidate_count: Number(feed.infrastructure?.candidates || 0)
     })
   }
   recordSloObservation('discovery', totalMs, true, {
     trace_id: traceId,
-    service: 'vercel',
+    service: 'self-hosted',
     item_count: Array.isArray(feed.items) ? feed.items.length : 0
   })
 

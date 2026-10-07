@@ -2,7 +2,7 @@
 """Build Wikimedia Commons candidates with resumable, quota-saturating cell scans.
 
 The worker keeps at most three requests in flight, starts requests at the
-configured Wikimedia entitlement, checkpoints completed geographic cells in B2,
+configured Wikimedia entitlement, checkpoints completed geographic cells in object store,
 and merges partial candidate results so repeated scheduled runs always advance
 coverage instead of restarting from the first country.
 """
@@ -54,15 +54,15 @@ parser.add_argument('--request-limit', type=int, default=None)
 args = parser.parse_args()
 args.snapshot = safe_partition(args.snapshot, 'snapshot')
 
-BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-B2_ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
-B2_ENDPOINT = B2_ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
-B2_KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-B2_KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-B2_REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
-DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
-if not B2_ENDPOINT or not B2_KEY_ID or not B2_KEY:
-    raise RuntimeError('B2 endpoint and credentials are required.')
+BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+OBJECT_ENDPOINT_URL = first_env('OBJECT_STORAGE_ENDPOINT')
+OBJECT_ENDPOINT = OBJECT_ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
+OBJECT_KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+OBJECT_KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+OBJECT_REGION = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
+DATA_PREFIX = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
+if not OBJECT_ENDPOINT or not OBJECT_KEY_ID or not OBJECT_KEY:
+    raise RuntimeError('Object storage endpoint and credentials are required.')
 
 BASE_CELL = max(0.01, min(0.1, float(os.getenv('WIKIMEDIA_CELL_DEGREES', '0.05'))))
 MIN_CELL = max(0.003, min(BASE_CELL, float(os.getenv('WIKIMEDIA_MIN_CELL_DEGREES', '0.00625'))))
@@ -86,9 +86,9 @@ REFRESH_DAYS = max(1, min(365, int(os.getenv('WIKIMEDIA_RESCAN_DAYS', '30'))))
 
 s3 = boto3.client(
     's3',
-    endpoint_url=B2_ENDPOINT_URL,
-    aws_access_key_id=B2_KEY_ID,
-    aws_secret_access_key=B2_KEY,
+    endpoint_url=OBJECT_ENDPOINT_URL,
+    aws_access_key_id=OBJECT_KEY_ID,
+    aws_secret_access_key=OBJECT_KEY,
     config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}, max_pool_connections=64),
 )
 
@@ -256,7 +256,7 @@ def image_rows(payload):
         rows.append((
             str(page.get('pageid')), title, description, float(coord['lat']), float(coord['lon']), asset_url,
             f'https://commons.wikimedia.org/wiki/{urllib.parse.quote(str(page.get("title") or "").replace(" ", "_"))}',
-            f'{author} · Wikimedia Commons · {license_code}', license_code, license_url,
+            f'{author} Â· Wikimedia Commons Â· {license_code}', license_code, license_url,
             int(info.get('width') or 0) or None, int(info.get('height') or 0) or None
         ))
     return rows, len(pages) >= 500
@@ -349,9 +349,9 @@ con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
 con.execute(f"""
-CREATE OR REPLACE SECRET b2_data_secret (
- TYPE S3, KEY_ID '{B2_KEY_ID.replace("'", "''")}', SECRET '{B2_KEY.replace("'", "''")}',
- REGION '{B2_REGION.replace("'", "''")}', ENDPOINT '{B2_ENDPOINT.replace("'", "''")}', URL_STYLE 'path', USE_SSL true
+CREATE OR REPLACE SECRET object_data_secret (
+ TYPE S3, KEY_ID '{OBJECT_KEY_ID.replace("'", "''")}', SECRET '{OBJECT_KEY.replace("'", "''")}',
+ REGION '{OBJECT_REGION.replace("'", "''")}', ENDPOINT '{OBJECT_ENDPOINT.replace("'", "''")}', URL_STYLE 'path', USE_SSL {'true' if OBJECT_ENDPOINT_URL.startswith('https://') else 'false'}
 );
 """)
 con.create_function('token_similarity', token_similarity, ['VARCHAR', 'VARCHAR'], 'DOUBLE')

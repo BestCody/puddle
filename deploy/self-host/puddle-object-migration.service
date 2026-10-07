@@ -1,0 +1,18 @@
+[Unit]
+Description=Puddle manual canonical object inventory reconciliation
+Wants=network-online.target
+After=network-online.target docker.service puddle-object-copy-resume.service
+Requires=docker.service
+ConditionPathExists=/root/.config/puddle/object-copy-complete
+ConditionPathExists=!/root/.config/puddle/object-inventory-checked
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/puddle-stage
+EnvironmentFile=/root/.config/puddle/migration.env
+ExecStart=/usr/bin/node /opt/puddle-stage/self-host-migrate-objects.mjs
+ExecStartPost=/usr/bin/touch /root/.config/puddle/object-inventory-checked
+TimeoutStartSec=0
+Restart=no
+MemoryMax=4G

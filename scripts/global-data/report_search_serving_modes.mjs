@@ -4,11 +4,6 @@
 // query silently lands on a scan path.
 import { searchGlobalLocations } from '../../lib/app/global-location-search.js'
 
-const env = {
-  ...process.env,
-  GLOBAL_LOCATION_SEARCH_BACKEND: 'b2'
-}
-
 const cases = [
   ['toronto', 43.6532, -79.3832, 25],
   ['toronto-suburbs', 43.7615, -79.4111, 25],
@@ -25,7 +20,7 @@ for (const [name, latitude, longitude, distanceKm] of cases) {
     distanceKm,
     filters: {},
     candidateLimit: 20
-  }, { env })
+  })
   const diagnostics = result.diagnostics || {}
   console.log(`serving_mode city=${name} mode=${diagnostics.textMode || 'none'} prune=${diagnostics.textPrune} prunedShards=${diagnostics.textPrunedShards} refs=${diagnostics.textPostingRefs} count=${result.candidates.length} tookMs=${result.tookMs}`)
 }

@@ -7,18 +7,18 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const read = (path) => readFile(join(root, path), 'utf8')
 
 const required = [
-  'package.json','vercel.json','next.config.mjs','proxy.js','.env.example',
+  'package.json','next.config.mjs','proxy.js','.env.example',
   'public/landing.html','public/landing.css','public/app.js','public/puddle-mark.svg',
   'app/global.css',
   'app/layout.js','app/(product)/layout.js','app/(product)/loading.js','app/(product)/discover/page.js','app/(map)/layout.js','app/(map)/map/page.js','app/(product)/matches/page.js','app/(product)/profile/page.js','app/(product)/plans/page.js','app/(product)/plans/[slug]/page.js',
-  'app/api/auth/signup/route.js','app/api/auth/google/route.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js','app/api/map/snapshot/route.js','app/api/profile/identity/route.js',
+  'app/api/auth/signup/route.js','app/api/auth/google/route.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js','app/api/map/snapshot/route.js','app/api/profile/identity/route.js','app/api/telemetry/route.js',
   'components/product-nav.js','components/static-product-shell.js','components/map-route-client.js','components/date-swipe-workspace-v2.js','components/figma-swipe-card.js',
-  'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js',
-  'lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/app/location-moderation-overlay.js','lib/app/b2-photo-search-overlay.js','lib/auth/sign-up.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
-  'scripts/b2-upload-tree.mjs','scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/location_search_common.py','scripts/global-data/build_b2_search_index.py','scripts/global-data/validate_b2_search_index.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/kartaview_urls.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/build_bulk_photo_manifest.py','scripts/global-data/materialize_photo_candidates.py','scripts/global-data/build_b2_photo_search_overlay.py','scripts/global-data/audit_b2_photo_inventory.py','scripts/global-data/repair_b2_photo_inventory.py','scripts/global-data/repair_b2_photo_references.py','scripts/global-data/audit_b2_photo_index_alignment.py','scripts/global-data/export_b2_photo_reset_manifest.py','scripts/global-data/reset_canonical_photo_pipeline.py','scripts/global-data/reset_canonical_photo_pipeline.sql','scripts/global-data/verify_photo_pilot.py',
-  '.github/workflows/global-location-data.yml','.github/workflows/b2-location-search-smoke.yml','.github/workflows/global-photo-enrichment.yml','.github/workflows/publish-b2-photo-overlay.yml','.github/workflows/global-kartaview-enrichment.yml','.github/workflows/audit-b2-photo-inventory.yml','.github/workflows/repair-b2-photo-inventory.yml','.github/workflows/repair-b2-photo-references.yml','.github/workflows/audit-b2-photo-index-alignment.yml','.github/workflows/apply-global-photo-candidate-registry.yml','.github/workflows/export-photo-reset-manifest.yml','.github/workflows/reset-canonical-photo-pipeline.yml','.github/workflows/run-canonical-photo-pilot.yml',
+  'lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/object-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/search-object-store.js','lib/app/global-location-reference.js',
+  'lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/app/location-moderation-overlay.js','lib/app/photo-search-overlay.js','lib/auth/sign-up.js','lib/storage/self-host-object-store.js','lib/media/open-photo-url.js',
+  'scripts/global-data/mirror_overture.py','scripts/global-data/mirror_fsq_iceberg.py','scripts/global-data/stage_global_sources.py','scripts/global-data/resolve_global_entities.py','scripts/global-data/location_search_common.py','scripts/global-data/build_object_search_index.py','scripts/global-data/validate_object_search_index.py','scripts/global-data/build_wikimedia_candidates.py','scripts/global-data/build_mapillary_candidates.py','scripts/global-data/kartaview_urls.py','scripts/global-data/build_kartaview_candidates.py','scripts/global-data/build_bulk_photo_manifest.py','scripts/global-data/materialize_photo_candidates.py','scripts/global-data/build_object_photo_search_overlay.py','scripts/global-data/audit_object_photo_inventory.py','scripts/global-data/repair_object_photo_inventory.py','scripts/global-data/repair_object_photo_references.py','scripts/global-data/audit_object_photo_index_alignment.py','scripts/global-data/export_object_photo_reset_manifest.py','scripts/global-data/reset_canonical_photo_pipeline.py','scripts/global-data/reset_canonical_photo_pipeline.sql','scripts/global-data/verify_photo_pilot.py',
   'supabase/migrations/20260818204500_lazy_location_refs_cutover.sql','supabase/migrations/20260818204600_location_relational_overlays.sql','supabase/migrations/20260818204700_opensearch_heatmap_and_actions.sql','supabase/migrations/20260818204800_remove_remaining_location_catalogue_coupling.sql','supabase/migrations/20260826200000_global_photo_candidate_registry.sql','supabase/migrations/20260828120000_bulk_photo_provider.sql',
-  'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs'
+  'scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/self-host-postgres-query.mjs',
+  'deploy/self-host/object-backend-cutover.sql'
 ]
 for (const path of required) await access(join(root, path))
 
@@ -45,29 +45,29 @@ for (const path of removed) {
 }
 
 const syntaxFiles = [
-  'next.config.mjs','proxy.js','instrumentation.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/b2-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/b2-search-object-store.js','lib/app/global-location-reference.js','lib/app/location-moderation-overlay.js','lib/app/b2-photo-search-overlay.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/storage/b2-native.js','lib/media/open-photo-url.js',
-  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','scripts/b2-upload-tree.mjs','app/api/auth/signup/route.js','app/api/auth/google/route.js','lib/auth/sign-up.js','app/api/profile/identity/route.js',
-  'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js','app/api/map/snapshot/route.js'
+  'next.config.mjs','proxy.js','instrumentation.js','lib/app/discovery.js','lib/app/discovery-global.js','lib/app/discovery-filters.js','lib/app/global-location-search.js','lib/app/object-location-search.js','lib/app/location-search-shards.js','lib/app/location-search-ranking.js','lib/app/search-object-store.js','lib/app/global-location-reference.js','lib/app/location-moderation-overlay.js','lib/app/photo-search-overlay.js','lib/app/public-location-cache.js','lib/app/location-plans-data.js','lib/app/global-connections-data.js','lib/app/social-hub-data.js','lib/storage/self-host-object-store.js','lib/media/open-photo-url.js',
+  'scripts/check.mjs','scripts/check-security-surface.mjs','scripts/check-secrets.mjs','scripts/check-client-boundaries.mjs','scripts/check-duplicate-assets.mjs','scripts/check-bundle-size.mjs','app/api/auth/signup/route.js','app/api/auth/google/route.js','lib/auth/sign-up.js','app/api/profile/identity/route.js',
+  'public/app.js','app/api/discovery/route.js','app/api/discovery/actions/route.js','app/api/social/share-location/route.js','app/api/open-photo/[sha256]/route.js','app/api/media/upload/route.js','app/api/map/viewport/route.js','app/api/map/snapshot/route.js','app/api/telemetry/route.js','scripts/self-host-postgres-query.mjs'
 ]
 for (const path of syntaxFiles) execFileSync(process.execPath, ['--check', join(root, path)], { stdio: 'pipe' })
 
 const pkg = JSON.parse(await read('package.json'))
-for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','react','react-dom','sharp']) {
+for (const dependency of ['@supabase/ssr','@supabase/supabase-js','next','pg','react','react-dom','sharp']) {
   if (!pkg.dependencies?.[dependency]) throw new Error(`Missing dependency: ${dependency}`)
 }
 const serializedScripts = JSON.stringify(pkg.scripts || {})
 for (const forbidden of ['static-catalogue','global:bootstrap:export','locations:photos','locations:google','locations:spatial']) {
   if (serializedScripts.includes(forbidden)) throw new Error(`Legacy catalogue command remains: ${forbidden}`)
 }
-for (const requiredScript of ['b2:upload-tree','global:overture:mirror','global:fsq:mirror','global:index','global:index:validate','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview','global:photos:bulk','global:photos:materialize','global:photos:overlay']) {
-  if (!pkg.scripts?.[requiredScript]) throw new Error(`Global B2 command is missing: ${requiredScript}`)
+for (const requiredScript of ['global:overture:mirror','global:fsq:mirror','global:index','global:index:validate','global:photos:wikimedia','global:photos:mapillary','global:photos:kartaview','global:photos:bulk','global:photos:materialize','global:photos:overlay']) {
+  if (!pkg.scripts?.[requiredScript]) throw new Error(`Global data command is missing: ${requiredScript}`)
 }
 
 const env = await read('.env.example')
 for (const forbidden of ['STATIC_CATALOGUE_','STATIC_MEDIA_RESOLUTION_ENABLED','PUDDLE_LEGACY_SYSTEMS_ENABLED','R2_PUBLIC_BASE_URL','R2_CONFIG','OPEN_PHOTO_SUPABASE_BUCKET','GLOBAL_LOCATION_FALLBACK_TO_SUPABASE','GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK','GLOBAL_LOCATION_SEARCH_BACKEND=','OPENSEARCH_USERNAME','OPENSEARCH_PASSWORD','OPENSEARCH_BEARER_TOKEN','GLOBAL_LOCATION_SEARCH_URL']) {
   if (env.includes(forbidden)) throw new Error(`Legacy environment setting remains: ${forbidden}`)
 }
-for (const requiredEnv of ['GLOBAL_LOCATION_SEARCH_MANIFEST_KEY','B2_DATA_APPLICATION_KEY_ID','B2_DATA_APPLICATION_KEY','B2_MEDIA_APPLICATION_KEY_ID','B2_MEDIA_APPLICATION_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
+for (const requiredEnv of ['GLOBAL_LOCATION_SEARCH_MANIFEST_KEY','OBJECT_STORAGE_ENDPOINT','OBJECT_STORAGE_BUCKET','OBJECT_STORAGE_ACCESS_KEY_ID','OBJECT_STORAGE_SECRET_ACCESS_KEY','FSQ_ICEBERG_TOKEN','MAPILLARY_ACCESS_TOKEN']) {
   if (!env.includes(requiredEnv)) throw new Error(`Environment example is missing ${requiredEnv}`)
 }
 
@@ -85,18 +85,18 @@ for (const marker of ['global-location-serving','searchGlobalLocations','global-
   if (!globalDiscovery.includes(marker)) throw new Error(`Global discovery is missing ${marker}`)
 }
 const globalSearch = await read('lib/app/global-location-search.js')
-for (const marker of ['searchB2GlobalLocations','searchB2GlobalLocationsInViewport','getB2GlobalLocationBySlug','getB2GlobalLocationsByIds']) {
+for (const marker of ['searchObjectGlobalLocations','searchObjectGlobalLocationsInViewport','getObjectGlobalLocationBySlug','getObjectGlobalLocationsByIds']) {
   if (globalSearch.includes('opensearch')) throw new Error('Global location-search facade still references retired OpenSearch')
   if (!globalSearch.includes(marker)) throw new Error(`Global location-search facade is missing ${marker}`)
 }
-const b2Search = await read('lib/app/b2-location-search.js')
+const objectSearch = await read('lib/app/object-location-search.js')
 for (const marker of ['resolveGeoShardPlan','haversineDistanceMeters','matchesStructuredFilters','scoreTextMatch','createTopK']) {
-  if (!b2Search.includes(marker)) throw new Error(`B2 location search is missing ${marker}`)
+  if (!objectSearch.includes(marker)) throw new Error(`Object location search is missing ${marker}`)
 }
-if (b2Search.includes('primary_photo.url') || globalSearch.includes('primary_photo.url')) throw new Error('Global search restored URL-coupled photo storage')
+if (objectSearch.includes('primary_photo.url') || globalSearch.includes('primary_photo.url')) throw new Error('Global search restored URL-coupled photo storage')
 const shardRouter = await read('lib/app/location-search-shards.js')
 for (const marker of ['GLOBAL_LOCATION_MAX_SHARDS','GLOBAL_LOCATION_MAX_COMPRESSED_BYTES','GLOBAL_LOCATION_MAX_CANDIDATES','directoryTilesForBounds','getLocationsByIdsFromShards','getLocationBySlugFromShards']) {
-  if (!shardRouter.includes(marker)) throw new Error(`B2 shard router is missing ${marker}`)
+  if (!shardRouter.includes(marker)) throw new Error(`Object shard router is missing ${marker}`)
 }
 
 const refs = await read('lib/app/global-location-reference.js')
@@ -115,7 +115,7 @@ if (publicLocation.includes('searchGlobalLocations') || publicLocation.includes(
   throw new Error('Public location recommendations still perform a live similar-place search')
 }
 if (publicLocation.includes("from('locations')")) throw new Error('Public location path still reads the Supabase catalogue')
-if (publicLocation.includes("from('location_media')")) throw new Error('Public location path overrides canonical B2 media')
+if (publicLocation.includes("from('location_media')")) throw new Error('Public location path overrides canonical photo media')
 
 const actions = await read('app/api/discovery/actions/route.js')
 for (const marker of ['record_discovery_actions_v4','ensureGlobalLocationReferences','adjust_location_save_density_batch_v1']) {
@@ -124,13 +124,20 @@ for (const marker of ['record_discovery_actions_v4','ensureGlobalLocationReferen
 
 const openPhoto = await read('app/api/open-photo/[sha256]/route.js')
 for (const marker of ['canonicalStorageKey','media/photos/by-sha256/','actualHash !== hash']) {
-  if (!openPhoto.includes(marker)) throw new Error(`B2 photo delivery is missing ${marker}`)
+  if (!openPhoto.includes(marker)) throw new Error(`Photo delivery is missing ${marker}`)
 }
-if (openPhoto.includes("from('media_objects')")) throw new Error('Canonical B2 photo delivery still depends on Supabase media registration')
+if (openPhoto.includes("from('media_objects')")) throw new Error('Canonical photo delivery still depends on Supabase media registration')
 
 const createActions = await read('app/(product)/create/actions.js')
-if (!createActions.includes("from('location_submissions')")) throw new Error('Place authoring is not isolated to location_submissions')
-if (createActions.includes("from('locations')")) throw new Error('Place authoring still writes the global catalogue table')
+const draftEndpoint = await read('app/api/drafts/[kind]/route.js')
+const draftWriter = await read('lib/app/location-draft-write.js')
+if (!createActions.includes('saveLocationSubmission(') || !draftEndpoint.includes('saveLocationSubmission(')) {
+  throw new Error('Place authoring and autosave must use the same draft writer')
+}
+if (!draftWriter.includes("from('location_submissions')")) throw new Error('Place authoring is not isolated to location_submissions')
+if ([createActions, draftEndpoint, draftWriter].some((source) => source.includes("from('locations')"))) {
+  throw new Error('Place authoring still writes the global catalogue table')
+}
 
 const cutover = await read('supabase/migrations/20260818204500_lazy_location_refs_cutover.sql')
 for (const marker of ['create table if not exists public.location_refs','create table if not exists public.location_submissions','drop table public.locations','record_discovery_actions_v4_unchecked','references public.location_refs']) {
@@ -177,4 +184,4 @@ for (const relative of runtimeFiles) {
   }
 }
 
-console.log(`Architecture checks passed: B2 sharded global catalogue with lazy Supabase location refs across ${runtimeFiles.length} runtime files.`)
+console.log(`Architecture checks passed: self-hosted object catalogue with lazy Supabase location refs across ${runtimeFiles.length} runtime files.`)

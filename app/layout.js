@@ -1,7 +1,6 @@
 import './global.css'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
-import { SpeedInsights } from '@vercel/speed-insights/next'
-import { Analytics } from '@vercel/analytics/next'
+import { ClientTelemetry } from '@/components/client-telemetry'
 
 export const metadata = {
   title: { default: 'Puddle', template: '%s · Puddle' },
@@ -25,8 +24,6 @@ export const viewport = {
 }
 
 export default function RootLayout({ children }) {
-  const vercelTelemetryEnabled = process.env.VERCEL === '1'
-
   return <html lang="en">
     <head>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -36,7 +33,7 @@ export default function RootLayout({ children }) {
     <body>
       {children}
       <ServiceWorkerCleanup />
-      {vercelTelemetryEnabled ? <><SpeedInsights /><Analytics /></> : null}
+      <ClientTelemetry />
     </body>
   </html>
 }

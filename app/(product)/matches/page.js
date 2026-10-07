@@ -1,6 +1,4 @@
-import { FigmaMessagesRealtime } from '@/components/figma-messages-realtime'
-import { FigmaSocialHub } from '@/components/figma-social-hub'
-import { PassMessageSearch } from '@/components/pass-message-search'
+import { FriendsRouteContent } from '@/components/friends-route-content'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getSocialHubSnapshot } from '@/lib/app/social-hub-data'
 
@@ -15,11 +13,6 @@ export default async function FriendsPage({ searchParams }) {
 
   return renderProductPage(async (session) => {
     const snapshot = await getSocialHubSnapshot(session, conversationId, { tab })
-    return <div className="figma-friends-pass-wrapper">
-      {tab === 'add' ? <PassMessageSearch enabled={snapshot.passActive} /> : null}
-      {tab === 'messages'
-        ? <FigmaMessagesRealtime initialSnapshot={snapshot} conversationId={conversationId} />
-        : <FigmaSocialHub initialSnapshot={snapshot} initialTab={tab} />}
-    </div>
+    return <FriendsRouteContent snapshot={snapshot} tab={tab} conversationId={conversationId} />
   })
 }

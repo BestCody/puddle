@@ -1,8 +1,7 @@
 "use client"
 
-import { track } from '@vercel/analytics'
+import { sendClientTelemetry } from '@/lib/performance/send-client-telemetry'
 
-const DISCOVERY_RUM_SAMPLE_RATE = 0.1
 const MAX_RUM_DURATION_MS = 120_000
 const REGION_PATTERN = /^[a-z0-9-]{1,32}$/i
 const PHASES = new Set(['navigation', 'continuation', 'prefetch', 'refresh'])
@@ -43,12 +42,13 @@ export function reportDiscoveryRum({
   outcome = 'ok',
   serverTiming = {}
 }) {
-  if (typeof window === 'undefined' || !PHASES.has(phase) || Math.random() >= DISCOVERY_RUM_SAMPLE_RATE) return
+  if (typeof window === 'undefined' || !PHASES.has(phase)) return
 
   const duration = boundedMilliseconds(durationMs)
   if (duration === null) return
 
   const properties = {
+    event: 'discovery_rum',
     phase,
     outcome: OUTCOMES.has(outcome) ? outcome : 'network_error',
     duration_ms: duration,
@@ -65,7 +65,7 @@ export function reportDiscoveryRum({
 
   const connection = String(window.navigator?.connection?.effectiveType || '').trim()
   if (connection) properties.connection = connection.slice(0, 16)
-  track('discovery_rum', properties)
+  sendClientTelemetry(properties)
 }
 
 export async function timedDiscoveryRequest(request, { phase, region }) {
@@ -86,7 +86,7 @@ export async function timedDiscoveryRequest(request, { phase, region }) {
       serverTiming: parseDiscoveryServerTiming(response.headers.get('server-timing'))
     })
     return { response, result }
-  } catch {
+  } catch (error) {
     reportDiscoveryRum({
       phase,
       durationMs: window.performance.now() - startedAt,

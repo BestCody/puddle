@@ -134,6 +134,10 @@ export default async function PlansPage({ searchParams }) {
     const folders = categories.map((row) => [row.category, row.place_count])
     const selectedCategory = active === 'saved' ? requestedCategory : 'all'
     const visible = items
+    const savedPageKey = JSON.stringify([
+      selectedCategory, query, cursor,
+      visible.map((item) => [item.location_id, item.saved_at, item.pinned_at, item.perfect_pick, item.title, item.slug, item.category])
+    ])
 
     return <>
       {active === 'saved' ? <SavedSearchInput initialQuery={query} category={selectedCategory} /> : null}
@@ -159,11 +163,11 @@ export default async function PlansPage({ searchParams }) {
         </div> : <div className={styles.planBand}><h1 className={styles.planHeading}>Plans</h1></div>}
 
         {visible.length ? active === 'saved'
-          ? <SavedPagedGrid key={`${selectedCategory}:${query}`} initialItems={visible} initialPagination={page.pagination} category={selectedCategory} query={query} classes={{ grid: styles.placeGrid, card: styles.placeCard, photo: styles.placePhoto, copy: styles.placeCopy, meta: styles.placeMeta, perfectPick: styles.perfectPick, loadMore: styles.loadMore }} />
+          ? <SavedPagedGrid key={savedPageKey} initialItems={visible} initialPagination={page.pagination} category={selectedCategory} query={query} classes={{ grid: styles.placeGrid, card: styles.placeCard, photo: styles.placePhoto, copy: styles.placeCopy, meta: styles.placeMeta, perfectPick: styles.perfectPick, loadMore: styles.loadMore }} />
           : <section className={styles.placeGrid} aria-label={active === 'saved' ? 'Saved places' : active === 'planned' ? 'Plans' : 'History'} data-testid="saved-grid">
               {visible.map((item) => <SavedCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}
             </section>
-          : <div className={styles.empty} data-testid="saved-empty"><strong>{active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong><Link href="/discover">Start swiping</Link></div>}
+          : <div className={styles.empty} data-testid="saved-empty"><strong>{page.pagination.hasMore ? 'Some places on this page are unavailable. Continue to see more.' : active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong>{!page.pagination.hasMore ? <Link href="/discover">Start swiping</Link> : null}</div>}
 
         {active !== 'saved' && page.pagination.hasMore ? <div className={styles.historyLink}>
           <Link data-testid="saved-next-page" href={nextPageHref({ active, category: selectedCategory, query, cursor: page.pagination.nextCursor })}>{active === 'past' ? 'Older history' : 'More plans'}</Link>

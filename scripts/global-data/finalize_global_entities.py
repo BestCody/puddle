@@ -27,15 +27,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 args = parser.parse_args()
 
-endpoint_url = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
+endpoint_url = first_env('OBJECT_STORAGE_ENDPOINT').rstrip('/')
 endpoint = endpoint_url.replace('https://', '').replace('http://', '')
-key_id = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-key = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-bucket = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-region = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
-data_prefix = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+key_id = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+key = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+bucket = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+region = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
+data_prefix = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
 if not endpoint_url or not key_id or not key:
-    raise RuntimeError('B2 endpoint and credentials are required.')
+    raise RuntimeError('Object storage endpoint and credentials are required.')
 
 s3 = boto3.client(
     's3', endpoint_url=endpoint_url, aws_access_key_id=key_id, aws_secret_access_key=key,
@@ -74,14 +74,14 @@ con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
 con.execute(f"SET threads TO {max(1, min(32, int(os.getenv('GLOBAL_FINALIZE_THREADS', '8'))))}")
 con.execute(f"""
-CREATE OR REPLACE SECRET b2_data_secret (
+CREATE OR REPLACE SECRET object_data_secret (
  TYPE S3,
  KEY_ID '{key_id.replace("'", "''")}',
  SECRET '{key.replace("'", "''")}',
  REGION '{region.replace("'", "''")}',
  ENDPOINT '{endpoint.replace("'", "''")}',
  URL_STYLE 'path',
- USE_SSL true
+ USE_SSL {'true' if endpoint_url.startswith('https://') else 'false'}
 );
 """)
 root = f's3://{bucket}/{normalized_prefix.rstrip("/")}'

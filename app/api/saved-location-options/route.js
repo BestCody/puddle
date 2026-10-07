@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
+import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overlay'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
@@ -66,7 +67,8 @@ export async function GET(request) {
 
   try {
     const locations = await getGlobalLocationsByIds(ids)
-    const byId = new Map(locations.map((row) => [String(row.id), optionShape(row)]))
+    const visible = await filterModeratedLocationRows(supabase, locations)
+    const byId = new Map(visible.map((row) => [String(row.id), optionShape(row)]))
     return NextResponse.json({ items: ids.map((id) => byId.get(id)).filter(Boolean) })
   } catch {
     return NextResponse.json({ items: [] }, { status: 503 })

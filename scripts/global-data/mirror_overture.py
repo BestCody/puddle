@@ -35,19 +35,19 @@ def clean_prefix(value):
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
-parser = argparse.ArgumentParser(description='Mirror the current Overture Places GeoParquet release into the canonical B2 raw lake.')
+parser = argparse.ArgumentParser(description='Mirror the current Overture Places GeoParquet release into the canonical Object storage raw lake.')
 parser.add_argument('--release', default=os.getenv('OVERTURE_RELEASE', 'latest'))
 parser.add_argument('--workers', type=int, default=int(os.getenv('OVERTURE_MIRROR_WORKERS', '8')))
 parser.add_argument('--max-files', type=int, default=int(os.getenv('OVERTURE_MIRROR_MAX_FILES', '0')))
 args = parser.parse_args()
 
-B2_ENDPOINT = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
-B2_KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-B2_KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-B2_BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
-if not B2_ENDPOINT or not B2_KEY_ID or not B2_KEY:
-    raise RuntimeError('B2 endpoint and credentials are required to mirror Overture.')
+OBJECT_ENDPOINT = first_env('OBJECT_STORAGE_ENDPOINT')
+OBJECT_KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+OBJECT_KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+OBJECT_BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+DATA_PREFIX = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
+if not OBJECT_ENDPOINT or not OBJECT_KEY_ID or not OBJECT_KEY:
+    raise RuntimeError('Object storage endpoint and credentials are required to mirror Overture.')
 
 
 def unsigned_source():
@@ -94,7 +94,7 @@ if not release:
 
 source = unsigned_source()
 destination = boto3.client(
-    's3', endpoint_url=B2_ENDPOINT, aws_access_key_id=B2_KEY_ID, aws_secret_access_key=B2_KEY,
+    's3', endpoint_url=OBJECT_ENDPOINT, aws_access_key_id=OBJECT_KEY_ID, aws_secret_access_key=OBJECT_KEY,
     config=Config(retries={'max_attempts': 10, 'mode': 'adaptive'}, max_pool_connections=max(16, args.workers * 2)),
 )
 prefix = f'release/{release}/theme=places/type=place/'
@@ -117,7 +117,7 @@ def mirror(row):
     relative = row['key'][len(prefix):]
     target_key = f'{DATA_PREFIX}/raw/overture/release={release}/theme=places/type=place/{relative}'
     try:
-        head = destination.head_object(Bucket=B2_BUCKET, Key=target_key)
+        head = destination.head_object(Bucket=OBJECT_BUCKET, Key=target_key)
         if head.get('Metadata', {}).get('source-etag') == row['etag'] and int(head.get('ContentLength', -1)) == row['size']:
             return {'key': target_key, 'bytes': row['size'], 'status': 'unchanged'}
     except ClientError as error:
@@ -131,7 +131,7 @@ def mirror(row):
         tmp.flush()
         tmp.seek(0)
         destination.upload_fileobj(
-            tmp, B2_BUCKET, target_key,
+            tmp, OBJECT_BUCKET, target_key,
             ExtraArgs={'ContentType': 'application/vnd.apache.parquet', 'Metadata': {'source-etag': row['etag'], 'source': 'overture'}},
             Config=transfer,
         )
@@ -150,8 +150,8 @@ manifest = {
     'uploaded': sum(r['status'] == 'uploaded' for r in results), 'unchanged': sum(r['status'] == 'unchanged' for r in results),
 }
 manifest_key = f'{DATA_PREFIX}/raw/overture/release={release}/manifest.json'
-destination.put_object(Bucket=B2_BUCKET, Key=manifest_key, Body=(json.dumps(manifest, indent=2) + '\n').encode(), ContentType='application/json')
+destination.put_object(Bucket=OBJECT_BUCKET, Key=manifest_key, Body=(json.dumps(manifest, indent=2) + '\n').encode(), ContentType='application/json')
 print(json.dumps(manifest, indent=2))
-if os.getenv('GITHUB_OUTPUT'):
-    with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
-        output.write('overture_release=' + str(release) + '\n')
+if os.getenv('PUDDLE_JOB_OUTPUT'):
+    with open(os.environ['PUDDLE_JOB_OUTPUT'], 'x', encoding='utf-8') as output:
+        json.dump({'overture_release': str(release)}, output)

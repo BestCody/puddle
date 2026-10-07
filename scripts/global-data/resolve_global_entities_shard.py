@@ -31,19 +31,19 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 parser.add_argument('--shard-index', type=int, required=True)
 parser.add_argument('--shard-count', type=int, required=True)
-parser.add_argument('--bootstrap-prefix', default=os.getenv('GLOBAL_BOOTSTRAP_B2_PREFIX', 'data/snapshots/bootstrap/current'))
+parser.add_argument('--bootstrap-prefix', default=os.getenv('GLOBAL_BOOTSTRAP_PREFIX', 'data/snapshots/bootstrap/current'))
 args = parser.parse_args()
 if args.shard_count < 1 or args.shard_index < 0 or args.shard_index >= args.shard_count:
     raise RuntimeError('Invalid shard index/count.')
 
-endpoint = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
-key_id = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-key = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-bucket = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-data_prefix = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+endpoint = first_env('OBJECT_STORAGE_ENDPOINT').rstrip('/')
+key_id = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+key = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+bucket = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+data_prefix = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
 force_reresolve = env_truthy('GLOBAL_FORCE_RERESOLVE')
 if not endpoint or not key_id or not key:
-    raise RuntimeError('B2 endpoint and credentials are required.')
+    raise RuntimeError('Object storage endpoint and credentials are required.')
 
 s3 = boto3.client(
     's3',

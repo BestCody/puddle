@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage, safeNextPath } from '@/lib/auth/redirect'
-import { locationPayload, objectFromFormData, validateLocation } from '@/lib/app/content-input'
+import { objectFromFormData } from '@/lib/app/content-input'
+import { LocationDraftError, saveLocationSubmission } from '@/lib/app/location-draft-write'
 import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -17,64 +18,22 @@ function editLocationPath(id) {
   return id ? `/studio/places/${id}` : '/create/place'
 }
 
-async function savePrivateDetail(supabase, id, exactAddress, userId) {
-  if (exactAddress) {
-    const { error } = await supabase.from('location_private_details').upsert({
-      location_id: id,
-      exact_address: exactAddress,
-      updated_by: userId,
-      updated_at: new Date().toISOString()
-    })
-    return error
-  }
-  const { error } = await supabase.from('location_private_details').delete().eq('location_id', id)
-  return error
-}
-
 async function persistLocation(formData) {
   const session = await requireUser({ onboarding: true })
   const input = objectFromFormData(formData)
   const id = String(input.id || '').trim()
-  let existing = null
-
-  if (!id) {
-    const { data: passActive, error: passError } = await session.supabase.rpc('puddle_tinder_active_v1')
-    if (passError || !passActive) {
-      redirect(pathWithMessage('/membership', 'error', 'Puddle Pass is required to create a location.'))
+  try {
+    const location = await saveLocationSubmission(session.supabase, session.user.id, input)
+    return { session, location }
+  } catch (error) {
+    if (!(error instanceof LocationDraftError)) {
+      redirect(pathWithMessage(editLocationPath(id), 'error', 'We could not save this location draft.'))
     }
+    const destination = error.code === 'pass_required' ? '/membership'
+      : error.code === 'not_found' ? '/create/place'
+        : editLocationPath(error.locationId || id)
+    redirect(pathWithMessage(destination, 'error', error.message))
   }
-
-  if (id) {
-    const { data } = await session.supabase.from('location_submissions').select('*').eq('id', id).maybeSingle()
-    existing = data
-    if (!existing) redirect(pathWithMessage('/create/place', 'error', 'That location draft is not available.'))
-  }
-
-  const payload = locationPayload(input, session.user.id, existing)
-  const errors = validateLocation(payload)
-  if (errors.length) redirect(pathWithMessage(editLocationPath(id), 'error', errors[0]))
-
-  const privateAddress = payload.private_address
-  const writable = { ...payload }
-  delete writable.private_address
-  if (existing) {
-    delete writable.created_by
-    delete writable.slug
-  }
-
-  const query = existing
-    ? session.supabase.from('location_submissions').update(writable).eq('id', id).select('id,slug,status').single()
-    : session.supabase.from('location_submissions').insert(writable).select('id,slug,status').single()
-  const { data, error } = await query
-  if (error || !data) {
-    redirect(pathWithMessage(editLocationPath(id), 'error', firstError(error, 'We could not save this location draft.')))
-  }
-
-  const privateError = await savePrivateDetail(session.supabase, data.id, privateAddress, session.user.id)
-  if (privateError) {
-    redirect(pathWithMessage(`/studio/places/${data.id}`, 'error', 'The draft saved, but its private address could not be secured.'))
-  }
-  return { session, location: data }
 }
 
 export async function saveLocationDraft(formData) {

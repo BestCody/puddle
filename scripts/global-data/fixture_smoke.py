@@ -2,7 +2,7 @@
 """No-key smoke test for global-data identity, slug, and photo-priority contracts.
 
 This intentionally uses only local fixture data and the Python standard library. It
-exercises invariants that must hold before any production B2/provider/search access
+exercises invariants that must hold before any production object store/provider/search access
 is attempted.
 """
 import json

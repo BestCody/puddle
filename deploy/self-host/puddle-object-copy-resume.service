@@ -1,0 +1,20 @@
+[Unit]
+Description=Resume the non-deleting Puddle object copy after a host reboot
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+ConditionPathExists=!/root/.config/puddle/object-copy-complete
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/root/.config/puddle/migration.env
+ExecStart=/usr/bin/rclone copy --config ${RCLONE_CONFIG} --transfers 16 --checkers 32 --stats 1m --stats-log-level NOTICE ${PUDDLE_SOURCE_OBJECT_REMOTE} ${PUDDLE_TARGET_OBJECT_REMOTE}
+ExecStartPost=/usr/bin/touch /root/.config/puddle/object-copy-complete
+TimeoutStartSec=0
+Restart=on-failure
+RestartSec=1h
+MemoryMax=3G
+
+[Install]
+WantedBy=multi-user.target

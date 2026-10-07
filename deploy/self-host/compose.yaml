@@ -13,10 +13,16 @@ services:
       - "127.0.0.1:8333:8333"
     init: true
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "20m"
+        max-file: "5"
     security_opt:
       - no-new-privileges:true
 
   app:
+    image: ${PUDDLE_APP_IMAGE:-puddle-app:local}
     build:
       context: ../..
       dockerfile: deploy/self-host/Dockerfile
@@ -26,6 +32,7 @@ services:
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
         NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
         NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+        PUDDLE_BUILD_SHA: ${PUDDLE_BUILD_SHA:?set PUDDLE_BUILD_SHA to the deployed commit}
     env_file:
       - ../../.env.selfhost
     depends_on:
@@ -33,6 +40,11 @@ services:
         condition: service_started
     init: true
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "20m"
+        max-file: "5"
     stop_grace_period: 30s
     security_opt:
       - no-new-privileges:true
@@ -42,12 +54,15 @@ services:
       - "3000"
     volumes:
       - next_cache:/app/.next/cache
+    networks:
+      - default
+      - puddle_edge
     healthcheck:
       test:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:3000/api/health').then(async response => { const body = await response.json(); if (!response.ok || !body.ok || !body.authConfigured) process.exit(1) }).catch(() => process.exit(1))"
+        - "fetch('http://127.0.0.1:3000/api/health').then(async response => { const body = await response.json(); if (!response.ok || !body.ok || !body.authConfigured || !body.supabaseTransportConfigured) process.exit(1) }).catch(() => process.exit(1))"
       interval: 30s
       timeout: 10s
       start_period: 60s
@@ -59,8 +74,15 @@ services:
       app:
         condition: service_healthy
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "20m"
+        max-file: "5"
     environment:
       PUDDLE_DOMAIN: ${PUDDLE_DOMAIN:?set PUDDLE_DOMAIN}
+      PUDDLE_WWW_DOMAIN: www.${PUDDLE_DOMAIN:?set PUDDLE_DOMAIN}
+      PUDDLE_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?set NEXT_PUBLIC_SITE_URL}
       SUPABASE_DOMAIN: ${SUPABASE_DOMAIN:?set SUPABASE_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
     ports:

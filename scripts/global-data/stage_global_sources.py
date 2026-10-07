@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vectorize Overture + FSQ raw datasets into a common, partitioned source schema in B2.
+"""Vectorize Overture + FSQ raw datasets into a common, partitioned source schema in Object storage.
 
 This stage deliberately keeps source rows separate. Entity resolution happens in
 resolve_global_entities.py so the raw lake and source-normalized lake are always rebuildable.
@@ -29,17 +29,17 @@ parser.add_argument('--fsq-release', default=os.getenv('FSQ_RELEASE_LABEL', ''))
 parser.add_argument('--snapshot', default=os.getenv('GLOBAL_LOCATION_SNAPSHOT', datetime.now(timezone.utc).date().isoformat()))
 args = parser.parse_args()
 
-BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT')
+BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+ENDPOINT_URL = first_env('OBJECT_STORAGE_ENDPOINT')
 ENDPOINT = ENDPOINT_URL.replace('https://', '').replace('http://', '').rstrip('/')
-KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
-DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
+KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+REGION = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
+DATA_PREFIX = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
 if not ENDPOINT or not KEY_ID or not KEY:
-    raise RuntimeError('B2 endpoint and credentials are required.')
+    raise RuntimeError('Object storage endpoint and credentials are required.')
 if not args.overture_release or not args.fsq_release:
-    raise RuntimeError('Set --overture-release and --fsq-release to mirrored B2 release labels.')
+    raise RuntimeError('Set --overture-release and --fsq-release to mirrored Object storage release labels.')
 
 con = duckdb.connect()
 con.execute("INSTALL httpfs; LOAD httpfs; INSTALL spatial; LOAD spatial;")
@@ -47,14 +47,14 @@ con.execute("SET preserve_insertion_order=false")
 con.execute(f"SET threads TO {max(1, min(32, int(os.getenv('GLOBAL_STAGE_THREADS', '8'))))}")
 con.execute(f"SET temp_directory='{os.getenv('DUCKDB_TEMP_DIRECTORY', '.duckdb-tmp').replace("'", "''")}'")
 con.execute(f"""
-CREATE OR REPLACE SECRET b2_data_secret (
+CREATE OR REPLACE SECRET object_data_secret (
   TYPE S3,
   KEY_ID '{KEY_ID.replace("'", "''")}',
   SECRET '{KEY.replace("'", "''")}',
   REGION '{REGION.replace("'", "''")}',
   ENDPOINT '{ENDPOINT.replace("'", "''")}',
   URL_STYLE 'path',
-  USE_SSL true
+  USE_SSL {'true' if ENDPOINT_URL.startswith('https://') else 'false'}
 );
 """)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Materialize globally unique licensed location photos into immutable B2 media.
+"""Materialize globally unique licensed location photos into immutable Object storage media.
 
 Discovery remains bulk/spatial. For each real canonical location this worker keeps
 several ranked provider candidates, atomically reserves an unseen provider asset
@@ -71,18 +71,18 @@ if args.bulk_manifest:
     if not os.path.isfile(args.bulk_manifest):
         raise RuntimeError(f'bulk photo manifest does not exist: {args.bulk_manifest}')
 
-DATA_BUCKET = first_env('B2_DATA_BUCKET_NAME', 'B2_BUCKET', default='puddle-assets')
-DATA_ENDPOINT_URL = first_env('B2_DATA_S3_ENDPOINT', 'B2_S3_ENDPOINT').rstrip('/')
+DATA_BUCKET = first_env('OBJECT_STORAGE_BUCKET', default='puddle-assets')
+DATA_ENDPOINT_URL = first_env('OBJECT_STORAGE_ENDPOINT').rstrip('/')
 DATA_ENDPOINT = DATA_ENDPOINT_URL.replace('https://', '').replace('http://', '')
-DATA_KEY_ID = first_env('B2_DATA_KEY_ID', 'B2_DATA_APPLICATION_KEY_ID', 'B2_KEY_ID')
-DATA_KEY = first_env('B2_DATA_APPLICATION_KEY', 'B2_APPLICATION_KEY')
-DATA_REGION = first_env('B2_DATA_S3_REGION', 'B2_REGION', default='us-east-005')
-DATA_PREFIX = clean_prefix(first_env('B2_DATA_PREFIX', default='data'))
-MEDIA_BUCKET = first_env('B2_MEDIA_BUCKET_NAME', 'B2_BUCKET', default=DATA_BUCKET)
-MEDIA_ENDPOINT = first_env('B2_MEDIA_S3_ENDPOINT', 'B2_S3_ENDPOINT', default=DATA_ENDPOINT_URL)
-MEDIA_KEY_ID = first_env('B2_MEDIA_KEY_ID', 'B2_MEDIA_APPLICATION_KEY_ID', 'B2_KEY_ID', default=DATA_KEY_ID)
-MEDIA_KEY = first_env('B2_MEDIA_APPLICATION_KEY', 'B2_APPLICATION_KEY', default=DATA_KEY)
-MEDIA_PREFIX = clean_prefix(first_env('B2_MEDIA_OPEN_PHOTO_PREFIX', default='media/photos/by-sha256'))
+DATA_KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID')
+DATA_KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY')
+DATA_REGION = first_env('OBJECT_STORAGE_REGION', default='us-east-1')
+DATA_PREFIX = clean_prefix(first_env('PUDDLE_DATA_PREFIX', default='data'))
+MEDIA_BUCKET = first_env('OBJECT_STORAGE_BUCKET', default=DATA_BUCKET)
+MEDIA_ENDPOINT = first_env('OBJECT_STORAGE_ENDPOINT', default=DATA_ENDPOINT_URL)
+MEDIA_KEY_ID = first_env('OBJECT_STORAGE_ACCESS_KEY_ID', default=DATA_KEY_ID)
+MEDIA_KEY = first_env('OBJECT_STORAGE_SECRET_ACCESS_KEY', default=DATA_KEY)
+MEDIA_PREFIX = clean_prefix(first_env('PUDDLE_OPEN_PHOTO_PREFIX', default='media/photos/by-sha256'))
 SUPABASE_URL = first_env('NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL').rstrip('/')
 SUPABASE_KEY = first_env('SUPABASE_SECRET_KEY')
 MAPILLARY_TOKEN = os.getenv('MAPILLARY_ACCESS_TOKEN', '').strip()
@@ -118,11 +118,11 @@ EXCLUSION_PREFIX = f'{DATA_PREFIX}/enrichment/photo_exclusions/snapshot={args.sn
 ATTEMPT_PREFIX = f'{DATA_PREFIX}/enrichment/photo_attempts/snapshot={args.snapshot}'
 
 if not DATA_ENDPOINT_URL or not DATA_KEY_ID or not DATA_KEY:
-    raise RuntimeError('B2 data endpoint and credentials are required.')
+    raise RuntimeError('Object storage data endpoint and credentials are required.')
 if not MEDIA_ENDPOINT or not MEDIA_KEY_ID or not MEDIA_KEY:
-    raise RuntimeError('B2 media endpoint and credentials are required.')
+    raise RuntimeError('Object storage media endpoint and credentials are required.')
 if not MEDIA_PREFIX:
-    raise RuntimeError('B2 media photo prefix is empty.')
+    raise RuntimeError('Object storage media photo prefix is empty.')
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError('Supabase URL and service secret are required for global photo uniqueness claims.')
 
@@ -335,7 +335,7 @@ def release_claim(token):
 def finalize_claim(token, storage_key):
     result = supabase_rpc('finalize_global_photo_claim_v1', {'p_claim_token': token, 'p_storage_key': storage_key})
     if result is not True:
-        raise RuntimeError('global photo claim could not be finalized after B2 verification')
+        raise RuntimeError('global photo claim could not be finalized after Object storage verification')
 
 
 def wait_mapillary_graph_start():
@@ -380,7 +380,7 @@ def mapillary_details(image_id):
             return {
                 'asset_url': row.get('thumb_2048_url'),
                 'page_url': f'https://www.mapillary.com/app/?pKey={urllib.parse.quote(str(image_id))}&focus=photo',
-                'attribution': f'{creator} · Mapillary · CC BY-SA 4.0',
+                'attribution': f'{creator} Â· Mapillary Â· CC BY-SA 4.0',
                 'license': 'CC-BY-SA-4.0', 'license_url': 'https://creativecommons.org/licenses/by-sa/4.0/'
             }
         except urllib.error.HTTPError as error:
@@ -550,7 +550,7 @@ def normalize(body):
         data = out.getvalue()
         if not data or len(data) > MAX_BYTES:
             raise RuntimeError('normalized image is empty or exceeds 10 MB')
-        # Fingerprints must describe the exact canonical bytes written to B2.
+        # Fingerprints must describe the exact canonical bytes written to Object storage.
         # JPEG encoding can change pixels enough to flip a perceptual bit, so
         # calculate both hashes from the encoded representation we serve.
         with Image.open(io.BytesIO(data)) as canonical:
@@ -567,7 +567,7 @@ def upload_media(data, sha256):
         head = s3.head_object(Bucket=MEDIA_BUCKET, Key=key)
         if int(head.get('ContentLength', -1)) == len(data) and head.get('Metadata', {}).get('sha256') == sha256:
             return key
-        raise RuntimeError(f'B2 media object exists with mismatched integrity metadata: {key}')
+        raise RuntimeError(f'Object storage media object exists with mismatched integrity metadata: {key}')
     except ClientError as error:
         code = str(error.response.get('Error', {}).get('Code', ''))
         status = error.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
@@ -580,14 +580,14 @@ def upload_media(data, sha256):
     )
     head = s3.head_object(Bucket=MEDIA_BUCKET, Key=key)
     if int(head.get('ContentLength', -1)) != len(data):
-        raise RuntimeError('B2 media size verification failed')
+        raise RuntimeError('Object storage media size verification failed')
     if head.get('Metadata', {}).get('sha256') != sha256:
-        raise RuntimeError('B2 media SHA256 metadata verification failed')
+        raise RuntimeError('Object storage media SHA256 metadata verification failed')
     return key
 
 
 def inspect_canonical_media(data):
-    """Recover dimensions/fingerprints from an already canonical B2 JPEG."""
+    """Recover dimensions/fingerprints from an already canonical Object storage JPEG."""
     with Image.open(io.BytesIO(data)) as image:
         image.load()
         perceptual = dhash(image)
@@ -619,7 +619,7 @@ def recover_materialized_candidate(row):
         raise RuntimeError('accepted candidate has an invalid content SHA-256')
     expected_key = f'{MEDIA_PREFIX}/{content_hash[:2]}/{content_hash}.jpg'
     if storage_key != expected_key:
-        raise RuntimeError('accepted candidate has a noncanonical B2 storage key')
+        raise RuntimeError('accepted candidate has a noncanonical Object storage storage key')
     response = s3.get_object(Bucket=MEDIA_BUCKET, Key=storage_key)
     body_stream = response['Body']
     try:
@@ -627,7 +627,7 @@ def recover_materialized_candidate(row):
     finally:
         body_stream.close()
     if not body or len(body) > MAX_BYTES or hashlib.sha256(body).hexdigest() != content_hash:
-        raise RuntimeError('accepted candidate B2 bytes failed recovery integrity checks')
+        raise RuntimeError('accepted candidate Object storage bytes failed recovery integrity checks')
     head = s3.head_object(Bucket=MEDIA_BUCKET, Key=storage_key)
     if (
         int(head.get('ContentLength', -1)) != len(body)
@@ -635,12 +635,12 @@ def recover_materialized_candidate(row):
         or head.get('Metadata', {}).get('purpose') != 'puddle_open_location_photo'
         or str(head.get('ContentType') or '').lower() != 'image/jpeg'
     ):
-        raise RuntimeError('accepted candidate B2 metadata failed recovery integrity checks')
+        raise RuntimeError('accepted candidate Object storage metadata failed recovery integrity checks')
     width, height, perceptual, _ = inspect_canonical_media(body)
     candidate = dict(row)
     return {
         'location_id': str(row['location_id']), 'provider': row['provider'], 'external_photo_id': external_id,
-        'storage_backend': 'b2', 'storage_key': storage_key, 'content_hash': content_hash,
+        'storage_backend': 'object_store', 'storage_key': storage_key, 'content_hash': content_hash,
         'perceptual_hash': perceptual, 'byte_size': len(body), 'width': width, 'height': height,
         'attribution': candidate.get('attribution'), 'attribution_url': candidate.get('page_url'),
         'license': candidate.get('license'), 'license_url': candidate.get('license_url'),
@@ -731,14 +731,14 @@ def materialize_location(candidates):
             try:
                 complete_candidate(candidate_token, 'accepted', 'materialized', content_hash=content_hash, storage_key=key)
             except Exception as error:
-                # The authoritative photo claim and immutable B2 object are
+                # The authoritative photo claim and immutable Object storage object are
                 # already complete. A later reservation reconciles this row
                 # from global_photo_claims without downloading the asset again.
                 print(f'warning: candidate registry completion failed for {row["provider"]}/{row["external_photo_id"]}: {error}', flush=True)
             candidate_token = None
             return {
                 'location_id': location_id, 'provider': row['provider'], 'external_photo_id': row['external_photo_id'],
-                'storage_backend': 'b2', 'storage_key': key, 'content_hash': content_hash, 'perceptual_hash': perceptual,
+                'storage_backend': 'object_store', 'storage_key': key, 'content_hash': content_hash, 'perceptual_hash': perceptual,
                 'byte_size': len(normalized), 'width': width, 'height': height, 'attribution': candidate.get('attribution'),
                 'attribution_url': candidate.get('page_url'), 'license': candidate.get('license'), 'license_url': candidate.get('license_url'),
                 'source_dataset': candidate.get('source_dataset'),
@@ -774,8 +774,8 @@ def materialize_location(candidates):
 con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET preserve_insertion_order=false')
-B2_SECRET_SQL = f"""CREATE OR REPLACE SECRET b2_data_secret (TYPE S3,KEY_ID '{DATA_KEY_ID.replace("'","''")}',SECRET '{DATA_KEY.replace("'","''")}',REGION '{DATA_REGION.replace("'","''")}',ENDPOINT '{DATA_ENDPOINT.replace("'","''")}',URL_STYLE 'path',USE_SSL true);"""
-con.execute(B2_SECRET_SQL)
+OBJECT_SECRET_SQL = f"""CREATE OR REPLACE SECRET object_data_secret (TYPE S3,KEY_ID '{DATA_KEY_ID.replace("'","''")}',SECRET '{DATA_KEY.replace("'","''")}',REGION '{DATA_REGION.replace("'","''")}',ENDPOINT '{DATA_ENDPOINT.replace("'","''")}',URL_STYLE 'path',USE_SSL {'true' if DATA_ENDPOINT_URL.startswith('https://') else 'false'});"""
+con.execute(OBJECT_SECRET_SQL)
 
 
 def countries():
