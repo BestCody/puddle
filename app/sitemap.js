@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { dateIdeasPath } from '@/lib/app/date-ideas'
+import { hasWrittenSummary } from '@/lib/app/public-content'
 import {
   HUB_MAX_PAGES,
   HUB_PAGE_SIZE,
@@ -58,7 +59,9 @@ async function placeRoutes(markets) {
       const places = await getCachedMarketPlaces(markets[index].id)
       routeSets[index] = places
         .slice(0, PLACES_PER_MARKET)
-        .filter((place) => place?.slug)
+        // Hub rows do not carry hours or amenities. Keep only the indexability
+        // signals available here instead of advertising known noindex pages.
+        .filter((place) => place?.slug && (place.coverUrl || hasWrittenSummary(place)))
         .map((place) => ({
           path: `/places/${encodeURIComponent(place.slug)}`,
           changeFrequency: 'monthly',
@@ -82,7 +85,6 @@ async function placeRoutes(markets) {
 }
 
 async function buildSitemap() {
-  const lastModified = new Date().toISOString()
   const markets = listMarkets()
 
   const marketRoutes = markets.map((market) => ({
@@ -107,7 +109,6 @@ async function buildSitemap() {
 
   return [...staticRoutes, ...marketRoutes, ...dateRoutes, ...categoryRoutes, ...places].map((route) => ({
     url: `${site}${route.path}`,
-    lastModified,
     changeFrequency: route.changeFrequency,
     priority: route.priority
   }))

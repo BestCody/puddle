@@ -27,6 +27,18 @@ test('location moderation invalidates the independently cached public sitemap', 
   assert.match(admin, /revalidateTag\(tag, \{ expire: 0 \}\)/)
 })
 
+test('public sitemap avoids known noindex places and fabricated modification dates', async () => {
+  const [sitemap, placePage, listing] = await Promise.all([
+    read('app/sitemap.js'),
+    read('app/places/[slug]/page.js'),
+    read('components/public-listing.js')
+  ])
+  assert.match(sitemap, /place\.coverUrl \|\| hasWrittenSummary\(place\)/)
+  assert.doesNotMatch(sitemap, /lastModified/)
+  assert.match(placePage, /market=\{market\}/)
+  assert.match(listing, /dateIdeasPath\(market\)/)
+})
+
 test('post reports preserve evidence and moderator removal is enforced by RLS', async () => {
   const [migration, report, feed, admin, consoleSource, create] = await Promise.all([
     read('supabase/migrations/20260927211856_moderate_social_posts.sql'),

@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { dateIdeasPath } from '@/lib/app/date-ideas'
+import { marketPath } from '@/lib/app/seo-places'
 import { PuddleLogo } from './puddle-logo'
 import { ContentActionButton } from './content-action-button'
 import { PhotoFrame } from './photo-frame'
@@ -98,7 +100,20 @@ function PlaceBreadcrumbs({ trail = [] }) {
   </nav>
 }
 
-export function PublicLocationView({ location, similar = [], preview = false, trail = [] }) {
+function CityLinks({ market }) {
+  if (!market) return null
+  return <section className="public-section">
+    <div className="public-section-heading"><h2>More in {market.name}</h2></div>
+    <nav aria-label={`Explore ${market.name}`}>
+      <ul className="place-hub-links">
+        <li><Link href={marketPath(market)}>Things to do in {market.name}</Link></li>
+        <li><Link href={dateIdeasPath(market)}>Date ideas in {market.name}</Link></li>
+      </ul>
+    </nav>
+  </section>
+}
+
+export function PublicLocationView({ location, similar = [], preview = false, trail = [], market = null }) {
   const hours = Object.entries(location.opening_hours || {})
   return <div className="public-page"><PublicHeader /><main className="public-wrap">
     {preview ? <div className="preview-banner">Preview mode · only you can see this draft</div> : null}
@@ -109,5 +124,6 @@ export function PublicLocationView({ location, similar = [], preview = false, tr
     <Gallery items={location.gallery} title="Get a feel for the place." />
     <section className="public-safety-bar"><div><strong>Own or manage this place?</strong><p>Submit a claim without creating a separate organizer account.</p></div><div><Link href={`/places/${location.slug}/claim`}>Claim location</Link><Link href={`/report?target_type=location&target_id=${encodeURIComponent(location.id)}&return_to=${encodeURIComponent(`/places/${location.slug}`)}`}>Report details</Link></div></section>
     <SimilarGrid items={similar} />
+    <CityLinks market={market} />
   </main></div>
 }

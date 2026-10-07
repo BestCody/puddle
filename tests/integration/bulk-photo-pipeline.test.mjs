@@ -16,7 +16,7 @@ test('bulk photo datasets share the canonical metadata-to-object pipeline', asyn
   assert.match(builder, /iter_osv/)
   assert.match(builder, /iter_msls/)
   assert.match(builder, /iter_yfcc/)
-  assert.ok(builder.includes('YFCC_COLUMNS = [\n    "photo_id",\n    "user_id"'))
+  assert.match(builder, /YFCC_COLUMNS = \[\r?\n    "photo_id",\r?\n    "user_id"/)
   assert.match(builder, /YFCC_LEADING_ROW_COLUMNS/)
   assert.match(builder, /unsupported YFCC metadata row width/)
   assert.match(builder, /source_candidates/)

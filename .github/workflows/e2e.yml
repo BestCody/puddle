@@ -28,7 +28,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           status_sha='${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}'
-          curl --fail-with-body --silent --show-error --location \
+          curl --retry 3 --retry-delay 2 --retry-max-time 20 --fail-with-body --silent --show-error --location \
             --request POST \
             --header 'Accept: application/vnd.github+json' \
             --header "Authorization: Bearer $GH_TOKEN" \
@@ -190,7 +190,7 @@ jobs:
             state=failure
             description='Browser E2E suite failed'
           fi
-          curl --fail-with-body --silent --show-error --location \
+          curl --retry 3 --retry-delay 2 --retry-max-time 20 --fail-with-body --silent --show-error --location \
             --request POST \
             --header 'Accept: application/vnd.github+json' \
             --header "Authorization: Bearer $GH_TOKEN" \
