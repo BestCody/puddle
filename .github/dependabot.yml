@@ -5,9 +5,19 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
-    labels: [dependencies, security]
+    labels: [dependencies]
+    groups:
+      routine-npm:
+        applies-to: version-updates
+        patterns: ['*']
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    labels: [dependencies, security]
+    labels: [dependencies]
+    groups:
+      routine-actions:
+        applies-to: version-updates
+        patterns: ['*']
+        update-types: [minor, patch]
