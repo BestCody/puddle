@@ -65,7 +65,11 @@ test('Saved hydrates nearby cards and defers related places until the detail rea
     await map.scrollIntoViewIfNeeded()
     await expect(map.locator('.location-map-tiles')).toBeVisible()
 
-    await similar.scrollIntoViewIfNeeded()
+    // The section unmounts when the fixture has no related places, so scroll
+    // its stable container rather than racing the section's removal.
+    await page.locator('.saved-inline-detail-card').evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
     await expect.poll(() => similarOutcomes.filter((outcome) => outcome === 'response:200').length).toBe(1)
     expect(similarRequests.length - similarOutcomes.filter((outcome) => outcome.startsWith('failed:')).length).toBe(1)
     await page.locator('.saved-inline-detail-close').click()
