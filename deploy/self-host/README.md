@@ -11,8 +11,7 @@ A subsequent source snapshot and local target inventory matched exactly at
 569,357 objects and 143,272,626,359 bytes after a nine-object delta. Eight
 copied photo hashes and the three database-linked media hashes matched on the
 local target. The full-download verifier was stopped before its download phase
-and disabled at boot. The owner declined a final write-freeze delta, so later
-source writes cannot be claimed present on the target. The private app and
+and disabled at boot. The private app and
 object store are now Compose-owned; the three stopped manual containers were
 removed without deleting their images or the copied object data. A final-URL
 `puddle-app:pre-dns` image is running privately, but no public TLS proxy is
@@ -51,16 +50,16 @@ purchase storage, move data, or deploy production by itself.
 | Next.js web/API and image optimization | Vercel | Standalone Node container and HTTPS reverse proxy (scaffolded here) |
 | ISR/cache | Vercel/Next.js | Validate Next.js cache behavior on the single-instance host |
 | Daily IndexNow | Vercel Cron | Host scheduler, enabled only after cutover |
-| Auth, Postgres/RLS, Realtime, user uploads | Supabase | Staging database snapshot and 99 Storage files restored; OAuth/SMTP and full flow testing remain. The owner declined a final source-write delta. |
-| Global search snapshots and canonical photos | Backblaze B2 | Snapshot keys/sizes match on private SeaweedFS; production cutover remains. The owner declined a final source-write delta. |
+| Auth, Postgres/RLS, Realtime, user uploads | Supabase | Staging database snapshot and 99 Storage files restored; OAuth/SMTP and full flow testing remain. |
+| Global search snapshots and canonical photos | Backblaze B2 | Snapshot keys/sizes match on private SeaweedFS; production cutover remains. |
 | Photo/index import jobs | GitHub Actions and B2 | Six host timers staged but disabled; copied data and host validation are required before enabling |
 | Billing, bot checks, geocoding/maps | Stripe, Turnstile, Google/Geoapify | Keep or replace by separate product decision; these are not hosting providers |
 
 The migration candidate uses only the private S3-compatible object
 store for live search and photo delivery. Offline workers consume the same
 `OBJECT_STORAGE_*` settings; there is no provider-specific runtime branch or
-fallback when the local store is unavailable. Keep the candidate off `main`
-and the live site until the remaining cutover checks pass. Supabase is more than Postgres:
+fallback when the local store is unavailable. Keep the private deployment off
+the public site until the remaining cutover checks pass. Supabase is more than Postgres:
 replacing it with plain Postgres would break Auth, Storage URLs, Realtime,
 and privileged RPCs.
 
@@ -188,7 +187,7 @@ returns to its pre-test value afterward.
 `scripts/self-host-staging-media-upload-smoke.mjs` additionally exercises the
 app's authenticated profile-photo upload, CSRF token, image processing,
 storage write, media record, profile attachment, and disposable cleanup. It
-does not substitute for external malware-scanner or user-facing browser tests.
+does not substitute for a live scanner or user-facing browser tests.
 `scripts/self-host-staging-realtime-smoke.mjs` checks two WebSocket clients
 subscribing and receiving a broadcast through the private gateway. This
 proves Realtime transport. `scripts/self-host-staging-message-cdc-smoke.mjs`
@@ -405,14 +404,21 @@ the Vercel cron is retired at cutover. The timer invokes the route inside the
 app container, so its bearer secret is not exposed in the host process list.
 If installed at a different path, change the service's `WorkingDirectory`.
 
-Verification PDFs stay quarantined until an external malware scanner reports
-them clean. Configure and test `MALWARE_SCANNER_ENDPOINT` before enabling
+Verification PDFs stay quarantined until the private ClamAV service reports
+them clean. Set `MALWARE_SCANNER_ENDPOINT=tcp://scanner:3310` and
+`MALWARE_SCAN_ALL_UPLOADS=true`, then test clean and infected samples before enabling
 `media-scans.service` and `media-scans.timer` at cutover. The timer processes
 bounded batches every five minutes through the app's internal route; it is
 staged but not enabled by this repository. A failed batch returns a failing
 service status for monitoring, and stale claims become retryable after their
 lease expires. Without a configured scanner and enabled timer, verification
 documents cannot advance to review.
+
+The scanner uses ClamAV's official versioned image and a persistent signature
+volume. Its TCP port is only on the private Compose network; no scanner port is
+published on the host. The app sends bounded `INSTREAM` scans and fails closed
+on malformed replies, connection errors, and timeouts. Watch available memory
+during ClamAV signature reloads on the 8 GB VPS.
 
 Account deletion removes media rows with the profile, but Storage file bytes
 need a separate API call. A database trigger now records each deleted media

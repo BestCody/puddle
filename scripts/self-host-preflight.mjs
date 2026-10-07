@@ -87,11 +87,11 @@ export function validateSelfHostEnv(env) {
   if (configured(env.MALWARE_SCANNER_ENDPOINT)) {
     try {
       const scanner = new URL(env.MALWARE_SCANNER_ENDPOINT)
-      if (!['http:', 'https:'].includes(scanner.protocol) || !scanner.hostname || scanner.username || scanner.password) {
-        problems.push('MALWARE_SCANNER_ENDPOINT must be an HTTP(S) URL without embedded credentials.')
+      if (scanner.href !== 'tcp://scanner:3310' && scanner.href !== 'tcp://scanner:3310/') {
+        problems.push('MALWARE_SCANNER_ENDPOINT must use the private Compose scanner:3310 endpoint.')
       }
     } catch {
-      problems.push('MALWARE_SCANNER_ENDPOINT must be an HTTP(S) URL without embedded credentials.')
+      problems.push('MALWARE_SCANNER_ENDPOINT must use the private Compose scanner:3310 endpoint.')
     }
   }
   if (String(env.TURNSTILE_REQUIRED || '').trim().toLowerCase() !== 'false') {

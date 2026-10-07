@@ -20,7 +20,7 @@ The application proxy enforces restricted CORS, Fetch Metadata and Origin CSRF c
 
 ## Media scanning and evidence
 
-Images are decoded and re-encoded before storage. Verification PDFs remain quarantined. Configure `MALWARE_SCANNER_ENDPOINT` for an external scanner boundary and run `npm run media:scan`. When `MALWARE_SCAN_ALL_UPLOADS=true`, re-encoded images are scanned synchronously and the upload fails closed; verification PDFs remain quarantined and use the worker queue. The scanner receives the file bytes, SHA-256, MIME type, timestamp, and an optional HMAC signature. Clean files may be approved; infected or suspicious files remain rejected and create high-severity security events.
+Images are decoded and re-encoded before storage. Verification PDFs remain quarantined. On the self-hosted stack, set `MALWARE_SCANNER_ENDPOINT=tcp://scanner:3310` to use the private ClamAV service and run `npm run media:scan`. When `MALWARE_SCAN_ALL_UPLOADS=true`, re-encoded images are scanned synchronously and the upload fails closed; verification PDFs remain quarantined and use the worker queue. The scanner receives file bytes through ClamAV's bounded `INSTREAM` protocol. Clean files may be approved; infected files are rejected and create high-severity security events.
 
 Private files are delivered only through short-lived signed URLs after an authorization RPC. Moderation evidence uses immutable snapshots and optional legal holds. Do not release quarantined evidence to ordinary users.
 

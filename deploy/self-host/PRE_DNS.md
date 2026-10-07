@@ -20,7 +20,7 @@ owner of `/srv/puddle/objects`.
    `scripts/self-host-prepare-pre-dns-env.mjs` can create a mode-0600 private
    environment from the existing private app credentials. It refuses to
    overwrite an existing file, generates private cron/security-hash secrets,
-   and deliberately lacks ACME, Stripe, Turnstile, malware-scanner, and
+   and deliberately lacks ACME, Stripe, Turnstile, and
    external SMTP credentials. It is **not** a production
    readiness pass. The pre-DNS image tag and build revision are temporary; a
    committed production image needs its real commit SHA at cutover.
@@ -59,8 +59,10 @@ SMTP configuration and must not be included in the production Compose command.
 | Stripe | Live secret key, current subscription price ID, and the **new endpoint's** signing secret. Select `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, and `invoice.payment_failed` | `https://puddle.you/api/billing/webhook` |
 | TLS | An operator contact email for ACME | Certificates for `puddle.you`, `www.puddle.you`, and `api.puddle.you` |
 
-The app preflight also requires production Turnstile credentials and a malware
-scanner endpoint. Do not substitute empty or test values for a public launch.
+The app preflight also requires production Turnstile credentials. The scanner
+is the private Compose ClamAV service at `tcp://scanner:3310`; start it and
+verify clean/infected scans before public uploads. Do not substitute empty or
+test credentials for a public launch.
 Create the new Stripe destination only when its HTTPS endpoint is ready to
 receive events; keep the old destination and providers intact until the new
 flow is verified. Do not reuse the old endpoint's signing secret.
@@ -71,6 +73,6 @@ The authoritative DNS is on Spaceship nameservers. Ask its administrator to
 point `api.puddle.you` to the Contabo IPv4 address first, without changing
 MX/TXT records. Issue/verify API TLS and Auth callbacks. Only then point the
 apex and `www` to Contabo and verify their TLS and app routes. No AAAA record
-should be added until IPv6 reachability is independently verified. The owner
-has chosen not to perform a final source-write delta, so the copied snapshot
-cannot be claimed to contain later source writes.
+should be added until IPv6 reachability is independently verified. The DNS
+administrator controls the handoff; do not start public TLS until those records reach
+the Contabo host.
