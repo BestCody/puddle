@@ -22,7 +22,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.deployed_sha }}
+          ref: main
+          persist-credentials: false
+      - name: Confirm the deployed revision matches main
+        env:
+          DEPLOYED_SHA: ${{ inputs.deployed_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOYED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$DEPLOYED_SHA"
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
