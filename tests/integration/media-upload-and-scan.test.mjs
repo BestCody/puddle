@@ -1,9 +1,33 @@
 import assert from 'node:assert/strict'
-import { createServer } from 'node:http'
+import { createServer } from 'node:net'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { attachMediaAsset } from '../../lib/media/attach-asset.js'
 import { processPendingMediaScans } from '../../lib/security/media-scan-worker.js'
+import { scanBuffer } from '../../lib/security/malware-scanner.js'
+
+function fakeClamd(reply) {
+  return createServer((socket) => {
+    let request = Buffer.alloc(0)
+    socket.on('data', (chunk) => {
+      request = Buffer.concat([request, chunk])
+      const command = Buffer.from('zINSTREAM\0')
+      if (request.length < command.length + 4) return
+      assert.ok(request.subarray(0, command.length).equals(command))
+      let offset = command.length
+      while (request.length >= offset + 4) {
+        const length = request.readUInt32BE(offset)
+        offset += 4
+        if (length === 0) {
+          socket.end(`${reply}\0`)
+          return
+        }
+        if (request.length < offset + length) return
+        offset += length
+      }
+    })
+  })
+}
 
 function updateClient(result) {
   const state = { table: null, clauses: [] }
@@ -41,6 +65,7 @@ test('scan worker does not claim jobs without a configured scanner', async () =>
   delete process.env.MALWARE_SCANNER_ENDPOINT
   try {
     await assert.rejects(processPendingMediaScans({ rpc: () => { throw new Error('claimed'); } }), /scanner must be configured/)
+    assert.equal((await scanBuffer({ buffer: Buffer.from('sample') })).status, 'error')
   } finally {
     if (prior === undefined) delete process.env.MALWARE_SCANNER_ENDPOINT
     else process.env.MALWARE_SCANNER_ENDPOINT = prior
@@ -49,7 +74,7 @@ test('scan worker does not claim jobs without a configured scanner', async () =>
 
 test('scan worker passes claim attempt to completion and treats stale claims as failures', async () => {
   const prior = process.env.MALWARE_SCANNER_ENDPOINT
-  process.env.MALWARE_SCANNER_ENDPOINT = 'http://127.0.0.1:1'
+  process.env.MALWARE_SCANNER_ENDPOINT = 'tcp://127.0.0.1:1'
   const completions = []
   const admin = {
     rpc(name, args) {
@@ -71,14 +96,10 @@ test('scan worker passes claim attempt to completion and treats stale claims as 
 })
 
 test('scan worker completes a clean response with the claimed attempt', async () => {
-  const server = createServer((request, response) => {
-    request.resume()
-    response.setHeader('content-type', 'application/json')
-    response.end(JSON.stringify({ status: 'clean', provider: 'test-scanner' }))
-  })
+  const server = fakeClamd('stream: OK')
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
   const prior = process.env.MALWARE_SCANNER_ENDPOINT
-  process.env.MALWARE_SCANNER_ENDPOINT = `http://127.0.0.1:${server.address().port}`
+  process.env.MALWARE_SCANNER_ENDPOINT = `tcp://127.0.0.1:${server.address().port}`
   const completions = []
   const admin = {
     rpc(name, args) {
@@ -101,7 +122,7 @@ test('scan worker completes a clean response with the claimed attempt', async ()
 
 test('scan completion errors are surfaced instead of reported as successful jobs', async () => {
   const prior = process.env.MALWARE_SCANNER_ENDPOINT
-  process.env.MALWARE_SCANNER_ENDPOINT = 'http://127.0.0.1:1'
+  process.env.MALWARE_SCANNER_ENDPOINT = 'tcp://127.0.0.1:1'
   const admin = {
     rpc(name) {
       if (name === 'claim_media_scan_jobs_v1') return Promise.resolve({ data: [{ id: 9, claim_attempt: 1, bucket_id: 'quarantine', object_path: 'missing' }], error: null })
@@ -115,6 +136,22 @@ test('scan completion errors are surfaced instead of reported as successful jobs
     if (prior === undefined) delete process.env.MALWARE_SCANNER_ENDPOINT
     else process.env.MALWARE_SCANNER_ENDPOINT = prior
   }
+})
+
+test('scanner rejects an infected upload and fails closed on malformed replies', async () => {
+  const prior = process.env.MALWARE_SCANNER_ENDPOINT
+  for (const [reply, status] of [['stream: Eicar-Test-Signature FOUND', 'infected'], ['unexpected', 'error']]) {
+    const server = fakeClamd(reply)
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    try {
+      process.env.MALWARE_SCANNER_ENDPOINT = `tcp://127.0.0.1:${server.address().port}`
+      assert.equal((await scanBuffer({ buffer: Buffer.from('sample') })).status, status)
+    } finally {
+      await new Promise((resolve) => server.close(resolve))
+    }
+  }
+  if (prior === undefined) delete process.env.MALWARE_SCANNER_ENDPOINT
+  else process.env.MALWARE_SCANNER_ENDPOINT = prior
 })
 
 test('self-host media scans have a gated recurring runner and fenced SQL claims', async () => {

@@ -60,7 +60,7 @@ export async function POST(request) {
     const processed = await processMediaFile(file, purpose)
     let externalScan = null
     if (String(process.env.MALWARE_SCAN_ALL_UPLOADS || '').toLowerCase() === 'true' && processed.scanStatus === 'clean') {
-      externalScan = await scanBuffer({ buffer: processed.buffer, mimeType: processed.mimeType, filename: processed.originalName, sha256: processed.sha256 })
+      externalScan = await scanBuffer({ buffer: processed.buffer })
       if (externalScan.status !== 'clean') throw new Error(externalScan.status === 'infected' || externalScan.status === 'suspicious' ? 'The upload was rejected by malware scanning.' : 'Malware scanning is temporarily unavailable.')
     }
 

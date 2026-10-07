@@ -20,7 +20,7 @@ const valid = {
   OBJECT_STORAGE_SECRET_ACCESS_KEY: 'local-secret',
   CRON_SECRET: 'worker-secret',
   SECURITY_HASH_SECRET: 'a'.repeat(32),
-  MALWARE_SCANNER_ENDPOINT: 'http://scanner:3001/scan',
+  MALWARE_SCANNER_ENDPOINT: 'tcp://scanner:3310',
   STRIPE_SECRET_KEY: 'stripe-secret',
   STRIPE_WEBHOOK_SECRET: 'webhook-secret',
   STRIPE_TINDER_PRICE_ID: 'price-test',
@@ -65,7 +65,7 @@ test('self-host preflight requires a scanner before verification uploads can ent
   const absent = validateSelfHostEnv({ ...valid, MALWARE_SCANNER_ENDPOINT: '' })
   assert.ok(absent.some((problem) => problem.includes('MALWARE_SCANNER_ENDPOINT')))
   const malformed = validateSelfHostEnv({ ...valid, MALWARE_SCANNER_ENDPOINT: 'file:///tmp/scanner' })
-  assert.ok(malformed.some((problem) => problem.includes('HTTP(S) URL')))
+  assert.ok(malformed.some((problem) => problem.includes('private Compose scanner:3310')))
 })
 
 test('self-host preflight rejects the temporary pre-DNS image revision', () => {

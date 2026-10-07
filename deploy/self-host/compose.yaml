@@ -1,4 +1,19 @@
 services:
+  scanner:
+    image: clamav/clamav:1.5.1
+    volumes:
+      - scanner_signatures:/var/lib/clamav
+    expose:
+      - "3310"
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "20m"
+        max-file: "5"
+    security_opt:
+      - no-new-privileges:true
+
   objects:
     image: chrislusf/seaweedfs:4.47
     command: ["mini", "-dir=/data", "-master.volumeSizeLimitMB=30000", "-admin.ui=false"]
@@ -37,6 +52,8 @@ services:
       - ../../.env.selfhost
     depends_on:
       objects:
+        condition: service_started
+      scanner:
         condition: service_started
     init: true
     restart: unless-stopped
@@ -98,6 +115,7 @@ services:
       - puddle_edge
 
 volumes:
+  scanner_signatures:
   next_cache:
   caddy_data:
   caddy_config:
