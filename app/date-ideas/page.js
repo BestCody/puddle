@@ -2,9 +2,8 @@ import { PlaceHub, marketLinks } from '@/components/place-hub'
 import { DATE_GROUPS, dateIdeasPath } from '@/lib/app/date-ideas'
 import { listMarkets, marketRegionLabel } from '@/lib/app/seo-places'
 import { breadcrumbStructuredData } from '@/lib/app/public-content'
-import { serializeStructuredData } from '@/lib/app/structured-data'
+import { StructuredData } from '@/components/structured-data'
 
-export const revalidate = 3600
 
 const title = 'Date ideas, city by city'
 const description = 'Coffee, dinner, drinks, walks, museums and things to do together - drawn from real places rather than a generic list. Pick a city to see what is near you.'
@@ -51,7 +50,7 @@ export default function DateIdeasIndexPage() {
   })
 
   return <>
-    {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
+    <StructuredData data={breadcrumbs} />
     <PlaceHub
       trail={trail}
       title="Date ideas, city by city."

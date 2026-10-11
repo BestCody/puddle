@@ -3,15 +3,8 @@ import { PublicLocationView } from '@/components/public-listing'
 import { breadcrumbStructuredData, placeIsIndexable, placeStructuredData } from '@/lib/app/public-content'
 import { getCachedPublicLocation, getCachedPublicLocationRecommendations } from '@/lib/app/public-location-cache'
 import { findMarketForPoint, marketPath } from '@/lib/app/seo-places'
-import { serializeStructuredData } from '@/lib/app/structured-data'
+import { StructuredData } from '@/components/structured-data'
 
-export const revalidate = 3600
-
-// The catalogue is too large to enumerate during builds. Generate each place
-// on its first request and retain the result with on-demand ISR.
-export async function generateStaticParams() {
-  return []
-}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
@@ -62,8 +55,8 @@ export default async function PlacePage({ params }) {
   ]
   const breadcrumbs = breadcrumbStructuredData(trail, site)
   return <>
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(structured) }} />
-    {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
+    <StructuredData data={structured} />
+    <StructuredData data={breadcrumbs} />
     <PublicLocationView {...result} similar={similar} trail={trail} market={market} />
   </>
 }

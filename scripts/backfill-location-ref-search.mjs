@@ -4,7 +4,7 @@ import { connectSelfHostPostgres } from './self-host-postgres-query.mjs'
 
 const { querySql, close } = await connectSelfHostPostgres({ connectionString: process.env.PUDDLE_SELF_HOST_DB_URL })
 try {
-const checkpointId = 'global-location-ref-previews-v2'
+const checkpointId = 'global-location-ref-previews-v3'
 // Full catalogue decoding belongs only to this offline backfill. Keep its
 // batches below the interactive reader's bounded timeout and memory budget.
 const batchSize = 16
@@ -28,12 +28,13 @@ for (;;) {
   const rows = locations.map(locationReferenceMetadata)
   if (rows.length) {
     await querySql(`
-      insert into public.location_ref_search_index(location_id,name,slug,category,city,latitude,longitude,photo_hash)
-      select x.location_id,x.name,x.slug,x.category,x.city,x.latitude,x.longitude,x.photo_hash
-      from jsonb_to_recordset($1::jsonb) as x(location_id uuid,name text,slug text,category text,city text,latitude double precision,longitude double precision,photo_hash text)
+      insert into public.location_ref_search_index(location_id,name,slug,category,city,latitude,longitude,photo_hash,summary,neighborhood,is_published)
+      select x.location_id,x.name,x.slug,x.category,x.city,x.latitude,x.longitude,x.photo_hash,x.summary,x.neighborhood,x.is_published
+      from jsonb_to_recordset($1::jsonb) as x(location_id uuid,name text,slug text,category text,city text,latitude double precision,longitude double precision,photo_hash text,summary text,neighborhood text,is_published boolean)
       on conflict (location_id) do update set
         name=excluded.name,slug=excluded.slug,category=excluded.category,city=excluded.city,
-        latitude=excluded.latitude,longitude=excluded.longitude,photo_hash=excluded.photo_hash,indexed_at=now()
+        latitude=excluded.latitude,longitude=excluded.longitude,photo_hash=excluded.photo_hash,
+        summary=excluded.summary,neighborhood=excluded.neighborhood,is_published=excluded.is_published,indexed_at=now()
     `, [JSON.stringify(rows)])
   }
 

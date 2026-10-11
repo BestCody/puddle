@@ -3,13 +3,8 @@ import { PlaceGroups, PlaceHub, marketLinks } from '@/components/place-hub'
 import { DATE_MIN_INDEXABLE, dateIdeasPath, getDateIdeas } from '@/lib/app/date-ideas'
 import { PLACE_CATEGORIES, listMarkets, marketPath, marketRegionLabel } from '@/lib/app/seo-places'
 import { breadcrumbStructuredData, placeListStructuredData } from '@/lib/app/public-content'
-import { serializeStructuredData } from '@/lib/app/structured-data'
+import { StructuredData } from '@/components/structured-data'
 
-export const revalidate = 3600
-
-export async function generateStaticParams() {
-  return []
-}
 
 function copy(market) {
   const region = marketRegionLabel(market)
@@ -72,8 +67,8 @@ export default async function DateIdeasPage({ params }) {
   const otherMarkets = listMarkets().filter((entry) => entry.id !== market.id).slice(0, 12)
 
   return <>
-    {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
-    {itemList ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(itemList) }} /> : null}
+    <StructuredData data={breadcrumbs} />
+    <StructuredData data={itemList} />
     <PlaceHub
       trail={trail}
       title={title}

@@ -13,6 +13,7 @@ export default {
     '@/lib/supabase/server': './mocks/data.js',
     '@/lib/app/render-product-page': './mocks/render-product-page.js',
     '@/lib/app/global-location-search': './mocks/data.js',
+    '@/lib/app/location-previews': './mocks/data.js',
     '@/lib/app/membership-data': './mocks/data.js',
     '@/lib/app/location-plans-data': './mocks/data.js',
     '@/lib/app/location-map-data': './mocks/data.js'

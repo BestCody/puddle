@@ -3,13 +3,14 @@ import test from 'node:test'
 import { locationReferenceMetadata, savedLocationOption } from '../../lib/app/location-reference-preview.js'
 
 const hash = 'a'.repeat(64)
-const location = { id: 'place', name: 'Park', slug: 'park', category: 'park', city: 'Toronto', latitude: 0, longitude: 0, primary_photo: { content_hash: hash } }
+const location = { id: 'place', name: 'Park', slug: 'park', category: 'park', city: 'Toronto', status: 'published', latitude: 0, longitude: 0, primary_photo: { content_hash: hash } }
 
 test('referenced-location preview retains real coordinates and only canonical photo identity', () => {
   const metadata = locationReferenceMetadata(location)
   assert.equal(metadata.latitude, 0)
   assert.equal(metadata.longitude, 0)
   assert.equal(metadata.photo_hash, hash)
+  assert.equal(metadata.is_published, true)
   assert.deepEqual(savedLocationOption(metadata), {
     id: 'place', name: 'Park', title: 'Park', slug: 'park', category: 'park', city: 'Toronto', latitude: 0, longitude: 0,
     cover_url: `/api/open-photo/${hash}`

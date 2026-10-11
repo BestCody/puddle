@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { isPublicCataloguePath, isPublicRecommendationPath } from '../../lib/security/public-cache-path.js'
 
-test('only public read-only catalogue routes qualify for shared page caching', () => {
+test('public catalogue route classification excludes mutations and private data', () => {
   for (const path of ['/places', '/places/toronto-park', '/places/in/toronto', '/places/in/toronto/parks', '/date-ideas', '/date-ideas/toronto']) {
     assert.equal(isPublicCataloguePath(path), true, path)
   }
@@ -17,7 +17,7 @@ test('only public read-only catalogue routes qualify for shared page caching', (
 test('proxy bypasses session work only for public catalogue reads and preserves protected routes', async () => {
   const proxy = await readFile(new URL('../../proxy.js', import.meta.url), 'utf8')
   assert.match(proxy, /publicNoSessionPaths\.has\(pathname\) \|\| isPublicCataloguePath\(pathname\)/)
-  assert.match(proxy, /if \(isPublicCataloguePath\(pathname\) \|\| isPublicRecommendationPath\(pathname\)\) return response/)
-  assert.match(proxy, /cacheablePublicPaths\.has\(pathname\)/)
+  assert.match(proxy, /if \(isPublicCataloguePath\(pathname\)\) \{ response\.headers\.set\('Cache-Control', 'no-store'\)/)
+  assert.match(proxy, /if \(isPublicRecommendationPath\(pathname\)\) return response/)
   assert.match(proxy, /const isProtected = matchesPrefix\(pathname, protectedPrefixes\)/)
 })

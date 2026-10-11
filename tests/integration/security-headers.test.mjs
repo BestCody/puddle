@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { cspValue } from '../../lib/security/headers.js'
+import { cspValue, requestContentSecurityPolicy, applySecurityHeaders } from '../../lib/security/headers.js'
+
+test('forwarded CSP and response CSP use the same nonce and framing rules', () => {
+  for (const path of ['/places/in/toronto', '/landing-demo/swipe', '/account?embedded=1']) {
+    const url = new URL(path, 'https://puddle.you')
+    const request = { url: url.href, nextUrl: url, headers: new Headers() }
+    const response = { headers: new Headers() }
+    const nonce = 'fresh-request-nonce'
+    applySecurityHeaders(response, { request, nonce })
+    assert.equal(response.headers.get('Content-Security-Policy'), requestContentSecurityPolicy(request, nonce))
+    assert.match(response.headers.get('Content-Security-Policy'), /'nonce-fresh-request-nonce'/)
+  }
+})
 
 test('CSP permits only the Supabase websocket origin matching the configured transport', () => {
   const original = process.env.NEXT_PUBLIC_SUPABASE_URL

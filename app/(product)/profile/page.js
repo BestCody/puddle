@@ -3,9 +3,9 @@ import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { ProfileAvatarEditor } from '@/components/profile-avatar-editor'
 import { PhotoFrame } from '@/components/photo-frame'
-import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
+import { getLocationPreviews } from '@/lib/app/location-previews'
+import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { requiredQuery } from '@/lib/app/required-query'
 import { signOut } from '@/app/auth/actions'
 import { ProfileFriendButton } from '@/components/profile-friend-button'
@@ -63,24 +63,6 @@ async function readFriendCount(supabase) {
   return count
 }
 
-async function globalLocations(ids, traceId) {
-  const unique = [...new Set(ids.map(String).filter(Boolean))]
-  if (!unique.length) return []
-  return getGlobalLocationsByIds(unique, { traceId })
-}
-
-function profileLocationShape(location) {
-  if (!location) return null
-  const photoHash = location.primary_photo && typeof location.primary_photo === 'object'
-    ? location.primary_photo.content_hash
-    : null
-  return {
-    ...location,
-    kind: location.kind || location.category || 'place',
-    cover_path: openPhotoUrlForHash(photoHash)
-  }
-}
-
 export default async function ProfilePage({ searchParams }) {
   const params = await searchParams
   const customizing = params?.customize === '1'
@@ -92,32 +74,19 @@ export default async function ProfilePage({ searchParams }) {
       .eq('author_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(6))
-    const saveRowsPromise = requiredQuery(session.supabase
-      .from('user_content_states')
-      .select('location_id,pinned_at,created_at')
-      .eq('profile_id', session.user.id)
-      .eq('state', 'saved')
-      .not('location_id', 'is', null)
-      .order('pinned_at', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false })
-      .limit(12))
-    const friendsPromise = requiredQuery(session.supabase.rpc('social_friends_v2', { before_name: null, before_id: null, result_limit: 4 }))
+    const saveRowsPromise = getLocationPlansPage(session, { tab: 'saved', limit: 4 })
+    const friendsPromise = requiredQuery(session.supabase.rpc('social_friend_picker_v2', { before_name: null, before_id: null, result_limit: 4 }))
     const savedCountPromise = readSavedLocationCount(session.supabase, session.user.id)
     const friendCountPromise = readFriendCount(session.supabase)
-    // Location hydration depends on the two lists, not on the independent
-    // friend/count reads. Start it as soon as the list IDs are available.
-    const globalRowsPromise = Promise.all([postRowsPromise, saveRowsPromise]).then(([postRows, saveRows]) => globalLocations([
-      ...postRows.map((row) => row.location_id),
-      ...saveRows.map((row) => row.location_id)
-    ], session.traceId || null))
-    const [postRows, saveRows, friends, savedLocationCount, friendCount, globalRows] = await Promise.all([
+    // Only post previews need enrichment; Saved already returns display records.
+    const globalRowsPromise = postRowsPromise.then(postRows => getLocationPreviews(session.supabase, postRows.map(row => row.location_id)))
+    const [postRows, savedPage, friends, savedLocationCount, friendCount, globalRows] = await Promise.all([
       postRowsPromise, saveRowsPromise, friendsPromise, savedCountPromise, friendCountPromise, globalRowsPromise
     ])
-    const locations = new Map(globalRows.map((row) => [String(row.id), profileLocationShape(row)]))
+    const locations = new Map(globalRows.map(row => [String(row.id), { ...row, kind: row.category }]))
     const posts = postRows.map((post) => ({ ...post, locations: locations.get(String(post.location_id)) || null }))
-    const saves = saveRows.map((item) => ({ ...item, locations: locations.get(String(item.location_id)) || null }))
-    const visiblePosts = posts.filter((post) => post.locations?.status === 'published')
-    const visibleSaves = saves.filter((item) => item.locations?.status === 'published')
+    const visiblePosts = posts.filter(post => post.locations)
+    const visibleSaves = savedPage.items.map(item => ({ ...item, locations: { name: item.title, slug: item.slug } }))
     const recentPost = visiblePosts[0] || null
     const recentLocation = recentPost?.locations || null
     const recentCover = recentLocation?.cover_path || null

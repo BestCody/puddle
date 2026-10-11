@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
-import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
+import { getLocationPreviews } from '@/lib/app/location-previews'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { safeSecurityError } from '@/lib/security/request'
@@ -9,17 +8,6 @@ export const dynamic = 'force-dynamic'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const MAX_LOCATION_IDS = 100
-
-function locationShape(row) {
-  const photo = row?.primary_photo && typeof row.primary_photo === 'object' ? row.primary_photo : null
-  return {
-    id: row.id,
-    name: row.name || 'Shared place',
-    city: row.city || row.region || row.country || null,
-    slug: row.slug || null,
-    cover_path: openPhotoUrlForHash(photo?.content_hash)
-  }
-}
 
 export async function GET(request) {
   if (!isSupabaseConfigured()) return NextResponse.json({ error: 'Location metadata is temporarily unavailable.' }, { status: 503 })
@@ -37,8 +25,8 @@ export async function GET(request) {
   if (!ids.length) return NextResponse.json({ items: [] })
 
   try {
-    const locations = await getGlobalLocationsByIds(ids)
-    return NextResponse.json({ items: locations.map(locationShape) })
+    const locations = await getLocationPreviews(supabase, ids)
+    return NextResponse.json({ items: locations.map(({ id, name, city, slug, cover_path }) => ({ id, name, city, slug, cover_path })) })
   } catch (error) {
     return NextResponse.json({ error: safeSecurityError(error, 'Location metadata could not be loaded.') }, { status: 503 })
   }
