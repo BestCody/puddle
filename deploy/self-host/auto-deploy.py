@@ -24,7 +24,11 @@ PUBLIC_KEYS = (
     'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
     'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY',
 )
-PRESERVE = ('.env*', '.venv/', '.git/', 'node_modules/', '.next/', '.e2e-local/', '__pycache__/')
+PRESERVE = (
+    '.env*', '.venv/', '.git/', 'node_modules/', '.next/', '.e2e-local/', '__pycache__/',
+    '/scripts/global-data/', '/scripts/self-host-run-data-job.mjs',
+    '/deploy/self-host/puddle-data@*', '/deploy/self-host/data-jobs-requirements.*',
+)
 MANUAL_FILES = (
     'deploy/self-host/compose.yaml', 'deploy/self-host/Caddyfile',
     'deploy/self-host/supabase-compose.override.yaml',
@@ -191,33 +195,32 @@ def deploy(app, sha, image, actor):
             finally:
                 subprocess.run(['docker', 'rm', '-f', candidate], stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL)
-            # Share the workers' existing lock only for activation, not downloads/builds.
-            with Path('/var/lib/puddle-jobs/global.lock').open('a') as jobs:
-                fcntl.flock(jobs, fcntl.LOCK_EX)
-                previous = active_release()
-                health('self-host-app-1', previous['sha'])
-                old_source = work / 'previous'
-                old_source.mkdir()
-                sync_source(app, old_source)
-                try:
-                    sync_source(source, app)
-                    atomic_json(OVERRIDE, release_override(image, sha))
-                    run(compose(app, OVERRIDE) + ['up', '-d', '--no-build', '--no-deps',
-                        '--pull', 'never', '--wait', '--wait-timeout', '120', 'app'], env=env)
-                    health('self-host-app-1', sha)
-                    site = public_config(app)['NEXT_PUBLIC_SITE_URL']
-                    public = json.loads(run(['curl', '--fail', '--silent', '--show-error',
-                        '--max-time', '20', '--resolve', f'{urlsplit(site).hostname}:443:127.0.0.1',
-                        site.rstrip('/') + '/api/health'], capture=True))
-                    if not public.get('ok') or public.get('buildSha') != sha:
-                        raise RuntimeError('Proxy/public revision gate failed.')
-                except Exception:
-                    sync_source(old_source, app)
-                    atomic_json(OVERRIDE, release_override(previous['image'], previous['sha']))
-                    run(compose(app, OVERRIDE) + ['up', '-d', '--no-build', '--no-deps',
-                        '--pull', 'never', '--wait', '--wait-timeout', '120', 'app'])
-                    raise
-                atomic_json(STATE / 'current.json', {'sha': sha, 'image': image, 'deployed_at': int(time.time())})
+            # Photo-worker code/dependencies are excluded from app sync. Imports can
+            # continue on their unchanged release without blocking app activation.
+            previous = active_release()
+            health('self-host-app-1', previous['sha'])
+            old_source = work / 'previous'
+            old_source.mkdir()
+            sync_source(app, old_source)
+            try:
+                sync_source(source, app)
+                atomic_json(OVERRIDE, release_override(image, sha))
+                run(compose(app, OVERRIDE) + ['up', '-d', '--no-build', '--no-deps',
+                    '--pull', 'never', '--wait', '--wait-timeout', '120', 'app'], env=env)
+                health('self-host-app-1', sha)
+                site = public_config(app)['NEXT_PUBLIC_SITE_URL']
+                public = json.loads(run(['curl', '--fail', '--silent', '--show-error',
+                    '--max-time', '20', '--resolve', f'{urlsplit(site).hostname}:443:127.0.0.1',
+                    site.rstrip('/') + '/api/health'], capture=True))
+                if not public.get('ok') or public.get('buildSha') != sha:
+                    raise RuntimeError('Proxy/public revision gate failed.')
+            except Exception:
+                sync_source(old_source, app)
+                atomic_json(OVERRIDE, release_override(previous['image'], previous['sha']))
+                run(compose(app, OVERRIDE) + ['up', '-d', '--no-build', '--no-deps',
+                    '--pull', 'never', '--wait', '--wait-timeout', '120', 'app'])
+                raise
+            atomic_json(STATE / 'current.json', {'sha': sha, 'image': image, 'deployed_at': int(time.time())})
             print(json.dumps({'deployed': True, 'sha': sha, 'image': image}))
 
 
