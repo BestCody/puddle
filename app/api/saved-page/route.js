@@ -15,7 +15,7 @@ export async function GET(request) {
   const query = String(params.get('q') || '').trim().slice(0, 100)
   try {
     const page = await getLocationPlansPage({ supabase, user }, {
-      tab: 'saved', cursor, category, query, lightweightSaved: true
+      tab: 'saved', cursor, category, query
     })
     return NextResponse.json(page, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch {

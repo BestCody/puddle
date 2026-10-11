@@ -1,29 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
-import { filterModeratedLocationRows } from '@/lib/app/location-moderation-overlay'
-import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
+import { savedLocationOption } from '@/lib/app/location-reference-preview'
 import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 
 export const dynamic = 'force-dynamic'
 
 const SAVED_OPTION_LIMIT = 50
-
-function optionShape(row) {
-  const photo = row?.primary_photo && typeof row.primary_photo === 'object' ? row.primary_photo : {}
-  return {
-    id: row.id,
-    name: row.name || 'Saved place',
-    title: row.name || 'Saved place',
-    slug: row.slug || null,
-    city: row.city || row.region || row.country || null,
-    neighborhood: row.neighborhood || null,
-    latitude: row.latitude ?? null,
-    longitude: row.longitude ?? null,
-    category: row.category || row.kind || 'place',
-    cover_url: openPhotoUrlForHash(photo.content_hash)
-  }
-}
 
 export async function GET(request) {
   if (!isSupabaseConfigured()) return NextResponse.json({ items: [] }, { status: 503 })
@@ -38,38 +20,20 @@ export async function GET(request) {
     .filter(Boolean)
     .slice(0, SAVED_OPTION_LIMIT)
 
-  let ids = requestedIds
-  if (requestedIds.length) {
-    const { data: ownedRows, error } = await supabase
-      .from('user_content_states')
-      .select('location_id')
-      .eq('profile_id', user.id)
-      .eq('state', 'saved')
-      .in('location_id', requestedIds)
-    if (error) return NextResponse.json({ items: [] }, { status: 503 })
-    const owned = new Set((ownedRows || []).map((row) => String(row.location_id)))
-    ids = requestedIds.filter((id) => owned.has(id))
-  } else {
-    const { data: savedRows, error } = await supabase
-      .from('user_content_states')
-      .select('location_id,created_at')
-      .eq('profile_id', user.id)
-      .eq('state', 'saved')
-      .not('location_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(SAVED_OPTION_LIMIT)
-    if (error) return NextResponse.json({ error: 'Saved places are unavailable.' }, { status: 503 })
-    if (!savedRows?.length) return NextResponse.json({ items: [] })
-    ids = [...new Set(savedRows.map((row) => String(row.location_id || '')).filter(Boolean))]
+  if (requestedIds.some((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+    return NextResponse.json({ error: 'Invalid location ID.' }, { status: 400 })
   }
 
-  if (!ids.length) return NextResponse.json({ items: [] })
-
   try {
-    const locations = await getGlobalLocationsByIds(ids)
-    const visible = await filterModeratedLocationRows(supabase, locations)
-    const byId = new Map(visible.map((row) => [String(row.id), optionShape(row)]))
-    return NextResponse.json({ items: ids.map((id) => byId.get(id)).filter(Boolean) })
+    const { data, error } = await supabase.rpc('location_saved_options_v1', {
+      requested_ids: requestedIds.length ? requestedIds : null
+    })
+    if (error || !Array.isArray(data)) throw error || new Error('Invalid saved preview response.')
+    const items = data.map(savedLocationOption)
+    const byId = new Map(items.map((item) => [item.id, item]))
+    return NextResponse.json({ items: requestedIds.length ? requestedIds.map((id) => byId.get(id)).filter(Boolean) : items }, {
+      headers: { 'Cache-Control': 'private, no-store' }
+    })
   } catch {
     return NextResponse.json({ items: [] }, { status: 503 })
   }

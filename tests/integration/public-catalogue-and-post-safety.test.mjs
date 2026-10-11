@@ -47,7 +47,7 @@ test('feed and saved previews use coordinates already in their bounded payloads'
   ])
   assert.match(feedData, /scanVisibleFeedPage\(/)
   assert.match(feedData, /latitude: row\.latitude \?\? null/)
-  assert.match(savedOptions, /latitude: row\.latitude \?\? null/)
+  assert.match(savedOptions, /location_saved_options_v1/)
   assert.doesNotMatch(visual, /\/api\/saved-location\//)
   assert.match(visual, /onError=\{\(\) => setFailedImage\(image\)\}/)
   assert.match(account, /notificationResult\.error \|\| preferenceResult\.error \|\| passResult\.error/)

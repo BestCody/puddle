@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { GLOBAL_LOCATION_FIXTURES } from './global-location-fixture.mjs'
 import { admin, completeProfileDirect, createConfirmedUser, signInThroughApi } from './support.mjs'
 
-test('Saved hydrates nearby cards and defers related places until the detail reaches them', async ({ page }) => {
+test('Saved titles and links arrive with the page; only opened details load related places', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 560 })
   const account = await createConfirmedUser({ displayName: 'Saved Loading Tester' })
   const previewRequests = []
@@ -28,7 +28,8 @@ test('Saved hydrates nearby cards and defers related places until the detail rea
     if (refsError) throw refsError
     const { error: indexError } = await admin.from('location_ref_search_index').upsert(
       GLOBAL_LOCATION_FIXTURES.map((place) => ({
-        location_id: place.id, name: place.name, slug: place.slug, category: place.category, city: place.city
+        location_id: place.id, name: place.name, slug: place.slug, category: place.category, city: place.city,
+        latitude: place.latitude, longitude: place.longitude
       }))
     )
     if (indexError) throw indexError
@@ -41,15 +42,14 @@ test('Saved hydrates nearby cards and defers related places until the detail rea
     const cards = page.getByTestId('saved-card')
     await expect(cards).toHaveCount(GLOBAL_LOCATION_FIXTURES.length)
     const last = cards.last()
-    const lastId = await last.getAttribute('data-saved-preview-id')
-    const requested = () => new Set(previewRequests.flatMap((url) => String(url.searchParams.get('ids') || '').split(',').filter(Boolean)))
-    await expect.poll(() => previewRequests.length).toBeGreaterThan(0)
+    await expect(last.locator('h2 a')).toHaveAttribute('href', /\/plans\//)
+    await expect(last.locator('h2')).not.toContainText('Saved place')
     expect(await last.evaluate((element) => element.getBoundingClientRect().top > innerHeight * 1.25)).toBe(true)
-    expect(requested().has(lastId)).toBe(false)
+    expect(previewRequests).toHaveLength(0)
 
     await last.scrollIntoViewIfNeeded()
-    await expect.poll(() => requested().has(lastId)).toBe(true)
     await expect(last.locator('h2')).not.toContainText('Saved place')
+    expect(previewRequests).toHaveLength(0)
 
     await cards.first().locator('[data-saved-morph-link]').first().click()
     await expect(page.getByRole('dialog', { name: /details/ })).toBeVisible()

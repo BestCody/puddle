@@ -40,15 +40,6 @@ const swipeItems = Object.freeze(swipePlaces.map((place) => ({
   photo_urls: [place.image.webp]
 })))
 
-const savedPreviewMap = Object.freeze(Object.fromEntries(savedPlaces.map((place) => [place.id, {
-  id: place.id,
-  title: place.title,
-  slug: place.id,
-  city: place.city,
-  category: place.category,
-  cover_url: place.image.webp
-}])))
-
 const landingFeed = Object.freeze({
   items: [{
     id: 'landing-post-maple-grove',
@@ -180,7 +171,7 @@ function SavedDemo({ onNavigate }) {
     if (category !== 'All' && item.category !== category) return false
     return `${item.title} ${item.city}`.toLowerCase().includes(query.trim().toLowerCase())
   }), [category, query])
-  const savedItems = useMemo(() => filtered.map((item) => ({ location_id: item.id })), [filtered])
+  const savedItems = useMemo(() => filtered.map((item) => ({ ...item, location_id: item.id, slug: item.id, cover_url: item.image.webp })), [filtered])
 
   function openSaved(item) {
     const place = savedPlaces.find((candidate) => candidate.id === item.location_id)
@@ -216,8 +207,6 @@ function SavedDemo({ onNavigate }) {
         photoClassName="landing-demo-saved-photo"
         copyClassName="landing-demo-saved-copy"
         metaClassName="landing-demo-saved-meta"
-        initialPreviews={savedPreviewMap}
-        loadPreviews={false}
         imageLoading="eager"
         onOpen={openSaved}
         classPrefix="landing-demo-saved"
