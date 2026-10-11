@@ -1,5 +1,14 @@
 # Puddle single-machine migration
 
+## Application deployments
+
+Pushes to `main` now release the app to Contabo **after `Validate` passes**.
+Other branches/PRs are checks-only. See [automatic deployments](AUTO_DEPLOY.md)
+for the release boundary, setup, and how to pause deployments. SQL and
+infrastructure changes still require explicit review/application; the app
+workflow does not replay migrations or restart the data services. The older
+migration notes below are historical, not the automatic release procedure.
+
 This directory stages the **single-machine primary stack**: Puddle, HTTPS,
 self-hosted Supabase, and private S3-compatible canonical objects. A Contabo
 staging host runs the pinned Supabase stack and a private SeaweedFS object
