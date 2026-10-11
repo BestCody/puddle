@@ -37,7 +37,7 @@ export function validateJob(job, env) {
     throw new Error('SUPABASE_URL must not point to a different Supabase project.')
   }
   if (job === 'materialize') {
-    for (const key of ['SUPABASE_SECRET_KEY']) {
+    for (const key of ['SUPABASE_SECRET_KEY', 'MAPILLARY_ACCESS_TOKEN']) {
       if (!env[key]) throw new Error(`${key} is required for materialization.`)
     }
   }

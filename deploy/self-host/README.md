@@ -459,10 +459,23 @@ runuser -u puddle -- /opt/puddle/.venv/bin/python \
   /opt/puddle/deploy/self-host/verify-data-worker.py
 ```
 
-The import/native-library preflight passed as the non-root worker; no data job
-has run. Set job credentials, provider quotas and any
-global-data tuning in `.env.jobs`. The service executes as a non-root `puddle`
-user and writes temporary index state only in `/var/lib/puddle-jobs`.
+Run the import/native-library preflight as the non-root worker before enabling
+jobs. Set provider credentials, quotas, and any global-data tuning in
+`.env.jobs`. The service executes as a non-root `puddle`
+user and writes temporary index state only in `/var/lib/puddle-jobs`. Generate
+the initial private environment from the active app environment with
+`node scripts/self-host-prepare-jobs-env.mjs --source=/opt/puddle/.env.selfhost --output=/opt/puddle/.env.jobs --confirm=private-prep`.
+The generator copies only required local credentials, switches object access
+to loopback, and starts with bounded discovery and materialization settings.
+The shared service lock prevents data jobs from competing for memory on a
+single host. Add provider credentials only after testing each source. Photo
+materialization requires a Mapillary token because the existing mixed candidate
+queue includes Mapillary assets; the runner refuses to mark them invalid merely
+because that credential is absent. Pass existing provider tokens on stdin to
+`scripts/self-host-install-provider-token.mjs`; do not put them in shell arguments
+or the repository. Recovery of copied canonical photos checks the actual bytes
+against the SHA-256-addressed key; missing S3 user metadata does not invalidate
+an otherwise verified JPEG, but conflicting metadata does.
 
 At cutover, ensure the old remote schedules are disabled, install the host units,
 verify `systemd-analyze calendar` for each schedule, enable one job at a time,

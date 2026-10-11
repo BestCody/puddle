@@ -363,7 +363,7 @@ def mapillary_details(image_id):
     if not MAPILLARY_TOKEN:
         raise RuntimeError('MAPILLARY_ACCESS_TOKEN is required to materialize Mapillary candidates.')
     fields = 'id,thumb_2048_url,width,height,creator,quality_score'
-    url = f'https://graph.mapillary.com/{urllib.parse.quote(str(image_id))}?' + urllib.parse.urlencode({'fields': fields, 'access_token': MAPILLARY_TOKEN})
+    url = f'https://graph.mapillary.com/{urllib.parse.quote(str(image_id))}?' + urllib.parse.urlencode({'fields': fields})
     for attempt in range(6):
         wait_mapillary_graph_start()
         try:
@@ -372,6 +372,7 @@ def mapillary_details(image_id):
                 url,
                 headers={
                     'Accept': 'application/json',
+                    'Authorization': f'OAuth {MAPILLARY_TOKEN}',
                     'User-Agent': 'Puddle/1.0 global photo materializer (https://puddle.you/)',
                 },
                 timeout=20,
@@ -398,7 +399,7 @@ def mapillary_details(image_id):
 def approved_host(provider, hostname):
     host = hostname.lower()
     if provider == 'wikimedia-commons':
-        return host == 'upload.wikimedia.org'
+        return host in {'upload.wikimedia.org', 'thumb.wikimedia.org'}
     if provider == 'mapillary':
         return host.endswith('.fbcdn.net') or host == 'fbcdn.net' or host.endswith('.mapillary.com') or host == 'mapillary.com'
     if provider == 'kartaview':
@@ -629,10 +630,14 @@ def recover_materialized_candidate(row):
     if not body or len(body) > MAX_BYTES or hashlib.sha256(body).hexdigest() != content_hash:
         raise RuntimeError('accepted candidate Object storage bytes failed recovery integrity checks')
     head = s3.head_object(Bucket=MEDIA_BUCKET, Key=storage_key)
+    metadata = head.get('Metadata') or {}
+    # Copied canonical objects can lack S3 user metadata. The verified bytes,
+    # content-addressed key, length, and JPEG type establish integrity; reject
+    # conflicting metadata if it is present, but do not require it to exist.
     if (
         int(head.get('ContentLength', -1)) != len(body)
-        or head.get('Metadata', {}).get('sha256') != content_hash
-        or head.get('Metadata', {}).get('purpose') != 'puddle_open_location_photo'
+        or (metadata.get('sha256') and metadata['sha256'] != content_hash)
+        or (metadata.get('purpose') and metadata['purpose'] != 'puddle_open_location_photo')
         or str(head.get('ContentType') or '').lower() != 'image/jpeg'
     ):
         raise RuntimeError('accepted candidate Object storage metadata failed recovery integrity checks')

@@ -10,6 +10,7 @@ const read = (path) => readFile(join(root, path), 'utf8')
 test('bulk photo datasets share the canonical metadata-to-object pipeline', async () => {
   const builder = await read('scripts/global-data/build_bulk_photo_manifest.py')
   const materializer = await read('scripts/global-data/materialize_photo_candidates.py')
+  const mapillaryCandidates = await read('scripts/global-data/build_mapillary_candidates.py')
   const migration = await read('supabase/migrations/20260828120000_bulk_photo_provider.sql')
   const packageJson = JSON.parse(await read('package.json'))
 
@@ -32,6 +33,12 @@ test('bulk photo datasets share the canonical metadata-to-object pipeline', asyn
   assert.match(materializer, /source_dataset/)
   assert.match(materializer, /get_global_photo_candidate_v1/)
   assert.match(materializer, /candidate_rank <= \{FALLBACK_CANDIDATES\}/)
+  assert.match(materializer, /'Authorization': f'OAuth \{MAPILLARY_TOKEN\}'/)
+  assert.doesNotMatch(materializer, /access_token': MAPILLARY_TOKEN/)
+  assert.match(materializer, /metadata\.get\('sha256'\) and metadata\['sha256'\] != content_hash/)
+  assert.match(materializer, /host in \{'upload\.wikimedia\.org', 'thumb\.wikimedia\.org'\}/)
+  assert.match(mapillaryCandidates, /COPY mapillary_images FROM \? \(FORMAT CSV, HEADER false\)/)
+  assert.doesNotMatch(mapillaryCandidates, /con\.executemany\('INSERT INTO mapillary_images/)
 
   assert.match(migration, /provider_code between 1 and 4/)
   assert.match(migration, /when 4 then ''yfcc100m''/)
