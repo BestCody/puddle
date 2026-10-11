@@ -13,7 +13,7 @@ import re
 import uuid
 from collections import Counter
 from pathlib import Path
-from photo_overlay_format import bloom_parameters, build_bloom, photo_bucket, valid_bucket_count
+from photo_overlay_format import build_membership, photo_bucket, valid_bucket_count
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / 'tests' / 'fixtures' / 'global-data' / 'platform-smoke.json'
@@ -234,21 +234,16 @@ def main():
     assert len(canonical_ids) == 3, f'fixture expected 3 canonical locations, got {len(canonical_ids)}'
 
     photo_ids = [str(uuid.uuid5(namespace, f'photo:{index}')) for index in range(1000)]
-    bloom = build_bloom(photo_ids)
-    bits = base64.b64decode(bloom['bits'])
-    def may_contain(identifier):
-        digest = hashlib.sha256(identifier.encode()).digest()
-        for index in range(bloom['hash_count']):
-            offset = (index * 4) % 29
-            bit = int.from_bytes(digest[offset:offset + 4], 'big') % bloom['bit_count']
-            if not bits[bit >> 3] & (1 << (bit & 7)):
-                return False
-        return True
-    assert all(may_contain(identifier) for identifier in photo_ids), 'photo membership must have no false negatives'
-    assert not any(may_contain(f'absent:{index}') for index in range(10000)), 'non-photo lookups must not fan out to photo shards'
-    for count in (100_000, 200_000, 500_000):
-        bit_count, hashes = bloom_parameters(count)
-        assert (1 - math.exp(-hashes * count / bit_count)) ** hashes <= 1e-6, 'membership budget must scale with the photo inventory'
+    membership = build_membership(photo_ids)
+    body = base64.b64decode(membership['ids_base64'])
+    assert membership['encoding'] == 'uuid128-sorted'
+    assert len(body) == len(photo_ids) * 16 and hashlib.sha256(body).hexdigest() == membership['sha256']
+    assert body == b''.join(sorted(uuid.UUID(identifier).bytes for identifier in photo_ids)), 'membership must preserve every canonical UUID exactly'
+    try:
+        build_membership(photo_ids + photo_ids[:1])
+        raise AssertionError('duplicate photo membership must not be published')
+    except ValueError:
+        pass
     assert all(valid_bucket_count(count) for count in (16, 64, 256, 1024, 4096))
     assert not any(valid_bucket_count(count) for count in (0, 17, 8192))
     assert [photo_bucket('loc-2', count) for count in (16, 64, 256, 1024, 4096)] == ['02', '32', '32', '298', '298'], 'published shard identity and larger-bucket padding must match the runtime'

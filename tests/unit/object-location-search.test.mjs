@@ -86,14 +86,14 @@ function detail(row) {
   ]
 }
 
-function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCount = 16, photoEntries = [], missingKey = null } = {}) {
+function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCount = 16, photoEntries = [], locations = [tower, cafe], membership = null, missingKey = null } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
   const geoKey = `${prefix}/geo/r5/852b9b7bfffffff.json.br`
   const outsideRadiusKey = `${prefix}/geo/r8/outside-radius-corner.json.br`
   const denseViewportKey = `${prefix}/geo/r8/dense-viewport-edge.json.br`
-  const geoBody = br([tower, cafe])
+  const geoBody = br(locations)
   const projectionBase = `${prefix}/text-projection-v1/${plannerId}`
   const projectionCandidateKey = `${projectionBase}/candidate.json`
   const coreKey = `${projectionBase}/core/${digest(geoKey)}.json.zst`
@@ -112,7 +112,7 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
     ['data/search/active.json', Buffer.from(JSON.stringify({ schema_version: 1, snapshot: '2026-08-19', manifest_key: manifestKey }))],
     [manifestKey, Buffer.from(JSON.stringify(manifest))],
     [`${prefix}/routing/133/100.json.br`, br([
-      [geoKey, '852b9b7bfffffff', 44, 43, -79, -80, 2, geoBody.length],
+      [geoKey, '852b9b7bfffffff', 44, 43, -79, -80, locations.length, geoBody.length],
       // This shard overlaps the radius bounding square but its entire bounding box is outside
       // the 25 km circle. If the planner includes it, the synthetic byte budget is exceeded.
       [outsideRadiusKey, '882b9b000000001', 43.87, 43.84, -79.12, -79.18, 5000, 4 * 1024 * 1024],
@@ -133,8 +133,8 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
       object_count: 1,
       location_rows: 2
     }))],
-    [coreKey, zstd([1, [core(tower), core(cafe)]])],
-    [detailKey, zstd([1, 0, [detail(tower), detail(cafe)]])]
+    [coreKey, zstd([1, locations.map(core)])],
+    [detailKey, zstd([1, 0, locations.map(detail)])]
   ])
   if (photoOverlay) {
     const entries = photoEntries.length ? photoEntries : [['loc-2', [overlayHash, 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]]]
@@ -161,7 +161,8 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
       source_manifest_key: manifestKey,
       bucket_count: photoBucketCount,
       shards,
-      photo_count: entries.length
+      photo_count: entries.length,
+      ...(membership ? { membership } : {})
     })))
   }
   const counts = new Map()
@@ -185,6 +186,59 @@ function reset() {
   clearPhotoSearchOverlayCaches()
   clearTextProjectionCaches()
 }
+
+function exactMembership(ids) {
+  const bytes = Buffer.concat(ids.map(id => Buffer.from(id.replaceAll('-', ''), 'hex')).sort(Buffer.compare))
+  return { encoding: 'uuid128-sorted', ids_base64: bytes.toString('base64'), sha256: createHash('sha256').update(bytes).digest('hex') }
+}
+
+test('exact photo presence preserves radius/viewport ranking and loads metadata only for winners', async () => {
+  const locations = Array.from({ length: 40 }, (_, index) => ({ ...cafe,
+    id: `00000000-0000-4000-8000-${index.toString(16).padStart(12, '0')}`,
+    quality_score: index / 40, popularity_score: index, primary_photo: null
+  }))
+  // The active photo publication is authoritative, not a stale core photo hash.
+  locations.at(-1).primary_photo = { content_hash: 'outdated-photo' }
+  const entries = locations.filter((_, index) => index % 2 === 0).map(row => [row.id,
+    ['a'.repeat(64), 'wikimedia-commons', 'Attribution', 'https://fixture.invalid', 'CC BY', 1200, 800]])
+  const fixture = { locations, photoOverlay: true, photoEntries: entries, photoBucketCount: 4096 }
+  const query = { latitude: 43.65, longitude: -79.39, distanceKm: 25, candidateLimit: 3, preferPhoto: true }
+  const viewport = { north: 43.7, south: 43.6, west: -79.5, east: -79.3, zoom: 12, candidateLimit: 3 }
+  reset()
+  const legacyStore = fixtureObjectStore(fixture)
+  const options = { env: { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: legacyStore.projectionCandidateKey } }
+  const legacyRadius = await searchObjectGlobalLocations(query, options)
+  const legacyViewport = await searchObjectGlobalLocationsInViewport(viewport, options)
+  reset()
+  const store = fixtureObjectStore({ ...fixture, membership: exactMembership(entries.map(entry => entry[0])) })
+  const optimizedRadius = await searchObjectGlobalLocations(query, options)
+  const optimizedViewport = await searchObjectGlobalLocationsInViewport(viewport, options)
+  assert.deepEqual(optimizedRadius.candidates, legacyRadius.candidates)
+  assert.deepEqual(optimizedViewport.candidates, legacyViewport.candidates)
+  const photoReads = [...store.counts].filter(([key]) => key.includes('/photo-overlay-v2/objects/'))
+  assert.ok(photoReads.length <= query.candidateLimit + viewport.candidateLimit)
+  assert.ok(photoReads.length < entries.length)
+  assert.equal(optimizedRadius.candidates[0].primary_photo.attribution, 'Attribution')
+  reset()
+})
+
+test('exact photo membership handles boundaries and rejects corrupt/unsorted IDs', async () => {
+  const ids = ['00000000-0000-4000-8000-000000000001', 'ffffffff-ffff-4fff-8fff-ffffffffffff']
+  const entries = ids.map(id => [id, ['a'.repeat(64), null, null, null, null, null, null]])
+  reset()
+  const store = fixtureObjectStore({ photoOverlay: true, photoEntries: entries, membership: exactMembership(ids) })
+  const pointer = await getPhotoSearchOverlay({ manifest: store.manifest, manifestKey: store.manifestKey, ids: [], env })
+  assert.equal(pointer.hasPhoto(ids[0]), true)
+  assert.equal(pointer.hasPhoto(ids[1].toUpperCase()), true)
+  assert.equal(pointer.hasPhoto('00000000-0000-4000-8000-000000000002'), false)
+  assert.equal(pointer.hasPhoto('not-a-uuid'), false)
+  for (const broken of [{ ...exactMembership(ids), sha256: '0'.repeat(64) }, exactMembership([ids[0], ids[0]])]) {
+    reset()
+    const fixture = fixtureObjectStore({ photoOverlay: true, photoEntries: entries, membership: broken })
+    await assert.rejects(getPhotoSearchOverlay({ manifest: fixture.manifest, manifestKey: fixture.manifestKey, env }), /checksum|unique and sorted/)
+  }
+  reset()
+})
 
 test('bounded fuzzy scoring accepts a two-edit place-name typo', () => {
   const score = scoreTextMatch(tower, prepareTextQuery('cn towr'))
