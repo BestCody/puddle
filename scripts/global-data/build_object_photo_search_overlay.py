@@ -23,12 +23,10 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 
 from location_search_common import object_source_config, clean_prefix, configure_duckdb, first_env
-from photo_overlay_bloom import build_bloom
+from photo_overlay_format import build_bloom, photo_bucket, valid_bucket_count, DEFAULT_BUCKET_COUNT, MAX_BUCKET_COUNT
 
 
 OVERLAY_VERSION = 2
-DEFAULT_BUCKET_COUNT = 16
-MAX_BUCKET_COUNT = 64
 SNAPSHOT_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -154,15 +152,6 @@ def add_exclusion_source(con, glob: str, columns: dict[str, str]) -> bool:
     return True
 
 
-def valid_bucket_count(value: int) -> bool:
-    return 2 <= value <= MAX_BUCKET_COUNT and value & (value - 1) == 0
-
-
-def photo_bucket(location_id: str, bucket_count: int) -> str:
-    digest = hashlib.sha256(str(location_id).encode()).digest()
-    return f"{digest[0] & (bucket_count - 1):02x}"
-
-
 def bucket_payloads(entries: list[list], bucket_count: int) -> dict[str, tuple[bytes, bytes, int]]:
     grouped: dict[str, list[list]] = {}
     for entry in entries:
@@ -208,7 +197,7 @@ source = object_source_config()
 if args.max_compressed_bytes < 64 * 1024 or args.max_compressed_bytes > 32 * 1024 * 1024:
     raise RuntimeError("--max-compressed-bytes must be between 65536 and 33554432 per shard.")
 if not valid_bucket_count(args.bucket_count):
-    raise RuntimeError("--bucket-count must be a power of two between 2 and 64.")
+    raise RuntimeError("--bucket-count must be a power of two between 2 and 4096.")
 
 client = boto3.client(
     "s3",

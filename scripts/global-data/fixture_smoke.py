@@ -13,7 +13,7 @@ import re
 import uuid
 from collections import Counter
 from pathlib import Path
-from photo_overlay_bloom import bloom_parameters, build_bloom
+from photo_overlay_format import bloom_parameters, build_bloom, photo_bucket, valid_bucket_count
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / 'tests' / 'fixtures' / 'global-data' / 'platform-smoke.json'
@@ -249,6 +249,12 @@ def main():
     for count in (100_000, 200_000, 500_000):
         bit_count, hashes = bloom_parameters(count)
         assert (1 - math.exp(-hashes * count / bit_count)) ** hashes <= 1e-6, 'membership budget must scale with the photo inventory'
+    assert all(valid_bucket_count(count) for count in (16, 64, 256, 1024, 4096))
+    assert not any(valid_bucket_count(count) for count in (0, 17, 8192))
+    assert [photo_bucket('loc-2', count) for count in (16, 64, 256, 1024, 4096)] == ['02', '32', '32', '298', '298'], 'published shard identity and larger-bucket padding must match the runtime'
+    small_buckets = {photo_bucket(identifier, 4096) for identifier in photo_ids[:20]}
+    touched = sum(photo_bucket(identifier, 4096) in small_buckets for identifier in photo_ids)
+    assert touched < 50, 'a small page should not decode the entire photo inventory'
     assert_slug_collision_regression()
     assert_category_mapping()
 

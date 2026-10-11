@@ -15,7 +15,7 @@ import {
 } from '../../lib/app/location-search-shards.js'
 import { clearSearchObjectInFlightForTests } from '../../lib/app/search-object-store.js'
 import { resetSelfHostObjectClientForTests, setSelfHostObjectClientForTests } from '../../lib/storage/self-host-object-store.js'
-import { clearPhotoSearchOverlayCaches } from '../../lib/app/photo-search-overlay.js'
+import { clearPhotoSearchOverlayCaches, getPhotoSearchOverlay } from '../../lib/app/photo-search-overlay.js'
 import { clearTextProjectionCaches } from '../../lib/app/text-search-projection.js'
 import { queryPrefixCodes } from '../../lib/app/text-postings.js'
 import { normalizeSearchText, prepareTextQuery, scoreTextMatch } from '../../lib/app/location-search-ranking.js'
@@ -86,7 +86,7 @@ function detail(row) {
   ]
 }
 
-function fixtureObjectStore({ delayMs = 0, photoOverlay = false, missingKey = null } = {}) {
+function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCount = 16, photoEntries = [], missingKey = null } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
@@ -137,20 +137,32 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, missingKey = nu
     [detailKey, zstd([1, 0, [detail(tower), detail(cafe)]])]
   ])
   if (photoOverlay) {
-    const bucket = (createHash('sha256').update('loc-2').digest()[0] & 15).toString(16).padStart(2, '0')
-    const shardBody = br([2, [['loc-2', [overlayHash, 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]]]])
-    const shardDigest = createHash('sha256').update(shardBody).digest('hex')
-    const shardKey = `data/search/photo-overlay-v2/objects/sha256=${shardDigest}/bucket=${bucket}.json.br`
+    const entries = photoEntries.length ? photoEntries : [['loc-2', [overlayHash, 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]]]
+    const grouped = new Map()
+    for (const entry of entries) {
+      const hash = createHash('sha256').update(entry[0]).digest()
+      const window = photoBucketCount <= 256 ? hash[0] : hash.readUInt16BE(0)
+      const bucket = (window & (photoBucketCount - 1)).toString(16).padStart(Math.max(2, Math.ceil(Math.log2(photoBucketCount) / 4)), '0')
+      if (!grouped.has(bucket)) grouped.set(bucket, [])
+      grouped.get(bucket).push(entry)
+    }
+    const shards = {}
+    for (const [bucket, rows] of grouped) {
+      const shardBody = br([2, rows])
+      const shardDigest = createHash('sha256').update(shardBody).digest('hex')
+      const shardKey = `data/search/photo-overlay-v2/objects/sha256=${shardDigest}/bucket=${bucket}.json.br`
+      objects.set(shardKey, shardBody)
+      shards[bucket] = { object_key: shardKey, object_sha256: shardDigest, photo_count: rows.length }
+    }
     objects.set('data/search/photo-overlay-v1/active.json', Buffer.from(JSON.stringify({
       schema_version: 1,
       overlay_version: 2,
       source_snapshot: '2026-08-19',
       source_manifest_key: manifestKey,
-      bucket_count: 16,
-      shards: { [bucket]: { object_key: shardKey, object_sha256: shardDigest, photo_count: 1 } },
-      photo_count: 1
+      bucket_count: photoBucketCount,
+      shards,
+      photo_count: entries.length
     })))
-    objects.set(shardKey, shardBody)
   }
   const counts = new Map()
 
@@ -163,7 +175,7 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, missingKey = nu
     if (!body) throw Object.assign(new Error('Missing object'), { name: 'NoSuchKey' })
     return { ContentLength: body.length, Body: (async function* () { yield body })() }
   } })
-  return { projectionCandidateKey, coreKey, detailKey, geoKey, counts }
+  return { projectionCandidateKey, coreKey, detailKey, geoKey, manifest, manifestKey, counts }
 }
 
 function reset() {
@@ -264,6 +276,44 @@ test('object-store photo overlay loads only the content-addressed hash shard nee
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
   const shardReads = [...counts.keys()].filter((key) => key.startsWith('data/search/photo-overlay-v2/'))
   assert.equal(shardReads.length, 1)
+})
+
+test('small photo shards preserve attribution and avoid fetching unrelated photos', async () => {
+  reset()
+  const entries = Array.from({ length: 100 }, (_, index) => [`photo-${index}`, ['b'.repeat(64), 'mapillary', 'Street attribution', 'https://fixture.invalid', 'CC BY-SA', 800, 600]])
+  entries.push(['loc-2', ['a'.repeat(64), 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]])
+  const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
+  const overlay = await getPhotoSearchOverlay({ manifest, manifestKey, ids: ['loc-2'], env })
+  assert.equal(overlay.photos.size, 1)
+  assert.deepEqual(overlay.photos.get('loc-2'), entries.at(-1)[1])
+  const reads = [...counts.keys()].filter(key => key.startsWith('data/search/photo-overlay-v2/'))
+  assert.equal(reads.length, 1)
+  assert.match(reads[0], /bucket=298\.json\.br$/)
+})
+
+test('photo byte cache retains a small working set larger than the old object-count ceiling', async () => {
+  reset()
+  const entries = Array.from({ length: 80 }, (_, index) => [`photo-${index}`, ['b'.repeat(64), 'mapillary', 'Fixture', null, 'CC BY-SA', 800, 600]])
+  const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
+  const ids = entries.map(entry => entry[0])
+  await getPhotoSearchOverlay({ manifest, manifestKey, ids, env })
+  const keys = [...counts.keys()].filter(key => key.startsWith('data/search/photo-overlay-v2/'))
+  assert.ok(keys.length > 32)
+  await getPhotoSearchOverlay({ manifest, manifestKey, ids, env })
+  assert.ok(keys.every(key => counts.get(key) === 1), 'Small shards should remain cached, not churn at 32 objects')
+})
+
+test('photo byte cache evicts old payloads when its byte budget is exhausted', async () => {
+  reset()
+  const entries = Array.from({ length: 5 }, (_, index) => [`large-photo-${index}`, ['b'.repeat(64), 'mapillary', 'a'.repeat(350000), null, 'CC BY-SA', 800, 600]])
+  const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
+  const options = { manifest, manifestKey, env: { ...env, GLOBAL_LOCATION_PHOTO_OVERLAY_CACHE_BYTES: String(1024 * 1024) } }
+  const keyFor = id => { const bucket = (createHash('sha256').update(id).digest().readUInt16BE(0) & 4095).toString(16).padStart(3, '0'); return [...counts.keys()].find(key => key.endsWith(`bucket=${bucket}.json.br`)) }
+  for (const [id] of entries) await getPhotoSearchOverlay({ ...options, ids: [id] })
+  await getPhotoSearchOverlay({ ...options, ids: [entries.at(-1)[0]] })
+  assert.equal(counts.get(keyFor(entries.at(-1)[0])), 1)
+  await getPhotoSearchOverlay({ ...options, ids: [entries[0][0]] })
+  assert.equal(counts.get(keyFor(entries[0][0])), 2)
 })
 
 test('object-store dense text radius search uses compact core and hydrates winner detail', async () => {
