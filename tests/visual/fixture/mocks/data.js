@@ -14,7 +14,7 @@ export function snapshotForConversation(id) {
   return { ...snapshot, selectedConversation, messages: messagesForConversation(selectedConversation.conversation_id), messagesHasMore: selectedConversation === conversations[0] }
 }
 const tables = { social_posts: posts, user_content_states: places.map(p => ({ location_id: p.id, created_at: '2026-10-10T12:00:00Z' })), notifications: [], notification_preferences: [null], profiles: [person] }
-const rpcs = { social_friend_count_v1: 1, social_friends_v2: snapshot.friends, puddle_tinder_active_v1: false, social_messages_v2: messages, social_conversations_v2: conversations, social_mark_conversation_read_v1: null }
+const rpcs = { social_friend_count_v1: 1, social_friends_v2: snapshot.friends, social_friend_picker_v2: snapshot.friends, puddle_tinder_active_v1: false, social_messages_v2: messages, social_conversations_v2: conversations, social_mark_conversation_read_v1: null }
 function query(data, count = Array.isArray(data) ? data.length : 0) {
   const q = { then: (resolve, reject) => Promise.resolve({ data, count, error: null }).then(resolve, reject), maybeSingle: () => Promise.resolve({ data: data?.[0] ?? null, error: null }), single: () => Promise.resolve({ data: data?.[0] ?? null, error: null }) }
   for (const name of ['select', 'eq', 'not', 'is', 'order', 'limit', 'in']) q[name] = () => q
@@ -34,9 +34,10 @@ const client = {
 export function createClient() { return client }
 export async function requireUser() { return { user: { ...person, email: 'visual@example.test', aud: 'authenticated' }, profile: person, supabase: client } }
 export async function getGlobalLocationsByIds(ids) { return places.filter(p => ids.includes(p.id)) }
+export async function getLocationPreviews(_client, ids) { return places.filter(p => ids.includes(p.id)) }
 export async function getMembershipSnapshot() { return { active: false, adult: true, paymentsConfigured: false, membership: null } }
 export function ageFromBirthDate() { return 25 }
-export async function getLocationPlansPage() { return { items: places, pagination: { hasMore: false } } }
+export async function getLocationPlansPage(_session, { limit = places.length } = {}) { return { items: places.slice(0, limit), pagination: { hasMore: false } } }
 export async function getSavedCategories() { return [{ category: 'park', place_count: 12 }] }
 export const mapPoints = places.map(place => ({ ...place, states: ['saved'], href: `/plans/${place.slug}`, summary: 'A quiet green space to explore with friends.' }))
 export async function getLocationMapSnapshot() { return { points: mapPoints, center: { latitude: 43.45, longitude: -79.66 } } }

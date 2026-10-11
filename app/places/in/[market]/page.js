@@ -11,9 +11,8 @@ import {
   paginateHubPlaces
 } from '@/lib/app/seo-places'
 import { breadcrumbStructuredData, placeListStructuredData } from '@/lib/app/public-content'
-import { serializeStructuredData } from '@/lib/app/structured-data'
+import { StructuredData } from '@/components/structured-data'
 
-export const revalidate = 3600
 
 function copy(market) {
   const region = marketRegionLabel(market)
@@ -77,8 +76,8 @@ export default async function MarketHubPage({ params, searchParams }) {
   const intro = [description, describeHubPlaces(places, { market })].filter(Boolean).join(' ')
 
   return <>
-    {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
-    {itemList ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(itemList) }} /> : null}
+    <StructuredData data={breadcrumbs} />
+    <StructuredData data={itemList} />
     <PlaceHub
       trail={trail}
       title={page > 1 ? `${title} — page ${page}` : title}

@@ -224,6 +224,22 @@ test('object-store radius search can prioritize canonical photo candidates witho
   assert.equal(result.diagnostics.photoFirst, true)
 })
 
+test('grouped geographic search preserves individual category rankings with one shared decode', async () => {
+  for (const projection of [false, true]) {
+    reset()
+    const { counts, projectionCandidateKey, coreKey } = fixtureObjectStore({ photoOverlay: true })
+    const options = { env: projection ? { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey } : env }
+    const input = { latitude: 43.65, longitude: -79.39, distanceKm: 25, candidateLimit: 1, preferPhoto: true }
+    const grouped = await searchObjectGlobalLocations({ ...input, categories: ['landmark', 'cafe'] }, options)
+    assert.equal(grouped.candidates.length, 2)
+    if (projection) assert.equal(counts.get(coreKey), 1)
+    for (const category of ['landmark', 'cafe']) {
+      const individual = await searchObjectGlobalLocations({ ...input, filters: { category } }, options)
+      assert.deepEqual(grouped.candidates.filter(row => row.category === category), individual.candidates)
+    }
+  }
+})
+
 test('object-store radius search applies freshly materialized photo metadata before photo-first ranking', async () => {
   reset()
   const { projectionCandidateKey } = fixtureObjectStore({ photoOverlay: true })

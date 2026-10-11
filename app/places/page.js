@@ -1,9 +1,8 @@
 import { PlaceHub, marketLinks } from '@/components/place-hub'
 import { PLACE_CATEGORIES, listMarkets, marketRegionLabel } from '@/lib/app/seo-places'
 import { breadcrumbStructuredData, faqStructuredData } from '@/lib/app/public-content'
-import { serializeStructuredData } from '@/lib/app/structured-data'
+import { StructuredData } from '@/components/structured-data'
 
-export const revalidate = 3600
 
 const title = 'Places to go, city by city'
 const description = 'Browse parks, coffee shops, restaurants, museums, and nightlife across every city on Puddle. Find somewhere worth going, then see who else is there.'
@@ -84,8 +83,8 @@ export default function PlacesIndexPage() {
   }
 
   return <>
-    {breadcrumbs ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(breadcrumbs) }} /> : null}
-    {faqSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(faqSchema) }} /> : null}
+    <StructuredData data={breadcrumbs} />
+    <StructuredData data={faqSchema} />
     <PlaceHub
       trail={trail}
       title="Find somewhere worth going."

@@ -1,5 +1,6 @@
 import './global.css'
 import { ClientTelemetry } from '@/components/client-telemetry'
+import { connection } from 'next/server'
 
 export const metadata = {
   title: { default: 'Puddle', template: '%s · Puddle' },
@@ -22,7 +23,10 @@ export const viewport = {
   colorScheme: 'light dark'
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  // All Next HTML uses per-request CSP nonces. Cache catalogue data, not the
+  // HTML envelope; this also keeps error/auth pages' scripts executable.
+  await connection()
   return <html lang="en">
     <head>
       <link rel="preconnect" href="https://fonts.googleapis.com" />

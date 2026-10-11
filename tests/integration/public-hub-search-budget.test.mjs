@@ -14,14 +14,14 @@ test('an unsaturated search is complete even if the page has fewer places than i
   assert.equal(shouldExpandPublicHubSearch({ returned: 0, visible: 0, requested: 264, needed: 240 }), false)
 })
 
-test('date ideas use the bounded category lookup while sitemap and category hubs keep full paging', async () => {
+test('date ideas share one geographic scan while sitemap and category hubs keep full paging', async () => {
   const [dates, hubs, sitemap] = await Promise.all([
     readFile(new URL('../../lib/app/date-ideas.js', import.meta.url), 'utf8'),
     readFile(new URL('../../lib/app/seo-places.js', import.meta.url), 'utf8'),
     readFile(new URL('../../app/sitemap.js', import.meta.url), 'utf8')
   ])
-  assert.match(dates, /getCachedDateCategoryPlaces\(market\.id, slug\)/)
+  assert.match(dates, /getCachedDateMarketPlaces\(market\.id, wanted\)/)
   assert.match(hubs, /HUB_INITIAL_CANDIDATE_LIMIT = HUB_PAGE_SIZE \* \(HUB_MAX_PAGES \+ 1\)/)
-  assert.match(hubs, /const initialLimit = mode === 'date' \? DATE_CANDIDATE_LIMIT : HUB_INITIAL_CANDIDATE_LIMIT/)
+  assert.match(hubs, /searchVisible\(DATE_CANDIDATE_LIMIT, categories\)/)
   assert.match(sitemap, /getCachedMarketPlaces\(markets\[index\]\.id\)/)
 })

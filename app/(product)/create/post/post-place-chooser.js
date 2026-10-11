@@ -9,9 +9,9 @@ function categoryLabel(value) {
   return String(value || 'Park').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-export function PostPlaceChooser({ selectedPoint, initialPoints }) {
-  const [points, setPoints] = useState(initialPoints || [])
-  const [loaded, setLoaded] = useState(initialPoints !== null)
+export function PostPlaceChooser({ selectedPoint }) {
+  const [points, setPoints] = useState([])
+  const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const requestRef = useRef(null)

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
-import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue } from '@/lib/security/headers'
+import { allowedCorsOrigins, applySecurityHeaders, applicationOrigin, nonceValue, requestContentSecurityPolicy } from '@/lib/security/headers'
 import { isUnsafeMethod } from '@/lib/security/request'
 import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
 import { isPublicCataloguePath, isPublicRecommendationPath } from '@/lib/security/public-cache-path'
@@ -10,9 +10,9 @@ const protectedPrefixes = ['/dashboard','/discover','/matches','/membership','/m
 const productRoutePrefixes = ['/discover','/map','/plans','/matches','/membership','/profile','/create']
 const authOnlyPaths = ['/signup','/forgot-password']
 const staticLandingPaths = new Set(['/','/landing.html','/index.html'])
-const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
+const publicPagePaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
 const authCanonicalPaths = new Set(['/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
-const publicNoSessionPaths = new Set([...cacheablePublicPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
+const publicNoSessionPaths = new Set([...publicPagePaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
 const verifiedProductUserHeader = 'x-puddle-verified-user-id'
 const moderationExemptApiPrefixes = [
   '/api/appeals',
@@ -40,15 +40,12 @@ function requiresModerationGate(pathname) {
 }
 function cachePolicy(response, pathname, privateResponse = false) {
   if (privateResponse) { response.headers.set('Cache-Control', 'private, no-store'); return response }
-  // Catalogue pages and recommendations own their success/error cache policy.
-  // Proxy runs before rendering and cannot safely mark a future 500 cacheable.
-  if (isPublicCataloguePath(pathname) || isPublicRecommendationPath(pathname)) return response
+  // Cache public data, not HTML containing a fresh per-request CSP nonce.
+  if (isPublicCataloguePath(pathname)) { response.headers.set('Cache-Control', 'no-store'); return response }
+  if (isPublicRecommendationPath(pathname)) return response
   if (staticLandingPaths.has(pathname)) {
     response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate')
     response.headers.set('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60')
-  } else if (cacheablePublicPaths.has(pathname)) {
-    response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400')
-    response.headers.set('CDN-Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
   } else response.headers.set('Cache-Control', 'no-store')
   return response
 }
@@ -64,6 +61,8 @@ export async function proxy(request) {
   const pathname = request.nextUrl.pathname
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
+  // Next extracts the nonce from the forwarded CSP for its framework scripts.
+  requestHeaders.set('Content-Security-Policy', requestContentSecurityPolicy(request, nonce, staticLandingPaths.has(pathname)))
   requestHeaders.set('x-request-id', request.headers.get('x-request-id') || request.headers.get('cf-ray') || crypto.randomUUID())
   requestHeaders.delete('x-puddle-product-route')
   requestHeaders.delete(verifiedProductUserHeader)

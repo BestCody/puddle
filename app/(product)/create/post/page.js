@@ -5,7 +5,7 @@ import { AuthMessage } from '@/components/auth-message'
 import { PhotoFrame } from '@/components/photo-frame'
 import { RoutedSegment } from '@/components/routed-segment'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { getLocationMapSnapshot } from '@/lib/app/location-map-data'
+import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { validCoordinates } from '@/lib/app/optional-number'
@@ -94,8 +94,9 @@ export default async function CreatePostPage({ searchParams }) {
     const directPoint = await requestedSwipePoint(session, requestedLocation)
     // A Swipe-selected place is sufficient to render the composer. Saved and
     // planned places are only needed if the attach-place menu is opened.
-    const snapshot = directPoint ? null : await getLocationMapSnapshot(session)
-    const selectedPoint = directPoint || snapshot?.points[0] || null
+    const savedPage = directPoint ? null : await getLocationPlansPage(session, { tab: 'saved', limit: 1 })
+    const saved = savedPage?.items[0]
+    const selectedPoint = directPoint || (saved ? { ...saved, photo_url: saved.cover_path } : null)
 
     return <div className={scopedClasses(createStyles, "figma-create-post-screen")} data-figma-node="25:79">
       <AuthMessage searchParams={params} />
@@ -126,7 +127,7 @@ export default async function CreatePostPage({ searchParams }) {
           <button className={scopedClasses(createStyles, "figma-create-post-submit")} type="submit" disabled={!selectedPoint} aria-label="Publish post">↑</button>
           <label className={scopedClasses(createStyles, "figma-create-post-title")}><input aria-label="Title" name="title" maxLength="80" required placeholder="Title" /></label>
           <label className={scopedClasses(createStyles, "figma-create-post-description")}><textarea aria-label="Description" name="description" maxLength="1000" placeholder="Description" /></label>
-          <PostPlaceChooser key={selectedPoint?.id || 'none'} selectedPoint={selectedPoint} initialPoints={snapshot?.points ?? null} />
+          <PostPlaceChooser key={selectedPoint?.id || 'none'} selectedPoint={selectedPoint} />
           <Link className={scopedClasses(createStyles, "figma-create-post-map")} href="/map?view=map&selectForPost=1" aria-label="Choose a place from the map">⌑</Link>
         </form>
       </section>

@@ -32,7 +32,7 @@ test('map catalogue and heatmap requests wait for a measured viewport', async ()
 
 test('Profile queries only as many friends as it displays', async () => {
   const profile = await read('app/(product)/profile/page.js')
-  assert.match(profile, /social_friends_v2', \{ before_name: null, before_id: null, result_limit: 4 \}/)
+  assert.match(profile, /social_friend_picker_v2', \{ before_name: null, before_id: null, result_limit: 4 \}/)
   assert.match(profile, /friends\.slice\(0, 4\)/)
   assert.match(profile, /readFriendCount\(session\.supabase\)/)
 })
@@ -89,9 +89,10 @@ test('Friends loads only the active tab UI, and Profile defers photo controls un
   assert.match(avatarEditor, /\{requested \? <ProfilePhotoEditor/)
 })
 
-test('Profile overlaps place hydration with independent friend and count reads', async () => {
+test('Profile overlaps small post previews with Saved and independent counts', async () => {
   const profilePage = await read('app/(product)/profile/page.js')
-  assert.match(profilePage, /const globalRowsPromise = Promise\.all\(\[postRowsPromise, saveRowsPromise\]\)\.then/)
+  assert.match(profilePage, /postRowsPromise\.then\(postRows => getLocationPreviews/)
+  assert.match(profilePage, /getLocationPlansPage\(session, \{ tab: 'saved', limit: 4 \}\)/)
   assert.match(profilePage, /friendCountPromise, globalRowsPromise\s*\]/)
   assert.doesNotMatch(profilePage, /const globalRows = await globalLocations/)
 })
@@ -111,7 +112,7 @@ test('map place hydration overlaps membership and Swipe-selected post skips the 
   ])
   assert.match(mapData, /const locationsPromise = plansPromise\.then/)
   assert.match(mapData, /Promise\.all\(\[plansPromise, passActivePromise, locationsPromise\]\)/)
-  assert.match(createPost, /const snapshot = directPoint \? null : await getLocationMapSnapshot\(session\)/)
+  assert.match(createPost, /directPoint \? null : await getLocationPlansPage\(session, \{ tab: 'saved', limit: 1 \}\)/)
   assert.match(chooser, /if \(event\.currentTarget\.open\) void loadPlaces\(\)/)
   assert.match(chooser, /fetch\('\/api\/map\/snapshot'/)
 })
