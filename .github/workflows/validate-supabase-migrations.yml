@@ -51,6 +51,7 @@ jobs:
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/global_photo_uniqueness.sql
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/no_missing_public_relations.sql
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/0024_stage9_authorization.sql
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/0025_saved_previews.sql
 
       - name: Dump local database logs after failure
         if: failure()
@@ -73,3 +74,4 @@ jobs:
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/global_photo_uniqueness.sql
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/no_missing_public_relations.sql
           docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/0024_stage9_authorization.sql
+          docker exec -i "$database" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < supabase/tests/0025_saved_previews.sql

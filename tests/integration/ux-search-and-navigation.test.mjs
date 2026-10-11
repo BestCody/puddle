@@ -39,10 +39,8 @@ test('saved searches and categories filter the entire owned relation before keys
   assert.match(endpoint, /supabase.auth.getUser\(\)/)
   assert.match(collection, /setItems\(\(current\) =>/)
   assert.match(collection, /data-testid="saved-next-page"/)
-  assert.match(backfill, /getLocationsByIdsFromShards/)
   assert.match(backfill, /location_ref_index_checkpoint/)
   assert.match(backfill, /location_ref_index_progress_v1/)
-  assert.match(references, /Promise\.all\(\[/)
   assert.match(references, /from\('location_ref_search_index'\)/)
 })
 

@@ -1,11 +1,11 @@
-import { getActiveSearchManifest, getLocationsByIdsFromShards } from '../lib/app/location-search-shards.js'
+import { getGlobalLocationsByIds } from '../lib/app/global-location-search.js'
+import { locationReferenceMetadata } from '../lib/app/location-reference-preview.js'
 import { connectSelfHostPostgres } from './self-host-postgres-query.mjs'
 
 const { querySql, close } = await connectSelfHostPostgres({ connectionString: process.env.PUDDLE_SELF_HOST_DB_URL })
 try {
-const checkpointId = 'global-location-ref-search-v1'
+const checkpointId = 'global-location-ref-previews-v2'
 const batchSize = 64
-const { manifest } = await getActiveSearchManifest()
 const [checkpoint] = await querySql(
   'select last_id::text as last_id from public.location_ref_index_checkpoint where id=$1',
   [checkpointId]
@@ -22,21 +22,16 @@ for (;;) {
   )
   if (!refs.length) break
 
-  const locations = await getLocationsByIdsFromShards(refs.map((ref) => ref.id), { manifest })
-  const rows = locations.map((row) => ({
-    location_id: row.id,
-    name: String(row.name || '').slice(0, 300),
-    slug: String(row.slug || '').slice(0, 400),
-    category: String(row.category || row.kind || 'other').slice(0, 80),
-    city: String(row.city || '').slice(0, 160)
-  }))
+  const locations = await getGlobalLocationsByIds(refs.map((ref) => ref.id))
+  const rows = locations.map(locationReferenceMetadata)
   if (rows.length) {
     await querySql(`
-      insert into public.location_ref_search_index(location_id,name,slug,category,city)
-      select x.location_id,x.name,x.slug,x.category,x.city
-      from jsonb_to_recordset($1::jsonb) as x(location_id uuid,name text,slug text,category text,city text)
+      insert into public.location_ref_search_index(location_id,name,slug,category,city,latitude,longitude,photo_hash)
+      select x.location_id,x.name,x.slug,x.category,x.city,x.latitude,x.longitude,x.photo_hash
+      from jsonb_to_recordset($1::jsonb) as x(location_id uuid,name text,slug text,category text,city text,latitude double precision,longitude double precision,photo_hash text)
       on conflict (location_id) do update set
-        name=excluded.name,slug=excluded.slug,category=excluded.category,city=excluded.city,indexed_at=now()
+        name=excluded.name,slug=excluded.slug,category=excluded.category,city=excluded.city,
+        latitude=excluded.latitude,longitude=excluded.longitude,photo_hash=excluded.photo_hash,indexed_at=now()
     `, [JSON.stringify(rows)])
   }
 

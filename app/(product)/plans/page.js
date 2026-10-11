@@ -117,7 +117,6 @@ export default async function PlansPage({ searchParams }) {
   const requestedCategory = typeof params?.category === 'string' ? params.category : 'all'
   const query = typeof params?.q === 'string' ? params.q.trim() : ''
   const cursor = typeof params?.cursor === 'string' ? params.cursor : null
-  const lightweightSaved = active === 'saved'
 
   return renderProductPage(async (session) => {
     const [page, categories] = await Promise.all([
@@ -125,8 +124,7 @@ export default async function PlansPage({ searchParams }) {
         tab: active,
         cursor,
         category: active === 'saved' ? requestedCategory : null,
-        query: active === 'saved' ? query : '',
-        lightweightSaved
+        query: active === 'saved' ? query : ''
       }),
       active === 'saved' ? getSavedCategories(session) : Promise.resolve([])
     ])
@@ -136,7 +134,7 @@ export default async function PlansPage({ searchParams }) {
     const visible = items
     const savedPageKey = JSON.stringify([
       selectedCategory, query, cursor,
-      visible.map((item) => [item.location_id, item.saved_at, item.pinned_at, item.perfect_pick, item.title, item.slug, item.category])
+      visible.map((item) => [item.location_id, item.saved_at, item.pinned_at, item.perfect_pick, item.title, item.slug, item.category, item.cover_path, item.latitude, item.longitude])
     ])
 
     return <>
