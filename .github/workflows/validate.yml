@@ -30,6 +30,8 @@ jobs:
         run: python -m py_compile scripts/global-data/*.py
       - name: Run no-key global data fixture smoke test
         run: python scripts/global-data/fixture_smoke.py
+      - name: Exercise deployment safety boundaries
+        run: python -m unittest discover -s tests/deploy
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Audit production dependencies
