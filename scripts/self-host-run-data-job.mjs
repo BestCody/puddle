@@ -47,9 +47,6 @@ export function validateJob(job, env) {
   if (job === 'mapillary' && !env.MAPILLARY_ACCESS_TOKEN) {
     throw new Error('MAPILLARY_ACCESS_TOKEN is required for Mapillary discovery.')
   }
-  if (job === 'kartaview' && !env.KARTAVIEW_ACCESS_TOKEN) {
-    throw new Error('KARTAVIEW_ACCESS_TOKEN is required for KartaView discovery.')
-  }
 }
 
 function python(file, args = [], extraEnv = {}, capture = false) {

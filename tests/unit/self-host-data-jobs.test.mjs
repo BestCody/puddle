@@ -63,6 +63,7 @@ test('host job environment uses only local endpoints and bounded worker settings
   assert.match(prepared, /^PUDDLE_JOBS_ENABLED=true$/m)
   assert.match(prepared, /^GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY=2$/m)
   assert.match(prepared, /^MAPILLARY_TILE_CONCURRENCY=2$/m)
+  assert.match(prepared, /^KARTAVIEW_REQUESTS_PER_HOUR=100$/m)
   assert.doesNotMatch(prepared, /do-not-copy|http:\/\/objects:8333/)
   assert.throws(() => prepareJobsEnv(source.replace('https://api.puddle.you', 'https://old.supabase.co')), /managed source/)
 })
@@ -100,4 +101,5 @@ test('host jobs reject a stale managed Supabase URL despite cutover flags', () =
   assert.doesNotThrow(() => validateJob('materialize', env))
   delete env.MAPILLARY_ACCESS_TOKEN
   assert.throws(() => validateJob('materialize', env), /MAPILLARY_ACCESS_TOKEN/)
+  assert.doesNotThrow(() => validateJob('kartaview', env))
 })

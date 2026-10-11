@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Use the full authenticated KartaView quota as a global photo fallback.
+"""Discover KartaView street photos within the available API request quota.
 
 Successful no-match lookups are persisted in Object storage so the 1,000 requests/hour
 allowance continuously advances to new locations instead of retrying the same
