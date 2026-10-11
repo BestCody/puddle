@@ -46,8 +46,9 @@ focused tests for whatever a release changes.
    python3 install-auto-deploy.py --repository OWNER/REPOSITORY --public-key deploy.pub
    ```
 
-2. Store its private key as the repository secret `CONTABO_DEPLOY_KEY`. Do not
-   reuse a personal SSH key. Keep the existing known host fingerprint verified
+2. Store its private key as `CONTABO_DEPLOY_KEY` in the GitHub **production
+   environment**, restricted to the `main` branch (not as a repository-wide
+   secret available to PR jobs). Do not reuse a personal SSH key. Keep the existing known host fingerprint verified
    out of band; never use unverified `ssh-keyscan` during a release.
 3. Set repository variables `CONTABO_HOST`, `CONTABO_KNOWN_HOSTS`, and the five
    `NEXT_PUBLIC_*` values listed in `auto-deploy.py`. Copy the public build
@@ -78,7 +79,7 @@ docker compose --project-name self-host --env-file .env.selfhost \
 Check `Deploy Contabo` in Actions and `/api/health` after releases. To pause
 automatic deploys, disable that workflow in GitHub; checks can continue. To
 revoke machine access completely, remove just the dedicated key's line from
-root's `authorized_keys` and delete `CONTABO_DEPLOY_KEY` in GitHub.
+root's `authorized_keys` and delete `CONTABO_DEPLOY_KEY` in GitHub's production environment.
 
 To refresh public build values after an intentional configuration change,
 update the GitHub variables to match the host; the fingerprint gate otherwise
