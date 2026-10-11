@@ -1,4 +1,6 @@
 "use client"
+import profileStyles from "@/components/profile.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -138,17 +140,17 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
     router.refresh()
   }
 
-  return <div className="profile-photo-editor">
-    <span className="social-avatar is-large" style={{ overflow: 'hidden' }}>
+  return <div className={scopedClasses(profileStyles, "profile-photo-editor")}>
+    <span className={scopedClasses(profileStyles, "social-avatar is-large")} style={{ overflow: 'hidden' }}>
       {safeShownUrl && !photoFailed ? <Image src={safeShownUrl} alt="Profile preview" width={96} height={96} unoptimized={safeShownUrl.startsWith('blob:')} onError={() => setPhotoFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : initials(displayName)}
     </span>
     <div>
-      <div className="profile-photo-actions">
+      <div className={scopedClasses(profileStyles, "profile-photo-actions")}>
         <label>{file ? 'Choose another' : (currentPath || savedUrl) ? 'Change photo' : 'Add photo'}<input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={choose} disabled={busy} /></label>
         {file ? <><button type="button" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save photo'}</button><button type="button" onClick={() => clearSelection()} disabled={busy}>Cancel</button></> : null}
         {!file && (currentPath || savedUrl) ? <button type="button" onClick={remove} disabled={busy}>Remove</button> : null}
       </div>
-      <div className="profile-photo-status">{status || 'JPEG, PNG, WebP, or AVIF · up to 10 MB'}</div>
+      <div className={scopedClasses(profileStyles, "profile-photo-status")}>{status || 'JPEG, PNG, WebP, or AVIF · up to 10 MB'}</div>
     </div>
   </div>
 }

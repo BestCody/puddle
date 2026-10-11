@@ -82,7 +82,7 @@ test('the auth cookie survives a browser-context restart', async ({ browser }) =
     await secondPage.goto('/account')
     await expect(secondPage).toHaveURL(/\/account$/)
     await secondPage.goto('/')
-    await expect(secondPage.getByRole('heading', { name: '1.0 coming soon', level: 1 })).toBeVisible()
+    await expect(secondPage.locator('.landing')).toBeVisible()
   } finally {
     await secondContext?.close()
     await firstContext?.close()

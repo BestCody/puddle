@@ -24,7 +24,6 @@ from botocore.client import Config
 
 from build_object_search_index import (
     ArtifactWriter,
-    CHECKPOINT_CONCURRENCY,
     HEX_BUCKETS,
     ZstdPartitionSpool,
     artifact_index_from_hash_lines,
@@ -34,7 +33,6 @@ from build_object_search_index import (
     directory_tiles,
     finite_coordinate,
     hash_bucket,
-    is_missing_object,
     load_json_object,
     point_tile,
     put_content_addressed_object,

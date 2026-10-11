@@ -1,7 +1,9 @@
 "use client"
+import shellStyles from "./product-shell.module.css"
+import { scopedClasses } from "./scoped-classes"
 
 import { useEffect, useRef, useState } from 'react'
-import { AppearanceToggleLogo } from './appearance-toggle-logo'
+import { AppearanceLogo } from './appearance-logo'
 import { ProductNav } from './product-nav'
 import { SettingsTrigger } from './settings-trigger'
 
@@ -93,20 +95,20 @@ export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'l
     else commit(EXPANDED_WIDTH)
   }
 
-  return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`} aria-label="Puddle sidebar" data-sidebar-width={effectiveWidth}>
-    <div className="figma-dashboard-sidebar-logo"><AppearanceToggleLogo initialAppearance={initialAppearance} /></div>
+  return <aside className={scopedClasses(shellStyles, `figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`)} aria-label="Puddle sidebar" data-sidebar-width={effectiveWidth}>
+    <div className={scopedClasses(shellStyles, "figma-dashboard-sidebar-logo")}><AppearanceLogo initialAppearance={initialAppearance} /></div>
     <ProductNav avatarUrl={avatarUrl} />
-    <div className="figma-dashboard-sidebar-actions">
-      <SettingsTrigger className="figma-dashboard-settings-link">
-        <span className="figma-dashboard-settings-icon"><SettingsIcon /></span>
-        <span className="figma-dashboard-settings-label">Settings</span>
+    <div className={scopedClasses(shellStyles, "figma-dashboard-sidebar-actions")}>
+      <SettingsTrigger className={scopedClasses(shellStyles, "figma-dashboard-settings-link")}>
+        <span className={scopedClasses(shellStyles, "figma-dashboard-settings-icon")}><SettingsIcon /></span>
+        <span className={scopedClasses(shellStyles, "figma-dashboard-settings-label")}>Settings</span>
       </SettingsTrigger>
-      <form className="figma-dashboard-signout-form" action={signOutAction}>
-        <button className="figma-dashboard-signout" type="submit">Sign out</button>
+      <form className={scopedClasses(shellStyles, "figma-dashboard-signout-form")} action={signOutAction}>
+        <button className={scopedClasses(shellStyles, "figma-dashboard-signout")} type="submit">Sign out</button>
       </form>
     </div>
     <div
-      className="figma-dashboard-sidebar-resizer"
+      className={scopedClasses(shellStyles, "figma-dashboard-sidebar-resizer")}
       role="separator"
       aria-label="Resize navigation sidebar"
       aria-orientation="vertical"

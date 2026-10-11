@@ -22,7 +22,6 @@ OVERRIDE = Path('/etc/puddle/release.compose.json')
 PUBLIC_KEYS = (
     'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
-    'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY',
 )
 PRESERVE = (
     '.env*', '.venv/', '.git/', 'node_modules/', '.next/', '.e2e-local/', '__pycache__/',

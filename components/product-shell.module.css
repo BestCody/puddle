@@ -1,0 +1,430 @@
+.figma-dashboard-shell {
+  --shell-surface: #fff;
+  --shell-text: #111;
+  --shell-muted: #919191;
+  --shell-border: #e4e4e4;
+  --shell-hover: #f2f2f2;
+  --shell-shadow: #bdbdbd;
+  --puddle-mobile-nav-height: 6.5rem;
+  --puddle-mobile-content-bottom: calc(var(--puddle-mobile-nav-height) + env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  color: var(--shell-text);
+  background: var(--shell-surface);
+  font-family: var(--font-sans);
+  font-size: .9rem;
+}
+
+.figma-dashboard-shell[data-embedded="true"] .figma-dashboard-stage {
+  margin-left: 0;
+}
+
+.figma-dashboard-shell:is([data-appearance="dark"], [data-resolved-appearance="dark"]) {
+  --shell-surface: #111315;
+  --shell-text: #f4f5f7;
+  --shell-muted: #a6acb2;
+  --shell-border: #353b41;
+  --shell-hover: #262a2f;
+  --shell-shadow: #08090a;
+  color-scheme: dark;
+}
+
+.figma-dashboard-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 30;
+  width: var(--figma-shell-sidebar, 15.75rem);
+  height: 100dvh;
+  min-height: 0;
+  background: var(--shell-surface);
+  border-right: .125rem solid var(--shell-border);
+  overflow: hidden;
+}
+
+.figma-dashboard-sidebar-logo {
+  position: absolute;
+  top: max(1.25rem, calc(50% - 14.75rem));
+  left: 1.9375rem;
+  width: 3.5rem;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.figma-dashboard-sidebar-logo :global(.puddle-logo),
+.figma-dashboard-sidebar-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+}
+
+.figma-dashboard-nav {
+  position: absolute;
+  top: 50%;
+  inset-inline: 1rem;
+  transform: translateY(-50%);
+  display: grid;
+  gap: .3125rem;
+}
+
+.figma-dashboard-nav-item {
+  --nav-tone: var(--figma-blue);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-width: 0;
+  height: 3.3125rem;
+  padding: 0 .75rem 0 1.25rem;
+  border: .125rem solid transparent;
+  border-radius: 1.1875rem;
+  color: var(--shell-muted);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-decoration: none;
+}
+
+.figma-dashboard-nav-item:global(.tone-yellow) {
+  --nav-tone: var(--figma-yellow);
+}
+
+.figma-dashboard-nav-item:global(.tone-purple) {
+  --nav-tone: var(--figma-purple);
+}
+
+.figma-dashboard-nav-item:global(.tone-green) {
+  --nav-tone: var(--figma-green);
+}
+
+.figma-dashboard-nav-item:global(.tone-pink) {
+  --nav-tone: var(--figma-pink);
+}
+
+.figma-dashboard-nav-item:global(.tone-profile) {
+  --nav-tone: #a5a5a5;
+}
+
+.figma-dashboard-nav-item:global(.is-active) {
+  color: #fff;
+  background: var(--nav-tone);
+  border-color: color-mix(in srgb, var(--nav-tone), #000 18%);
+  box-shadow: 0 .1875rem var(--shell-shadow);
+}
+
+.figma-dashboard-nav-item:not(:global(.is-active)):hover {
+  background: var(--shell-hover);
+}
+
+.figma-dashboard-nav-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 1.8125rem;
+  width: 1.8125rem;
+  height: 1.625rem;
+}
+
+.figma-dashboard-nav-icon svg {
+  width: 1.5625rem;
+  height: 1.5625rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+
+.figma-dashboard-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.figma-dashboard-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.figma-dashboard-nav-label {
+  min-width: 0;
+}
+
+.figma-dashboard-sidebar-actions {
+  position: absolute;
+  left: 2.625rem;
+  bottom: clamp(1.25rem, 4dvh, 2.25rem);
+  display: grid;
+  justify-items: start;
+  gap: .875rem;
+}
+
+.figma-dashboard-settings-link, .figma-dashboard-signout {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--shell-muted);
+  font: 700 .9375rem/1.1 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.figma-dashboard-settings-icon {
+  display: none;
+}
+
+.figma-dashboard-settings-icon svg {
+  width: 1.6875rem;
+  height: 1.6875rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+
+.figma-dashboard-signout-form {
+  margin: 0;
+}
+
+.figma-dashboard-signout {
+  color: #d95757;
+}
+
+.figma-dashboard-sidebar-resizer {
+  position: absolute;
+  inset: 0 -.25rem 0 auto;
+  width: .5625rem;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.figma-dashboard-sidebar-resizer:focus-visible {
+  outline: .125rem solid var(--figma-blue);
+  outline-offset: -.125rem;
+}
+
+.figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-sidebar-logo {
+  left: 50%;
+  top: max(1.25rem, calc(50% - 13.9375rem));
+  width: 2.125rem;
+  transform: translateX(-50%);
+}
+
+.figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-nav {
+  inset-inline: auto;
+  left: 50%;
+  width: 3.375rem;
+  transform: translate(-50%, -50%);
+}
+
+.figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-nav-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-nav-label {
+  display: none;
+}
+
+.figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-sidebar-actions {
+  left: 1rem;
+  bottom: 1.5rem;
+  width: 3.75rem;
+  justify-items: center;
+  gap: .625rem;
+}
+
+.figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-settings-link {
+  width: 2.75rem;
+  height: 2.75rem;
+  justify-content: center;
+}
+
+.figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-settings-icon {
+  display: grid;
+}
+
+.figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-settings-label {
+  display: none;
+}
+
+.figma-dashboard-stage {
+  min-width: 0;
+  min-height: 100dvh;
+  margin-left: var(--figma-shell-sidebar, 15.75rem);
+  background: var(--shell-surface);
+}
+
+.figma-dashboard-main {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+}
+
+.figma-dashboard-account-menu {
+  display: none;
+}
+
+.figma-dashboard-mobile-nav {
+  display: none;
+}
+
+.puddle-main-transition {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--shell-content-height, 100dvh);
+}
+
+.puddle-main-transition-content {
+  min-height: inherit;
+}
+
+.puddle-main-transition:global(.is-loading) {
+  height: var(--shell-content-height, 100dvh);
+  overflow: hidden;
+}
+
+.puddle-main-transition:global(.is-loading) .puddle-main-transition-content {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.puddle-main-transition-loader, .puddle-route-stream-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-height: var(--shell-content-height, 100dvh);
+  background: var(--shell-surface);
+  color: var(--shell-text);
+}
+
+.puddle-main-spinner {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+@media (min-width: 47.5625rem) and (max-width: 65.625rem) {
+
+  .figma-dashboard-stage {
+    margin-left: var(--figma-shell-sidebar, 5.75rem);
+  }
+
+  .figma-dashboard-sidebar-resizer {
+    display: none;
+  }
+}
+
+@media (min-width: 47.5625rem) and (max-height: 36.1875rem) {
+
+  .figma-dashboard-nav {
+    top: 6rem;
+    transform: none;
+    gap: 0;
+  }
+
+  .figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-nav {
+    transform: translateX(-50%);
+  }
+
+  .figma-dashboard-nav-item {
+    height: 2.75rem;
+  }
+
+  .figma-dashboard-sidebar-logo {
+    top: 1.25rem;
+  }
+}
+
+@media (max-width: 47.5rem) {
+
+  .figma-dashboard-shell {
+    --figma-shell-sidebar: 0rem;
+    --shell-content-height: calc(100dvh - var(--puddle-mobile-content-bottom));
+  }
+
+  .figma-dashboard-shell[data-hide-mobile-nav] {
+    --puddle-mobile-content-bottom: 0rem;
+  }
+
+  .figma-dashboard-shell[data-hide-mobile-nav] .figma-dashboard-mobile-nav {
+    display: none;
+  }
+
+  .figma-dashboard-sidebar, .figma-dashboard-account-menu {
+    display: none;
+  }
+
+  .figma-dashboard-stage {
+    margin-left: 0;
+  }
+
+  .figma-dashboard-main {
+    min-height: var(--shell-content-height);
+    padding-bottom: var(--puddle-mobile-content-bottom);
+  }
+
+  .puddle-main-transition[data-route-path="/matches"] {
+    height: var(--shell-content-height);
+    min-height: 0;
+  }
+
+  .puddle-main-transition[data-route-path="/matches"] .puddle-main-transition-content {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .figma-dashboard-mobile-nav {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    place-items: center;
+    height: var(--puddle-mobile-content-bottom);
+    padding: .75rem .5rem calc(1.125rem + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, transparent, var(--shell-surface) 28%);
+  }
+
+  .figma-dashboard-nav-item {
+    display: grid;
+    justify-content: center;
+    justify-items: center;
+    align-content: center;
+    gap: .0625rem;
+    width: 3.5rem;
+    max-width: 100%;
+    height: 3.5rem;
+    padding: .1875rem;
+    border-radius: 1rem;
+    font-size: .55rem;
+  }
+
+  .figma-dashboard-nav-icon {
+    width: 1.8125rem;
+    height: 1.8125rem;
+  }
+
+  .figma-dashboard-nav-icon svg {
+    width: 1.8125rem;
+    height: 1.8125rem;
+  }
+
+  .figma-dashboard-nav-item:global(.tone-profile.is-active) {
+    color: var(--shell-text);
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+}

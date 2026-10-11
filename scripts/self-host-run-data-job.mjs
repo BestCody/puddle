@@ -41,8 +41,8 @@ export function validateJob(job, env) {
       if (!env[key]) throw new Error(`${key} is required for materialization.`)
     }
   }
-  if (job === 'locations' && !env.FSQ_OS_CONNECTION_SQL && !env.FSQ_ICEBERG_TOKEN) {
-    throw new Error('FSQ_OS_CONNECTION_SQL or FSQ_ICEBERG_TOKEN is required for the global build.')
+  if (job === 'locations' && !env.FSQ_ICEBERG_TOKEN) {
+    throw new Error('FSQ_ICEBERG_TOKEN is required for the global build.')
   }
   if (job === 'mapillary' && !env.MAPILLARY_ACCESS_TOKEN) {
     throw new Error('MAPILLARY_ACCESS_TOKEN is required for Mapillary discovery.')

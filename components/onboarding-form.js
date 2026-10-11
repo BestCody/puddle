@@ -1,4 +1,6 @@
 "use client"
+import onboardingStyles from "@/components/onboarding.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { BirthDateInput } from '@/components/birth-date-input'
@@ -159,22 +161,22 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
   const previewName = values?.displayName || displayName
   const previewCategories = values?.categories || []
 
-  return <div className="pdl-onb-widget">
+  return <div className={scopedClasses(onboardingStyles, "pdl-onb-widget")}>
     <form
-      className="pdl-onb-panel"
+      className={scopedClasses(onboardingStyles, "pdl-onb-panel")}
       ref={formRef}
       action={formAction}
       noValidate
       onInput={() => setTick((current) => current + 1)}
       onChange={() => setTick((current) => current + 1)}
     >
-      <div className="pdl-onb-brand">
+      <div className={scopedClasses(onboardingStyles, "pdl-onb-brand")}>
         <img src="/puddle-mark.svg" alt="" width="40" height="41" />
         <span>puddle</span>
       </div>
 
       <div
-        className="pdl-onb-progress"
+        className={scopedClasses(onboardingStyles, "pdl-onb-progress")}
         role="progressbar"
         aria-valuemin={1}
         aria-valuemax={STEPS.length}
@@ -184,22 +186,22 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
         <i style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
       </div>
 
-      <div className="pdl-onb-crumbs">
-        <button className="pdl-onb-crumb" type="button" hidden={step === 0} onClick={() => goTo(step - 1)}>Back</button>
-        {step === 2 ? <button className="pdl-onb-crumb" type="button" onClick={() => { setRadius('10'); markEdited('search_radius_km'); goTo(step + 1) }}>Skip</button> : null}
-        {step === 4 ? <button className="pdl-onb-crumb" type="button" onClick={() => { setBio(''); markEdited('bio') }}>Skip</button> : null}
+      <div className={scopedClasses(onboardingStyles, "pdl-onb-crumbs")}>
+        <button className={scopedClasses(onboardingStyles, "pdl-onb-crumb")} type="button" hidden={step === 0} onClick={() => goTo(step - 1)}>Back</button>
+        {step === 2 ? <button className={scopedClasses(onboardingStyles, "pdl-onb-crumb")} type="button" onClick={() => { setRadius('10'); markEdited('search_radius_km'); goTo(step + 1) }}>Skip</button> : null}
+        {step === 4 ? <button className={scopedClasses(onboardingStyles, "pdl-onb-crumb")} type="button" onClick={() => { setBio(''); markEdited('bio') }}>Skip</button> : null}
       </div>
 
-      <h1 className={`pdl-onb-heading${heading.blue ? ' is-blue' : ''}`}>
+      <h1 className={scopedClasses(onboardingStyles, `pdl-onb-heading${heading.blue ? ' is-blue' : ''}`)}>
         <b>{heading.lead}</b>
         {heading.rest}
       </h1>
 
-      {state?.message ? <p className="pdl-onb-alert" role="alert">{state.message}</p> : null}
+      {state?.message ? <p className={scopedClasses(onboardingStyles, "pdl-onb-alert")} role="alert">{state.message}</p> : null}
 
-      <div className="pdl-onb-body">
-        <div className="pdl-onb-step" hidden={step !== 0}>
-          <label className="pdl-onb-field">Display name
+      <div className={scopedClasses(onboardingStyles, "pdl-onb-body")}>
+        <div className={scopedClasses(onboardingStyles, "pdl-onb-step")} hidden={step !== 0}>
+          <label className={scopedClasses(onboardingStyles, "pdl-onb-field")}>Display name
             <input
               name="display_name"
               type="text"
@@ -214,22 +216,22 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
             <small className="field-error" id="display-name-error">{displayNameError}</small>
           </label>
 
-          <label className="pdl-onb-field">Username
+          <label className={scopedClasses(onboardingStyles, "pdl-onb-field")}>Username
             <UsernameInput defaultValue={profile?.username || ''} error={errors.username} id="onboarding-username" />
           </label>
 
-          <label className="pdl-onb-field">Birth date
+          <label className={scopedClasses(onboardingStyles, "pdl-onb-field")}>Birth date
             <BirthDateInput defaultValue={profile?.birth_date || ''} serverError={errors.birth_date} />
           </label>
         </div>
 
-        <div className="pdl-onb-step" hidden={step !== 1}>
-          <LocationPicker profile={profile} error={errors.location} onLocationChange={() => setTick((current) => current + 1)} />
+        <div className={scopedClasses(onboardingStyles, "pdl-onb-step")} hidden={step !== 1}>
+          <LocationPicker variant="onboarding" profile={profile} error={errors.location} onLocationChange={() => setTick((current) => current + 1)} />
         </div>
 
-        <div className="pdl-onb-step" hidden={step !== 2}>
-          <label className="pdl-onb-field">Type a number:
-            <span className="pdl-onb-radius">
+        <div className={scopedClasses(onboardingStyles, "pdl-onb-step")} hidden={step !== 2}>
+          <label className={scopedClasses(onboardingStyles, "pdl-onb-field")}>Type a number:
+            <span className={scopedClasses(onboardingStyles, "pdl-onb-radius")}>
               <input
                 aria-label="Search radius"
                 name="search_radius_km"
@@ -246,18 +248,18 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
               />
               <em aria-hidden="true">km</em>
             </span>
-            <small className="pdl-onb-hint" id="radius-hint">Choose a whole-number distance from 1 to 100 km.</small>
+            <small className={scopedClasses(onboardingStyles, "pdl-onb-hint")} id="radius-hint">Choose a whole-number distance from 1 to 100 km.</small>
             <small className="field-error" id="radius-error">{radiusError}</small>
           </label>
         </div>
 
-        <div className="pdl-onb-step" hidden={step !== 3}>
-          <fieldset className="pdl-onb-field pdl-onb-fieldset" aria-invalid={Boolean(interestsError)}>
+        <div className={scopedClasses(onboardingStyles, "pdl-onb-step")} hidden={step !== 3}>
+          <fieldset className={scopedClasses(onboardingStyles, "pdl-onb-field pdl-onb-fieldset")} aria-invalid={Boolean(interestsError)}>
             <legend>What kinds of places do you like for dates?</legend>
-            <small className="pdl-onb-hint pdl-onb-hint-flush">Choose at least three.</small>
-            <div className="pdl-onb-chips">
+            <small className={scopedClasses(onboardingStyles, "pdl-onb-hint pdl-onb-hint-flush")}>Choose at least three.</small>
+            <div className={scopedClasses(onboardingStyles, "pdl-onb-chips")}>
               {dateLocationOptions.map((option) => (
-                <label className="pdl-onb-chip" key={option.value}>
+                <label className={scopedClasses(onboardingStyles, "pdl-onb-chip")} key={option.value}>
                   <span><strong>{option.label}</strong><small>{option.detail}</small></span>
                   <input type="checkbox" name="date_locations" value={option.value} checked={selected.has(option.value)} onChange={() => toggleLocation(option.value)} aria-label={option.label} />
                 </label>
@@ -267,8 +269,8 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
           </fieldset>
         </div>
 
-        <div className="pdl-onb-step" hidden={step !== 4}>
-          <label className="pdl-onb-field">Your ideal date vibe
+        <div className={scopedClasses(onboardingStyles, "pdl-onb-step")} hidden={step !== 4}>
+          <label className={scopedClasses(onboardingStyles, "pdl-onb-field")}>Your ideal date vibe
             <textarea
               name="bio"
               maxLength={500}
@@ -278,11 +280,11 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
               aria-invalid={Boolean(bioError)}
               aria-describedby="bio-hint bio-error"
             />
-            <small className="pdl-onb-hint" id="bio-hint">Optional · {bio.length}/500 characters.</small>
+            <small className={scopedClasses(onboardingStyles, "pdl-onb-hint")} id="bio-hint">Optional · {bio.length}/500 characters.</small>
             <small className="field-error" id="bio-error">{bioError}</small>
           </label>
 
-          <label className="pdl-onb-field">Profile visibility
+          <label className={scopedClasses(onboardingStyles, "pdl-onb-field")}>Profile visibility
             <select
               name="profile_visibility"
               value={visibility}
@@ -301,53 +303,53 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
         </div>
       </div>
 
-      <div className="pdl-onb-foot">
-        <small className="pdl-onb-count" aria-live="polite">{blocker || `Step ${step + 1} of ${STEPS.length}`}</small>
-        {step === 1 ? <SubmitButton className="pdl-onb-submit" pendingText="Building your deck…" disabled={!values || Boolean(blocker)}>Start exploring</SubmitButton> : null}
+      <div className={scopedClasses(onboardingStyles, "pdl-onb-foot")}>
+        <small className={scopedClasses(onboardingStyles, "pdl-onb-count")} aria-live="polite">{blocker || `Step ${step + 1} of ${STEPS.length}`}</small>
+        {step === 1 ? <SubmitButton className={scopedClasses(onboardingStyles, "pdl-onb-submit")} pendingText="Building your deck…" disabled={!values || Boolean(blocker)}>Start exploring</SubmitButton> : null}
         {isLastStep
-          ? <SubmitButton className="pdl-onb-submit" pendingText="Building your deck…" disabled={!values || Boolean(blocker)}>Finish setup</SubmitButton>
-          : <button className="pdl-onb-next" type="button" onClick={() => goTo(step + 1)} disabled={!values || Boolean(blocker)} aria-label={step === 1 ? 'Customize your deck' : 'Next step'}><ArrowRight /></button>}
+          ? <SubmitButton className={scopedClasses(onboardingStyles, "pdl-onb-submit")} pendingText="Building your deck…" disabled={!values || Boolean(blocker)}>Finish setup</SubmitButton>
+          : <button className={scopedClasses(onboardingStyles, "pdl-onb-next")} type="button" onClick={() => goTo(step + 1)} disabled={!values || Boolean(blocker)} aria-label={step === 1 ? 'Customize your deck' : 'Next step'}><ArrowRight /></button>}
       </div>
     </form>
 
-    <aside className="pdl-onb-preview">
-      {signOutAction ? <form className="pdl-onb-signout" action={signOutAction}><button type="submit">Sign out</button></form> : null}
-      <p className="pdl-onb-preview-label">Your profile so far</p>
+    <aside className={scopedClasses(onboardingStyles, "pdl-onb-preview")}>
+      {signOutAction ? <form className={scopedClasses(onboardingStyles, "pdl-onb-signout")} action={signOutAction}><button type="submit">Sign out</button></form> : null}
+      <p className={scopedClasses(onboardingStyles, "pdl-onb-preview-label")}>Your profile so far</p>
 
-      <div className="pdl-onb-card">
-        <div className="pdl-onb-card-top">
-          <div className="pdl-onb-avatar" aria-hidden="true">{(previewName || '·').slice(0, 1)}</div>
-          <div className="pdl-onb-card-name">
+      <div className={scopedClasses(onboardingStyles, "pdl-onb-card")}>
+        <div className={scopedClasses(onboardingStyles, "pdl-onb-card-top")}>
+          <div className={scopedClasses(onboardingStyles, "pdl-onb-avatar")} aria-hidden="true">{(previewName || '·').slice(0, 1)}</div>
+          <div className={scopedClasses(onboardingStyles, "pdl-onb-card-name")}>
             <strong>{previewName || 'Your name'}</strong>
             {values?.username ? <span>@{values.username}</span> : <em>@username</em>}
           </div>
         </div>
 
-        <dl className="pdl-onb-facts">
-          <div className="pdl-onb-fact">
+        <dl className={scopedClasses(onboardingStyles, "pdl-onb-facts")}>
+          <div className={scopedClasses(onboardingStyles, "pdl-onb-fact")}>
             <dt>From</dt>
             <dd className={values?.locationLabel || values?.city ? '' : 'is-empty'}>{values?.locationLabel || values?.city || 'Not set yet'}</dd>
           </div>
-          <div className="pdl-onb-fact">
+          <div className={scopedClasses(onboardingStyles, "pdl-onb-fact")}>
             <dt>Travels up to</dt>
             <dd className={values?.radius ? '' : 'is-empty'}>{values?.radius ? `${values.radius} km` : 'Not set yet'}</dd>
           </div>
-          <div className="pdl-onb-fact">
+          <div className={scopedClasses(onboardingStyles, "pdl-onb-fact")}>
             <dt>Visibility</dt>
             <dd className="is-capital">{visibility}</dd>
           </div>
         </dl>
 
-        <div className="pdl-onb-tags">
+        <div className={scopedClasses(onboardingStyles, "pdl-onb-tags")}>
           {previewCategories.length
             ? previewCategories.map((value) => <span key={value}>{dateLocationOptions.find((option) => option.value === value)?.label || value}</span>)
             : <span className="is-empty">Places you like show up here</span>}
         </div>
 
-        <p className={`pdl-onb-bio${bio ? '' : ' is-empty'}`}>{bio || 'Your date vibe shows up here as you type it.'}</p>
+        <p className={scopedClasses(onboardingStyles, `pdl-onb-bio${bio ? '' : ' is-empty'}`)}>{bio || 'Your date vibe shows up here as you type it.'}</p>
       </div>
 
-      <p className="pdl-onb-preview-note">This preview updates as you fill the form. Nothing is saved until you finish setup.</p>
+      <p className={scopedClasses(onboardingStyles, "pdl-onb-preview-note")}>This preview updates as you fill the form. Nothing is saved until you finish setup.</p>
     </aside>
   </div>
 }

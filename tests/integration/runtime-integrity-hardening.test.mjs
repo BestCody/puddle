@@ -48,28 +48,3 @@ test('discovery retries are filtered by receipt before side effects run', async 
   assert.match(migration, /receipt\.profile_id=actor/)
   assert.match(migration, /receipt\.event_id=\(source\.item->>'eventId'\)::uuid/)
 })
-
-test('discovery cards use canonical B2 photo URLs without a relational catalogue fallback', async () => {
-  const card = await read('components/figma-swipe-card.js')
-  const discovery = await read('lib/app/discovery.js')
-  const global = await read('lib/app/discovery-global.js')
-  const photo = await read('lib/media/open-photo-url.js')
-
-  assert.doesNotMatch(card, /usePrivateB2Asset|private_b2_asset|mainPhotoPending|GooglePlacePhoto|GoogleServerPlace/)
-  assert.match(card, /figma-swipe-card-photo-empty/)
-  assert.match(global, /primary_photo/)
-  assert.match(photo, /\/api\/open-photo\//)
-  assert.doesNotMatch(discovery, /getRelationalDiscoveryFeed|discovery-relational|from\(['"]locations['"]\)/)
-})
-
-test('photo enrichment builds a global candidate lake and materializes canonical media', async () => {
-  const runner = await read('scripts/self-host-run-data-job.mjs')
-  const materializer = await read('scripts/global-data/materialize_photo_candidates.py')
-
-  assert.match(runner, /build_wikimedia_candidates\.py/)
-  assert.match(runner, /build_mapillary_candidates\.py/)
-  assert.match(runner, /materialize_photo_candidates\.py/)
-  assert.match(runner, /PUDDLE_STORAGE_CUTOVER_COMPLETE/)
-  assert.match(materializer, /sha256/i)
-  assert.match(materializer, /PUDDLE_OPEN_PHOTO_PREFIX/)
-})

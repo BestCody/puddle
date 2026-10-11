@@ -1,3 +1,5 @@
+import profileStyles from "@/components/profile.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { ProfileAvatarEditor } from '@/components/profile-avatar-editor'
 import { PhotoFrame } from '@/components/photo-frame'
@@ -128,12 +130,12 @@ export default async function ProfilePage({ searchParams }) {
     const themeName = Object.hasOwn(themes, session.profile.profile_theme) ? session.profile.profile_theme : 'blue'
     const theme = themes[themeName]
 
-    return <div className={`figma-profile-screen${customizing ? ' is-customizing' : ''}`} style={{ '--profile-theme': theme }} data-figma-node="40:347">
-      <section className="figma-profile-hero" aria-label="Profile overview">
-        {customizing ? <div className="figma-profile-theme-picker" aria-label="Profile banner color">
-          {Object.entries(themes).map(([name, color]) => <form action={updateProfileTheme} key={name}><input type="hidden" name="profile_theme" value={name} /><button className={name === themeName ? 'is-selected' : ''} type="submit" style={{ background: color }} aria-label={`${name} banner`}>{name === themeName ? '✓' : ''}</button></form>)}
-          <Link className="figma-profile-customize-done" href="/profile" aria-label="Done customizing">✓</Link>
-        </div> : <div className="figma-profile-top-actions"><Link className="figma-profile-settings-mobile" href="/account?mobile=1&returnTo=%2Fprofile">Settings</Link></div>}
+    return <div className={scopedClasses(profileStyles, `figma-profile-screen${customizing ? ' is-customizing' : ''}`)} style={{ '--profile-theme': theme }} data-figma-node="40:347">
+      <section className={scopedClasses(profileStyles, "figma-profile-hero")} aria-label="Profile overview">
+        {customizing ? <div className={scopedClasses(profileStyles, "figma-profile-theme-picker")} aria-label="Profile banner color">
+          {Object.entries(themes).map(([name, color]) => <form action={updateProfileTheme} key={name}><input type="hidden" name="profile_theme" value={name} /><button className={scopedClasses(profileStyles, name === themeName ? 'is-selected' : '')} type="submit" style={{ background: color }} aria-label={`${name} banner`}>{name === themeName ? '✓' : ''}</button></form>)}
+          <Link className={scopedClasses(profileStyles, "figma-profile-customize-done")} href="/profile" aria-label="Done customizing">✓</Link>
+        </div> : <div className={scopedClasses(profileStyles, "figma-profile-top-actions")}><Link className={scopedClasses(profileStyles, "figma-profile-settings-mobile")} href="/account?mobile=1&returnTo=%2Fprofile">Settings</Link></div>}
 
         <ProfileAvatarEditor
           avatarUrl={avatarUrl}
@@ -143,41 +145,41 @@ export default async function ProfilePage({ searchParams }) {
           currentPath={session.profile.avatar_path || null}
         />
 
-        <div className="figma-profile-identity">
+        <div className={scopedClasses(profileStyles, "figma-profile-identity")}>
           <h1>{displayName}</h1>
           <small>@{username}</small>
-          <div className="figma-profile-counts" aria-label="Profile counts"><span>{friendCount} {friendCount === 1 ? 'Friend' : 'Friends'}</span><span>{savedLocationCount} {savedLocationCount === 1 ? 'Save' : 'Saves'}</span></div>
-          <div className="figma-profile-chips" aria-label="Favorite categories">
+          <div className={scopedClasses(profileStyles, "figma-profile-counts")} aria-label="Profile counts"><span>{friendCount} {friendCount === 1 ? 'Friend' : 'Friends'}</span><span>{savedLocationCount} {savedLocationCount === 1 ? 'Save' : 'Saves'}</span></div>
+          <div className={scopedClasses(profileStyles, "figma-profile-chips")} aria-label="Favorite categories">
             {chips.map((value) => <span key={value}>{value}</span>)}
             <Link href="/account?section=profile&returnTo=%2Fprofile" aria-label="Edit favorite categories">+</Link>
           </div>
-          <div className="figma-profile-actions">
-            <Link className="is-follow" href="/create/post">Create puddle</Link>
+          <div className={scopedClasses(profileStyles, "figma-profile-actions")}>
+            <Link className={scopedClasses(profileStyles, "is-follow")} href="/create/post">Create puddle</Link>
             <Link href="/matches?tab=add">＋ Add friends</Link>
           </div>
         </div>
       </section>
 
-      <section className="figma-profile-cards" aria-label="Profile details">
-        <div className="figma-profile-card-column figma-profile-card-column--left">
-          <article className="figma-profile-card figma-profile-puddles-card">
+      <section className={scopedClasses(profileStyles, "figma-profile-cards")} aria-label="Profile details">
+        <div className={scopedClasses(profileStyles, "figma-profile-card-column figma-profile-card-column--left")}>
+          <article className={scopedClasses(profileStyles, "figma-profile-card figma-profile-puddles-card")}>
             <h2>Puddles</h2>
-            {recentPost ? <Link className="figma-profile-post-preview figma-profile-real-post" href="/map">
-              <header><PhotoFrame as="span" className="figma-profile-post-avatar" src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" /><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
+            {recentPost ? <Link className={scopedClasses(profileStyles, "figma-profile-post-preview figma-profile-real-post")} href="/map">
+              <header><PhotoFrame as="span" className={scopedClasses(profileStyles, "figma-profile-post-avatar")} src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" /><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
               <p>{recentPost.body || recentPost.title}</p>
-              <div className="figma-profile-post-collage"><PhotoFrame as="i" src={recentCover} alt={`${recentLocation?.name || recentPost.title} photo`} unavailableText="Photo unavailable" /><i /><i>{visiblePosts.length > 1 ? `+${visiblePosts.length - 1}` : ''}</i></div>
-              <div className="figma-profile-post-place"><small>{String(recentLocation?.kind || 'Place').replaceAll('_', ' ')}</small><strong>{recentLocation?.name || recentPost.title}</strong><b>+</b></div>
-            </Link> : <div className="figma-profile-card-empty"><p>No puddles posted yet.</p><Link href="/create/post">Create one</Link></div>}
+              <div className={scopedClasses(profileStyles, "figma-profile-post-collage")}><PhotoFrame as="i" src={recentCover} alt={`${recentLocation?.name || recentPost.title} photo`} unavailableText="Photo unavailable" /><i /><i>{visiblePosts.length > 1 ? `+${visiblePosts.length - 1}` : ''}</i></div>
+              <div className={scopedClasses(profileStyles, "figma-profile-post-place")}><small>{String(recentLocation?.kind || 'Place').replaceAll('_', ' ')}</small><strong>{recentLocation?.name || recentPost.title}</strong><b>+</b></div>
+            </Link> : <div className={scopedClasses(profileStyles, "figma-profile-card-empty")}><p>No puddles posted yet.</p><Link href="/create/post">Create one</Link></div>}
           </article>
-          <article className="figma-profile-card figma-profile-friends-card"><h2>Friends</h2>{friends.length ? <div className="figma-profile-mini-list">{friends.slice(0, 4).map((friend) => <ProfileFriendButton friendId={friend.id} name={friend.display_name || friend.username || 'Friend'} key={friend.id} />)}</div> : <p>No friends yet.</p>}<Link className="figma-profile-card-link" href="/matches?tab=add">Manage Friends</Link></article>
+          <article className={scopedClasses(profileStyles, "figma-profile-card figma-profile-friends-card")}><h2>Friends</h2>{friends.length ? <div className={scopedClasses(profileStyles, "figma-profile-mini-list")}>{friends.slice(0, 4).map((friend) => <ProfileFriendButton friendId={friend.id} name={friend.display_name || friend.username || 'Friend'} key={friend.id} />)}</div> : <p>No friends yet.</p>}<Link className={scopedClasses(profileStyles, "figma-profile-card-link")} href="/matches?tab=add">Manage Friends</Link></article>
         </div>
-        <div className="figma-profile-card-column figma-profile-card-column--right">
-          <article className="figma-profile-card figma-profile-location-card"><h2>Location</h2><strong>{locationLabel}</strong></article>
-          <article className="figma-profile-card figma-profile-saves-card"><h2>Saves</h2>{visibleSaves.length ? <div className="figma-profile-mini-list">{visibleSaves.slice(0, 4).map((item) => <Link href={`/plans/${item.locations.slug}`} key={item.location_id}><span>{item.locations.name}</span>{item.pinned_at ? <b>PINNED</b> : null}</Link>)}</div> : <p>Nothing saved yet.</p>}<Link className="figma-profile-card-link" href="/plans">View Saved</Link></article>
+        <div className={scopedClasses(profileStyles, "figma-profile-card-column figma-profile-card-column--right")}>
+          <article className={scopedClasses(profileStyles, "figma-profile-card figma-profile-location-card")}><h2>Location</h2><strong>{locationLabel}</strong></article>
+          <article className={scopedClasses(profileStyles, "figma-profile-card figma-profile-saves-card")}><h2>Saves</h2>{visibleSaves.length ? <div className={scopedClasses(profileStyles, "figma-profile-mini-list")}>{visibleSaves.slice(0, 4).map((item) => <Link href={`/plans/${item.locations.slug}`} key={item.location_id}><span>{item.locations.name}</span>{item.pinned_at ? <b>PINNED</b> : null}</Link>)}</div> : <p>Nothing saved yet.</p>}<Link className={scopedClasses(profileStyles, "figma-profile-card-link")} href="/plans">View Saved</Link></article>
         </div>
       </section>
 
-      <form className="figma-profile-signout" action={signOut}>
+      <form className={scopedClasses(profileStyles, "figma-profile-signout")} action={signOut}>
         <button type="submit">Sign out</button>
       </form>
     </div>

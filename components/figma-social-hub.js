@@ -1,4 +1,6 @@
 "use client"
+import friendsStyles from "@/components/friends.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
@@ -23,12 +25,12 @@ function Avatar({ client, person, className = '' }) {
   const path = person?.avatar_path || person?.friend_avatar_path || person?.sender_avatar_path
   const name = person?.display_name || person?.friend_name || person?.sender_name || 'Puddle person'
   const url = mediaUrl(client, path)
-  return <PhotoFrame as="span" src={url} alt="" className={`figma-friends-avatar ${className}`} unavailableText={initials(name)} loadingText="" />
+  return <PhotoFrame as="span" src={url} alt="" className={scopedClasses(friendsStyles, `figma-friends-avatar ${className}`)} unavailableText={initials(name)} loadingText="" />
 }
 
 function FriendsTabs({ tab }) {
   return <RoutedSegment
-    className="figma-friends-tabs"
+    className={scopedClasses(friendsStyles, "figma-friends-tabs")}
     tone="green"
     activeValue={tab}
     ariaLabel="Friends sections"
@@ -91,24 +93,24 @@ function SharedView({ client, snapshot }) {
     }
   }
 
-  return <section className="figma-friends-shared-view">
+  return <section className={scopedClasses(friendsStyles, "figma-friends-shared-view")}>
     <h1>Shared puddles</h1>
-    {notice ? <p className="figma-friends-chat-notice" role="status">{notice}</p> : null}
-    <div className="figma-friends-shared-grid">
+    {notice ? <p className={scopedClasses(friendsStyles, "figma-friends-chat-notice")} role="status">{notice}</p> : null}
+    <div className={scopedClasses(friendsStyles, "figma-friends-shared-grid")}>
       {shared.length ? shared.flatMap((item) => {
         const placeHref = item.location_slug ? `/plans/${item.location_slug}` : '/plans'
         const placePhotoUrl = mediaUrl(client, item.location_cover_path)
         return [
-          <article className="figma-friends-shared-place" key={`place:${item.share_id}`}>
-            <PhotoFrame as={Link} className="figma-friends-shared-photo" href={placeHref} src={placePhotoUrl} alt={`${item.location_name || 'Shared puddle'} photo`} aria-label={`Open ${item.location_name || 'shared puddle'}`} />
+          <article className={scopedClasses(friendsStyles, "figma-friends-shared-place")} key={`place:${item.share_id}`}>
+            <PhotoFrame as={Link} className={scopedClasses(friendsStyles, "figma-friends-shared-photo")} href={placeHref} src={placePhotoUrl} alt={`${item.location_name || 'Shared puddle'} photo`} aria-label={`Open ${item.location_name || 'shared puddle'}`} />
             <h2>{item.location_name || 'Shared puddle'}</h2><small>{item.location_city || ''}</small><span>{item.distance_label || ''}</span>
             <b>{item.direction === 'received' ? `Shared by ${item.friend_name || 'friend'}` : `Shared with ${item.friend_name || 'friend'}`}</b>
           </article>,
-          <article className="figma-friends-shared-chat" key={`chat:${item.share_id}`}><button type="button" onClick={() => openChat(item.friend_id)} disabled={openingFriendId === item.friend_id}>{openingFriendId === item.friend_id ? 'Opening...' : 'Jump to chat'}</button></article>
+          <article className={scopedClasses(friendsStyles, "figma-friends-shared-chat")} key={`chat:${item.share_id}`}><button type="button" onClick={() => openChat(item.friend_id)} disabled={openingFriendId === item.friend_id}>{openingFriendId === item.friend_id ? 'Opening...' : 'Jump to chat'}</button></article>
         ]
-      }) : <div className="figma-friends-shared-empty">No shared puddles yet.</div>}
+      }) : <div className={scopedClasses(friendsStyles, "figma-friends-shared-empty")}>No shared puddles yet.</div>}
     </div>
-    {hasMore ? <button className="figma-friends-shared-load-more" type="button" onClick={loadMore} disabled={loading}>{loading ? 'Loading...' : 'Load more shared puddles'}</button> : null}
+    {hasMore ? <button className={scopedClasses(friendsStyles, "figma-friends-shared-load-more")} type="button" onClick={loadMore} disabled={loading}>{loading ? 'Loading...' : 'Load more shared puddles'}</button> : null}
   </section>
 }
 
@@ -238,30 +240,30 @@ function AddView({ client, snapshot }) {
       return <button type="button" onClick={() => cancel(person)} disabled={Boolean(pendingTarget)}>{pendingTarget === person.id ? 'Updating...' : 'Pending · Cancel'}</button>
     }
     if (person.request_state === 'pending' && person.request_direction === 'incoming') {
-      return <span className="figma-friends-inline-request-actions"><button type="button" onClick={() => respond(person, 'accept')} disabled={Boolean(pendingTarget)}>Accept</button><button type="button" onClick={() => respond(person, 'decline')} disabled={Boolean(pendingTarget)}>Decline</button></span>
+      return <span className={scopedClasses(friendsStyles, "figma-friends-inline-request-actions")}><button type="button" onClick={() => respond(person, 'accept')} disabled={Boolean(pendingTarget)}>Accept</button><button type="button" onClick={() => respond(person, 'decline')} disabled={Boolean(pendingTarget)}>Decline</button></span>
     }
     return <button type="button" onClick={() => request(person)} disabled={Boolean(pendingTarget)} aria-label={`Add ${label}`}>{pendingTarget === person.id ? 'Adding...' : '+'}</button>
   }
 
   const outgoing = snapshot.requests.filter((item) => item.direction === 'outgoing' && !hiddenOutgoing.has(item.id))
 
-  return <section className="figma-friends-add-view">
+  return <section className={scopedClasses(friendsStyles, "figma-friends-add-view")}>
     <h1>Add Friends</h1>
-    <form className="figma-friends-search" onSubmit={search}>
+    <form className={scopedClasses(friendsStyles, "figma-friends-search")} onSubmit={search}>
       <span aria-hidden="true">&#x2667;</span>
       <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or @username" aria-label="Search friends by name or username" maxLength={60} />
       <button type="submit" disabled={searching} aria-label="Search for friends">&#x2191;</button>
     </form>
-    {notice ? <p className="figma-friends-chat-notice figma-friends-add-notice" role="alert">{notice}</p> : null}
+    {notice ? <p className={scopedClasses(friendsStyles, "figma-friends-chat-notice figma-friends-add-notice")} role="alert">{notice}</p> : null}
 
-    {results.length ? <div className="figma-friends-search-results">{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}{person.mutual_count ? <small>{person.mutual_count} mutual</small> : null}</span>{resultAction(person)}</div>)}</div> : null}
+    {results.length ? <div className={scopedClasses(friendsStyles, "figma-friends-search-results")}>{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}{person.mutual_count ? <small>{person.mutual_count} mutual</small> : null}</span>{resultAction(person)}</div>)}</div> : null}
 
-    <article className="figma-friends-request-card">
+    <article className={scopedClasses(friendsStyles, "figma-friends-request-card")}>
       <small>Request</small>
-      {incoming.length ? incoming.map((person) => <div className="figma-friends-request-row" key={`in:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button className="is-accept" type="button" onClick={() => respond(person, 'accept')} disabled={Boolean(pendingTarget)} aria-label={`Accept friend request from ${person.display_name || person.username || 'friend'}`}>&#x2713;</button><button className="is-decline" type="button" onClick={() => respond(person, 'decline')} disabled={Boolean(pendingTarget)} aria-label={`Decline friend request from ${person.display_name || person.username || 'friend'}`}>&#x00D7;</button></div></div>) : <p>No requests</p>}
+      {incoming.length ? incoming.map((person) => <div className={scopedClasses(friendsStyles, "figma-friends-request-row")} key={`in:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button className={scopedClasses(friendsStyles, "is-accept")} type="button" onClick={() => respond(person, 'accept')} disabled={Boolean(pendingTarget)} aria-label={`Accept friend request from ${person.display_name || person.username || 'friend'}`}>&#x2713;</button><button className={scopedClasses(friendsStyles, "is-decline")} type="button" onClick={() => respond(person, 'decline')} disabled={Boolean(pendingTarget)} aria-label={`Decline friend request from ${person.display_name || person.username || 'friend'}`}>&#x00D7;</button></div></div>) : <p>No requests</p>}
       <hr />
       <small>Sent</small>
-      {outgoing.length ? outgoing.map((person) => <div className="figma-friends-request-row" key={`out:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button type="button" onClick={() => cancel(person)} disabled={Boolean(pendingTarget)} aria-label={`Cancel friend request to ${person.display_name || person.username || 'Puddle person'}`}>&#x2212;</button></div></div>) : <p>No sent requests</p>}
+      {outgoing.length ? outgoing.map((person) => <div className={scopedClasses(friendsStyles, "figma-friends-request-row")} key={`out:${person.id}`}><Avatar client={client} person={person} /><span><strong>{person.display_name || 'Puddle person'}</strong>{person.username ? <em>@{person.username}</em> : null}</span><div><button type="button" onClick={() => cancel(person)} disabled={Boolean(pendingTarget)} aria-label={`Cancel friend request to ${person.display_name || person.username || 'Puddle person'}`}>&#x2212;</button></div></div>) : <p>No sent requests</p>}
     </article>
   </section>
 }
@@ -269,7 +271,7 @@ function AddView({ client, snapshot }) {
 export function FigmaSocialHub({ initialSnapshot, initialTab = 'messages' }) {
   const client = useMemo(() => createClient(), [])
   const tab = initialTab === 'friends' ? 'add' : initialTab
-  return <div className={`figma-friends-screen is-${tab}`}>
+  return <div className={scopedClasses(friendsStyles, `figma-friends-screen is-${tab}`)}>
     <FriendsTabs tab={tab} />
     {tab === 'shared' ? <SharedView client={client} snapshot={initialSnapshot} /> : <AddView client={client} snapshot={initialSnapshot} />}
   </div>

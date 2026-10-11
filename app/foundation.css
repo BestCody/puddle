@@ -1,0 +1,477 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=Martian+Mono:wght@700&display=swap');
+
+/* Shared tokens, reset and explicit utilities; all feature geometry is scoped. */
+
+@layer foundation {
+
+  :root {
+    --ink: #171114;
+    --paper: #fff8f3;
+    --pink: #ff4fa3;
+    --purple: #7c4dff;
+    --lavender: #cbb9ff;
+    --yellow: #ffd86b;
+    --mint: #72e6c1;
+    --blue: #65b8ff;
+    --line: 0.1875rem solid var(--ink);
+    --shadow: 0.375rem 0.4375rem 0 var(--ink);
+    --product-sidebar: 16.75rem;
+    --responsive-page-max: 90rem;
+    --responsive-gutter: clamp(.75rem,2.6vw,3rem);
+    --responsive-section-gap: clamp(1rem,2vw,1.6rem);
+    --responsive-card-pad: clamp(1rem,2vw,1.6rem);
+    --responsive-radius: clamp(1.125rem,2vw,1.875rem);
+    --minimal-card: #fff;
+    --minimal-sidebar-width: 4.75rem;
+    --puddle-figma-blue: #4ca5f7;
+    --puddle-figma-blue-border: #1c74d8;
+    --puddle-figma-red: #e73668;
+    --puddle-figma-green: #65e736;
+    --puddle-figma-yellow: #f2c035;
+    --puddle-figma-grey: #858585;
+    --puddle-figma-line: #d1d1d1;
+    --puddle-figma-bg: #f6f6f6;
+    --minimal-accent: var(--puddle-figma-blue);
+    --minimal-ink: #080808;
+    --minimal-muted: #858585;
+    --minimal-line: var(--puddle-figma-line);
+    --minimal-bg: var(--puddle-figma-bg);
+    --figma-public-blue: #4ca5f7;
+    --figma-public-grey: #858585;
+    --figma-public-line: #e6e6e6;
+    --figma-shell-sidebar: 17.5rem;
+    --figma-bg: #f6f6f6;
+    --figma-grey: #858585;
+    --figma-border: #e5e5e5;
+    --figma-blue: #4ca5f7;
+    --figma-blue-border: #1c74d8;
+    --figma-yellow: #f2c035;
+    --figma-yellow-border: #c79e2b;
+    --figma-purple: #b784e4;
+    --figma-purple-border: #8d5eb7;
+    --figma-green: #78e152;
+    --figma-green-border: #4caf28;
+    --figma-pink: #e73668;
+    --figma-pink-border: #a02044;
+    --figma-danger: #b42318;
+    --figma-card-shadow: 0 0.25rem 0 rgba(0,0,0,.10);
+    --figma-mono: "Martian Mono", "SFMono-Regular", Consolas, monospace;
+    --font-sans: Manrope, Arial, sans-serif;
+    --puddle-overlay-backdrop: rgba(245, 247, 249, .34);
+    --puddle-overlay-blur: 0.875rem;
+    --puddle-search-overlay-backdrop: rgba(245, 247, 249, .20);
+    --puddle-search-overlay-blur: .5rem;
+    --puddle-feed-search-overlay-backdrop: rgba(255, 255, 255, .18);
+    --puddle-overlay-duration: 180ms;
+    --puddle-mobile-nav-height: 6.5rem;
+    --puddle-mobile-content-bottom: calc(var(--puddle-mobile-nav-height) + env(safe-area-inset-bottom));
+    --onb-blue: var(--puddle-figma-blue, #4ca5f7);
+    --onb-green: var(--puddle-figma-green, #65e736);
+    --onb-ink: #575757;
+    --onb-label: #7a7a7a;
+    --onb-muted: #b0b0b0;
+    --onb-grey: var(--puddle-figma-grey, #858585);
+    --onb-line: #e6e6e6;
+    --onb-rule: #b7b7b7;
+    --onb-track: #e7e7e7;
+    --onb-fancy: 'Martian Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+    --onb-default: Manrope, Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans',sans-serif;
+    font-size: clamp(0.9375rem,calc(0.875rem + .18vw),1.125rem);
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-width: 17.5rem;
+    overflow-x: hidden;
+    background: var(--puddle-figma-bg);
+    color: #080808;
+    font-family: Manrope, Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    max-width: 100%;
+  }
+
+  input {
+    font: inherit;
+    color: inherit;
+    max-width: 100%;
+  }
+
+  select {
+    font: inherit;
+    color: inherit;
+    max-width: 100%;
+  }
+
+  textarea {
+    font: inherit;
+    color: inherit;
+    max-width: 100%;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    background: var(--yellow);
+    border: 0.125rem solid var(--ink);
+    border-radius: 999rem;
+    padding: .38rem .7rem;
+    font-weight: 800;
+    font-size: .75rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    box-shadow: 0.125rem 0.1875rem 0 var(--ink);
+  }
+
+  .field {
+    display: grid;
+    gap: .45rem;
+    font-weight: 700;
+  }
+
+  .field input {
+    width: 100%;
+    border: var(--line);
+    border-radius: 1rem;
+    background: #fff;
+    padding: .95rem 1rem;
+    outline: none;
+    box-shadow: 0 0 0 transparent;
+    transition: .16s;
+  }
+
+  .field select {
+    width: 100%;
+    border: var(--line);
+    border-radius: 1rem;
+    background: #fff;
+    padding: .95rem 1rem;
+    outline: none;
+    box-shadow: 0 0 0 transparent;
+    transition: .16s;
+  }
+
+  .field textarea {
+    width: 100%;
+    border: var(--line);
+    border-radius: 1rem;
+    background: #fff;
+    padding: .95rem 1rem;
+    outline: none;
+    box-shadow: 0 0 0 transparent;
+    transition: .16s;
+    min-height: 6.875rem;
+    resize: vertical;
+  }
+
+  .field input:focus {
+    box-shadow: 0.25rem 0.3125rem 0 var(--purple);
+    transform: translate(-0.0625rem,-0.0625rem);
+  }
+
+  .field select:focus {
+    box-shadow: 0.25rem 0.3125rem 0 var(--purple);
+    transform: translate(-0.0625rem,-0.0625rem);
+  }
+
+  .field textarea:focus {
+    box-shadow: 0.25rem 0.3125rem 0 var(--purple);
+    transform: translate(-0.0625rem,-0.0625rem);
+  }
+
+  .primary-button {
+    border: var(--line);
+    border-radius: 1rem;
+    padding: .95rem 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: .15s;
+    box-shadow: 0.25rem 0.3125rem 0 var(--ink);
+    background: var(--pink);
+  }
+
+  .primary-button:hover {
+    transform: translate(-0.125rem,-0.125rem);
+    box-shadow: 0.375rem 0.4375rem 0 var(--ink);
+  }
+
+  button:disabled {
+    opacity: .6;
+    cursor: wait;
+  }
+
+  .muted {
+    color: #725f69;
+    line-height: 1.6;
+  }
+
+  .field-error {
+    display: block;
+    min-height: 1.05rem;
+    color: #9f1f2f;
+    font-weight: 700;
+    line-height: 1.35;
+    font-size: 0.625rem;
+  }
+
+  .field [aria-invalid="true"] {
+    border-color: #9f1f2f;
+    box-shadow: 0 0 0 0.125rem rgba(159,31,47,.12);
+  }
+
+  .primary-button:disabled {
+    cursor: not-allowed;
+  }
+
+  .field-hint {
+    color: #725f69;
+    font-weight: 600;
+    line-height: 1.4;
+    font-size: 0.625rem;
+  }
+
+  [data-photo-state='loading'] > img {
+    opacity: 0;
+  }
+
+  [data-photo-state='unavailable'] > img {
+    display: none;
+  }
+
+  .section-pill {
+    border: 0.125rem solid #171114;
+    border-radius: 999rem;
+    background: #fff;
+    padding: .35rem .65rem;
+    font-weight: 900;
+    font-size: .72rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    box-shadow: 0.125rem 0.1875rem 0 #171114;
+    display: none;
+  }
+
+  .section-pill-yellow {
+    background: #ffd86b;
+  }
+
+  .section-pill-mint {
+    background: #72e6c1;
+  }
+
+  .span-two {
+    grid-column: span 2;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  svg {
+    max-width: 100%;
+  }
+
+  video {
+    max-width: 100%;
+  }
+
+  canvas {
+    max-width: 100%;
+  }
+
+  :is(h1,h2,h3,p,a,strong,span,small,label,dd,dt) {
+    overflow-wrap: anywhere;
+  }
+
+  :where([class$="-grid"],[class*="-grid "],[class$="-layout"],[class*="-layout "])>* {
+    min-width: 0;
+  }
+
+  :where(img,video,canvas,iframe) {
+    max-width: 100%;
+  }
+
+  :where(input,select,textarea,button) {
+    min-width: 0;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 0.0625rem;
+    height: 0.0625rem;
+    padding: 0;
+    margin: -0.0625rem;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  ::view-transition-old(root) {
+    animation: none;
+  }
+
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
+  ::view-transition-group(*) {
+    animation-duration: 260ms;
+    animation-timing-function: cubic-bezier(.2,.72,.2,1);
+  }
+
+  ::view-transition-image-pair(*) {
+    isolation: auto;
+  }
+
+  ::view-transition-old(*) {
+    mix-blend-mode: normal;
+    backface-visibility: hidden;
+  }
+
+  ::view-transition-new(*) {
+    mix-blend-mode: normal;
+    backface-visibility: hidden;
+  }
+
+  body:has(.figma-dashboard-shell) {
+    min-width: 17.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: #c7c7c7 transparent;
+  }
+
+  body:has(.figma-dashboard-shell)::-webkit-scrollbar {
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+
+  body:has(.figma-dashboard-shell)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  body:has(.figma-dashboard-shell)::-webkit-scrollbar-thumb {
+    border: 0.125rem solid transparent;
+    border-radius: 999rem;
+    background: #c7c7c7;
+    background-clip: padding-box;
+  }
+
+  @media (prefers-reduced-motion:reduce) {
+
+    * {
+      transition: none !important;
+      scroll-behavior: auto !important;
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+    }
+
+    *::before {
+      scroll-behavior: auto !important;
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+    }
+
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+    }
+  }
+
+  @media (max-width:66.25rem) {
+
+    :root {
+      --product-sidebar: 13.75rem;
+    }
+  }
+
+  @media (max-width:45rem) {
+
+    .span-two {
+      grid-column: auto;
+    }
+  }
+
+  @media (min-width:100rem) {
+
+    :root {
+      --responsive-page-max: 95rem;
+    }
+  }
+
+  @media (max-width:56.25rem) {
+
+    html {
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-width:42.5rem) {
+
+    :root {
+      --responsive-gutter: .65rem;
+      --responsive-card-pad: 1rem;
+      --responsive-radius: 1.375rem;
+    }
+
+    .span-two {
+      grid-column: auto;
+    }
+
+    :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+      width: 100%;
+    }
+  }
+
+  @media (max-width:51.25rem) {
+
+    :root {
+      --minimal-sidebar-width: 0;
+    }
+  }
+
+  @media (max-width: 47.5rem) {
+
+    body {
+      background: #fff;
+    }
+
+    :root {
+      --figma-shell-sidebar: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+
+    ::view-transition-group(*) {
+      animation-timing-function: linear;
+      animation-duration: 1ms !important;
+      animation-delay: 0ms;
+    }
+  }
+}
+

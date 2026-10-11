@@ -1,3 +1,5 @@
+import authStyles from "@/components/auth.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
@@ -10,11 +12,11 @@ export default function ForgotPasswordPage({ searchParams }) {
   return (
     <AuthShell eyebrow="No panic" title="Let’s get you back in." description="Enter your email and we’ll send a secure password-reset link.">
       <AuthMessage searchParams={searchParams} />
-      <form className="auth-form" action={requestPasswordReset}>
+      <form className={scopedClasses(authStyles, "auth-form")} action={requestPasswordReset}>
         <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" placeholder="you@example.com" /></label>
         <SubmitButton>Send reset link →</SubmitButton>
       </form>
-      <div className="auth-links"><Link href="/">Back to sign in</Link></div>
+      <div className={scopedClasses(authStyles, "auth-links")}><Link href="/">Back to sign in</Link></div>
     </AuthShell>
   )
 }

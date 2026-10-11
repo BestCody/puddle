@@ -1,0 +1,689 @@
+/* Swipe owns its layout, card, dock and details. State classes remain DOM hooks,
+   not global styling surfaces; landing demos use their own explicit variant. */
+
+:global(html):has(.screen), :global(body):has(.screen) {
+  overflow: hidden;
+}
+
+.screen {
+  position: relative;
+  min-height: 100dvh;
+  background: var(--swipe-canvas, #fff);
+  overflow: visible;
+}
+
+.workspace {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  justify-items: center;
+  align-content: center;
+  gap: .75rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 100dvh;
+  padding: 4.5rem 1.5rem 2.25rem;
+}
+
+.stage {
+  position: relative;
+  width: min(22.5rem, calc(100% - 3rem), calc((100dvh - 12.25rem) * 5 / 7));
+  aspect-ratio: 5 / 7;
+  overflow: visible;
+}
+
+.card {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  border: .1875rem solid #d1d1d1;
+  border-radius: 1.5625rem;
+  background: #fff;
+  box-shadow: none;
+  touch-action: pan-y;
+  transition: transform .28s ease, opacity .2s ease;
+}
+
+.card:global(.is-active) {
+  z-index: 2;
+}
+
+.card:global(.is-dragging) {
+  transition: none;
+}
+
+.card:global(.is-preview) {
+  z-index: 1;
+  transform: translateY(clamp(.5rem, 1.5vw, .75rem)) scale(.94);
+  opacity: .86;
+  pointer-events: none;
+  transition: transform .36s cubic-bezier(.2,.78,.24,1), opacity .36s ease;
+}
+
+.stage:global(.is-swiping) > .card:global(.is-preview) {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.card:global(.is-leaving) {
+  z-index: 3;
+  transition: transform .36s cubic-bezier(.16,.84,.22,1), opacity .36s ease;
+}
+
+.cardPhoto {
+  position: absolute;
+  inset: 0;
+  background: #fff center / cover;
+}
+
+.cardPhoto::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.02) 48%, rgba(255,255,255,.62) 69%, #fff 87%);
+}
+
+.cardPhoto > img, .cardPhoto > div {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardPhoto > img {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.cardPhotoEmpty {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #f1f1f1, #d9d9d9);
+  color: #686868;
+  font: 600 .875rem/1 var(--figma-mono);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.cardMeta {
+  position: absolute;
+  z-index: 3;
+  inset: .9375rem 1rem auto;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.cardMeta span {
+  min-height: 1.5625rem;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: .625rem;
+  border-radius: 2rem;
+  background: var(--swipe-chip, #d9d9d9);
+  color: var(--swipe-chip-text, #000);
+  font: 600 .875rem/1 var(--figma-mono);
+}
+
+.cardCopy {
+  position: absolute;
+  z-index: 4;
+  inset: auto 4.125rem 1.125rem 1rem;
+  display: grid;
+  align-content: end;
+  gap: .375rem;
+}
+
+.cardCopy h1 {
+  width: 100%;
+  margin: 0;
+  color: #000;
+  font: 800 2.25rem/.98 Manrope, Inter, sans-serif;
+  letter-spacing: -.1125rem;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.cardCopy p {
+  margin: 0;
+  color: #000;
+  font: 600 .7625rem/1.15 var(--figma-mono);
+  letter-spacing: -.05rem;
+  overflow-wrap: anywhere;
+}
+
+.detailsButton {
+  position: absolute;
+  z-index: 5;
+  inset: auto 1.1875rem 1.25rem auto;
+  width: 2.5625rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--swipe-chip, #d9d9d9);
+  color: var(--swipe-chip-text, #6c6c6c);
+  font: 400 2rem/1 Manrope, sans-serif;
+  cursor: pointer;
+}
+
+.dragLabel {
+  position: absolute;
+  z-index: 6;
+  top: 5rem;
+  padding: .5rem .75rem;
+  border: .1875rem solid currentColor;
+  border-radius: .625rem;
+  background: rgba(255,255,255,.84);
+  font: 800 1.5rem/1 Manrope, sans-serif;
+  opacity: 0;
+}
+
+.dragLabel:global(.is-pass) {
+  left: 1.375rem;
+  color: var(--figma-pink);
+  transform: rotate(-10deg);
+}
+
+.dragLabel:global(.is-save) {
+  right: 1.375rem;
+  color: var(--figma-green);
+  transform: rotate(10deg);
+}
+
+.actions {
+  position: relative;
+  width: min(17.4375rem, calc(100% - 3rem));
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .5625rem;
+}
+
+.action {
+  display: grid;
+  justify-items: center;
+  gap: .25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+}
+
+.action > span {
+  width: 3.375rem;
+  height: 3.375rem;
+  display: grid;
+  place-items: center;
+  border: .125rem solid currentColor;
+  border-radius: 50%;
+  background: var(--swipe-action-surface, rgba(255,255,255,.92));
+  box-shadow: 0 .25rem 0 var(--swipe-action-shadow, rgba(0,0,0,.12));
+}
+
+.action svg {
+  width: 1.625rem;
+  height: 1.625rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.action small {
+  font: 800 .675rem/1 var(--figma-mono);
+}
+
+.action:global(.is-undo) {
+  color: #d6d6d6;
+}
+
+.action:global(.is-pass) {
+  color: var(--figma-pink);
+}
+
+.action:global(.is-save) {
+  color: var(--figma-green);
+}
+
+.action:global(.is-perfect) {
+  color: var(--figma-yellow);
+}
+
+.action:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.status {
+  position: relative;
+  width: max-content;
+  max-width: calc(100% - 3rem);
+  min-height: 1.125rem;
+  color: var(--figma-grey);
+  font: 700 .6875rem/1.2 Manrope, sans-serif;
+  text-align: center;
+}
+
+.filterTrigger {
+  position: fixed;
+  z-index: 65;
+  inset: 2.25rem 2.25rem auto auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: .125rem solid var(--swipe-control-border, #dedede);
+  border-radius: 50%;
+  background: var(--swipe-control-surface, #fff);
+  color: var(--swipe-control-text, #666);
+  box-shadow: 0 .25rem 0 rgba(0,0,0,.1);
+  font: 700 .75rem/1 Manrope, sans-serif;
+  cursor: pointer;
+}
+
+.filterIcon {
+  display: grid;
+  place-items: center;
+}
+
+.filterIcon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.filterLabel {
+  position: absolute;
+  width: .0625rem;
+  height: .0625rem;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.mobileLogo {
+  display: none;
+}
+
+.detailsBackdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(0,0,0,.48);
+}
+
+.details {
+  position: relative;
+  width: min(38.75rem, 100%);
+  max-height: min(88dvh, 47.5rem);
+  overflow: auto;
+  padding-bottom: 1.375rem;
+  border: .15625rem solid #e5e5e5;
+  border-radius: 1.5625rem;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 1.5rem 4.375rem rgba(0,0,0,.25);
+}
+
+.detailsClose {
+  position: absolute;
+  z-index: 4;
+  inset: .75rem .75rem auto auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.92);
+  color: #555;
+  font: 400 1.75rem/1 Manrope, sans-serif;
+  box-shadow: 0 .1875rem 0 rgba(0,0,0,.1);
+  cursor: pointer;
+}
+
+.detailsGallery {
+  height: 16.25rem;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: .375rem;
+  overflow: hidden;
+  border-radius: 1.375rem 1.375rem 0 0;
+  background: #eee;
+}
+
+.detailsGallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.detailsPhotoEmpty {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  background: #f0f0f0;
+  color: #858585;
+  font: 700 .75rem/1.25 Manrope, sans-serif;
+  text-align: center;
+}
+
+.detailsKicker {
+  min-height: 1.625rem;
+  display: inline-flex;
+  align-items: center;
+  margin: 1.375rem 1.375rem 0;
+  padding-inline: .625rem;
+  border-radius: 100vmax;
+  background: #d9d9d9;
+  color: #666;
+  font: 600 .75rem/1 var(--figma-mono);
+}
+
+.details h2 {
+  margin: .5625rem 1.375rem .25rem;
+  font: 800 2.375rem/1 Manrope, sans-serif;
+  letter-spacing: -.1125rem;
+}
+
+.details > p {
+  margin: 0 1.375rem;
+  color: #858585;
+  font: 600 .8125rem/1.35 var(--figma-mono);
+}
+
+.details > .detailsSummary {
+  margin-top: 1.125rem;
+  color: #333;
+  font: 600 .9375rem/1.45 Manrope, sans-serif;
+}
+
+.detailsTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4375rem;
+  margin: 1.125rem 1.375rem 0;
+}
+
+.detailsTags span {
+  padding: .4375rem .625rem;
+  border-radius: 100vmax;
+  background: #f0f0f0;
+  color: #777;
+  font: 700 .6875rem/1 Manrope, sans-serif;
+  text-transform: capitalize;
+}
+
+.detailsActions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .5625rem;
+  margin: 1.375rem 1.375rem 0;
+}
+
+.detailsActions button {
+  min-height: 2.6875rem;
+  border: .125rem solid #e5e5e5;
+  border-radius: 100vmax;
+  background: #fff;
+  color: #555;
+  font: 800 .875rem/1 Manrope, sans-serif;
+  cursor: pointer;
+}
+
+.detailsActions button:nth-child(1) {
+  border-color: var(--figma-pink);
+  color: var(--figma-pink);
+}
+
+.detailsActions button:nth-child(2) {
+  border-color: var(--figma-green);
+  color: #4caf28;
+}
+
+.detailsActions button:nth-child(3) {
+  border-color: var(--figma-yellow);
+  color: #bd8b00;
+}
+
+.detailsActions button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.empty {
+  width: min(26.875rem, 100%);
+  min-height: 15.625rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1rem;
+  padding: 1.75rem;
+  border: .15625rem solid #e5e5e5;
+  border-radius: 1.5625rem;
+  background: #fff;
+  text-align: center;
+}
+
+.empty h1 {
+  margin: 0;
+  font: 800 1.875rem/1.05 Manrope, sans-serif;
+}
+
+.empty p {
+  margin: 0;
+  color: #858585;
+  font: 600 .875rem/1.4 Manrope, sans-serif;
+}
+
+.empty > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .5rem;
+}
+
+.empty button {
+  min-height: 2.5rem;
+  padding-inline: .9375rem;
+  border: .125rem solid #d9d9d9;
+  border-radius: 100vmax;
+  background: #fff;
+  color: #555;
+  font: 800 .8125rem/1 Manrope, sans-serif;
+}
+
+:global(.figma-dashboard-shell[data-resolved-appearance='dark']) .screen,
+:global(.figma-dashboard-shell[data-appearance='dark']) .screen {
+  --swipe-canvas: #111315;
+  --swipe-chip: rgba(39,43,48,.92);
+  --swipe-chip-text: #d8dcdf;
+  --swipe-action-surface: rgba(30,33,37,.96);
+  --swipe-action-shadow: rgba(0,0,0,.28);
+  --swipe-control-surface: #202428;
+  --swipe-control-border: #3d4349;
+  --swipe-control-text: #eef1f3;
+}
+
+@media (min-width: 47.5625rem) and (max-height: 47.5rem) {
+
+  .workspace {
+    align-content: start;
+    padding-top: 4rem;
+  }
+}
+
+@media (max-width: 47.5rem) {
+
+  .screen {
+    height: calc(100dvh - var(--puddle-mobile-content-bottom, 6.5rem));
+    min-height: 0;
+  }
+
+  .workspace {
+    height: 100%;
+    min-height: 0;
+    align-content: start;
+    gap: clamp(.4375rem, 1.25dvh, .75rem);
+    padding: clamp(4.5rem, 12dvh, 6.4375rem) clamp(1rem, 5vw, 1.5rem) clamp(.75rem, 3dvh, 1.5rem);
+  }
+
+  .stage {
+    width: min(20.3125rem, calc(100% - 1rem), calc(59.7dvh - 10.625rem));
+    aspect-ratio: 325 / 544;
+  }
+
+  .card {
+    border-width: .15625rem;
+    border-radius: 1.3125rem;
+  }
+
+  .cardMeta {
+    inset: .75rem .8125rem auto;
+  }
+
+  .cardMeta span {
+    min-height: 1.3125rem;
+    padding-inline: .5rem;
+    font-size: .6875rem;
+  }
+
+  .cardCopy {
+    inset: auto clamp(3.375rem, 15vw, 3.75rem) clamp(.781rem, 2.5dvh, 1.0625rem) clamp(.8rem, 4vw, .9375rem);
+    gap: .3125rem;
+  }
+
+  .cardCopy h1 {
+    font-size: clamp(1.5625rem, min(8.6vw, 5.1dvh), 2.0625rem);
+    letter-spacing: -.084375rem;
+  }
+
+  .cardCopy p {
+    font-size: clamp(.5625rem, min(2.8vw, 1.45dvh), .6875rem);
+    letter-spacing: -.041575rem;
+  }
+
+  .detailsButton {
+    inset: auto 1.09375rem .875rem auto;
+    width: clamp(2.375rem, 12vw, 2.875rem);
+    height: clamp(2.375rem, 12vw, 2.875rem);
+    background: var(--swipe-chip, rgba(217,217,217,.24));
+  }
+
+  .actions {
+    width: min(18rem, 100%);
+    gap: clamp(.375rem, 2vw, .5rem);
+  }
+
+  .action > span {
+    width: clamp(2.75rem, min(15vw, 7.6dvh), 3.625rem);
+    height: clamp(2.75rem, min(15vw, 7.6dvh), 3.625rem);
+  }
+
+  .action svg {
+    width: clamp(1.3125rem, 7vw, 1.6875rem);
+    height: clamp(1.3125rem, 7vw, 1.6875rem);
+  }
+
+  .action small {
+    font-size: clamp(.53125rem, 2.6vw, .625rem);
+  }
+
+  .status {
+    max-width: calc(100% - 2rem);
+    min-height: .875rem;
+    font-size: .625rem;
+  }
+
+  .mobileLogo {
+    display: block;
+    position: absolute;
+    z-index: 2;
+    top: 4.6dvh;
+    left: 50%;
+    width: clamp(2rem, 9vw, 2.375rem);
+    aspect-ratio: 1;
+    transform: translateX(-50%);
+    background: url('/puddle-mark-outline.svg') center / contain no-repeat;
+  }
+
+  .filterTrigger {
+    position: absolute;
+    inset: 1.5rem 1rem auto auto;
+    width: auto;
+    min-width: 4.75rem;
+    height: 2.5rem;
+    padding-inline: .9375rem;
+    border-radius: 100vmax;
+  }
+
+  .filterIcon {
+    display: none;
+  }
+
+  .filterLabel {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .detailsBackdrop {
+    padding: .75rem;
+  }
+
+  .details {
+    max-height: 90svh;
+    border-radius: 1.375rem;
+  }
+
+  .detailsGallery {
+    height: 13.125rem;
+  }
+
+  .details h2 {
+    font-size: 1.9375rem;
+  }
+
+  .detailsActions {
+    gap: .375rem;
+  }
+}
+
+@media (max-width: 23.75rem), (max-height: 40.625rem) {
+
+  .filterTrigger {
+    top: 1.25rem;
+    right: .75rem;
+    height: 2.375rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .card, .card:global(.is-preview), .card:global(.is-leaving) {
+    transition: none;
+  }
+}

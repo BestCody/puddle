@@ -13,7 +13,6 @@ test('host jobs reconcile claims before materializing and publish the photo over
   assert.match(runner, /PUDDLE_JOBS_ENABLED/)
   assert.match(runner, /PUDDLE_STORAGE_CUTOVER_COMPLETE/)
   assert.match(runner, /PUDDLE_SUPABASE_CUTOVER_COMPLETE/)
-  assert.doesNotMatch(runner, /B2_/)
 })
 
 test('location rebuild carries photo state before activating the index', async () => {

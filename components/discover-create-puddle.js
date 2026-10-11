@@ -1,4 +1,6 @@
 "use client"
+import composerStyles from "@/components/feed-composer.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
@@ -98,28 +100,28 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
     setSavedPointsRetry((value) => value + 1)
   }
 
-  return <div className={`puddle-discover-create-dock${open ? ' is-open' : ''}`} data-testid="feed-composer" ref={dockRef}>
-    <button className="puddle-discover-create-trigger" type="button" aria-expanded={open} aria-controls="discover-create-puddle-form" onClick={() => setOpen(true)}>
-      <PhotoFrame as="span" className="puddle-discover-create-avatar" src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
-      <span className="puddle-discover-create-placeholder">Create a puddle...</span>
-      <span className="puddle-discover-create-arrow" aria-hidden="true">↑</span>
+  return <div className={scopedClasses(composerStyles, `puddle-discover-create-dock${open ? ' is-open' : ''}`)} data-testid="feed-composer" ref={dockRef}>
+    <button className={scopedClasses(composerStyles, "puddle-discover-create-trigger")} type="button" aria-expanded={open} aria-controls="discover-create-puddle-form" onClick={() => setOpen(true)}>
+      <PhotoFrame as="span" className={scopedClasses(composerStyles, "puddle-discover-create-avatar")} src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
+      <span className={scopedClasses(composerStyles, "puddle-discover-create-placeholder")}>Create a puddle...</span>
+      <span className={scopedClasses(composerStyles, "puddle-discover-create-arrow")} aria-hidden="true">↑</span>
     </button>
 
-    <form ref={formRef} action={createPuddlePost} className="puddle-discover-create-form" id="discover-create-puddle-form" role="dialog" aria-modal="true" aria-label="Create a puddle" aria-hidden={!open} inert={!open} tabIndex={-1}>
+    <form ref={formRef} action={createPuddlePost} className={scopedClasses(composerStyles, "puddle-discover-create-form")} id="discover-create-puddle-form" role="dialog" aria-modal="true" aria-label="Create a puddle" aria-hidden={!open} inert={!open} tabIndex={-1}>
       <input type="hidden" name="location_id" value={locationId} />
-      <header className="puddle-discover-create-header">
-        <PhotoFrame as="span" className="puddle-discover-create-avatar" src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
-        <fieldset className="puddle-discover-create-visibility" aria-label="Post visibility">
+      <header className={scopedClasses(composerStyles, "puddle-discover-create-header")}>
+        <PhotoFrame as="span" className={scopedClasses(composerStyles, "puddle-discover-create-avatar")} src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
+        <fieldset className={scopedClasses(composerStyles, "puddle-discover-create-visibility")} aria-label="Post visibility">
           <label><input type="radio" name="visibility" value="public" defaultChecked /><span>Public</span></label>
           <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>
         </fieldset>
-        <button className="puddle-discover-create-close" type="button" onClick={() => setOpen(false)} aria-label="Close create puddle">×</button>
-        <button className="puddle-discover-create-submit" type="submit" disabled={!locationId} aria-label="Publish puddle">↑</button>
+        <button className={scopedClasses(composerStyles, "puddle-discover-create-close")} type="button" onClick={() => setOpen(false)} aria-label="Close create puddle">×</button>
+        <button className={scopedClasses(composerStyles, "puddle-discover-create-submit")} type="submit" disabled={!locationId} aria-label="Publish puddle">↑</button>
       </header>
-      <label className="puddle-discover-create-title"><span className="sr-only">Title</span><input ref={titleRef} name="title" maxLength="80" required placeholder="Title" tabIndex={open ? 0 : -1} /></label>
-      <label className="puddle-discover-create-description"><span className="sr-only">Description</span><textarea name="description" maxLength="1000" placeholder="Description" tabIndex={open ? 0 : -1} /></label>
-      <div className="puddle-discover-create-footer">
-        <label className="puddle-discover-create-place">
+      <label className={scopedClasses(composerStyles, "puddle-discover-create-title")}><span className={scopedClasses(composerStyles, "sr-only")}>Title</span><input ref={titleRef} name="title" maxLength="80" required placeholder="Title" tabIndex={open ? 0 : -1} /></label>
+      <label className={scopedClasses(composerStyles, "puddle-discover-create-description")}><span className={scopedClasses(composerStyles, "sr-only")}>Description</span><textarea name="description" maxLength="1000" placeholder="Description" tabIndex={open ? 0 : -1} /></label>
+      <div className={scopedClasses(composerStyles, "puddle-discover-create-footer")}>
+        <label className={scopedClasses(composerStyles, "puddle-discover-create-place")}>
           <span>Saved place</span>
           <select value={locationId} onChange={(event) => setLocationId(event.target.value)} disabled={!savedPoints.length} tabIndex={open ? 0 : -1}>
             {savedPoints.length ? savedPoints.map((point) => <option value={point.id} key={point.id}>{point.title} · {placeLabel(point)}</option>) : <option value="">Save a place first</option>}

@@ -1,0 +1,291 @@
+.location-search-field [aria-invalid="true"] {
+  border-color: #9f1f2f;
+  box-shadow: 0 0 0 0.125rem rgba(159,31,47,.12);
+}
+
+.location-picker {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.location-search-field {
+  margin: 0;
+}
+
+.location-search-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 0.5rem;
+}
+
+.location-search-row input {
+  min-width: 0;
+}
+
+.location-search-row button {
+  border: 0.0625rem solid #e8e2e5;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #171114;
+  padding: 0.625rem 0.875rem;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.location-current-button {
+  border: 0.0625rem solid #e8e2e5;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #171114;
+  padding: 0.625rem 0.875rem;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  justify-self: start;
+}
+
+.location-search-row button:hover {
+  border-color: #ff4f7b;
+}
+
+.location-current-button:hover {
+  border-color: #ff4f7b;
+}
+
+.location-search-row button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.location-current-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.location-results {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0.375rem;
+  border: 0.0625rem solid #e8e2e5;
+  border-radius: 0.875rem;
+  background: #fff;
+  box-shadow: 0 0.75rem 1.75rem rgba(23,17,20,.1);
+  position: relative;
+  z-index: 5;
+}
+
+.location-results button {
+  display: grid;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0.6875rem 0.75rem;
+  border: 0;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: #171114;
+  text-align: left;
+  cursor: pointer;
+}
+
+.location-results button:hover {
+  background: #f7f3f5;
+  outline: none;
+}
+
+.location-results button:focus-visible {
+  background: #f7f3f5;
+  outline: none;
+}
+
+.location-results span {
+  color: #6f676b;
+  font-size: .8rem;
+}
+
+.location-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6875rem 0.8125rem;
+  border-radius: 0.75rem;
+  background: #f7f3f5;
+}
+
+.location-selected span {
+  color: #6f676b;
+  font-size: .78rem;
+}
+
+.location-selected strong {
+  text-align: right;
+}
+
+.location-picker-message {
+  min-height: 1.2em;
+  margin: 0;
+  color: #6f676b;
+  font-size: .8rem;
+}
+
+@media (max-width:40rem) {
+
+  .location-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .location-search-row button {
+    width: 100%;
+  }
+
+  .location-current-button {
+    width: 100%;
+  }
+
+  .location-selected {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.1875rem;
+  }
+
+  .location-selected strong {
+    text-align: left;
+  }
+}
+
+/* Explicit onboarding presentation, owned by the picker rather than a parent override. */
+.location-picker.onboarding {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.onboarding .location-search-field {
+  display: grid;
+  gap: 0.5rem;
+  font-family: var(--onb-default);
+  font-weight: 800;
+  font-size: 0.92725rem;
+  color: var(--onb-label);
+}
+
+.onboarding .location-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.onboarding .location-search-row button {
+  min-height: 2.3125rem;
+  padding: 0 1rem;
+  border: 0.0946875rem solid var(--onb-line);
+  border-radius: 1.1835625rem;
+  background: #fff;
+  box-shadow: 0 0.189375rem 0 rgba(0, 0, 0, .1);
+  font-family: var(--onb-default);
+  font-weight: 700;
+  font-size: 0.7575rem;
+  color: #545454;
+  cursor: pointer;
+}
+
+.onboarding .location-current-button {
+  min-height: 2.3125rem;
+  padding: 0 1rem;
+  border: 0.0946875rem solid var(--onb-line);
+  border-radius: 1.1835625rem;
+  background: #fff;
+  box-shadow: 0 0.189375rem 0 rgba(0, 0, 0, .1);
+  font-family: var(--onb-default);
+  font-weight: 700;
+  font-size: 0.7575rem;
+  color: #545454;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  padding-left: 0.83125rem;
+}
+
+.onboarding .location-search-row button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.onboarding .location-current-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.onboarding .location-results {
+  display: grid;
+  gap: 0.375rem;
+  max-height: 10.5rem;
+  overflow: auto;
+  padding: 0.375rem;
+  border: 0.0946875rem solid var(--onb-line);
+  border-radius: 1.1835625rem;
+}
+
+.onboarding .location-results button {
+  display: grid;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0.5rem 0.6875rem;
+  border: 0;
+  border-radius: 0.875rem;
+  background: #fff;
+  text-align: left;
+  font-family: var(--onb-default);
+  cursor: pointer;
+}
+
+.onboarding .location-results button:hover {
+  background: #f2f8ff;
+}
+
+.onboarding .location-results strong {
+  font-size: 0.7575rem;
+  color: #111;
+}
+
+.onboarding .location-results span {
+  font-size: 0.6875rem;
+  color: var(--onb-grey);
+}
+
+.onboarding .location-selected {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.3125rem;
+  padding: 0 0.83125rem;
+  border-radius: 1.1835625rem;
+  background: var(--onb-green);
+  box-shadow: 0 0.189375rem 0 rgba(0, 0, 0, .1);
+  color: #fff;
+}
+
+.onboarding .location-selected span {
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  opacity: .85;
+}
+
+.onboarding .location-selected strong {
+  font-size: 0.7575rem;
+  font-weight: 800;
+}
+
+.onboarding .location-picker-message {
+  margin: 0;
+  padding-left: 0.9375rem;
+  font-size: 0.7575rem;
+  font-weight: 600;
+  color: var(--onb-muted);
+}
+
+.onboarding .location-picker-message:empty {
+  display: none;
+}

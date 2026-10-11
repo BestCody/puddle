@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror an FSQ OS bulk release into Object storage.
-
-The historical FSQ_OS_CONNECTION_SQL secret is supported first so an already-working
-Foursquare connection does not have to be re-provisioned. The newer Iceberg token
-configuration remains available as an alternative.
-"""
+"""Mirror an FSQ OS Iceberg release into object storage."""
 import json
 import os
 import re
@@ -32,11 +27,10 @@ def clean_prefix(value):
     return '/'.join(part for part in str(value or '').strip('/').split('/') if part)
 
 
-LEGACY_SQL = first_env('FSQ_OS_CONNECTION_SQL')
 TOKEN = first_env('FSQ_ICEBERG_TOKEN')
 ENDPOINT = first_env('FSQ_ICEBERG_ENDPOINT', default='https://h3-hub-foursquare.acryl.io/gms/iceberg/')
 CATALOG = first_env('FSQ_ICEBERG_CATALOG', default='open_h3')
-TABLE = first_env('FSQ_OS_TABLE', 'FSQ_ICEBERG_TABLE')
+TABLE = first_env('FSQ_ICEBERG_TABLE')
 DELTA_TABLE = first_env('FSQ_ICEBERG_DELTA_TABLE')
 RELEASE = first_env('FSQ_RELEASE_LABEL')
 RELEASE_LABEL_SOURCE = 'configured' if RELEASE else 'mirror_date'
@@ -69,30 +63,19 @@ con = duckdb.connect()
 con.execute('INSTALL httpfs; LOAD httpfs;')
 con.execute('SET threads TO 8')
 con.execute('SET preserve_insertion_order=false')
-connection_mode = None
-
-if LEGACY_SQL:
-    # This value is a repository secret controlled by Puddle operators. It is never
-    # printed or persisted in manifests. It is treated as connection configuration,
-    # not provider data.
-    con.execute(LEGACY_SQL)
-    connection_mode = 'legacy_connection_sql'
-else:
-    if not TOKEN:
-        raise RuntimeError('Configure existing FSQ_OS_CONNECTION_SQL or the newer FSQ_ICEBERG_TOKEN connection.')
-    con.execute('INSTALL iceberg; LOAD iceberg;')
-    con.execute(f"""
-    CREATE OR REPLACE SECRET fsq_iceberg_secret (
-      TYPE ICEBERG,
-      TOKEN '{TOKEN.replace("'", "''")}'
-    );
-    ATTACH '{CATALOG.replace("'", "''")}' AS fsq_catalog (
-      TYPE iceberg,
-      SECRET fsq_iceberg_secret,
-      ENDPOINT '{ENDPOINT.replace("'", "''")}'
-    );
-    """)
-    connection_mode = 'iceberg_token'
+required(TOKEN, 'FSQ_ICEBERG_TOKEN')
+con.execute('INSTALL iceberg; LOAD iceberg;')
+con.execute(f"""
+CREATE OR REPLACE SECRET fsq_iceberg_secret (
+  TYPE ICEBERG,
+  TOKEN '{TOKEN.replace("'", "''")}'
+);
+ATTACH '{CATALOG.replace("'", "''")}' AS fsq_catalog (
+  TYPE iceberg,
+  SECRET fsq_iceberg_secret,
+  ENDPOINT '{ENDPOINT.replace("'", "''")}'
+);
+""")
 
 con.execute(f"""
 CREATE OR REPLACE SECRET object_data_secret (
@@ -108,7 +91,7 @@ CREATE OR REPLACE SECRET object_data_secret (
 
 if TABLE:
     source_table = safe_identifier(TABLE)
-    if connection_mode == 'iceberg_token' and source_table.count('.') == 1:
+    if source_table.count('.') == 1:
         qualified = f'fsq_catalog.{source_table}'
     else:
         qualified = source_table
@@ -124,8 +107,7 @@ else:
         table_catalog, table_schema, table_name
     """).fetchall()
     if not rows:
-        hint = 'FSQ_OS_TABLE' if connection_mode == 'legacy_connection_sql' else 'FSQ_ICEBERG_TABLE'
-        raise RuntimeError(f'No FSQ Places table was discovered after connecting. Set {hint} explicitly.')
+        raise RuntimeError('No FSQ Places table was discovered after connecting. Set FSQ_ICEBERG_TABLE explicitly.')
     catalog, schema, name = rows[0]
     qualified = qualify_discovered_table(catalog, schema, name)
     TABLE = qualified
@@ -148,7 +130,7 @@ TO '{raw_prefix}'
 (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 250000, PER_THREAD_OUTPUT true, OVERWRITE_OR_IGNORE true);
 """)
 
-if DELTA_TABLE and connection_mode == 'iceberg_token':
+if DELTA_TABLE:
     delta = safe_identifier(DELTA_TABLE)
     qualified_delta = f'fsq_catalog.{delta}' if delta.count('.') == 1 else delta
     con.execute(f"""
@@ -162,7 +144,7 @@ manifest = {
     'release': RELEASE,
     'releaseLabelSource': RELEASE_LABEL_SOURCE,
     'mirroredAt': datetime.now(timezone.utc).isoformat(),
-    'connectionMode': connection_mode,
+    'connectionMode': 'iceberg_token',
     'table': TABLE,
     'deltaTable': DELTA_TABLE or None,
     'rawPrefix': raw_prefix,

@@ -1,4 +1,6 @@
 "use client"
+import createStyles from "@/components/create-post.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
@@ -45,17 +47,17 @@ export function PostPlaceChooser({ selectedPoint, initialPoints }) {
     ? [selectedPoint, ...points]
     : points
 
-  return <details className="figma-create-post-add" onToggle={(event) => { if (event.currentTarget.open) void loadPlaces() }}>
+  return <details className={scopedClasses(createStyles, "figma-create-post-add")} onToggle={(event) => { if (event.currentTarget.open) void loadPlaces() }}>
     <summary aria-label="Open add menu">＋</summary>
-    <div className="figma-create-post-add-menu">
+    <div className={scopedClasses(createStyles, "figma-create-post-add-menu")}>
       <strong>Attach a place</strong>
-      {selectablePoints.length ? <div className="figma-create-post-location-options">
-        {selectablePoints.slice(0, 12).map((point) => <Link className={selectedPoint?.id === point.id ? 'is-selected' : ''} href={`/create/post?location=${encodeURIComponent(point.id)}`} key={point.id}><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
+      {selectablePoints.length ? <div className={scopedClasses(createStyles, "figma-create-post-location-options")}>
+        {selectablePoints.slice(0, 12).map((point) => <Link className={scopedClasses(createStyles, selectedPoint?.id === point.id ? 'is-selected' : '')} href={`/create/post?location=${encodeURIComponent(point.id)}`} key={point.id}><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
       </div> : loaded ? <p>Choose a place from Swipe, Saved, or the map.</p> : null}
       {loading ? <p role="status">Loading your places…</p> : null}
       {error ? <p role="alert">{error}</p> : null}
       {error && !loading ? <button type="button" onClick={() => { void loadPlaces() }}>Try again</button> : null}
     </div>
-    <div className="figma-create-post-add-footer"><span>{selectedPoint ? selectedPoint.title : 'No place selected'}</span></div>
+    <div className={scopedClasses(createStyles, "figma-create-post-add-footer")}><span>{selectedPoint ? selectedPoint.title : 'No place selected'}</span></div>
   </details>
 }

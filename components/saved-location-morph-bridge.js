@@ -1,4 +1,6 @@
 "use client"
+import detailStyles from "@/components/saved-detail.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
@@ -121,7 +123,7 @@ function SavedInlineSimilar({ slug, initialItems = [] }) {
           setItems(payload.items.filter((item) => item?.content_kind !== 'event' && item?.slug).slice(0, 3))
           setLoaded(true)
         }
-      } catch (cause) {
+      } catch {
         if (!controller.signal.aborted) setError('Similar places could not be loaded.')
       } finally {
         if (!controller.signal.aborted) setLoading(false)
@@ -132,11 +134,11 @@ function SavedInlineSimilar({ slug, initialItems = [] }) {
   }, [slug, retry, nearViewport, initialItems.length])
 
   if (nearViewport && loaded && !items.length) return null
-  return <div ref={sectionRef} className="saved-inline-detail-similar">
+  return <div ref={sectionRef} className={scopedClasses(detailStyles, "saved-inline-detail-similar")}>
     <h2>Similar splashes</h2>
     {loading ? <p role="status">Loading similar places…</p> : null}
     {error ? <p role="alert">{error} <button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></p> : null}
-    {items.map((item) => { const title = item.title || item.name || 'Puddle'; return <a href={`/places/${encodeURIComponent(item.slug)}`} key={`place:${item.id || item.slug}`}><PhotoFrame as="span" src={item.cover_url} alt={`${title} photo`} className="saved-inline-detail-similar-photo" /><strong>{title}</strong></a> })}
+    {items.map((item) => { const title = item.title || item.name || 'Puddle'; return <a href={`/places/${encodeURIComponent(item.slug)}`} key={`place:${item.id || item.slug}`}><PhotoFrame as="span" src={item.cover_url} alt={`${title} photo`} className={scopedClasses(detailStyles, "saved-inline-detail-similar-photo")} /><strong>{title}</strong></a> })}
   </div>
 }
 
@@ -157,10 +159,10 @@ function SavedInlineMap({ ready, point, center }) {
     return () => observer.disconnect()
   }, [nearViewport])
 
-  return <div ref={containerRef} className="saved-inline-detail-map">
-    {ready && !point.length ? <div className="saved-inline-detail-map-empty">Map unavailable</div>
-      : ready && nearViewport ? <LocationMap initialPoints={point} initialCenter={center} />
-        : <div className="saved-inline-detail-map-loading" aria-label="Loading map" />}
+  return <div ref={containerRef} className={scopedClasses(detailStyles, "saved-inline-detail-map")}>
+    {ready && !point.length ? <div className={scopedClasses(detailStyles, "saved-inline-detail-map-empty")}>Map unavailable</div>
+      : ready && nearViewport ? <LocationMap initialPoints={point} initialCenter={center} compact />
+        : <div className={scopedClasses(detailStyles, "saved-inline-detail-map-loading")} aria-label="Loading map" />}
   </div>
 }
 
@@ -191,16 +193,16 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [onClose])
 
-  return <div ref={detailRef} className="saved-inline-detail-layer" role="dialog" aria-modal="true" aria-label={`${location.name} details`} tabIndex={-1}>
-    <button className="saved-inline-detail-backdrop" type="button" aria-label="Close saved details" onClick={onClose} />
-    <article className="saved-inline-detail-card" style={{ viewTransitionName: names.card }}>
-      <button ref={closeRef} className="saved-inline-detail-close" type="button" onClick={onClose} aria-label="Close saved details">×</button>
+  return <div ref={detailRef} className={scopedClasses(detailStyles, "saved-inline-detail-layer")} role="dialog" aria-modal="true" aria-label={`${location.name} details`} tabIndex={-1}>
+    <button className={scopedClasses(detailStyles, "saved-inline-detail-backdrop")} type="button" aria-label="Close saved details" onClick={onClose} />
+    <div className={scopedClasses(detailStyles, "saved-inline-detail-frame")}>
+    <article className={scopedClasses(detailStyles, "saved-inline-detail-card")} style={{ viewTransitionName: names.card }}>
 
-      <div className="saved-inline-detail-main">
-        <PhotoFrame className="saved-inline-detail-hero" data-inline-morph-photo src={image} alt={`${location.name} photo`} loading="eager" style={{ viewTransitionName: names.photo }} />
+      <div className={scopedClasses(detailStyles, "saved-inline-detail-main")}>
+        <PhotoFrame className={scopedClasses(detailStyles, "saved-inline-detail-hero")} data-inline-morph-photo src={image} alt={`${location.name} photo`} loading="eager" style={{ viewTransitionName: names.photo }} />
 
-        <div className="saved-inline-detail-actions">
-          <button type="button" disabled={!detail || busy} className="is-primary" onClick={() => onAction('toggle_pinned')}>{detail?.state?.pinned ? 'Unpin' : 'Pin'}</button>
+        <div className={scopedClasses(detailStyles, "saved-inline-detail-actions")}>
+          <button type="button" disabled={!detail || busy} className={scopedClasses(detailStyles, "is-primary")} onClick={() => onAction('toggle_pinned')}>{detail?.state?.pinned ? 'Unpin' : 'Pin'}</button>
           <button type="button" disabled={!detail || busy} onClick={() => onAction('toggle_saved')}>{detail?.state?.saved === false ? 'Save' : 'Unsave'}</button>
           <details>
             <summary>Share</summary>
@@ -209,16 +211,16 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
         </div>
 
         <h1 style={{ viewTransitionName: names.title }}>{location.name}</h1>
-        <div className="saved-inline-detail-meta" style={{ viewTransitionName: names.meta }}>
+        <div className={scopedClasses(detailStyles, "saved-inline-detail-meta")} style={{ viewTransitionName: names.meta }}>
           <span>{placeLabel(location)}</span>
           {location.price_level ? <span>{'$'.repeat(Math.max(1, Math.min(4, Number(location.price_level))))}</span> : <span>Price varies</span>}
           <span>Local spot</span>
         </div>
 
-        {detailError ? <div className="saved-inline-detail-message is-error" role="alert"><span>{detailError}</span><button type="button" onClick={onRetry}>Try again</button></div> : null}
-        {message ? <div className="saved-inline-detail-message" role="status">{message}</div> : null}
+        {detailError ? <div className={scopedClasses(detailStyles, "saved-inline-detail-message is-error")} role="alert"><span>{detailError}</span><button type="button" onClick={onRetry}>Try again</button></div> : null}
+        {message ? <div className={scopedClasses(detailStyles, "saved-inline-detail-message")} role="status">{message}</div> : null}
 
-        <section className="saved-inline-detail-plan">
+        <section className={scopedClasses(detailStyles, "saved-inline-detail-plan")}>
           <h2>Plan a visit</h2>
           <form onSubmit={(event) => {
             event.preventDefault()
@@ -231,31 +233,33 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
           </form>
         </section>
 
-        <section className="saved-inline-detail-posts">
-          <div className="saved-inline-detail-posts-heading">
+        <section className={scopedClasses(detailStyles, "saved-inline-detail-posts")}>
+          <div className={scopedClasses(detailStyles, "saved-inline-detail-posts-heading")}>
             <h2>Posts</h2>
             <a href={`/create/post?location=${encodeURIComponent(location.id)}`}>Create post</a>
           </div>
-          {detail ? posts.length ? <div className="saved-inline-detail-post-list">{posts.map((post) => {
+          {detail ? posts.length ? <div className={scopedClasses(detailStyles, "saved-inline-detail-post-list")}>{posts.map((post) => {
             const authorName = post.author?.display_name || post.author?.username || 'Puddle person'
-            return <a className="saved-inline-detail-post" href={`/map#post-${post.id}`} key={post.id}>
-              <PhotoFrame as="span" className="saved-inline-detail-post-avatar" src={post.author_avatar_url} alt="" unavailableText={initials(authorName)} loadingText="" />
-              <span className="saved-inline-detail-post-copy">
+            return <a className={scopedClasses(detailStyles, "saved-inline-detail-post")} href={`/map#post-${post.id}`} key={post.id}>
+              <PhotoFrame as="span" className={scopedClasses(detailStyles, "saved-inline-detail-post-avatar")} src={post.author_avatar_url} alt="" unavailableText={initials(authorName)} loadingText="" />
+              <span className={scopedClasses(detailStyles, "saved-inline-detail-post-copy")}>
                 <span><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
                 {post.title ? <b>{post.title}</b> : null}
                 {post.body ? <p>{post.body}</p> : null}
               </span>
             </a>
-          })}</div> : <div className="saved-inline-detail-post-empty"><strong>No posts here yet.</strong><span>Be the first person to post about this place.</span></div> : <div className="saved-inline-detail-post-loading" aria-label="Loading posts" />}
+          })}</div> : <div className={scopedClasses(detailStyles, "saved-inline-detail-post-empty")}><strong>No posts here yet.</strong><span>Be the first person to post about this place.</span></div> : <div className={scopedClasses(detailStyles, "saved-inline-detail-post-loading")} aria-label="Loading posts" />}
         </section>
       </div>
 
-      <aside className="saved-inline-detail-side">
+      <aside className={scopedClasses(detailStyles, "saved-inline-detail-side")}>
         <SavedInlineMap ready={Boolean(detail)} point={point} center={center} />
-        {location.summary || location.description ? <p className="saved-inline-detail-summary">{location.summary || location.description}</p> : null}
+        {location.summary || location.description ? <p className={scopedClasses(detailStyles, "saved-inline-detail-summary")}>{location.summary || location.description}</p> : null}
         {detail ? <SavedInlineSimilar key={location.slug} slug={location.slug} initialItems={detail.similar || []} /> : null}
       </aside>
     </article>
+      <button ref={closeRef} className={scopedClasses(detailStyles, "saved-inline-detail-close")} type="button" onClick={onClose} aria-label="Close saved details">×</button>
+    </div>
   </div>
 }
 

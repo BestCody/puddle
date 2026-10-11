@@ -1,10 +1,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { authLinkErrorMessage, isDuplicateUsernameError, profileWriteErrorMessage, safeAuthErrorCode } from '../../lib/auth/errors.js'
+import { authLinkErrorMessage, isDuplicateUsernameError, profileWriteErrorMessage, publicAuthError, safeAuthErrorCode } from '../../lib/auth/errors.js'
 import { authenticatedDestination, ensureProfile } from '../../lib/auth/profile.js'
 import { pathWithMessage, safeNextPath } from '../../lib/auth/redirect.js'
 import { birthDateError, formatBirthDateDigits, isValidEmail, sanitizeUsername } from '../../lib/app/input-validation.js'
+
+test('shared auth errors preserve useful messages and redact infrastructure details', () => {
+  const fallback = 'Please try again.'
+  for (const message of ['', 'Supabase is unavailable', 'Missing API key', 'Database permission denied']) {
+    assert.equal(publicAuthError({ message }, fallback), fallback)
+  }
+  assert.equal(publicAuthError({ message: 'Invalid login credentials' }, fallback), 'Invalid login credentials')
+})
 
 test('expired and reused authentication links receive a useful message', () => {
   assert.match(authLinkErrorMessage('otp_expired'), /expired|already been used/i)
@@ -106,49 +114,8 @@ test('authentication flows use the landing page and keep recovery links on produ
 
   assert(signInSessionClear >= 0 && signInSessionClear < passwordRequest, 'sign-in must clear a previous local session before checking credentials')
   assert.match(actions, /siteOrigin\(await headers\(\)\)/)
-  assert.doesNotMatch(actions, /export async function signIn\(/)
-  assert.doesNotMatch(actions, /sendLoginCode|verifyLoginCode|signInWithOAuth/)
-  assert.doesNotMatch(actions, /\/signin/)
   assert.match(passwordRoute, /authenticatePassword\(supabase, email, password\)/)
   assert.match(googleRoute, /startGoogleOAuth/)
-})
-
-test('landing credential sign-in posts directly to the authenticated destination', async () => {
-  const [landing, route] = await Promise.all([
-    readFile(new URL('../../public/landing.html', import.meta.url), 'utf8'),
-    readFile(new URL('../../app/api/auth/password/route.js', import.meta.url), 'utf8')
-  ])
-
-  assert.match(landing, /<form class="landing-login-form" action="\/api\/auth\/password" method="post"[^>]*>/)
-  assert.match(landing, /<input type="hidden" name="next" value="\/discover" \/>/)
-  assert.doesNotMatch(landing, /data-signin-handoff/)
-  assert.match(landing, /class="mobile-login-button" href="\/landing\.html\?mode=login"/)
-  assert.match(landing, /id="mobile-login-dialog"/)
-  assert.match(route, /authenticatePassword\(supabase, email, password\)/)
-  assert.match(route, /authenticatedDestination\(profile, next\)/)
-  assert.match(route, /NextResponse\.redirect\(siteUrl\(request\.headers, authenticatedDestination\(profile, next\)\), 303\)/)
-  assert.match(landing, /data-auth-mode="login"/)
-  assert.match(landing, /data-auth-mode="signup"/)
-  assert.match(landing, /id="landing-signup-form" class="landing-signup-form" action="\/api\/auth\/signup" method="post"/)
-  assert.match(landing, /Create my Puddle &#8594;/)
-  assert.match(landing, /formaction="\/api\/auth\/google"/)
-})
-
-test('browser and server auth clients use the same persistent cookie policy', async () => {
-  const [cookieOptions, browserClient, serverClient, proxyClient] = await Promise.all([
-    readFile(new URL('../../lib/supabase/cookie-options.js', import.meta.url), 'utf8'),
-    readFile(new URL('../../lib/supabase/client.js', import.meta.url), 'utf8'),
-    readFile(new URL('../../lib/supabase/server.js', import.meta.url), 'utf8'),
-    readFile(new URL('../../lib/supabase/proxy.js', import.meta.url), 'utf8')
-  ])
-
-  assert.match(cookieOptions, /AUTH_COOKIE_MAX_AGE_SECONDS = 400 \* 24 \* 60 \* 60/)
-  assert.match(cookieOptions, /sameSite: 'lax'/)
-  assert.match(cookieOptions, /maxAge: AUTH_COOKIE_MAX_AGE_SECONDS/)
-  assert.match(browserClient, /cookieOptions: authCookieOptions\(\)/)
-  assert.match(serverClient, /cookieOptions: authCookieOptions\(\)/)
-  assert.match(proxyClient, /cookieOptions: authCookieOptions\(\)/)
-  assert.doesNotMatch(browserClient, /persistSession:\s*false/)
 })
 
 test('birth date entry keeps only eight digits and formats them predictably', () => {

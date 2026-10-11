@@ -1,4 +1,6 @@
 "use client"
+import searchStyles from "@/components/search.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -77,13 +79,13 @@ export function PuddleSearchOverlay({
   const overlayClass = ['puddle-discover-search-overlay', 'puddle-search-overlay', overlayClassName].filter(Boolean).join(' ')
 
   return <>
-    <button className={triggerClass} type="button" onClick={() => setOpen(true)} data-testid={testId} aria-label={triggerLabel} aria-haspopup="dialog" aria-controls={dialogId} aria-expanded={open}>
-      <span className="puddle-search-trigger-label">{triggerVisualLabel || triggerLabel}</span><span className="puddle-search-trigger-icon" aria-hidden="true">{triggerGlyph}</span>
+    <button className={scopedClasses(searchStyles, triggerClass)} type="button" onClick={() => setOpen(true)} data-testid={testId} aria-label={triggerLabel} aria-haspopup="dialog" aria-controls={dialogId} aria-expanded={open}>
+      <span className={scopedClasses(searchStyles, "puddle-search-trigger-label")}>{triggerVisualLabel || triggerLabel}</span><span className={scopedClasses(searchStyles, "puddle-search-trigger-icon")} aria-hidden="true">{triggerGlyph}</span>
     </button>
-    <div ref={overlayRef} id={dialogId} className={`${overlayClass}${open ? ' is-open' : ''}`} role="dialog" aria-modal="true" aria-label={`${triggerLabel} dialog`} aria-hidden={!open} inert={!open} tabIndex={-1}>
-      <button className="puddle-discover-search-backdrop puddle-universal-backdrop" type="button" onClick={() => setOpen(false)} aria-label="Close search" />
-      <form className="puddle-discover-search-dialog puddle-search-dialog" role="search" onSubmit={submit}>
-        <span className="puddle-search-dialog-icon" aria-hidden="true">⌕</span>
+    <div ref={overlayRef} id={dialogId} className={scopedClasses(searchStyles, `${overlayClass}${open ? ' is-open' : ''}`)} role="dialog" aria-modal="true" aria-label={`${triggerLabel} dialog`} aria-hidden={!open} inert={!open} tabIndex={-1}>
+      <button className={scopedClasses(searchStyles, "puddle-discover-search-backdrop")} type="button" onClick={() => setOpen(false)} aria-label="Close search" />
+      <form className={scopedClasses(searchStyles, "puddle-discover-search-dialog puddle-search-dialog")} role="search" onSubmit={submit}>
+        <span className={scopedClasses(searchStyles, "puddle-search-dialog-icon")} aria-hidden="true">⌕</span>
         <input ref={inputRef} type="search" value={query} onChange={(event) => update(event.target.value)} placeholder={placeholder} aria-label={placeholder} autoComplete="off" />
         {query ? <button type="button" onClick={() => update('')} aria-label="Clear search">×</button> : null}
       </form>
@@ -133,9 +135,9 @@ export function SavedSearchInput({ initialQuery = '', category = 'all' }) {
     navigate(query)
   }
 
-  return <form className="puddle-saved-search-input" role="search" aria-label="Search saved puddles" onSubmit={submit} data-testid="saved-search">
+  return <form className={scopedClasses(searchStyles, "puddle-saved-search-input")} role="search" aria-label="Search saved puddles" onSubmit={submit} data-testid="saved-search">
     <label>
-      <span className="sr-only">Search saved puddles</span>
+      <span className={scopedClasses(searchStyles, "sr-only")}>Search saved puddles</span>
       <input type="search" value={query} onChange={(event) => update(event.target.value)} placeholder="Search a saved puddle..." aria-label="Search saved puddles" autoComplete="off" />
     </label>
     <button type="submit" aria-label="Apply saved puddle search">↑</button>

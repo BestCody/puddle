@@ -1,5 +1,7 @@
 "use client"
 
+import styles from './swipe.module.css'
+
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DISCOVERY_IMAGE_SIZES, canOptimizeDiscoveryImage } from '@/lib/media/discovery-image'
@@ -44,22 +46,22 @@ function rotationFor(offset) {
 }
 
 const DEFAULT_CLASS_NAMES = Object.freeze({
-  card: 'figma-swipe-card',
-  cardPhoto: 'figma-swipe-card-photo',
-  cardPhotoEmpty: 'figma-swipe-card-photo-empty',
-  cardMeta: 'figma-swipe-card-meta',
-  cardCopy: 'figma-swipe-card-copy',
-  dragLabel: 'figma-swipe-drag-label',
-  detailsButton: 'figma-swipe-details-button',
-  detailsBackdrop: 'figma-swipe-details-backdrop',
-  details: 'figma-swipe-details',
-  detailsClose: 'figma-swipe-details-close',
-  detailsGallery: 'figma-swipe-details-gallery',
-  detailsPhotoEmpty: 'figma-swipe-details-photo-empty',
-  detailsKicker: 'figma-swipe-details-kicker',
-  detailsSummary: 'figma-swipe-details-summary',
-  detailsTags: 'figma-swipe-details-tags',
-  detailsActions: 'figma-swipe-details-actions'
+  card: `figma-swipe-card ${styles.card}`,
+  cardPhoto: `figma-swipe-card-photo ${styles.cardPhoto}`,
+  cardPhotoEmpty: `figma-swipe-card-photo-empty ${styles.cardPhotoEmpty}`,
+  cardMeta: `figma-swipe-card-meta ${styles.cardMeta}`,
+  cardCopy: `figma-swipe-card-copy ${styles.cardCopy}`,
+  dragLabel: `figma-swipe-drag-label ${styles.dragLabel}`,
+  detailsButton: `figma-swipe-details-button ${styles.detailsButton}`,
+  detailsBackdrop: `figma-swipe-details-backdrop ${styles.detailsBackdrop}`,
+  details: `figma-swipe-details ${styles.details}`,
+  detailsClose: `figma-swipe-details-close ${styles.detailsClose}`,
+  detailsGallery: `figma-swipe-details-gallery ${styles.detailsGallery}`,
+  detailsPhotoEmpty: `figma-swipe-details-photo-empty ${styles.detailsPhotoEmpty}`,
+  detailsKicker: `figma-swipe-details-kicker ${styles.detailsKicker}`,
+  detailsSummary: `figma-swipe-details-summary ${styles.detailsSummary}`,
+  detailsTags: `figma-swipe-details-tags ${styles.detailsTags}`,
+  detailsActions: `figma-swipe-details-actions ${styles.detailsActions}`
 })
 
 function classFor(prefix, name) {

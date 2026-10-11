@@ -1,0 +1,70 @@
+.segment {
+  --segment-padding: .25rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr));
+  align-items: center;
+  width: var(--segment-width, 10.4375rem);
+  max-width: 100%;
+  min-height: var(--segment-height, 3rem);
+  padding: var(--segment-padding);
+  border: .125rem solid var(--segment-border, #d9d9d9);
+  border-radius: 3rem;
+  background: var(--segment-surface, #fff);
+  overflow: hidden;
+}
+
+.segment::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: var(--segment-padding);
+  bottom: var(--segment-padding);
+  left: var(--segment-active-left, var(--segment-padding));
+  width: var(--segment-active-width, calc((100% - 2 * var(--segment-padding)) / var(--segment-count)));
+  border-radius: inherit;
+  background: var(--segment-active-bg);
+  box-shadow: 0 .25rem rgba(0,0,0,.1);
+  pointer-events: none;
+  transition: left .145s cubic-bezier(.2,.8,.2,1), width .145s cubic-bezier(.2,.8,.2,1);
+}
+
+.segment > :is(a, button) {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  min-height: var(--segment-item-height, 2.25rem);
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: .375rem .25rem;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+  color: var(--segment-text, #858585);
+  font: 800 var(--segment-font, 1rem)/1.2 var(--font-sans);
+  text-align: center;
+  text-decoration: none;
+}
+
+.segment > :global(.is-active) {
+  color: #fff;
+}
+
+.segment[data-segment-count="3"] > :is(a, button) {
+  font-size: .75rem;
+}
+
+:global(.figma-dashboard-shell:is([data-appearance="dark"], [data-resolved-appearance="dark"])) .segment {
+  --segment-surface: #1e2226;
+  --segment-border: #353b41;
+  --segment-text: #aab0b5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .segment::before {
+    transition: none;
+  }
+}

@@ -1,3 +1,5 @@
+import settingsStyles from "@/components/settings.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { ProductShell } from '@/components/product-shell'
 import { AuthMessage } from '@/components/auth-message'
@@ -27,8 +29,8 @@ function SettingsSectionIcon({ section }) {
 
 function SettingsNavLink({ section, label, href, suffix = '' }) {
   return <Link href={href} data-settings-section={section}>
-    <span className="figma-settings-nav-icon"><SettingsSectionIcon section={section} /></span>
-    <span className="figma-settings-nav-label">{label}{suffix}</span>
+    <span className={scopedClasses(settingsStyles, "figma-settings-nav-icon")}><SettingsSectionIcon section={section} /></span>
+    <span className={scopedClasses(settingsStyles, "figma-settings-nav-label")}>{label}{suffix}</span>
   </Link>
 }
 
@@ -117,12 +119,12 @@ export default async function AccountPage({ searchParams }) {
   const windowClass = `figma-settings-window${selectedSection ? ` is-expanded section-${selectedSection}` : ' section-index'}${mobileFlow ? ' is-mobile-flow-window' : ''}`
   const mobileBackHref = selectedSection ? mobileSettingsIndexHref(returnTo) : returnTo
 
-  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded} embedded={embedded}>
+  return <ProductShell user={user} profile={profile} settingsOverlay={!embedded} embedded={embedded} mobileNavigation={!mobileFlow}>
     <SettingsScrollBridge />
-    <div className={`figma-settings-screen${embedded ? ' is-embedded' : ''}${mobileFlow ? ' is-mobile-flow' : ''}${mobileFlow && !selectedSection ? ' is-mobile-index' : ''}`}>
-      <section className={windowClass} aria-label="Settings">
-        {mobileFlow ? <Link className="figma-settings-mobile-back" href={mobileBackHref} aria-label={selectedSection ? 'Back to Settings' : 'Back to Profile'}>‹ <span>Back</span></Link> : <Link className="figma-settings-close" href={returnTo} aria-label="Close settings">×</Link>}
-        <aside className="figma-settings-local-nav">
+    <div className={scopedClasses(settingsStyles, `figma-settings-screen${embedded ? ' is-embedded' : ''}${mobileFlow ? ' is-mobile-flow' : ''}${mobileFlow && !selectedSection ? ' is-mobile-index' : ''}`)}>
+      <section className={scopedClasses(settingsStyles, windowClass)} aria-label="Settings">
+        {mobileFlow ? <Link className={scopedClasses(settingsStyles, "figma-settings-mobile-back")} href={mobileBackHref} aria-label={selectedSection ? 'Back to Settings' : 'Back to Profile'}>‹ <span>Back</span></Link> : <Link className={scopedClasses(settingsStyles, "figma-settings-close")} href={returnTo} aria-label="Close settings">×</Link>}
+        <aside className={scopedClasses(settingsStyles, "figma-settings-local-nav")}>
           <strong>Settings</strong>
           <nav>
             <SettingsNavLink section="profile" label="Profile" href={settingsHref('profile', returnTo, { embedded, mobile: mobileFlow })} />
@@ -135,46 +137,46 @@ export default async function AccountPage({ searchParams }) {
           </nav>
         </aside>
 
-        <div className="figma-settings-detail">
+        <div className={scopedClasses(settingsStyles, "figma-settings-detail")}>
           <AuthMessage searchParams={params} />
 
-          {showSection('profile') ? <form className="figma-settings-section" id="profile" action={updateDateProfile}>
+          {showSection('profile') ? <form className={scopedClasses(settingsStyles, "figma-settings-section")} id="profile" action={updateDateProfile}>
             <header><small>Profile</small><h1>Profile</h1><p>Manage how your profile appears across Puddle.</p></header>
-            <div className="figma-settings-section-body">
-              <div className="figma-settings-row"><label htmlFor="account-display-name">Display name</label><input id="account-display-name" name="display_name" defaultValue={profile?.display_name || ''} required maxLength="60" /></div>
-              <div className="figma-settings-row"><label htmlFor="account-username">Username</label><UsernameInput defaultValue={profile?.username || ''} id="account-username" /></div>
-              <div className="figma-settings-row is-tall"><label htmlFor="account-bio">About</label><textarea id="account-bio" name="bio" defaultValue={profile?.bio || ''} maxLength="500" /></div>
-              <div className="figma-settings-row"><label htmlFor="account-visibility">Visibility</label><select id="account-visibility" name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Shared-plan attendees</option><option value="hidden">Hidden</option></select></div>
+            <div className={scopedClasses(settingsStyles, "figma-settings-section-body")}>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-display-name">Display name</label><input id="account-display-name" name="display_name" defaultValue={profile?.display_name || ''} required maxLength="60" /></div>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-username">Username</label><UsernameInput defaultValue={profile?.username || ''} id="account-username" /></div>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row is-tall")}><label htmlFor="account-bio">About</label><textarea id="account-bio" name="bio" defaultValue={profile?.bio || ''} maxLength="500" /></div>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-visibility">Visibility</label><select id="account-visibility" name="profile_visibility" defaultValue={profile?.profile_visibility || 'public'}><option value="public">Public</option><option value="friends">Friends</option><option value="mutuals">Mutuals</option><option value="attendees">Shared-plan attendees</option><option value="hidden">Hidden</option></select></div>
             </div>
-            <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save changes</SubmitButton></div>
+            <div className={scopedClasses(settingsStyles, "figma-settings-submit")}><SubmitButton pendingText="Saving…">Save changes</SubmitButton></div>
           </form> : null}
 
-          {showSection('security') ? <section className="figma-settings-section" id="security">
+          {showSection('security') ? <section className={scopedClasses(settingsStyles, "figma-settings-section")} id="security">
             <header><small>Email / Password</small><h1>Email / Password</h1><p>Update your sign-in details and password.</p></header>
-            <div className="figma-settings-section-body">
-              <div className="figma-settings-row"><label>Email</label><span>{user.email || 'No email available'}</span><Link href="/change-email">Change</Link></div>
-              <form action={updatePassword} className="figma-settings-nested-form">
-                <div className="figma-settings-row"><label htmlFor="account-password">New password</label><input id="account-password" name="password" type="password" minLength="10" maxLength="128" required /></div>
-                <div className="figma-settings-row"><label htmlFor="account-password-confirmation">Confirm password</label><input id="account-password-confirmation" name="password_confirmation" type="password" minLength="10" maxLength="128" required /></div>
-                <div className="figma-settings-submit"><SubmitButton>Change password</SubmitButton></div>
+            <div className={scopedClasses(settingsStyles, "figma-settings-section-body")}>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label>Email</label><span>{user.email || 'No email available'}</span><Link href="/change-email">Change</Link></div>
+              <form action={updatePassword} className={scopedClasses(settingsStyles, "figma-settings-nested-form")}>
+                <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-password">New password</label><input id="account-password" name="password" type="password" minLength="10" maxLength="128" required /></div>
+                <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-password-confirmation">Confirm password</label><input id="account-password-confirmation" name="password_confirmation" type="password" minLength="10" maxLength="128" required /></div>
+                <div className={scopedClasses(settingsStyles, "figma-settings-submit")}><SubmitButton>Change password</SubmitButton></div>
               </form>
             </div>
           </section> : null}
 
-          {showSection('appearance') ? <form className="figma-settings-section" id="appearance" action={updateAppearance}>
+          {showSection('appearance') ? <form className={scopedClasses(settingsStyles, "figma-settings-section")} id="appearance" action={updateAppearance}>
             <header><small>Appearance</small><h1>Appearance</h1><p>Choose how Puddle looks for you.</p></header>
-            <div className="figma-settings-section-body">
-              <div className="figma-settings-row"><label htmlFor="account-appearance-theme">Theme</label><select id="account-appearance-theme" name="appearance_theme" defaultValue={profile?.appearance_theme || 'light'}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></div>
-              <div className="figma-settings-row"><label htmlFor="account-profile-theme">Profile color</label><select id="account-profile-theme" name="profile_theme" defaultValue={profile?.profile_theme || 'blue'}><option value="blue">Blue</option><option value="green">Green</option><option value="yellow">Yellow</option><option value="purple">Purple</option><option value="red">Red</option><option value="grey">Grey</option></select></div>
+            <div className={scopedClasses(settingsStyles, "figma-settings-section-body")}>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-appearance-theme">Theme</label><select id="account-appearance-theme" name="appearance_theme" defaultValue={profile?.appearance_theme || 'light'}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></div>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-profile-theme">Profile color</label><select id="account-profile-theme" name="profile_theme" defaultValue={profile?.profile_theme || 'blue'}><option value="blue">Blue</option><option value="green">Green</option><option value="yellow">Yellow</option><option value="purple">Purple</option><option value="red">Red</option><option value="grey">Grey</option></select></div>
             </div>
-            <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save appearance</SubmitButton></div>
+            <div className={scopedClasses(settingsStyles, "figma-settings-submit")}><SubmitButton pendingText="Saving…">Save appearance</SubmitButton></div>
           </form> : null}
 
-          {showNotifications ? <section className="figma-settings-section" id="notifications">
+          {showNotifications ? <section className={scopedClasses(settingsStyles, "figma-settings-section")} id="notifications">
             <header><small>Notifications</small><h1>Notifications</h1><p>Control what Puddle lets you know about.</p></header>
-            <div className="figma-settings-section-body figma-settings-section-body--notifications">
+            <div className={scopedClasses(settingsStyles, "figma-settings-section-body figma-settings-section-body--notifications")}>
               <PassNotificationAlertControl enabled={Boolean(passActive)} />
-              <form action={updateNotificationPreferences} className="figma-notification-preferences">
+              <form action={updateNotificationPreferences} className={scopedClasses(settingsStyles, "figma-notification-preferences")}>
                 <input type="hidden" name="timezone" value={preferences.timezone || profile?.timezone || 'America/Toronto'} />
                 <label><input type="checkbox" name="in_app_enabled" defaultChecked={preferences.in_app_enabled} /> In-app notifications</label>
                 <label><input type="checkbox" name="friend_requests" defaultChecked={preferences.friend_requests} /> Friend requests</label>
@@ -185,12 +187,12 @@ export default async function AccountPage({ searchParams }) {
                 <label><input type="checkbox" name="event_changes" defaultChecked={preferences.event_changes} /> Event changes</label>
                 <label><input type="checkbox" name="host_announcements" defaultChecked={preferences.host_announcements} /> Host announcements</label>
                 <label><input type="checkbox" name="marketing" defaultChecked={preferences.marketing} /> Product updates</label>
-                <div className="figma-settings-submit"><SubmitButton pendingText="Saving…">Save notifications</SubmitButton></div>
+                <div className={scopedClasses(settingsStyles, "figma-settings-submit")}><SubmitButton pendingText="Saving…">Save notifications</SubmitButton></div>
               </form>
-              <div className="figma-notification-list-heading"><strong>Recent</strong>{unread ? <form action={markAllNotificationsRead}><button type="submit">Mark all read</button></form> : null}</div>
-              <div className="figma-notification-list">{notifications.length ? notifications.map((item) => {
+              <div className={scopedClasses(settingsStyles, "figma-notification-list-heading")}><strong>Recent</strong>{unread ? <form action={markAllNotificationsRead}><button type="submit">Mark all read</button></form> : null}</div>
+              <div className={scopedClasses(settingsStyles, "figma-notification-list")}>{notifications.length ? notifications.map((item) => {
                 const href = notificationHref(item.href)
-                return <article className={item.read_at ? '' : 'is-unread'} key={item.id}>
+                return <article className={scopedClasses(settingsStyles, item.read_at ? '' : 'is-unread')} key={item.id}>
                   <div><small>{notificationTime(item.created_at)} · {item.kind.replaceAll('_', ' ')}</small><strong>{item.title}</strong><p>{item.body}</p></div>
                   <div>{href ? <Link href={href}>Open</Link> : null}{!item.read_at ? <form action={markNotificationRead}><input type="hidden" name="notification_id" value={item.id} /><button type="submit">Mark read</button></form> : null}</div>
                 </article>
@@ -198,28 +200,28 @@ export default async function AccountPage({ searchParams }) {
             </div>
           </section> : null}
 
-          {showSection('sessions') ? <section className="figma-settings-section" id="sessions">
+          {showSection('sessions') ? <section className={scopedClasses(settingsStyles, "figma-settings-section")} id="sessions">
             <header><small>Sessions</small><h1>Sessions</h1><p>Review and manage where your account is signed in.</p></header>
-            <div className="figma-settings-section-body">
-              <div className="figma-settings-row is-tall"><label>Current browser</label><span>{sessionExpiry}<br />Last sign-in: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Unavailable'}</span></div>
+            <div className={scopedClasses(settingsStyles, "figma-settings-section-body")}>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row is-tall")}><label>Current browser</label><span>{sessionExpiry}<br />Last sign-in: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Unavailable'}</span></div>
             </div>
-            <form action={revokeOtherSessions}><div className="figma-settings-submit"><SubmitButton>Sign out other sessions</SubmitButton></div></form>
+            <form action={revokeOtherSessions}><div className={scopedClasses(settingsStyles, "figma-settings-submit")}><SubmitButton>Sign out other sessions</SubmitButton></div></form>
           </section> : null}
 
-          {showSection('billing') ? <section className="figma-settings-section" id="billing">
+          {showSection('billing') ? <section className={scopedClasses(settingsStyles, "figma-settings-section")} id="billing">
             <header><small>Billing</small><h1>Billing</h1><p>Manage your Puddle Pass and plan.</p></header>
-            <div className="figma-settings-section-body">
-              <div className="figma-settings-row"><label>Puddle Pass</label><span>Membership and plan details</span><Link href="/membership" target="_top">View plans</Link></div>
+            <div className={scopedClasses(settingsStyles, "figma-settings-section-body")}>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label>Puddle Pass</label><span>Membership and plan details</span><Link href="/membership" target="_top">View plans</Link></div>
             </div>
           </section> : null}
 
-          {showSection('account') ? <section className="figma-settings-section" id="account">
+          {showSection('account') ? <section className={scopedClasses(settingsStyles, "figma-settings-section")} id="account">
             <header><small>Account</small><h1>Account</h1><p>Account-level controls and permanent actions.</p></header>
-            <div className="figma-settings-section-body figma-settings-section-body--danger">
-              <p className="figma-settings-warning">Permanently delete your Puddle account and associated records.</p>
+            <div className={scopedClasses(settingsStyles, "figma-settings-section-body figma-settings-section-body--danger")}>
+              <p className={scopedClasses(settingsStyles, "figma-settings-warning")}>Permanently delete your Puddle account and associated records.</p>
               <form action={deleteAccount}>
-                <div className="figma-settings-row"><label htmlFor="account-delete-confirmation">Type DELETE</label><input id="account-delete-confirmation" name="confirmation" autoComplete="off" required minLength="6" maxLength="6" pattern="DELETE" /></div>
-                <div className="figma-settings-submit is-danger"><SubmitButton pendingText="Deleting…">Delete my account</SubmitButton></div>
+                <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-delete-confirmation">Type DELETE</label><input id="account-delete-confirmation" name="confirmation" autoComplete="off" required minLength="6" maxLength="6" pattern="DELETE" /></div>
+                <div className={scopedClasses(settingsStyles, "figma-settings-submit is-danger")}><SubmitButton pendingText="Deleting…">Delete my account</SubmitButton></div>
               </form>
             </div>
           </section> : null}

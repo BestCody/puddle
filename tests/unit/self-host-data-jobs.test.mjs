@@ -104,4 +104,7 @@ test('host jobs reject a stale managed Supabase URL despite cutover flags', () =
   delete env.MAPILLARY_ACCESS_TOKEN
   assert.throws(() => validateJob('materialize', env), /MAPILLARY_ACCESS_TOKEN/)
   assert.doesNotThrow(() => validateJob('kartaview', env))
+  assert.throws(() => validateJob('locations', env), /FSQ_ICEBERG_TOKEN/)
+  env.FSQ_ICEBERG_TOKEN = 'provider-token'
+  assert.doesNotThrow(() => validateJob('locations', env))
 })

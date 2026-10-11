@@ -1,5 +1,8 @@
 "use client"
 
+import styles from './saved-grid.module.css'
+import { scopedClasses } from './scoped-classes'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LocationVisualPreview } from '@/components/location-visual-preview'
 import { resolveSavedPreviewBatch } from '@/lib/app/saved-preview-results'
@@ -120,11 +123,15 @@ export function SavedLightweightGrid({ items = [], className = '', cardClassName
     }
   }, [ids, initialPreviews, loadPreviews, retry])
 
-  const errorClass = `${classPrefix}-error`
-  const titleClass = `${classPrefix}-title`
-  const titleSkeletonClass = `${classPrefix}-title-skeleton`
-  const metaClass = `${classPrefix}-meta`
-  const metaSkeletonClass = `${classPrefix}-meta-skeleton`
+  function classFor(suffix) {
+    const name = `${classPrefix}-${suffix}`
+    return classPrefix === 'saved-lightweight' ? scopedClasses(styles, name) : name
+  }
+  const errorClass = classFor('error')
+  const titleClass = classFor('title')
+  const titleSkeletonClass = classFor('title-skeleton')
+  const metaClass = classFor('meta')
+  const metaSkeletonClass = classFor('meta-skeleton')
 
   return <section ref={gridRef} className={className} aria-label="Saved places" data-testid="saved-grid">
     {loadError ? <div className={errorClass} role="alert"><strong>{loadError}</strong><button type="button" onClick={() => {

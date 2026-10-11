@@ -52,7 +52,7 @@ focused tests for whatever a release changes.
    environment**, restricted to the `main` branch (not as a repository-wide
    secret available to PR jobs). Do not reuse a personal SSH key. Keep the existing known host fingerprint verified
    out of band; never use unverified `ssh-keyscan` during a release.
-3. Set repository variables `CONTABO_HOST`, `CONTABO_KNOWN_HOSTS`, and the five
+3. Set repository variables `CONTABO_HOST`, `CONTABO_KNOWN_HOSTS`, and the four
    `NEXT_PUBLIC_*` values listed in `auto-deploy.py`. Copy the public build
    configuration privately from the host with
    `install-auto-deploy.py --print-public-config`; do not copy its environment

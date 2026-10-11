@@ -1,3 +1,5 @@
+import publicStyles from "@/components/public-places.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { PublicHeader } from './public-listing'
 import { marketPath } from '@/lib/app/seo-places'
@@ -23,7 +25,7 @@ export function marketLinks(markets) {
 
 function Breadcrumbs({ trail }) {
   if (!trail?.length) return null
-  return <nav className="place-hub-breadcrumbs" aria-label="Breadcrumb">
+  return <nav className={scopedClasses(publicStyles, "place-hub-breadcrumbs")} aria-label="Breadcrumb">
     <ol>
       {trail.map((crumb, index) => {
         const isCurrent = index === trail.length - 1
@@ -38,7 +40,7 @@ function Breadcrumbs({ trail }) {
 }
 
 function PlaceCard({ place }) {
-  return <li className="place-hub-card">
+  return <li className={scopedClasses(publicStyles, "place-hub-card")}>
     <Link href={`/places/${place.slug}`}>
       {place.coverUrl
         ? <img
@@ -49,13 +51,13 @@ function PlaceCard({ place }) {
             loading="lazy"
             decoding="async"
           />
-        : <span className="place-hub-card-placeholder" aria-hidden="true" />}
+        : <span className={scopedClasses(publicStyles, "place-hub-card-placeholder")} aria-hidden="true" />}
       <strong>{place.name}</strong>
       {/* Category and neighbourhood come straight from the catalogue. Without them every card on
           every hub reads as a name over a city name, which is the shape of a page with nothing
           of its own to say. */}
       <small>
-        {place.categoryLabel ? <span className="place-hub-card-kind">{place.categoryLabel}</span> : null}
+        {place.categoryLabel ? <span className={scopedClasses(publicStyles, "place-hub-card-kind")}>{place.categoryLabel}</span> : null}
         {place.area || place.city ? <span>{place.area || place.city}</span> : null}
       </small>
       {place.summary ? <p>{place.summary}</p> : null}
@@ -65,9 +67,9 @@ function PlaceCard({ place }) {
 
 function LinkSection({ title, links }) {
   if (!links?.length) return null
-  return <section className="place-hub-section">
+  return <section className={scopedClasses(publicStyles, "place-hub-section")}>
     <h2>{title}</h2>
-    <ul className="place-hub-links">
+    <ul className={scopedClasses(publicStyles, "place-hub-links")}>
       {links.map((link) => <li key={link.href}><Link href={link.href}>{link.label}</Link></li>)}
     </ul>
   </section>
@@ -78,7 +80,7 @@ function LinkSection({ title, links }) {
 // answer is visible, and answer engines quote what they can read in the HTML.
 function Faq({ items }) {
   if (!items?.length) return null
-  return <section className="place-hub-faq">
+  return <section className={scopedClasses(publicStyles, "place-hub-faq")}>
     <h2>Common questions</h2>
     <dl>
       {items.map((item) => <div key={item.question}>
@@ -100,9 +102,9 @@ export function hubPageHref(basePath, page) {
 function Pagination({ basePath, page, totalPages }) {
   if (!basePath || !totalPages || totalPages < 2) return null
   const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
-  return <nav className="place-hub-pagination" aria-label="Pagination">
+  return <nav className={scopedClasses(publicStyles, "place-hub-pagination")} aria-label="Pagination">
     {page > 1
-      ? <Link className="place-hub-pagination-step" rel="prev" href={hubPageHref(basePath, page - 1)}>← Previous</Link>
+      ? <Link className={scopedClasses(publicStyles, "place-hub-pagination-step")} rel="prev" href={hubPageHref(basePath, page - 1)}>← Previous</Link>
       : null}
     <ol>
       {pages.map((value) => <li key={value}>
@@ -112,7 +114,7 @@ function Pagination({ basePath, page, totalPages }) {
       </li>)}
     </ol>
     {page < totalPages
-      ? <Link className="place-hub-pagination-step" rel="next" href={hubPageHref(basePath, page + 1)}>Next →</Link>
+      ? <Link className={scopedClasses(publicStyles, "place-hub-pagination-step")} rel="next" href={hubPageHref(basePath, page + 1)}>Next →</Link>
       : null}
   </nav>
 }
@@ -123,10 +125,10 @@ function Pagination({ basePath, page, totalPages }) {
 export function PlaceGroups({ groups = [] }) {
   if (!groups.length) return null
   return <>{groups.map((group) => (
-    <section className="place-hub-section place-hub-group" key={group.slug}>
+    <section className={scopedClasses(publicStyles, "place-hub-section place-hub-group")} key={group.slug}>
       <h2>{group.title}</h2>
-      {group.blurb ? <p className="place-hub-group-blurb">{group.blurb}</p> : null}
-      <ul className="place-hub-grid">
+      {group.blurb ? <p className={scopedClasses(publicStyles, "place-hub-group-blurb")}>{group.blurb}</p> : null}
+      <ul className={scopedClasses(publicStyles, "place-hub-grid")}>
         {group.places.map((place) => <PlaceCard key={place.slug} place={place} />)}
       </ul>
     </section>
@@ -136,15 +138,15 @@ export function PlaceGroups({ groups = [] }) {
 export function PlaceHub({ trail = [], title, intro, places = [], emptyNote, sections = [], pagination = null, faq = [], children = null }) {
   return <>
     <PublicHeader />
-    <main className="place-hub">
+    <main className={scopedClasses(publicStyles, "place-hub")}>
       <Breadcrumbs trail={trail} />
-      <header className="place-hub-header">
+      <header className={scopedClasses(publicStyles, "place-hub-header")}>
         <h1>{title}</h1>
         {intro ? <p>{intro}</p> : null}
       </header>
       {places.length
-        ? <ul className="place-hub-grid">{places.map((place) => <PlaceCard key={place.slug} place={place} />)}</ul>
-        : emptyNote ? <p className="place-hub-empty">{emptyNote}</p> : null}
+        ? <ul className={scopedClasses(publicStyles, "place-hub-grid")}>{places.map((place) => <PlaceCard key={place.slug} place={place} />)}</ul>
+        : emptyNote ? <p className={scopedClasses(publicStyles, "place-hub-empty")}>{emptyNote}</p> : null}
       {children}
       {pagination ? <Pagination {...pagination} /> : null}
       {sections.map((section) => <LinkSection key={section.title} title={section.title} links={section.links} />)}

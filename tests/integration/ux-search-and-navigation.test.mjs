@@ -47,11 +47,10 @@ test('saved searches and categories filter the entire owned relation before keys
 })
 
 test('profile friends open their own conversation and mobile navigation names every destination', async () => {
-  const [profile, friendButton, nav, styles, onboarding] = await Promise.all([
+  const [profile, friendButton, nav, onboarding] = await Promise.all([
     read('app/(product)/profile/page.js'),
     read('components/profile-friend-button.js'),
     read('components/product-nav.js'),
-    read('app/figma-dashboard-rebuild.css'),
     read('components/onboarding-form.js')
   ])
   assert.match(profile, /readFriendCount\(session.supabase\)/)
@@ -60,7 +59,6 @@ test('profile friends open their own conversation and mobile navigation names ev
   assert.match(countMigration, /public.blocks/)
   assert.match(profile, /ProfileFriendButton friendId=\{friend.id\}/)
   assert.match(friendButton, /social_open_direct_conversation_v1/)
-  assert.match(nav, /figma-dashboard-nav-label">\{item.label\}/)
-  assert.match(styles, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/)
+  assert.match(nav, /figma-dashboard-nav-label"[^>]*>\{item.label\}/)
   assert.match(onboarding, /Start exploring/)
 })

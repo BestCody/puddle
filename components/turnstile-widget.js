@@ -2,6 +2,7 @@
 
 import Script from 'next/script'
 import { useEffect, useId, useRef } from 'react'
+import styles from './turnstile-widget.module.css'
 
 export function TurnstileWidget({ action, onToken }) {
   const id = `turnstile-${useId().replaceAll(':','')}`
@@ -22,5 +23,5 @@ export function TurnstileWidget({ action, onToken }) {
   }
   useEffect(() => { render(); return () => { if (widget.current && window.turnstile) window.turnstile.remove(widget.current) } }, [])
   if (!siteKey) return <input type="hidden" name="cf-turnstile-response" value="" />
-  return <div className="turnstile-field"><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={render}/><div id={id}/></div>
+  return <div className={styles.field}><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={render}/><div id={id}/></div>
 }

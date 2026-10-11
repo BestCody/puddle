@@ -1,0 +1,11 @@
+.photo-frame-message {
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  font: inherit;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}

@@ -1,4 +1,8 @@
 "use client"
+import recommendationStyles from "@/components/recommendation-settings.module.css"
+import sharedUIStyles from "@/components/shared-ui.module.css"
+import editorStyles from "@/components/location-editor.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useState } from 'react'
 import { csrfFetch } from '@/lib/security/csrf-client'
@@ -55,30 +59,30 @@ export function RecommendationSettings({ initialPreferences }) {
   }
 
   const toggle = (key) => setPreferences((current) => ({ ...current, [key]: !current[key] }))
-  return <div className="recommendation-settings-grid">
-    <form className="recommendation-settings-card" onSubmit={save}>
+  return <div className={scopedClasses(recommendationStyles, "recommendation-settings-grid")}>
+    <form className={scopedClasses(recommendationStyles, "recommendation-settings-card")} onSubmit={save}>
       <span className="section-pill section-pill-mint">Personalization controls</span>
       <h2>Choose which signals shape Discover.</h2>
-      <label className="settings-toggle"><input type="checkbox" checked={preferences.behavioral_enabled} onChange={() => toggle('behavioral_enabled')} /><span><strong>Use my Puddle activity</strong><small>Saves, RSVPs, attendance, tickets, visits, and discovery choices.</small></span></label>
-      <label className="settings-toggle"><input type="checkbox" checked={preferences.friend_activity_enabled} onChange={() => toggle('friend_activity_enabled')} /><span><strong>Use permitted friend activity</strong><small>Only activity that friends chose to share with you.</small></span></label>
-      <label className="settings-toggle"><input type="checkbox" checked={preferences.vector_enabled} onChange={() => toggle('vector_enabled')} /><span><strong>Use content similarity</strong><small>Compare local pgvector embeddings generated without an external AI key.</small></span></label>
-      <label className="settings-toggle"><input type="checkbox" checked={preferences.explicit_interests_only} onChange={() => toggle('explicit_interests_only')} /><span><strong>Explicit interests only</strong><small>Ignore behavioral history and build recommendations from profile interests.</small></span></label>
+      <label className={scopedClasses(recommendationStyles, "settings-toggle")}><input type="checkbox" checked={preferences.behavioral_enabled} onChange={() => toggle('behavioral_enabled')} /><span><strong>Use my Puddle activity</strong><small>Saves, RSVPs, attendance, tickets, visits, and discovery choices.</small></span></label>
+      <label className={scopedClasses(recommendationStyles, "settings-toggle")}><input type="checkbox" checked={preferences.friend_activity_enabled} onChange={() => toggle('friend_activity_enabled')} /><span><strong>Use permitted friend activity</strong><small>Only activity that friends chose to share with you.</small></span></label>
+      <label className={scopedClasses(recommendationStyles, "settings-toggle")}><input type="checkbox" checked={preferences.vector_enabled} onChange={() => toggle('vector_enabled')} /><span><strong>Use content similarity</strong><small>Compare local pgvector embeddings generated without an external AI key.</small></span></label>
+      <label className={scopedClasses(recommendationStyles, "settings-toggle")}><input type="checkbox" checked={preferences.explicit_interests_only} onChange={() => toggle('explicit_interests_only')} /><span><strong>Explicit interests only</strong><small>Ignore behavioral history and build recommendations from profile interests.</small></span></label>
       <button type="submit" disabled={busy}>Save preferences</button>
     </form>
-    <section className="recommendation-settings-card">
+    <section className={scopedClasses(recommendationStyles, "recommendation-settings-card")}>
       <span className="section-pill section-pill-yellow">How ranking works</span>
       <h2>Transparent hybrid ranking.</h2>
       <p>Hard safety and availability rules run first. Eligible events and places are then scored from distance, timing, your interests and activity, followed hosts, permitted friend activity, popularity, novelty, diversity, and optional vector similarity.</p>
       <p>Every card explanation comes from a signal that actually contributed to its score. Popularity, friends, and vector similarity are capped so none can control the feed alone.</p>
-      <button type="button" className="quiet-button" disabled={busy} onClick={reset}>Reset learned preferences</button>
+      <button type="button" className={scopedClasses(sharedUIStyles, "quiet-button")} disabled={busy} onClick={reset}>Reset learned preferences</button>
     </section>
-    <section className="recommendation-settings-card recommendation-danger-card">
+    <section className={scopedClasses(recommendationStyles, "recommendation-settings-card recommendation-danger-card")}>
       <span className="section-pill">Delete recommendation data</span>
       <h2>Remove personalization logs.</h2>
       <p>This deletes recommendation requests, candidates, outcomes, legacy discovery actions and impressions, experiment assignments, and your preference embedding. It does not delete tickets, orders, RSVPs, attendance, visits, security records, or your account.</p>
-      <label className="editor-field">Type DELETE<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
+      <label className={scopedClasses(editorStyles, "editor-field")}>Type DELETE<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
       <button type="button" className="danger-link" disabled={busy || confirmation !== 'DELETE'} onClick={removeData}>Delete recommendation data</button>
     </section>
-    {message ? <p className="recommendation-settings-message" role="status">{message}</p> : null}
+    {message ? <p className={scopedClasses(recommendationStyles, "recommendation-settings-message")} role="status">{message}</p> : null}
   </div>
 }

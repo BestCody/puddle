@@ -1,0 +1,246 @@
+.puddle-search-trigger {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .875rem;
+  border: .125rem solid var(--shell-border, #d9d9d9);
+  border-radius: 999rem;
+  background: var(--shell-surface, #fff);
+  color: var(--shell-muted, #555);
+  box-shadow: 0 .125rem 0 rgb(0 0 0 / .08);
+  cursor: pointer;
+  font: 700 .8125rem/1 var(--font-sans);
+}
+
+.puddle-discover-search-trigger {
+  width: 2.75rem;
+  height: 2.5rem;
+  justify-content: center;
+  padding: 0;
+}
+
+.puddle-discover-search-trigger > .puddle-search-trigger-label {
+  position: absolute;
+  width: .0625rem;
+  height: .0625rem;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.puddle-search-trigger-icon, .puddle-search-dialog-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  font-size: 1.375rem;
+  line-height: 1;
+}
+
+.puddle-search-overlay {
+  position: fixed;
+  inset: 0 0 0 var(--figma-shell-sidebar, 0rem);
+  z-index: 900;
+  display: grid;
+  place-items: start center;
+  padding: clamp(4.75rem, 11dvh, 7.25rem) 1.5rem 1.5rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .2s ease, visibility 0s linear .2s;
+}
+
+.puddle-search-overlay:global(.is-open) {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.puddle-discover-search-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: var(--puddle-search-overlay-backdrop, rgb(245 247 249 / .28));
+  backdrop-filter: blur(var(--puddle-search-overlay-blur, 1rem));
+  cursor: default;
+}
+
+.puddle-feed-search-overlay .puddle-discover-search-backdrop {
+  background: var(--puddle-feed-search-overlay-backdrop, rgb(245 247 249 / .28));
+  backdrop-filter: none;
+}
+
+.puddle-search-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(33.75rem, calc(100% - 1.75rem));
+  min-height: 3.625rem;
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) 2.125rem;
+  align-items: center;
+  gap: .5rem;
+  padding: .375rem .625rem .375rem 1rem;
+  border: .09375rem solid var(--shell-border, rgb(30 30 30 / .13));
+  border-radius: 999rem;
+  background: var(--shell-surface, #fff);
+  color: var(--shell-muted, #777);
+  box-shadow: 0 1.25rem 4.0625rem rgb(0 0 0 / .16), 0 .25rem 1rem rgb(0 0 0 / .08);
+  transform: translateY(-1.125rem) scale(.88);
+  opacity: 0;
+  transition: transform .32s cubic-bezier(.2,.9,.25,1.18), opacity .2s ease;
+}
+
+.puddle-search-overlay:global(.is-open) .puddle-search-dialog {
+  transform: none;
+  opacity: 1;
+}
+
+.puddle-search-dialog input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--shell-text, #111);
+  font: 650 1.125rem/1.2 var(--font-sans);
+}
+
+.puddle-search-dialog input::placeholder {
+  color: var(--shell-muted, #aaa);
+}
+
+.puddle-search-dialog button {
+  width: 2.125rem;
+  height: 2.125rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--shell-hover, #f0f0f0);
+  color: inherit;
+  font: 500 1.4375rem/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.puddle-saved-search-input {
+  position: fixed;
+  z-index: 75;
+  left: calc(50% + var(--figma-shell-sidebar, 0rem) / 2);
+  bottom: clamp(1.25rem, 5vh, 2.75rem);
+  width: min(26.25rem, calc(100vw - var(--figma-shell-sidebar, 0rem) - 3rem));
+  min-height: 3.25rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .25rem .3125rem .25rem 1.0625rem;
+  transform: translateX(-50%);
+  border: .125rem solid var(--shell-border, #e6e6e6);
+  border-radius: 1.5625rem;
+  background: var(--shell-surface, #fff);
+  box-shadow: 0 .25rem 0 rgb(0 0 0 / .1);
+  font: 600 .875rem/1.2 var(--font-sans);
+}
+
+.puddle-saved-search-input:focus-within {
+  outline: .1875rem solid #b784e4;
+  outline-offset: .1875rem;
+}
+
+.puddle-map-search-trigger {
+  position: absolute;
+  z-index: 12;
+  top: clamp(5.5rem, 12dvh, 7rem);
+  right: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.puddle-saved-search-input label {
+  flex: 1;
+  min-width: 0;
+}
+
+.puddle-saved-search-input input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--shell-text, #111);
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+.puddle-saved-search-input input::placeholder {
+  color: var(--shell-muted, #b0b0b0);
+}
+
+.puddle-saved-search-input button {
+  width: 2.625rem;
+  height: 2.625rem;
+  flex: 0 0 2.625rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: .125rem solid #b784e4;
+  border-radius: 50%;
+  background: var(--shell-surface, #fff);
+  color: #b784e4;
+  font: 800 1.375rem/1 var(--font-sans);
+}
+
+@media (max-width: 47.5rem) {
+
+  .puddle-discover-search-trigger {
+    width: 2.625rem;
+  }
+
+  .puddle-search-overlay {
+    left: 0;
+    padding: max(4.375rem, 10dvh) .875rem 1.5rem;
+  }
+
+  .puddle-saved-search-input {
+    left: 50%;
+    bottom: calc(var(--puddle-mobile-content-bottom) + 1rem);
+    width: min(22.5rem, calc(100vw - 2rem));
+  }
+
+  .puddle-search-dialog {
+    min-height: 3.375rem;
+    grid-template-columns: 1.625rem minmax(0, 1fr) 2rem;
+    padding-left: .875rem;
+  }
+
+  .puddle-search-dialog input {
+    font-size: 1rem;
+  }
+
+  .puddle-map-search-trigger {
+    top: auto;
+    right: auto;
+    left: 50%;
+    bottom: 1rem;
+    width: min(13.75rem, calc(100% - 2rem));
+    height: 2.625rem;
+    justify-content: start;
+    padding-inline: .875rem;
+    transform: translateX(-50%);
+  }
+
+  .puddle-map-search-trigger > .puddle-search-trigger-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .puddle-search-overlay, .puddle-search-dialog {
+    transition: none;
+  }
+}

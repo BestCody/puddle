@@ -1,0 +1,46 @@
+.figma-not-found {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 1.875rem;
+  background: #fff;
+}
+
+.figma-not-found-card {
+  width: min(38.75rem,100%);
+  display: grid;
+  justify-items: center;
+  gap: 1.125rem;
+  text-align: center;
+}
+
+.figma-not-found-mark {
+  font: 800 clamp(6.875rem,24vw,15.625rem)/.8 "SFMono-Regular",Consolas,monospace;
+  color: #4ca5f7;
+  letter-spacing: -.1em;
+}
+
+.figma-not-found h1 {
+  margin: 0;
+  font-size: 2.625rem;
+  letter-spacing: -.05em;
+}
+
+.figma-not-found p {
+  max-width: 30rem;
+  margin: 0;
+  color: #858585;
+}
+
+.figma-not-found a {
+  min-height: 3.125rem;
+  display: grid;
+  place-items: center;
+  padding: 0 1.375rem;
+  border: 0.125rem solid #111;
+  border-radius: 1.375rem;
+  background: #111;
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+}

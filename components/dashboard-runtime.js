@@ -24,7 +24,6 @@ export function DashboardRuntime({ profileId }) {
         if (!active || error) return
         loaded = true
         setBootstrap({
-          showAdmin: Boolean(data?.show_admin),
           unreadNotifications: Number(data?.unread_notifications || 0),
           passActive: Boolean(data?.pass_active)
         })
@@ -59,6 +58,5 @@ export function DashboardRuntime({ profileId }) {
     <Link ref={notificationsLink} href="/account?section=notifications&returnTo=%2Fdiscover">
       Notifications{bootstrap?.unreadNotifications ? ` (${bootstrap.unreadNotifications})` : ''}
     </Link>
-    {bootstrap?.showAdmin ? <Link href="/admin">Admin</Link> : null}
   </>
 }

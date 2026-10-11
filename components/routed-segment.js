@@ -1,6 +1,7 @@
 "use client"
 
 import Link from 'next/link'
+import styles from './routed-segment.module.css'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 const TONE_COLORS = {
@@ -39,7 +40,7 @@ export function RoutedSegment({ items, activeValue, ariaLabel, className = '', t
 
   return <nav
     ref={segmentRef}
-    className={`${rootClassName} tone-${tone}${className ? ` ${className}` : ''}`}
+    className={`${rootClassName}${rootClassName.includes('figma-dashboard-segment') ? ` ${styles.segment}` : ''} tone-${tone}${className ? ` ${className}` : ''}`}
     aria-label={ariaLabel}
     data-testid={testId}
     data-layout-anchor={layoutAnchor}
@@ -48,9 +49,7 @@ export function RoutedSegment({ items, activeValue, ariaLabel, className = '', t
     style={{
       '--segment-count': items.length,
       '--segment-active-index': activeIndex,
-      '--segment-active-bg': TONE_COLORS[tone] || TONE_COLORS.neutral,
-      '--segment-active-left': '4px',
-      '--segment-active-width': 'calc((100% - 8px) / var(--segment-count))'
+      '--segment-active-bg': TONE_COLORS[tone] || TONE_COLORS.neutral
     }}
   >
     {items.map((item, index) => {

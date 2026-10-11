@@ -1,5 +1,7 @@
 "use client"
 
+import styles from './swipe.module.css'
+
 function UndoIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6"/></svg>
 }
@@ -27,9 +29,9 @@ export function SwipeActionDock({ onUndo, onPass, onSave, onPerfect, canUndo, bu
     handlers[key]?.()
   }
 
-  return <div className={`${classPrefix}-actions`} aria-label="Swipe controls">
+  return <div className={`${classPrefix}-actions${classPrefix === 'figma-swipe' ? ` ${styles.actions}` : ''}`} aria-label="Swipe controls">
     {actions.map(({ key, label, Icon }) => <button
-      className={`${classPrefix}-action is-${key}`}
+      className={`${classPrefix}-action${classPrefix === 'figma-swipe' ? ` ${styles.action}` : ''} is-${key}`}
       type="button"
       onClick={(event) => runAction(key, event)}
       disabled={busy || (key === 'undo' && !canUndo)}

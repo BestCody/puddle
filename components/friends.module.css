@@ -1,0 +1,760 @@
+.figma-friends-pass-wrapper {
+  position: relative;
+}
+
+.figma-friends-screen {
+  position: relative;
+  min-height: var(--shell-content-height, 100dvh);
+  display: grid;
+  grid-template-rows: max-content minmax(0, 1fr);
+  gap: .9375rem;
+  padding: 2.4375rem 1.125rem 1.875rem 1.75rem;
+  color: var(--shell-text, #111);
+  background: var(--shell-surface, #fff);
+}
+
+.figma-friends-tabs {
+  --segment-active-bg: #78e152;
+  --segment-width: 14.875rem;
+  justify-self: center;
+}
+
+.figma-friends-screen:global(.is-messages) {
+  height: var(--shell-content-height, 100dvh);
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 1.375rem;
+}
+
+.figma-friends-message-layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(12rem, 21.1875rem) minmax(0, 1fr);
+  gap: .8125rem;
+}
+
+.figma-friends-conversations, .figma-friends-chat, .figma-friends-shared-place, .figma-friends-shared-chat, .figma-friends-request-card {
+  min-width: 0;
+  min-height: 0;
+  border: .15625rem solid var(--shell-border, #e5e5e5);
+  border-radius: 1.5625rem;
+  background: var(--shell-surface, #fff);
+  box-shadow: 0 .25rem 0 rgb(0 0 0 / .1);
+}
+
+.figma-friends-conversations {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: .625rem .5rem;
+}
+
+.figma-friends-conversations > button {
+  width: 100%;
+  min-height: 4.5rem;
+  display: grid;
+  grid-template-columns: 2.8125rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .625rem;
+  padding: .5rem .625rem;
+  border: 0;
+  border-radius: 1.125rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.figma-friends-conversations > button:global(.is-active) {
+  background: color-mix(in srgb, #78e152 15%, var(--shell-surface, #fff));
+}
+
+.figma-friends-conversations > button > span {
+  min-width: 0;
+  display: grid;
+  gap: .3125rem;
+}
+
+.figma-friends-conversations strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 1rem/1 var(--font-sans);
+}
+
+.figma-friends-conversations small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--shell-muted, #858585);
+  font: 600 .6875rem/1.15 var(--font-sans);
+}
+
+.figma-friends-conversations b {
+  min-width: 1.375rem;
+  height: 1.375rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #78e152;
+  color: #fff;
+  font: 800 .625rem/1 var(--font-sans);
+}
+
+.figma-friends-avatar {
+  width: 2.625rem;
+  height: 2.625rem;
+  flex: 0 0 2.625rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--shell-hover, #e4e4e4);
+  color: var(--shell-muted, #555);
+  font: 800 .75rem/1 var(--font-sans);
+}
+
+.figma-friends-avatar > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.figma-friends-avatar[data-photo-state='loading'] > img {
+  opacity: 0;
+}
+
+.figma-friends-conversations .figma-friends-avatar {
+  width: 2.375rem;
+  height: 2.375rem;
+  flex-basis: 2.375rem;
+}
+
+.figma-friends-conversation-empty, .figma-friends-chat-empty {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: .75rem;
+  color: var(--shell-muted, #b7b7b7);
+  font: 700 .875rem/1.2 var(--font-sans);
+}
+
+.figma-friends-chat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.figma-friends-chat > header {
+  flex: 0 0 auto;
+  min-height: 4.5rem;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .5rem 1.125rem;
+  border-bottom: .09375rem solid var(--shell-border, #ededed);
+}
+
+.figma-friends-chat > header > span {
+  min-width: 0;
+  display: grid;
+  gap: .25rem;
+}
+
+.figma-friends-chat > header strong {
+  overflow-wrap: anywhere;
+  font: 800 1.0625rem/1.1 var(--font-sans);
+}
+
+.figma-friends-chat > header small {
+  color: var(--shell-muted, #858585);
+  font: 600 .625rem/1 var(--figma-mono);
+}
+
+.figma-friends-chat-back {
+  display: none;
+}
+
+.figma-friends-messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 1.125rem;
+}
+
+.figma-friends-message {
+  display: flex;
+  align-items: flex-end;
+  gap: .5rem;
+  margin: .625rem 0;
+}
+
+.figma-friends-message:global(.is-mine) {
+  justify-content: flex-end;
+}
+
+.figma-friends-message .figma-friends-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-basis: 1.75rem;
+}
+
+.figma-friends-message > div {
+  max-width: 70%;
+  padding: .625rem .875rem;
+  border-radius: 1.125rem;
+  background: var(--shell-hover, #f0f0f0);
+  color: inherit;
+  overflow-wrap: anywhere;
+  font: 600 .875rem/1.3 var(--font-sans);
+}
+
+.figma-friends-message:global(.is-mine) > div {
+  background: #78e152;
+  color: #fff;
+}
+
+.figma-friends-message p {
+  margin: 0;
+}
+
+.figma-friends-message a {
+  color: inherit;
+  font-weight: 800;
+}
+
+.figma-friends-location-message {
+  display: grid;
+  gap: .1875rem;
+  text-decoration: none;
+}
+
+.figma-friends-composer {
+  flex: 0 0 auto;
+  min-height: 2.875rem;
+  display: flex;
+  align-items: center;
+  gap: .4375rem;
+  margin: .75rem .625rem 1.0625rem;
+  padding: .1875rem .25rem;
+  border: .09375rem solid var(--shell-border, #e5e5e5);
+  border-radius: 1.5rem;
+  background: var(--shell-surface, #fff);
+  box-shadow: 0 .1875rem 0 rgb(0 0 0 / .1);
+}
+
+.figma-friends-composer input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: 600 .875rem/1 var(--font-sans);
+}
+
+.figma-friends-composer-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.figma-friends-composer-menu > summary {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: .5625rem;
+  background: transparent;
+  color: var(--shell-muted, #777);
+  cursor: pointer;
+  list-style: none;
+  font: 500 1.5625rem/1 var(--font-sans);
+}
+
+.figma-friends-composer-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.figma-friends-composer-menu > summary:hover {
+  background: var(--shell-hover, #f2f2f2);
+}
+
+.figma-friends-composer-menu > div {
+  position: absolute;
+  z-index: 60;
+  left: 0;
+  bottom: calc(100% + .5rem);
+  width: min(18.125rem, 75vw);
+  max-height: min(18.75rem, 50dvh);
+  overflow: auto;
+  display: grid;
+  gap: .25rem;
+  padding: .75rem;
+  border: .0625rem solid var(--shell-border, #d8d8d8);
+  border-radius: .9375rem;
+  background: var(--shell-surface, #fff);
+  color: var(--shell-text, #111);
+  box-shadow: 0 .875rem 2.25rem rgb(0 0 0 / .15);
+}
+
+.figma-friends-composer-menu > div > a, .figma-friends-composer-menu > div > button {
+  width: 100%;
+  min-height: 3rem;
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: .25rem;
+  padding: .5625rem .625rem;
+  border: 0;
+  border-radius: .75rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  font: 700 .75rem/1.2 var(--font-sans);
+}
+
+.figma-friends-composer-menu > div > :is(a, button):hover {
+  background: var(--shell-hover, #f4f4f4);
+}
+
+.figma-friends-composer-menu > .figma-message-place-picker {
+  left: -.25rem;
+  width: min(20rem, calc(100vw - 3.25rem));
+  max-height: min(18.125rem, 50dvh);
+  padding: .625rem;
+  border-radius: 1.125rem;
+}
+
+.figma-message-place-picker > strong {
+  padding: .25rem .375rem .5rem;
+  color: var(--shell-muted, #777);
+  font: 800 .6875rem/1 var(--font-sans);
+}
+
+.figma-message-place-picker > button span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 .8125rem/1.15 var(--font-sans);
+}
+
+.figma-message-place-picker > button small, .figma-message-place-picker > p {
+  margin: 0;
+  color: var(--shell-muted, #999);
+  font: 600 .625rem/1.2 var(--font-sans);
+}
+
+.puddle-send-action {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: .125rem solid #78e152;
+  border-radius: 50%;
+  background: var(--shell-surface, #fff);
+  color: #58c92e;
+  box-shadow: none;
+  cursor: pointer;
+  font: 900 1.3125rem/1 var(--font-sans);
+  transition: transform .12s ease, background .16s ease;
+}
+
+.puddle-send-action:hover:not(:disabled) {
+  background: color-mix(in srgb, #78e152 10%, var(--shell-surface, #fff));
+}
+
+.puddle-send-action:active:not(:disabled) {
+  transform: scale(.94);
+}
+
+.puddle-send-action:disabled {
+  border-color: var(--shell-border, #dedede);
+  color: var(--shell-muted, #b8b8b8);
+  cursor: default;
+}
+
+.figma-friends-chat-notice {
+  margin: 0 1.25rem .5rem;
+  color: #e73668;
+  font: 700 .75rem/1.3 var(--font-sans);
+}
+
+.figma-messages-navigation-status {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--shell-surface, #fff) 85%, transparent);
+  color: var(--shell-muted, #777);
+  font: 800 .875rem/1.2 var(--font-sans);
+}
+
+.figma-friends-shared-view {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 1.125rem;
+  padding-top: .5rem;
+}
+
+.figma-friends-shared-view > h1 {
+  margin: 0 .5rem;
+  color: var(--shell-muted, #c9c9c9);
+  font: 700 1.875rem/1 var(--figma-mono);
+}
+
+.figma-friends-shared-grid {
+  display: grid;
+  grid-template-columns: minmax(17.5rem, 21.9375rem) minmax(0, 1fr);
+  grid-auto-rows: minmax(13.375rem, auto);
+  gap: 1.25rem .6875rem;
+}
+
+.figma-friends-shared-place {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-content: start;
+  gap: .625rem;
+  padding: .4375rem;
+}
+
+.figma-friends-shared-photo {
+  grid-column: 1 / -1;
+  min-height: 6.5rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: .125rem solid var(--shell-border, #dedede);
+  border-radius: 1.5625rem;
+  background: var(--shell-hover, #f0f0f0);
+  color: var(--shell-muted, #858585);
+  font: 700 .75rem/1.2 var(--font-sans);
+  text-align: center;
+  text-decoration: none;
+}
+
+.figma-friends-shared-photo > img {
+  width: 100%;
+  height: 6.5rem;
+  display: block;
+  object-fit: cover;
+}
+
+.figma-friends-shared-photo[data-photo-state='loading'] > img {
+  opacity: 0;
+}
+
+.figma-friends-shared-place h2 {
+  grid-column: 1 / -1;
+  margin: 0 .3125rem;
+  font: 800 1.5625rem/1.1 var(--font-sans);
+  letter-spacing: -.04em;
+  overflow-wrap: anywhere;
+}
+
+.figma-friends-shared-place small, .figma-friends-shared-place > span, .figma-friends-shared-place > b {
+  padding-inline: .3125rem;
+  color: var(--shell-muted, #858585);
+  font: 700 .8125rem/1 var(--figma-mono);
+}
+
+.figma-friends-shared-place > b {
+  grid-column: 1 / -1;
+  font-size: .6875rem;
+}
+
+.figma-friends-shared-chat {
+  display: flex;
+  align-items: end;
+  justify-content: end;
+  padding: .5625rem;
+}
+
+.figma-friends-shared-chat button {
+  min-width: 8rem;
+  min-height: 2.1875rem;
+  padding: .5rem;
+  border: .09375rem solid #58c92e;
+  border-radius: 1.5625rem;
+  background: #78e152;
+  color: #fff;
+  font: 600 1rem/1 var(--font-sans);
+}
+
+.figma-friends-shared-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  color: var(--shell-muted, #b7b7b7);
+  font: 800 1rem/1.2 var(--font-sans);
+}
+
+.figma-friends-add-view {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 1.75rem;
+  padding: 4.125rem .25rem 1.875rem;
+}
+
+.figma-friends-add-view > h1 {
+  margin: 0 .5625rem;
+  background: linear-gradient(180deg, #65e736, #b0ea9c 64%);
+  background-clip: text;
+  color: transparent;
+  font: 800 4.5rem/1 var(--figma-mono);
+  letter-spacing: -.055em;
+}
+
+.figma-friends-search {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  min-height: 3.25rem;
+  padding: .25rem .3125rem .25rem .875rem;
+  border: .125rem solid var(--shell-border, #e6e6e6);
+  border-radius: 1.5625rem;
+  background: var(--shell-surface, #fff);
+  box-shadow: 0 .25rem 0 rgb(0 0 0 / .1);
+}
+
+.figma-friends-search > span {
+  color: #58c92e;
+  font-size: 1.375rem;
+}
+
+.figma-friends-search input {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: 600 1rem/1 var(--font-sans);
+}
+
+.figma-friends-search input::placeholder {
+  color: var(--shell-muted, #b0b0b0);
+}
+
+.figma-friends-search button {
+  width: 2.375rem;
+  height: 2.375rem;
+  flex: 0 0 2.375rem;
+  display: grid;
+  place-items: center;
+  border: .125rem solid #78e152;
+  border-radius: 50%;
+  background: var(--shell-surface, #fff);
+  color: #58c92e;
+  font: 800 1.25rem/1 var(--font-sans);
+}
+
+.figma-friends-search-results {
+  max-height: 15.625rem;
+  overflow: auto;
+  padding: .5rem;
+  border: .125rem solid var(--shell-border, #e5e5e5);
+  border-radius: 1.25rem;
+  background: var(--shell-surface, #fff);
+  box-shadow: 0 .75rem 1.875rem rgb(0 0 0 / .12);
+}
+
+.figma-friends-search-results > div, .figma-friends-request-row {
+  min-height: 3.625rem;
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  padding: .3125rem .4375rem;
+}
+
+.figma-friends-search-results .figma-friends-avatar, .figma-friends-request-row .figma-friends-avatar {
+  width: 2.1875rem;
+  height: 2.1875rem;
+  flex-basis: 2.1875rem;
+}
+
+.figma-friends-search-results > div > span, .figma-friends-request-row > span {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: .25rem;
+}
+
+.figma-friends-search-results strong, .figma-friends-request-row strong {
+  overflow-wrap: anywhere;
+  font: 800 1rem/1 var(--font-sans);
+}
+
+.figma-friends-search-results small, .figma-friends-request-row em {
+  color: var(--shell-muted, #b7b7b7);
+  font: 700 .6875rem/1 var(--font-sans);
+  font-style: normal;
+}
+
+.figma-friends-search-results button {
+  min-width: 2.375rem;
+  min-height: 1.9375rem;
+  border: .09375rem solid #51c129;
+  border-radius: 1.25rem;
+  background: #78e152;
+  color: #fff;
+}
+
+.figma-friends-inline-request-actions, .figma-friends-request-row > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4375rem;
+}
+
+.figma-friends-request-card {
+  width: min(41.3125rem, 100%);
+  min-height: 14.4375rem;
+  justify-self: center;
+  padding: 1.0625rem .9375rem;
+}
+
+.figma-friends-request-card > small {
+  color: var(--shell-muted, #b8b8b8);
+  font: 700 .875rem/1 var(--figma-mono);
+}
+
+.figma-friends-request-card > p {
+  margin: .75rem 0 .625rem;
+  color: var(--shell-muted, #b7b7b7);
+  font: 700 .8125rem/1 var(--font-sans);
+}
+
+.figma-friends-request-card > hr {
+  border: 0;
+  border-top: .09375rem solid var(--shell-border, #c9c9c9);
+  margin: 1rem 0;
+}
+
+.figma-friends-request-row button {
+  width: 2.6875rem;
+  min-height: 2rem;
+  border: .08125rem solid var(--shell-border, #e2e2e2);
+  border-radius: 999rem;
+  background: var(--shell-surface, #fff);
+  color: var(--shell-muted, #858585);
+  font: 800 1.125rem/1 var(--font-sans);
+}
+
+.figma-friends-request-row button:global(.is-accept) {
+  border-color: #51c129;
+  background: #78e152;
+  color: #fff;
+}
+
+.figma-friends-request-row button:global(.is-decline) {
+  border-color: #a7284c;
+  background: #e73668;
+  color: #fff;
+}
+
+@media (max-width: 47.5rem) {
+
+  .figma-friends-screen {
+    padding: 1.75rem .75rem 1.5rem;
+    gap: 1rem;
+  }
+
+  .figma-friends-screen:global(.is-messages) {
+    padding-bottom: 0;
+  }
+
+  .figma-friends-message-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .figma-friends-screen:global(.is-messages):not(:global(.is-conversation-open)) .figma-friends-chat {
+    display: none;
+  }
+
+  .figma-friends-screen:global(.is-conversation-open) {
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+    padding: 0;
+  }
+
+  .figma-friends-screen:global(.is-conversation-open) .figma-friends-tabs, .figma-friends-screen:global(.is-conversation-open) .figma-friends-conversations {
+    display: none;
+  }
+
+  .figma-friends-screen:global(.is-conversation-open) .figma-friends-chat {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .figma-friends-chat-back {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999rem;
+    color: #4ca5f7;
+    font: 500 2.125rem/1 var(--font-sans);
+    text-decoration: none;
+  }
+
+  .figma-friends-chat > header {
+    padding-inline: 1rem;
+  }
+
+  .figma-friends-composer {
+    margin-bottom: .75rem;
+  }
+
+  .figma-friends-composer-menu > .figma-message-place-picker {
+    width: min(18.75rem, calc(100vw - 2rem));
+    max-height: min(15rem, 50dvh);
+  }
+
+  .figma-friends-shared-view > h1 {
+    font-size: 1.5625rem;
+  }
+
+  .figma-friends-shared-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(11.875rem, auto);
+  }
+
+  .figma-friends-add-view {
+    padding-top: .75rem;
+    gap: 1.25rem;
+  }
+
+  .figma-friends-add-view > h1 {
+    font-size: 3.25rem;
+  }
+
+  .figma-friends-request-card {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .puddle-send-action {
+    transition: none;
+  }
+}

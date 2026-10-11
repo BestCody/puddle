@@ -1,4 +1,6 @@
 "use client"
+import authStyles from "@/components/auth.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -26,7 +28,7 @@ function AuthMessageClient({ params }) {
   const error = params.get('error')
   const success = params.get('success')
   if (!error && !success) return null
-  return <p className={`auth-message ${error ? 'is-error' : 'is-success'}`}>{error || success}</p>
+  return <p className={scopedClasses(authStyles, `auth-message ${error ? 'is-error' : 'is-success'}`)}>{error || success}</p>
 }
 
 function MapScreen({ selectingForPost, query }) {

@@ -1,5 +1,4 @@
 import './global.css'
-import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import { ClientTelemetry } from '@/components/client-telemetry'
 
 export const metadata = {
@@ -32,7 +31,6 @@ export default function RootLayout({ children }) {
     </head>
     <body>
       {children}
-      <ServiceWorkerCleanup />
       <ClientTelemetry />
     </body>
   </html>

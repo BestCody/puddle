@@ -19,6 +19,7 @@ __pycache__/
 .e2e-gh-artifacts/
 .e2e-local-trace-*/
 .e2e-local/
+.playwright-mcp/
 landing-artifacts/
 test-results/
 ann2.json

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { AuthMessage } from '@/components/auth-message'
+import { RoutedSegment } from '@/components/routed-segment'
 import { LocationMap } from '@/components/location-map'
 import { PhotoFrame } from '@/components/photo-frame'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
@@ -93,10 +94,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
 
       <header className={styles.detailTopbar}>
         <a className={styles.detailBack} href="/plans" aria-label="Back to Saved" data-saved-morph-back>‹</a>
-        <nav className={`figma-dashboard-segment ${styles.tabs} ${styles.detailTabs}`} aria-label="Saved and plans" data-testid="saved-detail-tabs">
-          <Link className={styles.active} href="/plans">Saved</Link>
-          <Link href="/plans?tab=planned">Plans</Link>
-        </nav>
+        <RoutedSegment className={`${styles.tabs} ${styles.detailTabs}`} tone="purple" activeValue="saved" ariaLabel="Saved and plans" testId="saved-detail-tabs" items={[{ value: 'saved', label: 'Saved', href: '/plans' }, { value: 'planned', label: 'Plans', href: '/plans?tab=planned' }]} />
       </header>
 
       <div className={styles.detailCategoryBand}>
@@ -147,7 +145,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
         </div>
 
         <section className={styles.detailMap} data-testid="saved-detail-map">
-          {mapPoint.length ? <LocationMap initialPoints={mapPoint} initialCenter={mapCenter} /> : <div className={styles.mapEmpty}>Map unavailable</div>}
+          {mapPoint.length ? <LocationMap initialPoints={mapPoint} initialCenter={mapCenter} compact /> : <div className={styles.mapEmpty}>Map unavailable</div>}
         </section>
       </article>
 

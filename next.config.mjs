@@ -48,7 +48,6 @@ const nextConfig = {
       { source: '/puddle-mark.svg', headers: durableAssetCache },
       { source: '/og-puddle.svg', headers: durableAssetCache },
       { source: '/landing.css', headers: landingAssetCache },
-      { source: '/maintenance.css', headers: landingAssetCache },
       { source: '/app.js', headers: landingAssetCache },
       { source: '/:path*', headers: securityHeaders },
       { source: '/landing-demo/:path*', headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }] }
@@ -59,7 +58,7 @@ const nextConfig = {
       { source: '/index.html', destination: '/', permanent: true }
     ]
   },
-  async rewrites() { return { beforeFiles: [{ source: '/', destination: '/maintenance.html' }] } }
+  async rewrites() { return { beforeFiles: [{ source: '/', destination: '/landing.html' }] } }
 }
 
 export default nextConfig

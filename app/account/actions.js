@@ -81,25 +81,6 @@ export async function updateAppearance(formData) {
   redirect(pathWithMessage('/account?section=appearance', 'success', 'Appearance saved.'))
 }
 
-export async function setAppearanceThemeFromLogo(theme) {
-  const appearanceTheme = String(theme || '')
-  if (appearanceTheme !== 'light' && appearanceTheme !== 'dark') return { ok: false }
-  if (!isSupabaseConfigured()) return { ok: false }
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { ok: false }
-
-  const { data, error } = await supabase.from('profiles').update({
-    appearance_theme: appearanceTheme,
-    updated_at: new Date().toISOString()
-  }).eq('id', user.id).select('id').maybeSingle()
-
-  if (error || !data) return { ok: false }
-  revalidateAppearancePaths()
-  return { ok: true, appearanceTheme }
-}
-
 export async function updateNotificationPreferences(formData) {
   const { supabase, user } = await accountClient()
   const payload = {

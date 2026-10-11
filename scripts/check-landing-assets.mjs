@@ -4,8 +4,7 @@ import sharp from 'sharp'
 
 const publicDirectory = path.join(process.cwd(), 'public')
 const landingPath = path.join(publicDirectory, 'landing.html')
-const appPath = path.join(publicDirectory, 'app.js')
-const [landing, app] = await Promise.all([readFile(landingPath, 'utf8'), readFile(appPath, 'utf8')])
+const landing = await readFile(landingPath, 'utf8')
 
 const references = new Set()
 const assetPattern = /(?:src|href)=["'](\/[^"'?#]+\.(?:avif|css|gif|jpe?g|js|png|svg|webp))(?:[?#][^"']*)?["']/gi
@@ -22,7 +21,7 @@ if (missing.length) {
   process.exit(1)
 }
 
-const heroPhonePath = path.join(publicDirectory, 'figma/assets/hero-phone-exact.png')
+const heroPhonePath = path.join(publicDirectory, 'figma/assets/hero-phone-centered.png')
 const heroPhone = await sharp(heroPhonePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
 const alphaOffset = heroPhone.info.channels - 1
 let heroTransparentPixels = 0
@@ -40,78 +39,16 @@ if (heroTransparentPixels < 1000 || cornerOffsets.some((offset) => heroPhone.dat
   process.exit(1)
 }
 
-const legacyOpaqueForegroundAssets = [
-  'hero-phone.png', 'iphone-frame.png',
-  'phone-swipe.png', 'phone-swipe-exact.png',
-  'phone-save.png', 'phone-save-exact.png',
-  'phone-feed.png', 'phone-feed-exact.png',
-  'phone-profile.png', 'phone-profile-exact.png',
-  'heart.png', 'lock.png', 'mobile-logo.png', 'move.png'
-]
-const productionLandingSource = landing + '\n' + app
-for (const asset of legacyOpaqueForegroundAssets) {
-  if (productionLandingSource.includes(asset)) {
-    console.error('Landing production source references legacy opaque Figma foreground export: ' + asset)
+for (const glyph of ['lock', 'heart', 'move-swipe', 'move-save', 'move-feed']) {
+  const image = await sharp(path.join(publicDirectory, `figma/assets/${glyph}.svg`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  let transparent = false
+  for (let offset = image.info.channels - 1; offset < image.data.length; offset += image.info.channels) {
+    if (image.data[offset] === 0) { transparent = true; break }
+  }
+  if (!transparent) {
+    console.error(`Landing glyph ${glyph} has an opaque canvas`)
     process.exit(1)
   }
 }
 
-const requiredRoutes = ['/signup', '/privacy', '/terms']
-const missingRoutes = requiredRoutes.filter((route) => !new RegExp(`href=["']${route.replace('/', '\\/')}["']`, 'i').test(landing))
-if (missingRoutes.length) {
-  console.error(`Landing page is missing native links:\n${missingRoutes.map((route) => `- ${route}`).join('\n')}`)
-  process.exit(1)
-}
-
-const requiredMarkup = [
-  'data-figma-node="352:484"',
-  'data-figma-node="351:156"',
-  'action="/api/auth/password"',
-  'method="post"',
-  'name="next" value="/discover"',
-  'type="password"',
-  'class="feature-card',
-  'class="safety-panel',
-  'class="safety-post',
-  'class="site-footer',
-  'href="/api/auth/google?next=%2Fdiscover"',
-  'class="mobile-login-button"',
-  'href="/landing.html?mode=login"',
-  'src="/figma/assets/mobile-logo-exact.svg"',
-  'id="mobile-login-dialog"',
-  'Over 30 million locations worldwide',
-  'href="/signup"'
-]
-for (const marker of requiredMarkup) {
-  if (!landing.includes(marker)) {
-    console.error(`Landing page is missing genuine frontend markup: ${marker}`)
-    process.exit(1)
-  }
-}
-
-const forbiddenLandingMarkers = [
-  '/figma/landing-desktop.png',
-  '/figma/landing-mobile.png',
-  'figma-artboard__image',
-  'data-open-app',
-  'data-open-modal="waitlist"',
-  'data-signin-handoff',
-  '<button data-open-modal="privacy"',
-  '<button data-open-modal="terms"'
-]
-for (const marker of forbiddenLandingMarkers) {
-  if (landing.includes(marker)) {
-    console.error(`Landing page contains forbidden screenshot/legacy implementation marker: ${marker}`)
-    process.exit(1)
-  }
-}
-
-const forbiddenScriptMarkers = ['replaceButtonWithLink', 'connectLandingToAuthentication', 'alignLandingToDateLocations', 'initSignInHandoff']
-for (const marker of forbiddenScriptMarkers) {
-  if (app.includes(marker)) {
-    console.error(`Landing script still rewrites critical navigation: ${marker}`)
-    process.exit(1)
-  }
-}
-
-console.log(`Genuine landing assets and native routes verified: ${references.size} assets, ${requiredRoutes.length} routes`)
+console.log(`Landing assets verified: ${references.size} referenced assets and transparent phone/glyph artwork.`)

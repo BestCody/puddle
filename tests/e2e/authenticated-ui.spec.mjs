@@ -19,6 +19,26 @@ async function assertRouteHealth(page) {
   await assertNoHorizontalOverflow(page)
 }
 
+async function assertSwipeLayout(page) {
+  const geometry = await page.evaluate(() => {
+    const stage = document.querySelector('.figma-swipe-card-stage')?.getBoundingClientRect()
+    const card = document.querySelector('.figma-swipe-card.is-active')?.getBoundingClientRect()
+    const actions = document.querySelector('.figma-swipe-actions')?.getBoundingClientRect()
+    return stage && card && actions
+      ? { stage: { left: stage.left, right: stage.right, bottom: stage.bottom },
+          card: { left: card.left, right: card.right },
+          actions: { left: actions.left, right: actions.right, top: actions.top },
+          viewportWidth: document.documentElement.clientWidth }
+      : null
+  })
+  expect(geometry).not.toBeNull()
+  expect(geometry.card.left).toBeGreaterThanOrEqual(geometry.stage.left - 1)
+  expect(geometry.card.right).toBeLessThanOrEqual(geometry.stage.right + 1)
+  expect(geometry.actions.top).toBeGreaterThanOrEqual(geometry.stage.bottom - 1)
+  expect(geometry.actions.left).toBeGreaterThanOrEqual(0)
+  expect(geometry.actions.right).toBeLessThanOrEqual(geometry.viewportWidth + 1)
+}
+
 async function attachRender(page, testInfo, name) {
   await testInfo.attach(`${testInfo.project.name}-${name}.png`, {
     body: await page.screenshot({ fullPage: false }),
@@ -85,6 +105,7 @@ test('core authenticated UI behavior works across desktop and mobile', async ({ 
   await signIn(page, account.email, account.password)
   await expect(page).toHaveURL(/\/discover$/)
   await expect(page.locator('.figma-swipe-card.is-active')).toBeVisible()
+  await assertSwipeLayout(page)
   const undo = page.getByRole('button', { name: 'Undo', exact: true })
   await expect(undo).toBeVisible()
   await expect(undo).toBeDisabled()
