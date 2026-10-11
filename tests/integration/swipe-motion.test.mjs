@@ -58,9 +58,8 @@ test('rebuilt Figma swipe card uses viewport exit geometry and a concurrent card
   assert.doesNotMatch(workspaceSource, /MinimalSwipePreviewCard/)
 
   assert.match(shellCss, /\.figma-swipe-card-stage\s*\{/)
-  assert.match(shellCss, /width: 400px/)
-  assert.match(shellCss, /height: 560px/)
   assert.match(shellCss, /transition: transform \.28s ease, opacity \.2s ease/)
+  assert.match(flowCss, /\.figma-swipe-card-stage\s*\{[^}]*position: relative !important;[^}]*width: min\(/s)
   assert.match(flowCss, /\.figma-swipe-actions,\s*\.minimal-swipe-actions\.figma-swipe-actions\s*\{[^}]*position: relative !important;[^}]*top: auto !important;[^}]*grid-template-columns: repeat\(4, 1fr\)/s)
   assert.doesNotMatch(shellCss, /top: 666px|top: 662px/)
   assert.doesNotMatch(swipeCss, /top: 666px|top: 662px/)

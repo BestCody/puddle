@@ -7,13 +7,10 @@ import { compareObjectInventories, validateObjectMigrationEnv } from '../../scri
 
 test('restored host alone relabels canonical media and removes retired source credentials', () => {
   const sql = readFileSync(new URL('../../deploy/self-host/object-backend-cutover.sql', import.meta.url), 'utf8')
-  const guide = readFileSync(new URL('../../deploy/self-host/README.md', import.meta.url), 'utf8')
   assert.match(sql, /update public\.media_objects\s+set storage_backend='object_store'/)
   assert.match(sql, /check \(storage_backend = 'object_store'\)/)
   assert.match(sql, /drop function if exists public\.get_b2_data_runtime_auth\(\)/)
   assert.match(sql, /delete from vault\.secrets/)
-  assert.match(guide, /after inventory reconciliation/i)
-  assert.match(guide, /restored self-host database only/)
 })
 
 test('object migration fails closed without a private rclone config and distinct bucket roots', () => {

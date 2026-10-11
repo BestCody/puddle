@@ -1,4 +1,4 @@
-# Canonical media boundaries (self-hosted target)
+# Canonical media boundaries
 
 Licensed location photos and user-owned uploads have separate storage and authorization paths.
 
@@ -7,4 +7,4 @@ Licensed location photos and user-owned uploads have separate storage and author
 
 The runtime never accepts an external photo URL as canonical identity or serves private object-store credentials to browsers. Search and photo serving fail closed when the object store is unavailable. Supabase Storage is not an approved open-photo byte store.
 
-Before switching to this target, copy and byte-verify the complete source bucket, restore the relational database and user uploads, relabel canonical media rows on the restored host, and verify searchable photo references. See [`deploy/self-host/README.md`](../deploy/self-host/README.md).
+The live application uses the self-hosted object store for canonical photos and self-hosted Supabase Storage for user uploads. See the [operations runbook](../deploy/self-host/README.md) for service and release checks.
