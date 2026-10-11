@@ -4,6 +4,7 @@ import { scopedClasses } from "@/components/scoped-classes"
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { PhotoFrame } from '@/components/photo-frame'
+import { prepareTextQuery, scoreTextMatch } from '@/lib/app/location-search-ranking'
 
 const TILE_SIZE = 256
 const MIN_ZOOM = 3
@@ -110,7 +111,9 @@ function PointCard({ point }) {
   </article>
 }
 
-export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, selectingForPost = false, selectionFollowsMap = false, compact = false }) {
+export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, query = '', selectingForPost = false, selectionFollowsMap = false, compact = false }) {
+  const preparedQuery = useMemo(() => prepareTextQuery(query), [query])
+  const initialSelected = initialPoints.find(point => !preparedQuery.normalized || scoreTextMatch({ ...point, name: point.title }, preparedQuery) > 0)
   const mapRef = useRef(null)
   const panLayerRef = useRef(null)
   const dragRef = useRef(null)
@@ -128,11 +131,12 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const [center, setCenter] = useState(initialCenter || { latitude: 43.6532, longitude: -79.3832 })
   const [zoom, setZoom] = useState(initialPoints.length <= 1 ? 14 : 12)
   const [filter, setFilter] = useState('all')
-  const [selectedId, setSelectedId] = useState(initialPoints[0]?.id || null)
-  const [selectedPoint, setSelectedPoint] = useState(initialPoints[0] || null)
+  const [selectedId, setSelectedId] = useState(initialSelected?.id || null)
+  const [selectedPoint, setSelectedPoint] = useState(initialSelected || null)
+  const [selectedQuery, setSelectedQuery] = useState(preparedQuery.normalized)
   const [heatmapEnabled, setHeatmapEnabled] = useState(Boolean(passActive))
   const [visibleHeatmap, setVisibleHeatmap] = useState(heatmapPoints)
-  const [cataloguePoints, setCataloguePoints] = useState([])
+  const [catalogueResult, setCatalogueResult] = useState({ query: preparedQuery.normalized, points: [] })
   const [catalogueState, setCatalogueState] = useState('idle')
   const [catalogueRetry, setCatalogueRetry] = useState(0)
   const [locationState, setLocationState] = useState('idle')
@@ -204,11 +208,11 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     setCatalogueState('loading')
     const timer = window.setTimeout(async () => {
       const bounds = viewportBounds(center, zoom, viewport)
-      const cacheKey = viewportCacheKey(bounds, zoom)
+      const cacheKey = `${viewportCacheKey(bounds, zoom)}:${preparedQuery.normalized}`
       const cached = catalogueCacheRef.current.get(cacheKey)
       if (cached) {
         if (!controller.signal.aborted && requestId === catalogueRequestRef.current) {
-          setCataloguePoints(cached)
+          setCatalogueResult({ query: preparedQuery.normalized, points: cached })
           setCatalogueState('ready')
         }
         return
@@ -217,6 +221,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         north: bounds.north.toFixed(6), south: bounds.south.toFixed(6),
         west: bounds.west.toFixed(6), east: bounds.east.toFixed(6), zoom: String(zoom)
       })
+      if (preparedQuery.normalized) params.set('q', preparedQuery.normalized)
       try {
         const response = await fetch(`/api/map/viewport?${params}`, { cache: 'no-store', signal: controller.signal })
         if (!response.ok) throw new Error(`Map viewport returned ${response.status}`)
@@ -226,7 +231,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         cache.set(cacheKey, next)
         if (cache.size > CATALOGUE_CACHE_LIMIT) cache.delete(cache.keys().next().value)
         if (!controller.signal.aborted && requestId === catalogueRequestRef.current) {
-          setCataloguePoints(next)
+          setCatalogueResult({ query: preparedQuery.normalized, points: next })
           setCatalogueState('ready')
         }
       } catch (error) {
@@ -237,7 +242,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       }
     }, 280)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [catalogueRetry, center.latitude, center.longitude, filter, loadCatalogue, selectingForPost, viewport.height, viewport.width, viewportMeasured, zoom])
+  }, [catalogueRetry, center.latitude, center.longitude, filter, loadCatalogue, preparedQuery.normalized, selectingForPost, viewport.height, viewport.width, viewportMeasured, zoom])
 
   useEffect(() => {
     const requestId = ++heatmapRequestRef.current
@@ -263,8 +268,11 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
 
   const allPoints = useMemo(() => {
     const merged = new Map()
-    for (const point of cataloguePoints) merged.set(point.id, point)
+    if (catalogueResult.query === preparedQuery.normalized) {
+      for (const point of catalogueResult.points) merged.set(point.id, point)
+    }
     for (const point of initialPoints) {
+      if (preparedQuery.normalized && scoreTextMatch({ ...point, name: point.title }, preparedQuery) <= 0) continue
       const existing = merged.get(point.id)
       merged.set(point.id, existing ? {
         ...existing, ...point,
@@ -272,16 +280,16 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         states: [...new Set([...(existing.states || []), ...(point.states || [])])]
       } : point)
     }
-    if (selectedPoint?.id === selectedId && !merged.has(selectedPoint.id)) merged.set(selectedPoint.id, selectedPoint)
+    if (selectedQuery === preparedQuery.normalized && selectedPoint?.id === selectedId && !merged.has(selectedPoint.id)) merged.set(selectedPoint.id, selectedPoint)
     return [...merged.values()]
-  }, [cataloguePoints, initialPoints, selectedId, selectedPoint])
+  }, [catalogueResult, initialPoints, preparedQuery, selectedId, selectedPoint, selectedQuery])
 
   const points = useMemo(() => filter === 'all' ? allPoints : allPoints.filter((point) => point.states.includes(filter)), [allPoints, filter])
   // Keep the point captured by the marker click authoritative while the
   // viewport request replaces the catalogue window. The request may briefly
   // contain a different slice (or an older version of the same row), but the
   // details card must never disappear during that refresh.
-  const selected = selectedPoint?.id === selectedId
+  const selected = selectedQuery === preparedQuery.normalized && selectedPoint?.id === selectedId
     ? selectedPoint
     : allPoints.find((point) => point.id === selectedId) || points[0] || null
   const projectedCenter = project(center.latitude, center.longitude, zoom)
@@ -321,6 +329,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   function selectPoint(point) {
     setSelectedPoint(point)
     setSelectedId(point.id)
+    setSelectedQuery(preparedQuery.normalized)
   }
   function handleMapKeyDown(event) {
     // Marker, zoom, and attribution controls own their keyboard

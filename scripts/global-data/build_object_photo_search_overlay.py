@@ -10,7 +10,6 @@ payload has been uploaded and checked.
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import os
 import re
@@ -24,13 +23,12 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 
 from location_search_common import object_source_config, clean_prefix, configure_duckdb, first_env
+from photo_overlay_bloom import build_bloom
 
 
 OVERLAY_VERSION = 2
 DEFAULT_BUCKET_COUNT = 16
 MAX_BUCKET_COUNT = 64
-BLOOM_BITS = 1 << 21
-BLOOM_HASHES = 7
 SNAPSHOT_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -154,17 +152,6 @@ def add_exclusion_source(con, glob: str, columns: dict[str, str]) -> bool:
         + f" FROM read_parquet('{sql_text(glob)}', union_by_name=true, hive_partitioning=true)"
     )
     return True
-
-
-def bloom_filter(ids: list[str]) -> str:
-    bits = bytearray(BLOOM_BITS // 8)
-    for identifier in ids:
-        digest = hashlib.sha256(identifier.encode()).digest()
-        for index in range(BLOOM_HASHES):
-            offset = (index * 4) % 29
-            bit = int.from_bytes(digest[offset : offset + 4], "big") % BLOOM_BITS
-            bits[bit >> 3] |= 1 << (bit & 7)
-    return base64.b64encode(bytes(bits)).decode("ascii")
 
 
 def valid_bucket_count(value: int) -> bool:
@@ -420,11 +407,7 @@ pointer = {
     "bucket_count": bucket_count,
     "shards": shards,
     "photo_count": len(entries),
-    "bloom": {
-        "bit_count": BLOOM_BITS,
-        "hash_count": BLOOM_HASHES,
-        "bits": bloom_filter([entry[0] for entry in entries]),
-    },
+    "bloom": build_bloom([entry[0] for entry in entries]),
     "generated_at": utc_now(),
 }
 pointer_key = f"{source.data_prefix}/search/photo-overlay-v1/active.json"

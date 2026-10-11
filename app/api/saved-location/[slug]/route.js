@@ -42,7 +42,7 @@ async function detailPayload(supabase, user, slug) {
       .eq('location_id', location.id)
       .eq('state', 'saved')
       .maybeSingle(),
-    supabase.rpc('social_friends_v2'),
+    supabase.rpc('social_friend_picker_v2'),
     supabase
       .from('location_visits')
       .select('planned_for,note,status')

@@ -163,7 +163,7 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, missingKey = nu
     if (!body) throw Object.assign(new Error('Missing object'), { name: 'NoSuchKey' })
     return { ContentLength: body.length, Body: (async function* () { yield body })() }
   } })
-  return { projectionCandidateKey, coreKey, detailKey, counts }
+  return { projectionCandidateKey, coreKey, detailKey, geoKey, counts }
 }
 
 function reset() {
@@ -366,6 +366,24 @@ test('dense normal-zoom object-store viewport falls back to bounded coarse map i
   assert.equal(result.diagnostics.coarse, true)
   assert.equal(result.diagnostics.coarseFallback, true)
   assert.equal(result.diagnostics.decodedCandidates, 2)
+})
+
+test('viewport compact ranking equals document ranking and only hydrates winners', async () => {
+  for (const q of ['', 'cn towr', 'cafe', 'no-such-place']) {
+    reset()
+    const { counts, geoKey, projectionCandidateKey, coreKey } = fixtureObjectStore({ photoOverlay: true })
+    const input = { north: 43.74, south: 43.5, west: -79.6, east: -79.2, zoom: 11, candidateLimit: 1, q }
+    const compact = await searchObjectGlobalLocationsInViewport(input, { env: { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey } })
+    assert.equal(compact.diagnostics.textProjection, true)
+    assert.equal(counts.get(coreKey), 1)
+    assert.equal(counts.get(geoKey) || 0, 0)
+    const full = await searchObjectGlobalLocationsInViewport(input, { env })
+    const fields = ['id', 'slug', 'name', 'category', 'city', 'neighborhood', 'summary', 'description', 'latitude', 'longitude', 'primary_photo', 'distance_m', 'search_score']
+    const presentation = rows => rows.map(row => Object.fromEntries(fields.map(key => [key, row[key] ?? null])))
+    assert.deepEqual(presentation(compact.candidates), presentation(full.candidates))
+    if (q === 'cn towr') assert.deepEqual(compact.candidates.map(row => row.id), ['loc-1'])
+    if (q === 'no-such-place') assert.deepEqual(compact.candidates, [])
+  }
 })
 
 test('object-store ID and slug hydration use deterministic hash buckets', async () => {

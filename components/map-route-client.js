@@ -81,6 +81,7 @@ function MapScreen({ selectingForPost, query }) {
         heatmapPoints={snapshot.heatmap || []}
         passActive={Boolean(snapshot.passActive) && !selectingForPost}
         loadCatalogue
+        query={query}
         selectingForPost={selectingForPost}
         selectionFollowsMap
       /></div>

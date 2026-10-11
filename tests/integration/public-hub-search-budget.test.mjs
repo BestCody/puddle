@@ -7,6 +7,8 @@ test('a full initial search widens only when moderation leaves a visible shortfa
   assert.equal(shouldExpandPublicHubSearch({ returned: 264, visible: 239, requested: 264, needed: 240 }), true)
   assert.equal(shouldExpandPublicHubSearch({ returned: 264, visible: 240, requested: 264, needed: 240 }), false)
   assert.equal(shouldExpandPublicHubSearch({ returned: 24, visible: 5, requested: 24, needed: 6 }), true)
+  assert.equal(shouldExpandPublicHubSearch({ returned: 6, visible: 6, requested: 6, needed: 6 }), false)
+  assert.equal(shouldExpandPublicHubSearch({ returned: 6, visible: 5, requested: 6, needed: 6 }), true)
 })
 
 test('an unsaturated search is complete even if the page has fewer places than its target', () => {
@@ -22,6 +24,6 @@ test('date ideas share one geographic scan while sitemap and category hubs keep 
   ])
   assert.match(dates, /getCachedDateMarketPlaces\(market\.id, wanted\)/)
   assert.match(hubs, /HUB_INITIAL_CANDIDATE_LIMIT = HUB_PAGE_SIZE \* \(HUB_MAX_PAGES \+ 1\)/)
-  assert.match(hubs, /searchVisible\(DATE_CANDIDATE_LIMIT, categories\)/)
+  assert.match(hubs, /for \(const limit of \[DATE_GROUP_SIZE, DATE_CANDIDATE_LIMIT, HUB_MAX_CANDIDATE_LIMIT\]\)/)
   assert.match(sitemap, /getCachedMarketPlaces\(markets\[index\]\.id\)/)
 })
