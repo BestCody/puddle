@@ -19,7 +19,7 @@ from contextlib import closing
 from collections import Counter
 from pathlib import Path
 from photo_overlay_format import build_membership
-from indexed_location_data import write_photo_index, prune_inactive_photo_indices
+from indexed_location_data import write_photo_index, prune_inactive_photo_indices, validate_slug_targets
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / 'tests' / 'fixtures' / 'global-data' / 'platform-smoke.json'
@@ -245,6 +245,17 @@ def main():
     assert membership['encoding'] == 'uuid128-sorted'
     assert len(body) == len(photo_ids) * 16 and hashlib.sha256(body).hexdigest() == membership['sha256']
     assert body == b''.join(sorted(uuid.UUID(identifier).bytes for identifier in photo_ids)), 'membership must preserve every canonical UUID exactly'
+    with closing(sqlite3.connect(':memory:')) as db:
+        db.executescript((ROOT / 'config' / 'location-lookup-schema.sql').read_text())
+        db.execute('insert into locations values(?,?,?)', ('present', b'', b''))
+        db.executemany('insert into slugs values(?,?)', [('canonical', 'present'), ('alias', 'present')])
+        validate_slug_targets(db)
+        db.execute('insert into slugs values(?,?)', ('broken', 'missing'))
+        try:
+            validate_slug_targets(db)
+            raise AssertionError('dangling slug must not be published')
+        except RuntimeError:
+            pass
     try:
         build_membership(photo_ids + photo_ids[:1])
         raise AssertionError('duplicate photo membership must not be published')

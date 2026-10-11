@@ -18,6 +18,13 @@ def metadata(db, values):
     db.executemany('insert into metadata values(?,?)', ((key, str(value)) for key, value in values.items()))
 
 
+def validate_slug_targets(db):
+    # ORDER BY enables a sorted merge with the existing ID index, rather than
+    # one random ID-index lookup for each of the ~30 million slug rows.
+    if db.execute('select location_id from slugs except select id from locations order by 1 limit 1').fetchone():
+        raise RuntimeError('Catalogue index contains a dangling slug.')
+
+
 def write_photo_index(entries, manifest_key: str, directory: str) -> dict:
     root = Path(directory)
     if not root.is_absolute() or not root.is_dir():

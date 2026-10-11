@@ -18,7 +18,7 @@ import zstandard as zstd
 from botocore.config import Config
 
 from build_object_text_search_projection import detail_document
-from indexed_location_data import catalogue_identity, metadata
+from indexed_location_data import catalogue_identity, metadata, validate_slug_targets
 from location_search_common import object_source_config
 
 
@@ -111,8 +111,7 @@ def main():
     for table in ('locations', 'slugs'):
         if db.execute(f'select count(*) from {table}').fetchone()[0] != expected:
             raise RuntimeError('Catalogue index final count mismatch.')
-    if db.execute('select 1 from slugs s left join locations l on l.id=s.location_id where l.id is null limit 1').fetchone():
-        raise RuntimeError('Catalogue index contains a dangling slug.')
+    validate_slug_targets(db)
     if db.execute('pragma quick_check').fetchone()[0] != 'ok':
         raise RuntimeError('Catalogue index integrity check failed.')
     if orjson.loads(get(active_key))['manifest_key'] != original_active_key:
