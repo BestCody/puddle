@@ -9,7 +9,7 @@ test('host scheduler installs all six data schedules', () => {
   assert.deepEqual(JOBS, {
     kartaview: '11 * * * *',
     wikimedia: '3 */6 * * *',
-    mapillary: '7 */6 * * *',
+    mapillary: '7 */4 * * *',
     materialize: '31 * * * *',
     locations: '23 5 * * *',
     photo_audit: '17 4 * * 1'
@@ -36,7 +36,7 @@ test('non-root data worker has a pinned Python environment and offline preflight
   const locked = readFileSync(new URL('../../deploy/self-host/data-jobs-requirements.txt', import.meta.url), 'utf8')
   const verifier = readFileSync(new URL('../../deploy/self-host/verify-data-worker.py', import.meta.url), 'utf8')
   assert.match(service, /^User=puddle$/m)
-  assert.match(service, /flock -w 1800 \/var\/lib\/puddle-jobs\/global\.lock/)
+  assert.match(service, /flock -w 7200 \/var\/lib\/puddle-jobs\/global\.lock/)
   assert.match(service, /^Environment=PYTHON_BIN=\/opt\/puddle\/\.venv\/bin\/python$/m)
   for (const line of direct.split(/\r?\n/)) {
     const match = /^([a-z][a-z0-9-]*)[<>=]/i.exec(line)
@@ -63,6 +63,9 @@ test('host job environment uses only local endpoints and bounded worker settings
   assert.match(prepared, /^PUDDLE_JOBS_ENABLED=true$/m)
   assert.match(prepared, /^GLOBAL_PHOTO_DOWNLOAD_CONCURRENCY=2$/m)
   assert.match(prepared, /^MAPILLARY_TILE_CONCURRENCY=2$/m)
+  assert.match(prepared, /^MAPILLARY_TILE_DAILY_LIMIT=600$/m)
+  assert.match(prepared, /^MAPILLARY_TILE_RUN_LIMIT=100$/m)
+  assert.match(prepared, /^KARTAVIEW_REQUESTS_PER_HOUR=100$/m)
   assert.doesNotMatch(prepared, /do-not-copy|http:\/\/objects:8333/)
   assert.throws(() => prepareJobsEnv(source.replace('https://api.puddle.you', 'https://old.supabase.co')), /managed source/)
 })
@@ -100,4 +103,5 @@ test('host jobs reject a stale managed Supabase URL despite cutover flags', () =
   assert.doesNotThrow(() => validateJob('materialize', env))
   delete env.MAPILLARY_ACCESS_TOKEN
   assert.throws(() => validateJob('materialize', env), /MAPILLARY_ACCESS_TOKEN/)
+  assert.doesNotThrow(() => validateJob('kartaview', env))
 })

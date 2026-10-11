@@ -42,7 +42,7 @@ test('photo materialization is resumable and bounded by provider budgets, not a 
   assert.doesNotMatch(materializer, /min\(10_000|min\(100_000/)
   assert.match(runner, /GLOBAL_PHOTO_RUN_BUDGET_SECONDS/)
   assert.match(runner, /WIKIMEDIA_REQUESTS_PER_MINUTE/)
-  assert.match(runner, /MAPILLARY_TILE_DAILY_LIMIT/)
+  assert.match(runner, /MAPILLARY_TILE_RUN_LIMIT/)
   assert.match(runner, /KARTAVIEW_REQUESTS_PER_HOUR/)
 })
 
