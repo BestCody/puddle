@@ -5,7 +5,9 @@ import { connectSelfHostPostgres } from './self-host-postgres-query.mjs'
 const { querySql, close } = await connectSelfHostPostgres({ connectionString: process.env.PUDDLE_SELF_HOST_DB_URL })
 try {
 const checkpointId = 'global-location-ref-previews-v2'
-const batchSize = 64
+// Full catalogue decoding belongs only to this offline backfill. Keep its
+// batches below the interactive reader's bounded timeout and memory budget.
+const batchSize = 16
 const [checkpoint] = await querySql(
   'select last_id::text as last_id from public.location_ref_index_checkpoint where id=$1',
   [checkpointId]
