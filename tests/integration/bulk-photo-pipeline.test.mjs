@@ -39,6 +39,8 @@ test('bulk photo datasets share the canonical metadata-to-object pipeline', asyn
   assert.match(materializer, /host in \{'upload\.wikimedia\.org', 'thumb\.wikimedia\.org'\}/)
   assert.match(mapillaryCandidates, /COPY mapillary_images FROM \? \(FORMAT CSV, HEADER false\)/)
   assert.doesNotMatch(mapillaryCandidates, /con\.executemany\('INSERT INTO mapillary_images/)
+  assert.match(mapillaryCandidates, /p\.tx=i\.match_tx AND p\.ty=i\.match_ty/)
+  assert.doesNotMatch(mapillaryCandidates, /abs\(p\.tx-i\.tx\)<=1/)
 
   assert.match(migration, /provider_code between 1 and 4/)
   assert.match(migration, /when 4 then ''yfcc100m''/)
