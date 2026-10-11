@@ -23,7 +23,7 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 
 from location_search_common import object_source_config, clean_prefix, configure_duckdb, first_env
-from photo_overlay_format import build_bloom, photo_bucket, valid_bucket_count, DEFAULT_BUCKET_COUNT, MAX_BUCKET_COUNT
+from photo_overlay_format import build_membership, photo_bucket, valid_bucket_count, DEFAULT_BUCKET_COUNT, MAX_BUCKET_COUNT
 
 
 OVERLAY_VERSION = 2
@@ -396,14 +396,17 @@ pointer = {
     "bucket_count": bucket_count,
     "shards": shards,
     "photo_count": len(entries),
-    "bloom": build_bloom([entry[0] for entry in entries]),
+    "membership": build_membership([entry[0] for entry in entries]),
     "generated_at": utc_now(),
 }
 pointer_key = f"{source.data_prefix}/search/photo-overlay-v1/active.json"
+pointer_body = orjson.dumps(pointer, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b"\n"
+if len(pointer_body) > int(os.getenv('GLOBAL_LOCATION_PHOTO_OVERLAY_MAX_ACTIVE_BYTES', str(8 * 1024 * 1024))):
+    raise RuntimeError('Photo overlay pointer exceeds the configured runtime byte budget.')
 client.put_object(
     Bucket=source.bucket,
     Key=pointer_key,
-    Body=orjson.dumps(pointer, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2) + b"\n",
+    Body=pointer_body,
     ContentType="application/json",
     CacheControl="no-store",
 )
