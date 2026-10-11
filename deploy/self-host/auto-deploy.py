@@ -7,12 +7,14 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import tarfile
 import tempfile
 import time
 import zlib
+from urllib.parse import urlsplit
 
 CONFIG = Path('/etc/puddle/deploy.json')
 STATE = Path('/var/lib/puddle-deploy')
@@ -43,10 +45,13 @@ def command_args(command, repository):
     raise ValueError('Only status or a digest-pinned Puddle release is permitted.')
 
 
-def run(args, *, env=None, input=None, capture=False):
-    result = subprocess.run(args, env=env, input=input, text=True,
-                            stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
-                            stderr=subprocess.PIPE)
+def run(args, *, env=None, input=None, capture=False, timeout=600):
+    try:
+        result = subprocess.run(args, env=env, input=input, text=True, timeout=timeout,
+                                stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
+                                stderr=subprocess.PIPE)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f'{args[0]} operation timed out.') from None
     if result.returncode:
         # Docker config/compose diagnostics can contain credentials. Do not relay them.
         raise RuntimeError(f'{args[0]} operation failed (exit {result.returncode}).')
@@ -127,7 +132,7 @@ def health(container, sha):
               "b.buildSha!==process.argv[1])process.exit(1)}).catch(()=>process.exit(1))")
     for _ in range(60):
         try:
-            run(['docker', 'exec', container, 'node', '-e', script, sha])
+            run(['docker', 'exec', container, 'node', '-e', script, sha], timeout=5)
             return
         except RuntimeError:
             time.sleep(1)
@@ -202,7 +207,7 @@ def deploy(app, sha, image, actor):
                     health('self-host-app-1', sha)
                     site = public_config(app)['NEXT_PUBLIC_SITE_URL']
                     public = json.loads(run(['curl', '--fail', '--silent', '--show-error',
-                        '--max-time', '20', '--resolve', f'{site.split("//", 1)[1]}:443:127.0.0.1',
+                        '--max-time', '20', '--resolve', f'{urlsplit(site).hostname}:443:127.0.0.1',
                         site.rstrip('/') + '/api/health'], capture=True))
                     if not public.get('ok') or public.get('buildSha') != sha:
                         raise RuntimeError('Proxy/public revision gate failed.')
@@ -226,6 +231,9 @@ def main():
 
 
 if __name__ == '__main__':
+    def interrupted(_signal, _frame):
+        raise RuntimeError('Deployment interrupted; cleaning up the release.')
+    signal.signal(signal.SIGTERM, interrupted)
     try:
         main()
     except (ValueError, RuntimeError, OSError, tarfile.TarError, EOFError, zlib.error) as error:
