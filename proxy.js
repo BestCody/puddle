@@ -6,7 +6,7 @@ import { canonicalPuddleAuthUrl } from '@/lib/auth/origin'
 import { isPublicCataloguePath, isPublicRecommendationPath } from '@/lib/security/public-cache-path'
 import { SERVER_LATENCY_BUDGET_MS, appendServerTiming, elapsedMs, latencyStart, recordServerLatency } from '@/lib/performance/server-latency'
 
-const protectedPrefixes = ['/dashboard','/discover','/matches','/global-matches','/membership','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals','/admin']
+const protectedPrefixes = ['/dashboard','/discover','/matches','/global-matches','/membership','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals']
 const productRoutePrefixes = ['/discover','/map','/plans','/matches','/membership','/profile','/global-matches','/create']
 const authOnlyPaths = ['/signup','/forgot-password']
 const staticLandingPaths = new Set(['/','/maintenance.html','/landing.html','/index.html','/responsive-landing'])

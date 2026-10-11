@@ -11,12 +11,11 @@ body{min-width:280px;overflow-x:hidden}
 img,svg,video,canvas{max-width:100%}
 button,input,select,textarea{max-width:100%}
 :is(h1,h2,h3,p,a,strong,span,small,label,dd,dt){overflow-wrap:anywhere}
-:is(.product-stage,.product-main,.public-wrap,.app-main,.admin-shell,.editor-layout,.public-listing-hero,.public-content-grid,.plan-detail-grid,.notifications-layout,.scanner-layout)>*{min-width:0}
+:is(.product-stage,.product-main,.public-wrap,.app-main,.editor-layout,.public-listing-hero,.public-content-grid,.plan-detail-grid,.notifications-layout,.scanner-layout)>*{min-width:0}
 
 /* Shared page geometry */
-.product-main,.public-wrap,.app-main,.admin-shell{width:min(var(--responsive-page-max),calc(100% - clamp(1.25rem,5vw,6rem)));max-width:none;margin-inline:auto}
+.product-main,.public-wrap,.app-main{width:min(var(--responsive-page-max),calc(100% - clamp(1.25rem,5vw,6rem)));max-width:none;margin-inline:auto}
 .product-main,.public-wrap,.app-main{padding-top:clamp(1.25rem,3vw,3.5rem)}
-.admin-shell{padding:var(--responsive-gutter)}
 .product-shell{--product-sidebar:clamp(200px,16vw,260px)}
 .product-sidebar{padding:clamp(1rem,1.8vw,1.55rem) clamp(.7rem,1.3vw,1.15rem);gap:clamp(1.25rem,2.4vh,2rem)}
 .product-header,.public-header{height:clamp(68px,6vw,86px);padding-inline:var(--responsive-gutter)}
@@ -28,7 +27,6 @@ button,input,select,textarea{max-width:100%}
 .product-hero h1,.product-title,.profile-hero h1{font-size:clamp(2.35rem,5.2vw,5.7rem)}
 .public-hero-copy h1,.public-host-hero h1{font-size:clamp(2.7rem,6.4vw,6.5rem)}
 .auth-copy h1,.page-title{font-size:clamp(2.25rem,4.8vw,4.7rem)}
-.admin-header h1{font-size:clamp(2.1rem,4.5vw,4.5rem)}
 .product-hero p,.page-heading-row p,.profile-hero p,.public-hero-copy>p,.public-host-hero p,.auth-copy p,.welcome-card p{font-size:clamp(.98rem,.3vw + .92rem,1.14rem)}
 :is(.splash-button,.editor-button,.public-cta,.public-secondary-cta,.primary-button,.secondary-button,.danger-button,.oauth-button,.quiet-button,.filter-actions button,.mode-tabs button,.real-card-actions button,.location-sharing-panel button){min-height:44px}
 
@@ -88,7 +86,7 @@ button,input,select,textarea{max-width:100%}
 .plan-content-grid,.poll-grid,.plan-option-picker,.incoming-location-grid,.wallet-grid,.finance-summary-grid,.inbox-conversation-grid,.recommendation-settings-grid{gap:var(--responsive-section-gap)}
 .plan-detail-grid{grid-template-columns:minmax(0,1fr) clamp(290px,27vw,380px)}
 .shared-plan-builder{grid-template-columns:minmax(240px,.7fr) minmax(0,1.3fr);gap:var(--responsive-section-gap)}
-.attendee-manager,.finance-card,.admin-table{max-width:100%;overflow-x:auto}
+.attendee-manager,.finance-card{max-width:100%;overflow-x:auto}
 .attendee-table{min-width:760px}
 .ticket-purchase-panel,.ticket-detail-card{width:min(1180px,calc(100% - clamp(1rem,4vw,4rem)));padding:var(--responsive-card-pad)}
 .ticket-detail-card{max-width:960px;grid-template-columns:minmax(240px,420px) minmax(0,1fr);gap:clamp(1.25rem,3vw,2rem)}
@@ -97,8 +95,6 @@ button,input,select,textarea{max-width:100%}
 .camera-reader{min-height:clamp(260px,45svh,420px)}
 .notifications-layout{grid-template-columns:minmax(0,1fr) clamp(270px,25vw,340px)}
 .conversation-message-list{max-height:min(62vh,680px)}
-.admin-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
-.admin-case{grid-template-columns:minmax(95px,120px) minmax(0,1fr) auto auto}
 .ai-creation-card,.recommendation-settings-card{padding:var(--responsive-card-pad);margin-block:clamp(1rem,2vw,1.75rem)}
 
 /* Short desktop windows need height-aware scaling as well as width breakpoints. */
@@ -146,23 +142,22 @@ button,input,select,textarea{max-width:100%}
   .conversation-list{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));overflow:auto}
   .discovery-filter-panel label.wide,.filter-actions{grid-column:auto}
   .ticket-detail-card{grid-template-columns:1fr}
-  .admin-case{grid-template-columns:1fr}
 }
 
 @media (max-width:680px){
   :root{--responsive-gutter:.65rem;--responsive-card-pad:1rem;--responsive-radius:22px}
-  .product-main,.public-wrap,.app-main,.admin-shell{width:calc(100% - 1rem);padding-inline:0}
+  .product-main,.public-wrap,.app-main{width:calc(100% - 1rem);padding-inline:0}
   .product-header,.public-header,.app-header{padding-inline:.7rem}
   .product-header-actions,.public-header nav,.app-nav{gap:.4rem}
   .product-hero,.profile-hero,.public-listing-hero{border-radius:22px}
   .product-title,.product-hero h1,.public-hero-copy h1,.public-host-hero h1{font-size:clamp(2.25rem,13vw,3.2rem)}
-  .page-heading-row,.product-toolbar,.public-safety-bar,.listing-social-heading,.conversation-header,.location-sharing-heading,.active-location-card,.ai-creation-heading,.admin-header,.admin-case-heading{align-items:flex-start;flex-direction:column}
+  .page-heading-row,.product-toolbar,.public-safety-bar,.listing-social-heading,.conversation-header,.location-sharing-heading,.active-location-card,.ai-creation-heading{align-items:flex-start;flex-direction:column}
   .deck-stack{height:clamp(500px,145vw,555px)}
   .discovery-art{height:50%}
   .content-tile{grid-template-columns:95px minmax(0,1fr)}
   .profile-hero{grid-template-columns:1fr}
   .profile-avatar-large{width:96px;height:96px}
-  .editor-grid.two,.editor-grid.three,.studio-media-grid,.media-settings-grid,.accessibility-grid,.hours-grid,.rsvp-form,.visit-plan-form,.compact-plan-form,.poll-grid,.plan-option-picker,.listing-social-actions,.finance-facts,.admin-form-grid{grid-template-columns:1fr}
+  .editor-grid.two,.editor-grid.three,.studio-media-grid,.media-settings-grid,.accessibility-grid,.hours-grid,.rsvp-form,.visit-plan-form,.compact-plan-form,.poll-grid,.plan-option-picker,.listing-social-actions,.finance-facts{grid-template-columns:1fr}
   .span-two,.span-three,.compact-plan-form .span-two,.finance-form-grid .span-two{grid-column:auto}
   .real-discovery-card.is-compact{grid-template-columns:1fr}
   .is-compact .real-discovery-art{min-height:220px;border-right:0;border-bottom:3px solid #171114}
@@ -174,12 +169,10 @@ button,input,select,textarea{max-width:100%}
   .wallet-ticket form{grid-template-columns:1fr}
   .public-safety-bar>div:last-child{width:100%;flex-wrap:wrap}
   .public-safety-bar a{flex:1;text-align:center}
-  .admin-nav span{margin-left:0}
-  .system-notice{padding-inline:.8rem}
 }
 
 @media (max-width:380px){
-  .product-main,.public-wrap,.app-main,.admin-shell{width:calc(100% - .7rem)}
+  .product-main,.public-wrap,.app-main{width:calc(100% - .7rem)}
   .deck-stack{height:500px}
   .content-tile{grid-template-columns:1fr}
   .content-tile-art{min-height:115px;border-right:0;border-bottom:3px solid #171114}

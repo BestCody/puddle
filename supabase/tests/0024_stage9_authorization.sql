@@ -11,6 +11,9 @@ begin
   if not exists(select 1 from pg_trigger where tgname='audit_logs_immutable_stage9' and tgenabled<>'D') then raise exception 'Legacy audit log immutability is missing';end if;
   if has_function_privilege('anon','public.open_moderation_case_v1(text,text,text,text,text,text,text,text)','execute') then raise exception 'Anonymous users can open moderation cases';end if;
   if has_function_privilege('anon','public.admin_moderation_action_v1(uuid,text,jsonb,text)','execute') then raise exception 'Anonymous users can execute moderation actions';end if;
+  if has_function_privilege('authenticated','public.admin_moderation_action_v1(uuid,text,jsonb,text)','execute') then raise exception 'Retired staff actions remain callable through PostgREST';end if;
+  if has_function_privilege('authenticated','public.admin_remove_post_v1(uuid,text,text)','execute') then raise exception 'Retired post-removal RPC remains callable through PostgREST';end if;
+  if has_function_privilege('authenticated','public.manage_privileged_role_v1(uuid,text,boolean,text,text)','execute') then raise exception 'Retired role-management RPC remains callable through PostgREST';end if;
   if has_table_privilege('authenticated','public.feature_flags','update') then raise exception 'Authenticated users can bypass audited feature-flag changes';end if;
   if has_function_privilege('authenticated','public.consume_security_rate_limit_v1(uuid,text,text,text,uuid,integer,text)','execute') then raise exception 'Browser users can bypass server rate-limit context';end if;
   if has_function_privilege('authenticated','public.claim_media_scan_jobs_v1(integer)','execute') then raise exception 'Browser users can claim malware scan jobs';end if;

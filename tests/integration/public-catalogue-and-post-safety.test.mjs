@@ -17,16 +17,6 @@ test('public catalogue has a live route smoke rather than configuration-only hea
   assert.match(health, /scope: 'liveness'/)
 })
 
-test('location moderation invalidates the independently cached public sitemap', async () => {
-  const [admin, sitemap] = await Promise.all([
-    read('app/api/admin/action/route.js'),
-    read('app/sitemap.js')
-  ])
-  assert.match(sitemap, /tags: \['public-sitemap'\]/)
-  assert.match(admin, /'public-location-recommendations', 'public-sitemap'/)
-  assert.match(admin, /revalidateTag\(tag, \{ expire: 0 \}\)/)
-})
-
 test('public sitemap avoids known noindex places and fabricated modification dates', async () => {
   const [sitemap, placePage, listing] = await Promise.all([
     read('app/sitemap.js'),
@@ -39,13 +29,12 @@ test('public sitemap avoids known noindex places and fabricated modification dat
   assert.match(listing, /dateIdeasPath\(market\)/)
 })
 
-test('post reports preserve evidence and moderator removal is enforced by RLS', async () => {
-  const [migration, report, feed, admin, consoleSource, create] = await Promise.all([
+test('post reports preserve evidence and moderator removal remains enforced by RLS', async () => {
+  const [migration, cutover, report, feed, create] = await Promise.all([
     read('supabase/migrations/20260927211856_moderate_social_posts.sql'),
+    read('supabase/migrations/20261011090000_remove_admin_dashboard_bootstrap.sql'),
     read('app/report/actions.js'),
     read('components/social-feed-client.js'),
-    read('app/api/admin/action/route.js'),
-    read('components/moderation-case-console.js'),
     read('app/(product)/create/post/actions.js')
   ])
   assert.match(migration, /moderator_removed_at is null/)
@@ -56,8 +45,8 @@ test('post reports preserve evidence and moderator removal is enforced by RLS', 
   assert.match(migration, /revoke update, delete on public\.social_posts from authenticated/)
   assert.match(report, /'post'/)
   assert.match(feed, /target_type=post/)
-  assert.match(admin, /admin_remove_post_v1/)
-  assert.match(consoleSource, /remove_post/)
+  assert.match(migration, /create or replace function public\.admin_remove_post_v1/)
+  assert.match(cutover, /public\.admin_remove_post_v1\(uuid,text,text\)/)
   assert.match(create, /action: 'create_puddle_post'/)
 })
 

@@ -2,7 +2,7 @@
 
 Puddle is a place-discovery product for finding somewhere worth going, saving places you like, and sharing them with people you know.
 
-The architecture below is the **uncommitted self-hosted target**. The live deployment remains on its current providers until the host is provisioned and the migration gates in `deploy/self-host/README.md` pass.
+Puddle runs on the self-hosted stack described below. Deployment and operational procedures are in `deploy/self-host/README.md`.
 
 ## Active product
 
@@ -25,11 +25,11 @@ Current capabilities include:
 - Friends, friend requests, direct messages, rich shared-place messages, and places in common
 - Saved, Planned, and Past place views
 - optional Tinder-tier worldwide adult connections under the separate global-matches flow
-- location contribution, editing, media moderation, reports, and security administration
+- location contribution, editing, media moderation, and user reports
 
 The active browser path does not depend on the retired shared pair/group deck system, static catalogue, R2 media runtime, OpenSearch, or Supabase Storage for canonical open-location photos.
 
-## Target architecture
+## Architecture
 
 ```text
 Browser

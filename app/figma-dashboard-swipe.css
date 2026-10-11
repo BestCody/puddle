@@ -1,14 +1,4 @@
-/* Fresh Swipe component styles. No legacy product component selectors. */
-.figma-swipe-actions {
-  position: absolute;
-  top: 666px;
-  left: 50%;
-  width: 310px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  transform: translateX(-50%);
-}
+/* Swipe-specific controls; shared action-row layout is defined in figma-dashboard-flow.css. */
 .figma-swipe-action {
   display: grid;
   justify-items: center;
@@ -190,7 +180,6 @@
 .figma-swipe-empty button { min-height: 40px; padding: 0 15px; border: 2px solid #d9d9d9; border-radius: 999px; background: #fff; color: #555; font: 800 13px/1 Manrope, sans-serif; }
 
 @media (max-width: 760px) {
-  .figma-swipe-actions { top: 662px; width: 288px; gap: 7px; }
   .figma-swipe-action > span { width: 60px; height: 48px; border-radius: 25px; }
   .figma-swipe-action small { font-size: 10px; }
   .figma-swipe-details-backdrop { padding: 12px; }

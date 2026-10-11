@@ -425,17 +425,6 @@
 .figma-swipe-drag-label.is-pass { left: 22px; color: var(--figma-pink); transform: rotate(-10deg); }
 .figma-swipe-drag-label.is-save { right: 22px; color: var(--figma-green); transform: rotate(10deg); }
 
-.figma-swipe-actions,
-.minimal-swipe-actions.figma-swipe-actions {
-  position: absolute;
-  top: 666px;
-  left: 50%;
-  width: 310px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  transform: translateX(-50%);
-}
 .figma-swipe-actions .minimal-swipe-action {
   display: grid;
   justify-items: center;
@@ -568,12 +557,6 @@
   .figma-swipe-card-meta { top: 12px; left: 13px; right: 13px; }
   .figma-swipe-card-meta span { min-height: 21px; padding: 0 8px; font-size: 11px; }
   .figma-swipe-details-button { width: 48px; height: 46px; right: 13px; bottom: 14px; background: rgba(217,217,217,.24); }
-  .figma-swipe-actions,
-  .minimal-swipe-actions.figma-swipe-actions {
-    top: 662px;
-    width: 288px;
-    gap: 7px;
-  }
   .figma-swipe-actions .minimal-swipe-action > span { width: 60px; height: 48px; border-radius: 25px; }
   .figma-swipe-actions .minimal-swipe-action small { font-size: 10px; }
   .figma-swipe-status { top: 748px; }

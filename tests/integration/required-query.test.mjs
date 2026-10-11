@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { requiredQuery } from '../../lib/app/required-query.js'
-import { getAdminDashboard, getModerationCases } from '../../lib/app/admin-data.js'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
@@ -14,36 +13,30 @@ test('required database reads preserve empty results but propagate failures', as
   await assert.rejects(requiredQuery(Promise.reject(databaseError)), databaseError)
 })
 
-test('admin reads surface database failures instead of presenting an empty safety queue', async () => {
-  const databaseError = new Error('moderation database unavailable')
-  const supabase = {
-    rpc: () => Promise.resolve({ data: null, error: databaseError }),
-    from: () => ({
-      select() { return this },
-      order() { return this },
-      limit() { return Promise.resolve({ data: null, error: databaseError }) }
-    })
-  }
-  await assert.rejects(getAdminDashboard(supabase), databaseError)
-  await assert.rejects(getModerationCases(supabase), databaseError)
+test('dashboard bootstrap no longer performs a staff-role lookup', async () => {
+  const [runtime, migration] = await Promise.all([
+    read('components/dashboard-runtime.js'),
+    read('supabase/migrations/20261011090000_remove_admin_dashboard_bootstrap.sql')
+  ])
+  assert.doesNotMatch(runtime, /showAdmin|href="\/admin"/)
+  assert.doesNotMatch(migration, /'show_admin'|v_access\s*:=/)
+  assert.match(migration, /'unread_notifications'/)
+  assert.match(migration, /'pass_active'/)
+  assert.match(migration, /revoke execute on function/)
 })
 
 test('sensitive pages distinguish failed reads from empty data', async () => {
-  const [recommendations, appeals, content, security] = await Promise.all([
+  const [recommendations, appeals] = await Promise.all([
     read('app/settings/recommendations/page.js'),
-    read('app/appeals/page.js'),
-    read('app/admin/content/page.js'),
-    read('app/admin/security/page.js')
+    read('app/appeals/page.js')
   ])
-  for (const source of [recommendations, appeals, content, security]) {
+  for (const source of [recommendations, appeals]) {
     assert.match(source, /requiredQuery\(/)
     assert.match(source, /role="alert"/)
     assert.match(source, /Try again/)
   }
   assert.match(recommendations, /preferences \? <RecommendationSettings/)
-  assert.match(appeals, /return <section className="admin-card" role="alert"/)
-  assert.match(content, /subjectType=\{item\.subject_type\}/)
-  assert.doesNotMatch(content, /filter\(\(item\) => item\.subject_type === 'location'\)/)
+  assert.match(appeals, /return <section className=\{styles\.card\} role="alert"/)
 })
 
 test('audience-specific notices and recommendation settings are never shared-cached', async () => {

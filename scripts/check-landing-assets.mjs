@@ -22,7 +22,7 @@ if (missing.length) {
   process.exit(1)
 }
 
-const heroPhonePath = path.join(publicDirectory, 'figma/assets/hero-phone-exact.png')
+const heroPhonePath = path.join(publicDirectory, 'figma/assets/hero-phone-centered.png')
 const heroPhone = await sharp(heroPhonePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
 const alphaOffset = heroPhone.info.channels - 1
 let heroTransparentPixels = 0

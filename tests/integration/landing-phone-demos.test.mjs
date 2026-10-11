@@ -67,20 +67,20 @@ test('landing feature phones reuse production components with deterministic fixt
   assert.match(landingCss, /\.interactive-pill/)
 })
 
-test('product shell fixes keep compact menu bars and icon-only narrow sidebar', async () => {
-  const [sidebar, polish, profile] = await Promise.all([
-    read('components/resizable-product-sidebar.js'),
-    read('app/product-polish.css'),
-    read('app/(product)/profile/page.js')
+test('product shell uses the current resizable sidebar and navigation', async () => {
+  const [shell, sidebar, nav] = await Promise.all([
+    read('components/static-product-shell.js'),
+    read('components/figma-dashboard-sidebar.js'),
+    read('components/product-nav.js')
   ])
 
-  assert.match(sidebar, /LABEL_MIN_WIDTH = 196/)
-  assert.match(sidebar, /is-collapsed/)
-  assert.match(polish, /\.minimal-product-sidebar:not\(\.is-expanded\).*\.product-nav-label\{display:none!important\}/s)
-  assert.match(polish, /cursor:col-resize/)
-  assert.match(polish, /\.figma-menu-icon\{display:flex!important;flex-direction:column/)
-  assert.doesNotMatch(profile, /minimal-advanced-settings/)
-  assert.doesNotMatch(profile, />Advanced</)
+  assert.match(shell, /<FigmaDashboardSidebar signOutAction=\{signOut\}/)
+  assert.match(sidebar, /<ProductNav avatarUrl=\{avatarUrl\}/)
+  assert.match(sidebar, /aria-label="Resize navigation sidebar"/)
+  assert.match(sidebar, /onPointerDown=\{beginResize\}/)
+  assert.match(sidebar, /onKeyDown=\{keyboardResize\}/)
+  assert.match(nav, /className="figma-dashboard-nav"/)
+  assert.match(nav, /figma-dashboard-nav-label/)
 })
 
 test('only landing demos can be framed by the same origin', async () => {

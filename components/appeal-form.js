@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { TurnstileWidget } from './turnstile-widget'
+import styles from './appeal-card.module.css'
 
 async function csrf() {
   const response = await fetch('/api/security/csrf', { cache: 'no-store' })
@@ -28,7 +29,7 @@ export function AppealForm() {
     setMessage(response.ok ? 'Appeal submitted.' : payload.error || 'Appeal could not be submitted.')
   }
 
-  return <section className="admin-card">
+  return <section className={styles.card}>
     <h2>Submit an appeal</h2>
     <form onSubmit={submit}>
       <label>Case number<input value={caseNumber} onChange={(event) => setCaseNumber(event.target.value.slice(0, 32))} required minLength={4} maxLength={32} pattern="PDL-[A-Za-z0-9-]+" placeholder="PDL-…" /></label>

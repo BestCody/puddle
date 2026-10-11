@@ -6,6 +6,7 @@ const cardSource = await readFile(new URL('../../components/figma-swipe-card.js'
 const workspaceSource = await readFile(new URL('../../components/date-swipe-workspace-v2.js', import.meta.url), 'utf8')
 const shellCss = await readFile(new URL('../../app/figma-dashboard-rebuild.css', import.meta.url), 'utf8')
 const swipeCss = await readFile(new URL('../../app/figma-dashboard-swipe.css', import.meta.url), 'utf8')
+const flowCss = await readFile(new URL('../../app/figma-dashboard-flow.css', import.meta.url), 'utf8')
 
 test('rebuilt Figma swipe card uses viewport exit geometry and a concurrent card stack', () => {
   assert.match(cardSource, /export function FigmaSwipeCard/)
@@ -60,7 +61,7 @@ test('rebuilt Figma swipe card uses viewport exit geometry and a concurrent card
   assert.match(shellCss, /width: 400px/)
   assert.match(shellCss, /height: 560px/)
   assert.match(shellCss, /transition: transform \.28s ease, opacity \.2s ease/)
-  assert.match(swipeCss, /\.figma-swipe-actions\s*\{/)
-  assert.match(swipeCss, /top: 666px/)
-  assert.match(swipeCss, /grid-template-columns: repeat\(4, 1fr\)/)
+  assert.match(flowCss, /\.figma-swipe-actions,\s*\.minimal-swipe-actions\.figma-swipe-actions\s*\{[^}]*position: relative !important;[^}]*top: auto !important;[^}]*grid-template-columns: repeat\(4, 1fr\)/s)
+  assert.doesNotMatch(shellCss, /top: 666px|top: 662px/)
+  assert.doesNotMatch(swipeCss, /top: 666px|top: 662px/)
 })

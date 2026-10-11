@@ -12,30 +12,10 @@ const required = [
   'lib/security/rate-limit.js',
   'lib/security/malware-scanner.js',
   'lib/security/worker-auth.js',
-  'lib/auth/privileged.js',
-  'app/admin/page.js',
-  'app/admin/cases/page.js',
-  'app/admin/cases/[id]/page.js',
-  'app/admin/mfa/page.js',
-  'app/admin/users/page.js',
-  'app/api/admin/action/route.js',
-  'app/api/admin/cases/route.js',
-  'app/api/admin/roles/route.js',
-  'app/api/admin/notices/route.js',
-  'app/api/admin/feature-flags/route.js',
-  'app/api/admin/security-alerts/route.js',
   'app/api/security/csrf/route.js',
   'app/api/security/csp-report/route.js',
   'app/api/security/media-scans/process/route.js',
   'components/turnstile-widget.js',
-  'components/mfa-enrollment.js',
-  'components/privileged-role-console.js',
-  'components/system-notice-console.js',
-  'components/open-moderation-case.js',
-  'components/feature-flag-console.js',
-  'components/security-alert-console.js',
-  'components/secure-media-download.js',
-  'docs/STAGE_9_SETUP.md',
   'docs/SECRET_ROTATION.md',
   '.github/dependabot.yml',
   '.github/workflows/security.yml',
@@ -50,7 +30,7 @@ for (const path of required) await access(join(root, path))
 
 const proxy = await readFile(join(root, 'proxy.js'), 'utf8')
 const headers = await readFile(join(root, 'lib/security/headers.js'), 'utf8')
-for (const marker of ['sec-fetch-site', 'Access-Control-Allow-Origin', 'content-length', '/admin']) {
+for (const marker of ['sec-fetch-site', 'Access-Control-Allow-Origin', 'content-length']) {
   if (!proxy.includes(marker)) throw new Error(`Proxy security missing ${marker}`)
 }
 for (const marker of ['Content-Security-Policy', 'Strict-Transport-Security', 'frame-ancestors', 'report-uri /api/security/csp-report']) {
@@ -83,8 +63,5 @@ const authorization = await readFile(join(root, 'supabase/migrations/0027_stage9
 if (!authorization.includes('to service_role') || !authorization.includes('from public,anon,authenticated')) {
   throw new Error('Worker grants are not isolated')
 }
-
-const docs = await readFile(join(root, 'docs/STAGE_9_SETUP.md'), 'utf8')
-if (!docs.includes('No Vercel deployment')) throw new Error('Vercel prohibition is missing')
 
 console.log('Puddle Stage 9 security and moderation validation checks passed.')
