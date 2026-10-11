@@ -60,7 +60,7 @@
     overflow: visible !important;
   }
 
-  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle,
+  .figma-dashboard-sidebar.is-concise .puddle-logo-appearance,
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo {
     width: 34px !important;
     min-width: 34px !important;
@@ -77,7 +77,7 @@
     overflow: visible !important;
   }
 
-  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle img,
+  .figma-dashboard-sidebar.is-concise .puddle-logo-appearance img,
   .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img {
     width: 34px !important;
     max-width: 34px !important;
@@ -109,7 +109,7 @@
     place-items: center !important;
   }
 
-  .figma-dashboard-sidebar .puddle-logo-theme-toggle,
+  .figma-dashboard-sidebar .puddle-logo-appearance,
   .figma-dashboard-sidebar .figma-dashboard-sidebar-logo .puddle-logo {
     width: 34px !important;
     min-width: 34px !important;
@@ -122,7 +122,7 @@
     place-items: center !important;
   }
 
-  .figma-dashboard-sidebar .puddle-logo-theme-toggle img,
+  .figma-dashboard-sidebar .puddle-logo-appearance img,
   .figma-dashboard-sidebar .figma-dashboard-sidebar-logo img {
     width: 34px !important;
     max-width: 34px !important;

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { AppearanceToggleLogo } from './appearance-toggle-logo'
+import { AppearanceLogo } from './appearance-logo'
 import { ProductNav } from './product-nav'
 import { SettingsTrigger } from './settings-trigger'
 
@@ -94,7 +94,7 @@ export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'l
   }
 
   return <aside className={`figma-dashboard-sidebar${concise ? ' is-concise' : ' is-expanded'}`} aria-label="Puddle sidebar" data-sidebar-width={effectiveWidth}>
-    <div className="figma-dashboard-sidebar-logo"><AppearanceToggleLogo initialAppearance={initialAppearance} /></div>
+    <div className="figma-dashboard-sidebar-logo"><AppearanceLogo initialAppearance={initialAppearance} /></div>
     <ProductNav avatarUrl={avatarUrl} />
     <div className="figma-dashboard-sidebar-actions">
       <SettingsTrigger className="figma-dashboard-settings-link">

@@ -271,20 +271,6 @@
   overflow: visible;
   background: var(--figma-bg);
 }
-.figma-swipe-workspace {
-  width: 100%;
-  min-height: 832px;
-  position: relative;
-}
-.figma-swipe-card-stage {
-  position: absolute;
-  top: 100px;
-  left: 50%;
-  width: 400px;
-  height: 560px;
-  transform: translateX(-50%);
-  overflow: visible;
-}
 .figma-swipe-preview { display: none; }
 .figma-swipe-card,
 .minimal-swipe-card.figma-swipe-card {
@@ -538,11 +524,6 @@
     height: 38px;
     transform: translateX(-50%);
     background: url('/puddle-mark-outline.svg') center/contain no-repeat;
-  }
-  .figma-swipe-card-stage {
-    top: 103px;
-    width: min(325px, calc(100vw - 72px));
-    height: 544px;
   }
   .figma-swipe-card,
   .minimal-swipe-card.figma-swipe-card {

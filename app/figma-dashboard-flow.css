@@ -42,6 +42,7 @@
   width: min(400px, 100%) !important;
   height: 560px;
   transform: none !important;
+  overflow: visible;
 }
 .figma-swipe-actions,
 .minimal-swipe-actions.figma-swipe-actions {

@@ -2,11 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
 import { membershipFromSubscription, membershipIsActive, verifyStripeWebhook } from '../../lib/billing/stripe.js'
 
-const root = fileURLToPath(new URL('../..', import.meta.url))
-const source = (path) => readFile(new URL(path, `file://${root}/`), 'utf8')
+const source = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('Stripe webhook verification accepts only a current matching signature', () => {
   const raw = JSON.stringify({ id: 'evt_test', type: 'customer.subscription.updated' })
@@ -116,30 +114,4 @@ test('canceled subscriptions lose the paid entitlement', () => {
   }, '00000000-0000-4000-8000-000000000001', 'price_test')
   assert.equal(membership.tier, 'free')
   assert.equal(membershipIsActive(membership), false)
-})
-
-test('global connections require opt-in, adulthood, paid access, and a shared positive place action', async () => {
-  const migration = await source('supabase/migrations/10036_tinder_tier_global_connections.sql')
-  const hardening = await source('supabase/migrations/10037_tinder_tier_entitlement_hardening.sql')
-  const rateLimits = await source('supabase/migrations/10038_global_connection_rate_limits.sql')
-  assert.match(migration, /discoverable boolean not null default false/)
-  assert.match(migration, /profile\.birth_date<=current_date-interval '18 years'/)
-  assert.match(migration, /action\.action in \('saved','interested'\)/)
-  assert.match(migration, /theirs\.location_id=mine\.location_id/)
-  assert.match(migration, /status text not null default 'pending'/)
-  assert.match(migration, /thread\.status='accepted'/)
-  assert.match(migration, /global_connection_blocks/)
-  assert.match(migration, /global_connection_reports/)
-  assert.match(hardening, /puddle_tinder_active_v1\(auth\.uid\(\)\)/)
-  assert.match(hardening, /puddle_adult_v1\(auth\.uid\(\)\)/)
-  assert.match(hardening, /return jsonb_build_object\('eligible',false,'threads','\[\]'::jsonb\)/)
-  assert.match(rateLimits, /create table if not exists public\.global_connection_rate_limits/)
-  assert.match(rateLimits, /pg_advisory_xact_lock/)
-  assert.match(rateLimits, /when 'request'/)
-  assert.match(rateLimits, /when 'message'/)
-  assert.match(rateLimits, /when 'report'/)
-  assert.match(rateLimits, /before insert on public\.global_connection_threads/)
-  assert.match(rateLimits, /before insert on public\.global_connection_messages/)
-  assert.match(rateLimits, /before insert on public\.global_connection_reports/)
-  assert.doesNotMatch(rateLimits, /grant execute on function public\.consume_global_connection_rate_limit_v1\(text\) to authenticated/)
 })

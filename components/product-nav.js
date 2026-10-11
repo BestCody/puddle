@@ -43,7 +43,7 @@ const prefetchedRoutes = new Set()
 function isActive(pathname, href) {
   if (href === '/plans') return pathname === '/plans' || pathname.startsWith('/plans/')
   if (href === '/matches') return pathname === '/matches' || pathname.startsWith('/matches/')
-  if (href === '/membership') return pathname === '/membership' || pathname.startsWith('/global-matches')
+  if (href === '/membership') return pathname === '/membership'
   if (href === '/map') return pathname === '/map' || pathname.startsWith('/create/post')
   return pathname === href || pathname.startsWith(`${href}/`)
 }

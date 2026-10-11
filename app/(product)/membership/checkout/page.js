@@ -19,8 +19,8 @@ export default async function MembershipCheckoutPage() {
   const session = await requireUser({ onboarding: true })
   const snapshot = await getMembershipSnapshot(session)
 
-  if (snapshot.active) redirect('/global-matches')
-  if (!snapshot.adult) redirect(membershipError('Tinder tier global connections require users to be at least 18.'))
+  if (snapshot.active) redirect('/membership?view=manage')
+  if (!snapshot.adult) redirect(membershipError('Puddle Pass requires users to be at least 18.'))
   if (!snapshot.paymentsConfigured) redirect(membershipError('Payments are not configured yet.'))
 
   const displayName = session.profile?.display_name || 'Puddle member'
@@ -37,8 +37,8 @@ export default async function MembershipCheckoutPage() {
         <div className="membership-checkout-heading">
           <div>
             <span>Membership checkout</span>
-            <h1>Upgrade to Tinder tier</h1>
-            <p>Meet people worldwide through places you both genuinely liked.</p>
+            <h1>Upgrade to Puddle Pass</h1>
+            <p>Unlock the additional features included with Puddle Pass.</p>
           </div>
           <div className="membership-checkout-price">
             <small>Monthly subscription</small>
@@ -98,15 +98,17 @@ export default async function MembershipCheckoutPage() {
         <section className="membership-order-card">
           <div className="membership-order-head">
             <div className="membership-order-mark"><img src="/puddle-mark.svg" alt="" /></div>
-            <div><strong>Tinder tier</strong><span>Puddle membership · monthly</span></div>
+            <div><strong>Puddle Pass</strong><span>Puddle membership · monthly</span></div>
             <b>{MONTHLY_PRICE}</b>
           </div>
 
           <div className="membership-order-features">
-            <div><span>•</span><p><strong>Global connections</strong><small>Meet opt-in adults worldwide through places you both liked.</small></p><i>✓</i></div>
-            <div><span>•</span><p><strong>Shared-place matches</strong><small>See adults who liked the same location.</small></p><i>✓</i></div>
-            <div><span>•</span><p><strong>Date or hangout requests</strong><small>Send a date, hangout, or either request.</small></p><i>✓</i></div>
-            <div><span>•</span><p><strong>Messaging after acceptance</strong><small>Chat once the other person accepts.</small></p><i>✓</i></div>
+            <div><span>?</span><p><strong>Heatmap</strong><small>Explore activity around places.</small></p><i>?</i></div>
+            <div><span>?</span><p><strong>Pass badge</strong><small>Show your membership on your profile.</small></p><i>?</i></div>
+            <div><span>?</span><p><strong>Create your location</strong><small>Contribute a place to Puddle.</small></p><i>?</i></div>
+            <div><span>?</span><p><strong>Message anyone</strong><small>Connect beyond your existing friends.</small></p><i>?</i></div>
+            <div><span>?</span><p><strong>See who saved</strong><small>View people who saved a place.</small></p><i>?</i></div>
+            <div><span>?</span><p><strong>Notification alerts</strong><small>Choose your notification preferences.</small></p><i>?</i></div>
           </div>
 
           <div className="membership-order-total">

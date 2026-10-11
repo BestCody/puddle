@@ -6,68 +6,10 @@
 @media (min-width: 761px) {
   /* Figma desktop sidebars are authored from x=-8 to x=280. In the browser
      there is no negative canvas origin, so 280px is the visible column. */
-  .minimal-product-shell {
-    --minimal-sidebar-width: var(--product-sidebar-live-width, 280px) !important;
-    grid-template-columns: var(--minimal-sidebar-width) minmax(0, 1fr) !important;
-  }
-
-  .minimal-product-sidebar.is-expanded {
-    width: var(--minimal-sidebar-width) !important;
-    padding: 184px 12px 6px 27px !important;
-    gap: 18px !important;
-  }
-  .minimal-product-sidebar.is-expanded .minimal-sidebar-logo {
-    width: 241px;
-    height: 58px;
-    padding-left: 7px !important;
-  }
-  .minimal-product-sidebar.is-expanded .minimal-sidebar-logo .puddle-logo,
-  .minimal-product-sidebar.is-expanded .minimal-sidebar-logo .puddle-logo img {
-    width: 56px !important;
-    height: 56px !important;
-  }
-  .minimal-product-sidebar.is-expanded .minimal-product-nav {
-    gap: 4px !important;
-  }
-  .minimal-product-sidebar.is-expanded .minimal-product-nav > a {
-    width: 100% !important;
-    height: 56px !important;
-    min-height: 56px !important;
-    padding: 0 16px !important;
-    gap: 7px !important;
-    border-width: 2px !important;
-    border-radius: 20px !important;
-    font-size: 17px !important;
-    letter-spacing: 0 !important;
-  }
-  .minimal-product-sidebar.is-expanded .minimal-product-nav .product-nav-icon {
-    width: 30px !important;
-    height: 30px !important;
-    flex: 0 0 30px !important;
-    display: grid !important;
-    place-items: center !important;
-  }
-  .minimal-product-sidebar.is-expanded .minimal-product-nav > a:last-child {
-    padding-left: 28px !important;
-  }
-  .minimal-product-sidebar.is-expanded .minimal-product-nav > a:last-child .product-nav-icon {
-    display: none !important;
-  }
 
   /* Only Swipe has the top-right menu in the current desktop Figma. */
-  .minimal-product-shell:has(.figma-feed-page) .minimal-product-header,
-  .minimal-product-shell:has(.figma-saved-page) .minimal-product-header,
-  .minimal-product-shell:has(.figma-pass-page) .minimal-product-header,
-  .minimal-product-shell:has(.minimal-profile-page) .minimal-product-header,
-  .minimal-product-shell:has(.figma-settings-page) .minimal-product-header {
-    display: none !important;
-  }
 
   /* Swipe node 12:11: 49x44 menu at x1190,y36. */
-  .minimal-product-header {
-    top: 36px !important;
-    right: 41px !important;
-  }
   .profile-menu summary {
     width: 49px !important;
     height: 44px !important;
@@ -83,10 +25,6 @@
     background: #c8c8c8 !important;
   }
   .profile-menu-panel { top: 54px !important; }
-  .minimal-product-shell:has(.minimal-swipe-page) .minimal-swipe-toolbar,
-  .minimal-product-shell:has(.minimal-swipe-page) .discover-share-trigger {
-    display: none !important;
-  }
   .minimal-swipe-actions {
     width: 310px !important;
     max-width: 310px !important;
@@ -133,13 +71,6 @@
   }
   .figma-feed-compose {
     left: calc(var(--minimal-sidebar-width, 280px) + (100vw - var(--minimal-sidebar-width, 280px)) / 2 - 15px) !important;
-  }
-  .minimal-product-shell:has(.figma-feed-page) .minimal-product-nav > a[href="/map"] .product-nav-label {
-    font-size: 0 !important;
-  }
-  .minimal-product-shell:has(.figma-feed-page) .minimal-product-nav > a[href="/map"] .product-nav-label::after {
-    content: "Explore";
-    font-size: 17px;
   }
 
   /* Saved node 25:180: page begins exactly at the visible sidebar edge. */
@@ -397,15 +328,6 @@
   /* Settings node 40:381 is a viewport-level overlay, not a content-column
      card. Preserve functional forms inside the overlay and blur the product
      behind it, matching the authored frame. */
-  .minimal-product-shell:has(.figma-settings-page)::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 82;
-    background: rgba(246, 246, 246, .14);
-    backdrop-filter: blur(4px);
-    pointer-events: none;
-  }
   .figma-settings-page {
     position: fixed !important;
     left: 107px !important;
@@ -424,5 +346,4 @@
 
 @media (max-width: 760px) {
   /* Desktop parity must not disturb the dedicated mobile Figma layouts. */
-  .minimal-product-shell:has(.figma-settings-page)::before { display: none; }
 }

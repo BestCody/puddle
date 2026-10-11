@@ -156,7 +156,6 @@ test('current product media surfaces use the canonical image contract', async ()
     'components/location-map.js',
     'components/saved-location-morph-bridge.js',
     'app/(product)/create/post/page.js',
-    'app/(product)/global-matches/page.js',
     'app/(product)/profile/page.js',
     'app/studio/places/[id]/page.js'
   ]

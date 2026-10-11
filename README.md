@@ -24,7 +24,6 @@ Current capabilities include:
 - Pass, Save, Perfect Pick, details, filters, undo, and continuous nearby-place refill
 - Friends, friend requests, direct messages, rich shared-place messages, and places in common
 - Saved, Planned, and Past place views
-- optional Tinder-tier worldwide adult connections under the separate global-matches flow
 - location contribution, editing, media moderation, and user reports
 
 The active browser path does not depend on the retired shared pair/group deck system, static catalogue, R2 media runtime, OpenSearch, or Supabase Storage for canonical open-location photos.

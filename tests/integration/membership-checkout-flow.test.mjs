@@ -26,7 +26,7 @@ test('legacy Puddle checkout never collects raw payment credentials', async () =
 test('checkout preserves entitlement and environment guards before payment', async () => {
   const checkout = await read('app/(product)/membership/checkout/page.js')
 
-  assert.match(checkout, /if \(snapshot\.active\) redirect\('\/global-matches'\)/)
+  assert.match(checkout, /if \(snapshot\.active\) redirect\('\/membership\?view=manage'\)/)
   assert.match(checkout, /if \(!snapshot\.adult\)/)
   assert.match(checkout, /if \(!snapshot\.paymentsConfigured\)/)
 })

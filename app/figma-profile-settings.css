@@ -1,10 +1,4 @@
 /* Profile */
-.minimal-product-nav > a[href="/profile"].is-active,
-.minimal-mobile-nav > a[href="/profile"].is-active {
-  --figma-section: #f5f5f5;
-  --figma-section-border: #e5e5e5;
-  color: #111 !important;
-}
 .minimal-profile-page {
   width: min(100%, 900px);
   min-height: calc(100vh - 130px);

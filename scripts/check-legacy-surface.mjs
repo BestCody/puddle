@@ -126,8 +126,8 @@ for (const required of ['Object-store serving failures fail closed and never fal
   if (!architecture.includes(required)) throw new Error(`System architecture is missing invariant: ${required}`)
 }
 
-// Derive the retired database contract directly from the migrations that performed
-// the production cutovers. Historical B2 snapshots may legitimately contain files
+// Derive the retired database contract from applied and staged retirement migrations.
+// Historical object snapshots may legitimately contain files
 // named after their former source tables; only executable database access patterns
 // are forbidden here.
 const retirementMigrations = [
@@ -138,7 +138,8 @@ const retirementMigrations = [
   'supabase/migrations/20260818204900_retire_legacy_location_function_coupling.sql',
   'supabase/migrations/20260818205000_retire_catalogue_sync_region_hooks.sql',
   'supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql',
-  'supabase/migrations/20260819073341_retire_remaining_catalogue_enrichment_helpers.sql'
+  'supabase/migrations/20260819073341_retire_remaining_catalogue_enrichment_helpers.sql',
+  'supabase/migrations/20261011100000_remove_global_likes.sql'
 ]
 const retiredDatabaseIdentifiers = new Set()
 for (const migration of retirementMigrations) {

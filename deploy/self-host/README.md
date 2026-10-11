@@ -5,8 +5,8 @@ Puddle's public DNS now points to the Contabo host. Caddy serves `puddle.you`,
 SeaweedFS object store, and pinned self-hosted Supabase stack run on that host.
 The public root intentionally shows the maintenance page; that is a product
 setting, not a pending infrastructure migration. This runbook describes the
-running stack, not the completed provider-copy procedure. Historical transfer
-scripts and reports remain available for audit, but are not release steps.
+running stack. The completed source-transfer tooling has been retired from the
+working tree; its history remains available in Git.
 
 Status below was checked on 2026-10-11. Recheck the host before operating on it.
 
@@ -156,5 +156,5 @@ credentials in owner-only environment files and never print them while
 collecting diagnostics.
 
 For implementation details, see [the architecture map](../../docs/system-architecture.md),
-[media boundaries](../../docs/media-architecture.md), the pinned
-[host checklist](CONTABO.md), and the Compose files in this directory.
+[media boundaries](../../docs/media-architecture.md), and the Compose files
+in this directory.

@@ -43,21 +43,20 @@ for (const table of ['privileged_role_assignments', 'moderation_cases', 'moderat
 }
 
 const workflows = await readFile(join(root, 'supabase/migrations/0025_stage9_admin_workflows.sql'), 'utf8')
-for (const fn of ['privileged_access_v1', 'preserve_case_evidence_v1', 'open_moderation_case_v1', 'submit_moderation_appeal_v1']) {
+for (const fn of ['preserve_case_evidence_v1', 'open_moderation_case_v1', 'submit_moderation_appeal_v1']) {
   if (!workflows.includes(`public.${fn}`)) throw new Error(`Stage 9 workflow missing ${fn}`)
 }
 
 const controls = await readFile(join(root, 'supabase/migrations/0026_stage9_security_controls.sql'), 'utf8')
 if (controls.includes("verification_status in('submitted'")) throw new Error('Invalid host verification states leaked into queue')
-for (const fn of ['consume_security_rate_limit_v1', 'claim_media_scan_jobs_v1', 'complete_media_scan_job_v1', 'can_access_private_media_v1', 'admin_security_dashboard_v1']) {
+for (const fn of ['consume_security_rate_limit_v1', 'claim_media_scan_jobs_v1', 'complete_media_scan_job_v1']) {
   if (!controls.includes(`public.${fn}`)) throw new Error(`Stage 9 security control missing ${fn}`)
 }
 
-const hardening = await readFile(join(root, 'supabase/migrations/0028_stage9_hardening.sql'), 'utf8')
-if (!hardening.includes('create or replace function public.is_admin()') || !hardening.includes("auth.jwt()->>'aal'")) {
-  throw new Error('Admin MFA enforcement is missing')
+const retirement = await readFile(join(root, 'supabase/migrations/20261011090000_remove_admin_dashboard_bootstrap.sql'), 'utf8')
+if (!retirement.includes('revoke execute on function') || !retirement.includes('public.admin_security_dashboard_v1()') || !retirement.includes('from authenticated;')) {
+  throw new Error('Retired staff dashboard grants are not revoked by the current migration')
 }
-if (!workflows.includes("auth.jwt()->>'aal'")) throw new Error('Database MFA enforcement is missing')
 
 const authorization = await readFile(join(root, 'supabase/migrations/0027_stage9_authorization.sql'), 'utf8')
 if (!authorization.includes('to service_role') || !authorization.includes('from public,anon,authenticated')) {

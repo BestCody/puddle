@@ -2,10 +2,6 @@
 
 import { useLayoutEffect, useRef } from 'react'
 
-const PENDING_KEY = 'puddle:appearance-pending'
-const EXPLICIT_THEMES = new Set(['light', 'dark'])
-const buttonStyle = { width: 56, height: 56, display: 'grid', placeItems: 'center', padding: 0, border: 0, background: 'transparent', cursor: 'pointer' }
-
 function resolveAppearance(value) {
   if (value === 'dark') return 'dark'
   if (value === 'system' && typeof window !== 'undefined') {
@@ -28,8 +24,7 @@ function useAppearanceSync(initialAppearance) {
     const shell = elementRef.current?.closest('.figma-dashboard-shell')
     if (!shell) return undefined
 
-    const pending = window.sessionStorage.getItem(PENDING_KEY)
-    const appearance = EXPLICIT_THEMES.has(pending) ? pending : initialAppearance
+    const appearance = initialAppearance
     applyAppearance(shell, appearance)
 
     if (appearance !== 'system') return undefined
@@ -47,16 +42,15 @@ export function AppearanceSync({ initialAppearance = 'light' }) {
   return <span ref={elementRef} hidden aria-hidden="true" />
 }
 
-export function AppearanceToggleLogo({ initialAppearance = 'light' }) {
-  const buttonRef = useAppearanceSync(initialAppearance)
+export function AppearanceLogo({ initialAppearance = 'light' }) {
+  const elementRef = useAppearanceSync(initialAppearance)
 
-  return <button
-    ref={buttonRef}
-    type="button"
-    className="puddle-logo puddle-logo-theme-toggle"
-    style={buttonStyle}
+  return <span
+    ref={elementRef}
+    className="puddle-logo puddle-logo-appearance"
+    role="img"
     aria-label="Puddle"
   >
     <img src="/puddle-mark-outline.svg" alt="" width="44" height="44" />
-  </button>
+  </span>
 }

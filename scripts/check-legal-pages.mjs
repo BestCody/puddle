@@ -22,7 +22,6 @@ for (const marker of [
   'Privacy Policy',
   'Information we collect',
   'Membership and billing information',
-  'Global connection privacy',
   'Location and recommendation controls',
   'Retention and deletion',
   'Your choices and privacy rights',
@@ -36,7 +35,6 @@ for (const marker of [
   'What Puddle provides',
   'Recommendations and place information',
   'DateMatch and shared planning',
-  'Tinder tier and global connections',
   'Paid subscriptions and billing',
   'Acceptable use',
   'Governing law and disputes'

@@ -61,7 +61,7 @@
   color: #f47777;
 }
 
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-theme-toggle {
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-appearance {
   width: 56px;
   height: 56px;
   display: grid;
@@ -69,10 +69,9 @@
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
 }
 
-:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-theme-toggle img {
+:is(.figma-dashboard-shell[data-appearance="dark"], .figma-dashboard-shell[data-resolved-appearance="dark"]) .puddle-logo-appearance img {
   width: 56px !important;
   height: 56px !important;
   display: block;

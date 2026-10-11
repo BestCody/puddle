@@ -139,12 +139,12 @@ body:has(.figma-settings-screen.is-embedded) .figma-settings-window.is-expanded 
 }
 
 .figma-dashboard-sidebar-logo .puddle-logo,
-.figma-dashboard-sidebar-logo .puddle-logo-theme-toggle,
+.figma-dashboard-sidebar-logo .puddle-logo-appearance,
 .figma-dashboard-sidebar-logo a,
 .figma-dashboard-sidebar-logo img,
 .figma-dashboard-sidebar-logo svg,
 .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo,
-.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo-theme-toggle,
+.figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo .puddle-logo-appearance,
 .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo a,
 .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo img,
 .figma-dashboard-sidebar.is-concise .figma-dashboard-sidebar-logo svg {

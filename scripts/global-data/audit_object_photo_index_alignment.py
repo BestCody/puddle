@@ -81,14 +81,6 @@ def photo_bucket(identifier: str, bucket_count: int) -> str:
 
 def load_overlay_entries(client, bucket: str, pointer: dict) -> tuple[list, list[str]]:
     version = int(pointer.get("overlay_version") or 0)
-    if version == 1:
-        key = clean(pointer.get("object_key"))
-        if not key:
-            raise RuntimeError("active photo overlay pointer has no object key")
-        payload = decode_json(client, bucket, key)
-        if not isinstance(payload, list) or len(payload) != 2 or int(payload[0]) != 1 or not isinstance(payload[1], list):
-            raise RuntimeError("active photo overlay has an invalid legacy schema")
-        return payload[1], [key]
     if version != 2:
         raise RuntimeError(f"unsupported active photo overlay version: {version}")
     shards = pointer.get("shards")

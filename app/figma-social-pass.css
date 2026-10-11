@@ -1,14 +1,4 @@
 /* Product navigation accents shared by Friends and Pass. */
-.minimal-product-nav > a[href="/matches"].is-active,
-.minimal-mobile-nav > a[href="/matches"].is-active {
-  --figma-section: #78e152;
-  --figma-section-border: #4caf28;
-}
-.minimal-product-nav > a[href="/membership"].is-active,
-.minimal-mobile-nav > a[href="/membership"].is-active {
-  --figma-section: #e73668;
-  --figma-section-border: #a02044;
-}
 
 /* Pass */
 .figma-pass-page {
@@ -143,11 +133,6 @@
 .figma-manage-card small { color: #e73668; font-family: monospace; font-weight: 800; }
 .figma-manage-card strong { font-size: 22px; text-transform: capitalize; }
 .figma-manage-card span { color: #858585; font-size: 12px; }
-.figma-manage-card.global-visibility-card {
-  max-width: none;
-  display: grid;
-  grid-template-columns: minmax(0,1fr) minmax(240px,340px);
-}
 .figma-manage-card.is-empty { display: grid; justify-items: center; text-align: center; }
 
 @media (max-width: 760px) {
@@ -155,6 +140,5 @@
   .figma-pass-title { font-size: 32px; margin-bottom: 25px; }
   .figma-pass-grid { grid-template-columns: 1fr; width: min(100%, 360px); }
   .figma-pass-card { height: 300px; }
-  .figma-manage-card,
-  .figma-manage-card.global-visibility-card { grid-template-columns: 1fr; display: grid; }
+  .figma-manage-card { grid-template-columns: 1fr; display: grid; }
 }

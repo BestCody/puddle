@@ -111,7 +111,7 @@ for (const marker of ['authenticatePassword(supabase, email, password)', 'authen
 }
 assert(googleRoute.includes('startGoogleOAuth'), 'Direct Google sign-in route is missing')
 assert(googleOAuth.includes('signInWithOAuth'), 'Google OAuth integration is missing')
-for (const marker of ['saveOnboardingDraft', 'profileWriteErrorMessage', 'ensureProfile', 'resetPasswordForEmail', "signOut({ scope: 'local' })"]) {
+for (const marker of ['resetPasswordForEmail', 'updatePassword', 'updateEmail', 'revokeOtherSessions', 'deleteAccount', "signOut({ scope: 'local' })"]) {
   assert(actions.includes(marker), `Authentication lifecycle is missing ${marker}`)
 }
 assert(signup.includes('updateUserById(user.id, { email_confirm: true })'), 'Hosted signup must auto-confirm new users when Supabase still requires confirmation')

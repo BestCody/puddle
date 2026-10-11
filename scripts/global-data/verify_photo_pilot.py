@@ -85,29 +85,24 @@ def photo_bucket(location_id: str, bucket_count: int) -> str:
 
 def load_overlay_entries(s3, bucket: str, pointer: dict, location_ids: set[str]) -> tuple[dict[str, list], list[str]]:
     version = int(pointer.get("overlay_version") or 0)
-    if version == 1:
-        keys = [str(pointer.get("object_key") or "").strip()]
-        if not keys[0]:
-            raise RuntimeError("active photo overlay pointer has no object key")
-    elif version == 2:
-        bucket_count = int(pointer.get("bucket_count") or 0)
-        shards = pointer.get("shards")
-        if not isinstance(shards, dict) or bucket_count < 2 or bucket_count > 64 or bucket_count & (bucket_count - 1):
-            raise RuntimeError("active photo overlay has invalid shard metadata")
-        needed = {photo_bucket(value, bucket_count) for value in location_ids}
-        keys = []
-        for shard_bucket in sorted(needed):
-            shard = shards.get(shard_bucket)
-            if not shard:
-                continue
-            if not isinstance(shard, dict):
-                raise RuntimeError(f"active photo overlay shard {shard_bucket} is invalid")
-            key = str(shard.get("object_key") or "").strip()
-            if not key:
-                raise RuntimeError(f"active photo overlay shard {shard_bucket} has no object key")
-            keys.append(key)
-    else:
+    if version != 2:
         raise RuntimeError(f"unsupported active photo overlay version: {version}")
+    bucket_count = int(pointer.get("bucket_count") or 0)
+    shards = pointer.get("shards")
+    if not isinstance(shards, dict) or bucket_count < 2 or bucket_count > 64 or bucket_count & (bucket_count - 1):
+        raise RuntimeError("active photo overlay has invalid shard metadata")
+    needed = {photo_bucket(value, bucket_count) for value in location_ids}
+    keys = []
+    for shard_bucket in sorted(needed):
+        shard = shards.get(shard_bucket)
+        if not shard:
+            continue
+        if not isinstance(shard, dict):
+            raise RuntimeError(f"active photo overlay shard {shard_bucket} is invalid")
+        key = str(shard.get("object_key") or "").strip()
+        if not key:
+            raise RuntimeError(f"active photo overlay shard {shard_bucket} has no object key")
+        keys.append(key)
 
     entries: dict[str, list] = {}
     shard_by_key = {
@@ -117,20 +112,16 @@ def load_overlay_entries(s3, bucket: str, pointer: dict, location_ids: set[str])
     }
     for key in keys:
         body = read_bytes(s3, bucket, key)
-        expected_digest = ""
-        if version == 1:
-            expected_digest = normalized_hash(pointer.get("object_sha256"))
-        else:
-            shard = shard_by_key.get(key)
-            if not shard:
-                raise RuntimeError(f"photo overlay shard is not declared by the active pointer: {key}")
-            expected_digest = normalized_hash(shard.get("object_sha256"))
+        shard = shard_by_key.get(key)
+        if not shard:
+            raise RuntimeError(f"photo overlay shard is not declared by the active pointer: {key}")
+        expected_digest = normalized_hash(shard.get("object_sha256"))
         if not HASH_RE.fullmatch(expected_digest) or hashlib.sha256(body).hexdigest() != expected_digest:
             raise RuntimeError(f"photo overlay checksum mismatch: {key}")
         payload = json.loads(brotli.decompress(body))
         if not isinstance(payload, list) or len(payload) != 2 or int(payload[0]) != version or not isinstance(payload[1], list):
             raise RuntimeError(f"photo overlay object has an invalid schema: {key}")
-        if version == 2 and len(payload[1]) != int(shard_by_key[key].get("photo_count") or 0):
+        if len(payload[1]) != int(shard_by_key[key].get("photo_count") or 0):
             raise RuntimeError(f"photo overlay shard count is invalid: {key}")
         for entry in payload[1]:
             if not isinstance(entry, list) or len(entry) != 2 or not str(entry[0] or "").strip() or not isinstance(entry[1], list):

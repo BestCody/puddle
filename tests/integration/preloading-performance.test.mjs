@@ -165,7 +165,7 @@ test('Puddle logo keeps appearance state without toggling dark mode on click', a
     read('app/global.css'),
     read('components/product-shell.js'),
     read('components/figma-dashboard-sidebar.js'),
-    read('components/appearance-toggle-logo.js'),
+    read('components/appearance-logo.js'),
     read('app/dark-mode.css')
   ])
 
@@ -174,12 +174,12 @@ test('Puddle logo keeps appearance state without toggling dark mode on click', a
   assert.match(layout, /colorScheme:\s*'light dark'/)
   assert.match(shell, /data-appearance=\{appearance\}/)
   assert.match(shell, /<FigmaDashboardSidebar avatarUrl=\{avatarUrl\} initialAppearance=\{appearance\} signOutAction=\{signOut\} \/>/)
-  assert.match(sidebar, /<AppearanceToggleLogo initialAppearance=\{initialAppearance\} \/>/)
+  assert.match(sidebar, /<AppearanceLogo initialAppearance=\{initialAppearance\} \/>/)
 
   assert.match(toggle, /shell\.dataset\.appearance = appearance/)
   assert.match(toggle, /shell\.dataset\.resolvedAppearance = resolved/)
   assert.match(toggle, /aria-label="Puddle"/)
-  assert.doesNotMatch(toggle, /toggleAppearance|setAppearanceThemeFromLogo|onClick=|sessionStorage\.setItem\(PENDING_KEY/)
+  assert.doesNotMatch(toggle, /toggleAppearance|setAppearanceThemeFromLogo|onClick=|sessionStorage/)
 
   assert.match(darkStyles, /--puddle-dark-bg:\s*#111315/)
   assert.match(darkStyles, /--puddle-dark-raised:\s*#202428/)

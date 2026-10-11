@@ -20,16 +20,7 @@ body {
   font-family: Manrope, Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.minimal-product-shell {
-  background: var(--puddle-figma-bg);
-}
-
-.minimal-product-sidebar,
-.minimal-product-header,
-.minimal-mobile-nav,
-.minimal-swipe-card,
-.minimal-swipe-action > span,
-.profile-menu-panel {
+.minimal-swipe-card, .minimal-swipe-action > span, .profile-menu-panel {
   box-sizing: border-box;
 }
 
@@ -129,20 +120,6 @@ body {
 }
 
 @media (min-width: 761px) {
-  .minimal-product-shell {
-    --minimal-sidebar-width: 288px;
-    min-height: 100vh;
-    grid-template-columns: var(--minimal-sidebar-width) minmax(0, 1fr);
-  }
-
-  .minimal-product-sidebar {
-    width: var(--minimal-sidebar-width);
-    padding: 180px 20px 30px;
-    align-items: stretch;
-    gap: 22px;
-    background: #fff;
-    border-right: 1px solid #d8d8d8;
-  }
 
   .minimal-sidebar-logo {
     height: 62px;
@@ -161,93 +138,6 @@ body {
   .minimal-sidebar-logo .puddle-logo img {
     width: 56px;
     height: 56px;
-  }
-
-  .minimal-product-nav {
-    flex: 1;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 3px;
-  }
-
-  .minimal-product-nav > a {
-    width: 100%;
-    height: 58px;
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 24px;
-    border: 2px solid transparent;
-    border-radius: 20px;
-    color: var(--puddle-figma-grey);
-    font-size: 17px;
-    font-weight: 800;
-    letter-spacing: -.035em;
-    transition: background .14s ease, color .14s ease, border-color .14s ease, transform .14s ease;
-  }
-
-  .minimal-product-nav > a:hover {
-    background: #f1f7fd;
-    color: #535353;
-    transform: none;
-  }
-
-  .minimal-product-nav > a.is-active {
-    background: var(--puddle-figma-blue);
-    color: #fff;
-    border-color: var(--puddle-figma-blue-border);
-    box-shadow: 0 4px 0 rgba(0, 0, 0, .25), inset 0 4px 0 rgba(0, 0, 0, .1);
-  }
-
-  .minimal-product-nav > a:last-child {
-    margin-top: auto;
-  }
-
-  .minimal-product-nav .product-nav-icon,
-  .minimal-product-nav .figma-nav-glyph {
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
-  }
-
-  .minimal-product-nav svg {
-    width: 29px;
-    height: 29px;
-    stroke-width: 1.75;
-  }
-
-  .minimal-product-nav .product-nav-label {
-    display: inline !important;
-  }
-
-  .minimal-product-nav .nav-tooltip {
-    display: none !important;
-  }
-
-  .minimal-sidebar-resizer {
-    width: 10px;
-    right: -5px;
-    opacity: 0;
-  }
-
-  .minimal-product-stage {
-    grid-column: 2;
-  }
-
-  .minimal-product-header {
-    position: fixed;
-    top: 36px;
-    right: 36px;
-    z-index: 70;
-    width: auto;
-    height: auto;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    backdrop-filter: none;
   }
 
   .minimal-header-logo {
@@ -313,11 +203,6 @@ body {
     background: #fff;
   }
 
-  .minimal-card-stage {
-    min-height: 560px;
-    height: 560px;
-  }
-
   .minimal-swipe-card {
     width: 400px;
     height: 560px;
@@ -371,28 +256,6 @@ body {
     font-size: 12px;
     font-weight: 700;
     backdrop-filter: none;
-  }
-
-  .minimal-swipe-title {
-    position: relative;
-    z-index: 3;
-    width: 100%;
-    padding-bottom: 4px;
-  }
-
-  .minimal-swipe-title h1 {
-    max-width: 305px;
-    margin: 0;
-    color: #050505;
-    font-size: 40px;
-    font-weight: 800;
-    line-height: .98;
-    letter-spacing: -.055em;
-    text-wrap: balance;
-  }
-
-  .minimal-swipe-title > div {
-    display: none;
   }
 
   .minimal-swipe-pass,
@@ -491,35 +354,6 @@ body {
     background: #fff;
   }
 
-  .minimal-product-shell {
-    display: block;
-    min-height: 100svh;
-    background: #fff;
-  }
-
-  .minimal-product-sidebar {
-    display: none;
-  }
-
-  .minimal-product-stage {
-    display: block;
-  }
-
-  .minimal-product-header {
-    position: fixed;
-    top: 30px;
-    left: 50%;
-    right: auto;
-    z-index: 70;
-    width: 44px;
-    height: 48px;
-    padding: 0;
-    transform: translateX(-50%);
-    border: 0;
-    background: transparent;
-    backdrop-filter: none;
-  }
-
   .minimal-header-logo {
     visibility: visible;
     display: grid;
@@ -579,12 +413,6 @@ body {
     background: #fff;
   }
 
-  .minimal-card-stage {
-    width: 100%;
-    min-height: min(544px, calc(100svh - 305px));
-    height: min(544px, calc(100svh - 305px));
-  }
-
   .minimal-swipe-card {
     width: 100%;
     height: min(544px, calc(100svh - 305px));
@@ -638,25 +466,6 @@ body {
     font-size: 11px;
     font-weight: 700;
     backdrop-filter: none;
-  }
-
-  .minimal-swipe-title {
-    z-index: 3;
-    padding-bottom: 3px;
-  }
-
-  .minimal-swipe-title h1 {
-    max-width: 245px;
-    margin: 0;
-    color: #050505;
-    font-size: 33px;
-    font-weight: 800;
-    line-height: .98;
-    letter-spacing: -.055em;
-  }
-
-  .minimal-swipe-title > div {
-    display: none;
   }
 
   .minimal-swipe-address {
@@ -746,92 +555,22 @@ body {
   .minimal-progress {
     display: none;
   }
-
-  .minimal-mobile-nav {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 80;
-    height: calc(84px + env(safe-area-inset-bottom));
-    padding: 11px 15px calc(9px + env(safe-area-inset-bottom));
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 2px;
-    background: rgba(255,255,255,.97);
-    border-top: 0;
-    backdrop-filter: blur(12px);
-  }
-
-  .minimal-mobile-nav > a {
-    min-width: 0;
-    display: grid;
-    place-items: center;
-    align-content: center;
-    color: #8e8e8e;
-    border-radius: 18px;
-  }
-
-  .minimal-mobile-nav > a.is-active {
-    width: 56px;
-    height: 56px;
-    margin: 0 auto;
-    align-self: center;
-    background: var(--puddle-figma-blue);
-    color: #fff;
-    border: 2px solid var(--puddle-figma-blue-border);
-    box-shadow: 0 4px 0 rgba(0,0,0,.24), inset 0 3px 0 rgba(0,0,0,.08);
-  }
-
-  .minimal-mobile-nav svg {
-    width: 27px;
-    height: 27px;
-    stroke-width: 1.7;
-  }
-
-  .minimal-mobile-nav .figma-nav-glyph,
-  .minimal-mobile-nav .mobile-product-nav-icon {
-    width: 29px;
-    height: 29px;
-  }
-
-  .minimal-mobile-nav .product-nav-profile-photo {
-    width: 29px;
-    height: 29px;
-  }
-
-  .minimal-mobile-nav small {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0,0,0,0);
-    white-space: nowrap;
-    border: 0;
-  }
 }
 
 @media (max-height: 720px) and (min-width: 761px) {
-  .minimal-product-sidebar {
-    padding-top: 86px;
-  }
 
   .minimal-product-main {
     padding-top: 84px;
   }
 
-  .minimal-swipe-card,
-  .minimal-card-stage {
+  .minimal-swipe-card {
     height: 500px;
     min-height: 500px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .minimal-swipe-details-button,
-  .minimal-product-nav > a {
+  .minimal-swipe-details-button {
     transition: none;
   }
 }

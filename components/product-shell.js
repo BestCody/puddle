@@ -6,7 +6,7 @@ import { DashboardRuntime } from './dashboard-runtime'
 import { MainContentTransition } from './main-content-transition'
 import { SettingsOverlay } from './settings-overlay'
 import { SettingsTrigger } from './settings-trigger'
-import { AppearanceSync } from './appearance-toggle-logo'
+import { AppearanceSync } from './appearance-logo'
 import { signOut } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/server'
 

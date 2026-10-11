@@ -166,7 +166,7 @@
     font-size: 12.2px !important;
   }
 
-  /* Smaller expanded Puddle mark without changing the appearance-toggle behavior. */
+  /* Smaller expanded Puddle mark without changing saved appearance preferences. */
   .figma-dashboard-sidebar:not(.is-concise) .figma-dashboard-sidebar-logo {
     left: 31px !important;
     width: 44px !important;
@@ -196,7 +196,7 @@
     transform: translateX(-50%) !important;
   }
 
-  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle {
+  .figma-dashboard-sidebar.is-concise .puddle-logo-appearance {
     width: 38px !important;
     height: 38px !important;
     min-width: 38px !important;
@@ -211,7 +211,7 @@
     overflow: visible !important;
   }
 
-  .figma-dashboard-sidebar.is-concise .puddle-logo-theme-toggle img {
+  .figma-dashboard-sidebar.is-concise .puddle-logo-appearance img {
     width: 100% !important;
     height: 100% !important;
     max-width: 100% !important;
@@ -337,7 +337,7 @@
     transform: translateX(-50%) !important;
   }
 
-  .figma-dashboard-sidebar .puddle-logo-theme-toggle {
+  .figma-dashboard-sidebar .puddle-logo-appearance {
     width: 38px !important;
     height: 38px !important;
     min-width: 38px !important;
@@ -349,7 +349,7 @@
     box-shadow: none !important;
   }
 
-  .figma-dashboard-sidebar .puddle-logo-theme-toggle img {
+  .figma-dashboard-sidebar .puddle-logo-appearance img {
     width: 100% !important;
     height: 100% !important;
     object-fit: contain !important;

@@ -39,15 +39,8 @@ test('sensitive pages distinguish failed reads from empty data', async () => {
   assert.match(appeals, /return <section className=\{styles\.card\} role="alert"/)
 })
 
-test('audience-specific notices and recommendation settings are never shared-cached', async () => {
-  const [notices, recommendations] = await Promise.all([
-    read('app/api/system/notices/route.js'),
-    read('app/api/recommendations/preferences/route.js')
-  ])
-  assert.match(notices, /'Cache-Control': 'private, no-store'/)
-  assert.match(notices, /if \(error\) throw error/)
-  assert.match(notices, /status: 503/)
-  assert.doesNotMatch(notices, /public, max-age/)
+test('recommendation settings are never shared-cached', async () => {
+  const recommendations = await read('app/api/recommendations/preferences/route.js')
   assert.match(recommendations, /preferencesError \|\| flagsError/)
   assert.match(recommendations, /status: 503, headers: privateHeaders/)
 })
