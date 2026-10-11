@@ -7,12 +7,14 @@ tiles that were already completed for the same location snapshot. Candidate
 files are merged rather than overwritten so partial runs accumulate coverage.
 """
 import argparse
+import csv
 import concurrent.futures
 import hashlib
 import json
 import math
 import os
 import re
+import tempfile
 import threading
 import time
 import urllib.error
@@ -197,7 +199,9 @@ def request_tile(tile, budget):
             time.sleep(delay)
         except Exception as error:
             if attempt == 5:
-                return tile, b'', str(error)[:200]
+                # urllib errors can include the request URL, which contains the
+                # Mapillary token required by this tile endpoint.
+                return tile, b'', type(error).__name__
             time.sleep(min(10, 0.5 * (2 ** attempt)))
     return tile, b'', 'request_failed'
 
@@ -366,24 +370,30 @@ try:
         inserted = 0
         first_incomplete = None
         failures = []
-        for index, (tile, payload, error) in enumerate(results):
-            retryable_error = error and not str(error).startswith('permanent:')
-            if retryable_error and first_incomplete is None:
-                first_incomplete = index
-            if error:
-                failures.append({'tile': tile, 'error': error})
-                continue
-            try:
-                rows = image_rows(tile, payload)
-            except Exception as decode_error:
-                # A malformed 200 response is isolated to its tile. It must
-                # not rewind the whole country or abort a near-complete run;
-                # the next snapshot will naturally retry the tile.
-                failures.append({'tile': tile, 'error': f'permanent:decode {decode_error}'})
-                continue
-            if rows:
-                con.executemany('INSERT INTO mapillary_images VALUES (?,?,?,?,?,?,?,?)', rows)
-                inserted += len(rows)
+        with tempfile.TemporaryDirectory(prefix='mapillary-rows-', dir=os.getenv('DUCKDB_TEMP_DIRECTORY') or None) as scratch:
+            rows_path = os.path.join(scratch, 'images.csv')
+            with open(rows_path, 'w', newline='', encoding='utf-8') as rows_file:
+                writer = csv.writer(rows_file)
+                for index, (tile, payload, error) in enumerate(results):
+                    retryable_error = error and not str(error).startswith('permanent:')
+                    if retryable_error and first_incomplete is None:
+                        first_incomplete = index
+                    if error:
+                        failures.append({'tile': tile, 'error': error})
+                        continue
+                    try:
+                        rows = image_rows(tile, payload)
+                    except Exception as decode_error:
+                        # A malformed 200 response is isolated to its tile. It must
+                        # not rewind the whole country or abort a near-complete run;
+                        # the next snapshot will naturally retry the tile.
+                        failures.append({'tile': tile, 'error': f'permanent:decode {decode_error}'})
+                        continue
+                    if rows:
+                        writer.writerows(rows)
+                        inserted += len(rows)
+            if inserted:
+                con.execute('COPY mapillary_images FROM ? (FORMAT CSV, HEADER false)', [rows_path])
 
         con.execute(f"""
         CREATE OR REPLACE TEMP VIEW ranked_candidates AS
