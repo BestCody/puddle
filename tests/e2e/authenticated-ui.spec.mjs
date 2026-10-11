@@ -37,7 +37,7 @@ async function assertSwipeLayout(page) {
   expect(geometry.actions.top).toBeGreaterThanOrEqual(geometry.stage.bottom - 1)
   expect(geometry.actions.left).toBeGreaterThanOrEqual(0)
   expect(geometry.actions.right).toBeLessThanOrEqual(geometry.viewportWidth + 1)
-})
+}
 
 async function attachRender(page, testInfo, name) {
   await testInfo.attach(`${testInfo.project.name}-${name}.png`, {
