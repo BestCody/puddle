@@ -104,7 +104,8 @@ export async function GET(request) {
       south: finiteParam(params, 'south'),
       east: finiteParam(params, 'east'),
       west: finiteParam(params, 'west'),
-      zoom: Number(params.get('zoom') || 11)
+      zoom: Number(params.get('zoom') || 11),
+      q: String(params.get('q') || '').trim().slice(0, 100)
     }
 
     // Authentication and catalogue search are independent network reads. Run them in
