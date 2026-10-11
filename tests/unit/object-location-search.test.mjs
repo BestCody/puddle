@@ -197,6 +197,8 @@ test('exact photo presence preserves radius/viewport ranking and loads metadata 
     id: `00000000-0000-4000-8000-${index.toString(16).padStart(12, '0')}`,
     quality_score: index / 40, popularity_score: index, primary_photo: null
   }))
+  // The active photo publication is authoritative, not a stale core photo hash.
+  locations.at(-1).primary_photo = { content_hash: 'outdated-photo' }
   const entries = locations.filter((_, index) => index % 2 === 0).map(row => [row.id,
     ['a'.repeat(64), 'wikimedia-commons', 'Attribution', 'https://fixture.invalid', 'CC BY', 1200, 800]])
   const fixture = { locations, photoOverlay: true, photoEntries: entries, photoBucketCount: 4096 }
