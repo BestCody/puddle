@@ -36,13 +36,13 @@ const env = {
 }
 
 const tower = {
-  id: 'loc-1', slug: 'cn-tower', name: 'CN Tower', aliases: [], category: 'landmark',
+  id: '11111111-1111-4111-8111-111111111111', slug: 'cn-tower', name: 'CN Tower', aliases: [], category: 'landmark',
   latitude: 43.6426, longitude: -79.3871, city: 'Toronto', neighborhood: 'Downtown', address: '290 Bremner Blvd',
   quality_score: 0.95, popularity_score: 4, status: 'published', amenities: ['observation_deck'], accessible: true,
   primary_photo: { content_hash: 'abc' }
 }
 const cafe = {
-  id: 'loc-2', slug: 'nearby-cafe', name: 'Nearby Cafe', aliases: [], category: 'cafe',
+  id: '22222222-2222-4222-8222-222222222222', slug: 'nearby-cafe', name: 'Nearby Cafe', aliases: [], category: 'cafe',
   latitude: 43.65, longitude: -79.39, city: 'Toronto', neighborhood: 'Downtown', address: '1 Front St',
   quality_score: 0.8, popularity_score: 2, status: 'published', amenities: [], accessible: false
 }
@@ -86,7 +86,7 @@ function detail(row) {
   ]
 }
 
-function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCount = 16, photoEntries = [], locations = [tower, cafe], membership = null, missingKey = null } = {}) {
+function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCount = 16, photoEntries = [], locations = [tower, cafe], membership, missingKey = null } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
@@ -122,8 +122,7 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
     ])],
     [geoKey, geoBody],
     [`${prefix}/geo-map/z1/13/10.json.br`, br([tower, cafe])],
-    [`${prefix}/id/60c.json.br`, br({ 'loc-1': tower, 'loc-2': cafe })],
-    [`${prefix}/slug/e79.json.br`, br({ 'cn-tower': 'loc-1' })],
+    [`${prefix}/slug/e79.json.br`, br({ 'cn-tower': tower.id })],
     [projectionCandidateKey, Buffer.from(JSON.stringify({
       schema_version: 1,
       projection_version: 1,
@@ -136,8 +135,16 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
     [coreKey, zstd([1, locations.map(core)])],
     [detailKey, zstd([1, 0, locations.map(detail)])]
   ])
+  const idBuckets = new Map()
+  for (const row of locations) {
+    const key = `${prefix}/id/${digest(row.id).slice(0, 3)}.json.br`
+    const bucket = idBuckets.get(key) || {}
+    bucket[row.id] = row
+    idBuckets.set(key, bucket)
+  }
+  for (const [key, bucket] of idBuckets) objects.set(key, br(bucket))
   if (photoOverlay) {
-    const entries = photoEntries.length ? photoEntries : [['loc-2', [overlayHash, 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]]]
+    const entries = photoEntries.length ? photoEntries : [['22222222-2222-4222-8222-222222222222', [overlayHash, 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]]]
     const grouped = new Map()
     for (const entry of entries) {
       const hash = createHash('sha256').update(entry[0]).digest()
@@ -162,7 +169,7 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
       bucket_count: photoBucketCount,
       shards,
       photo_count: entries.length,
-      ...(membership ? { membership } : {})
+      membership: membership === undefined ? exactMembership(entries.map(entry => entry[0])) : membership
     })))
   }
   const counts = new Map()
@@ -192,6 +199,10 @@ function exactMembership(ids) {
   return { encoding: 'uuid128-sorted', ids_base64: bytes.toString('base64'), sha256: createHash('sha256').update(bytes).digest('hex') }
 }
 
+function photoFixtureId(index) {
+  return `00000000-0000-4000-9000-${index.toString(16).padStart(12, '0')}`
+}
+
 test('exact photo presence preserves radius/viewport ranking and loads metadata only for winners', async () => {
   const locations = Array.from({ length: 40 }, (_, index) => ({ ...cafe,
     id: `00000000-0000-4000-8000-${index.toString(16).padStart(12, '0')}`,
@@ -205,16 +216,18 @@ test('exact photo presence preserves radius/viewport ranking and loads metadata 
   const query = { latitude: 43.65, longitude: -79.39, distanceKm: 25, candidateLimit: 3, preferPhoto: true }
   const viewport = { north: 43.7, south: 43.6, west: -79.5, east: -79.3, zoom: 12, candidateLimit: 3 }
   reset()
-  const legacyStore = fixtureObjectStore(fixture)
-  const options = { env: { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: legacyStore.projectionCandidateKey } }
-  const legacyRadius = await searchObjectGlobalLocations(query, options)
-  const legacyViewport = await searchObjectGlobalLocationsInViewport(viewport, options)
+  fixtureObjectStore(fixture)
+  const documentRadius = await searchObjectGlobalLocations(query, { env })
+  const documentViewport = await searchObjectGlobalLocationsInViewport(viewport, { env })
   reset()
-  const store = fixtureObjectStore({ ...fixture, membership: exactMembership(entries.map(entry => entry[0])) })
+  const store = fixtureObjectStore(fixture)
+  const options = { env: { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: store.projectionCandidateKey } }
   const optimizedRadius = await searchObjectGlobalLocations(query, options)
   const optimizedViewport = await searchObjectGlobalLocationsInViewport(viewport, options)
-  assert.deepEqual(optimizedRadius.candidates, legacyRadius.candidates)
-  assert.deepEqual(optimizedViewport.candidates, legacyViewport.candidates)
+  const fields = ['id', 'slug', 'name', 'category', 'city', 'neighborhood', 'address', 'latitude', 'longitude', 'primary_photo', 'distance_m', 'search_score']
+  const presentation = rows => rows.map(row => Object.fromEntries(fields.map(key => [key, row[key] ?? null])))
+  assert.deepEqual(presentation(optimizedRadius.candidates), presentation(documentRadius.candidates))
+  assert.deepEqual(presentation(optimizedViewport.candidates), presentation(documentViewport.candidates))
   const photoReads = [...store.counts].filter(([key]) => key.includes('/photo-overlay-v2/objects/'))
   assert.ok(photoReads.length <= query.candidateLimit + viewport.candidateLimit)
   assert.ok(photoReads.length < entries.length)
@@ -232,10 +245,10 @@ test('exact photo membership handles boundaries and rejects corrupt/unsorted IDs
   assert.equal(pointer.hasPhoto(ids[1].toUpperCase()), true)
   assert.equal(pointer.hasPhoto('00000000-0000-4000-8000-000000000002'), false)
   assert.equal(pointer.hasPhoto('not-a-uuid'), false)
-  for (const broken of [{ ...exactMembership(ids), sha256: '0'.repeat(64) }, exactMembership([ids[0], ids[0]])]) {
+  for (const broken of [null, { ...exactMembership(ids), sha256: '0'.repeat(64) }, exactMembership([ids[0], ids[0]])]) {
     reset()
     const fixture = fixtureObjectStore({ photoOverlay: true, photoEntries: entries, membership: broken })
-    await assert.rejects(getPhotoSearchOverlay({ manifest: fixture.manifest, manifestKey: fixture.manifestKey, env }), /checksum|unique and sorted/)
+    await assert.rejects(getPhotoSearchOverlay({ manifest: fixture.manifest, manifestKey: fixture.manifestKey, env }), /required|checksum|unique and sorted/)
   }
   reset()
 })
@@ -271,7 +284,7 @@ test('object-store radius search routes, filters, fuzzily matches, and ranks can
   }, { env })
   assert.equal(result.backend, 'object-store')
   assert.equal(result.index, 'object:2026-08-19')
-  assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
+  assert.deepEqual(result.candidates.map((row) => row.id), ['11111111-1111-4111-8111-111111111111'])
   assert.equal(result.diagnostics.shards, 1)
   assert.equal(result.diagnostics.textProjection, false)
 })
@@ -285,7 +298,7 @@ test('object-store radius search can prioritize canonical photo candidates witho
   }, {
     env: { ...env, GLOBAL_LOCATION_RANK_PREFERRED_CATEGORY: '100' }
   })
-  assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
+  assert.deepEqual(result.candidates.map((row) => row.id), ['11111111-1111-4111-8111-111111111111'])
   assert.equal(result.candidateLimit, 1)
   assert.equal(result.diagnostics.photoFirst, true)
 })
@@ -315,9 +328,9 @@ test('object-store radius search applies freshly materialized photo metadata bef
   }, {
     env: { ...env, GLOBAL_LOCATION_RANK_PREFERRED_CATEGORY: '100', GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey }
   })
-  assert.equal(result.candidates[0]?.id, 'loc-2')
+  assert.equal(result.candidates[0]?.id, '22222222-2222-4222-8222-222222222222')
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
-  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1, possibleCount: 2, matchedCount: 1 })
+  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1, possibleCount: 1, matchedCount: 1 })
 })
 
 test('object-store photo overlay loads only the content-addressed hash shard needed by the candidates', async () => {
@@ -334,20 +347,21 @@ test('object-store photo overlay loads only the content-addressed hash shard nee
 
 test('small photo shards preserve attribution and avoid fetching unrelated photos', async () => {
   reset()
-  const entries = Array.from({ length: 100 }, (_, index) => [`photo-${index}`, ['b'.repeat(64), 'mapillary', 'Street attribution', 'https://fixture.invalid', 'CC BY-SA', 800, 600]])
-  entries.push(['loc-2', ['a'.repeat(64), 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]])
+  const entries = Array.from({ length: 100 }, (_, index) => [photoFixtureId(index), ['b'.repeat(64), 'mapillary', 'Street attribution', 'https://fixture.invalid', 'CC BY-SA', 800, 600]])
+  entries.push(['22222222-2222-4222-8222-222222222222', ['a'.repeat(64), 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]])
   const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
-  const overlay = await getPhotoSearchOverlay({ manifest, manifestKey, ids: ['loc-2'], env })
+  const overlay = await getPhotoSearchOverlay({ manifest, manifestKey, ids: ['22222222-2222-4222-8222-222222222222'], env })
   assert.equal(overlay.photos.size, 1)
-  assert.deepEqual(overlay.photos.get('loc-2'), entries.at(-1)[1])
+  assert.deepEqual(overlay.photos.get('22222222-2222-4222-8222-222222222222'), entries.at(-1)[1])
   const reads = [...counts.keys()].filter(key => key.startsWith('data/search/photo-overlay-v2/'))
   assert.equal(reads.length, 1)
-  assert.match(reads[0], /bucket=298\.json\.br$/)
+  const expectedBucket = (createHash('sha256').update(cafe.id).digest().readUInt16BE(0) & 4095).toString(16).padStart(3, '0')
+  assert.ok(reads[0].endsWith(`bucket=${expectedBucket}.json.br`))
 })
 
 test('photo byte cache retains a small working set larger than the old object-count ceiling', async () => {
   reset()
-  const entries = Array.from({ length: 80 }, (_, index) => [`photo-${index}`, ['b'.repeat(64), 'mapillary', 'Fixture', null, 'CC BY-SA', 800, 600]])
+  const entries = Array.from({ length: 80 }, (_, index) => [photoFixtureId(index), ['b'.repeat(64), 'mapillary', 'Fixture', null, 'CC BY-SA', 800, 600]])
   const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
   const ids = entries.map(entry => entry[0])
   await getPhotoSearchOverlay({ manifest, manifestKey, ids, env })
@@ -359,7 +373,7 @@ test('photo byte cache retains a small working set larger than the old object-co
 
 test('photo byte cache evicts old payloads when its byte budget is exhausted', async () => {
   reset()
-  const entries = Array.from({ length: 5 }, (_, index) => [`large-photo-${index}`, ['b'.repeat(64), 'mapillary', 'a'.repeat(350000), null, 'CC BY-SA', 800, 600]])
+  const entries = Array.from({ length: 5 }, (_, index) => [photoFixtureId(index), ['b'.repeat(64), 'mapillary', 'a'.repeat(350000), null, 'CC BY-SA', 800, 600]])
   const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
   const options = { manifest, manifestKey, env: { ...env, GLOBAL_LOCATION_PHOTO_OVERLAY_CACHE_BYTES: String(1024 * 1024) } }
   const keyFor = id => { const bucket = (createHash('sha256').update(id).digest().readUInt16BE(0) & 4095).toString(16).padStart(3, '0'); return [...counts.keys()].find(key => key.endsWith(`bucket=${bucket}.json.br`)) }
@@ -379,7 +393,7 @@ test('object-store dense text radius search uses compact core and hydrates winne
   }, {
     env: { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey }
   })
-  assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
+  assert.deepEqual(result.candidates.map((row) => row.id), ['11111111-1111-4111-8111-111111111111'])
   assert.equal(result.candidates[0]?.slug, 'cn-tower')
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'abc')
   assert.equal(result.diagnostics.textProjection, true)
@@ -396,7 +410,7 @@ test('object-store structured radius search reuses compact core and hydrates win
   }, {
     env: { ...env, GLOBAL_LOCATION_TEXT_PROJECTION_READY_KEY: projectionCandidateKey }
   })
-  assert.deepEqual(result.candidates.map((row) => row.id), ['loc-1'])
+  assert.deepEqual(result.candidates.map((row) => row.id), ['11111111-1111-4111-8111-111111111111'])
   assert.equal(result.candidates[0]?.slug, 'cn-tower')
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'abc')
   assert.equal(result.diagnostics.textProjection, true)
@@ -417,7 +431,7 @@ test('concurrent compact searches share manifest, readiness, decode, and hydrati
     searchObjectGlobalLocations(input, { env: projectionEnv }),
     searchObjectGlobalLocations(input, { env: projectionEnv })
   ])
-  assert.deepEqual(results.map((result) => result.candidates[0]?.id), ['loc-1', 'loc-1', 'loc-1'])
+  assert.deepEqual(results.map((result) => result.candidates[0]?.id), ['11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111111'])
   assert.equal(counts.get('data/search/active.json'), 1)
   assert.equal(counts.get(projectionCandidateKey), 1)
   assert.equal(counts.get(coreKey), 1)
@@ -445,7 +459,7 @@ test('object-store viewport uses exact bounds at normal zoom', async () => {
   const result = await searchObjectGlobalLocationsInViewport({
     north: 43.74, south: 43.5, west: -79.6, east: -79.2, zoom: 11
   }, { env })
-  assert.deepEqual(new Set(result.candidates.map((row) => row.id)), new Set(['loc-1', 'loc-2']))
+  assert.deepEqual(new Set(result.candidates.map((row) => row.id)), new Set(['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']))
   assert.equal(result.diagnostics.coarseFallback, undefined)
 })
 
@@ -455,9 +469,9 @@ test('object-store viewport applies the photo overlay before selecting map resul
   const result = await searchObjectGlobalLocationsInViewport({
     north: 43.74, south: 43.5, west: -79.6, east: -79.2, zoom: 11, candidateLimit: 1
   }, { env })
-  assert.equal(result.candidates[0]?.id, 'loc-2')
+  assert.equal(result.candidates[0]?.id, '22222222-2222-4222-8222-222222222222')
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
-  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1, possibleCount: 2, matchedCount: 1 })
+  assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1, possibleCount: 1, matchedCount: 1 })
 })
 
 test('dense normal-zoom object-store viewport falls back to bounded coarse map instead of failing budget', async () => {
@@ -466,7 +480,7 @@ test('dense normal-zoom object-store viewport falls back to bounded coarse map i
   const result = await searchObjectGlobalLocationsInViewport({
     north: 43.8, south: 43.5, west: -79.6, east: -79.2, zoom: 11
   }, { env })
-  assert.deepEqual(new Set(result.candidates.map((row) => row.id)), new Set(['loc-1', 'loc-2']))
+  assert.deepEqual(new Set(result.candidates.map((row) => row.id)), new Set(['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']))
   assert.equal(result.diagnostics.coarse, true)
   assert.equal(result.diagnostics.coarseFallback, true)
   assert.equal(result.diagnostics.decodedCandidates, 2)
@@ -485,7 +499,7 @@ test('viewport compact ranking equals document ranking and only hydrates winners
     const fields = ['id', 'slug', 'name', 'category', 'city', 'neighborhood', 'summary', 'description', 'latitude', 'longitude', 'primary_photo', 'distance_m', 'search_score']
     const presentation = rows => rows.map(row => Object.fromEntries(fields.map(key => [key, row[key] ?? null])))
     assert.deepEqual(presentation(compact.candidates), presentation(full.candidates))
-    if (q === 'cn towr') assert.deepEqual(compact.candidates.map(row => row.id), ['loc-1'])
+    if (q === 'cn towr') assert.deepEqual(compact.candidates.map(row => row.id), ['11111111-1111-4111-8111-111111111111'])
     if (q === 'no-such-place') assert.deepEqual(compact.candidates, [])
   }
 })
@@ -493,10 +507,10 @@ test('viewport compact ranking equals document ranking and only hydrates winners
 test('object-store ID and slug hydration use deterministic hash buckets', async () => {
   reset()
   fixtureObjectStore()
-  const ids = await getObjectGlobalLocationsByIds(['loc-1'], { env })
-  assert.equal(ids[0]?.id, 'loc-1')
+  const ids = await getObjectGlobalLocationsByIds(['11111111-1111-4111-8111-111111111111'], { env })
+  assert.equal(ids[0]?.id, '11111111-1111-4111-8111-111111111111')
   const bySlug = await getObjectGlobalLocationBySlug('cn-tower', { env })
-  assert.equal(bySlug?.id, 'loc-1')
+  assert.equal(bySlug?.id, '11111111-1111-4111-8111-111111111111')
 })
 
 test('radius guard rejects world-scale legacy scans before any object-store read', async () => {
