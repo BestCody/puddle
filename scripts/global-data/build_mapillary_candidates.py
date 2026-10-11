@@ -397,7 +397,10 @@ try:
 
         con.execute(f"""
         CREATE OR REPLACE TEMP VIEW ranked_candidates AS
-        WITH nearby AS (
+        WITH expanded_images AS (
+          SELECT i.*, i.tx + dx AS match_tx, i.ty + dy AS match_ty
+          FROM mapillary_images i, range(-1,2) x(dx), range(-1,2) y(dy)
+        ), nearby AS (
           SELECT
             p.id location_id, i.image_id external_photo_id, i.latitude image_latitude, i.longitude image_longitude,
             i.heading, i.captured_at, i.quality_score,
@@ -409,7 +412,10 @@ try:
               sin(radians(p.longitude-i.longitude))*cos(radians(p.latitude)),
               cos(radians(i.latitude))*sin(radians(p.latitude))-sin(radians(i.latitude))*cos(radians(p.latitude))*cos(radians(p.longitude-i.longitude))
             )) bearing
-          FROM pois p JOIN mapillary_images i ON abs(p.tx-i.tx)<=1 AND abs(p.ty-i.ty)<=1
+          FROM pois p JOIN expanded_images i ON p.tx=i.match_tx AND p.ty=i.match_ty
+          WHERE abs(p.latitude-i.latitude) <= {MAX_DISTANCE_M}/110000
+            AND abs(p.longitude-i.longitude) <= {MAX_DISTANCE_M}/
+              (110000 * greatest(0.01, abs(cos(radians((p.latitude+i.latitude)/2)))))
         ), scored AS (
           SELECT *,
             abs(mod(coalesce(heading,bearing)-bearing+540,360)-180) heading_error,
