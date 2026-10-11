@@ -17,8 +17,10 @@ ephemeral Docker login directory; no registry password is retained on Contabo.
 ## Release boundary
 
 - Pull and health-check the candidate while the current app still serves users.
-- During activation, take the existing data-worker lock so source files cannot
-  change beneath a running photo job.
+- Leave `scripts/global-data`, the data-job entrypoint, Python dependencies,
+  and data-job systemd units untouched. Photo imports run on their existing
+  release without blocking app activation or having source replaced beneath
+  them. Worker code/dependency/schedule releases are separate explicit operations.
 - Synchronize source, including deletion of retired tracked code, while
   preserving `.env*`, `.venv`, object data, caches, and local dependencies.
 - Recreate **only the app**. Never restart Caddy, the object store, scanner, or

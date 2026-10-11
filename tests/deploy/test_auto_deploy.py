@@ -92,12 +92,22 @@ class DeploymentSafety(unittest.TestCase):
             (target / '.venv').mkdir()
             (target / '.venv/worker').write_text('worker dependencies')
             (target / '.env.selfhost').symlink_to('.env.production')
+            for root, body in [(source, 'pending worker release'), (target, 'running worker release')]:
+                (root / 'scripts/global-data').mkdir(parents=True)
+                (root / 'scripts/global-data/job.py').write_text(body)
+                (root / 'scripts/self-host-run-data-job.mjs').write_text(body)
+                (root / 'deploy/self-host').mkdir(parents=True)
+                (root / 'deploy/self-host/puddle-data@kartaview.timer').write_text(body)
+                (root / 'deploy/self-host/data-jobs-requirements.txt').write_text(body)
             deployment.sync_source(source, target)
             self.assertFalse((target / 'retired.js').exists())
             self.assertEqual((target / 'current.js').read_text(), 'new release')
             self.assertTrue((target / '.env.selfhost').is_symlink())
             self.assertEqual((target / '.env.selfhost').read_text(), 'private-test-fixture')
             self.assertEqual((target / '.venv/worker').read_text(), 'worker dependencies')
+            for name in ['scripts/global-data/job.py', 'scripts/self-host-run-data-job.mjs',
+                         'deploy/self-host/puddle-data@kartaview.timer', 'deploy/self-host/data-jobs-requirements.txt']:
+                self.assertEqual((target / name).read_text(), 'running worker release')
 
 
 if __name__ == '__main__':
