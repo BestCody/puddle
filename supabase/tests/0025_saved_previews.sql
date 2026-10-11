@@ -5,7 +5,8 @@ insert into auth.users(id,email,raw_user_meta_data) values
   ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2','saved-preview-other@example.test','{}');
 insert into public.profiles(id,display_name) values
   ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1','Saved preview owner'),
-  ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2','Saved preview other');
+  ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2','Saved preview other')
+on conflict (id) do update set display_name=excluded.display_name;
 insert into public.location_refs(id,kind) values
   ('dddddddd-dddd-4ddd-8ddd-ddddddddddd1','global'),
   ('dddddddd-dddd-4ddd-8ddd-ddddddddddd2','global');
