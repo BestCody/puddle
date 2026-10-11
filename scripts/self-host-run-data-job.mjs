@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url'
 export const JOBS = Object.freeze({
   kartaview: '11 * * * *',
   wikimedia: '3 */6 * * *',
-  mapillary: '7 */6 * * *',
+  mapillary: '7 */4 * * *',
   materialize: '31 * * * *',
   locations: '23 5 * * *',
   photo_audit: '17 4 * * 1'
@@ -95,7 +95,7 @@ export function runJob(job) {
     })
   } else if (job === 'mapillary') {
     python('build_mapillary_candidates.py', [`--snapshot=${activeSnapshot()}`, `--countries=${countries}`,
-      `--request-limit=${process.env.MAPILLARY_TILE_DAILY_LIMIT || '50000'}`])
+      `--request-limit=${process.env.MAPILLARY_TILE_RUN_LIMIT || '100'}`])
   } else if (job === 'kartaview') {
     python('build_kartaview_candidates.py', [`--snapshot=${activeSnapshot()}`, `--countries=${countries}`,
       `--limit=${process.env.KARTAVIEW_REQUESTS_PER_HOUR || '1000'}`])
