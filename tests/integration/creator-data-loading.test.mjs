@@ -31,9 +31,3 @@ test('location editor reads revisions and private address without unused claim h
   assert.match(data, /if \(!allowed\) notFound\(\)[\s\S]*const \[data, revisions, privateDetails\] = await Promise\.all\(/)
   assert.match(data, /private_address: privateDetails\?\.exact_address \|\| '', revisions/)
 })
-
-test('retired home snapshot cannot trigger three unrelated place-page reads', async () => {
-  const plans = await read('lib/app/location-plans-data.js')
-  assert.doesNotMatch(plans, /getLocationPlansSnapshot/)
-  await assert.rejects(read('lib/app/home-data.js'), { code: 'ENOENT' })
-})

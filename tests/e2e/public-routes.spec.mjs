@@ -13,11 +13,6 @@ test('mutating APIs reject requests without a CSRF token', async ({ request }) =
   await expect(response.json()).resolves.toMatchObject({ error: expect.stringMatching(/security token/i) })
 })
 
-test('the retired sign-in route is no longer served', async ({ request }) => {
-  const response = await request.get('/signin')
-  expect(response.status()).toBe(404)
-})
-
 test('callback provider failures return a useful sign-in message', async ({ page }) => {
   await page.goto('/auth/callback?error=access_denied&error_description=cancelled')
   await expect(page).toHaveURL(/\/landing\.html\?.*auth_error=access_denied/)

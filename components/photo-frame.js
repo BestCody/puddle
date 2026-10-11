@@ -1,4 +1,6 @@
 "use client"
+import photoStyles from "@/components/photo-frame.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useEffect, useRef, useState } from 'react'
 
@@ -35,7 +37,7 @@ export function PhotoFrame({
     {available
       ? <img ref={imageRef} src={src} alt={alt} loading={loading} fetchPriority={fetchPriority} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
       : null}
-    {state !== 'ready' ? <span className="photo-frame-message" aria-hidden="true">{state === 'loading' ? loadingText : unavailableText}</span> : null}
+    {state !== 'ready' ? <span className={scopedClasses(photoStyles, "photo-frame-message")} aria-hidden="true">{state === 'loading' ? loadingText : unavailableText}</span> : null}
     {children}
   </Element>
 }

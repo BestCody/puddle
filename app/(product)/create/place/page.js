@@ -1,3 +1,6 @@
+import sharedUIStyles from "@/components/shared-ui.module.css"
+import passExtrasStyles from "@/components/pass-extras.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { randomUUID } from 'node:crypto'
 import { AuthMessage } from '@/components/auth-message'
@@ -15,15 +18,15 @@ export default async function CreatePlacePage({ searchParams }) {
     const membership = await getMembershipSnapshot(session)
     const options = membership.active ? await getCreatorOptions(session) : null
     return <>
-      <div className="page-heading-row">
+      <div className={scopedClasses(sharedUIStyles, "page-heading-row")}>
         <div>
           <span className="section-pill section-pill-mint">New location</span>
-          <h1 className="product-title">Put a local gem on Puddle.</h1>
+          <h1 className={scopedClasses(sharedUIStyles, "product-title")}>Put a local gem on Puddle.</h1>
           <p>Add accurate hours, amenities, access details, and contact information.</p>
         </div>
       </div>
       <AuthMessage searchParams={params} />
-      {membership.active ? <LocationEditor {...options} newDraftId={randomUUID()} /> : <section className="pass-location-create-lock">
+      {membership.active ? <LocationEditor {...options} newDraftId={randomUUID()} /> : <section className={scopedClasses(passExtrasStyles, "pass-location-create-lock")}>
         <span>PASS</span>
         <h2>Create your location</h2>
         <p>Adding a new place to Puddle is included with Puddle Pass.</p>

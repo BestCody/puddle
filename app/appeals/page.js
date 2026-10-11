@@ -1,3 +1,5 @@
+import sharedUIStyles from "@/components/shared-ui.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { requiredQuery } from '@/lib/app/required-query'
 import { AppealForm } from '@/components/appeal-form'
@@ -21,7 +23,7 @@ export default function AppealsPage() {
     }
 
     return <>
-      <div className="page-heading-row"><div><span className="section-pill section-pill-yellow">Appeals</span><h1 className="product-title">Request another review.</h1><p>Appeals are assigned separately and preserve the original case evidence and audit history.</p></div></div>
+      <div className={scopedClasses(sharedUIStyles, "page-heading-row")}><div><span className="section-pill section-pill-yellow">Appeals</span><h1 className={scopedClasses(sharedUIStyles, "product-title")}>Request another review.</h1><p>Appeals are assigned separately and preserve the original case evidence and audit history.</p></div></div>
       <AppealForm />
       <section className={styles.card}><h2>Your appeals</h2>{appeals.map((item) => <article key={item.id}><strong>{item.moderation_cases?.case_number} · {item.state}</strong><p>{item.statement}</p>{item.decision_reason ? <small>{item.decision_reason}</small> : null}</article>)}</section>
     </>

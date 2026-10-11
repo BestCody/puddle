@@ -1,4 +1,6 @@
 "use client"
+import mapStyles from "@/components/location-map.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { PhotoFrame } from '@/components/photo-frame'
@@ -84,31 +86,31 @@ const MapTileLayer = memo(function MapTileLayer({ center, zoom, viewport }) {
       })
     }
   }
-  return <div className="location-map-tiles" aria-hidden="true">{tiles.map((tile) => <img key={tile.key} src={tile.src} alt="" draggable="false" width="256" height="256" style={{ transform: `translate3d(${tile.left}px,${tile.top}px,0)` }} />)}</div>
+  return <div className={scopedClasses(mapStyles, "location-map-tiles")} aria-hidden="true">{tiles.map((tile) => <img key={tile.key} src={tile.src} alt="" draggable="false" width="256" height="256" style={{ transform: `translate3d(${tile.left}px,${tile.top}px,0)` }} />)}</div>
 })
 
 function MapCardPhoto({ point }) {
   return <PhotoFrame
     src={point.photo_url}
     alt={`${point.title} photo`}
-    className="location-map-card-photo"
+    className={scopedClasses(mapStyles, "location-map-card-photo")}
     unavailableClassName="is-unavailable"
     unavailableText="Photo unavailable"
     loading="lazy"
   >
-    <span className="location-map-card-photo-state">{point.states.map(stateLabel).join(' · ')}</span>
+    <span className={scopedClasses(mapStyles, "location-map-card-photo-state")}>{point.states.map(stateLabel).join(' · ')}</span>
   </PhotoFrame>
 }
 
 function PointCard({ point }) {
-  if (!point) return <div className="location-map-empty-selection"><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, upcoming plans, and Puddle locations in this map area.</p></div>
-  return <article className="location-map-card">
+  if (!point) return <div className={scopedClasses(mapStyles, "location-map-empty-selection")}><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, upcoming plans, and Puddle locations in this map area.</p></div>
+  return <article className={scopedClasses(mapStyles, "location-map-card")}>
     <MapCardPhoto key={point.id} point={point} />
-    <div><small>{point.neighborhood || point.city || String(point.category || 'location').replaceAll('_', ' ')}</small><h2>{point.title}</h2><p>{point.summary}</p><div className="location-map-card-tags">{point.states.map((state) => <span className={`is-${state}`} key={state}>{stateLabel(state)}</span>)}</div>{point.plan?.planned_for ? <strong className="location-map-plan-time">{new Date(point.plan.planned_for).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong> : null}<div className="location-map-card-actions"><a href={directionsUrl(point)} target="_blank" rel="noreferrer">Directions</a></div></div>
+    <div><small>{point.neighborhood || point.city || String(point.category || 'location').replaceAll('_', ' ')}</small><h2>{point.title}</h2><p>{point.summary}</p><div className={scopedClasses(mapStyles, "location-map-card-tags")}>{point.states.map((state) => <span className={scopedClasses(mapStyles, `is-${state}`)} key={state}>{stateLabel(state)}</span>)}</div>{point.plan?.planned_for ? <strong className={scopedClasses(mapStyles, "location-map-plan-time")}>{new Date(point.plan.planned_for).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong> : null}<div className={scopedClasses(mapStyles, "location-map-card-actions")}><a href={directionsUrl(point)} target="_blank" rel="noreferrer">Directions</a></div></div>
   </article>
 }
 
-export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, selectingForPost = false, selectionFollowsMap = false }) {
+export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, selectingForPost = false, selectionFollowsMap = false, compact = false }) {
   const mapRef = useRef(null)
   const panLayerRef = useRef(null)
   const dragRef = useRef(null)
@@ -459,44 +461,44 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }, () => setLocationState('denied'), { maximumAge: 300000, timeout: 8000 })
   }
 
-  const selectionPanel = <aside className="location-map-side" style={selectionStyle}><PointCard point={selected} /><div className="location-map-list">{visiblePointItems.map(({ point }) => {
+  const selectionPanel = <aside className={scopedClasses(mapStyles, "location-map-side")} style={selectionStyle}><PointCard point={selected} /><div className={scopedClasses(mapStyles, "location-map-list")}>{visiblePointItems.map(({ point }) => {
     const primary = primaryState(point)
-    return <button type="button" className={selectedId === point.id ? 'is-active' : ''} onClick={() => selectPoint(point)} key={point.id}><span className={`is-${primary}`} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>
+    return <button type="button" className={scopedClasses(mapStyles, selectedId === point.id ? 'is-active' : '')} onClick={() => selectPoint(point)} key={point.id}><span className={scopedClasses(mapStyles, `is-${primary}`)} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>
   })}</div></aside>
 
-  return <div className="location-map-workspace">
-    <section className="location-map-toolbar">
-      <div className="location-map-filters" aria-label="Map filters">{['all', 'saved', 'matched', 'planned'].map((state) => <button type="button" className={filter === state ? 'is-active' : ''} onClick={() => changeFilter(state)} key={state}>{state === 'all' ? 'All places' : stateLabel(state)}<strong>{state === 'all' ? allPoints.length : allPoints.filter((point) => point.states.includes(state)).length}</strong></button>)}</div>
-      <div className="location-map-toolbar-actions">
-        {passActive ? <button className={`location-map-heatmap-toggle${heatmapEnabled ? ' is-active' : ''}`} type="button" onClick={() => setHeatmapEnabled((value) => !value)} aria-pressed={heatmapEnabled}><span>PASS</span> Heatmap</button> : null}
-        <button className="location-map-locate" type="button" onClick={locate} disabled={locationState === 'loading'} aria-busy={locationState === 'loading'}>◎ {locationState === 'loading' ? 'Locating…' : 'Near me'}</button>
+  return <div className={scopedClasses(mapStyles, `location-map-workspace${selectionFollowsMap ? ' anchored' : ''}${compact ? ' compact' : ''}`)}>
+    <section className={scopedClasses(mapStyles, "location-map-toolbar")}>
+      <div className={scopedClasses(mapStyles, "location-map-filters")} aria-label="Map filters">{['all', 'saved', 'matched', 'planned'].map((state) => <button type="button" className={scopedClasses(mapStyles, filter === state ? 'is-active' : '')} onClick={() => changeFilter(state)} key={state}>{state === 'all' ? 'All places' : stateLabel(state)}<strong>{state === 'all' ? allPoints.length : allPoints.filter((point) => point.states.includes(state)).length}</strong></button>)}</div>
+      <div className={scopedClasses(mapStyles, "location-map-toolbar-actions")}>
+        {passActive ? <button className={scopedClasses(mapStyles, `location-map-heatmap-toggle${heatmapEnabled ? ' is-active' : ''}`)} type="button" onClick={() => setHeatmapEnabled((value) => !value)} aria-pressed={heatmapEnabled}><span>PASS</span> Heatmap</button> : null}
+        <button className={scopedClasses(mapStyles, "location-map-locate")} type="button" onClick={locate} disabled={locationState === 'loading'} aria-busy={locationState === 'loading'}>◎ {locationState === 'loading' ? 'Locating…' : 'Near me'}</button>
       </div>
     </section>
-    <div className="location-map-layout">
-      <section className="location-map-canvas" ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onKeyDown={handleMapKeyDown} data-map-zoom={zoom} data-map-center-latitude={center.latitude} data-map-center-longitude={center.longitude} tabIndex={0} aria-label="Interactive map of Puddle locations. Use arrow keys to pan and plus or minus to zoom.">
-        <div className="location-map-pan-layer" ref={panLayerRef}>
+    <div className={scopedClasses(mapStyles, "location-map-layout")}>
+      <section className={scopedClasses(mapStyles, "location-map-canvas")} ref={mapRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onKeyDown={handleMapKeyDown} data-map-zoom={zoom} data-map-center-latitude={center.latitude} data-map-center-longitude={center.longitude} tabIndex={0} aria-label="Interactive map of Puddle locations. Use arrow keys to pan and plus or minus to zoom.">
+        <div className={scopedClasses(mapStyles, "location-map-pan-layer")} ref={panLayerRef}>
           {viewportMeasured ? <MapTileLayer center={center} zoom={zoom} viewport={viewport} /> : null}
-          {passActive && heatmapEnabled ? <div className="location-map-heatmap" aria-label="Pass save density heatmap">{visibleHeatmap.map((point) => {
+          {passActive && heatmapEnabled ? <div className={scopedClasses(mapStyles, "location-map-heatmap")} aria-label="Pass save density heatmap">{visibleHeatmap.map((point) => {
             const projected = project(point.latitude, point.longitude, zoom)
             const x = projectedXOffset(projected.x, projectedCenter.x, zoom) + viewport.width / 2
             const y = projected.y - projectedCenter.y + viewport.height / 2
             const ratio = Math.max(.12, (Number(point.save_count) || 1) / maxHeat)
             const size = Math.round(34 + ratio * 74)
-            return <span className="location-map-heat" title={`${point.name}: ${point.save_count} saves`} style={{ width: `${size}px`, height: `${size}px`, opacity: .2 + ratio * .5, transform: `translate3d(${x}px,${y}px,0) translate(-50%,-50%)` }} key={point.id}><b>{point.save_count}</b></span>
+            return <span className={scopedClasses(mapStyles, "location-map-heat")} title={`${point.name}: ${point.save_count} saves`} style={{ width: `${size}px`, height: `${size}px`, opacity: .2 + ratio * .5, transform: `translate3d(${x}px,${y}px,0) translate(-50%,-50%)` }} key={point.id}><b>{point.save_count}</b></span>
           })}</div> : null}
-          <div className="location-map-markers">{visiblePointItems.map(({ point, x, y }) => {
+          <div className={scopedClasses(mapStyles, "location-map-markers")}>{visiblePointItems.map(({ point, x, y }) => {
             const primary = primaryState(point)
-            return <button type="button" className={`location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`} style={{ transform: `translate3d(${x}px,${y}px,0) rotate(-45deg)${selectedId === point.id ? ' scale(1.15)' : ''}` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} data-map-point-id={point.id} key={point.id}><span aria-hidden="true">{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? 'P' : '♥'}</span></button>
+            return <button type="button" className={scopedClasses(mapStyles, `location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`)} style={{ transform: `translate3d(${x}px,${y}px,0) rotate(-45deg)${selectedId === point.id ? ' scale(1.15)' : ''}` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} data-map-point-id={point.id} key={point.id}><span aria-hidden="true">{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? 'P' : '♥'}</span></button>
           })}</div>
           {selectionFollowsMap && selectedAnchor ? selectionPanel : null}
         </div>
-        <div className="location-map-zoom"><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
-        <a className="location-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onPointerDown={(event) => event.stopPropagation()}>© OpenStreetMap contributors</a>
-        {loadCatalogue && filter === 'all' && catalogueState === 'loading' ? <div className="location-map-status" role="status">Loading locations…</div> : null}
-        {loadCatalogue && filter === 'all' && catalogueState === 'error' ? <div className="location-map-status is-error" role="alert"><span>Locations could not be loaded.</span><button type="button" onClick={() => setCatalogueRetry((value) => value + 1)}>Try again</button></div> : null}
-        {loadCatalogue && filter === 'all' && catalogueState === 'ready' && !allPoints.length ? <div className="location-map-status" role="status">No Puddle locations in this map area.</div> : null}
-        {locationState === 'denied' ? <div className="location-map-status is-error" role="status">Location access was not granted.</div> : null}
-        {locationState === 'unavailable' ? <div className="location-map-status is-error" role="status">Location access is unavailable in this browser.</div> : null}
+        <div className={scopedClasses(mapStyles, "location-map-zoom")}><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
+        <a className={scopedClasses(mapStyles, "location-map-attribution")} href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onPointerDown={(event) => event.stopPropagation()}>© OpenStreetMap contributors</a>
+        {loadCatalogue && filter === 'all' && catalogueState === 'loading' ? <div className={scopedClasses(mapStyles, "location-map-status")} role="status">Loading locations…</div> : null}
+        {loadCatalogue && filter === 'all' && catalogueState === 'error' ? <div className={scopedClasses(mapStyles, "location-map-status is-error")} role="alert"><span>Locations could not be loaded.</span><button type="button" onClick={() => setCatalogueRetry((value) => value + 1)}>Try again</button></div> : null}
+        {loadCatalogue && filter === 'all' && catalogueState === 'ready' && !allPoints.length ? <div className={scopedClasses(mapStyles, "location-map-status")} role="status">No Puddle locations in this map area.</div> : null}
+        {locationState === 'denied' ? <div className={scopedClasses(mapStyles, "location-map-status is-error")} role="status">Location access was not granted.</div> : null}
+        {locationState === 'unavailable' ? <div className={scopedClasses(mapStyles, "location-map-status is-error")} role="status">Location access is unavailable in this browser.</div> : null}
       </section>
       {!selectionFollowsMap ? selectionPanel : null}
     </div>

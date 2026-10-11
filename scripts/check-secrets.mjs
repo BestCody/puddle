@@ -26,10 +26,7 @@ const serverOnlyNames = [
   'GLOBAL_LOCATION_SEARCH_URL','OPENSEARCH_URL','OPENSEARCH_USERNAME','OPENSEARCH_PASSWORD','OPENSEARCH_BEARER_TOKEN'
 ]
 const allowedPublicCredentialNames = new Set([
-  'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
-  // Google Maps JavaScript keys are intentionally delivered to browsers. The deployed
-  // key must be restricted by HTTP referrer and to the Maps JavaScript API in Google Cloud.
-  'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'
+  'NEXT_PUBLIC_TURNSTILE_SITE_KEY'
 ])
 const findings = []
 

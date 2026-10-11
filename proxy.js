@@ -9,7 +9,7 @@ import { SERVER_LATENCY_BUDGET_MS, appendServerTiming, elapsedMs, latencyStart, 
 const protectedPrefixes = ['/dashboard','/discover','/matches','/membership','/map','/plans','/create','/studio','/report','/profile','/onboarding','/account','/change-email','/settings','/appeals']
 const productRoutePrefixes = ['/discover','/map','/plans','/matches','/membership','/profile','/create']
 const authOnlyPaths = ['/signup','/forgot-password']
-const staticLandingPaths = new Set(['/','/maintenance.html','/landing.html','/index.html','/responsive-landing'])
+const staticLandingPaths = new Set(['/','/landing.html','/index.html'])
 const cacheablePublicPaths = new Set([...staticLandingPaths, '/privacy', '/terms'])
 const authCanonicalPaths = new Set(['/signup','/forgot-password','/verify-email','/update-password','/change-email','/auth/callback','/auth/confirm','/auth/error'])
 const publicNoSessionPaths = new Set([...cacheablePublicPaths, '/verify-email', '/auth/callback', '/auth/confirm', '/auth/error'])
@@ -20,8 +20,6 @@ const moderationExemptApiPrefixes = [
   '/api/security',
   '/api/telemetry',
   '/api/health',
-  '/api/system',
-  '/api/location-photos',
   '/api/public-location',
   '/api/billing/webhook'
 ]

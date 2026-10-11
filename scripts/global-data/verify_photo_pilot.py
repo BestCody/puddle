@@ -8,7 +8,6 @@ import io
 import json
 import os
 import re
-import urllib.error
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 

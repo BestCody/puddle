@@ -1,4 +1,6 @@
 "use client"
+import logoStyles from "@/components/puddle-logo.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useLayoutEffect, useRef } from 'react'
 
@@ -47,7 +49,7 @@ export function AppearanceLogo({ initialAppearance = 'light' }) {
 
   return <span
     ref={elementRef}
-    className="puddle-logo puddle-logo-appearance"
+    className={scopedClasses(logoStyles, "puddle-logo puddle-logo-appearance")}
     role="img"
     aria-label="Puddle"
   >

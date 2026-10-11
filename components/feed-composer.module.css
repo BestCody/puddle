@@ -1,0 +1,302 @@
+.puddle-discover-create-dock {
+  position: fixed;
+  z-index: 100;
+  left: calc(50% + var(--figma-shell-sidebar, 0rem) / 2);
+  bottom: clamp(1rem, 3vw, 2.75rem);
+  width: min(26.25rem, calc(100vw - var(--figma-shell-sidebar, 0rem) - 3rem));
+  min-height: 3.25rem;
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+  transition: width 420ms cubic-bezier(.16,1.22,.3,1);
+}
+
+.puddle-discover-create-trigger {
+  width: 100%;
+  min-height: 3.25rem;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .25rem .3125rem;
+  border: .125rem solid var(--shell-border, #e6e6e6);
+  border-radius: 1.5625rem;
+  background: var(--shell-surface, #fff);
+  color: var(--shell-muted, #b0b0b0);
+  box-shadow: 0 .25rem 0 rgb(0 0 0 / .1);
+  cursor: pointer;
+  font: 600 1rem/1 var(--font-sans);
+  text-align: left;
+}
+
+.puddle-discover-create-avatar {
+  width: 1.9375rem;
+  height: 1.9375rem;
+  flex: 0 0 1.9375rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--shell-hover, #ececec);
+  color: var(--shell-muted, #555);
+  font: 800 .6875rem/1 var(--font-sans);
+}
+
+.puddle-discover-create-avatar > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.puddle-discover-create-placeholder {
+  flex: 1;
+  min-width: 0;
+}
+
+.puddle-discover-create-arrow, .puddle-discover-create-submit {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: .125rem solid #f2c035;
+  border-radius: 50%;
+  background: var(--shell-surface, #fff);
+  color: #e3a800;
+  font: 800 1.375rem/1 var(--font-sans);
+}
+
+.puddle-discover-create-form {
+  display: none;
+  min-height: 0;
+  max-height: calc(100dvh - 5.75rem);
+  grid-template-rows: auto auto minmax(5.75rem, 1fr) auto;
+  gap: .625rem;
+  overflow: auto;
+  padding: .875rem 1.125rem 1.125rem;
+  border: .15625rem solid var(--shell-border, #e6e6e6);
+  border-radius: 1.5625rem;
+  background: var(--shell-surface, #fff);
+  color: var(--shell-text, #111);
+  box-shadow: 0 .25rem 0 rgb(0 0 0 / .1), 0 1.125rem 3rem rgb(0 0 0 / .1);
+}
+
+.puddle-discover-create-dock:global(.is-open) {
+  width: min(43.5625rem, calc(100vw - var(--figma-shell-sidebar, 0rem) - 4rem));
+}
+
+.puddle-discover-create-dock:global(.is-open) .puddle-discover-create-trigger {
+  display: none;
+}
+
+.puddle-discover-create-dock:global(.is-open) .puddle-discover-create-form {
+  display: grid;
+  min-height: min(25.375rem, calc(100dvh - 5.75rem));
+}
+
+.puddle-discover-create-header {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .5625rem;
+}
+
+.puddle-discover-create-visibility {
+  min-width: 0;
+  min-height: 2.0625rem;
+  display: flex;
+  align-items: center;
+  padding: .1875rem;
+  margin: 0 0 0 auto;
+  border: .09375rem solid var(--shell-border, #d9d9d9);
+  border-radius: 999rem;
+  background: var(--shell-surface, #fff);
+}
+
+.puddle-discover-create-visibility label {
+  position: relative;
+  min-height: 1.5625rem;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.puddle-discover-create-visibility input {
+  position: absolute;
+  opacity: 0;
+}
+
+.puddle-discover-create-visibility span {
+  min-height: 1.5625rem;
+  display: grid;
+  place-items: center;
+  padding-inline: .625rem;
+  border-radius: 999rem;
+  color: var(--shell-muted, #858585);
+  font: 700 .68125rem/1 var(--font-sans);
+  white-space: nowrap;
+}
+
+.puddle-discover-create-visibility input:checked + span {
+  background: #f2c035;
+  color: #111;
+  box-shadow: 0 .1875rem 0 rgb(0 0 0 / .1);
+}
+
+.puddle-discover-create-visibility input:focus-visible + span {
+  outline: .125rem solid currentColor;
+  outline-offset: .125rem;
+}
+
+.puddle-discover-create-close {
+  width: 2.125rem;
+  height: 2.125rem;
+  flex: 0 0 2.125rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: .09375rem solid var(--shell-border, #e2e2e2);
+  border-radius: 50%;
+  background: var(--shell-surface, #fff);
+  color: var(--shell-muted, #858585);
+  cursor: pointer;
+  font: 500 1.375rem/1 var(--font-sans);
+}
+
+.puddle-discover-create-submit {
+  width: 2.375rem;
+  height: 2.375rem;
+  flex-basis: 2.375rem;
+  cursor: pointer;
+}
+
+.puddle-discover-create-submit:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.puddle-discover-create-title, .puddle-discover-create-description, .puddle-discover-create-place {
+  min-width: 0;
+  display: block;
+}
+
+.puddle-discover-create-title input, .puddle-discover-create-description textarea {
+  width: 100%;
+  padding: 0 .125rem;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-sans);
+}
+
+.puddle-discover-create-title input {
+  min-height: 3.125rem;
+  font-size: clamp(2.125rem, 4.2vw, 2.9375rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: .02em;
+}
+
+.puddle-discover-create-description textarea {
+  height: 100%;
+  min-height: 5.75rem;
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.puddle-discover-create-title input::placeholder, .puddle-discover-create-description textarea::placeholder {
+  color: var(--shell-muted, #b7b7b7);
+}
+
+.puddle-discover-create-footer {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+
+.puddle-discover-create-place {
+  flex: 1;
+}
+
+.puddle-discover-create-place > span, .puddle-discover-create-footer > small {
+  display: block;
+  margin-bottom: .3125rem;
+  color: var(--shell-muted, #858585);
+  font: 700 .625rem/1.2 var(--figma-mono);
+}
+
+.puddle-discover-create-place select {
+  width: 100%;
+  min-height: 2.625rem;
+  padding: .5rem .75rem;
+  border: .09375rem solid var(--shell-border, #dedede);
+  border-radius: .875rem;
+  background: var(--shell-surface, #fff);
+  color: inherit;
+  font: 700 .8125rem/1.2 var(--font-sans);
+}
+
+.puddle-discover-create-footer > small {
+  max-width: 11.25rem;
+  margin: 0 0 .625rem;
+}
+
+@media (max-width: 47.5rem) {
+
+  .puddle-discover-create-dock {
+    left: 50%;
+    bottom: var(--puddle-mobile-content-bottom);
+    width: calc(100vw - 2rem);
+  }
+
+  .puddle-discover-create-dock:global(.is-open) {
+    width: calc(100vw - 1.5rem);
+  }
+
+  .puddle-discover-create-form, .puddle-discover-create-dock:global(.is-open) .puddle-discover-create-form {
+    min-height: min(25.625rem, calc(100dvh - 8.875rem));
+    max-height: calc(100dvh - 8.875rem);
+    padding: .8125rem .875rem .9375rem;
+    border-radius: 1.375rem;
+  }
+
+  .puddle-discover-create-title input {
+    font-size: clamp(2rem, 10vw, 2.6875rem);
+  }
+
+  .puddle-discover-create-description textarea {
+    font-size: 1.0625rem;
+  }
+
+  .puddle-discover-create-header {
+    gap: .375rem;
+  }
+
+  .puddle-discover-create-visibility span {
+    padding-inline: .375rem;
+    font-size: .6125rem;
+  }
+
+  .puddle-discover-create-close {
+    width: 1.9375rem;
+    height: 1.9375rem;
+    flex-basis: 1.9375rem;
+  }
+
+  .puddle-discover-create-submit {
+    width: 2.1875rem;
+    height: 2.1875rem;
+    flex-basis: 2.1875rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .puddle-discover-create-dock {
+    transition: none;
+  }
+}

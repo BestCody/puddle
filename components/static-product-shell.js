@@ -1,3 +1,5 @@
+import shellStyles from "./product-shell.module.css"
+import { scopedClasses } from "./scoped-classes"
 import Link from 'next/link'
 import { FigmaDashboardSidebar } from './figma-dashboard-sidebar'
 import { MainContentTransition } from './main-content-transition'
@@ -10,11 +12,11 @@ import { signOut } from '@/app/auth/actions'
 // already authenticated the request, while route-specific identity is loaded
 // by the feed API after the shell is usable.
 export function StaticProductShell({ children }) {
-  return <div className="figma-dashboard-shell" data-appearance="light">
+  return <div className={scopedClasses(shellStyles, "figma-dashboard-shell")} data-appearance="light">
     <FigmaDashboardSidebar signOutAction={signOut} />
 
-    <div className="figma-dashboard-stage">
-      <details className="figma-dashboard-account-menu">
+    <div className={scopedClasses(shellStyles, "figma-dashboard-stage")}>
+      <details className={scopedClasses(shellStyles, "figma-dashboard-account-menu")}>
         <summary aria-label="Open profile menu"><span aria-hidden="true"><i /><i /><i /></span></summary>
         <div className="profile-menu-panel">
           <strong>Puddle person</strong>
@@ -24,7 +26,7 @@ export function StaticProductShell({ children }) {
           <form action={signOut}><button type="submit">Sign out</button></form>
         </div>
       </details>
-      <main className="figma-dashboard-main"><MainContentTransition>{children}</MainContentTransition></main>
+      <main className={scopedClasses(shellStyles, "figma-dashboard-main")}><MainContentTransition>{children}</MainContentTransition></main>
     </div>
 
     <ProductNav mobile />

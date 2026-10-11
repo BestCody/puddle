@@ -4,19 +4,6 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
-test('public catalogue has a live route smoke rather than configuration-only health', async () => {
-  const [smoke, workflow, health] = await Promise.all([
-    read('tests/live/public-catalogue.spec.mjs'),
-    read('.github/workflows/live-production-smoke.yml'),
-    read('app/api/health/route.js')
-  ])
-  assert.match(smoke, /\/places\/in\/toronto/)
-  assert.match(smoke, /\/date-ideas\/toronto/)
-  assert.match(smoke, /placeResponse\?\.status\(\)/)
-  assert.match(workflow, /tests\/live\/public-catalogue\.spec\.mjs/)
-  assert.match(health, /scope: 'liveness'/)
-})
-
 test('public sitemap avoids known noindex places and fabricated modification dates', async () => {
   const [sitemap, placePage, listing] = await Promise.all([
     read('app/sitemap.js'),

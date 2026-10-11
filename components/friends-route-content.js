@@ -1,4 +1,6 @@
 'use client'
+import friendsStyles from "@/components/friends.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import dynamic from 'next/dynamic'
 
@@ -7,7 +9,7 @@ const FigmaSocialHub = dynamic(() => import('./figma-social-hub').then((module) 
 const PassMessageSearch = dynamic(() => import('./pass-message-search').then((module) => module.PassMessageSearch))
 
 export function FriendsRouteContent({ snapshot, tab, conversationId }) {
-  return <div className="figma-friends-pass-wrapper">
+  return <div className={scopedClasses(friendsStyles, "figma-friends-pass-wrapper")}>
     {tab === 'add' && snapshot.passActive ? <PassMessageSearch enabled /> : null}
     {tab === 'messages'
       ? <FigmaMessagesRealtime initialSnapshot={snapshot} conversationId={conversationId} />

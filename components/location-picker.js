@@ -1,4 +1,6 @@
 "use client"
+import locationPickerStyles from "@/components/location-picker.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useEffect, useState } from 'react'
 import { csrfFetch } from '@/lib/security/csrf-client'
@@ -51,7 +53,7 @@ function normalizedResult(result, source, accuracy = '') {
   }
 }
 
-export function LocationPicker({ profile = {}, error = '', onLocationChange }) {
+export function LocationPicker({ profile = {}, error = '', onLocationChange, variant = 'default' }) {
   const [location, setLocation] = useState(() => initialLocation(profile))
   const [query, setQuery] = useState(location.label || location.city || '')
   const [results, setResults] = useState([])
@@ -138,23 +140,23 @@ export function LocationPicker({ profile = {}, error = '', onLocationChange }) {
     }, { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 })
   }
 
-  return <div className="location-picker">
-    <label className="field location-search-field">City or town
-      <div className="location-search-row">
+  return <div className={scopedClasses(locationPickerStyles, `location-picker${variant === 'onboarding' ? ' onboarding' : ''}`)}>
+    <label className={scopedClasses(locationPickerStyles, "field location-search-field")}>City or town
+      <div className={scopedClasses(locationPickerStyles, "location-search-row")}>
         <input value={query} onChange={(event) => editQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); search() } }} placeholder="Search anywhere in the world" autoComplete="off" maxLength={160} aria-invalid={Boolean(visibleError)} aria-describedby="location-picker-error" />
         <button type="button" onClick={search} disabled={busy || query.trim().length < 2}>Search</button>
       </div>
     </label>
-    <button className="location-current-button" type="button" onClick={useCurrentLocation} disabled={busy}>Use my current location</button>
+    <button className={scopedClasses(locationPickerStyles, "location-current-button")} type="button" onClick={useCurrentLocation} disabled={busy}>Use my current location</button>
 
-    {results.length ? <div className="location-results" role="listbox" aria-label="Location results">
+    {results.length ? <div className={scopedClasses(locationPickerStyles, "location-results")} role="listbox" aria-label="Location results">
       {results.map((result) => <button type="button" role="option" onClick={() => select(result)} key={`${result.providerId || result.label}:${result.latitude}:${result.longitude}`}>
         <strong>{result.city}</strong><span>{[result.region, result.country].filter(Boolean).join(', ')}</span>
       </button>)}
     </div> : null}
 
-    {location.latitude !== '' && location.longitude !== '' ? <div className="location-selected"><span>Selected location</span><strong>{location.label}</strong></div> : null}
-    <p className="location-picker-message" aria-live="polite">{message}</p>
+    {location.latitude !== '' && location.longitude !== '' ? <div className={scopedClasses(locationPickerStyles, "location-selected")}><span>Selected location</span><strong>{location.label}</strong></div> : null}
+    <p className={scopedClasses(locationPickerStyles, "location-picker-message")} aria-live="polite">{message}</p>
     <small className="field-error" id="location-picker-error" aria-live="polite">{visibleError}</small>
 
     <input type="hidden" name="city" value={location.city} />

@@ -1,4 +1,6 @@
 "use client"
+import passExtrasStyles from "@/components/pass-extras.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -67,13 +69,13 @@ export function PassNotificationAlertControl({ enabled }) {
     window.dispatchEvent(new Event(PERMISSION_EVENT))
   }
 
-  if (!enabled) return <section className="pass-notification-alert-control is-locked">
+  if (!enabled) return <section className={scopedClasses(passExtrasStyles, "pass-notification-alert-control is-locked")}>
     <span>PASS</span>
     <div><strong>Notification alerts</strong><p>Browser and desktop alerts are included with Puddle Pass.</p></div>
     <Link href="/membership">View Pass</Link>
   </section>
 
-  return <section className="pass-notification-alert-control">
+  return <section className={scopedClasses(passExtrasStyles, "pass-notification-alert-control")}>
     <span>PASS</span>
     <div><strong>Notification alerts</strong><p>Get browser or desktop alerts for enabled Puddle notifications while Puddle is open.</p></div>
     {permission === 'granted' ? <b>Enabled</b>

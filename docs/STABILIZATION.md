@@ -1,30 +1,15 @@
 # Repository stabilization
 
-## What changed
+The retired bootstrap build unpacked generated source from compressed chunks. The repository now contains direct Next.js source and builds with `next build`; generated bootstrap source must not return.
 
-The interrupted production rewrite stored generated source inside compressed `.bootstrap/chunk*` files and unpacked it during every build. That made the repository difficult to inspect, caused deployment failures, and prevented normal source review.
+## Landing page
 
-The stabilized repository now uses direct Next.js source files. The build command is simply `next build`.
+The canonical marketing files are `public/landing.html`, `public/landing.css`, and `public/app.js`. The root rewrite serves `/landing.html` without generating a second landing implementation. The interactive phones use the existing product components with isolated demo styles and deterministic data.
 
-## Landing-page preservation
+## Checks and deployment
 
-The public landing files are retained as the canonical serving files:
+`npm run check` covers source syntax, active architecture/security contracts, landing assets, and unit/integration behavior. `npm run e2e:visual` exercises presentation families using an isolated local fixture; it does not prove authenticated production data flows.
 
-- `public/landing.html`
-- `public/landing.css`
-- `public/app.js`
+The app runs as a standalone Next.js image on Contabo behind Caddy. A push to GitHub is not a machine deployment. Follow the [self-hosted runbook](../deploy/self-host/README.md) to release a reviewed revision.
 
-`next.config.mjs` rewrites only `/` to `/landing.html`; it does not recreate or transform the landing-page HTML, CSS, or JavaScript.
-
-## Deployment checks
-
-- `npm run check` verifies readable source syntax.
-- It verifies the public landing files exactly equal the canonical originals.
-- It rejects a reintroduced `.bootstrap` directory.
-- It verifies the direct Next.js build command and root rewrite.
-- Vercel uses its native Next.js framework integration.
-
-## Health endpoints
-
-- `GET /api/health` returns structured JSON.
-- `GET /status` returns a lightweight human-readable status page.
+`/api/health` and `/status` are liveness/configuration surfaces, not substitutes for testing the affected user journey.

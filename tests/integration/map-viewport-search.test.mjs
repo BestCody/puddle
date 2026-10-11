@@ -5,19 +5,17 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('map catalogue loading is viewport-bounded through the selected global search backend', async () => {
-  const [facadeSource, objectSource, shardSource, routeSource, snapshotSource, mapSource, mapStyles, dataSource, pageSource] = await Promise.all([
+  const [facadeSource, objectSource, shardSource, routeSource, snapshotSource, mapSource, dataSource, pageSource] = await Promise.all([
     read('lib/app/global-location-search.js'),
     read('lib/app/object-location-search.js'),
     read('lib/app/location-search-shards.js'),
     read('app/api/map/viewport/route.js'),
     read('app/api/map/snapshot/route.js'),
     read('components/location-map.js'),
-    read('app/mobile-discover-map-polish.css'),
     read('lib/app/location-map-data.js'),
     read('components/map-route-client.js')
   ])
 
-  assert.doesNotMatch(facadeSource, /GLOBAL_LOCATION_SEARCH_BACKEND|opensearch/i)
   assert.match(facadeSource, /searchGlobalLocationsInViewport/)
   assert.match(facadeSource, /searchObjectGlobalLocationsInViewport/)
   assert.match(facadeSource, /fails closed/)
@@ -33,7 +31,6 @@ test('map catalogue loading is viewport-bounded through the selected global sear
 
   assert.match(routeSource, /searchGlobalLocationsInViewport/)
   assert.match(routeSource, /Cache-Control': 'private, no-store'/)
-  assert.doesNotMatch(routeSource, /public_map_location_search_v1/)
   assert.match(snapshotSource, /getLocationMapSnapshot/)
   assert.match(snapshotSource, /Cache-Control': 'private, no-store'/)
   assert.match(snapshotSource, /onboarding_required/)
@@ -77,36 +74,16 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(mapSource, /suppressClickUntilRef\.current > Date\.now\(\)/)
   assert.match(mapSource, /data-map-point-id=\{point\.id\}/)
   assert.match(mapSource, /addEventListener\('wheel', onWheel, \{ passive: false \}\)/)
-  assert.doesNotMatch(mapSource, /onWheel=\{wheel\}/)
-  assert.match(mapStyles, /\.location-map-canvas \{ overscroll-behavior: none; \}/)
-  assert.doesNotMatch(mapStyles, /location-map-cluster|is-spiderfied/)
-  assert.match(mapStyles, /location-map-status\.is-error \{ color: #8b2434; pointer-events: auto; \}/)
-  assert.match(mapStyles, /\.location-map-canvas:focus-visible[\s\S]*outline: 3px solid #171114;/)
-  assert.match(mapStyles, /\.location-map-marker \{ rotate: none; \}/)
-  assert.match(mapStyles, /\.location-map-canvas\.is-dragging/)
   assert.match(mapSource, /translate3d\(\$\{x\}px,\$\{y\}px,0\) rotate\(-45deg\)/)
-  assert.doesNotMatch(mapSource, /clusterCellSize|MIN_CLUSTER_CELL_SIZE|expandedClusterKey|markerGroups|openCluster|spiderfied|location-map-cluster/)
-  assert.doesNotMatch(mapSource, /Open details/)
   assert.match(mapSource, /Directions<\/a>/)
   assert.match(pageSource, /<DiscoverSearchOverlay initialQuery=\{query\} mapMode \/>/)
   assert.match(pageSource, /ariaLabel="Feed or map"/)
   assert.match(pageSource, /selectionFollowsMap/)
 
-  const mapFeedStyles = await read('app/(product)/map/MapFeed.module.css')
-  assert.match(mapFeedStyles, /location-map-side\) \{[\s\S]*display: flex !important/)
-  assert.match(mapFeedStyles, /location-map-side \.location-map-list\) \{[\s\S]*display: none/)
-  assert.match(mapFeedStyles, /inset-block-start: var\(--location-map-selection-y\)/)
-  assert.match(mapFeedStyles, /inset-inline-start: var\(--location-map-selection-x\)/)
-  assert.match(mapFeedStyles, /\.mapCanvas\s*\{[^}]*container-type:\s*size;/s)
-  assert.doesNotMatch(mapFeedStyles, /\.composer\s*\{/)
-  assert.doesNotMatch(mapFeedStyles, /\.map(?:Puddle|Card|Search)\b/)
 
-  assert.doesNotMatch(dataSource, /public_map_location_search_v1/)
-  assert.doesNotMatch(dataSource, /rpcOr|globalLocationsOr/)
   assert.doesNotMatch(dataSource, /searchGlobalLocations/)
   assert.match(pageSource, /loadCatalogue/)
   assert.match(pageSource, /\/api\/map\/snapshot/)
-  assert.doesNotMatch(pageSource, /Search all Puddle locations/)
 })
 
 test('selecting a map location preserves the current viewport', async () => {

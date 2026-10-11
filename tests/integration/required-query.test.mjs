@@ -13,13 +13,8 @@ test('required database reads preserve empty results but propagate failures', as
   await assert.rejects(requiredQuery(Promise.reject(databaseError)), databaseError)
 })
 
-test('dashboard bootstrap no longer performs a staff-role lookup', async () => {
-  const [runtime, migration] = await Promise.all([
-    read('components/dashboard-runtime.js'),
-    read('supabase/migrations/20261011090000_remove_admin_dashboard_bootstrap.sql')
-  ])
-  assert.doesNotMatch(runtime, /showAdmin|href="\/admin"/)
-  assert.doesNotMatch(migration, /'show_admin'|v_access\s*:=/)
+test('dashboard bootstrap exposes notification and membership state with restricted grants', async () => {
+  const migration = await read('supabase/migrations/20261011090000_remove_admin_dashboard_bootstrap.sql')
   assert.match(migration, /'unread_notifications'/)
   assert.match(migration, /'pass_active'/)
   assert.match(migration, /revoke execute on function/)

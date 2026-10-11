@@ -25,29 +25,14 @@ test('the standalone image embeds a revision that the post-deploy gate verifies'
   assert.doesNotMatch(workflow, /sleep 45|branches: \[main\]/)
 })
 
-test('provider-specific runtime integrations and managed-only jobs are retired', async () => {
-  const [pkg, layout, backfill, indexnow, env] = await Promise.all([
-    read('package.json'),
+test('self-hosted runtime wires telemetry, direct Postgres operations and POST-only IndexNow', async () => {
+  const [layout, backfill, indexnow] = await Promise.all([
     read('app/layout.js'),
     read('scripts/backfill-location-ref-search.mjs'),
-    read('app/api/seo/indexnow/route.js'),
-    read('.env.example')
+    read('app/api/seo/indexnow/route.js')
   ])
-  const dependencies = JSON.parse(pkg).dependencies
-  assert.equal(dependencies['@vercel/analytics'], undefined)
-  assert.equal(dependencies['@vercel/speed-insights'], undefined)
-  assert.equal(JSON.parse(pkg).scripts['vercel-build'], undefined)
   assert.match(layout, /ClientTelemetry/)
   assert.match(backfill, /connectSelfHostPostgres/)
-  assert.doesNotMatch(backfill, /SUPABASE_ACCESS_TOKEN|createManagementQuery/)
   assert.match(indexnow, /export const POST = submit/)
   assert.doesNotMatch(indexnow, /export const GET/)
-  assert.doesNotMatch(env, /\.supabase\.co|stored in B2/)
-  await assert.rejects(read('vercel.json'), { code: 'ENOENT' })
-})
-
-test('isolated browser E2E configures an explicit internal Supabase route', async () => {
-  const workflow = await read('.github/workflows/e2e.yml')
-  assert.match(workflow, /echo "NEXT_PUBLIC_SUPABASE_URL=\$API_URL" >> "\$GITHUB_ENV"/)
-  assert.match(workflow, /echo "SUPABASE_INTERNAL_URL=\$API_URL" >> "\$GITHUB_ENV"/)
 })

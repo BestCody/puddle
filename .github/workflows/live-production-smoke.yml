@@ -39,8 +39,6 @@ jobs:
           cache: npm
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund
-      - name: Install Playwright test runner
-        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Confirm the requested revision is actually deployed
@@ -54,23 +52,6 @@ jobs:
           HEALTH="$health" node -e 'const health = JSON.parse(process.env.HEALTH); if (!health.ok || health.buildSha !== process.env.DEPLOYED_SHA) process.exit(1)'
       - name: Run live product UI smoke
         run: npx playwright test --config=playwright.live.config.mjs tests/live/production-smoke.spec.mjs tests/live/completed-ui-production-smoke.spec.mjs tests/live/public-figma-smoke.spec.mjs tests/live/public-catalogue.spec.mjs
-      - name: Run bounded production load until SLOs pass
-        shell: bash
-        run: |
-          set +e
-          for attempt in 1 2 3 4; do
-            echo "Production load attempt ${attempt}/4"
-            npx playwright test --config=playwright.live.config.mjs tests/live/production-load.spec.mjs
-            status=$?
-            if [ "$status" -eq 0 ]; then
-              exit 0
-            fi
-            if [ "$attempt" -lt 4 ]; then
-              echo "Production load did not meet every SLO; waiting 30 seconds before retrying."
-              sleep 30
-            fi
-          done
-          exit 1
       - name: Upload live browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v7

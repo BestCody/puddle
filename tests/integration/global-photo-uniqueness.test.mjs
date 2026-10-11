@@ -14,9 +14,7 @@ test('existing canonical photos are reconciled once and retired identities canno
   const indexer = await source('scripts/global-data/build_object_search_index.py')
   const registration = await source('supabase/migrations/10079_reconcile_existing_global_photo_claims.sql')
   const candidateRegistry = await source('supabase/migrations/20260826200000_global_photo_candidate_registry.sql')
-  const retirement = await source('supabase/migrations/20260819062549_retire_legacy_photo_source_helpers.sql')
 
-  assert.doesNotMatch(runner, /sync_retired_photo_exclusions\.py|backfill_global_photo_fingerprints\.py/)
   assert.match(runner, /reconcile_existing_global_photo_claims\.py/)
   assert.ok(runner.indexOf('reconcile_existing_global_photo_claims.py') < runner.indexOf('materialize_photo_candidates.py'))
 
@@ -37,8 +35,6 @@ test('existing canonical photos are reconciled once and retired identities canno
   assert.match(registration, /bit_count\(g\.perceptual_hash # v_perceptual\)<=5/)
   assert.match(registration, /pg_advisory_xact_lock\(19370001,v_lock_key\)/)
 
-  assert.match(retirement, /drop function if exists public\.list_retired_b2_photo_exclusions_v1\(integer\)/)
-  assert.match(retirement, /drop function if exists public\.retire_duplicate_global_photo_claim_v1\(uuid, text\)/)
   assert.match(materializer, /photo_exclusions/)
   assert.match(materializer, /x\.location_id=e\.location_id AND x\.content_hash=e\.content_hash/)
   assert.match(materializer, /def object_exists\(key\):/)

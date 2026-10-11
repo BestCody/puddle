@@ -1,3 +1,5 @@
+import authStyles from "@/components/auth.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
@@ -21,12 +23,12 @@ export default async function ChangeEmailPage({ searchParams }) {
     >
       <AuthMessage searchParams={searchParams} />
 
-      <div className="setup-note">
+      <div className={scopedClasses(authStyles, "setup-note")}>
         <strong>Current email</strong>
         <div>{user.email || 'Unavailable'}</div>
       </div>
 
-      <form className="auth-form" action={updateEmail}>
+      <form className={scopedClasses(authStyles, "auth-form")} action={updateEmail}>
         <label className="field">
           New email address
           <input
@@ -44,7 +46,7 @@ export default async function ChangeEmailPage({ searchParams }) {
         </SubmitButton>
       </form>
 
-      <div className="auth-links">
+      <div className={scopedClasses(authStyles, "auth-links")}>
         <Link href="/account">← Back to account settings</Link>
       </div>
     </AuthShell>

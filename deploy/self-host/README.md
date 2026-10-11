@@ -3,8 +3,8 @@
 Puddle's public DNS now points to the Contabo host. Caddy serves `puddle.you`,
 `www.puddle.you`, and `api.puddle.you` over HTTPS. The Next.js app, private
 SeaweedFS object store, and pinned self-hosted Supabase stack run on that host.
-The public root intentionally shows the maintenance page; that is a product
-setting, not a pending infrastructure migration. This runbook describes the
+The repository configures the public root to serve the normal marketing landing
+page; deploy the updated revision to apply that entry point. This runbook describes the
 running stack. The completed source-transfer tooling has been retired from the
 working tree; its history remains available in Git.
 
@@ -60,8 +60,8 @@ curl --fail --silent --show-error https://puddle.you/api/health
 `/api/health` is a liveness/configuration check, **not** proof that login,
 search, photos, messaging, uploads, email, and payments work. Verify the
 relevant user flow after a release. The response's `buildSha` should equal the
-release's full commit SHA. `puddle.you/` is expected to show maintenance
-until the product is deliberately reopened.
+release's full commit SHA. After deploying the landing restoration revision,
+`puddle.you/` should serve the normal landing page, not the retired alpha announcement.
 
 For a failed scheduled job, inspect the specific unit, for example:
 

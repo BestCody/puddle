@@ -1,4 +1,6 @@
 "use client"
+import shellStyles from "./product-shell.module.css"
+import { scopedClasses } from "./scoped-classes"
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
@@ -13,7 +15,7 @@ export function beginMainContentLoading() {
 
 function Spinner() {
   return (
-    <svg className="puddle-main-spinner" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className={scopedClasses(shellStyles, "puddle-main-spinner")} viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.16" />
       <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.7s" repeatCount="indefinite" />
@@ -40,10 +42,10 @@ export function MainContentTransition({ children }) {
   }, [])
 
   return (
-    <div className={`puddle-main-transition${loading ? ' is-loading' : ''}`} data-route-path={pathname || undefined} aria-busy={loading || undefined}>
-      <div className="puddle-main-transition-content">{children}</div>
+    <div className={scopedClasses(shellStyles, `puddle-main-transition${loading ? ' is-loading' : ''}`)} data-route-path={pathname || undefined} aria-busy={loading || undefined}>
+      <div className={scopedClasses(shellStyles, "puddle-main-transition-content")}>{children}</div>
       {loading ? (
-        <div className="puddle-main-transition-loader" role="status" aria-label="Loading">
+        <div className={scopedClasses(shellStyles, "puddle-main-transition-loader")} role="status" aria-label="Loading">
           <Spinner />
         </div>
       ) : null}

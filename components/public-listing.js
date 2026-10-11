@@ -1,3 +1,5 @@
+import publicStyles from "@/components/public-places.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { dateIdeasPath } from '@/lib/app/date-ideas'
 import { marketPath } from '@/lib/app/seo-places'
@@ -8,29 +10,29 @@ import { PhotoFrame } from './photo-frame'
 function human(value) { return String(value || '').replaceAll('_', ' ') }
 
 export function PublicHeader() {
-  return <header className="public-header">
+  return <header className={scopedClasses(publicStyles, "public-header")}>
     <PuddleLogo />
-    <nav><Link href="/">Home</Link><Link href="/landing.html">Sign in</Link><Link className="public-primary-link" href="/signup">Register</Link></nav>
+    <nav><Link href="/">Home</Link><Link href="/landing.html">Sign in</Link><Link className={scopedClasses(publicStyles, "public-primary-link")} href="/signup">Register</Link></nav>
   </header>
 }
 
 function HostChip({ host }) {
   return host
-    ? <div className="public-host-chip">
+    ? <div className={scopedClasses(publicStyles, "public-host-chip")}>
       {host.logo_url
         ? <PhotoFrame as="span" src={host.logo_url} alt={`${host.name} logo`} unavailableText={host.name.slice(0, 1).toUpperCase()} loadingText="" />
         : <span>{host.name.slice(0, 1).toUpperCase()}</span>}
       <div><strong>{host.name}</strong><small>{host.verification_status === 'verified' ? '✓ Verified host' : human(host.kind)}</small></div>
     </div>
-    : <div className="public-host-chip"><span>P</span><div><strong>Puddle member</strong><small>Personal host</small></div></div>
+    : <div className={scopedClasses(publicStyles, "public-host-chip")}><span>P</span><div><strong>Puddle member</strong><small>Personal host</small></div></div>
 }
 
 function Gallery({ items = [], title }) {
   if (!items.length) return null
-  return <section className="public-section">
-    <div className="public-section-heading"><span className="section-pill section-pill-yellow">Gallery</span><h2>{title}</h2></div>
-    <div className="public-gallery">{items.map((item) => <figure key={item.id}>
-      <PhotoFrame as="span" className="public-gallery-photo" src={item.url} alt={item.caption || 'Gallery photo'} unavailableText="Photo unavailable" />
+  return <section className={scopedClasses(publicStyles, "public-section")}>
+    <div className={scopedClasses(publicStyles, "public-section-heading")}><span className="section-pill section-pill-yellow">Gallery</span><h2>{title}</h2></div>
+    <div className={scopedClasses(publicStyles, "public-gallery")}>{items.map((item) => <figure key={item.id}>
+      <PhotoFrame as="span" className={scopedClasses(publicStyles, "public-gallery-photo")} src={item.url} alt={item.caption || 'Gallery photo'} unavailableText="Photo unavailable" />
       {item.caption ? <figcaption>{item.caption}</figcaption> : null}
     </figure>)}</div>
   </section>
@@ -39,12 +41,12 @@ function Gallery({ items = [], title }) {
 function SimilarGrid({ items = [] }) {
   const places = items.filter((item) => item && item.content_kind !== 'event' && !item.title)
   if (!places.length) return null
-  return <section className="public-section">
-    <div className="public-section-heading"><span className="section-pill section-pill-mint">Keep exploring</span><h2>Similar splashes.</h2></div>
-    <div className="public-similar-grid">{places.map((item) => <PhotoFrame
+  return <section className={scopedClasses(publicStyles, "public-section")}>
+    <div className={scopedClasses(publicStyles, "public-section-heading")}><span className="section-pill section-pill-mint">Keep exploring</span><h2>Similar splashes.</h2></div>
+    <div className={scopedClasses(publicStyles, "public-similar-grid")}>{places.map((item) => <PhotoFrame
       as="a"
       href={`/places/${item.slug}`}
-      className="public-similar-card"
+      className={scopedClasses(publicStyles, "public-similar-card")}
       src={item.cover_url}
       alt={`${item.name || 'Place'} photo`}
       unavailableText="Photo unavailable"
@@ -62,12 +64,12 @@ function SimilarGrid({ items = [] }) {
 function AccessList({ accessibility = {} }) {
   const features = Object.entries(accessibility).filter(([key, value]) => key !== 'notes' && value === true)
   if (!features.length && !accessibility.notes) return <p className="muted">No accessibility details have been added yet.</p>
-  return <div className="public-feature-list">{features.map(([key]) => <span key={key}>✓ {human(key)}</span>)}{accessibility.notes ? <p>{accessibility.notes}</p> : null}</div>
+  return <div className={scopedClasses(publicStyles, "public-feature-list")}>{features.map(([key]) => <span key={key}>✓ {human(key)}</span>)}{accessibility.notes ? <p>{accessibility.notes}</p> : null}</div>
 }
 
 function PublicHeroArt({ location }) {
   return <PhotoFrame
-    className="public-hero-art"
+    className={scopedClasses(publicStyles, "public-hero-art")}
     src={location.cover_url}
     alt={`${location.name} photo`}
     unavailableText="Photo unavailable"
@@ -86,7 +88,7 @@ function PublicHeroArt({ location }) {
 // of the sitemap - can reach three sibling places and nothing else.
 function PlaceBreadcrumbs({ trail = [] }) {
   if (trail.length < 2) return null
-  return <nav className="place-hub-breadcrumbs public-breadcrumbs" aria-label="Breadcrumb">
+  return <nav className={scopedClasses(publicStyles, "place-hub-breadcrumbs public-breadcrumbs")} aria-label="Breadcrumb">
     <ol>
       {trail.map((crumb, index) => {
         const isCurrent = index === trail.length - 1
@@ -102,10 +104,10 @@ function PlaceBreadcrumbs({ trail = [] }) {
 
 function CityLinks({ market }) {
   if (!market) return null
-  return <section className="public-section">
-    <div className="public-section-heading"><h2>More in {market.name}</h2></div>
+  return <section className={scopedClasses(publicStyles, "public-section")}>
+    <div className={scopedClasses(publicStyles, "public-section-heading")}><h2>More in {market.name}</h2></div>
     <nav aria-label={`Explore ${market.name}`}>
-      <ul className="place-hub-links">
+      <ul className={scopedClasses(publicStyles, "place-hub-links")}>
         <li><Link href={marketPath(market)}>Things to do in {market.name}</Link></li>
         <li><Link href={dateIdeasPath(market)}>Date ideas in {market.name}</Link></li>
       </ul>
@@ -115,14 +117,14 @@ function CityLinks({ market }) {
 
 export function PublicLocationView({ location, similar = [], preview = false, trail = [], market = null }) {
   const hours = Object.entries(location.opening_hours || {})
-  return <div className="public-page"><PublicHeader /><main className="public-wrap">
-    {preview ? <div className="preview-banner">Preview mode · only you can see this draft</div> : null}
+  return <div className={scopedClasses(publicStyles, "public-page")}><PublicHeader /><main className={scopedClasses(publicStyles, "public-wrap")}>
+    {preview ? <div className={scopedClasses(publicStyles, "preview-banner")}>Preview mode · only you can see this draft</div> : null}
     <PlaceBreadcrumbs trail={trail} />
-    <section className="public-listing-hero place-hero"><PublicHeroArt location={location} /><div className="public-hero-copy"><span className="section-pill section-pill-mint">Place</span><h1>{location.name}</h1><p>{location.summary || 'A place worth adding to the plan.'}</p><div className="public-meta-row"><span>{location.neighborhood || location.city}</span><span>{location.price_level ? '$'.repeat(location.price_level) : 'Price varies'}</span><span>{(location.amenities || []).slice(0, 2).join(' · ') || 'Local spot'}</span></div><div className="public-action-row"><ContentActionButton contentKind="place" contentId={location.id}>Save this place</ContentActionButton><Link className="public-secondary-cta" href={`/places/${location.slug}/plan`}>Plan a visit</Link></div></div></section>
-    <section className="public-content-grid"><article className="public-story-card"><span className="section-pill">Why go?</span><h2>{location.summary || 'Worth discovering.'}</h2><p>{location.description || location.summary}</p><div className="public-tag-row">{[...(location.tags || []), ...(location.amenities || [])].slice(0, 10).map((tag) => <span key={tag}>{tag}</span>)}</div></article><aside className="public-facts-card"><HostChip host={location.host} /><dl><div><dt>Area</dt><dd>{location.address_public || [location.neighborhood, location.city].filter(Boolean).join(', ')}</dd></div><div><dt>Timezone</dt><dd>{location.timezone}</dd></div><div><dt>Comments</dt><dd>{location.comments_enabled ? 'Open' : 'Off'}</dd></div></dl></aside></section>
-    <section className="public-content-grid"><article className="public-story-card"><span className="section-pill section-pill-yellow">Opening hours</span><h2>Know before you go.</h2>{hours.length ? <div className="hours-list">{hours.map(([day, value]) => <div key={day}><strong>{day}</strong><span>{value}</span></div>)}</div> : <p className="muted">Hours have not been confirmed yet.</p>}</article><article className="public-story-card"><span className="section-pill section-pill-mint">Accessibility</span><h2>Plan with confidence.</h2><AccessList accessibility={location.accessibility || {}} />{location.has_private_address ? <div className="privacy-note">The exact private address is not shown publicly.</div> : null}</article></section>
+    <section className={scopedClasses(publicStyles, "public-listing-hero place-hero")}><PublicHeroArt location={location} /><div className={scopedClasses(publicStyles, "public-hero-copy")}><span className="section-pill section-pill-mint">Place</span><h1>{location.name}</h1><p>{location.summary || 'A place worth adding to the plan.'}</p><div className={scopedClasses(publicStyles, "public-meta-row")}><span>{location.neighborhood || location.city}</span><span>{location.price_level ? '$'.repeat(location.price_level) : 'Price varies'}</span><span>{(location.amenities || []).slice(0, 2).join(' · ') || 'Local spot'}</span></div><div className={scopedClasses(publicStyles, "public-action-row")}><ContentActionButton contentKind="place" contentId={location.id}>Save this place</ContentActionButton><Link className={scopedClasses(publicStyles, "public-secondary-cta")} href={`/places/${location.slug}/plan`}>Plan a visit</Link></div></div></section>
+    <section className={scopedClasses(publicStyles, "public-content-grid")}><article className={scopedClasses(publicStyles, "public-story-card")}><span className="section-pill">Why go?</span><h2>{location.summary || 'Worth discovering.'}</h2><p>{location.description || location.summary}</p><div className={scopedClasses(publicStyles, "public-tag-row")}>{[...(location.tags || []), ...(location.amenities || [])].slice(0, 10).map((tag) => <span key={tag}>{tag}</span>)}</div></article><aside className={scopedClasses(publicStyles, "public-facts-card")}><HostChip host={location.host} /><dl><div><dt>Area</dt><dd>{location.address_public || [location.neighborhood, location.city].filter(Boolean).join(', ')}</dd></div><div><dt>Timezone</dt><dd>{location.timezone}</dd></div><div><dt>Comments</dt><dd>{location.comments_enabled ? 'Open' : 'Off'}</dd></div></dl></aside></section>
+    <section className={scopedClasses(publicStyles, "public-content-grid")}><article className={scopedClasses(publicStyles, "public-story-card")}><span className="section-pill section-pill-yellow">Opening hours</span><h2>Know before you go.</h2>{hours.length ? <div className={scopedClasses(publicStyles, "hours-list")}>{hours.map(([day, value]) => <div key={day}><strong>{day}</strong><span>{value}</span></div>)}</div> : <p className="muted">Hours have not been confirmed yet.</p>}</article><article className={scopedClasses(publicStyles, "public-story-card")}><span className="section-pill section-pill-mint">Accessibility</span><h2>Plan with confidence.</h2><AccessList accessibility={location.accessibility || {}} />{location.has_private_address ? <div className={scopedClasses(publicStyles, "privacy-note")}>The exact private address is not shown publicly.</div> : null}</article></section>
     <Gallery items={location.gallery} title="Get a feel for the place." />
-    <section className="public-safety-bar"><div><strong>Own or manage this place?</strong><p>Submit a claim without creating a separate organizer account.</p></div><div><Link href={`/places/${location.slug}/claim`}>Claim location</Link><Link href={`/report?target_type=location&target_id=${encodeURIComponent(location.id)}&return_to=${encodeURIComponent(`/places/${location.slug}`)}`}>Report details</Link></div></section>
+    <section className={scopedClasses(publicStyles, "public-safety-bar")}><div><strong>Own or manage this place?</strong><p>Submit a claim without creating a separate organizer account.</p></div><div><Link href={`/places/${location.slug}/claim`}>Claim location</Link><Link href={`/report?target_type=location&target_id=${encodeURIComponent(location.id)}&return_to=${encodeURIComponent(`/places/${location.slug}`)}`}>Report details</Link></div></section>
     <SimilarGrid items={similar} />
     <CityLinks market={market} />
   </main></div>

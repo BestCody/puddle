@@ -1,3 +1,7 @@
+import sharedUIStyles from "@/components/shared-ui.module.css"
+import mediaStyles from "@/components/media-uploader.module.css"
+import passExtrasStyles from "@/components/pass-extras.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { LocationEditor } from '@/components/location-editor'
@@ -56,31 +60,31 @@ export default async function EditLocationPage({ params, searchParams }) {
     const saverCursor = savers[savers.length - 1] || null
 
     return <>
-      <div className="page-heading-row">
+      <div className={scopedClasses(sharedUIStyles, "page-heading-row")}>
         <div>
           <span className="section-pill section-pill-mint">Location studio</span>
-          <h1 className="product-title">{location.name}</h1>
+          <h1 className={scopedClasses(sharedUIStyles, "product-title")}>{location.name}</h1>
           <p>Keep hours, map coordinates, access details, and secure artwork current.</p>
         </div>
       </div>
       <AuthMessage searchParams={messages} />
-      <section className="studio-media-grid">
+      <section className={scopedClasses(mediaStyles, "studio-media-grid")}>
         <MediaUploader purpose="location_cover" targetId={location.id} />
         <MediaUploader purpose="location_gallery" targetId={location.id} multiple />
       </section>
 
-      {membership.active ? <section className="pass-location-savers" aria-label="People who saved this location">
+      {membership.active ? <section className={scopedClasses(passExtrasStyles, "pass-location-savers")} aria-label="People who saved this location">
         <header><span>PASS</span><div><h2>See who saved</h2><p>{saverCount} total {saverCount === 1 ? 'save' : 'saves'}. Showing visible Puddle profiles below.</p></div></header>
-        {savers.length ? <div className="pass-location-saver-list">{savers.map((person) => {
+        {savers.length ? <div className={scopedClasses(passExtrasStyles, "pass-location-saver-list")}>{savers.map((person) => {
           const photo = avatarUrl(session, person.avatar_path)
           const name = person.display_name || person.username || 'Puddle person'
           return <article key={person.id}>
-            <PhotoFrame as="span" className="pass-location-saver-avatar" src={photo} alt="" unavailableText={initials(name)} loadingText="" />
+            <PhotoFrame as="span" className={scopedClasses(passExtrasStyles, "pass-location-saver-avatar")} src={photo} alt="" unavailableText={initials(name)} loadingText="" />
             <div><strong>{name}</strong>{person.username ? <small>@{person.username}</small> : null}</div>
           </article>
-        })}</div> : <p className="pass-location-savers-empty">No visible savers on this page.</p>}
+        })}</div> : <p className={scopedClasses(passExtrasStyles, "pass-location-savers-empty")}>No visible savers on this page.</p>}
         {hasMoreSavers && saverCursor ? <Link href={`/studio/places/${encodeURIComponent(location.id)}?savers_before=${encodeURIComponent(saverCursor.saved_at)}&savers_profile=${encodeURIComponent(saverCursor.id)}`}>Next savers</Link> : null}
-      </section> : <section className="pass-location-savers is-locked"><header><span>PASS</span><div><h2>See who saved</h2><p>Upgrade to see visible Puddle profiles that saved a location you manage.</p></div></header><Link href="/membership">View Pass</Link></section>}
+      </section> : <section className={scopedClasses(passExtrasStyles, "pass-location-savers is-locked")}><header><span>PASS</span><div><h2>See who saved</h2><p>Upgrade to see visible Puddle profiles that saved a location you manage.</p></div></header><Link href="/membership">View Pass</Link></section>}
 
       <LocationEditor location={location} {...options} />
     </>

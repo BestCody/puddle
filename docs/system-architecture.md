@@ -1,6 +1,6 @@
 # Puddle architecture
 
-This is the running self-hosted architecture. The public root currently shows a maintenance page; the application and data services are on Contabo. See the [operations runbook](../deploy/self-host/README.md) for deployment and service checks.
+This is the self-hosted architecture. The application and data services are on Contabo. The root route is configured to serve the normal marketing landing document (`public/landing.html`); deployment of this revision applies the restored entry point. See the [operations runbook](../deploy/self-host/README.md) for deployment and service checks.
 
 ## Runtime
 

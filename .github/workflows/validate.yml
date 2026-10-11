@@ -36,3 +36,20 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Run repository checks and build
         run: npm run build
+      - name: Install Chromium for local UI verification
+        run: npx playwright install --with-deps chromium
+      - name: Verify scoped UI with read-only local fixtures
+        env:
+          CSS_VISUAL_PRODUCTION: '1'
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run e2e:visual
+      - name: Preserve UI screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scoped-ui-report
+          path: |
+            .e2e-local/css-report
+            .e2e-local/css-regression
+          include-hidden-files: true
+          if-no-files-found: ignore

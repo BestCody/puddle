@@ -51,5 +51,4 @@ test('the telemetry route is same-origin, small, uncached and avoids auth databa
   assert.match(proxy, /'\/api\/telemetry'/)
   assert.match(layout, /<ClientTelemetry \/>/)
   assert.match(client, /useReportWebVitals\(reportWebVital\)/)
-  assert.doesNotMatch(layout, /@vercel\//)
 })

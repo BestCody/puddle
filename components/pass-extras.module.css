@@ -1,0 +1,387 @@
+.pass-message-anyone {
+  position: absolute;
+  z-index: 45;
+  top: 6.75rem;
+  right: 2rem;
+  width: min(26.875rem, calc(100% - 4rem));
+  padding: 0.875rem;
+  border: 0.125rem solid #dfe9dc;
+  border-radius: 1.25rem;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,.10);
+  box-sizing: border-box;
+}
+
+.pass-message-anyone-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.pass-message-anyone-heading > span {
+  flex: 0 0 auto;
+  padding: 0.3125rem 0.5rem;
+  border-radius: 0.5625rem;
+  background: #e73668;
+  color: #fff;
+  font: 900 0.625rem/1 Manrope,sans-serif;
+  letter-spacing: 0.0375rem;
+}
+
+.pass-location-create-lock > span {
+  flex: 0 0 auto;
+  padding: 0.3125rem 0.5rem;
+  border-radius: 0.5625rem;
+  background: #e73668;
+  color: #fff;
+  font: 900 0.625rem/1 Manrope,sans-serif;
+  letter-spacing: 0.0375rem;
+}
+
+.pass-location-savers header > span {
+  flex: 0 0 auto;
+  padding: 0.3125rem 0.5rem;
+  border-radius: 0.5625rem;
+  background: #e73668;
+  color: #fff;
+  font: 900 0.625rem/1 Manrope,sans-serif;
+  letter-spacing: 0.0375rem;
+}
+
+.pass-notification-alert-control > span {
+  flex: 0 0 auto;
+  padding: 0.3125rem 0.5rem;
+  border-radius: 0.5625rem;
+  background: #e73668;
+  color: #fff;
+  font: 900 0.625rem/1 Manrope,sans-serif;
+  letter-spacing: 0.0375rem;
+}
+
+.pass-message-anyone-heading > div {
+  display: grid;
+  gap: 0.1875rem;
+}
+
+.pass-message-anyone-heading strong {
+  font: 800 0.875rem/1.1 Manrope,sans-serif;
+}
+
+.pass-message-anyone-heading small {
+  color: #777;
+  font: 600 0.625rem/1.2 Manrope,sans-serif;
+}
+
+.pass-message-anyone > form {
+  display: flex;
+  gap: 0.4375rem;
+  margin-top: 0.625rem;
+}
+
+.pass-message-anyone input {
+  flex: 1;
+  min-width: 0;
+  height: 2.25rem;
+  padding: 0 0.6875rem;
+  border: 0.09375rem solid #ddd;
+  border-radius: 0.75rem;
+  font: 600 0.75rem/1 Manrope,sans-serif;
+}
+
+.pass-message-anyone button {
+  min-height: 2.125rem;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #78e152;
+  color: #fff;
+  cursor: pointer;
+  font: 800 0.6875rem/1 Manrope,sans-serif;
+}
+
+.pass-message-anyone button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.pass-message-anyone > p {
+  margin: 0.5rem 0 0;
+  color: #e73668;
+  font: 700 0.6875rem/1.25 Manrope,sans-serif;
+}
+
+.pass-message-anyone-results {
+  max-height: 11.25rem;
+  overflow: auto;
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.3125rem;
+}
+
+.pass-message-anyone-results > div {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.4375rem 0.5rem;
+  border-radius: 0.6875rem;
+  background: #f5f5f5;
+}
+
+.pass-message-anyone-results > div > span {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.125rem;
+}
+
+.pass-message-anyone-results strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 0.75rem/1.1 Manrope,sans-serif;
+}
+
+.pass-message-anyone-results small {
+  color: #888;
+  font: 600 0.5625rem/1 Manrope,sans-serif;
+}
+
+.pass-location-create-lock {
+  width: min(48.75rem, calc(100% - 2.25rem));
+  margin: 1.5rem auto;
+  padding: 1.375rem;
+  border: 0.125rem solid #e4e4e4;
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: 0 0.25rem 0 rgba(0,0,0,.08);
+  box-sizing: border-box;
+  display: grid;
+  justify-items: start;
+  gap: 0.625rem;
+}
+
+.pass-location-savers {
+  width: min(48.75rem, calc(100% - 2.25rem));
+  margin: 1.5rem auto;
+  padding: 1.375rem;
+  border: 0.125rem solid #e4e4e4;
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: 0 0.25rem 0 rgba(0,0,0,.08);
+  box-sizing: border-box;
+}
+
+.pass-location-create-lock h2 {
+  margin: 0;
+  font: 800 1.625rem/1.1 Manrope,sans-serif;
+}
+
+.pass-location-create-lock p {
+  margin: 0;
+  color: #666;
+  font: 600 0.875rem/1.4 Manrope,sans-serif;
+}
+
+.pass-location-create-lock a {
+  display: inline-grid;
+  place-items: center;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 1.25rem;
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  font: 800 0.75rem/1 Manrope,sans-serif;
+}
+
+.pass-location-savers:global(.is-locked) > a {
+  display: inline-grid;
+  place-items: center;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 1.25rem;
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  font: 800 0.75rem/1 Manrope,sans-serif;
+}
+
+.pass-location-savers > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.pass-location-savers header > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.pass-location-savers h2 {
+  margin: 0;
+  font: 800 1.3125rem/1.1 Manrope,sans-serif;
+}
+
+.pass-location-savers header p {
+  margin: 0;
+  color: #777;
+  font: 600 0.75rem/1.35 Manrope,sans-serif;
+}
+
+.pass-location-savers-empty {
+  margin: 0;
+  color: #777;
+  font: 600 0.75rem/1.35 Manrope,sans-serif;
+}
+
+.pass-location-saver-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(11.25rem,1fr));
+  gap: 0.5rem;
+  margin-top: 0.9375rem;
+}
+
+.pass-location-saver-list article {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  padding: 0.5625rem;
+  border-radius: 0.8125rem;
+  background: #f5f5f5;
+}
+
+.pass-location-saver-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #ddd center/cover no-repeat;
+  color: #555;
+  font: 800 0.625rem/1 Manrope,sans-serif;
+}
+
+.pass-location-saver-avatar > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.pass-location-saver-list article > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.1875rem;
+}
+
+.pass-location-saver-list strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 0.75rem/1 Manrope,sans-serif;
+}
+
+.pass-location-saver-list small {
+  color: #888;
+  font: 600 0.5625rem/1 Manrope,sans-serif;
+}
+
+.pass-location-savers:global(.is-locked) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.125rem;
+}
+
+.pass-notification-alert-control {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 1.125rem;
+  padding: 0.8125rem 0.875rem;
+  border: 0.09375rem solid #dedede;
+  border-radius: 0.9375rem;
+  background: #fafafa;
+}
+
+.pass-notification-alert-control > div {
+  display: grid;
+  gap: 0.1875rem;
+}
+
+.pass-notification-alert-control strong {
+  color: #111;
+  font: 800 0.8125rem/1.1 Manrope,sans-serif;
+}
+
+.pass-notification-alert-control p {
+  margin: 0;
+  color: #777;
+  font: 600 0.625rem/1.3 Manrope,sans-serif;
+}
+
+.pass-notification-alert-control button {
+  min-height: 2.125rem;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 1.0625rem;
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  font: 800 0.625rem/1 Manrope,sans-serif;
+}
+
+.pass-notification-alert-control a {
+  min-height: 2.125rem;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 1.0625rem;
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  font: 800 0.625rem/1 Manrope,sans-serif;
+}
+
+.pass-notification-alert-control b {
+  color: #58c92e;
+  font: 800 0.6875rem/1 Manrope,sans-serif;
+}
+
+.pass-notification-alert-control:global(.is-locked) b {
+  color: #888;
+}
+
+@media (max-width: 47.5rem) {
+
+  .pass-message-anyone {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: calc(100% - 1.5rem);
+    margin: 5.625rem auto 0.75rem;
+    transform: none;
+  }
+
+  .pass-location-savers:global(.is-locked) {
+    display: grid;
+  }
+
+  .pass-notification-alert-control {
+    grid-template-columns: auto 1fr;
+  }
+
+  .pass-notification-alert-control > :last-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

@@ -10,6 +10,7 @@ import { pathWithMessage } from '@/lib/auth/redirect'
 import { startGoogleOAuth } from '@/lib/auth/google-oauth'
 import { isValidEmail, MAX_PASSWORD_LENGTH } from '@/lib/app/input-validation'
 import { registerAccount } from '@/lib/auth/sign-up'
+import { publicAuthError } from '@/lib/auth/errors'
 
 function value(formData, key) {
   return String(formData.get(key) || '').trim()
@@ -21,17 +22,6 @@ function rawValue(formData, key) {
 
 async function siteUrl() {
   return siteOrigin(await headers())
-}
-
-async function clearLocalAuthSession(supabase) {
-  await supabase.auth.signOut({ scope: 'local' })
-}
-
-function publicError(error, fallback) {
-  const message = String(error?.message || '').trim()
-  if (!message) return fallback
-  if (/supabase|environment|api key|service role|configuration|project|provider.*enabled|database|schema|policy|permission/i.test(message)) return fallback
-  return message
 }
 
 function ensureConfigured(path) {
@@ -52,7 +42,7 @@ export async function startGoogleSignup(formData) {
   if (signupIntent && value(formData, 'terms_accepted') !== 'yes') redirect(pathWithMessage('/signup', 'error', 'Agree to the Terms and Privacy Policy before creating an account.'))
   const supabase = await createClient()
   const { data, error } = await startGoogleOAuth(supabase, await headers(), '/onboarding', true)
-  if (error || !data.url) redirect(pathWithMessage('/signup', 'error', publicError(error, 'That sign-in option is temporarily unavailable.')))
+  if (error || !data.url) redirect(pathWithMessage('/signup', 'error', publicAuthError(error, 'That sign-in option is temporarily unavailable.')))
   redirect(data.url)
 }
 
@@ -64,7 +54,7 @@ export async function requestPasswordReset(formData) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${await siteUrl()}/auth/callback?next=/update-password`
   })
-  if (error) redirect(pathWithMessage('/forgot-password', 'error', publicError(error, 'We could not send a reset link. Please try again.')))
+  if (error) redirect(pathWithMessage('/forgot-password', 'error', publicAuthError(error, 'We could not send a reset link. Please try again.')))
   redirect(pathWithMessage('/forgot-password', 'success', 'If that email has a Puddle account, a password reset link is on the way.'))
 }
 
@@ -76,7 +66,7 @@ export async function updatePassword(formData) {
   if (password !== confirmation) redirect(pathWithMessage('/update-password', 'error', 'The passwords do not match.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ password })
-  if (error) redirect(pathWithMessage('/update-password', 'error', publicError(error, 'We could not update your password. Please request a new reset link and try again.')))
+  if (error) redirect(pathWithMessage('/update-password', 'error', publicAuthError(error, 'We could not update your password. Please request a new reset link and try again.')))
   redirect(pathWithMessage('/account', 'success', 'Password updated.'))
 }
 
@@ -86,7 +76,7 @@ export async function updateEmail(formData) {
   if (!isValidEmail(email)) redirect(pathWithMessage('/account', 'error', 'Enter a valid email address.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/account` })
-  if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not update your email. Please try again.')))
+  if (error) redirect(pathWithMessage('/account', 'error', publicAuthError(error, 'We could not update your email. Please try again.')))
   redirect(pathWithMessage('/account', 'success', 'Check both inboxes to confirm the email change.'))
 }
 
@@ -94,7 +84,7 @@ export async function revokeOtherSessions() {
   ensureConfigured('/account')
   const supabase = await createClient()
   const { error } = await supabase.auth.signOut({ scope: 'others' })
-  if (error) redirect(pathWithMessage('/account', 'error', publicError(error, 'We could not sign out your other sessions.')))
+  if (error) redirect(pathWithMessage('/account', 'error', publicAuthError(error, 'We could not sign out your other sessions.')))
   redirect(pathWithMessage('/account', 'success', 'Other sessions were signed out.'))
 }
 
@@ -120,6 +110,6 @@ export async function deleteAccount(formData) {
   }
   const { error } = await admin.auth.admin.deleteUser(user.id)
   if (error) redirect(pathWithMessage('/account', 'error', 'We could not delete your account. Please try again later.'))
-  await clearLocalAuthSession(supabase)
+  await supabase.auth.signOut({ scope: 'local' })
   redirect('/?account=deleted')
 }

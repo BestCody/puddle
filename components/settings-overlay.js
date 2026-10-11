@@ -1,4 +1,6 @@
 "use client"
+import settingsStyles from "@/components/settings.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -136,12 +138,12 @@ export function SettingsOverlay() {
 
   if (!enabled) return null
 
-  return <div ref={overlayRef} className={`puddle-settings-overlay${open ? ' is-open' : ''}`} role="dialog" aria-modal="true" aria-label="Settings" aria-hidden={!open} inert={!open} tabIndex={-1}>
-    <button className="puddle-settings-overlay-backdrop puddle-universal-backdrop" type="button" onClick={requestClose} aria-label="Close settings" tabIndex={-1} />
-    {open && !frameLoaded ? <div className="puddle-settings-overlay-frame" role="status"><span className="puddle-settings-overlay-loading-text">Loading settings…</span></div> : null}
+  return <div ref={overlayRef} className={scopedClasses(settingsStyles, `puddle-settings-overlay${open ? ' is-open' : ''}`)} role="dialog" aria-modal="true" aria-label="Settings" aria-hidden={!open} inert={!open} tabIndex={-1}>
+    <button className={scopedClasses(settingsStyles, "puddle-settings-overlay-backdrop")} type="button" onClick={requestClose} aria-label="Close settings" tabIndex={-1} />
+    {open && !frameLoaded ? <div className={scopedClasses(settingsStyles, "puddle-settings-overlay-frame")} role="status"><span className={scopedClasses(settingsStyles, "puddle-settings-overlay-loading-text")}>Loading settings…</span></div> : null}
     {open ? <iframe
       ref={frameRef}
-      className={`puddle-settings-overlay-frame${frameLoaded ? '' : ' is-loading'}`}
+      className={scopedClasses(settingsStyles, `puddle-settings-overlay-frame${frameLoaded ? '' : ' is-loading'}`)}
       src="/account?embedded=1&returnTo=%2Fprofile"
       title="Settings"
       tabIndex={frameLoaded ? 0 : -1}

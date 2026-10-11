@@ -1,5 +1,7 @@
 "use client"
 
+import styles from './swipe.module.css'
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DiscoveryPhotoPreloader } from '@/components/discovery-photo-preloader'
 import { reportInitialDiscoveryNavigation, timedDiscoveryRequest } from '@/components/discovery-rum'
@@ -91,7 +93,7 @@ function EmptyDeck({ feed, onRefresh, onFilters, onExpand, exhausted = false }) 
       : 'That is everything available for the current filters.'
   }
 
-  return <div className="figma-swipe-empty" aria-live="polite">
+  return <div className={`figma-swipe-empty ${styles.empty}`} aria-live="polite">
     <h1>{title}</h1>
     {description ? <p>{description}</p> : null}
     <div>
@@ -505,17 +507,17 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   const deckComplete = feed.items.length > 0 && !current && exhausted
   const waitingForMore = feed.items.length > 0 && !current && !exhausted
 
-  return <section className="figma-swipe-screen">
+  return <section className={`figma-swipe-screen ${styles.screen}`}>
     <DiscoveryPhotoPreloader items={feed.items} index={index} ahead={PHOTO_PRELOAD_AHEAD} />
-    <span className="figma-swipe-mobile-logo" aria-hidden="true" />
-    <div className="figma-swipe-workspace">
-      <button className="figma-swipe-filter-trigger" type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">
-        <span className="figma-swipe-filter-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 7h16M4 17h16M9 7a2 2 0 1 0 0 0M15 17a2 2 0 1 0 0 0" /></svg></span>
-        <span className="figma-swipe-filter-label">Filters</span>
+    <span className={`figma-swipe-mobile-logo ${styles.mobileLogo}`} aria-hidden="true" />
+    <div className={`figma-swipe-workspace ${styles.workspace}`}>
+      <button className={`figma-swipe-filter-trigger ${styles.filterTrigger}`} type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">
+        <span className={`figma-swipe-filter-icon ${styles.filterIcon}`} aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 7h16M4 17h16M9 7a2 2 0 1 0 0 0M15 17a2 2 0 1 0 0 0" /></svg></span>
+        <span className={`figma-swipe-filter-label ${styles.filterLabel}`}>Filters</span>
       </button>
 
       {current ? <>
-        <div className={`figma-swipe-card-stage${cardLeaving ? ' is-swiping' : ''}`}>
+        <div className={`figma-swipe-card-stage ${styles.stage}${cardLeaving ? ' is-swiping' : ''}`}>
           {next ? <FigmaSwipeCard key={`preview:${next.content_id}`} item={next} preview /> : null}
           <FigmaSwipeCard key={`active:${current.content_id}`} item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} onLeavingChange={setCardLeaving} onActionHandled={clearActionRequest} />
         </div>
@@ -527,8 +529,8 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
           canUndo={index > 0}
           busy={busy}
         />
-        <span className="figma-swipe-status" aria-live="polite">{message}</span>
-      </> : waitingForMore ? <div className="figma-swipe-empty" aria-live="polite"><h1>Loading more places…</h1></div>
+        <span className={`figma-swipe-status ${styles.status}`} aria-live="polite">{message}</span>
+      </> : waitingForMore ? <div className={`figma-swipe-empty ${styles.empty}`} aria-live="polite"><h1>Loading more places…</h1></div>
         : deckComplete ? <EmptyDeck feed={feed} exhausted onRefresh={() => refresh()} onFilters={() => setShowFilters(true)} onExpand={expandDistance} />
           : <EmptyDeck feed={feed} onRefresh={() => refresh()} onFilters={() => setShowFilters(true)} onExpand={expandDistance} />}
 

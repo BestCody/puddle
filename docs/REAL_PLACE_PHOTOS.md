@@ -1,56 +1,17 @@
 # Real place photos
 
-Puddle swipe cards must show a photograph of the actual place or a neutral Puddle placeholder. AI-generated, generic stock, scraped, or unrelated imagery must never be presented as a venue photo.
+Puddle cards must not present generated, generic stock, scraped, or unrelated imagery as a photo of the actual place. When no verified image is available, use the location map or an explicit unavailable state.
 
-## Supported sources
+## Canonical photo pipeline
 
-Photo priority is:
+Source workers validate provider identity, licensing, geography, and location relevance before materialization. Accepted candidates are downloaded to temporary worker storage, decoded and normalized, and deduplicated by content SHA-256 and perceptual hash. Only accepted canonical bytes are uploaded to the private object store. Location mappings and searchable references are published after the object exists.
 
-1. Verified venue upload stored in Puddle public media (`locations.cover_path`)
-2. Approved Puddle user photo stored in Puddle public media
-3. Licensed provider photo registered in `location_photo_sources`
-4. Properly licensed public photo for a landmark, park, or attraction
-5. Neutral placeholder
+Cards receive first-party `/api/open-photo/<sha256>` URLs, not arbitrary provider URLs. The serving route verifies canonical bytes; it does not recreate the retired provider-photo proxy. Keep attribution and licence metadata with the accepted photo.
 
-Provider photos are stored as licensed references rather than silently copied into Puddle storage. The browser receives them through `/api/location-photos/[id]`, which only accepts approved HTTPS hosts configured in `LOCATION_PHOTO_ALLOWED_HOSTS`.
+The source-provider jobs and their credentials are configured privately on Contabo. See [media boundaries](media-architecture.md) for storage/authorization details, [bulk dataset processing](BULK_PHOTO_DATASETS.md) for offline imports, and the [self-hosted runbook](../deploy/self-host/README.md) for active timers and diagnostics. The old JSON-reference registration command is retired.
 
-## Register provider photos
+## User uploads
 
-Set the exact image hosts and provide a JSON manifest:
+User-owned media uses authenticated upload, scanning, self-hosted Supabase Storage, and `media_assets` metadata. It is a separate path from the licensed open-photo object store. Upload access controls and moderation remain active.
 
-```bash
-LOCATION_PHOTO_ALLOWED_HOSTS=images.example-provider.com,cdn.example-provider.com \
-  npm run locations:photos -- ./location-photos.json
-```
-
-Example manifest:
-
-```json
-{
-  "photos": [
-    {
-      "locationId": "00000000-0000-4000-8000-000000000000",
-      "source": "provider",
-      "provider": "example-provider",
-      "externalPhotoId": "photo-123",
-      "photoUrl": "https://images.example-provider.com/photo-123.jpg",
-      "attributionText": "Photo by Example Photographer",
-      "attributionUrl": "https://example-provider.com/photo-123",
-      "license": "provider-display-license",
-      "termsUrl": "https://example-provider.com/terms",
-      "width": 1600,
-      "height": 1000,
-      "isPrimary": true,
-      "cacheTtlSeconds": 3600
-    }
-  ]
-}
-```
-
-Only register a photo after confirming that it depicts the exact place and that Puddle is permitted to display it. Use provider IDs, address, coordinates, website, and phone matching rather than name-only matching.
-
-## Licensing and caching
-
-`cacheTtlSeconds` must reflect the provider agreement. Set it to `0` when the response must not be cached. Keep attribution and terms fields current. Expired records stop rendering automatically.
-
-Puddle does not scrape Google Maps, review sites, social networks, or venue websites for images.
+Puddle does not scrape Google Maps, review sites, social networks, or venue websites for images. A matching place name alone is not sufficient proof of photo identity or display permission.

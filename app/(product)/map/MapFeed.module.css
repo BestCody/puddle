@@ -12,13 +12,13 @@
   --feed-shadow: 0 .25rem 0 rgba(0, 0, 0, .1);
   container-type: inline-size;
   position: relative;
-  min-height: 100dvh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1fr);
   align-content: start;
   padding: clamp(1.5rem, 2.55vw, 2.4375rem) clamp(1rem, 1.7vw, 1.625rem) clamp(4rem, 5.25vw, 5rem);
-  background: #f6f6f6;
   box-sizing: border-box;
+  background: var(--shell-surface, #fff);
+  min-height: var(--shell-content-height, 100dvh);
 }
 
 .header {
@@ -38,34 +38,10 @@
 .tabs {
   grid-column: 2;
   justify-self: center;
-  width: 9.5rem;
-  min-height: 2.86rem;
-  display: grid;
-  grid-template-columns: 4rem minmax(0, 1fr);
-  align-items: center;
-  padding: .178rem .166rem;
-  border: .125rem solid #dedede;
-  border-radius: 999px;
-  background: #fff;
-  box-sizing: border-box;
-  box-shadow: 0 .125rem 0 rgba(0, 0, 0, .08);
-}
-
-.tab {
-  min-width: 0;
-  height: 2.132rem;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: #858585;
-  font: 700 .875rem/1 Manrope, sans-serif;
-  text-decoration: none;
-}
-
-.tabActive {
-  background: #f2c035;
-  color: #fff;
-  box-shadow: 0 .25rem 0 rgba(0, 0, 0, .1);
+  --segment-width: 9.5rem;
+  --segment-height: 2.86rem;
+  --segment-item-height: 2.132rem;
+  --segment-font: .875rem;
 }
 
 .search {
@@ -77,7 +53,7 @@
   align-items: center;
   padding: 0 .625rem 0 .84375rem;
   border: .15625rem solid #d9d9d9;
-  border-radius: 999px;
+  border-radius: 999rem;
   background: #fff;
   box-sizing: border-box;
 }
@@ -294,7 +270,7 @@
   right: .625rem;
   bottom: .5rem;
   padding: .25rem .4375rem;
-  border-radius: 999px;
+  border-radius: 999rem;
   background: rgba(17, 17, 17, .72);
   color: #fff;
   font: 800 .8125rem/1 Manrope, sans-serif;
@@ -420,8 +396,8 @@
   font-size: 1.5625rem;
 }
 
-.saved {
-  color: #e73668 !important;
+.interactions button.saved {
+  color: #e73668;
 }
 
 .actionMenu {
@@ -536,7 +512,7 @@
   min-height: 2.75rem;
   padding: 0 1.125rem;
   border: .125rem solid #dedede;
-  border-radius: 999px;
+  border-radius: 999rem;
   background: #fff;
   color: #111;
   box-shadow: 0 .125rem 0 rgba(0, 0, 0, .08);
@@ -557,13 +533,14 @@
 }
 
 /* Map canvas and authored map callouts are intentional overlays. */
+
 .mapMode {
-  height: 100dvh;
-  min-height: 100dvh;
   overflow: hidden;
   padding-top: 2.1875rem;
   padding-bottom: 0;
   background: #d0d0d0;
+  height: var(--shell-content-height, 100dvh);
+  min-height: 0;
 }
 
 .mapMode .header {
@@ -583,7 +560,7 @@
   display: grid;
   place-items: center;
   border: .125rem solid #dedede;
-  border-radius: 999px;
+  border-radius: 999rem;
   background: #fff;
   color: #858585;
   box-shadow: 0 .125rem 0 rgba(0, 0, 0, .08);
@@ -594,17 +571,11 @@
 }
 
 .mapMode .tabs {
-  width: 9.5rem;
-  min-height: 3.4375rem;
-  grid-template-columns: 4.625rem 4rem;
-  padding: .28125rem .25rem;
-  border-width: .15625rem;
   pointer-events: auto;
-}
-
-.mapMode .tab {
-  height: 2.5625rem;
-  font-size: 1rem;
+  --segment-width: 9.5rem;
+  --segment-height: 3.4375rem;
+  --segment-item-height: 2.5625rem;
+  --segment-font: 1rem;
 }
 
 .mapScreen,
@@ -615,135 +586,9 @@
   container-type: size;
 }
 
-.mapCanvas :global(.location-map-workspace),
-.mapCanvas :global(.location-map-layout),
-.mapCanvas :global(.location-map-canvas) {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-}
-
-.mapCanvas :global(.location-map-toolbar) {
-  display: none !important;
-}
-
 /* The full-screen map keeps the selected location anchored to its marker. The
    base map keeps the card beside the canvas; this view uses a compact callout
    so selection never gives up map context. */
-.mapCanvas :global(.location-map-side) {
-  position: absolute;
-  z-index: 8;
-  inset-block-start: var(--location-map-selection-y);
-  inset-inline-start: var(--location-map-selection-x);
-  right: auto;
-  width: clamp(14.5rem, 28cqi, 18.75rem);
-  max-height: none;
-  display: block !important;
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  pointer-events: auto;
-  transform: translate(-50%, calc(-100% - 1.125rem));
-}
-
-.mapCanvas :global(.location-map-side::after) {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -.4375rem;
-  width: .875rem;
-  height: .875rem;
-  background: #73a8ed;
-  transform: translateX(-50%) rotate(45deg);
-  pointer-events: none;
-}
-
-.mapCanvas :global(.location-map-side .location-map-list) {
-  display: none;
-}
-
-.mapCanvas :global(.location-map-side .location-map-card) {
-  width: 100%;
-  overflow: visible;
-  border: 0;
-  border-radius: 1.125rem;
-  background: #73a8ed;
-  color: #fff;
-  box-shadow: 0 .5rem 1.5rem rgba(38, 82, 142, .24);
-}
-
-.mapCanvas :global(.location-map-side .location-map-card-photo) {
-  display: none;
-}
-
-.mapCanvas :global(.location-map-side .location-map-card > div:last-child) {
-  display: grid;
-  gap: .375rem;
-  min-width: 0;
-  padding: .875rem 1rem .8125rem;
-}
-
-.mapCanvas :global(.location-map-side .location-map-card small) {
-  width: max-content;
-  max-width: 100%;
-  overflow: hidden;
-  padding: .25rem .5rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .2);
-  color: rgba(255, 255, 255, .95);
-  font: 700 .6875rem/1 Manrope, sans-serif;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mapCanvas :global(.location-map-side .location-map-card h2) {
-  min-width: 0;
-  overflow: hidden;
-  margin: 0;
-  color: #fff;
-  font: 800 clamp(.9375rem, 1.7cqi, 1.1875rem)/1.1 Manrope, sans-serif;
-  letter-spacing: -.04em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mapCanvas :global(.location-map-side .location-map-card p),
-.mapCanvas :global(.location-map-side .location-map-card-tags),
-.mapCanvas :global(.location-map-side .location-map-plan-time) {
-  display: none;
-}
-
-.mapCanvas :global(.location-map-side .location-map-card-actions) {
-  margin-top: .0625rem;
-}
-
-.mapCanvas :global(.location-map-side .location-map-card-actions a) {
-  color: #fff;
-  font: 800 .75rem/1 Manrope, sans-serif;
-  text-underline-offset: .1875rem;
-}
-
-.mapCanvas :global(.location-map-layout) {
-  display: block;
-}
-
-.mapCanvas :global(.location-map-canvas) {
-  touch-action: none;
-  overscroll-behavior: none;
-}
-
-.mapScreen :global(.puddle-map-search-trigger) {
-  position: absolute;
-  z-index: 12;
-  inset-block-start: clamp(5.5rem, 12dvh, 7rem);
-  inset-inline-end: clamp(1.25rem, 3vw, 2.5rem);
-  pointer-events: auto;
-}
 
 .actionIcon {
   width: 1.5625rem;
@@ -795,6 +640,7 @@
 }
 
 /* Persisted appearance remains route-owned for migrated Feed/Map elements. */
+
 :global(.figma-dashboard-shell[data-appearance='dark']) .screen,
 :global(.figma-dashboard-shell[data-appearance='dark']) .post,
 :global(.figma-dashboard-shell[data-appearance='dark']) .place,
@@ -821,6 +667,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
+
   :global(.figma-dashboard-shell[data-appearance='system']) .screen,
   :global(.figma-dashboard-shell[data-appearance='system']) .post,
   :global(.figma-dashboard-shell[data-appearance='system']) .place,
@@ -840,6 +687,7 @@
 }
 
 @media (max-width: 64rem) and (min-width: 47.5625rem) {
+
   .screen {
     grid-template-columns: minmax(0, 1fr) minmax(0, var(--feed-column)) minmax(0, 1fr);
     padding-inline: 1.25rem;
@@ -859,6 +707,7 @@
 }
 
 @media (max-width: 47.5rem) {
+
   .screen {
     --feed-column: 100%;
     --feed-radius: 1.211rem;
@@ -891,16 +740,11 @@
 
   .tabs {
     grid-column: 2;
-    width: 7.945rem;
-    min-height: 2.392rem;
-    grid-template-columns: 3.345rem minmax(0, 1fr);
-    padding: .244rem;
-    border-width: .105rem;
-  }
-
-  .tab {
-    height: 1.783rem;
-    font-size: .836rem;
+    justify-self: center;
+    --segment-width: 7.945rem;
+    --segment-height: 2.392rem;
+    --segment-item-height: 1.783rem;
+    --segment-font: .836rem;
   }
 
   .search {
@@ -1023,9 +867,9 @@
   }
 
   .mapMode {
-    height: 100dvh;
-    min-height: 100dvh;
     padding: 0;
+    height: var(--shell-content-height, 100dvh);
+    min-height: 0;
   }
 
   .mapMode .header {
@@ -1051,145 +895,10 @@
   }
 
   .mapMode .tabs {
-    width: min(100%, 7.851rem);
-    min-height: 2.841rem;
-    grid-template-columns: 3.675rem 3.306rem;
-    padding: .306rem;
-    border-width: .129rem;
-  }
-
-  .mapMode .tab {
-    height: 2.118rem;
-    font-size: .8264rem;
-  }
-
-  .mapCanvas :global(.location-map-workspace),
-  .mapCanvas :global(.location-map-layout),
-  .mapCanvas :global(.location-map-canvas) {
-    min-height: 0;
-  }
-
-  .mapCanvas :global(.location-map-side) {
-    inset-block-start: var(--location-map-selection-y);
-    inset-inline-start: var(--location-map-selection-x);
-    inset-inline-end: auto;
-    bottom: auto;
-    width: min(18.9375rem, calc(100% - 2rem));
-    max-height: min(7rem, calc(100% - 13.75rem));
-    display: flex !important;
-    overflow: hidden;
-    border-radius: 1rem;
-    background: #fff;
-    border: .0625rem solid #e8e2e5;
-    box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .16);
-    transform: translate(-50%, calc(-100% - 1.125rem));
-  }
-
-  .mapCanvas :global(.location-map-side .location-map-card) {
-    display: grid;
-    grid-template-columns: clamp(3.625rem, 18vw, 4.5rem) minmax(0, 1fr);
-    min-height: 6rem;
-    max-height: 7rem;
-    overflow: hidden;
-    border-radius: 0;
-    background: #fff;
-    color: #111;
-    box-shadow: none;
-  }
-
-  .mapCanvas :global(.location-map-side .location-map-card-photo) {
-    display: grid;
-    width: auto;
-    height: auto;
-    min-height: 0;
-    aspect-ratio: 1;
-    margin: .625rem;
-    border-radius: .75rem;
-  }
-
-  .mapCanvas :global(.location-map-side .location-map-card > div:last-child) {
-    min-width: 0;
-    display: grid;
-    align-content: center;
-    gap: .1875rem;
-    padding: .625rem .75rem .625rem 0;
-  }
-
-  .mapCanvas :global(.location-map-side .location-map-card h2) {
-    min-width: 0;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: clamp(.875rem, 4vw, 1.125rem);
-    letter-spacing: -.04em;
-    color: #111;
-  }
-
-  .mapCanvas :global(.location-map-side .location-map-card small) {
-    width: auto;
-    max-width: none;
-    overflow: hidden;
-    padding: 0;
-    border-radius: 0;
-    background: transparent;
-    color: #777;
-    font-size: .6875rem;
-  }
-
-  .mapCanvas :global(.location-map-side .location-map-card p),
-  .mapCanvas :global(.location-map-side .location-map-card-tags),
-  .mapCanvas :global(.location-map-side .location-map-plan-time) {
-    display: none;
-  }
-
-  .mapCanvas :global(.location-map-side .location-map-card-actions) {
-    margin-top: .125rem;
-  }
-
-  .mapCanvas :global(.location-map-side .location-map-card-actions a) {
-    color: #111;
-    font-size: .75rem;
-  }
-
-  .mapCanvas :global(.location-map-zoom) {
-    display: none;
-  }
-
-  .mapScreen :global(.puddle-map-search-trigger) {
-    inset-block-start: auto;
-    inset-inline-end: auto;
-    bottom: calc(var(--puddle-mobile-nav-height, 6.5rem) + env(safe-area-inset-bottom) + 1rem);
-    inset-inline-start: 50%;
-    width: min(13.75rem, calc(100% - 2rem)) !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    height: 2.625rem !important;
-    display: flex !important;
-    align-items: center;
-    justify-content: flex-start !important;
-    gap: .5rem;
-    padding: 0 .875rem !important;
-    transform: translateX(-50%);
-  }
-
-  .mapScreen :global(.puddle-map-search-trigger > span) {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip: auto;
-    white-space: nowrap;
-    color: #777;
-    font: 700 .8125rem/1 Manrope, sans-serif;
-  }
-
-  .mapScreen :global(.puddle-map-search-trigger > b) {
-    margin-left: auto;
-  }
-
-  .mapScreen :global(.puddle-map-search-overlay) {
-    z-index: 100;
+    --segment-width: 7.851rem;
+    --segment-height: 2.841rem;
+    --segment-item-height: 2.118rem;
+    --segment-font: .8264rem;
   }
 
 }

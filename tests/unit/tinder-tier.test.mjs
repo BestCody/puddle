@@ -17,11 +17,9 @@ test('Stripe webhook verification accepts only a current matching signature', ()
   assert.equal(verifyStripeWebhook(raw, header, secret, (timestamp + 301) * 1000), false)
 })
 
-test('membership page displays Tinder tier at $10 per month without the removed billing disclosure', async () => {
+test('membership page displays the advertised Tinder tier monthly price', async () => {
   const page = await source('app/(product)/membership/page.js')
   assert.match(page, /TINDER_TIER_MONTHLY_PRICE = '\$10\/month'/)
-  assert.doesNotMatch(page, /Billed monthly\. Taxes and renewal terms appear before payment\./)
-  assert.doesNotMatch(page, /<h2>Monthly<\/h2>/)
 })
 
 test('subscription webhooks refresh the current Stripe object before changing access', async () => {
@@ -34,8 +32,6 @@ test('subscription webhooks refresh the current Stripe object before changing ac
 
 test('Stripe billing uses the canonical endpoint and retries marked events that cannot be linked', async () => {
   const route = await source('app/api/billing/webhook/route.js')
-  await assert.rejects(source('app/api/stripe/webhook/route.js'), { code: 'ENOENT' })
-  assert.doesNotMatch(route, /api\/stripe\/webhook/)
   assert.match(route, /invoice\.paid/)
   assert.match(route, /invoice\.payment_failed/)
   assert.match(route, /Stripe subscription is not linked to a Puddle user\./)

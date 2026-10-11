@@ -3,7 +3,7 @@ import { assertNoHorizontalOverflow } from './support.mjs'
 import { assertImagesLoaded, trackFrontendHealth } from './frontend-health.mjs'
 
 const publicPages = [
-  ['/', '1.0 coming soon'],
+  ['/', null],
   ['/landing.html', null],
   ['/signup', 'Make plans that leave the chat.'],
   ['/privacy', 'Privacy Policy'],
@@ -29,7 +29,7 @@ for (const [path, heading] of publicPages) {
   test(`${path} renders without frontend failures or horizontal overflow`, async ({ page }, testInfo) => {
     const health = trackFrontendHealth(page, { baseURL: testInfo.project.use.baseURL, strictConsole: path !== '/' })
     await page.goto(path)
-    if (path === '/landing.html') await visibleLandingCanvas(page)
+    if (path === '/' || path === '/landing.html') await visibleLandingCanvas(page)
     else await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
     await assertImagesLoaded(page)
     await assertNoHorizontalOverflow(page)
@@ -43,20 +43,14 @@ test('landing page uses the Figma responsive composition and real DOM content', 
   const { mode, stage, selector, authRoot } = await visibleLandingCanvas(page)
 
   if (mode === 'desktop') {
-    await expect(page.locator('[data-figma-node="352:484"]')).toBeVisible()
     await expect(page.locator('.landing-sticky-left form.landing-login-form input:not([type="hidden"])')).toHaveCount(2)
     await expect(page.locator('.feature-card--d-swipe')).toBeVisible()
-    await expect(page.locator('.feature-card--d-profile')).toHaveCount(0)
   } else {
-    await expect(page.locator('[data-figma-node="351:156"]')).toBeVisible()
     await expect(page.locator('.feature-card--m-swipe')).toBeVisible()
-    await expect(page.locator('.feature-card--m-profile')).toHaveCount(0)
     await expect(page.locator('.mobile-login-button')).toBeVisible()
     await expect(page.locator('.landing-sticky-left')).not.toBeVisible()
   }
 
-  await expect(page.locator('img[src="/figma/landing-desktop.png"]')).toHaveCount(0)
-  await expect(page.locator('img[src="/figma/landing-mobile.png"]')).toHaveCount(0)
   await expect(page.locator(`${selector} .interactive-pill`).first()).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Discover places. See who’s there.', level: 1 })).toBeVisible()
 
@@ -77,7 +71,6 @@ test('landing phone routes render the correct Figma screen identities and hydrat
   await page.goto('/landing-demo/swipe')
   const swipe = page.locator('[data-demo-screen="swipe"]')
   await expect(swipe).toBeVisible()
-  await expect(swipe).toHaveAttribute('data-figma-screen', '40:641')
   await expect(swipe.getByRole('img', { name: 'Puddle' })).toBeVisible()
   await expect(swipe.getByText('Maple Grove Park', { exact: true })).toBeVisible()
   await expect(swipe.getByText('2243 Devon Road, Oakville', { exact: true })).toBeVisible()
@@ -93,7 +86,6 @@ test('landing phone routes render the correct Figma screen identities and hydrat
   await page.goto('/landing-demo/save')
   const saved = page.locator('[data-demo-screen="save"]')
   await expect(saved).toBeVisible()
-  await expect(saved).toHaveAttribute('data-figma-screen', '25:180')
   await expect(saved.getByRole('img', { name: 'Puddle' })).toBeVisible()
   await expect(saved.getByText('Firehall Cool Bar Hot Grill', { exact: true })).toBeVisible()
   await expect(saved.locator('.landing-demo-bottom-nav').getByRole('button', { name: 'Saved' })).toHaveAttribute('aria-current', 'page')
@@ -110,7 +102,6 @@ test('landing phone routes render the correct Figma screen identities and hydrat
   await page.goto('/landing-demo/feed')
   const feed = page.locator('[data-demo-screen="feed"]')
   await expect(feed).toBeVisible()
-  await expect(feed).toHaveAttribute('data-figma-screen', '40:519')
   await expect(feed.getByRole('img', { name: 'Puddle' })).toBeVisible()
   await expect(feed.getByText('Richie Zheng', { exact: true })).toBeVisible()
   await expect(feed.getByText(/This place is amazing! The atmosphere is beautiful/)).toBeVisible()
@@ -187,23 +178,6 @@ test('landing safety locations and navigation work', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.location.hash)).toBe(mode === 'desktop' ? '#footer-d' : '#footer-m')
 })
 
-test('landing exposes direct auth and legal links', async ({ page }) => {
-  await page.goto('/landing.html')
-  const { mode, stage, authRoot } = await visibleLandingCanvas(page)
-  if (mode === 'desktop') {
-    expect(await page.locator(`${authRoot} a[href="/signup"]`).count()).toBeGreaterThan(0)
-    expect(await page.locator(`${authRoot} a[href="/api/auth/google?next=%2Fdiscover"]`).count()).toBeGreaterThan(0)
-  } else {
-    await expect(page.locator('.mobile-login-button')).toHaveAttribute('href', '/landing.html?mode=login')
-  }
-  if (await page.locator(`${authRoot} form.landing-login-form`).count()) {
-    await expect(page.locator(`${authRoot} form.landing-login-form`)).toHaveAttribute('action', '/api/auth/password')
-  }
-  for (const path of ['/privacy', '/terms']) expect(await page.locator(`${stage} a[href="${path}"]`).count()).toBeGreaterThan(0)
-  await expect(page.locator('button[data-open-app]')).toHaveCount(0)
-  await expect(page.locator('[data-open-modal="waitlist"]')).toHaveCount(0)
-})
-
 test('landing auth controls expose direct authentication entry points', async ({ page }) => {
   await page.goto('/landing.html')
   const { mode, authRoot } = await visibleLandingCanvas(page)
@@ -228,5 +202,6 @@ test('404 gives the user a working route home', async ({ page }) => {
   await expect(page.getByText('404', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Back to Puddle' }).click()
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('heading', { name: '1.0 coming soon', level: 1 })).toBeVisible()
+  const { selector } = await visibleLandingCanvas(page)
+  await expect(page.locator(selector)).toBeVisible()
 })

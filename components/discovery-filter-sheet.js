@@ -1,4 +1,6 @@
 "use client"
+import filterStyles from "@/components/discovery-filter.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { csrfFetch } from '@/lib/security/csrf-client'
@@ -108,13 +110,13 @@ export function DiscoveryFilterSheet({ filters, categories = [], onChange, onApp
   }
 
   return (
-    <div className="minimal-details-backdrop puddle-universal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <section ref={sheetRef} className="minimal-filter-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title" tabIndex={-1}>
+    <div className={scopedClasses(filterStyles, "minimal-details-backdrop")} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section ref={sheetRef} className={scopedClasses(filterStyles, "minimal-filter-sheet")} role="dialog" aria-modal="true" aria-labelledby="filter-title" tabIndex={-1}>
         <header><h2 id="filter-title">Filters</h2><button ref={closeRef} type="button" onClick={onClose} aria-label="Close filters">×</button></header>
 
-        <div className="location-picker">
-          <label className="field location-search-field">Location
-            <div className="location-search-row">
+        <div className={scopedClasses(filterStyles, "location-picker")}>
+          <label className={scopedClasses(filterStyles, "field location-search-field")}>Location
+            <div className={scopedClasses(filterStyles, "location-search-row")}>
               <input
                 value={locationQuery}
                 onChange={(event) => { setLocationQuery(event.target.value.slice(0, 160)); setLocationResults([]); setLocationMessage('') }}
@@ -126,13 +128,13 @@ export function DiscoveryFilterSheet({ filters, categories = [], onChange, onApp
               <button type="button" onClick={searchLocation} disabled={locationBusy || locationQuery.trim().length < 2}>Search</button>
             </div>
           </label>
-          <button className="location-current-button" type="button" onClick={useCurrentLocation} disabled={locationBusy}>Use my current location</button>
-          {locationResults.length ? <div className="location-results" role="listbox" aria-label="Location results">
+          <button className={scopedClasses(filterStyles, "location-current-button")} type="button" onClick={useCurrentLocation} disabled={locationBusy}>Use my current location</button>
+          {locationResults.length ? <div className={scopedClasses(filterStyles, "location-results")} role="listbox" aria-label="Location results">
             {locationResults.map((result) => <button type="button" role="option" onClick={() => selectLocation(result)} key={`${result.providerId || result.label}:${result.latitude}:${result.longitude}`}>
               <strong>{result.city}</strong><span>{[result.region, result.country].filter(Boolean).join(', ')}</span>
             </button>)}
           </div> : null}
-          <p className="location-picker-message" aria-live="polite">{locationMessage}</p>
+          <p className={scopedClasses(filterStyles, "location-picker-message")} aria-live="polite">{locationMessage}</p>
         </div>
 
         <label>Category<select value={filters.category || ''} onChange={(event) => onChange('category', event.target.value)}>
@@ -141,9 +143,9 @@ export function DiscoveryFilterSheet({ filters, categories = [], onChange, onApp
         </select></label>
         <label>Distance<select value={String(filters.distance || 10)} onChange={(event) => onChange('distance', Number(event.target.value))}>{DISTANCE_OPTIONS.map((value) => <option value={value} key={value}>{value === 20_040 ? 'Anywhere' : `${value.toLocaleString()} km`}</option>)}</select></label>
         <label>Price<select value={filters.price || 'any'} onChange={(event) => onChange('price', event.target.value)}><option value="any">Any price</option><option value="1">$</option><option value="2">$$</option><option value="3">$$$</option><option value="4">$$$$</option></select></label>
-        <label className="minimal-filter-check"><input type="checkbox" checked={Boolean(filters.openNow)} onChange={(event) => onChange('openNow', event.target.checked)} /> Open now</label>
-        <label className="minimal-filter-check"><input type="checkbox" checked={Boolean(filters.accessible)} onChange={(event) => onChange('accessible', event.target.checked)} /> Accessible</label>
-        <button className="minimal-primary-button" type="button" onClick={onApply} disabled={loading || locationBusy}>{loading ? 'Loading…' : 'Apply'}</button>
+        <label className={scopedClasses(filterStyles, "minimal-filter-check")}><input type="checkbox" checked={Boolean(filters.openNow)} onChange={(event) => onChange('openNow', event.target.checked)} /> Open now</label>
+        <label className={scopedClasses(filterStyles, "minimal-filter-check")}><input type="checkbox" checked={Boolean(filters.accessible)} onChange={(event) => onChange('accessible', event.target.checked)} /> Accessible</label>
+        <button className={scopedClasses(filterStyles, "minimal-primary-button")} type="button" onClick={onApply} disabled={loading || locationBusy}>{loading ? 'Loading…' : 'Apply'}</button>
       </section>
     </div>
   )

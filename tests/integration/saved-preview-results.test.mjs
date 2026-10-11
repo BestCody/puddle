@@ -27,6 +27,6 @@ test('saved previews exclude moderated locations and render missing rows as unav
   assert.match(route, /filterModeratedLocationRows\(supabase, locations\)/)
   assert.match(grid, /resolveSavedPreviewBatch\(batch, payload\.items\)/)
   assert.match(grid, /Some saved places could not be loaded\./)
-  assert.doesNotMatch(grid, /readPreviewCache|writePreviewCache|localStorage/)
+  assert.doesNotMatch(grid, /localStorage/)
   assert.match(grid, /!loadPreviews && item\.slug \? item : null/)
 })

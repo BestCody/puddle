@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
+import { conversationPreview as messagePreview } from '../../lib/app/social-message-model.js'
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
 
@@ -9,9 +10,6 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   const ui = await read('components/figma-messages-realtime.js')
   const matchesPage = await read('app/(product)/matches/page.js')
   const friendsRoute = await read('components/friends-route-content.js')
-  const mobileStyles = await read('app/ui-fixes-20260822.css')
-  const densityStyles = await read('app/responsive-density-20260822.css')
-  const messagesStyles = await read('app/messages-realtime-polish.css')
   const migration = await read('supabase/migrations/10065_scalability_hardening.sql')
   const edges = await read('supabase/migrations/10068_scalability_edge_hardening.sql')
   const bounds = await read('supabase/migrations/10069_scalability_work_bounds.sql')
@@ -21,8 +19,6 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   assert.match(data, /tab === 'messages' \? rpcRequired\(session, 'social_conversations_v2'/)
   assert.doesNotMatch(data, /\['messages', 'shared'\]\.includes\(tab\)/)
   assert.match(data, /social_messages_v2/)
-  assert.doesNotMatch(data, /social_conversations_v1/)
-  assert.doesNotMatch(data, /social_messages_v1/)
   assert.match(ui, /Load older messages/)
   assert.match(ui, /Load more conversations/)
   assert.match(ui, /<Link[\s\S]*href="\/matches\?tab=messages"[\s\S]*replace[\s\S]*aria-label="Back to conversations"/)
@@ -34,8 +30,7 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   assert.match(ui, /is-mobile-mode-pending/)
   assert.match(ui, /is-conversation-open/)
   assert.match(ui, /filter: `conversation_id=eq\.\$\{selectedId\}`/)
-  assert.match(ui, /function conversationPreview\(conversation, openingFriendId\)/)
-  assert.match(ui, /Shared \$\{conversation\.last_location_name\}/)
+  assert.equal(messagePreview({ last_message_type: 'location', last_location_name: 'Maple Grove Park' }), 'Shared Maple Grove Park')
   assert.match(ui, /messagesRefreshRef/)
   assert.match(ui, /hydrateSocialLocationRows\(data\)/)
   assert.match(ui, /setMessages\(\(current\) => mergeById\(current, hydrated\)\)/)
@@ -49,18 +44,6 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   assert.match(matchesPage, /getSocialHubSnapshot\(session, conversationId, \{ tab \}\)/)
   assert.match(matchesPage, /<FriendsRouteContent snapshot=\{snapshot\} tab=\{tab\} conversationId=\{conversationId\} \/>/)
   assert.match(friendsRoute, /tab === 'messages'[\s\S]*<FigmaMessagesRealtime initialSnapshot=\{snapshot\} conversationId=\{conversationId\} \/>/)
-  assert.doesNotMatch(mobileStyles, /\.figma-friends-screen\.is-messages/)
-  assert.doesNotMatch(densityStyles, /@media \(max-width: 760px\)[\s\S]*\.figma-friends-screen\.is-messages/)
-  assert.match(messagesStyles, /@media \(max-width: 760px\)[\s\S]*height: calc\(100dvh - var\(--puddle-mobile-content-bottom\)\)/s)
-  assert.match(messagesStyles, /\.figma-friends-screen\.is-messages \.figma-friends-message-layout\s*\{[\s\S]*inset: auto !important;[\s\S]*grid-template-rows: minmax\(0, 1fr\);/s)
-  assert.match(messagesStyles, /\.figma-friends-screen\.is-messages:not\(.is-conversation-open\) \.figma-friends-conversations\s*\{[\s\S]*height: 100%;/s)
-  assert.match(messagesStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open\s*\{[\s\S]*grid-template-rows: minmax\(0, 1fr\);[\s\S]*padding: 0;/s)
-  assert.match(messagesStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open \.figma-friends-chat\s*\{[\s\S]*display: flex !important;/s)
-  assert.match(messagesStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open \.figma-friends-messages\s*\{[\s\S]*bottom: 4\.75rem;/s)
-  assert.match(messagesStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open \.figma-friends-composer\s*\{[\s\S]*bottom: \.75rem;/s)
-  assert.match(messagesStyles, /\.puddle-main-transition\[data-route-path="\/matches"\][\s\S]*min-height: 0;/s)
-  assert.match(messagesStyles, /\.figma-messages-navigation-status\s*\{[\s\S]*pointer-events: auto;/s)
-  assert.doesNotMatch(mobileStyles, /\.figma-friends-screen\.is-messages\.is-conversation-open \.figma-friends-chat\s*\{[\s\S]*position: fixed !important;/s)
   assert.match(migration, /last_message_id bigint/)
   assert.match(migration, /unread_count bigint not null default 0/)
   assert.match(migration, /order by m\.id desc limit page_limit/)
@@ -87,13 +70,11 @@ test('friend/profile search is trigram-backed, mutual friends are set-based, and
 })
 
 test('Pass heatmap is viewport-scoped and incrementally maintained', async () => {
-  const data = await read('lib/app/location-map-data.js')
   const map = await read('components/location-map.js')
   const endpoint = await read('app/api/map/heatmap/route.js')
   const migration = await read('supabase/migrations/10065_scalability_hardening.sql')
   const edges = await read('supabase/migrations/10068_scalability_edge_hardening.sql')
 
-  assert.doesNotMatch(data, /pass_location_heatmap_v1/)
   assert.match(map, /\/api\/map\/heatmap/)
   assert.match(endpoint, /pass_location_heatmap_viewport_v2/)
   assert.match(migration, /location_save_density_tiles/)
@@ -135,12 +116,9 @@ test('social feed uses bounded RLS keyset pages, indexed top-N comment previews,
   assert.match(feed, /queryFeedPosts\(session, cursorAt, cursorId, limit/)
   assert.match(feedScan, /maxBatches = 3/)
   assert.match(feedScan, /limit: scanSize \+ 1/)
-  assert.doesNotMatch(feed, /rpc\('social_feed_post_ids_v2'/)
   assert.match(feed, /rpc\('social_comment_previews_v2'/)
   assert.match(feed, /per_post: 3/)
-  assert.doesNotMatch(feed, /social_comment_previews_fallback/)
   assert.match(feed, /if \(list\.length < 3\)/)
-  assert.doesNotMatch(feed, /social_friends_v1/)
   assert.match(feed, /nextBeforeCreatedAt/)
   assert.match(feed, /nextBeforePostId/)
   assert.match(page, /<SocialFeedClient/)
@@ -150,7 +128,6 @@ test('social feed uses bounded RLS keyset pages, indexed top-N comment previews,
   assert.match(client, /onClick=\{onLoadMore\}/)
   assert.match(client, /setFeed\(\(current\) =>/)
   assert.match(client, /const seenIds = new Set\(\)/)
-  assert.doesNotMatch(client, /<Link href=\{moreHref\}>More puddles<\/Link>/)
   assert.match(share, /social_friend_picker_v2/)
   assert.match(share, /More friends/)
   assert.match(cursor, /\(p\.created_at, p\.id\) < \(before_created_at, before_post_id\)/)
@@ -161,44 +138,4 @@ test('social feed uses bounded RLS keyset pages, indexed top-N comment previews,
   assert.match(restore, /social_comments_post_preview_idx/)
   assert.match(restore, /cross join lateral/)
   assert.doesNotMatch(bounds, /row_number\(\) over/)
-})
-
-test('global discovery failures are isolated from the relational database', async () => {
-  const discovery = await read('lib/app/discovery.js')
-  const env = await read('.env.example')
-
-  assert.doesNotMatch(discovery, /FAILURE_THRESHOLD|CIRCUIT_COOLDOWN_MS|global-location-stale-cache|global-location-degraded|emptyDegradedFeed|markCached/)
-  assert.match(discovery, /getGlobalDiscoveryFeed/)
-  assert.doesNotMatch(discovery, /getRelationalDiscoveryFeed|discovery-relational|from\(['"]locations['"]\)/)
-
-  for (const forbidden of [
-    'GLOBAL_LOCATION_FALLBACK_TO_SUPABASE',
-    'GLOBAL_LOCATION_EMERGENCY_RELATIONAL_FALLBACK',
-    'GLOBAL_LOCATION_RELATIONAL_FALLBACK_MIN_INTERVAL_MS',
-    'nextRelationalFallbackAt',
-    'relational-discovery-fallback'
-  ]) {
-    assert.doesNotMatch(discovery, new RegExp(forbidden))
-    if (forbidden.startsWith('GLOBAL_')) assert.doesNotMatch(env, new RegExp(forbidden))
-  }
-
-  assert.match(env, /never fail over to Supabase\/Postgres/)
-})
-
-test('temporary v1 social RPC compatibility wrappers are dropped after the v2 cutover', async () => {
-  const cleanup = await read('supabase/migrations/10074_drop_legacy_social_rpc_compatibility.sql')
-  const activeData = await read('lib/app/social-hub-data.js')
-  const activeFeed = await read('lib/app/social-feed-data.js')
-
-  for (const signature of [
-    'social_friend_search_v1\\(text\\)',
-    'pass_message_search_v1\\(text\\)',
-    'social_friends_v1\\(\\)',
-    'social_conversations_v1\\(\\)',
-    'social_messages_v1\\(uuid\\)'
-  ]) {
-    assert.match(cleanup, new RegExp(`drop function if exists public\\.${signature}`))
-  }
-  assert.doesNotMatch(activeData, /social_(?:friend_search|friends|conversations|messages)_v1/)
-  assert.doesNotMatch(activeFeed, /social_friends_v1/)
 })

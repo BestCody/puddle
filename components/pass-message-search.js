@@ -1,4 +1,6 @@
 "use client"
+import passExtrasStyles from "@/components/pass-extras.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -39,14 +41,14 @@ export function PassMessageSearch({ enabled }) {
     router.push(`/matches?tab=messages&conversation=${encodeURIComponent(data)}`)
   }
 
-  return <section className="pass-message-anyone" aria-label="Pass message anyone">
-    <div className="pass-message-anyone-heading"><span>PASS</span><div><strong>Message anyone</strong><small>Search adult Puddle profiles outside your friends list.</small></div></div>
+  return <section className={scopedClasses(passExtrasStyles, "pass-message-anyone")} aria-label="Pass message anyone">
+    <div className={scopedClasses(passExtrasStyles, "pass-message-anyone-heading")}><span>PASS</span><div><strong>Message anyone</strong><small>Search adult Puddle profiles outside your friends list.</small></div></div>
     <form onSubmit={search}>
       <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or @username" maxLength={60} aria-label="Search profiles to message" />
       <button type="submit" disabled={busy || !query.trim()}>Search</button>
     </form>
     {notice ? <p role="status">{notice}</p> : null}
-    {results.length ? <div className="pass-message-anyone-results">{results.map((person) => <div key={person.id}>
+    {results.length ? <div className={scopedClasses(passExtrasStyles, "pass-message-anyone-results")}>{results.map((person) => <div key={person.id}>
       <span><strong>{person.display_name || person.username || 'Puddle person'}</strong>{person.username ? <small>@{person.username}</small> : null}</span>
       <button type="button" onClick={() => message(person)} disabled={busy || !person.can_message}>Message</button>
     </div>)}</div> : null}

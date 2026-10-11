@@ -1,23 +1,8 @@
 import assert from 'node:assert/strict'
-import { access, readFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 const source = (path) => readFile(new URL(`../../${path}`, import.meta.url), 'utf8')
-
-test('Global likes has no route, runtime loader, actions, or navigation', async () => {
-  for (const path of [
-    'app/(product)/global-matches/page.js',
-    'app/(product)/global-matches/actions.js',
-    'lib/app/global-connections-data.js',
-    'app/membership.css'
-  ]) {
-    await assert.rejects(access(new URL(`../../${path}`, import.meta.url)), { code: 'ENOENT' })
-  }
-  for (const path of ['proxy.js', 'components/product-nav.js', 'app/(product)/membership/actions.js', 'app/(product)/membership/checkout/page.js', 'app/privacy/page.js', 'app/terms/page.js']) {
-    assert.doesNotMatch(await source(path), /global-matches|global_connection|saveGlobalPreference|global visibility|global connections|same-place/i)
-  }
-  assert.match(await source('app/(product)/membership/actions.js'), /snapshot\.active\) redirect\('\/membership\?view=manage'\)/)
-})
 
 test('the retirement migration removes only the separate Global likes schema without cascading', async () => {
   const migration = await source('supabase/migrations/20261011100000_remove_global_likes.sql')

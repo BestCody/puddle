@@ -1,4 +1,6 @@
 "use client"
+import friendsStyles from "@/components/friends.module.css"
+import { scopedClasses } from "@/components/scoped-classes"
 
 import Link from 'next/link'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -8,6 +10,7 @@ import { RoutedSegment } from '@/components/routed-segment'
 import { createClient } from '@/lib/supabase/client'
 import { hydrateSocialLocationRows } from '@/lib/app/social-location-metadata-client'
 import { lastInboxCursor } from '@/lib/app/social-inbox-cursor'
+import { mergeById, sortConversations, conversationPreview, conversationList } from '@/lib/app/social-message-model'
 
 function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
@@ -24,12 +27,12 @@ function Avatar({ client, person }) {
   const path = person?.avatar_path || person?.friend_avatar_path || person?.sender_avatar_path
   const name = person?.display_name || person?.friend_name || person?.sender_name || 'Puddle person'
   const url = mediaUrl(client, path)
-  return <PhotoFrame as="span" src={url} alt="" className="figma-friends-avatar" unavailableText={initials(name)} loadingText="" />
+  return <PhotoFrame as="span" src={url} alt="" className={scopedClasses(friendsStyles, "figma-friends-avatar")} unavailableText={initials(name)} loadingText="" />
 }
 
 function MessagesTabs() {
   return <RoutedSegment
-    className="figma-friends-tabs"
+    className={scopedClasses(friendsStyles, "figma-friends-tabs")}
     tone="green"
     activeValue="messages"
     ariaLabel="Friends sections"
@@ -40,67 +43,6 @@ function MessagesTabs() {
     ]}
   />
 }
-
-function mergeById(current, incoming, key = 'id') {
-  const merged = new Map(current.map((item) => [item[key], item]))
-  for (const item of incoming || []) {
-    const previous = merged.get(item[key])
-    if (!previous) {
-      merged.set(item[key], item)
-      continue
-    }
-    const locationKey = key === 'conversation_id' ? 'last_location_id' : 'location_id'
-    const metadataFields = key === 'conversation_id'
-      ? ['last_location_name', 'last_location_city', 'last_location_slug', 'last_location_cover_path']
-      : ['location_name', 'location_city', 'location_slug', 'location_cover_path']
-    const previousLocationId = previous[locationKey] || null
-    const nextLocationId = item[locationKey] || null
-    const next = { ...previous, ...item }
-    if (previousLocationId && previousLocationId === nextLocationId) {
-      for (const field of metadataFields) {
-        if (item[field] == null && previous[field] != null) next[field] = previous[field]
-      }
-    } else if (previousLocationId !== nextLocationId) {
-      for (const field of metadataFields) next[field] = item[field] || null
-    }
-    merged.set(item[key], next)
-  }
-  return [...merged.values()]
-}
-
-function sortConversations(rows) {
-  return [...rows].sort((left, right) => {
-    const leftTime = Date.parse(left.sort_at || left.last_message_at || left.created_at || '') || 0
-    const rightTime = Date.parse(right.sort_at || right.last_message_at || right.created_at || '') || 0
-    return rightTime - leftTime || String(right.conversation_id || '').localeCompare(String(left.conversation_id || ''))
-  })
-}
-
-function conversationPreview(conversation, openingFriendId) {
-  if (conversation.last_message_type === 'location' && conversation.last_location_name) {
-    return `Shared ${conversation.last_location_name}`
-  }
-  return conversation.last_message || (openingFriendId === conversation.friend_id ? 'Opening…' : 'Start a conversation')
-}
-
-function conversationList(snapshot, selected, source = snapshot.conversations || []) {
-  const base = selected && !source.some((item) => item.conversation_id === selected.conversation_id)
-    ? [selected, ...source]
-    : [...source]
-  const friendIds = new Set(base.map((item) => item.friend_id).filter(Boolean))
-  const waiting = (snapshot.friends || []).filter((friend) => !friendIds.has(friend.id)).map((friend) => ({
-    conversation_id: null,
-    friend_id: friend.id,
-    display_name: friend.display_name,
-    username: friend.username,
-    avatar_path: friend.avatar_path,
-    last_message: null,
-    unread_count: 0,
-    is_friend_placeholder: true
-  }))
-  return [...base, ...waiting]
-}
-
 const MESSAGE_PAGE_SIZE = 50
 
 export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }) {
@@ -149,6 +91,16 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const renderedSelectedIdRef = useRef(null)
   const snapshotConversationIdRef = useRef(selectedId)
   const messageSnapshotConversationIdRef = useRef(selectedId)
+  const conversationScopeRef = useRef(null)
+
+  // Identity, rather than just an ID, also rejects an old A request after A → B → A.
+  useLayoutEffect(() => {
+    const scope = { id: selectedId }
+    conversationScopeRef.current = scope
+    return () => {
+      if (conversationScopeRef.current === scope) conversationScopeRef.current = null
+    }
+  }, [selectedId])
 
   useEffect(() => {
     const nextFriends = initialSnapshot.friends || []
@@ -171,11 +123,19 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     if (!changedConversation) setConversationsHasMore((current) => current || Boolean(initialSnapshot.conversationsHasMore))
   }, [initialSnapshot.conversations, initialSnapshot.friends, initialSnapshot.friendsHasMore, initialSnapshot.conversationsHasMore, selectedId])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const changedConversation = messageSnapshotConversationIdRef.current !== selectedId
     messageSnapshotConversationIdRef.current = selectedId
     setMessages((current) => changedConversation ? (initialSnapshot.messages || []) : mergeById(current, initialSnapshot.messages || []))
-    setMessagesHasMore((current) => current || Boolean(initialSnapshot.messagesHasMore))
+    if (changedConversation) {
+      setMessagesHasMore(Boolean(initialSnapshot.messagesHasMore))
+      setMessagesLoadedForId(conversationId ? selectedId : null)
+      setMessagesLoadFailedForId(null)
+      setDraft('')
+      setNotice('')
+      setBusy(false)
+      setPaging(false)
+    }
     if (conversationId && selectedId) setMessagesLoadedForId(selectedId)
   }, [conversationId, initialSnapshot.messages, initialSnapshot.messagesHasMore, selectedId])
 
@@ -237,11 +197,12 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   }
 
   async function refreshMessages() {
+    const scope = conversationScopeRef.current
     const targetId = selectedId
-    if (!targetId) return false
-    if (messagesRefreshRef.current?.conversationId === targetId) return messagesRefreshRef.current.promise
+    if (!targetId || scope?.id !== targetId) return false
+    if (messagesRefreshRef.current?.scope === scope) return messagesRefreshRef.current.promise
 
-    const request = { conversationId: targetId }
+    const request = { scope }
     request.promise = (async () => {
       try {
         const { data, error } = await client.rpc('social_messages_v2', {
@@ -249,8 +210,10 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           before_message_id: null,
           result_limit: MESSAGE_PAGE_SIZE
         })
-        if (!error && Array.isArray(data) && selectedId === targetId) {
+        if (conversationScopeRef.current !== scope) return false
+        if (!error && Array.isArray(data)) {
           const hydrated = await hydrateSocialLocationRows(data)
+          if (conversationScopeRef.current !== scope) return false
           setMessages((current) => mergeById(current, hydrated))
           setMessagesHasMore((current) => current || data.length === MESSAGE_PAGE_SIZE)
           setMessagesLoadedForId(targetId)
@@ -261,7 +224,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         throw new Error('Message response was invalid.')
       } catch (cause) {
         console.warn('Could not refresh messages.', { message: cause?.message || 'unknown error' })
-        if (selectedId === targetId) {
+        if (conversationScopeRef.current === scope) {
           setMessagesLoadFailedForId(targetId)
           setNotice('Messages could not be refreshed.')
         }
@@ -277,9 +240,10 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   }
 
   async function refreshConversations() {
-    const targetId = selectedId
-    if (conversationsRefreshRef.current?.selectedId === targetId) return conversationsRefreshRef.current.promise
-    const request = { selectedId: targetId }
+    const scope = conversationScopeRef.current
+    if (!scope) return false
+    if (conversationsRefreshRef.current?.scope === scope) return conversationsRefreshRef.current.promise
+    const request = { scope }
     request.promise = (async () => {
       try {
         const { data, error } = await client.rpc('social_conversations_v2', {
@@ -287,8 +251,10 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           before_conversation_id: null,
           result_limit: 30
         })
-        if (!error && Array.isArray(data) && selectedId === targetId) {
+        if (conversationScopeRef.current !== scope) return false
+        if (!error && Array.isArray(data)) {
           const hydrated = await hydrateSocialLocationRows(data, 'last_location_id')
+          if (conversationScopeRef.current !== scope) return false
           setConversations((current) => {
             const real = current.filter((item) => !item.is_friend_placeholder)
             return conversationList({ ...initialSnapshot, friends }, selected, sortConversations(mergeById(real, hydrated, 'conversation_id')))
@@ -300,7 +266,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         throw new Error('Conversation response was invalid.')
       } catch (cause) {
         console.warn('Could not refresh conversations.', { message: cause?.message || 'unknown error' })
-        if (selectedId === targetId) setNotice('Conversations could not be refreshed.')
+        if (conversationScopeRef.current === scope) setNotice('Conversations could not be refreshed.')
       }
       return false
     })()
@@ -358,6 +324,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
       }, async () => {
         if (!active) return
         await refreshMessages()
+        if (!active) return
         try {
           await markSelectedRead()
           if (active) await refreshConversations()
@@ -425,6 +392,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
 
   async function loadOlderMessages() {
     if (!selectedId || !messages.length || paging || !messagesHasMore) return
+    const scope = conversationScopeRef.current
     const targetId = selectedId
     const node = messageScrollRef.current
     const anchor = node ? { scrollTop: node.scrollTop, scrollHeight: node.scrollHeight } : null
@@ -436,8 +404,10 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         before_message_id: oldest.id,
         result_limit: MESSAGE_PAGE_SIZE
       })
-      if (!error && Array.isArray(data) && selectedId === targetId) {
+      if (conversationScopeRef.current !== scope) return
+      if (!error && Array.isArray(data)) {
         const hydrated = await hydrateSocialLocationRows(data)
+        if (conversationScopeRef.current !== scope) return
         if (hydrated.length && anchor) messageScrollAnchorRef.current = anchor
         setMessages((current) => mergeById(hydrated, current))
         setMessagesHasMore(data.length === MESSAGE_PAGE_SIZE)
@@ -445,14 +415,15 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
       if (error || !Array.isArray(data)) setNotice('Older messages could not be loaded.')
     } catch (cause) {
       console.warn('Could not load older messages.', { message: cause?.message || 'unknown error' })
-      setNotice('Older messages could not be loaded.')
+      if (conversationScopeRef.current === scope) setNotice('Older messages could not be loaded.')
     } finally {
-      setPaging(false)
+      if (conversationScopeRef.current === scope) setPaging(false)
     }
   }
 
   async function loadMoreConversations() {
     if (!conversationsHasMore || paging) return
+    const scope = conversationScopeRef.current
     const cursor = inboxCursorRef.current
     if (!cursor) {
       setConversationsHasMore(false)
@@ -467,6 +438,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
       })
       if (error || !Array.isArray(data)) throw error || new Error('Conversation page was invalid.')
       const hydrated = await hydrateSocialLocationRows(data, 'last_location_id')
+      if (conversationScopeRef.current !== scope) return
       setConversations((current) => {
         const placeholders = current.filter((item) => item.is_friend_placeholder)
         const real = current.filter((item) => !item.is_friend_placeholder)
@@ -478,14 +450,15 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
       setConversationsHasMore(data.length === 30)
     } catch (cause) {
       console.warn('Could not load more conversations.', { message: cause?.message || 'unknown error' })
-      setNotice('More conversations could not be loaded.')
+      if (conversationScopeRef.current === scope) setNotice('More conversations could not be loaded.')
     } finally {
-      setPaging(false)
+      if (conversationScopeRef.current === scope) setPaging(false)
     }
   }
 
   async function loadMoreFriends() {
     if (!friendsHasMore || paging) return
+    const scope = conversationScopeRef.current
     const cursor = friends[friends.length - 1]
     if (!cursor) {
       setFriendsHasMore(false)
@@ -499,15 +472,16 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         result_limit: 100
       })
       if (error || !Array.isArray(data)) throw error || new Error('Friend page was invalid.')
+      if (conversationScopeRef.current !== scope) return
       const nextFriends = mergeById(friends, data)
       setFriends(nextFriends)
       setFriendsHasMore(data.length === 100)
       setConversations((current) => conversationList({ ...initialSnapshot, friends: nextFriends }, selected, current))
     } catch (cause) {
       console.warn('Could not load more friends.', { message: cause?.message || 'unknown error' })
-      setNotice('More friends could not be loaded.')
+      if (conversationScopeRef.current === scope) setNotice('More friends could not be loaded.')
     } finally {
-      setPaging(false)
+      if (conversationScopeRef.current === scope) setPaging(false)
     }
   }
 
@@ -515,27 +489,31 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     event.preventDefault()
     const body = draft.trim()
     if (!body || !selectedId || busy) return
+    const scope = conversationScopeRef.current
     setBusy(true)
     setNotice('')
     try {
       const { data, error } = await client.rpc('social_send_message_v1', { target: selectedId, message_body: body })
       if (error || !data) throw error || new Error('Message was not accepted.')
+      if (conversationScopeRef.current !== scope) return
       setDraft('')
       stickToBottomRef.current = true
     } catch (cause) {
       console.warn('Could not send message.', { message: cause?.message || 'unknown error' })
+      if (conversationScopeRef.current !== scope) return
       setNotice('Could not send that message.')
       setBusy(false)
       return
     }
     try {
-      await reconcileSentMessage()
+      await reconcileSentMessage(scope)
     } finally {
-      setBusy(false)
+      if (conversationScopeRef.current === scope) setBusy(false)
     }
   }
 
-  async function reconcileSentMessage() {
+  async function reconcileSentMessage(scope) {
+    if (conversationScopeRef.current !== scope) return
     let messagesUpdated = false
     let readUpdated = true
     let conversationsUpdated = false
@@ -544,24 +522,27 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     } catch (cause) {
       console.warn('Could not refresh sent message.', { message: cause?.message || 'unknown error' })
     }
+    if (conversationScopeRef.current !== scope) return
     try {
       await markSelectedRead()
     } catch (cause) {
       readUpdated = false
       console.warn('Could not update sent-message read state.', { message: cause?.message || 'unknown error' })
     }
+    if (conversationScopeRef.current !== scope) return
     try {
       conversationsUpdated = await refreshConversations()
     } catch (cause) {
       console.warn('Could not refresh conversation after sending.', { message: cause?.message || 'unknown error' })
     }
-    if (!messagesUpdated || !conversationsUpdated || !readUpdated) {
+    if (conversationScopeRef.current === scope && (!messagesUpdated || !conversationsUpdated || !readUpdated)) {
       setNotice('Sent, but the conversation could not be fully refreshed. Reopen it to see the latest state.')
     }
   }
 
   async function sendLocation(locationId) {
     if (!selectedId || busy) return
+    const scope = conversationScopeRef.current
     const requestId = `${selectedId}:${locationId}`
     const requestKey = locationShareKeysRef.current.get(requestId) || crypto.randomUUID()
     locationShareKeysRef.current.set(requestId, requestKey)
@@ -574,19 +555,21 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
         request_key: requestKey
       })
       if (error || !data) throw error || new Error('Place was not attached.')
-      placeMenuRef.current?.removeAttribute('open')
       locationShareKeysRef.current.delete(requestId)
+      if (conversationScopeRef.current !== scope) return
+      placeMenuRef.current?.removeAttribute('open')
       stickToBottomRef.current = true
     } catch (cause) {
       console.warn('Could not attach place.', { message: cause?.message || 'unknown error' })
+      if (conversationScopeRef.current !== scope) return
       setNotice('Could not attach that place.')
       setBusy(false)
       return
     }
     try {
-      await reconcileSentMessage()
+      await reconcileSentMessage(scope)
     } finally {
-      setBusy(false)
+      if (conversationScopeRef.current === scope) setBusy(false)
     }
   }
 
@@ -601,13 +584,13 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     setNavigationPending(true)
   }
 
-  return <div className={`figma-friends-screen is-messages${isConversationOpen ? ' is-conversation-open' : ''}${mobileModePending ? ' is-mobile-mode-pending' : ''}`} aria-busy={navigationPending || undefined}>
+  return <div className={scopedClasses(friendsStyles, `figma-friends-screen is-messages${isConversationOpen ? ' is-conversation-open' : ''}${mobileModePending ? ' is-mobile-mode-pending' : ''}`)} aria-busy={navigationPending || undefined}>
     <MessagesTabs />
-    {navigationPending ? <div className="figma-messages-navigation-status" role="status" aria-label="Loading conversation">Loading conversation...</div> : null}
-    <div className="figma-friends-message-layout">
-      <aside className="figma-friends-conversations" aria-label="Conversations">
+    {navigationPending ? <div className={scopedClasses(friendsStyles, "figma-messages-navigation-status")} role="status" aria-label="Loading conversation">Loading conversation...</div> : null}
+    <div className={scopedClasses(friendsStyles, "figma-friends-message-layout")}>
+      <aside className={scopedClasses(friendsStyles, "figma-friends-conversations")} aria-label="Conversations">
         {conversations.length ? conversations.map((conversation) => <button
-          className={selectedId && selectedId === conversation.conversation_id ? 'is-active' : ''}
+          className={scopedClasses(friendsStyles, selectedId && selectedId === conversation.conversation_id ? 'is-active' : '')}
           type="button"
           onClick={() => openConversation(conversation)}
           disabled={Boolean(openingConversationId || openingFriendId) || openingFriendId === conversation.friend_id}
@@ -616,12 +599,12 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           <Avatar client={client} person={{ display_name: conversation.display_name, avatar_path: conversation.avatar_path }} />
           <span><strong>{conversation.display_name || conversation.username || 'Friend'}</strong><small>{conversationPreview(conversation, openingFriendId)}</small></span>
           {conversation.unread_count > 0 ? <b>{conversation.unread_count}</b> : null}
-        </button>) : <div className="figma-friends-conversation-empty">No conversations yet</div>}
+        </button>) : <div className={scopedClasses(friendsStyles, "figma-friends-conversation-empty")}>No conversations yet</div>}
         {conversationsHasMore ? <button type="button" onClick={loadMoreConversations} disabled={paging}>Load more conversations</button> : null}
         {friendsHasMore ? <button type="button" onClick={loadMoreFriends} disabled={paging}>Load more friends</button> : null}
       </aside>
 
-      <section className="figma-friends-chat">
+      <section className={scopedClasses(friendsStyles, "figma-friends-chat")}>
         {selected ? <>
           <header>
             {/* A route link keeps the mobile back affordance a real navigation target while the
@@ -631,42 +614,42 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
               replace
               scroll={false}
               onClick={handleBackNavigation}
-              className="figma-friends-chat-back"
+              className={scopedClasses(friendsStyles, "figma-friends-chat-back")}
               aria-label="Back to conversations"
             >‹</Link>
             <Avatar client={client} person={{ display_name: selected.display_name, avatar_path: selected.avatar_path }} />
             <span><strong>{selected.display_name || selected.username || 'Friend'}</strong>{selected.username ? <small>@{selected.username}</small> : null}</span>
           </header>
-          <div className="figma-friends-messages" ref={messageScrollRef} onScroll={handleMessageScroll} aria-live="polite">
+          <div className={scopedClasses(friendsStyles, "figma-friends-messages")} ref={messageScrollRef} onScroll={handleMessageScroll} aria-live="polite">
             {messagesHasMore ? <button type="button" onClick={loadOlderMessages} disabled={paging}>Load older messages</button> : null}
             {messages.length ? messages.map((item) => {
               const mine = item.sender_id === initialSnapshot.self.id
-              return <div className={`figma-friends-message${mine ? ' is-mine' : ''}`} key={item.id}>
+              return <div className={scopedClasses(friendsStyles, `figma-friends-message${mine ? ' is-mine' : ''}`)} key={item.id}>
                 {!mine ? <Avatar client={client} person={item} /> : null}
-                <div>{item.message_type === 'location' && item.location_slug ? <Link className="figma-friends-location-message" href={`/plans/${item.location_slug}`}><strong>{item.location_name || 'Shared place'}</strong><small>{item.location_city || 'Open place'}</small></Link> : <p>{item.body}</p>}</div>
+                <div>{item.message_type === 'location' && item.location_slug ? <Link className={scopedClasses(friendsStyles, "figma-friends-location-message")} href={`/plans/${item.location_slug}`}><strong>{item.location_name || 'Shared place'}</strong><small>{item.location_city || 'Open place'}</small></Link> : <p>{item.body}</p>}</div>
               </div>
-            }) : <div className="figma-friends-chat-empty" role="status">{messagesLoadFailedForId === selectedId ? <><span>Messages could not be loaded.</span><button type="button" onClick={refreshMessages}>Try again</button></> : messagesLoadedForId === selectedId ? 'Say hello' : 'Loading messages…'}</div>}
+            }) : <div className={scopedClasses(friendsStyles, "figma-friends-chat-empty")} role="status">{messagesLoadFailedForId === selectedId ? <><span>Messages could not be loaded.</span><button type="button" onClick={refreshMessages}>Try again</button></> : messagesLoadedForId === selectedId ? 'Say hello' : 'Loading messages…'}</div>}
           </div>
-          {notice ? <p className="figma-friends-chat-notice" role="status">{notice}</p> : null}
-          <form className="figma-friends-composer puddle-text-composer" onSubmit={send}>
+          {notice ? <p className={scopedClasses(friendsStyles, "figma-friends-chat-notice")} role="status">{notice}</p> : null}
+          <form className={scopedClasses(friendsStyles, "figma-friends-composer puddle-text-composer")} onSubmit={send}>
             <details
-              className="figma-friends-composer-menu is-attachment"
+              className={scopedClasses(friendsStyles, "figma-friends-composer-menu is-attachment")}
               ref={placeMenuRef}
               onToggle={(event) => {
                 if (event.currentTarget.open) loadShareableLocations()
               }}
             >
               <summary aria-label="Add a place" title="Add a place">+</summary>
-              <div className="figma-message-place-picker"><strong>Share a saved place</strong>{shareableLocationsLoading ? <p>Loading saved places...</p> : shareableLocations.length ? shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
+              <div className={scopedClasses(friendsStyles, "figma-message-place-picker")}><strong>Share a saved place</strong>{shareableLocationsLoading ? <p>Loading saved places...</p> : shareableLocations.length ? shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
             </details>
-            <details className="figma-friends-composer-menu is-more">
+            <details className={scopedClasses(friendsStyles, "figma-friends-composer-menu is-more")}>
               <summary aria-label="More message options">○</summary>
               <div><Link href="/matches?tab=shared">View shared puddles</Link><Link href="/plans">Open Saved</Link></div>
             </details>
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Text Message" aria-label="Message" maxLength={5000} />
-            <button className="is-send puddle-send-action" type="submit" disabled={!draft.trim() || busy} aria-label="Send message">↑</button>
+            <button className={scopedClasses(friendsStyles, "is-send puddle-send-action")} type="submit" disabled={!draft.trim() || busy} aria-label="Send message">↑</button>
           </form>
-        </> : <div className="figma-friends-chat-empty">Select a conversation</div>}
+        </> : <div className={scopedClasses(friendsStyles, "figma-friends-chat-empty")}>Select a conversation</div>}
       </section>
     </div>
   </div>

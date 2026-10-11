@@ -11,11 +11,10 @@ test('landing phone demo routes are public, same-origin frameable, and keep othe
   expect(signup.headers()['content-security-policy'] || '').toContain("frame-ancestors 'none'")
 })
 
-test('public Swipe phone keeps the Figma screen identity and real draggable mechanics', async ({ page }) => {
+test('public Swipe phone loads its photo and supports drag, details and undo', async ({ page }) => {
   await page.goto('/landing-demo/swipe')
   const screen = page.locator('[data-demo-screen="swipe"]')
   await expect(screen).toBeVisible()
-  await expect(screen).toHaveAttribute('data-figma-screen', '40:641')
   await expect(screen.getByRole('img', { name: 'Puddle' })).toBeVisible()
   const activePhoto = screen.locator('.landing-demo-swipe-card[data-card-role="active"] .landing-demo-swipe-card-photo img')
   await expect(activePhoto).toBeVisible()
@@ -42,7 +41,6 @@ test('Saved and Feed phone demos expose their corresponding Figma interactions',
   await page.goto('/landing-demo/save')
   const saved = page.locator('[data-demo-screen="save"]')
   await expect(saved).toBeVisible()
-  await expect(saved).toHaveAttribute('data-figma-screen', '25:180')
   await expect(saved.locator('.landing-demo-saved-photo img').first()).toBeVisible()
   const savedImageWidths = await saved.locator('.landing-demo-saved-photo img').evaluateAll((images) => images.map((image) => image.naturalWidth))
   expect(savedImageWidths).toHaveLength(5)
@@ -67,7 +65,6 @@ test('Saved and Feed phone demos expose their corresponding Figma interactions',
   await page.goto('/landing-demo/feed')
   const feed = page.locator('[data-demo-screen="feed"]')
   await expect(feed).toBeVisible()
-  await expect(feed).toHaveAttribute('data-figma-screen', '40:519')
   await expect(feed.getByText('A great place to spend the afternoon', { exact: true })).toBeVisible()
   await expect(feed.locator('.landing-demo-feed-placeVisual img')).toBeVisible()
   const feedImageWidths = await feed.locator('.landing-demo-feed-placeVisual img').evaluateAll((images) => images.map((image) => image.naturalWidth))
@@ -94,14 +91,13 @@ test('landing embeds the Figma phone set for each responsive composition instead
     await expect(phone).toBeAttached()
     await expect(phone.locator('iframe')).toHaveAttribute('data-src', `/landing-demo/${demo}`)
   }
-  await expect(page.locator('.landing-canvas--desktop [data-phone-demo="profile"]')).toHaveCount(0)
 
   const swipePhone = page.locator('.landing-canvas--desktop [data-phone-demo="swipe"]')
   await swipePhone.scrollIntoViewIfNeeded()
   const swipeIframe = swipePhone.locator('iframe')
   await expect(swipeIframe).toHaveAttribute('src', '/landing-demo/swipe', { timeout: 15_000 })
   const swipeFrame = swipeIframe.contentFrame()
-  await expect(swipeFrame.locator('[data-demo-screen="swipe"]')).toHaveAttribute('data-figma-screen', '40:641')
+  await expect(swipeFrame.locator('[data-demo-screen="swipe"]')).toBeVisible()
   await expect(swipeFrame.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
 
   await page.setViewportSize({ width: 704, height: 900 })
@@ -112,9 +108,7 @@ test('landing embeds the Figma phone set for each responsive composition instead
     await expect(phone).toBeAttached()
     await expect(phone.locator('iframe')).toHaveAttribute('data-src', `/landing-demo/${demo}`)
   }
-  await expect(page.locator('.landing-canvas--mobile [data-phone-demo="profile"]')).toHaveCount(0)
 
-  await expect(page.locator('img.feature-phone[data-draggable-phone]')).toHaveCount(0)
 })
 
 test('landing phone demos preserve usable proportions and contain their controls at mobile widths', async ({ page }) => {

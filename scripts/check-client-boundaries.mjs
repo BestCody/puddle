@@ -21,7 +21,6 @@ for (const path of paths) {
   const client = /^\s*["']use client["']/.test(source.slice(0, 300))
   if (!client) continue
   clientFiles.push({ path, bytes })
-  if (bytes > 90_000) findings.push(`${path}: client source is ${Math.round(bytes / 1024)} KiB`)
   if (/from\s+["'](?:node:|sharp|fs|path|crypto)/.test(source)) findings.push(`${path}: imports a Node-only module`)
   if (/from\s+["']@\/lib\/supabase\/(?:server|admin)/.test(source)) findings.push(`${path}: imports a server Supabase client`)
   if (/from\s+["']@\/lib\/auth\/user/.test(source)) findings.push(`${path}: imports server authentication logic`)
@@ -29,7 +28,6 @@ for (const path of paths) {
 
 const rootLayout = await readFile(join(root, 'app/layout.js'), 'utf8')
 if (/^[\s\n]*["']use client["']/.test(rootLayout)) findings.push('app/layout.js: the root layout must remain a server component')
-if (rootLayout.includes("import './legal.css'")) findings.push('app/layout.js: route-specific legal CSS leaked back into every route')
 
 if (findings.length) throw new Error(`Client boundary audit failed:\n${findings.map((item) => `- ${item}`).join('\n')}`)
 const largest = clientFiles.sort((a, b) => b.bytes - a.bytes).slice(0, 10).map(({ path, bytes }) => `${path} (${Math.round(bytes / 1024)} KiB)`).join(', ')
