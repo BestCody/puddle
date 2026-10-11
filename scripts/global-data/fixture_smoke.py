@@ -11,9 +11,15 @@ import hashlib
 import math
 import re
 import uuid
+import sqlite3
+import tempfile
+import os
+import time
+from contextlib import closing
 from collections import Counter
 from pathlib import Path
-from photo_overlay_format import build_membership, photo_bucket, valid_bucket_count
+from photo_overlay_format import build_membership
+from indexed_location_data import write_photo_index, prune_inactive_photo_indices
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / 'tests' / 'fixtures' / 'global-data' / 'platform-smoke.json'
@@ -244,12 +250,30 @@ def main():
         raise AssertionError('duplicate photo membership must not be published')
     except ValueError:
         pass
-    assert all(valid_bucket_count(count) for count in (16, 64, 256, 1024, 4096))
-    assert not any(valid_bucket_count(count) for count in (0, 17, 8192))
-    assert [photo_bucket('loc-2', count) for count in (16, 64, 256, 1024, 4096)] == ['02', '32', '32', '298', '298'], 'published shard identity and larger-bucket padding must match the runtime'
-    small_buckets = {photo_bucket(identifier, 4096) for identifier in photo_ids[:20]}
-    touched = sum(photo_bucket(identifier, 4096) in small_buckets for identifier in photo_ids)
-    assert touched < 50, 'a small page should not decode the entire photo inventory'
+    with tempfile.TemporaryDirectory() as directory:
+        entries = [[identifier, ['a' * 64, 'fixture', 'Creator', 'https://fixture.invalid', 'CC BY', 800, 600]] for identifier in photo_ids]
+        index = write_photo_index(entries, 'fixture-manifest', directory)
+        path = Path(directory) / f'photos-{index["data_sha256"]}.sqlite'
+        with closing(sqlite3.connect(f'file:{path}?mode=ro', uri=True)) as db:
+            assert db.execute('select count(*) from photos').fetchone()[0] == len(entries)
+            selected = db.execute('select photo from photos where location_id=?', (photo_ids[0],)).fetchone()
+            assert json.loads(selected[0]) == entries[0][1], 'indexed lookup must retain the complete attribution'
+            assert db.execute('select photo from photos where location_id=?', ('missing',)).fetchone() is None
+        assert write_photo_index(entries, 'fixture-manifest', directory) == index, 'immutable photo indices must be reused'
+        old = write_photo_index(entries[:1], 'fixture-manifest', directory)
+        old_path = Path(directory) / f'photos-{old["data_sha256"]}.sqlite'
+        unknown_path = Path(directory) / f'photos-{"f" * 64}.sqlite'
+        unknown_path.write_text('not an owned index')
+        catalogue_path = Path(directory) / 'catalogue-fixture.sqlite'
+        catalogue_path.write_text('keep catalogue data')
+        prune_inactive_photo_indices(directory, index['data_sha256'])
+        assert old_path.exists(), 'recent indices must remain readable through cached-pointer TTL'
+        expired = time.time() - 30 * 60
+        for candidate in (old_path, path, unknown_path, catalogue_path):
+            os.utime(candidate, (expired, expired))
+        prune_inactive_photo_indices(directory, index['data_sha256'])
+        assert not old_path.exists(), 'owned inactive metadata should be retired after the reader grace period'
+        assert path.exists() and unknown_path.exists() and catalogue_path.exists(), 'cleanup must preserve current, unknown, and catalogue files'
     assert_slug_collision_regression()
     assert_category_mapping()
 

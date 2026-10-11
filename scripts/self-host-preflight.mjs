@@ -56,6 +56,11 @@ export function validateSelfHostEnv(env) {
   if (!isAbsolute(objectDataDir) || ['/', '/srv', '/var', '/opt'].includes(resolve(objectDataDir))) {
     problems.push('PUDDLE_OBJECT_DATA_DIR must be a dedicated absolute data directory.')
   }
+  const catalogueDataDir = String(env.PUDDLE_CATALOGUE_DATA_DIR || '')
+  if (!isAbsolute(catalogueDataDir) || ['/', '/srv', '/var', '/opt'].includes(resolve(catalogueDataDir))) {
+    problems.push('PUDDLE_CATALOGUE_DATA_DIR must be a dedicated absolute data directory.')
+  }
+  if (env.GLOBAL_LOCATION_INDEXED_DATA_DIR !== '/catalogue') problems.push('GLOBAL_LOCATION_INDEXED_DATA_DIR must match the read-only /catalogue app mount.')
   const domain = String(env.PUDDLE_DOMAIN || '').trim().toLowerCase()
   if (configured(domain) && !/^(?=.{4,253}$)[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(domain)) {
     problems.push('PUDDLE_DOMAIN must be one DNS hostname without a scheme or path.')

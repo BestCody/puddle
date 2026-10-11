@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, isAbsolute } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 export const JOBS = Object.freeze({
@@ -40,6 +40,9 @@ export function validateJob(job, env) {
     for (const key of ['SUPABASE_SECRET_KEY', 'MAPILLARY_ACCESS_TOKEN']) {
       if (!env[key]) throw new Error(`${key} is required for materialization.`)
     }
+  }
+  if (['materialize', 'locations'].includes(job) && !isAbsolute(String(env.GLOBAL_LOCATION_INDEXED_DATA_DIR || ''))) {
+    throw new Error('GLOBAL_LOCATION_INDEXED_DATA_DIR must be the absolute host indexed-data directory.')
   }
   if (job === 'locations' && !env.FSQ_ICEBERG_TOKEN) {
     throw new Error('FSQ_ICEBERG_TOKEN is required for the global build.')
@@ -121,6 +124,10 @@ export function runJob(job) {
     python('build_bootstrap_overlays.py', [`--snapshot=${snapshot}`, '--bootstrap-prefix=data/snapshots/bootstrap/current'])
     python('build_object_search_index.py', [`--snapshot=${snapshot}`])
     python('validate_object_search_index.py', [`--snapshot=${snapshot}`])
+    python('build_indexed_location_data.py', [
+      `--output-dir=${process.env.GLOBAL_LOCATION_INDEXED_DATA_DIR}`,
+      `--manifest-key=${process.env.PUDDLE_DATA_PREFIX || 'data'}/search/schema=v1/snapshot=${snapshot}/manifest.json`
+    ])
     python('validate_object_search_index.py', [`--snapshot=${snapshot}`, '--activate'])
     python('build_object_photo_search_overlay.py', [`--snapshot=${snapshot}`])
   } else if (job === 'photo_audit') {

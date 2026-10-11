@@ -70,6 +70,7 @@ services:
       - "3000"
     volumes:
       - next_cache:/app/.next/cache
+      - ${PUDDLE_CATALOGUE_DATA_DIR:?set PUDDLE_CATALOGUE_DATA_DIR}:/catalogue:ro
     networks:
       - default
       - puddle_edge
