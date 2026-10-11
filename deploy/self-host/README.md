@@ -8,6 +8,15 @@ page; deploy the updated revision to apply that entry point. This runbook descri
 running stack. The completed source-transfer tooling has been retired from the
 working tree; its history remains available in Git.
 
+## Application deployments
+
+Pushes to `main` now release the app to Contabo **after `Validate` passes**.
+Other branches/PRs are checks-only. See [automatic deployments](AUTO_DEPLOY.md)
+for the release boundary, setup, and how to pause deployments. SQL and
+infrastructure changes still require explicit review/application; the app
+workflow does not replay migrations or restart the data services. Worker
+code, dependencies, and schedules also require separate explicit releases.
+
 Status below was checked on 2026-10-11. Recheck the host before operating on it.
 
 | Service | Current arrangement |
@@ -48,7 +57,8 @@ Run from the Contabo host without printing environment files or secrets:
 
 ```sh
 cd /opt/puddle
-docker compose --env-file .env.selfhost -f deploy/self-host/compose.yaml ps
+docker compose --project-name self-host --env-file .env.selfhost \
+  -f deploy/self-host/compose.yaml -f /etc/puddle/release.compose.json ps
 docker compose --env-file /opt/puddle-supabase/.env \
   -f /opt/puddle-supabase/docker-compose.yml \
   -f /opt/puddle/deploy/self-host/supabase-compose.override.yaml ps
@@ -77,45 +87,29 @@ enable the global location timer merely to refresh photos.
 
 ## Release an application revision
 
-Merging or pushing to `main` does **not** deploy this machine. A release is a
-separate, explicit operation:
+Pushes or merges to `main` deploy the app after `Validate` passes. Other
+branches and PRs do not deploy. Follow [automatic deployments](AUTO_DEPLOY.md)
+for the digest-pinned image, restricted SSH receiver, and pause/recovery procedure.
+Builds run on GitHub, not on the 8 GB production host. Public `NEXT_PUBLIC_*`
+values must match the machine because Next.js embeds them at build time.
 
-1. From a clean, trusted checkout of the intended commit, run `npm ci`,
-   `npm run check`, and the relevant browser tests. Record the **full** commit
-   SHA. Build and test the Next.js image against the same public origins that
-   will be used in production; `NEXT_PUBLIC_*` values are embedded at build
-   time. Check available memory and active data jobs before starting a build
-   on the 8 GB host.
-2. Stage that exact tracked source revision at `/opt/puddle`. Preserve the
-   host's private `.env` files, `.venv`, and object data. Remove files deleted
-   by the release; simply unpacking over the old tree leaves retired routes
-   behind. Do not publish a partially copied tree or include `.git`, local
-   test output, or credentials in the app image.
-3. Review SQL changes since the deployed revision. The database was restored
-   from an existing schema: **do not replay the entire migration history**.
-   Apply only unapplied, reviewed migrations to the self-hosted database,
-   with `ON_ERROR_STOP=1`, and run their focused authorization/data checks.
-4. Set `PUDDLE_BUILD_SHA` in the private app environment to the release's full
-   SHA. Then validate and start the app stack from `/opt/puddle`:
+Before merging SQL or infrastructure changes, review and apply only the
+unapplied changes. The restored database already contains the historical
+schema: **do not replay the entire migration history**. The receiver blocks
+activation if migration files or infrastructure definitions differ from the
+reviewed files on the host. It never runs migrations or restarts data services.
 
-   ```sh
-   node --env-file=.env.selfhost scripts/self-host-preflight.mjs
-   docker compose --env-file .env.selfhost -f deploy/self-host/compose.yaml config --quiet
-   docker compose --env-file .env.selfhost -f deploy/self-host/compose.yaml up -d --build --wait
-   curl --fail --silent --show-error https://puddle.you/api/health
-   ```
-
-5. Compare `buildSha` to the intended release. Check a real catalogue search,
-   a place photo, authenticated login, and any route or database behavior
-   touched by that release on desktop and mobile. The repository's **Live
-   production smoke** workflow accepts `deployed_sha` only after the host has
-   that revision; its results do not replace focused checks for changed code.
+After release, compare `/api/health`'s full `buildSha` to the merged commit and
+check the real user flows affected. The **Live production smoke** workflow
+accepts `deployed_sha` after that revision is running; its results do not
+replace focused checks for changed behavior. For manual app operations,
+include `/etc/puddle/release.compose.json` to retain the active image.
 
 The Dockerfile and Compose definitions are the source of truth for image
 contents, build arguments, health checks, and private networks. Do not scale
 the app horizontally without coordinating Next.js cache and deployment
-versions. The machine-side copy/release procedure is manual; avoid assuming
-that a GitHub PR or CI success changed the running host.
+versions. A successful PR check is not a release; confirm the separate
+`Deploy Contabo` result and the running host's revision after merging.
 
 ## Database and Supabase changes
 
