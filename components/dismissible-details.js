@@ -1,13 +1,18 @@
 'use client'
 
-import { useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState } from 'react'
 
 // Retain native disclosure semantics and existing content/styles. Only transient
 // menus use this wrapper; persistent disclosures (such as Plan a visit) do not.
-export function DismissibleDetails({ children, onToggle, ref: externalRef = null, ...props }) {
+export function DismissibleDetails({ children, onOpen, ref: externalRef = null, ...props }) {
   const ref = useRef(null)
   const [open, setOpen] = useState(false)
   useImperativeHandle(externalRef, () => ref.current, [])
+  const notifyOpen = useEffectEvent(() => onOpen?.())
+
+  // The native disclosure can be opened while hydration scripts are loading.
+  // Adopt that DOM state so light-dismiss is attached once React takes over.
+  useEffect(() => { setOpen(ref.current.open) }, [])
 
   function close() {
     ref.current.open = false
@@ -17,6 +22,7 @@ export function DismissibleDetails({ children, onToggle, ref: externalRef = null
   useEffect(() => {
     if (!open) return undefined
     const details = ref.current
+    notifyOpen()
     function dismissOutside(event) {
       if (!details.contains(event.target)) {
         details.open = false
@@ -33,7 +39,6 @@ export function DismissibleDetails({ children, onToggle, ref: externalRef = null
 
   return <details {...props} ref={ref} onToggle={(event) => {
     setOpen(event.currentTarget.open)
-    onToggle?.(event)
   }} onKeyDown={(event) => {
     if (event.key !== 'Escape' || !event.currentTarget.open) return
     // Consume the inner menu's Escape before it reaches an enclosing dialog.

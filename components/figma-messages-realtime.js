@@ -636,9 +636,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
             <DismissibleDetails
               className={scopedClasses(friendsStyles, "figma-friends-composer-menu is-attachment")}
               ref={placeMenuRef}
-              onToggle={(event) => {
-                if (event.currentTarget.open) loadShareableLocations()
-              }}
+              onOpen={loadShareableLocations}
             >
               <summary aria-label="Add a place" title="Add a place">+</summary>
               <div className={scopedClasses(friendsStyles, "figma-message-place-picker")}><strong>Share a saved place</strong>{shareableLocationsLoading ? <p>Loading saved places...</p> : shareableLocations.length ? shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>

@@ -42,11 +42,11 @@ export function DetailShareMenu({ locationId, slug }) {
     }
   }
 
-  function onToggle(event) {
-    if (event.currentTarget.open && !loaded && !loading) loadPage()
+  function onOpen() {
+    if (!loaded && !loading) loadPage()
   }
 
-  return <DismissibleDetails className={styles.share} onToggle={onToggle}>
+  return <DismissibleDetails className={styles.share} onOpen={onOpen}>
     <summary aria-label="Share saved place"><img src="/figma/saved-place-share.svg" alt="" aria-hidden="true" /></summary>
     <div>
       {friends.map((friend) => <form action={shareSavedPlace} onSubmit={(event) => { const input = event.currentTarget.elements.namedItem('share_key'); if (!input.value) input.value = crypto.randomUUID() }} key={friend.id}>

@@ -14,6 +14,35 @@ async function contained(child, parent) {
   expect(a.y + a.height).toBeLessThanOrEqual(b.y + b.height + 1)
 }
 
+for (const [route, label, content] of [
+  ['/plans', 'More saved categories', 'nav[aria-label="More saved categories"]'],
+  ['/create/post', 'Open add menu', '.figma-create-post-add-menu']
+]) test(`a native ${label} menu opened before hydration remains usable afterward`, async ({ page }, testInfo) => {
+  test.skip(!['phone', 'desktop'].includes(testInfo.project.name), 'The hydration race is viewport-independent; cover phone and desktop.')
+  let releaseScripts
+  const scripts = new Promise(resolve => { releaseScripts = resolve })
+  await page.route('**/_next/**/*.js*', async request => { await scripts; await request.continue() })
+  try {
+    await page.goto(route, { waitUntil: 'commit' })
+    const toggle = page.locator(`summary[aria-label="${label}"]`)
+    await toggle.click()
+    await expect(page.locator(content)).toBeVisible()
+    releaseScripts()
+    await expect(page.locator('.figma-dashboard-shell')).toHaveAttribute('data-resolved-appearance', /light|dark/)
+    await expect(page.locator(content)).toBeVisible()
+    if (route === '/create/post') await expect(page.locator('.figma-create-post-location-options').getByRole('link')).toHaveCount(12)
+    if (route === '/plans') await page.getByRole('searchbox', { name: 'Search saved puddles' }).click()
+    else await page.getByRole('textbox', { name: 'Title', exact: true }).focus()
+    await expect(page.locator(content)).toBeHidden()
+    await toggle.click()
+    await page.keyboard.press('Escape')
+    await expect(page.locator(content)).toBeHidden()
+    await expect(toggle).toBeFocused()
+  } finally {
+    releaseScripts()
+  }
+})
+
 test('Saved categories do not overlap, More is readable and History is reachable', async ({ page }) => {
   await page.goto('/plans')
   const rail = page.getByRole('navigation', { name: 'Saved categories', exact: true })

@@ -12,9 +12,7 @@ const ProfilePhotoEditor = dynamic(() => import('./profile-photo-editor').then((
 export function ProfileAvatarEditor({ avatarUrl, displayName, fallbackInitials, userId, currentPath }) {
   const [requested, setRequested] = useState(false)
 
-  return <DismissibleDetails className={scopedClasses(profileStyles, "figma-profile-avatar-editor")} onToggle={(event) => {
-    if (event.currentTarget.open) setRequested(true)
-  }}>
+  return <DismissibleDetails className={scopedClasses(profileStyles, "figma-profile-avatar-editor")} onOpen={() => setRequested(true)}>
     <summary aria-label="Change profile photo">
       <PhotoFrame as="span" className={scopedClasses(profileStyles, "figma-profile-avatar")} src={avatarUrl} alt={`${displayName} profile`} unavailableText={fallbackInitials} loadingText="" />
     </summary>

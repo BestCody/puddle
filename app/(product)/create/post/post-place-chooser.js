@@ -48,7 +48,7 @@ export function PostPlaceChooser({ selectedPoint }) {
     ? [selectedPoint, ...points]
     : points
 
-  return <DismissibleDetails className={scopedClasses(createStyles, "figma-create-post-add")} onToggle={(event) => { if (event.currentTarget.open) void loadPlaces() }}>
+  return <DismissibleDetails className={scopedClasses(createStyles, "figma-create-post-add")} onOpen={loadPlaces}>
     <summary aria-label="Open add menu">＋</summary>
     <div className={scopedClasses(createStyles, "figma-create-post-add-menu")}>
       <strong>Attach a place</strong>
