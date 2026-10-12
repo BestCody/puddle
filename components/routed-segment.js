@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import styles from './routed-segment.module.css'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const TONE_COLORS = {
   yellow: '#f2c035',
@@ -23,23 +23,13 @@ function isPlainLeftPointer(event) {
 
 export function RoutedSegment({ items, activeValue, ariaLabel, className = '', tone = 'neutral', testId, layoutAnchor, onSelect = null, rootClassName = 'figma-dashboard-segment routed-segment' }) {
   const [activeIndex, setActiveIndex] = useState(() => indexFor(items, activeValue))
-  const segmentRef = useRef(null)
   const locallyControlled = typeof onSelect === 'function'
 
   useEffect(() => {
     setActiveIndex(indexFor(items, activeValue))
   }, [activeValue, items])
 
-  useLayoutEffect(() => {
-    const segment = segmentRef.current
-    const active = segment?.querySelectorAll(':scope > a, :scope > button')?.[activeIndex]
-    if (!segment || !active) return
-    segment.style.setProperty('--segment-active-left', `${active.offsetLeft}px`)
-    segment.style.setProperty('--segment-active-width', `${active.offsetWidth}px`)
-  }, [activeIndex, items])
-
   return <nav
-    ref={segmentRef}
     className={`${rootClassName}${rootClassName.includes('figma-dashboard-segment') ? ` ${styles.segment}` : ''} tone-${tone}${className ? ` ${className}` : ''}`}
     aria-label={ariaLabel}
     data-testid={testId}
@@ -49,7 +39,7 @@ export function RoutedSegment({ items, activeValue, ariaLabel, className = '', t
     style={{
       '--segment-count': items.length,
       '--segment-active-index': activeIndex,
-      '--segment-active-text': tone === 'pink' ? '#fff' : '#111',
+      '--segment-active-text': '#111',
       '--segment-active-bg': TONE_COLORS[tone] || TONE_COLORS.neutral
     }}
   >

@@ -56,16 +56,31 @@ export function DismissibleDetails({ children, onOpen, fitAbove = null, ref: ext
       window.visualViewport?.addEventListener('scroll', sizeMenu)
     }
     function dismissOutside(event) {
-      if (!details.contains(event.target)) {
+      // The clicked control may be removed by its own handler (e.g. More
+      // friends becomes Loading). The original event path still owns the click.
+      if (!event.composedPath().includes(details)) {
         details.open = false
         setOpen(false)
       }
     }
-    document.addEventListener('pointerdown', dismissOutside)
-    document.addEventListener('focusin', dismissOutside)
+    // Pointer focus arrives before click. Collapsing a flow-layout menu then
+    // can move the button the user is pressing and swallow its click.
+    let pointerFocus = false
+    const startPointer = () => { pointerFocus = true }
+    const endPointer = () => { pointerFocus = false }
+    const dismissAfterClick = event => { endPointer(); dismissOutside(event) }
+    const dismissAfterFocus = event => { if (!pointerFocus) dismissOutside(event) }
+    document.addEventListener('pointerdown', startPointer, true)
+    document.addEventListener('pointercancel', endPointer, true)
+    document.addEventListener('keydown', endPointer, true)
+    document.addEventListener('click', dismissAfterClick)
+    document.addEventListener('focusin', dismissAfterFocus)
     return () => {
-      document.removeEventListener('pointerdown', dismissOutside)
-      document.removeEventListener('focusin', dismissOutside)
+      document.removeEventListener('pointerdown', startPointer, true)
+      document.removeEventListener('pointercancel', endPointer, true)
+      document.removeEventListener('keydown', endPointer, true)
+      document.removeEventListener('click', dismissAfterClick)
+      document.removeEventListener('focusin', dismissAfterFocus)
       observer?.disconnect()
       window.removeEventListener('resize', sizeMenu)
       window.removeEventListener('scroll', sizeMenu, true)

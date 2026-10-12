@@ -9,6 +9,7 @@ import { FigmaSwipeCard } from '@/components/figma-swipe-card'
 import { SwipeActionDock } from '@/components/swipe-action-dock'
 import { DiscoveryFilterSheet } from '@/components/discovery-filter-sheet'
 import { csrfFetch } from '@/lib/security/csrf-client'
+import { MAX_SEARCH_DISTANCE_KM } from '@/lib/app/discovery-filters'
 
 const ACTION_BATCH_DELAY_MS = 350
 const ACTION_BATCH_SIZE = 20
@@ -20,7 +21,6 @@ const CONTINUATION_BATCH_SIZE = 16
 const PREFETCH_THRESHOLD = 10
 const REFILL_THRESHOLD = 5
 const PHOTO_PRELOAD_AHEAD = 2
-const MAX_SEARCH_DISTANCE_KM = 20_040
 
 function queryString(filters) {
   const params = new URLSearchParams({ kind: 'place', date: 'any' })

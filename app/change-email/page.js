@@ -3,7 +3,7 @@ import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
-import { SubmitButton } from '@/components/submit-button'
+import { AccountEmailForm } from '@/components/account-email-form'
 import { updateEmail } from '@/app/auth/actions'
 import { settingsActionDestination } from '@/lib/app/settings-navigation'
 import { requireUser } from '@/lib/auth/user'
@@ -31,24 +31,7 @@ export default async function ChangeEmailPage({ searchParams }) {
         <div>{user.email || 'Unavailable'}</div>
       </div>
 
-      <form className={scopedClasses(authStyles, "auth-form")} action={updateEmail}>
-        <input type="hidden" name="settings_return" value={destination} />
-        <label className="field">
-          New email address
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            maxLength="254"
-            placeholder="you@example.com"
-            required
-          />
-        </label>
-
-        <SubmitButton pendingText="Sending confirmation…">
-          Send confirmation emails →
-        </SubmitButton>
-      </form>
+      <AccountEmailForm action={updateEmail} label="New email address" buttonLabel="Send confirmation emails →" pendingText="Sending confirmation…" settingsReturn={destination} />
 
       <div className={scopedClasses(authStyles, "auth-links")}>
         <Link href={destination}>← Back to account settings</Link>
