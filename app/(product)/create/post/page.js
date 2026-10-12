@@ -125,6 +125,7 @@ export default async function CreatePostPage({ searchParams }) {
             <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>
           </fieldset>
           <button className={scopedClasses(createStyles, "figma-create-post-submit")} type="submit" disabled={!selectedPoint} aria-label="Publish post">↑</button>
+          <p className={createStyles.selectedPlace}><span>Posting about</span><strong>{selectedPoint?.title || 'No place selected'}</strong><span>Use the add menu below to change the place.</span></p>
           <label className={scopedClasses(createStyles, "figma-create-post-title")}><input aria-label="Title" name="title" maxLength="80" required placeholder="Title" /></label>
           <label className={scopedClasses(createStyles, "figma-create-post-description")}><textarea aria-label="Description" name="description" maxLength="1000" placeholder="Description" /></label>
           <PostPlaceChooser key={selectedPoint?.id || 'none'} selectedPoint={selectedPoint} />

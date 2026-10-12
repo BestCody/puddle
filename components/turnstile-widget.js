@@ -14,6 +14,7 @@ export function TurnstileWidget({ action, onToken }) {
       sitekey: siteKey,
       action,
       theme: 'auto',
+      size: 'compact',
       retry: 'auto',
       'response-field': true,
       callback: (token) => onToken?.(token),

@@ -220,7 +220,7 @@
   z-index: 10;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  grid-template-rows: auto auto minmax(10.625rem, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(10.625rem, 1fr) auto;
   align-items: start;
   gap: .875rem .625rem;
   width: min(43.5625rem, calc(100% - 2.5rem));
@@ -298,6 +298,27 @@
   background: var(--shell-surface, #fff);
   color: #f2c035;
   font: 800 1.375rem/1 var(--font-sans);
+}
+
+.selectedPlace {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: .25rem;
+  min-width: 0;
+  margin: 0;
+  padding: .75rem;
+  border-radius: .75rem;
+  background: var(--shell-hover, #f4f4f4);
+  overflow-wrap: anywhere;
+  font: 500 .8125rem/1.4 var(--font-sans);
+}
+
+.selectedPlace span {
+  color: var(--shell-muted, #666);
+}
+
+.selectedPlace strong {
+  font-size: 1rem;
 }
 
 .figma-create-post-title, .figma-create-post-description {
@@ -419,10 +440,6 @@
 
 .figma-create-post-location-options small {
   color: var(--shell-muted, #858585);
-}
-
-.figma-create-post-add-footer {
-  display: none;
 }
 
 .figma-create-post-empty {

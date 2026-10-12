@@ -6,24 +6,10 @@ import { signOut } from '@/app/auth/actions'
 import { completeDateOnboarding } from './actions'
 import { requireUser } from '@/lib/auth/user'
 import { redirect } from 'next/navigation'
+import { PROFILE_INTEREST_OPTIONS } from '@/lib/app/profile-interests'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Build your date deck' }
-
-const dateLocationOptions = [
-  { value: 'cafe', label: 'Coffee shops', detail: 'Coffee, tea, and easy conversation' },
-  { value: 'restaurant', label: 'Restaurants', detail: 'Dinner, brunch, and tasting spots' },
-  { value: 'bar', label: 'Bars & lounges', detail: 'Cocktails, mocktails, and late-night drinks' },
-  { value: 'park', label: 'Parks & gardens', detail: 'Walks, picnics, and fresh air' },
-  { value: 'museum', label: 'Museums', detail: 'Something interesting to explore together' },
-  { value: 'gallery', label: 'Galleries', detail: 'Art, exhibits, and conversation starters' },
-  { value: 'attraction', label: 'Local attractions', detail: 'Landmarks, aquariums, and city favourites' },
-  { value: 'activity_venue', label: 'Activity dates', detail: 'Arcades, bowling, mini golf, and more' },
-  { value: 'scenic_spot', label: 'Scenic spots', detail: 'Views, sunsets, and photo-worthy places' },
-  { value: 'nightlife', label: 'Nightlife', detail: 'Dancing, live energy, and nights out' },
-  { value: 'shop', label: 'Markets & bookstores', detail: 'Browse, wander, and discover something new' },
-  { value: 'community_space', label: 'Community spaces', detail: 'Low-key local gems and shared experiences' }
-]
 
 export default async function OnboardingPage({ searchParams }) {
   const { user, profile } = await requireUser()
@@ -40,7 +26,7 @@ export default async function OnboardingPage({ searchParams }) {
         action={completeDateOnboarding}
         profile={profile || {}}
         userDisplayName={user.user_metadata?.display_name || ''}
-        dateLocationOptions={dateLocationOptions}
+        dateLocationOptions={PROFILE_INTEREST_OPTIONS}
         signOutAction={signOut}
       />
     </div>

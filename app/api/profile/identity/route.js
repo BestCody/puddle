@@ -4,7 +4,7 @@ import { isSupabaseConfigured } from '@/lib/supabase/env'
 
 export const dynamic = 'force-dynamic'
 
-const IDENTITY_PROFILE_SELECT = 'display_name,avatar_path,onboarding_completed_at,suspended_at,banned_at'
+const IDENTITY_PROFILE_SELECT = 'display_name,avatar_path,appearance_theme,onboarding_completed_at,suspended_at,banned_at'
 
 function publicMediaUrl(session, path) {
   const value = String(path || '').trim()
@@ -24,7 +24,8 @@ export async function GET() {
 
   return NextResponse.json({
     displayName: current.profile.display_name || 'Puddle person',
-    avatarUrl: publicMediaUrl(current, current.profile.avatar_path)
+    avatarUrl: publicMediaUrl(current, current.profile.avatar_path),
+    appearanceTheme: current.profile.appearance_theme
   }, {
     headers: { 'Cache-Control': 'private, no-store' }
   })

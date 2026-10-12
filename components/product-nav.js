@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { beginMainContentLoading } from './main-content-transition'
 import { PhotoFrame } from '@/components/photo-frame'
+import { loadProductIdentity, useProductIdentity } from './product-identity'
 
 function NavIcon({ type, avatarUrl }) {
   if (type === 'swipe') return <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="6" width="12" height="20" rx="3"/><path d="M13 10h6M6 11l-4 5 4 5M26 11l4 5-4 5"/></svg>
@@ -17,18 +18,6 @@ function NavIcon({ type, avatarUrl }) {
   if (type === 'profile' && avatarUrl) return <PhotoFrame as="span" className={scopedClasses(shellStyles, "figma-dashboard-avatar")} src={avatarUrl} alt="" unavailableText="" loadingText="" />
   if (type === 'profile') return <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="11" r="5"/><path d="M7 27c.8-6 4.3-9 9-9s8.2 3 9 9"/></svg>
   return null
-}
-
-let navIdentityPromise = null
-
-function loadNavIdentity() {
-  if (navIdentityPromise) return navIdentityPromise
-  navIdentityPromise = fetch('/api/profile/identity', { credentials: 'same-origin', cache: 'no-store' })
-    .then((response) => response.ok ? response.json() : null)
-    .then((value) => value?.avatarUrl ? value : null)
-    .catch(() => null)
-    .finally(() => { navIdentityPromise = null })
-  return navIdentityPromise
 }
 
 const items = [
@@ -66,6 +55,7 @@ function shouldAvoidPrefetch() {
 }
 
 function NavItems({ avatarUrl = null }) {
+  const productIdentity = useProductIdentity()
   const pathname = usePathname()
   const router = useRouter()
   const routeActiveHref = items.find((item) => isActive(pathname, item.href))?.href ?? null
@@ -74,16 +64,20 @@ function NavItems({ avatarUrl = null }) {
   const navigationIntentRef = useRef(null)
 
   useEffect(() => {
+    if (productIdentity) {
+      setResolvedAvatarUrl(productIdentity.identity?.avatarUrl || avatarUrl || null)
+      return undefined
+    }
     if (avatarUrl) {
       setResolvedAvatarUrl(avatarUrl)
       return undefined
     }
     let active = true
-    loadNavIdentity().then((identity) => {
+    loadProductIdentity().then((identity) => {
       if (active && identity?.avatarUrl) setResolvedAvatarUrl(identity.avatarUrl)
     })
     return () => { active = false }
-  }, [avatarUrl])
+  }, [avatarUrl, productIdentity])
 
   useEffect(() => {
     if (navigationIntentRef.current) {

@@ -4,7 +4,7 @@ export async function GET(request, { params }) {
   const { api } = await params
   const route = api.join('/')
   if (route === 'fixture/messages') return Response.json({ data: messagesForConversation(new URL(request.url).searchParams.get('conversation')), error: null })
-  if (route === 'profile/identity') return Response.json({ avatarUrl: person.avatar_path, displayName: person.display_name })
+  if (route === 'profile/identity') return Response.json({ avatarUrl: person.avatar_path, displayName: person.display_name, appearanceTheme: 'dark' })
   if (route === 'social-feed') return Response.json({ items: posts, pagination: { hasMore: false }, self: person })
   if (route === 'saved-location-options') return Response.json({ items: places.map(p => ({ ...p, cover_url: photo, href: `/plans/${p.slug}` })) })
   if (route.startsWith('saved-location/')) return Response.json({ location: { ...places[0], cover_url: photo, summary: 'A peaceful green space to explore together.' }, state: { saved: true }, posts, friends: [person], similar: [] })

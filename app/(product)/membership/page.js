@@ -52,10 +52,14 @@ function PlansView({ snapshot }) {
           ? <Link className={scopedClasses(passStyles, "figma-pass-upgrade")} href="/membership?view=manage">Manage</Link>
           : snapshot.adult && snapshot.paymentsConfigured
             ? <form action={startTinderCheckout}><button className={scopedClasses(passStyles, "figma-pass-upgrade")} type="submit">Upgrade</button></form>
-            : <button className={scopedClasses(passStyles, "figma-pass-upgrade")} type="button" disabled>Upgrade</button>}
+            : <><button className={scopedClasses(passStyles, "figma-pass-upgrade")} type="button" aria-describedby="upgrade-unavailable" disabled>Upgrade</button><UpgradeExplanation snapshot={snapshot} /></>}
       </article>
     </section>
   </>
+}
+
+function UpgradeExplanation({ snapshot }) {
+  return <p id="upgrade-unavailable" className={passStyles.upgradeExplanation}>{snapshot.adult ? 'Pass upgrades are temporarily unavailable. Your Free plan is unchanged.' : 'Pass is available to members aged 18 and over.'}</p>
 }
 
 function ManageView({ snapshot }) {
@@ -73,7 +77,7 @@ function ManageView({ snapshot }) {
         <form action={openMembershipPortal}><button type="submit">Cancel</button></form>
       </> : snapshot.adult && snapshot.paymentsConfigured
         ? <form action={startTinderCheckout}><button className={scopedClasses(passStyles, "is-upgrade")} type="submit">Upgrade</button></form>
-        : <button className={scopedClasses(passStyles, "is-upgrade")} type="button" disabled>Upgrade</button>}
+        : <><button className={scopedClasses(passStyles, "is-upgrade")} type="button" aria-describedby="upgrade-unavailable" disabled>Upgrade</button><UpgradeExplanation snapshot={snapshot} /></>}
     </div>
 
     <article className={scopedClasses(passStyles, "figma-pass-history")}>

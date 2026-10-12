@@ -7,19 +7,19 @@ import { ProductNav } from './product-nav'
 import { SettingsOverlay } from './settings-overlay'
 import { SettingsTrigger } from './settings-trigger'
 import { signOut } from '@/app/auth/actions'
+import { ProductIdentityName, ProductIdentityProvider } from './product-identity'
 
-// This shell intentionally contains no account data. The protected proxy has
-// already authenticated the request, while route-specific identity is loaded
-// by the feed API after the shell is usable.
+// Render navigation without blocking on account data; one lightweight client
+// read restores the avatar and saved appearance for the persistent shell.
 export function StaticProductShell({ children }) {
-  return <div className={scopedClasses(shellStyles, "figma-dashboard-shell")} data-appearance="light">
+  return <ProductIdentityProvider><div className={scopedClasses(shellStyles, "figma-dashboard-shell")} data-appearance="system">
     <FigmaDashboardSidebar signOutAction={signOut} />
 
     <div className={scopedClasses(shellStyles, "figma-dashboard-stage")}>
       <details className={scopedClasses(shellStyles, "figma-dashboard-account-menu")}>
         <summary aria-label="Open profile menu"><span aria-hidden="true"><i /><i /><i /></span></summary>
         <div className="profile-menu-panel">
-          <strong>Puddle person</strong>
+          <strong><ProductIdentityName /></strong>
           <Link href="/profile">Profile</Link>
           <Link href="/membership">Pass</Link>
           <SettingsTrigger>Settings</SettingsTrigger>
@@ -31,5 +31,5 @@ export function StaticProductShell({ children }) {
 
     <ProductNav mobile />
     <SettingsOverlay />
-  </div>
+  </div></ProductIdentityProvider>
 }

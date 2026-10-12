@@ -58,6 +58,5 @@ export function PostPlaceChooser({ selectedPoint }) {
       {error ? <p role="alert">{error}</p> : null}
       {error && !loading ? <button type="button" onClick={() => { void loadPlaces() }}>Try again</button> : null}
     </div>
-    <div className={scopedClasses(createStyles, "figma-create-post-add-footer")}><span>{selectedPoint ? selectedPoint.title : 'No place selected'}</span></div>
   </details>
 }

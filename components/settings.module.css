@@ -146,6 +146,52 @@
   scroll-margin-top: 1.125rem;
 }
 
+.fieldHint {
+  color: var(--settings-muted);
+  font: 600 .8125rem/1.5 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.interests {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 0;
+  scroll-margin-block-start: 1.125rem;
+}
+
+.interests legend {
+  padding-block-start: .75rem;
+  color: var(--settings-text);
+  font-weight: 700;
+}
+
+.interestChoices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: .5rem;
+}
+
+.interestChoices label {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  min-height: 2.75rem;
+  padding: .5rem;
+  color: var(--settings-text);
+  background: var(--settings-nav);
+  border: .0625rem solid var(--settings-border);
+  border-radius: .625rem;
+  font-size: .875rem;
+}
+
+.interestChoices input {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: #4ca5f7;
+}
+
 .figma-settings-section > header {
   margin: 0 3.125rem .875rem .125rem;
 }

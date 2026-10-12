@@ -3,6 +3,8 @@ import settingsStyles from "@/components/settings.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useProductIdentity } from './product-identity'
 
 export const SETTINGS_OPEN_EVENT = 'puddle:settings-open'
 export const SETTINGS_CLOSE_EVENT = 'puddle:settings-close'
@@ -24,25 +26,37 @@ function frameFocusable(document) {
   })
 }
 
-export function openSettingsOverlay() {
-  window.dispatchEvent(new Event(SETTINGS_OPEN_EVENT))
+export function openSettingsOverlay(section = 'profile', anchor = '') {
+  window.dispatchEvent(new CustomEvent(SETTINGS_OPEN_EVENT, { detail: { section, anchor } }))
 }
 
 export function SettingsOverlay() {
+  const router = useRouter()
+  const productIdentity = useProductIdentity()
+  const refreshIdentity = productIdentity?.refresh
   const [enabled, setEnabled] = useState(false)
   const [open, setOpen] = useState(false)
   const [frameLoaded, setFrameLoaded] = useState(false)
+  const [section, setSection] = useState('profile')
+  const [anchor, setAnchor] = useState('')
+  const openRef = useRef(false)
   const overlayRef = useRef(null)
   const frameRef = useRef(null)
   const frameCleanupRef = useRef(null)
 
   const closeOverlay = useCallback(() => {
+    const wasOpen = openRef.current
+    openRef.current = false
     setOpen(false)
     setFrameLoaded(false)
     frameCleanupRef.current?.()
     frameCleanupRef.current = null
     document.documentElement.classList.remove('puddle-settings-overlay-open')
-  }, [])
+    if (wasOpen) {
+      void refreshIdentity?.()
+      router.refresh()
+    }
+  }, [refreshIdentity, router])
 
   function requestClose() { closeOverlay() }
 
@@ -50,7 +64,10 @@ export function SettingsOverlay() {
     if (window.self !== window.top) return
     setEnabled(true)
 
-    function openOverlay() {
+    function openOverlay(event) {
+      openRef.current = true
+      setSection(event.detail?.section || 'profile')
+      setAnchor(event.detail?.anchor || '')
       setFrameLoaded(false)
       setOpen(true)
       document.documentElement.classList.add('puddle-settings-overlay-open')
@@ -84,7 +101,7 @@ export function SettingsOverlay() {
     const frame = frameRef.current
     const focusFrame = window.requestAnimationFrame(() => {
       const close = frame?.contentDocument?.querySelector('.figma-settings-close')
-      if (close) close.focus()
+      if (close) close.focus({ preventScroll: true })
       else overlay?.focus()
     })
 
@@ -128,7 +145,7 @@ export function SettingsOverlay() {
     }
     close?.addEventListener('click', closeFromFrame)
     doc.addEventListener('keydown', handleFrameKeyDown)
-    const focusClose = open ? window.requestAnimationFrame(() => close?.focus()) : null
+    const focusClose = open ? window.requestAnimationFrame(() => close?.focus({ preventScroll: true })) : null
     frameCleanupRef.current = () => {
       close?.removeEventListener('click', closeFromFrame)
       doc.removeEventListener('keydown', handleFrameKeyDown)
@@ -144,7 +161,7 @@ export function SettingsOverlay() {
     {open ? <iframe
       ref={frameRef}
       className={scopedClasses(settingsStyles, `puddle-settings-overlay-frame${frameLoaded ? '' : ' is-loading'}`)}
-      src="/account?embedded=1&returnTo=%2Fprofile"
+      src={`/account?embedded=1&section=${encodeURIComponent(section)}&returnTo=%2Fprofile${anchor ? `#${encodeURIComponent(anchor)}` : ''}`}
       title="Settings"
       tabIndex={frameLoaded ? 0 : -1}
       onLoad={prepareFrame}

@@ -198,7 +198,6 @@ function SavedDemo({ onNavigate }) {
     {tab === 'saved' ? <>
       <nav className="landing-demo-saved-categories" aria-label="Saved categories">
         {['All', 'Courts', 'Theatres'].map((value) => <button className={category === value ? 'is-active' : ''} type="button" onClick={() => setCategory(value)} key={value}>{value === 'Courts' ? '◉ Courts' : value === 'Theatres' ? '▦ Theatres' : value}</button>)}
-        <button type="button" aria-label="Add category">＋</button>
       </nav>
       <SavedLightweightGrid
         items={savedItems}

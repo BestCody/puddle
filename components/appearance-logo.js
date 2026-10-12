@@ -3,6 +3,7 @@ import logoStyles from "@/components/puddle-logo.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 
 import { useLayoutEffect, useRef } from 'react'
+import { useProductIdentity } from './product-identity'
 
 function resolveAppearance(value) {
   if (value === 'dark') return 'dark'
@@ -21,12 +22,13 @@ function applyAppearance(shell, appearance) {
 }
 
 function useAppearanceSync(initialAppearance) {
+  const productIdentity = useProductIdentity()
+  const appearance = initialAppearance ?? productIdentity?.identity?.appearanceTheme ?? 'system'
   const elementRef = useRef(null)
   useLayoutEffect(() => {
     const shell = elementRef.current?.closest('.figma-dashboard-shell')
     if (!shell) return undefined
 
-    const appearance = initialAppearance
     applyAppearance(shell, appearance)
 
     if (appearance !== 'system') return undefined
@@ -34,17 +36,17 @@ function useAppearanceSync(initialAppearance) {
     const syncSystemAppearance = () => applyAppearance(shell, 'system')
     media.addEventListener?.('change', syncSystemAppearance)
     return () => media.removeEventListener?.('change', syncSystemAppearance)
-  }, [initialAppearance])
+  }, [appearance])
 
   return elementRef
 }
 
-export function AppearanceSync({ initialAppearance = 'light' }) {
+export function AppearanceSync({ initialAppearance }) {
   const elementRef = useAppearanceSync(initialAppearance)
   return <span ref={elementRef} hidden aria-hidden="true" />
 }
 
-export function AppearanceLogo({ initialAppearance = 'light' }) {
+export function AppearanceLogo({ initialAppearance }) {
   const elementRef = useAppearanceSync(initialAppearance)
 
   return <span

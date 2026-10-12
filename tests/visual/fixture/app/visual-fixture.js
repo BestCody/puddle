@@ -30,7 +30,7 @@ const feed = {
 
 export function VisualFixture({ view, children = null, conversationId = null, tab = 'messages' }) {
   return <div className={scopedClasses(shellStyles, "figma-dashboard-shell")} data-appearance="light">
-    <FigmaDashboardSidebar avatarUrl="/figma/assets/logo.svg" />
+    <FigmaDashboardSidebar avatarUrl="/figma/assets/logo.svg" initialAppearance="light" />
     <div className={scopedClasses(shellStyles, "figma-dashboard-stage")}>
       <main className={scopedClasses(shellStyles, "figma-dashboard-main")}>
         <MainContentTransition>
