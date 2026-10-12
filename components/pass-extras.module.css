@@ -1,4 +1,5 @@
 .pass-message-anyone {
+  color: #111;
   position: absolute;
   z-index: 45;
   top: 6.75rem;
@@ -85,7 +86,7 @@
   padding: 0 0.6875rem;
   border: 0.09375rem solid #ddd;
   border-radius: 0.75rem;
-  font: 600 0.75rem/1 Manrope,sans-serif;
+  font: 600 1rem/1 Manrope,sans-serif;
 }
 
 .pass-message-anyone button {
@@ -147,6 +148,7 @@
 }
 
 .pass-location-create-lock {
+  color: #111;
   width: min(48.75rem, calc(100% - 2.25rem));
   margin: 1.5rem auto;
   padding: 1.375rem;

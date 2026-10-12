@@ -1,8 +1,9 @@
 const $ = (selector, root = document) => root.querySelector(selector)
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)]
+const mobileLandingLayout = window.matchMedia('(max-width: 47.5rem)')
 
 function activeLandingStage() {
-  return window.matchMedia('(max-width: 760px)').matches
+  return mobileLandingLayout.matches
     ? $('.landing-stage--mobile')
     : $('.landing-stage--desktop')
 }
@@ -98,7 +99,7 @@ function initLandingAuth() {
   }
 
   mobileLoginButton?.addEventListener('click', (event) => {
-    if (!window.matchMedia('(max-width: 760px)').matches || !openMobileAuth()) return
+    if (!mobileLandingLayout.matches || !openMobileAuth()) return
     event.preventDefault()
   })
   mobileLoginClose?.addEventListener('click', () => mobileLoginDialog?.close())
@@ -107,12 +108,49 @@ function initLandingAuth() {
   })
   mobileLoginDialog?.addEventListener('close', () => {
     restorePanel()
-    mobileLoginButton?.focus()
+    if (mobileLandingLayout.matches) mobileLoginButton?.focus()
+  })
+  mobileLandingLayout.addEventListener('change', ({ matches }) => {
+    if (matches || !mobileLoginDialog?.open) return
+    const focused = document.activeElement
+    mobileLoginDialog.close()
+    restorePanel()
+    if (panel.contains(focused)) focused.focus({ preventScroll: true })
+  })
+
+  // Keep validation failures in the existing form, without putting personal
+  // fields (or the password) in redirect URLs or persistent browser storage.
+  signupForm.addEventListener('submit', async (event) => {
+    if (event.submitter?.hasAttribute('formaction')) return
+    event.preventDefault()
+    if (signupForm.getAttribute('aria-busy') === 'true') return
+    const form = new FormData(signupForm)
+    const submit = $('.landing-signup-button', signupForm)
+    signupForm.setAttribute('aria-busy', 'true')
+    submit.disabled = true
+    const showError = (text) => {
+      $$('[data-landing-auth-message]', panel).forEach((target) => {
+        target.textContent = text
+        target.hidden = false
+        target.setAttribute('role', 'alert')
+      })
+    }
+    try {
+      const response = await fetch(signupForm.action, { method: 'POST', body: form, headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      const result = await response.json()
+      if (!response.ok || !result.destination) throw new Error(result.error || 'We could not create your account. Please try again.')
+      window.location.assign(result.destination)
+    } catch (cause) {
+      showError(cause instanceof Error ? cause.message : 'We could not create your account. Please try again.')
+    } finally {
+      signupForm.removeAttribute('aria-busy')
+      submit.disabled = false
+    }
   })
 
   const requestedMode = params.get('mode') === 'signup' ? 'signup' : 'login'
   setMode(requestedMode)
-  if ((['login', 'signup'].includes(params.get('mode')) || message) && window.matchMedia('(max-width: 760px)').matches) openMobileAuth(requestedMode)
+  if ((['login', 'signup'].includes(params.get('mode')) || message) && mobileLandingLayout.matches) openMobileAuth(requestedMode)
 }
 
 function initPhoneDemoLoading() {

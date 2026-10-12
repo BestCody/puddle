@@ -8,7 +8,7 @@ import { flushSync } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useModalFocus } from '@/components/modal-focus'
-import { DismissibleDetails } from '@/components/dismissible-details'
+import { FriendShareMenu } from '@/components/friend-share-menu'
 import { PhotoFrame } from '@/components/photo-frame'
 import { SavedPlacePosts } from '@/components/saved-place-posts'
 import { DetailReviews } from '@/app/(product)/plans/[slug]/detail-reviews'
@@ -152,7 +152,7 @@ function SavedInlineMap({ ready, point, center }) {
   </div>
 }
 
-function SamePageSavedDetail({ preview, detail, busy, message, detailError, names, userId, onClose, onRetry, onAction }) {
+function SamePageSavedDetail({ preview, detail, busy, detailLoading, message, detailError, names, userId, onClose, onRetry, onAction }) {
   const detailRef = useRef(null)
   const closeRef = useRef(null)
   const location = detail?.location || {
@@ -167,6 +167,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
   const image = location.cover_url || location.gallery?.[0]?.url || preview.image || null
   const point = mapPoint(location, detail?.state)
   const center = point.length ? { latitude: point[0].latitude, longitude: point[0].longitude } : null
+  const actionsDisabled = !detail || busy || Boolean(detailError)
 
   useModalFocus(detailRef, closeRef)
 
@@ -187,12 +188,9 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
         <PhotoFrame className={scopedClasses(detailStyles, "saved-inline-detail-hero")} data-inline-morph-photo src={image} alt={`${location.name} photo`} loading="eager" style={{ viewTransitionName: names.photo }} />
 
         <div className={scopedClasses(detailStyles, "saved-inline-detail-actions")}>
-          <button type="button" disabled={!detail || busy} className={scopedClasses(detailStyles, "is-primary")} onClick={() => onAction('toggle_pinned')}>{detail?.state?.pinned ? 'Unpin' : 'Pin'}</button>
-          <button type="button" disabled={!detail || busy} onClick={() => onAction('toggle_saved')}>{detail?.state?.saved === false ? 'Save' : 'Unsave'}</button>
-          <DismissibleDetails>
-            <summary>Share</summary>
-            <div>{detail?.friends?.length ? detail.friends.map((friend) => <button type="button" disabled={busy} onClick={() => onAction('share', { friend_id: friend.id, share_key: crypto.randomUUID() })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>) : <small>No friends to share with yet.</small>}</div>
-          </DismissibleDetails>
+          <button type="button" disabled={actionsDisabled} className={scopedClasses(detailStyles, "is-primary")} onClick={() => onAction('toggle_pinned')}>{detail?.state?.pinned ? 'Unpin' : 'Pin'}</button>
+          <button type="button" disabled={actionsDisabled} onClick={() => onAction('toggle_saved')}>{detail?.state?.saved === false ? 'Save' : 'Unsave'}</button>
+          <FriendShareMenu key={location.id} summary="Share" disabled={actionsDisabled} renderFriend={friend => <button type="button" disabled={actionsDisabled} onClick={() => onAction('share', { friend_id: friend.id, share_key: crypto.randomUUID() })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>} />
         </div>
 
         <h1 style={{ viewTransitionName: names.title }}>{location.name}</h1>
@@ -202,7 +200,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
           <span>Local spot</span>
         </div>
 
-        {detailError ? <div className={scopedClasses(detailStyles, "saved-inline-detail-message is-error")} role="alert"><span>{detailError}</span><button type="button" onClick={onRetry}>Try again</button></div> : null}
+        {detailError ? <div className={scopedClasses(detailStyles, "saved-inline-detail-message is-error")} role="alert"><span>{detailError}</span><button type="button" disabled={detailLoading} onClick={onRetry}>{detailLoading ? 'Loading…' : 'Try again'}</button></div> : null}
         {message ? <div className={scopedClasses(detailStyles, "saved-inline-detail-message")} role="status">{message}</div> : null}
 
         <section className={scopedClasses(detailStyles, "saved-inline-detail-plan")}>
@@ -214,11 +212,11 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
           }}>
             <VisitDateTime aria-label="Planned visit date and time" required />
             <input name="note" aria-label="Optional visit note" maxLength="500" placeholder="Optional note" />
-            <button type="submit" disabled={!detail || busy}>Add to Plans</button>
+            <button type="submit" disabled={actionsDisabled}>Add to Plans</button>
           </form>
         </section>
 
-        <SavedPlacePosts locationId={location.id} posts={detail?.posts} loading={!detail && !detailError} error={detailError} />
+        <SavedPlacePosts locationId={location.id} posts={detail?.posts} loading={!detail && !detailError} error={detail ? undefined : detailError} />
         {detail && userId ? <DetailReviews key={location.id} locationId={location.id} slug={location.slug} userId={userId} /> : null}
       </div>
 
@@ -237,6 +235,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
   const router = useRouter()
   const [preview, setPreview] = useState(null)
   const [detail, setDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [detailError, setDetailError] = useState('')
@@ -254,17 +253,22 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
     async function loadDetail(nextPreview, requestId) {
       const controller = new AbortController()
       detailRequestRef.current = controller
+      setDetailLoading(true)
       try {
         const response = await fetch(`/api/saved-location/${encodeURIComponent(nextPreview.slug)}`, { cache: 'no-store', signal: controller.signal })
         const payload = await response.json()
         if (!response.ok) throw new Error(payload?.error || 'Could not load Saved details.')
         if (controller.signal.aborted || requestRef.current !== requestId) return
+        setDetailError('')
         if (transitionReadyRef.current) setDetail(payload)
         else pendingDetailRef.current = payload
       } catch {
         if (!controller.signal.aborted && requestRef.current === requestId) setDetailError('Saved details could not be loaded.')
       } finally {
-        if (detailRequestRef.current === controller) detailRequestRef.current = null
+        if (detailRequestRef.current === controller) {
+          detailRequestRef.current = null
+          setDetailLoading(false)
+        }
       }
     }
 
@@ -367,18 +371,15 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
   }
 
   function retryDetail() {
-    if (!preview || busy || !detailLoaderRef.current) return
-    detailRequestRef.current?.abort()
+    if (!preview || busy || detailRequestRef.current || !detailLoaderRef.current) return
     requestRef.current += 1
     pendingDetailRef.current = null
-    setDetail(null)
     setMessage('')
-    setDetailError('')
     detailLoaderRef.current(preview, requestRef.current)
   }
 
   async function performAction(action, extra = {}) {
-    if (!preview || busy) return
+    if (!preview || !detail || detailError || busy) return
     setBusy(true)
     setMessage('')
     try {
@@ -389,8 +390,14 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload?.error || 'That action could not be completed.')
-      setDetail(payload)
-      setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : 'Saved.')
+      if (payload.refreshError) {
+        setDetailError(payload.refreshError)
+        setMessage(action === 'share' ? 'Shared.' : 'Saved.')
+      } else {
+        setDetail(payload)
+        setDetailError('')
+        setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : 'Saved.')
+      }
       if (['toggle_saved', 'toggle_pinned', 'plan'].includes(action)) needsRefreshRef.current = true
     } catch {
       setMessage('That action could not be completed.')
@@ -400,5 +407,5 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
   }
 
   if (detailLocationId || !preview) return null
-  return <SamePageSavedDetail preview={preview} detail={detail} busy={busy} message={message} detailError={detailError} names={preview.names} userId={userId} onClose={close} onRetry={retryDetail} onAction={performAction} />
+  return <SamePageSavedDetail preview={preview} detail={detail} busy={busy} detailLoading={detailLoading} message={message} detailError={detailError} names={preview.names} userId={userId} onClose={close} onRetry={retryDetail} onAction={performAction} />
 }

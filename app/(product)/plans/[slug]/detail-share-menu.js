@@ -1,66 +1,15 @@
 "use client"
 
-import { useMemo, useState } from 'react'
-import { DismissibleDetails } from '@/components/dismissible-details'
-import { createClient } from '@/lib/supabase/client'
+import { FriendShareMenu } from '@/components/friend-share-menu'
 import { shareSavedPlace } from './actions'
 import styles from '../Plans.module.css'
 
-function mergeFriends(current, incoming) {
-  const merged = new Map(current.map((item) => [item.id, item]))
-  for (const item of incoming || []) merged.set(item.id, item)
-  return [...merged.values()]
-}
-
 export function DetailShareMenu({ locationId, slug }) {
-  const client = useMemo(() => createClient(), [])
-  const [friends, setFriends] = useState([])
-  const [loaded, setLoaded] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [hasMore, setHasMore] = useState(false)
-
-  async function loadPage(cursor = null) {
-    if (loading) return
-    setLoading(true)
-    setError(null)
-    try {
-      const { data, error: queryError } = await client.rpc('social_friend_picker_v2', {
-        before_name: cursor?.sort_name || null,
-        before_id: cursor?.id || null,
-        result_limit: 30
-      })
-      if (queryError) throw queryError
-      const rows = data || []
-      setFriends((current) => cursor ? mergeFriends(current, rows) : rows)
-      setHasMore(rows.length === 30)
-      setLoaded(true)
-    } catch {
-      setError('Friends could not be loaded.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function onOpen() {
-    if (!loaded && !loading) loadPage()
-  }
-
-  return <DismissibleDetails className={styles.share} onOpen={onOpen}>
-    <summary aria-label="Share saved place"><img src="/figma/saved-place-share.svg" alt="" aria-hidden="true" /></summary>
-    <div>
-      {friends.map((friend) => <form action={shareSavedPlace} onSubmit={(event) => { const input = event.currentTarget.elements.namedItem('share_key'); if (!input.value) input.value = crypto.randomUUID() }} key={friend.id}>
+  return <FriendShareMenu className={styles.share} summary={<img src="/figma/saved-place-share.svg" alt="" aria-hidden="true" />} renderFriend={friend => <form action={shareSavedPlace} onSubmit={(event) => { const input = event.currentTarget.elements.namedItem('share_key'); if (!input.value) input.value = crypto.randomUUID() }} key={friend.id}>
         <input type="hidden" name="location_id" value={locationId} />
         <input type="hidden" name="slug" value={slug} />
         <input type="hidden" name="friend_id" value={friend.id} />
         <input type="hidden" name="share_key" defaultValue="" />
         <button type="submit">{friend.display_name || friend.username || 'Friend'}</button>
-      </form>)}
-      {loading ? <p>Loading friends…</p> : null}
-      {error ? <p role="status">{error}</p> : null}
-      {error && !loading ? <button type="button" onClick={() => loadPage()}>Try again</button> : null}
-      {loaded && !friends.length && !loading && !error ? <p>Add a friend before sharing.</p> : null}
-      {hasMore && !loading ? <button type="button" onClick={() => loadPage(friends[friends.length - 1])}>More friends</button> : null}
-    </div>
-  </DismissibleDetails>
+      </form>} />
 }

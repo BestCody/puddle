@@ -7,6 +7,9 @@ import PlanLocationVisitPage from '@/app/places/[slug]/plan/page'
 import { AppealForm } from '@/components/appeal-form'
 import MembershipPage from '@/app/(product)/membership/page'
 import CreatePostPage from '@/app/(product)/create/post/page'
+import CreatePlacePage from '@/app/(product)/create/place/page'
+import { MediaUploader } from '@/components/media-uploader'
+import { PassMessageSearch } from '@/components/pass-message-search'
 import ReportPage from '@/app/report/page'
 import { StaticProductShell } from '@/components/static-product-shell'
 import SignUpPage from '@/app/signup/page'
@@ -34,6 +37,9 @@ export default async function VisualPage({ params, searchParams }) {
   if (view[0] === 'landing-demo') return <LandingPhoneDemo view={view[1]} />
   if (view[0] === 'plans' && view[1]) return <SavedPlacePage params={Promise.resolve({ slug: view[1] })} searchParams={Promise.resolve(query)} />
   if (route === 'visit-plan') return <PlanLocationVisitPage params={Promise.resolve({ slug: 'visual-place-0' })} searchParams={Promise.resolve(query)} />
+  if (route === 'create/place') return <CreatePlacePage searchParams={Promise.resolve(query)} />
+  if (route === 'upload') return <VisualFixture view="upload"><MediaUploader purpose="profile_photo" /></VisualFixture>
+  if (route === 'paid-search') return <VisualFixture view="paid-search"><PassMessageSearch enabled /></VisualFixture>
   if (route === 'appeals') return <VisualFixture view="appeals"><AppealForm /></VisualFixture>
   const Page = { account: AccountPage, profile: ProfilePage, plans: PlansPage, membership: MembershipPage, 'create/post': CreatePostPage, report: ReportPage, signup: SignUpPage, 'forgot-password': ForgotPasswordPage, 'change-email': ChangeEmailPage, onboarding: OnboardingPage, privacy: PrivacyPage, terms: TermsPage, 'not-found': NotFound }[route]
   if (Page) return <Page searchParams={Promise.resolve(query)} />

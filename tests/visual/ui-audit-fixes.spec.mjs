@@ -55,6 +55,7 @@ test('Saved categories do not overlap, More is readable and History is reachable
   const more = page.getByRole('navigation', { name: 'More saved categories', exact: true })
   await expect(more).toBeVisible()
   for (const link of await more.getByRole('link').all()) {
+    await link.scrollIntoViewIfNeeded()
     await contained(link, more)
     expect((await link.boundingBox()).height).toBeGreaterThanOrEqual(40)
   }

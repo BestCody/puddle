@@ -5,6 +5,7 @@ export async function GET(request, { params }) {
   const route = api.join('/')
   if (route === 'fixture/messages') return Response.json({ data: messagesForConversation(new URL(request.url).searchParams.get('conversation')), error: null })
   if (route === 'fixture/reviews') return Response.json({ data: [], error: null })
+  if (route === 'fixture/friends') return Response.json({ data: [person], error: null })
   if (route === 'profile/identity') return Response.json({ avatarUrl: person.avatar_path, displayName: person.display_name, appearanceTheme: 'dark' })
   if (route === 'social-feed') return Response.json({ items: posts, pagination: { hasMore: false }, self: person })
   if (route === 'saved-page') {
@@ -14,7 +15,7 @@ export async function GET(request, { params }) {
     const start = Number(params.get('cursor') || 0)
     return Response.json({ items: all.slice(start, start + 24), pagination: { hasMore: start + 24 < all.length, nextCursor: String(start + 24) } })
   }
-  if (route.startsWith('saved-location/')) return Response.json({ location: { ...places[0], cover_url: photo, summary: 'A peaceful green space to explore together.' }, state: { saved: true }, posts, friends: [person], similar: [] })
+  if (route.startsWith('saved-location/')) return Response.json({ location: { ...places[0], cover_url: photo, summary: 'A peaceful green space to explore together.' }, state: { saved: true }, posts, similar: [] })
   if (route.endsWith('/similar')) return Response.json({ items: [] })
   if (route === 'map/snapshot') return Response.json({ points: mapPoints, center: { latitude: 43.45, longitude: -79.66 } })
   if (route === 'map/viewport') return Response.json({ points: mapPoints })

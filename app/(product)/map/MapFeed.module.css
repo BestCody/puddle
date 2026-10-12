@@ -627,6 +627,7 @@
 }
 
 .mapSelectionNotice {
+  color: #111;
   position: absolute;
   z-index: 40;
   inset-block-start: clamp(4rem, 10cqi, 6rem);
