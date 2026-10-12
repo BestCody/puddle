@@ -6,13 +6,14 @@ import dynamic from 'next/dynamic'
 import createStyles from '@/components/create-post.module.css'
 import { scopedClasses } from '@/components/scoped-classes'
 import { PhotoFrame } from '@/components/photo-frame'
+import { CreatePostPreview } from '@/components/create-post-preview'
 import { RoutedSegment } from '@/components/routed-segment'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
 import { PostPlaceChooser } from './post-place-chooser'
 
 const MapPlacePicker = dynamic(() => import('@/components/map-route-client').then(module => module.MapPlacePicker))
 
-export function PostComposer({ avatar, name, initialPoint, preview }) {
+export function PostComposer({ avatar, name, initialPoint }) {
   const [point, setPoint] = useState(initialPoint)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -38,7 +39,7 @@ export function PostComposer({ avatar, name, initialPoint, preview }) {
       <button className={scopedClasses(createStyles, 'figma-create-post-search')} type="button" aria-label="Search saved puddles" onClick={() => { chooser.current.open = true; chooser.current.scrollIntoView({ block: 'nearest' }) }}>⌕</button>
     </header>
     <section className={scopedClasses(createStyles, 'figma-create-post-workspace')} aria-label="Post composer preview">
-      {preview}
+      <CreatePostPreview avatar={avatar} name={name} point={point} />
       <form className={scopedClasses(createStyles, 'figma-create-post-card')} aria-label="Create a puddle post" action={action} onReset={event => event.preventDefault()}>
         <input type="hidden" name="location_id" value={point?.id || ''} />
         <PhotoFrame as="span" className={scopedClasses(createStyles, 'figma-feed-post-avatar')} src={avatar} alt="" unavailableText={initials} loadingText="" />

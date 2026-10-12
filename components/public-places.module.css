@@ -25,7 +25,7 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  height: clamp(4.25rem,6vw,5.375rem);
+  min-height: clamp(4.25rem,6vw,5.375rem);
   padding-inline: var(--responsive-gutter);
 }
 
@@ -969,7 +969,7 @@
 @media (max-height:47.5rem) and (min-width:51.3125rem) {
 
   .public-header {
-    height: 4.25rem;
+    min-height: 4.25rem;
   }
 
   .public-wrap {
@@ -1077,8 +1077,6 @@
 @media (max-width:56.25rem) {
 
   :where(.public-header) {
-    height: auto;
-    min-height: 0;
     flex-wrap: wrap;
   }
 

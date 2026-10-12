@@ -323,7 +323,7 @@
   background: var(--shell-surface, #fff);
   color: var(--shell-text, #222);
   box-sizing: border-box;
-  font: 600 0.8125rem/1.25 Manrope, sans-serif;
+  font: 600 1rem/1.25 Manrope, sans-serif;
 }
 
 .saved-inline-detail-plan button {
@@ -460,27 +460,10 @@
   font-size: 0.8125rem;
 }
 
-.saved-inline-detail-post-loading {
-  position: relative;
-  overflow: hidden;
-  background: var(--shell-hover, #f1f1f1);
-  height: 5.5rem;
-  border-radius: 0.875rem;
-}
-
 .saved-inline-detail-map-loading {
   position: relative;
   overflow: hidden;
   background: var(--shell-hover, #f1f1f1);
-}
-
-.saved-inline-detail-post-loading::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
-  animation: saved-inline-shimmer 1.2s linear infinite;
 }
 
 .saved-inline-detail-map-loading::after {
@@ -579,8 +562,6 @@
 }
 
 @media (max-width: 47.5rem) {
-  .saved-inline-detail-plan :is(input, textarea, select) { font-size: 1rem; }
-
   .saved-inline-detail-frame {
     width: 100%;
     height: 100%;
@@ -779,10 +760,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-
-  .saved-inline-detail-post-loading::after {
-    animation: none;
-  }
 
   .saved-inline-detail-map-loading::after {
     animation: none;

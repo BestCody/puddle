@@ -6,6 +6,7 @@ import { RoutedSegment } from '@/components/routed-segment'
 import { LocationMap } from '@/components/location-map'
 import { PhotoFrame } from '@/components/photo-frame'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
+import { SavedPlacePosts } from '@/components/saved-place-posts'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getPublicLocation } from '@/lib/app/public-content'
 import { getLocationPlanStatus } from '@/lib/app/location-plans-data'
@@ -53,7 +54,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
     const result = await resultPromise
     if (!result) notFound()
     const { location } = result
-    const [{ data: savedState, error: savedStateError }, plannedItem] = await Promise.all([
+    const [{ data: savedState, error: savedStateError }, plannedItem, postsResult] = await Promise.all([
       session.supabase
         .from('user_content_states')
         .select('pinned_at')
@@ -61,8 +62,16 @@ export default async function SavedPlacePage({ params, searchParams }) {
         .eq('location_id', location.id)
         .eq('state', 'saved')
         .maybeSingle(),
-      getLocationPlanStatus(session, location.id)
+      getLocationPlanStatus(session, location.id),
+      session.supabase.from('social_posts')
+        .select('id,title,body,created_at,profiles!social_posts_author_id_fkey(display_name,username,avatar_path)')
+        .eq('location_id', location.id).order('created_at', { ascending: false }).limit(12)
     ])
+    const posts = (postsResult.data || []).map(post => {
+      const path = post.profiles?.avatar_path
+      const avatar = !path ? null : path.startsWith('/') || /^https?:\/\//i.test(path) ? path : session.supabase.storage.from('puddle-public-media').getPublicUrl(path).data.publicUrl
+      return { ...post, author: post.profiles, author_avatar_url: avatar }
+    })
     const isSaved = Boolean(savedState)
     const isPinned = Boolean(savedState?.pinned_at)
     const mapStates = [isSaved ? 'saved' : null, plannedItem ? 'planned' : null].filter(Boolean)
@@ -143,6 +152,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
           </details>
 
           <DetailReviews locationId={location.id} slug={slug} userId={session.user.id} />
+          <SavedPlacePosts locationId={location.id} posts={posts} error={postsResult.error ? 'Posts could not be loaded. Refresh to try again.' : ''} />
         </div>
 
         <section className={styles.detailMap} data-testid="saved-detail-map">

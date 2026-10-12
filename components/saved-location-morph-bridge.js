@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation'
 import { useModalFocus } from '@/components/modal-focus'
 import { DismissibleDetails } from '@/components/dismissible-details'
 import { PhotoFrame } from '@/components/photo-frame'
+import { SavedPlacePosts } from '@/components/saved-place-posts'
+import { DetailReviews } from '@/app/(product)/plans/[slug]/detail-reviews'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 import { validCoordinates } from '@/lib/app/optional-number'
 
@@ -48,24 +50,6 @@ function csrfToken() {
 
 function placeLabel(location) {
   return location?.address_public || location?.city || location?.neighborhood || String(location?.kind || 'Saved place').replaceAll('_', ' ')
-}
-
-function timeLabel(value) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
-}
-
-function initials(name) {
-  return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
 }
 
 function mapPoint(location, state) {
@@ -168,7 +152,7 @@ function SavedInlineMap({ ready, point, center }) {
   </div>
 }
 
-function SamePageSavedDetail({ preview, detail, busy, message, detailError, names, onClose, onRetry, onAction }) {
+function SamePageSavedDetail({ preview, detail, busy, message, detailError, names, userId, onClose, onRetry, onAction }) {
   const detailRef = useRef(null)
   const closeRef = useRef(null)
   const location = detail?.location || {
@@ -183,7 +167,6 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
   const image = location.cover_url || location.gallery?.[0]?.url || preview.image || null
   const point = mapPoint(location, detail?.state)
   const center = point.length ? { latitude: point[0].latitude, longitude: point[0].longitude } : null
-  const posts = detail?.posts || []
 
   useModalFocus(detailRef, closeRef)
 
@@ -235,23 +218,8 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
           </form>
         </section>
 
-        <section className={scopedClasses(detailStyles, "saved-inline-detail-posts")}>
-          <div className={scopedClasses(detailStyles, "saved-inline-detail-posts-heading")}>
-            <h2>Posts</h2>
-            <a href={`/create/post?location=${encodeURIComponent(location.id)}`}>Create post</a>
-          </div>
-          {detail ? posts.length ? <div className={scopedClasses(detailStyles, "saved-inline-detail-post-list")}>{posts.map((post) => {
-            const authorName = post.author?.display_name || post.author?.username || 'Puddle person'
-            return <a className={scopedClasses(detailStyles, "saved-inline-detail-post")} href={`/map#post-${post.id}`} key={post.id}>
-              <PhotoFrame as="span" className={scopedClasses(detailStyles, "saved-inline-detail-post-avatar")} src={post.author_avatar_url} alt="" unavailableText={initials(authorName)} loadingText="" />
-              <span className={scopedClasses(detailStyles, "saved-inline-detail-post-copy")}>
-                <span><strong>{authorName}</strong><small>{timeLabel(post.created_at)}</small></span>
-                {post.title ? <b>{post.title}</b> : null}
-                {post.body ? <p>{post.body}</p> : null}
-              </span>
-            </a>
-          })}</div> : <div className={scopedClasses(detailStyles, "saved-inline-detail-post-empty")}><strong>No posts here yet.</strong><span>Be the first person to post about this place.</span></div> : <div className={scopedClasses(detailStyles, "saved-inline-detail-post-loading")} aria-label="Loading posts" />}
-        </section>
+        <SavedPlacePosts locationId={location.id} posts={detail?.posts} loading={!detail && !detailError} error={detailError} />
+        {detail && userId ? <DetailReviews key={location.id} locationId={location.id} slug={location.slug} userId={userId} /> : null}
       </div>
 
       <aside className={scopedClasses(detailStyles, "saved-inline-detail-side")}>
@@ -265,7 +233,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
   </div>
 }
 
-export function SavedLocationMorphBridge({ detailLocationId = null }) {
+export function SavedLocationMorphBridge({ detailLocationId = null, userId = null }) {
   const router = useRouter()
   const [preview, setPreview] = useState(null)
   const [detail, setDetail] = useState(null)
@@ -432,5 +400,5 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
   }
 
   if (detailLocationId || !preview) return null
-  return <SamePageSavedDetail preview={preview} detail={detail} busy={busy} message={message} detailError={detailError} names={preview.names} onClose={close} onRetry={retryDetail} onAction={performAction} />
+  return <SamePageSavedDetail preview={preview} detail={detail} busy={busy} message={message} detailError={detailError} names={preview.names} userId={userId} onClose={close} onRetry={retryDetail} onAction={performAction} />
 }

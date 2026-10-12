@@ -52,8 +52,8 @@ export function DetailReviews({ locationId, slug, userId }) {
   return <section className={styles.reviews} data-testid="saved-place-reviews">
     <h2>Reviews{averageRating ? ` · ${averageRating.toFixed(1)} / 5 (${state.reviews.length})` : ''}</h2>
     <div className={styles.reviewContent}>
-      <ReviewEditor key={myReview?.id || 'new'} locationId={locationId} slug={slug} review={myReview} />
-      {myReview ? <form action={deletePlaceReview} className={styles.reviewDelete}><HiddenLocation locationId={locationId} slug={slug} /><button type="submit">Delete my review</button></form> : null}
+      {!state.loading && !state.error ? <ReviewEditor key={myReview?.id || 'new'} locationId={locationId} slug={slug} review={myReview} /> : null}
+      {!state.loading && !state.error && myReview ? <form action={deletePlaceReview} className={styles.reviewDelete}><HiddenLocation locationId={locationId} slug={slug} /><button type="submit">Delete my review</button></form> : null}
       {state.loading ? <div className={styles.reviewStatus} role="status">Loading reviews…</div> : null}
       {state.error ? <div className={`${styles.reviewStatus} ${styles.reviewStatusError}`} role="alert"><span>{state.error}</span><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
       {!state.loading && !state.error ? <div className={styles.reviewList}>

@@ -120,6 +120,7 @@ function AddView({ client, snapshot }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
+  const [searchedTerm, setSearchedTerm] = useState('')
   const [pendingTarget, setPendingTarget] = useState(null)
   const [hiddenOutgoing, setHiddenOutgoing] = useState(() => new Set())
   const [notice, setNotice] = useState('')
@@ -128,12 +129,14 @@ function AddView({ client, snapshot }) {
     event.preventDefault()
     const term = query.trim()
     setNotice('')
+    setSearchedTerm('')
     if (!term) return setResults([])
     setSearching(true)
     try {
       const { data, error } = await client.rpc('social_friend_search_v2', { search_term: term, result_limit: 30 })
       if (error || !Array.isArray(data)) throw error || new Error('Friend search response was invalid.')
       setResults(data)
+      setSearchedTerm(term)
     } catch (cause) {
       console.warn('Could not search for friends.', { message: cause?.message || 'unknown error' })
       setResults([])
@@ -255,6 +258,7 @@ function AddView({ client, snapshot }) {
       <button type="submit" disabled={searching} aria-label="Search for friends">&#x2191;</button>
     </form>
     {notice ? <p className={scopedClasses(friendsStyles, "figma-friends-chat-notice figma-friends-add-notice")} role="alert">{notice}</p> : null}
+    {searching ? <p role="status">Searching for people…</p> : searchedTerm && searchedTerm === query.trim() && !results.length ? <p role="status">No matching people. Try another name or username.</p> : null}
 
     {results.length ? <div className={scopedClasses(friendsStyles, "figma-friends-search-results")}>{results.map((person) => <div key={person.id}><Avatar client={client} person={person} /><span><strong>{person.display_name || person.username}</strong>{person.username ? <small>@{person.username}</small> : null}{person.mutual_count ? <small>{person.mutual_count} mutual</small> : null}</span>{resultAction(person)}</div>)}</div> : null}
 

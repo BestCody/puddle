@@ -783,18 +783,8 @@
 
 .reviews h2 {
   margin: 1.35rem 1.28rem 0;
-  color: #b784e4;
+  color: var(--saved-accent, #80549f);
   font: 600 1.4615rem/1 var(--figma-mono);
-}
-
-.reviews p {
-  position: absolute;
-  width: .0625rem;
-  height: .0625rem;
-  overflow: hidden;
-  clip-path: inset(50%);
-  margin: 0;
-  white-space: nowrap;
 }
 
 .reviewEditor {
@@ -818,10 +808,11 @@
   border-radius: .625rem;
   background: var(--shell-surface, #fff);
   color: var(--shell-text, #111);
-  font: 600 .8125rem/1 Manrope, sans-serif;
+  font: 600 1rem/1 Manrope, sans-serif;
 }
 
 .reviewBodyInput {
+  background: var(--shell-surface, #fff);
   width: 100%;
   min-height: 4rem;
   resize: vertical;
@@ -829,7 +820,7 @@
   border: .09375rem solid var(--shell-border, #ddd);
   border-radius: .625rem;
   color: var(--shell-text, #111);
-  font: 500 .8125rem/1.35 Manrope, sans-serif;
+  font: 500 1rem/1.35 Manrope, sans-serif;
   box-sizing: border-box;
 }
 
@@ -1074,7 +1065,6 @@
 }
 
 @media (max-width: 47.5rem) {
-  .reviewRating, .reviewBodyInput { font-size: 1rem; }
 
   .screen,
   .detailScreen {

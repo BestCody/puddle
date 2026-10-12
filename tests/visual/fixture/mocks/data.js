@@ -25,6 +25,8 @@ function query(data, count = Array.isArray(data) ? data.length : 0) {
 const client = {
   from(name) { if (!(name in tables)) throw new Error(`Unmodelled visual fixture table: ${name}`); return query(tables[name]) },
   rpc(name, args = {}) {
+    if (name === 'location_reviews_v1') return fetch('/api/fixture/reviews').then(response => response.json())
+    if (name === 'social_friend_search_v2') return Promise.resolve({ data: [], error: null })
     if (name === 'social_messages_v2') return fetch(`/api/fixture/messages?conversation=${encodeURIComponent(args.target)}&before=${encodeURIComponent(args.before_message_id || '')}`).then(response => response.json())
     if (!(name in rpcs)) throw new Error(`Unmodelled visual fixture RPC: ${name}`)
     return Promise.resolve({ data: rpcs[name], error: null })
