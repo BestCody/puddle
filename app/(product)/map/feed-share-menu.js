@@ -42,8 +42,8 @@ export function FeedShareMenu({ postId, title }) {
     }
   }
 
-  function onToggle(event) {
-    if (event.currentTarget.open && !loaded && !loading) loadPage()
+  function onOpen() {
+    if (!loaded && !loading) loadPage()
   }
 
   async function loadMore() {
@@ -51,7 +51,7 @@ export function FeedShareMenu({ postId, title }) {
     if (cursor) await loadPage(cursor)
   }
 
-  return <DismissibleDetails className={styles.actionMenu} onToggle={onToggle}>
+  return <DismissibleDetails className={styles.actionMenu} onOpen={onOpen}>
     <summary aria-label={`Share ${title}`}>↗</summary>
     <div className={`${styles.actionPanel} ${styles.sharePanel}`}>
       <strong>Share with a friend</strong>

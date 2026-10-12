@@ -85,7 +85,7 @@ test('Friends loads only the active tab UI, and Profile defers photo controls un
   assert.match(friendsRoute, /tab === 'messages'[\s\S]*<FigmaMessagesRealtime/)
   assert.doesNotMatch(profilePage, /from '@\/components\/profile-photo-editor'/)
   assert.match(profilePage, /<ProfileAvatarEditor/)
-  assert.match(avatarEditor, /if \(event\.currentTarget\.open\) setRequested\(true\)/)
+  assert.match(avatarEditor, /onOpen=\{\(\) => setRequested\(true\)\}/)
   assert.match(avatarEditor, /\{requested \? <ProfilePhotoEditor/)
 })
 
@@ -113,6 +113,6 @@ test('map place hydration overlaps membership and Swipe-selected post skips the 
   assert.match(mapData, /const locationsPromise = plansPromise\.then/)
   assert.match(mapData, /Promise\.all\(\[plansPromise, passActivePromise, locationsPromise\]\)/)
   assert.match(createPost, /directPoint \? null : await getLocationPlansPage\(session, \{ tab: 'saved', limit: 1 \}\)/)
-  assert.match(chooser, /if \(event\.currentTarget\.open\) void loadPlaces\(\)/)
+  assert.match(chooser, /onOpen=\{loadPlaces\}/)
   assert.match(chooser, /fetch\('\/api\/map\/snapshot'/)
 })
