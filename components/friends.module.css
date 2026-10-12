@@ -33,7 +33,7 @@
   gap: .8125rem;
 }
 
-.figma-friends-conversations, .figma-friends-chat, .figma-friends-shared-place, .figma-friends-shared-chat, .figma-friends-request-card {
+.figma-friends-conversations, .figma-friends-chat, .figma-friends-shared-place, .figma-friends-request-card {
   min-width: 0;
   min-height: 0;
   border: .15625rem solid var(--shell-border, #e5e5e5);
@@ -418,8 +418,8 @@
 
 .figma-friends-shared-grid {
   display: grid;
-  grid-template-columns: minmax(17.5rem, 21.9375rem) minmax(0, 1fr);
-  grid-auto-rows: minmax(13.375rem, auto);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21.9375rem), 1fr));
+  align-items: start;
   gap: 1.25rem .6875rem;
 }
 
@@ -476,16 +476,11 @@
   font-size: .6875rem;
 }
 
-.figma-friends-shared-chat {
-  display: flex;
-  align-items: end;
-  justify-content: end;
-  padding: .5625rem;
-}
-
-.figma-friends-shared-chat button {
+.figma-friends-shared-chat-action {
+  grid-column: 1 / -1;
+  justify-self: end;
   min-width: 8rem;
-  min-height: 2.1875rem;
+  min-height: 2.75rem;
   padding: .5rem;
   border: .09375rem solid #58c92e;
   border-radius: 1.5625rem;

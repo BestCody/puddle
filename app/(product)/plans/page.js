@@ -92,14 +92,16 @@ function SavedCategoryRail({ folders, selectedCategory }) {
   const visibleKeys = new Set(visibleFolders.map(([category]) => category))
   const extraFolders = folders.filter(([category]) => !visibleKeys.has(category))
 
-  return <nav className={styles.categories} aria-label="Saved categories" data-testid="saved-categories">
+  return <div className={styles.categoryBand}>
+    <nav className={styles.categories} aria-label="Saved categories" data-testid="saved-categories">
     <Link className={selectedCategory === 'all' ? styles.categoryActive : undefined} href="/plans?tab=saved">All</Link>
     {visibleFolders.map(([category]) => <Link className={selectedCategory === category ? styles.categoryActive : undefined} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}><span aria-hidden="true">{categoryGlyph(category)}</span>{categoryLabel(category)}</Link>)}
+    </nav>
     {extraFolders.length ? <details className={styles.moreCategories}>
       <summary aria-label="More saved categories">+</summary>
-      <div>{extraFolders.map(([category]) => <Link className={selectedCategory === category ? styles.categoryActive : undefined} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}>{categoryLabel(category)}</Link>)}</div>
+      <nav aria-label="More saved categories">{extraFolders.map(([category]) => <Link aria-current={selectedCategory === category ? 'page' : undefined} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}>{categoryLabel(category)}</Link>)}</nav>
     </details> : null}
-  </nav>
+  </div>
 }
 
 function nextPageHref({ active, category, query, cursor }) {
@@ -156,9 +158,7 @@ export default async function PlansPage({ searchParams }) {
           />
         </header>
 
-        {active === 'saved' ? <div className={styles.categoryBand}>
-          <SavedCategoryRail folders={folders} selectedCategory={selectedCategory} />
-        </div> : <div className={styles.planBand}><h1 className={styles.planHeading}>Plans</h1></div>}
+        {active === 'saved' ? <SavedCategoryRail folders={folders} selectedCategory={selectedCategory} /> : <div className={styles.planBand}><h1 className={styles.planHeading}>{active === 'past' ? 'History' : 'Plans'}</h1></div>}
 
         {visible.length ? active === 'saved'
           ? <SavedPagedGrid key={savedPageKey} initialItems={visible} initialPagination={page.pagination} category={selectedCategory} query={query} classes={{ grid: styles.placeGrid, card: styles.placeCard, photo: styles.placePhoto, copy: styles.placeCopy, meta: styles.placeMeta, perfectPick: styles.perfectPick, loadMore: styles.loadMore }} />

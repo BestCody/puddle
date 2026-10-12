@@ -55,6 +55,7 @@
 }
 
 .figma-pass-plan-paid {
+  --upgrade-explanation-text: #35101b;
   border-color: #a02044;
   background: #e73668;
   color: #fff;
@@ -279,6 +280,14 @@
   background: #4a4a4a;
   color: #fff;
   font: 700 .6875rem/1 var(--font-sans);
+}
+
+.upgradeExplanation {
+  margin: .75rem 0 0;
+  max-width: 35ch;
+  color: var(--upgrade-explanation-text, var(--shell-muted, #656565));
+  font: 500 .875rem/1.5 var(--font-sans);
+  overflow-wrap: anywhere;
 }
 
 .figma-pass-history > p {

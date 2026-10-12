@@ -5,6 +5,7 @@ import { scopedClasses } from "@/components/scoped-classes"
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { PhotoFrame } from '@/components/photo-frame'
 import { prepareTextQuery, scoreTextMatch } from '@/lib/app/location-search-ranking'
+import { mapPopupPosition } from '@/lib/ui/map-popup-position'
 
 const TILE_SIZE = 256
 const MIN_ZOOM = 3
@@ -126,7 +127,10 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const catalogueCacheRef = useRef(new Map())
   const catalogueRequestRef = useRef(0)
   const heatmapRequestRef = useRef(0)
-  const [viewport, setViewport] = useState({ width: 900, height: 620 })
+  const selectionRef = useRef(null)
+  const selectionGeometryRef = useRef(null)
+  const selectionMetricsRef = useRef(null)
+  const [viewport, setViewport] = useState({ width: 0, height: 0 })
   const [viewportMeasured, setViewportMeasured] = useState(false)
   const [center, setCenter] = useState(initialCenter || { latitude: 43.6532, longitude: -79.3832 })
   const [zoom, setZoom] = useState(initialPoints.length <= 1 ? 14 : 12)
@@ -161,8 +165,8 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     const node = mapRef.current
     if (!node) return
     const observer = new ResizeObserver(([entry]) => {
-      const width = Math.max(280, entry.contentRect.width)
-      const height = Math.max(420, entry.contentRect.height)
+      const width = Math.max(1, entry.contentRect.width)
+      const height = Math.max(1, entry.contentRect.height)
       setViewport((current) => current.width === width && current.height === height ? current : { width, height })
       setViewportMeasured(true)
     })
@@ -205,18 +209,16 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }
     if (!viewportMeasured) return undefined
     const controller = new AbortController()
-    setCatalogueState('loading')
+    const bounds = viewportBounds(center, zoom, viewport)
+    const cacheKey = `${viewportCacheKey(bounds, zoom)}:${preparedQuery.normalized}`
+    const cached = catalogueCacheRef.current.get(cacheKey)
+    if (cached) {
+      setCatalogueResult({ query: preparedQuery.normalized, points: cached })
+      setCatalogueState('ready')
+      return undefined
+    }
     const timer = window.setTimeout(async () => {
-      const bounds = viewportBounds(center, zoom, viewport)
-      const cacheKey = `${viewportCacheKey(bounds, zoom)}:${preparedQuery.normalized}`
-      const cached = catalogueCacheRef.current.get(cacheKey)
-      if (cached) {
-        if (!controller.signal.aborted && requestId === catalogueRequestRef.current) {
-          setCatalogueResult({ query: preparedQuery.normalized, points: cached })
-          setCatalogueState('ready')
-        }
-        return
-      }
+      setCatalogueState('loading')
       const params = new URLSearchParams({
         north: bounds.north.toFixed(6), south: bounds.south.toFixed(6),
         west: bounds.west.toFixed(6), east: bounds.east.toFixed(6), zoom: String(zoom)
@@ -307,12 +309,45 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
   const selectedAnchor = selected
     ? visiblePointItems.find((item) => item.point.id === selected.id)
     : null
-  const selectionStyle = selectedAnchor
-    ? {
-        '--location-map-selection-x': `${(selectedAnchor.x / Math.max(1, viewport.width)) * 100}%`,
-        '--location-map-selection-y': `${(selectedAnchor.y / Math.max(1, viewport.height)) * 100}%`
+  selectionGeometryRef.current = { anchor: selectedAnchor, viewport }
+
+  const positionSelection = useCallback((offset = { x: 0, y: 0 }) => {
+    const node = selectionRef.current
+    const geometry = selectionGeometryRef.current
+    const metrics = selectionMetricsRef.current
+    if (!node || !geometry || !metrics) return
+    const anchor = geometry.anchor ? { x: geometry.anchor.x + offset.x, y: geometry.anchor.y + offset.y } : null
+    const placement = mapPopupPosition({ ...geometry, ...metrics, anchor })
+    node.style.setProperty('--map-popup-visibility', placement ? 'visible' : 'hidden')
+    if (!placement) return
+    node.style.setProperty('--location-map-selection-x', `${placement.left / geometry.viewport.width * 100}%`)
+    node.style.setProperty('--location-map-selection-y', `${placement.top / geometry.viewport.height * 100}%`)
+    node.style.setProperty('--map-popup-tip-x', `${placement.tip / metrics.popup.width * 100}%`)
+    node.dataset.popupPlacement = placement.side
+  }, [])
+
+  useLayoutEffect(() => {
+    const node = selectionRef.current
+    if (!selectionFollowsMap || !node) return undefined
+    function measure() {
+      const marker = mapRef.current?.querySelector(`[data-map-point-id="${CSS.escape(String(selectedId))}"]`)
+      const radius = Math.max(parseFloat(getComputedStyle(node).borderTopLeftRadius) || 0, parseFloat(getComputedStyle(node.querySelector('article') || node).borderTopLeftRadius) || 0)
+      selectionMetricsRef.current = {
+        popup: { width: node.offsetWidth, height: node.offsetHeight },
+        gap: marker ? marker.getBoundingClientRect().height / 2 : radius,
+        gutter: radius / 2
       }
-    : undefined
+      positionSelection(pendingPanRef.current || undefined)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [positionSelection, selectionFollowsMap, selectedId, Boolean(selectedAnchor)])
+
+  useLayoutEffect(() => {
+    positionSelection(pendingPanRef.current || undefined)
+  }, [positionSelection, selectedAnchor?.x, selectedAnchor?.y, viewport.width, viewport.height])
 
   function changeFilter(next) {
     setFilter(next)
@@ -406,6 +441,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       const pending = pendingPanRef.current
       if (!pending || !dragRef.current) return
       if (panLayerRef.current) panLayerRef.current.style.transform = `translate3d(${pending.x}px, ${pending.y}px, 0)`
+      positionSelection(pending)
     })
   }
   function pointerUp(event) {
@@ -470,7 +506,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }, () => setLocationState('denied'), { maximumAge: 300000, timeout: 8000 })
   }
 
-  const selectionPanel = <aside className={scopedClasses(mapStyles, "location-map-side")} style={selectionStyle}><PointCard point={selected} /><div className={scopedClasses(mapStyles, "location-map-list")}>{visiblePointItems.map(({ point }) => {
+  const selectionPanel = <aside className={scopedClasses(mapStyles, "location-map-side")} ref={selectionFollowsMap ? selectionRef : undefined}><PointCard point={selected} /><div className={scopedClasses(mapStyles, "location-map-list")}>{visiblePointItems.map(({ point }) => {
     const primary = primaryState(point)
     return <button type="button" className={scopedClasses(mapStyles, selectedId === point.id ? 'is-active' : '')} onClick={() => selectPoint(point)} key={point.id}><span className={scopedClasses(mapStyles, `is-${primary}`)} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>
   })}</div></aside>
@@ -499,11 +535,11 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
             const primary = primaryState(point)
             return <button type="button" className={scopedClasses(mapStyles, `location-map-marker is-${primary} ${selectedId === point.id ? 'is-selected' : ''}`)} style={{ transform: `translate3d(${x}px,${y}px,0) rotate(-45deg)${selectedId === point.id ? ' scale(1.15)' : ''}` }} onClick={(event) => { if (consumeDragClick(event)) return; event.stopPropagation(); selectPoint(point) }} aria-label={`${point.title}, ${point.states.map(stateLabel).join(', ')}`} data-map-point-id={point.id} key={point.id}><span aria-hidden="true">{primary === 'planned' ? '⌖' : primary === 'matched' ? '♡' : primary === 'catalogue' ? 'P' : '♥'}</span></button>
           })}</div>
-          {selectionFollowsMap && selectedAnchor ? selectionPanel : null}
         </div>
+        {selectionFollowsMap && selectedAnchor ? selectionPanel : null}
         <div className={scopedClasses(mapStyles, "location-map-zoom")}><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value + 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom in">+</button><button type="button" onClick={(event) => { event.stopPropagation(); setZoom((value) => clamp(value - 1, MIN_ZOOM, MAX_ZOOM)) }} aria-label="Zoom out">−</button></div>
         <a className={scopedClasses(mapStyles, "location-map-attribution")} href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onPointerDown={(event) => event.stopPropagation()}>© OpenStreetMap contributors</a>
-        {loadCatalogue && filter === 'all' && catalogueState === 'loading' ? <div className={scopedClasses(mapStyles, "location-map-status")} role="status">Loading locations…</div> : null}
+        {loadCatalogue && filter === 'all' && catalogueState === 'loading' && !allPoints.length ? <div className={scopedClasses(mapStyles, "location-map-loading")} role="status" aria-label="Loading locations"><span className={scopedClasses(mapStyles, "location-map-spinner")} aria-hidden="true" /></div> : null}
         {loadCatalogue && filter === 'all' && catalogueState === 'error' ? <div className={scopedClasses(mapStyles, "location-map-status is-error")} role="alert"><span>Locations could not be loaded.</span><button type="button" onClick={() => setCatalogueRetry((value) => value + 1)}>Try again</button></div> : null}
         {loadCatalogue && filter === 'all' && catalogueState === 'ready' && !allPoints.length ? <div className={scopedClasses(mapStyles, "location-map-status")} role="status">No Puddle locations in this map area.</div> : null}
         {locationState === 'denied' ? <div className={scopedClasses(mapStyles, "location-map-status is-error")} role="status">Location access was not granted.</div> : null}

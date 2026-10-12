@@ -24,12 +24,16 @@ test.beforeEach(async ({ context }) => {
 
 async function appearance(page, testInfo) {
   if (testInfo.project.name.endsWith('-dark')) {
+    const shell = page.locator('.figma-dashboard-shell').first()
+    if (await shell.count()) await expect(shell).toHaveAttribute('data-resolved-appearance', /light|dark/)
     await page.locator('.figma-dashboard-shell').evaluateAll(nodes => nodes.forEach(node => {
       node.dataset.appearance = 'dark'
       node.dataset.resolvedAppearance = 'dark'
     }))
-    const shell = page.locator('.figma-dashboard-shell').first()
     if (await shell.count()) expect(await shell.evaluate(node => getComputedStyle(node).getPropertyValue('--shell-surface').trim())).toBe('#111315')
+    if (await page.getByTestId('saved-card').count()) {
+      expect(await page.getByTestId('saved-card').first().evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(17, 19, 21)')
+    }
   }
 }
 
@@ -321,6 +325,9 @@ test('landing phones keep independent styles and all actions inside each screen'
     await section.scrollIntoViewIfNeeded()
     const frame = section.locator('iframe').contentFrame()
     await expect(frame.locator('.landing-phone-demo__screen')).toBeVisible()
+    const phone = await section.locator('.feature-phone').boundingBox()
+    const badge = await section.locator('.interactive-pill').boundingBox()
+    expect(badge.y).toBeGreaterThanOrEqual(phone.y + phone.height)
     expect(await frame.locator('.landing-phone-demo__screen').evaluate(node => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(1)
     if (view === 'swipe') {
       for (const action of await frame.locator('.landing-demo-swipe-actions button').all()) await inside(action, frame.locator('.landing-phone-demo__screen'))

@@ -60,8 +60,9 @@ export function SettingsScrollBridge() {
 
       function updateFromScroll() {
         frame = 0
+        const pageScroll = getComputedStyle(container).overflowY === 'visible'
         const containerRect = container.getBoundingClientRect()
-        const markerY = containerRect.top + Math.min(220, Math.max(96, container.clientHeight * .34))
+        const markerY = pageScroll ? window.innerHeight * .2 : containerRect.top + container.clientHeight * .2
         let visible = sections[0]
 
         for (const section of sections) {
@@ -87,22 +88,26 @@ export function SettingsScrollBridge() {
 
         event.preventDefault()
         setActive(id)
-        container.scrollTo({ top: Math.max(0, section.offsetTop - 12), behavior: 'smooth' })
+        section.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
 
         const nextUrl = new URL(window.location.href)
         nextUrl.searchParams.set('section', id)
+        nextUrl.hash = ''
         window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`)
       }
 
       for (const item of links) item.link.addEventListener('click', onClick)
       container.addEventListener('scroll', onScroll, { passive: true })
       window.addEventListener('resize', onScroll, { passive: true })
+      window.addEventListener('scroll', onScroll, { passive: true })
 
       const requested = new URLSearchParams(window.location.search).get('section')
       const initial = SECTION_IDS.includes(requested) ? requested : SECTION_IDS[0]
       const initialSection = document.getElementById(initial)
       if (initialSection) {
-        container.scrollTop = Math.max(0, initialSection.offsetTop - 12)
+        const anchor = initialSection.querySelector('[id="favorite-categories"]')
+        const target = window.location.hash === '#favorite-categories' && anchor ? anchor : initialSection
+        target.scrollIntoView({ block: 'start', behavior: 'instant' })
         setActive(initial)
       }
       updateFromScroll()
@@ -111,6 +116,7 @@ export function SettingsScrollBridge() {
         if (frame) window.cancelAnimationFrame(frame)
         container.removeEventListener('scroll', onScroll)
         window.removeEventListener('resize', onScroll)
+        window.removeEventListener('scroll', onScroll)
         for (const item of links) item.link.removeEventListener('click', onClick)
       }
     }

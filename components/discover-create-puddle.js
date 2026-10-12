@@ -123,11 +123,11 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       <div className={scopedClasses(composerStyles, "puddle-discover-create-footer")}>
         <label className={scopedClasses(composerStyles, "puddle-discover-create-place")}>
           <span>Saved place</span>
-          <select value={locationId} onChange={(event) => setLocationId(event.target.value)} disabled={!savedPoints.length} tabIndex={open ? 0 : -1}>
-            {savedPoints.length ? savedPoints.map((point) => <option value={point.id} key={point.id}>{point.title} · {placeLabel(point)}</option>) : <option value="">Save a place first</option>}
+          <select value={locationId} onChange={(event) => setLocationId(event.target.value)} disabled={!savedPointsLoaded || savedPointsLoading || !savedPoints.length} tabIndex={open ? 0 : -1}>
+            {savedPoints.length ? savedPoints.map((point) => <option value={point.id} key={point.id}>{point.title} · {placeLabel(point)}</option>) : <option value="">{!savedPointsLoaded || savedPointsLoading ? 'Loading saved places…' : savedPointsError ? 'Saved places unavailable' : 'Save a place first'}</option>}
           </select>
         </label>
-        {savedPointsLoading ? <small>Loading saved places...</small> : savedPointsError ? <small role="alert">{savedPointsError} <button type="button" onClick={retrySavedPoints}>Try again</button></small> : !savedPoints.length ? <small>Save a place before publishing a puddle.</small> : null}
+        {!savedPointsLoaded || savedPointsLoading ? <small role="status">Loading saved places...</small> : savedPointsError ? <small role="alert">{savedPointsError} <button type="button" onClick={retrySavedPoints}>Try again</button></small> : !savedPoints.length ? <small>Save a place before publishing a puddle.</small> : null}
       </div>
     </form>
   </div>

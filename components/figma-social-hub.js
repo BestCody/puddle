@@ -97,17 +97,17 @@ function SharedView({ client, snapshot }) {
     <h1>Shared puddles</h1>
     {notice ? <p className={scopedClasses(friendsStyles, "figma-friends-chat-notice")} role="status">{notice}</p> : null}
     <div className={scopedClasses(friendsStyles, "figma-friends-shared-grid")}>
-      {shared.length ? shared.flatMap((item) => {
+      {shared.length ? shared.map((item) => {
         const placeHref = item.location_slug ? `/plans/${item.location_slug}` : '/plans'
         const placePhotoUrl = mediaUrl(client, item.location_cover_path)
-        return [
+        return (
           <article className={scopedClasses(friendsStyles, "figma-friends-shared-place")} key={`place:${item.share_id}`}>
             <PhotoFrame as={Link} className={scopedClasses(friendsStyles, "figma-friends-shared-photo")} href={placeHref} src={placePhotoUrl} alt={`${item.location_name || 'Shared puddle'} photo`} aria-label={`Open ${item.location_name || 'shared puddle'}`} />
             <h2>{item.location_name || 'Shared puddle'}</h2><small>{item.location_city || ''}</small><span>{item.distance_label || ''}</span>
             <b>{item.direction === 'received' ? `Shared by ${item.friend_name || 'friend'}` : `Shared with ${item.friend_name || 'friend'}`}</b>
-          </article>,
-          <article className={scopedClasses(friendsStyles, "figma-friends-shared-chat")} key={`chat:${item.share_id}`}><button type="button" onClick={() => openChat(item.friend_id)} disabled={openingFriendId === item.friend_id}>{openingFriendId === item.friend_id ? 'Opening...' : 'Jump to chat'}</button></article>
-        ]
+            <button className={scopedClasses(friendsStyles, "figma-friends-shared-chat-action")} type="button" onClick={() => openChat(item.friend_id)} disabled={openingFriendId === item.friend_id}>{openingFriendId === item.friend_id ? 'Opening...' : 'Jump to chat'}</button>
+          </article>
+        )
       }) : <div className={scopedClasses(friendsStyles, "figma-friends-shared-empty")}>No shared puddles yet.</div>}
     </div>
     {hasMore ? <button className={scopedClasses(friendsStyles, "figma-friends-shared-load-more")} type="button" onClick={loadMore} disabled={loading}>{loading ? 'Loading...' : 'Load more shared puddles'}</button> : null}

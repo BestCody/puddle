@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
 import { pathWithMessage } from '@/lib/auth/redirect'
+import { normalizeProfileInterests } from '@/lib/app/profile-interests'
+import { settingsActionDestination } from '@/lib/app/settings-navigation'
 
 const allowedVisibility = new Set(['hidden', 'friends', 'mutuals', 'attendees', 'public'])
 const allowedAppearance = new Set(['light', 'dark', 'system'])
@@ -33,21 +35,23 @@ async function accountClient() {
 }
 
 export async function updateDateProfile(formData) {
+  const destination = settingsActionDestination(formData, 'profile')
   const { supabase, user } = await accountClient()
   const displayName = value(formData, 'display_name')
   const username = value(formData, 'username').toLowerCase()
   const bio = value(formData, 'bio')
   const requestedVisibility = value(formData, 'profile_visibility')
 
-  if (displayName.length < 1 || displayName.length > 60) redirect(pathWithMessage('/account', 'error', 'Add a display name between 1 and 60 characters.'))
-  if (!/^[a-z0-9_]{3,24}$/.test(username)) redirect(pathWithMessage('/account', 'error', 'Username must be 3–24 lowercase letters, numbers, or underscores.'))
-  if (bio.length > 500) redirect(pathWithMessage('/account', 'error', 'Keep your date vibe to 500 characters or fewer.'))
-  if (!allowedVisibility.has(requestedVisibility)) redirect(pathWithMessage('/account', 'error', 'Choose a valid profile visibility.'))
+  if (displayName.length < 1 || displayName.length > 60) redirect(pathWithMessage(destination, 'error', 'Add a display name between 1 and 60 characters.'))
+  if (!/^[a-z0-9_]{3,24}$/.test(username)) redirect(pathWithMessage(destination, 'error', 'Username must be 3–24 lowercase letters, numbers, or underscores.'))
+  if (bio.length > 500) redirect(pathWithMessage(destination, 'error', 'Keep your date vibe to 500 characters or fewer.'))
+  if (!allowedVisibility.has(requestedVisibility)) redirect(pathWithMessage(destination, 'error', 'Choose a valid profile visibility.'))
 
   const { data, error } = await supabase.from('profiles').update({
     display_name: displayName,
     username,
     bio: bio || null,
+    interests: normalizeProfileInterests(formData.getAll('date_locations')),
     profile_visibility: requestedVisibility,
     updated_at: new Date().toISOString()
   }).eq('id', user.id).select('id').maybeSingle()
@@ -56,32 +60,35 @@ export async function updateDateProfile(formData) {
     const message = isDuplicateUsernameError(error)
       ? 'That username is already taken. Choose another username.'
       : profileWriteErrorMessage(error, 'We could not save your profile. Please try again.')
-    redirect(pathWithMessage('/account', 'error', message))
+    redirect(pathWithMessage(destination, 'error', message))
   }
 
   revalidatePath('/account')
   revalidatePath('/profile')
-  redirect(pathWithMessage('/account?section=profile', 'success', 'Profile saved.'))
+  revalidatePath('/discover')
+  redirect(pathWithMessage(destination, 'success', 'Profile saved.'))
 }
 
 export async function updateAppearance(formData) {
+  const destination = settingsActionDestination(formData, 'appearance')
   const { supabase, user } = await accountClient()
   const appearanceTheme = value(formData, 'appearance_theme')
   const profileTheme = value(formData, 'profile_theme')
   if (!allowedAppearance.has(appearanceTheme) || !allowedProfileThemes.has(profileTheme)) {
-    redirect(pathWithMessage('/account?section=appearance', 'error', 'Choose valid appearance settings.'))
+    redirect(pathWithMessage(destination, 'error', 'Choose valid appearance settings.'))
   }
   const { data, error } = await supabase.from('profiles').update({
     appearance_theme: appearanceTheme,
     profile_theme: profileTheme,
     updated_at: new Date().toISOString()
   }).eq('id', user.id).select('id').maybeSingle()
-  if (error || !data) redirect(pathWithMessage('/account?section=appearance', 'error', 'We could not save your appearance.'))
+  if (error || !data) redirect(pathWithMessage(destination, 'error', 'We could not save your appearance.'))
   revalidateAppearancePaths()
-  redirect(pathWithMessage('/account?section=appearance', 'success', 'Appearance saved.'))
+  redirect(pathWithMessage(destination, 'success', 'Appearance saved.'))
 }
 
 export async function updateNotificationPreferences(formData) {
+  const destination = settingsActionDestination(formData, 'notifications')
   const { supabase, user } = await accountClient()
   const payload = {
     profile_id: user.id,
@@ -98,25 +105,27 @@ export async function updateNotificationPreferences(formData) {
     updated_at: new Date().toISOString()
   }
   const { error } = await supabase.from('notification_preferences').upsert(payload, { onConflict: 'profile_id' })
-  if (error) redirect(pathWithMessage('/account?section=notifications', 'error', 'We could not save your notification preferences.'))
+  if (error) redirect(pathWithMessage(destination, 'error', 'We could not save your notification preferences.'))
   revalidatePath('/account')
-  redirect(pathWithMessage('/account?section=notifications', 'success', 'Notification preferences saved.'))
+  redirect(pathWithMessage(destination, 'success', 'Notification preferences saved.'))
 }
 
 export async function markNotificationRead(formData) {
+  const destination = settingsActionDestination(formData, 'notifications')
   const { supabase, user } = await accountClient()
   const notificationId = Number(value(formData, 'notification_id'))
-  if (!Number.isFinite(notificationId)) redirect('/account?section=notifications')
+  if (!Number.isFinite(notificationId)) redirect(destination)
   const { data, error } = await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId).eq('profile_id', user.id).select('id').maybeSingle()
-  if (error || !data) redirect(pathWithMessage('/account?section=notifications', 'error', 'That notification could not be marked as read.'))
+  if (error || !data) redirect(pathWithMessage(destination, 'error', 'That notification could not be marked as read.'))
   revalidatePath('/account')
-  redirect('/account?section=notifications')
+  redirect(destination)
 }
 
-export async function markAllNotificationsRead() {
+export async function markAllNotificationsRead(formData) {
+  const destination = settingsActionDestination(formData, 'notifications')
   const { supabase, user } = await accountClient()
   const { error } = await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('profile_id', user.id).is('read_at', null)
-  if (error) redirect(pathWithMessage('/account?section=notifications', 'error', 'Notifications could not be marked as read.'))
+  if (error) redirect(pathWithMessage(destination, 'error', 'Notifications could not be marked as read.'))
   revalidatePath('/account')
-  redirect('/account?section=notifications')
+  redirect(destination)
 }

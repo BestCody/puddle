@@ -110,7 +110,7 @@
   gap: .6875rem;
 }
 
-.figma-profile-chips :is(span, a) {
+.figma-profile-chips :is(span, a, button) {
   min-height: 2.1875rem;
   display: inline-flex;
   align-items: center;
@@ -124,7 +124,7 @@
   box-shadow: 0 .125rem rgba(0,0,0,.08);
 }
 
-.figma-profile-chips > a {
+.figma-profile-chips > :is(a, button) {
   width: 2.75rem;
   padding-inline: 0;
   background: color-mix(in srgb, var(--profile-muted) 30%, transparent);
@@ -290,18 +290,21 @@
 .figma-profile-post-preview {
   width: 100%;
   min-width: 0;
-  height: 18.1875rem;
+  display: grid;
+  gap: .75rem;
+  height: auto;
+  padding: .75rem;
   position: relative;
   overflow: hidden;
   border: .125rem solid var(--profile-border);
   border-radius: 1.1875rem;
   background: var(--profile-surface);
-  text-align: center;
+  text-align: start;
+  color: var(--profile-text);
+  text-decoration: none;
 }
 
 .figma-profile-post-preview header {
-  position: absolute;
-  inset: .625rem .75rem auto;
   display: flex;
   align-items: center;
   gap: .5625rem;
@@ -336,24 +339,34 @@
 .figma-profile-post-preview header small {
   margin-top: .25rem;
   color: var(--profile-muted);
-  font: 700 .5rem/1.2 var(--figma-mono);
+  font: 700 .75rem/1.3 var(--figma-mono);
+}
+
+.figma-profile-post-preview > h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  font: 800 1.125rem/1.3 var(--font-sans);
 }
 
 .figma-profile-post-preview > p {
-  position: absolute;
-  inset: 3.25rem 1rem auto;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
   margin: 0;
   font: 500 .75rem/1.2 var(--font-sans);
 }
 
 .figma-profile-post-collage {
-  position: absolute;
-  inset: 6.5625rem 1.0625rem auto 2.625rem;
-  height: 5.9375rem;
+  height: auto;
+  max-height: 10rem;
+  aspect-ratio: 297 / 156;
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: .3125rem;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .figma-profile-post-collage i {
@@ -367,10 +380,6 @@
   font-style: normal;
 }
 
-.figma-profile-post-collage i:first-child {
-  grid-row: span 2;
-}
-
 .figma-profile-post-collage img {
   width: 100%;
   height: 100%;
@@ -378,8 +387,7 @@
 }
 
 .figma-profile-post-place {
-  position: absolute;
-  inset: auto 1rem 1.125rem;
+  position: relative;
   min-height: 4.0625rem;
   padding: .5rem 2.75rem .5rem .75rem;
   border: .09375rem solid var(--profile-border);
@@ -393,7 +401,10 @@
 }
 
 .figma-profile-post-place strong {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   margin-top: .4375rem;
   font: 800 1rem/1.2 var(--font-sans);
 }
@@ -518,7 +529,7 @@
     gap: .5rem;
   }
 
-  .figma-profile-chips :is(span, a) {
+  .figma-profile-chips :is(span, a, button) {
     min-height: 2.0625rem;
     font-size: clamp(.75rem, 3.4vw, .9375rem);
   }

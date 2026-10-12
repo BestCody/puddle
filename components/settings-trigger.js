@@ -3,16 +3,18 @@
 import { useRouter } from 'next/navigation'
 import { openSettingsOverlay } from './settings-overlay'
 
-export function SettingsTrigger({ className = '', children = 'Settings' }) {
+export function SettingsTrigger({ className = '', children = 'Settings', section = null, anchor = '', ...buttonProps }) {
   const router = useRouter()
 
   function openSettings() {
     if (window.matchMedia('(max-width: 760px)').matches) {
-      router.push('/account?mobile=1&returnTo=%2Fprofile')
+      const params = new URLSearchParams({ mobile: '1', returnTo: '/profile' })
+      if (section) params.set('section', section)
+      router.push(`/account?${params}${anchor ? `#${encodeURIComponent(anchor)}` : ''}`)
       return
     }
-    openSettingsOverlay()
+    openSettingsOverlay(section || 'profile', anchor)
   }
 
-  return <button className={className} type="button" onClick={openSettings}>{children}</button>
+  return <button {...buttonProps} className={className} type="button" onClick={openSettings}>{children}</button>
 }

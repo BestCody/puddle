@@ -10,6 +10,7 @@ import { requiredQuery } from '@/lib/app/required-query'
 import { signOut } from '@/app/auth/actions'
 import { ProfileFriendButton } from '@/components/profile-friend-button'
 import { updateProfileTheme } from './actions'
+import { SettingsTrigger } from '@/components/settings-trigger'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Profile' }
@@ -120,7 +121,7 @@ export default async function ProfilePage({ searchParams }) {
           <div className={scopedClasses(profileStyles, "figma-profile-counts")} aria-label="Profile counts"><span>{friendCount} {friendCount === 1 ? 'Friend' : 'Friends'}</span><span>{savedLocationCount} {savedLocationCount === 1 ? 'Save' : 'Saves'}</span></div>
           <div className={scopedClasses(profileStyles, "figma-profile-chips")} aria-label="Favorite categories">
             {chips.map((value) => <span key={value}>{value}</span>)}
-            <Link href="/account?section=profile&returnTo=%2Fprofile" aria-label="Edit favorite categories">+</Link>
+            <SettingsTrigger section="profile" anchor="favorite-categories" aria-label="Edit favorite categories">+</SettingsTrigger>
           </div>
           <div className={scopedClasses(profileStyles, "figma-profile-actions")}>
             <Link className={scopedClasses(profileStyles, "is-follow")} href="/create/post">Create puddle</Link>
@@ -133,10 +134,11 @@ export default async function ProfilePage({ searchParams }) {
         <div className={scopedClasses(profileStyles, "figma-profile-card-column figma-profile-card-column--left")}>
           <article className={scopedClasses(profileStyles, "figma-profile-card figma-profile-puddles-card")}>
             <h2>Puddles</h2>
-            {recentPost ? <Link className={scopedClasses(profileStyles, "figma-profile-post-preview figma-profile-real-post")} href="/map">
+            {recentPost ? <Link className={scopedClasses(profileStyles, "figma-profile-post-preview")} href="/map">
               <header><PhotoFrame as="span" className={scopedClasses(profileStyles, "figma-profile-post-avatar")} src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" /><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
-              <p>{recentPost.body || recentPost.title}</p>
-              <div className={scopedClasses(profileStyles, "figma-profile-post-collage")}><PhotoFrame as="i" src={recentCover} alt={`${recentLocation?.name || recentPost.title} photo`} unavailableText="Photo unavailable" /><i /><i>{visiblePosts.length > 1 ? `+${visiblePosts.length - 1}` : ''}</i></div>
+              {recentPost.title ? <h3>{recentPost.title}</h3> : null}
+              {recentPost.body ? <p>{recentPost.body}</p> : null}
+              <div className={scopedClasses(profileStyles, "figma-profile-post-collage")}><PhotoFrame as="i" src={recentCover} alt={`${recentLocation?.name || recentPost.title} photo`} unavailableText="Photo unavailable" /></div>
               <div className={scopedClasses(profileStyles, "figma-profile-post-place")}><small>{String(recentLocation?.kind || 'Place').replaceAll('_', ' ')}</small><strong>{recentLocation?.name || recentPost.title}</strong><b>+</b></div>
             </Link> : <div className={scopedClasses(profileStyles, "figma-profile-card-empty")}><p>No puddles posted yet.</p><Link href="/create/post">Create one</Link></div>}
           </article>

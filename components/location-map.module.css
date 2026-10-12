@@ -461,13 +461,13 @@
   background: transparent;
   box-shadow: none;
   pointer-events: auto;
-  transform: translate(-50%, calc(-100% - 1.125rem));
+  visibility: var(--map-popup-visibility, hidden);
 }
 
 .anchored .location-map-side::after {
   content: '';
   position: absolute;
-  left: 50%;
+  left: clamp(.875rem, var(--map-popup-tip-x, 50%), calc(100% - .875rem));
   bottom: -.4375rem;
   width: .875rem;
   height: .875rem;
@@ -478,6 +478,32 @@
 
 .anchored .location-map-side .location-map-list {
   display: none;
+}
+
+.anchored .location-map-side[data-popup-placement='below']::after {
+  top: -.4375rem;
+  bottom: auto;
+}
+
+.location-map-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.location-map-spinner {
+  width: 2rem;
+  aspect-ratio: 1;
+  border: .1875rem solid rgb(76 165 247 / .2);
+  border-top-color: #4ca5f7;
+  border-radius: 50%;
+  animation: map-loading-spin .7s linear infinite;
+}
+
+@keyframes map-loading-spin {
+  to { transform: rotate(1turn); }
 }
 
 .anchored .location-map-side .location-map-card {
@@ -613,7 +639,6 @@
     background: #fff;
     border: .0625rem solid #e8e2e5;
     box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .16);
-    transform: translate(-50%, calc(-100% - 1.125rem));
   }
 
   .anchored .location-map-side .location-map-card {
@@ -635,7 +660,12 @@
     min-height: 0;
     aspect-ratio: 1;
     margin: .625rem;
+    padding: 0;
     border-radius: .75rem;
+  }
+
+  .anchored .location-map-card-photo-state {
+    display: none;
   }
 
   .anchored .location-map-side .location-map-card > div:last-child {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { sanitizeUsername } from '@/lib/app/input-validation'
 
-export function UsernameInput({ defaultValue = '', error = '', id = 'username' }) {
+export function UsernameInput({ defaultValue = '', error = '', id = 'username', hintClassName = 'field-hint' }) {
   const [value, setValue] = useState(() => sanitizeUsername(defaultValue))
   const [editedAfterError, setEditedAfterError] = useState(false)
   const visibleError = editedAfterError ? '' : error
@@ -30,7 +30,7 @@ export function UsernameInput({ defaultValue = '', error = '', id = 'username' }
       aria-describedby={`${id}-hint ${id}-error`}
       placeholder="your_username"
     />
-    <small className="field-hint" id={`${id}-hint`}>3–24 lowercase letters, numbers, or underscores. Capitals are converted automatically.</small>
+    <small className={hintClassName} id={`${id}-hint`}>3–24 lowercase letters, numbers, or underscores. Capitals are converted automatically.</small>
     <small className="field-error" id={`${id}-error`} aria-live="polite">{visibleError}</small>
   </>
 }

@@ -11,6 +11,7 @@ import { startGoogleOAuth } from '@/lib/auth/google-oauth'
 import { isValidEmail, MAX_PASSWORD_LENGTH } from '@/lib/app/input-validation'
 import { registerAccount } from '@/lib/auth/sign-up'
 import { publicAuthError } from '@/lib/auth/errors'
+import { settingsActionDestination } from '@/lib/app/settings-navigation'
 
 function value(formData, key) {
   return String(formData.get(key) || '').trim()
@@ -59,15 +60,17 @@ export async function requestPasswordReset(formData) {
 }
 
 export async function updatePassword(formData) {
-  ensureConfigured('/update-password')
+  const inSettings = formData.has('settings_return')
+  const destination = inSettings ? settingsActionDestination(formData, 'security') : '/update-password'
+  ensureConfigured(destination)
   const password = rawValue(formData, 'password')
   const confirmation = rawValue(formData, 'password_confirmation')
-  if (password.length < 10 || password.length > MAX_PASSWORD_LENGTH) redirect(pathWithMessage('/update-password', 'error', `Use a password from 10 to ${MAX_PASSWORD_LENGTH} characters.`))
-  if (password !== confirmation) redirect(pathWithMessage('/update-password', 'error', 'The passwords do not match.'))
+  if (password.length < 10 || password.length > MAX_PASSWORD_LENGTH) redirect(pathWithMessage(destination, 'error', `Use a password from 10 to ${MAX_PASSWORD_LENGTH} characters.`))
+  if (password !== confirmation) redirect(pathWithMessage(destination, 'error', 'The passwords do not match.'))
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ password })
-  if (error) redirect(pathWithMessage('/update-password', 'error', publicAuthError(error, 'We could not update your password. Please request a new reset link and try again.')))
-  redirect(pathWithMessage('/account', 'success', 'Password updated.'))
+  if (error) redirect(pathWithMessage(destination, 'error', publicAuthError(error, 'We could not update your password. Please request a new reset link and try again.')))
+  redirect(pathWithMessage(inSettings ? destination : '/account', 'success', 'Password updated.'))
 }
 
 export async function updateEmail(formData) {
@@ -80,12 +83,13 @@ export async function updateEmail(formData) {
   redirect(pathWithMessage('/account', 'success', 'Check both inboxes to confirm the email change.'))
 }
 
-export async function revokeOtherSessions() {
-  ensureConfigured('/account')
+export async function revokeOtherSessions(formData) {
+  const destination = settingsActionDestination(formData, 'sessions')
+  ensureConfigured(destination)
   const supabase = await createClient()
   const { error } = await supabase.auth.signOut({ scope: 'others' })
-  if (error) redirect(pathWithMessage('/account', 'error', publicAuthError(error, 'We could not sign out your other sessions.')))
-  redirect(pathWithMessage('/account', 'success', 'Other sessions were signed out.'))
+  if (error) redirect(pathWithMessage(destination, 'error', publicAuthError(error, 'We could not sign out your other sessions.')))
+  redirect(pathWithMessage(destination, 'success', 'Other sessions were signed out.'))
 }
 
 export async function signOut() {
@@ -97,8 +101,9 @@ export async function signOut() {
 }
 
 export async function deleteAccount(formData) {
-  ensureConfigured('/account')
-  if (value(formData, 'confirmation') !== 'DELETE') redirect(pathWithMessage('/account', 'error', 'Type DELETE exactly to remove your account.'))
+  const destination = settingsActionDestination(formData, 'account')
+  ensureConfigured(destination)
+  if (value(formData, 'confirmation') !== 'DELETE') redirect(pathWithMessage(destination, 'error', 'Type DELETE exactly to remove your account.'))
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
@@ -106,10 +111,10 @@ export async function deleteAccount(formData) {
   try {
     admin = createAdminClient()
   } catch {
-    redirect(pathWithMessage('/account', 'error', 'Account deletion is temporarily unavailable. Please try again later.'))
+    redirect(pathWithMessage(destination, 'error', 'Account deletion is temporarily unavailable. Please try again later.'))
   }
   const { error } = await admin.auth.admin.deleteUser(user.id)
-  if (error) redirect(pathWithMessage('/account', 'error', 'We could not delete your account. Please try again later.'))
+  if (error) redirect(pathWithMessage(destination, 'error', 'We could not delete your account. Please try again later.'))
   await supabase.auth.signOut({ scope: 'local' })
   redirect('/?account=deleted')
 }

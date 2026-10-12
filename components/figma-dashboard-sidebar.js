@@ -32,7 +32,7 @@ function SettingsIcon() {
   </svg>
 }
 
-export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance = 'light', signOutAction }) {
+export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance, signOutAction }) {
   const [width, setWidth] = useState(EXPANDED_WIDTH)
   const [autoConcise, setAutoConcise] = useState(false)
   const drag = useRef(null)

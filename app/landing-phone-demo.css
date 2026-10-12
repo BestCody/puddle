@@ -610,7 +610,8 @@ body:has(.landing-phone-demo) {
 .landing-demo-swipe-details-gallery {
   height: 44.8cqi;
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: .75cqi;
   overflow: hidden;
   border-radius: 5cqi 5cqi 0 0;
@@ -1181,7 +1182,7 @@ body:has(.landing-phone-demo) {
 
 .landing-demo-feed-interactions > a,
 .landing-demo-feed-interactions > form > button,
-.landing-demo-feed-action,
+.landing-demo-feed-demoAction,
 .landing-demo-feed-actionMenu > summary {
   min-width: 6cqi;
   min-height: 6cqi;

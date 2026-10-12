@@ -9,21 +9,8 @@ import { profileLocationFromForm } from '@/lib/app/profile-location'
 import { birthDateError } from '@/lib/app/input-validation'
 import { isDuplicateUsernameError, profileWriteErrorMessage } from '@/lib/auth/errors'
 import { pathWithMessage } from '@/lib/auth/redirect'
+import { normalizeProfileInterests } from '@/lib/app/profile-interests'
 
-const allowedDateLocations = new Set([
-  'cafe',
-  'restaurant',
-  'bar',
-  'park',
-  'museum',
-  'gallery',
-  'attraction',
-  'activity_venue',
-  'scenic_spot',
-  'nightlife',
-  'shop',
-  'community_space'
-])
 const allowedVisibility = new Set(['hidden', 'friends', 'mutuals', 'attendees', 'public'])
 
 function value(formData, key) {
@@ -62,9 +49,7 @@ export async function completeDateOnboarding(previousState, maybeFormData) {
   const radiusValue = value(formData, 'search_radius_km')
   const radius = Number(radiusValue)
   const bio = value(formData, 'bio')
-  const dateLocations = [...new Set(
-    formData.getAll('date_locations').map(String).filter((location) => allowedDateLocations.has(location))
-  )].slice(0, 12)
+  const dateLocations = normalizeProfileInterests(formData.getAll('date_locations'))
   const requestedVisibility = value(formData, 'profile_visibility')
   const fieldErrors = {}
 

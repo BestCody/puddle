@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { csrfFetch } from '@/lib/security/csrf-client'
+import { useProductIdentity } from '@/components/product-identity'
 
 function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
@@ -42,6 +43,7 @@ function deviceId() {
 
 export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
   const router = useRouter()
+  const productIdentity = useProductIdentity()
   const client = useMemo(() => createClient(), [])
   const inputRef = useRef(null)
   const [file, setFile] = useState(null)
@@ -121,6 +123,7 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
       if (inputRef.current) inputRef.current.value = ''
       setBusy(false)
       setStatus('Profile picture updated.')
+      void productIdentity?.refresh()
       router.refresh()
     } catch {
       setBusy(false)
@@ -137,6 +140,7 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
     if (error) return setStatus(error.message || 'Could not remove profile picture.')
     setSavedUrl(null)
     setStatus('Profile picture removed.')
+    void productIdentity?.refresh()
     router.refresh()
   }
 

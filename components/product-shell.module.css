@@ -1,5 +1,6 @@
 .figma-dashboard-shell {
   --shell-surface: #fff;
+  --shell-canvas: #f6f6f6;
   --shell-text: #111;
   --shell-muted: #919191;
   --shell-border: #e4e4e4;
@@ -20,6 +21,8 @@
 
 .figma-dashboard-shell:is([data-appearance="dark"], [data-resolved-appearance="dark"]) {
   --shell-surface: #111315;
+  --shell-canvas: #111315;
+  --saved-accent: #c2a3dd;
   --shell-text: #f4f5f7;
   --shell-muted: #a6acb2;
   --shell-border: #353b41;
