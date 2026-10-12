@@ -56,6 +56,7 @@ test('host job environment uses only local endpoints and bounded worker settings
     'NEXT_PUBLIC_SUPABASE_URL=https://api.puddle.you',
     'SUPABASE_SECRET_KEY=local-key',
     'OBJECT_STORAGE_ENDPOINT=http://objects:8333',
+    `PUDDLE_CATALOGUE_DATA_DIR=${process.platform === 'win32' ? 'C:\\puddle\\catalogue' : '/var/lib/puddle-jobs/catalogue'}`,
     'UNRELATED_SECRET=do-not-copy'
   ].join('\n')
   const prepared = prepareJobsEnv(source)
@@ -95,6 +96,7 @@ test('host jobs reject a stale managed Supabase URL despite cutover flags', () =
     SUPABASE_SECRET_KEY: 'local-key',
     MAPILLARY_ACCESS_TOKEN: 'provider-token'
   }
+  env.GLOBAL_LOCATION_INDEXED_DATA_DIR = process.platform === 'win32' ? 'C:\\puddle\\catalogue' : '/var/lib/puddle-jobs/catalogue'
   assert.throws(() => validateJob('materialize', env), /managed source/)
   env.NEXT_PUBLIC_SUPABASE_URL = 'https://supabase.puddle.you'
   env.SUPABASE_URL = 'https://old-project.supabase.co'

@@ -44,6 +44,11 @@ requires its own Stripe verification before it is treated as working.
 - `/srv/puddle/objects` holds the live object data. Never include it in a
   source-code sync or cleanup. The object S3 port, Postgres, the Supabase
   gateway, and Studio are not public administration endpoints.
+- `PUDDLE_CATALOGUE_DATA_DIR` holds immutable keyed serving derivatives of that
+  same catalogue and its photo metadata. The app mounts it read-only at
+  `/catalogue`; workers use its absolute host path. Partial builds are resumable
+  and never opened by the application. Missing/misaligned completed indices are
+  errors, not a fallback to large ID buckets. These files contain no account data.
 - The app uses `NEXT_PUBLIC_SUPABASE_URL=https://api.puddle.you` for browser
   URLs and session cookies, and `SUPABASE_INTERNAL_URL` for private server
   traffic. Open-location photos and search read the private object store;
@@ -84,6 +89,21 @@ The workers run as the unprivileged `puddle` user, use `/opt/puddle/.venv`,
 and share `/var/lib/puddle-jobs/global.lock` to prevent overlapping data jobs.
 Their private `.env.jobs` enables only the approved local-store jobs. Do not
 enable the global location timer merely to refresh photos.
+
+For an existing catalogue, build its keyed detail derivative before an app
+release requiring it:
+
+```sh
+python scripts/global-data/build_indexed_location_data.py --output-dir "$GLOBAL_LOCATION_INDEXED_DATA_DIR"
+```
+
+Use the private worker environment on the host. This reads only the local
+copied ID/slug metadata, verifies source hashes/counts, and publishes a completed
+SQLite file atomically. It does not import locations or fetch image bytes.
+Photo materialization publishes a small immutable photo metadata index before
+updating its active pointer. Keep both source objects and current derivative
+files out of repository cleanup. The disabled location job prepares the keyed
+candidate before activation if it is explicitly enabled in the future.
 
 ## Release an application revision
 

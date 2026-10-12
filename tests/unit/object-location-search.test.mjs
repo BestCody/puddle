@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { DatabaseSync } from 'node:sqlite'
+import { mkdtempSync, readFileSync, rmSync, realpathSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { brotliCompressSync, zstdCompressSync } from 'node:zlib'
 import {
   getObjectGlobalLocationBySlug,
@@ -17,6 +21,7 @@ import { clearSearchObjectInFlightForTests } from '../../lib/app/search-object-s
 import { resetSelfHostObjectClientForTests, setSelfHostObjectClientForTests } from '../../lib/storage/self-host-object-store.js'
 import { clearPhotoSearchOverlayCaches, getPhotoSearchOverlay } from '../../lib/app/photo-search-overlay.js'
 import { clearTextProjectionCaches } from '../../lib/app/text-search-projection.js'
+import { catalogueIndexIdentity } from '../../lib/app/indexed-location-data.js'
 import { queryPrefixCodes } from '../../lib/app/text-postings.js'
 import { normalizeSearchText, prepareTextQuery, scoreTextMatch } from '../../lib/app/location-search-ranking.js'
 
@@ -34,6 +39,7 @@ const env = {
   GLOBAL_LOCATION_MAX_CANDIDATES: '10000',
   GLOBAL_LOCATION_SEARCH_TIMEOUT_MS: '5000'
 }
+const temporaryRoots = []
 
 const tower = {
   id: '11111111-1111-4111-8111-111111111111', slug: 'cn-tower', name: 'CN Tower', aliases: [], category: 'landmark',
@@ -86,7 +92,7 @@ function detail(row) {
   ]
 }
 
-function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCount = 16, photoEntries = [], locations = [tower, cafe], membership, missingKey = null } = {}) {
+function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoEntries = [], locations = [tower, cafe], membership, missingKey = null } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
@@ -101,6 +107,7 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
   const overlayHash = 'a'.repeat(64)
   const manifest = {
     schema_version: 1, snapshot: '2026-08-19', source_snapshot: '2026-08-19', prefix,
+    location_count: locations.length, validation: { hashes_sha256: 'f'.repeat(64) },
     planner: { id: plannerId },
     geo: { directory: { tile_degrees: 1, prefix: `${prefix}/routing` } },
     geo_map: {
@@ -108,6 +115,19 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
       z1: { tile_degrees: 10, prefix: `${prefix}/geo-map/z1` }
     }
   }
+  const directory = mkdtempSync(join(tmpdir(), 'puddle-index-fixture-'))
+  temporaryRoots.push(directory)
+  env.GLOBAL_LOCATION_INDEXED_DATA_DIR = directory
+  const catalogueIndexPath = join(directory, `catalogue-${catalogueIndexIdentity(manifest, manifestKey)}.sqlite`)
+  const database = new DatabaseSync(catalogueIndexPath)
+  database.exec(readFileSync(new URL('../../config/location-lookup-schema.sql', import.meta.url), 'utf8'))
+  const meta = database.prepare('insert into metadata values(?,?)')
+  for (const [key, value] of Object.entries({schema_version:1,complete:1,kind:'catalogue',source_manifest_key:manifestKey,source_ledger_sha256:manifest.validation.hashes_sha256,location_count:locations.length})) meta.run(key,String(value))
+  const insert = database.prepare('insert into locations values(?,?,?)')
+  for (const row of locations) insert.run(row.id,zstdCompressSync(Buffer.from(JSON.stringify(row))),zstdCompressSync(Buffer.from(JSON.stringify(detail(row)))))
+  database.prepare('insert into slugs values(?,?)').run('cn-tower', tower.id)
+  database.exec('create unique index location_id_lookup on locations(id); create unique index slug_lookup on slugs(slug);')
+  database.close()
   const objects = new Map([
     ['data/search/active.json', Buffer.from(JSON.stringify({ schema_version: 1, snapshot: '2026-08-19', manifest_key: manifestKey }))],
     [manifestKey, Buffer.from(JSON.stringify(manifest))],
@@ -122,7 +142,6 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
     ])],
     [geoKey, geoBody],
     [`${prefix}/geo-map/z1/13/10.json.br`, br([tower, cafe])],
-    [`${prefix}/slug/e79.json.br`, br({ 'cn-tower': tower.id })],
     [projectionCandidateKey, Buffer.from(JSON.stringify({
       schema_version: 1,
       projection_version: 1,
@@ -135,39 +154,24 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
     [coreKey, zstd([1, locations.map(core)])],
     [detailKey, zstd([1, 0, locations.map(detail)])]
   ])
-  const idBuckets = new Map()
-  for (const row of locations) {
-    const key = `${prefix}/id/${digest(row.id).slice(0, 3)}.json.br`
-    const bucket = idBuckets.get(key) || {}
-    bucket[row.id] = row
-    idBuckets.set(key, bucket)
-  }
-  for (const [key, bucket] of idBuckets) objects.set(key, br(bucket))
+  let photoIndexPath = null
   if (photoOverlay) {
     const entries = photoEntries.length ? photoEntries : [['22222222-2222-4222-8222-222222222222', [overlayHash, 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]]]
-    const grouped = new Map()
-    for (const entry of entries) {
-      const hash = createHash('sha256').update(entry[0]).digest()
-      const window = photoBucketCount <= 256 ? hash[0] : hash.readUInt16BE(0)
-      const bucket = (window & (photoBucketCount - 1)).toString(16).padStart(Math.max(2, Math.ceil(Math.log2(photoBucketCount) / 4)), '0')
-      if (!grouped.has(bucket)) grouped.set(bucket, [])
-      grouped.get(bucket).push(entry)
-    }
-    const shards = {}
-    for (const [bucket, rows] of grouped) {
-      const shardBody = br([2, rows])
-      const shardDigest = createHash('sha256').update(shardBody).digest('hex')
-      const shardKey = `data/search/photo-overlay-v2/objects/sha256=${shardDigest}/bucket=${bucket}.json.br`
-      objects.set(shardKey, shardBody)
-      shards[bucket] = { object_key: shardKey, object_sha256: shardDigest, photo_count: rows.length }
-    }
+    const photoIdentity = digest(JSON.stringify(entries))
+    photoIndexPath = join(directory, `photos-${photoIdentity}.sqlite`)
+    const photoDatabase = new DatabaseSync(photoIndexPath)
+    photoDatabase.exec('create table metadata(key text primary key,value text not null) without rowid; create table photos(location_id text primary key,photo text not null) without rowid;')
+    const photoMeta = photoDatabase.prepare('insert into metadata values(?,?)')
+    for (const [key,value] of Object.entries({schema_version:1,complete:1,kind:'photos',data_sha256:photoIdentity,source_manifest_key:manifestKey,photo_count:entries.length})) photoMeta.run(key,String(value))
+    const photoInsert = photoDatabase.prepare('insert into photos values(?,?)')
+    for (const [id, photo] of entries) photoInsert.run(id,JSON.stringify(photo))
+    photoDatabase.close()
     objects.set('data/search/photo-overlay-v1/active.json', Buffer.from(JSON.stringify({
       schema_version: 1,
       overlay_version: 2,
       source_snapshot: '2026-08-19',
       source_manifest_key: manifestKey,
-      bucket_count: photoBucketCount,
-      shards,
+      local_index: { schema_version:1, data_sha256:photoIdentity },
       photo_count: entries.length,
       membership: membership === undefined ? exactMembership(entries.map(entry => entry[0])) : membership
     })))
@@ -183,7 +187,7 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoBucketCoun
     if (!body) throw Object.assign(new Error('Missing object'), { name: 'NoSuchKey' })
     return { ContentLength: body.length, Body: (async function* () { yield body })() }
   } })
-  return { projectionCandidateKey, coreKey, detailKey, geoKey, manifest, manifestKey, counts }
+  return { projectionCandidateKey, coreKey, detailKey, geoKey, manifest, manifestKey, counts, photoIndexPath, catalogueIndexPath }
 }
 
 function reset() {
@@ -192,6 +196,11 @@ function reset() {
   resetSelfHostObjectClientForTests()
   clearPhotoSearchOverlayCaches()
   clearTextProjectionCaches()
+  for (const directory of temporaryRoots.splice(0)) {
+    assert.equal(realpathSync(directory), directory)
+    assert.ok(directory.startsWith(join(tmpdir(), 'puddle-index-fixture-')))
+    rmSync(directory, {recursive:true})
+  }
 }
 
 function exactMembership(ids) {
@@ -212,7 +221,7 @@ test('exact photo presence preserves radius/viewport ranking and loads metadata 
   locations.at(-1).primary_photo = { content_hash: 'outdated-photo' }
   const entries = locations.filter((_, index) => index % 2 === 0).map(row => [row.id,
     ['a'.repeat(64), 'wikimedia-commons', 'Attribution', 'https://fixture.invalid', 'CC BY', 1200, 800]])
-  const fixture = { locations, photoOverlay: true, photoEntries: entries, photoBucketCount: 4096 }
+  const fixture = { locations, photoOverlay: true, photoEntries: entries }
   const query = { latitude: 43.65, longitude: -79.39, distanceKm: 25, candidateLimit: 3, preferPhoto: true }
   const viewport = { north: 43.7, south: 43.6, west: -79.5, east: -79.3, zoom: 12, candidateLimit: 3 }
   reset()
@@ -333,7 +342,7 @@ test('object-store radius search applies freshly materialized photo metadata bef
   assert.deepEqual(result.diagnostics.photoOverlay, { active: true, photoCount: 1, possibleCount: 1, matchedCount: 1 })
 })
 
-test('object-store photo overlay loads only the content-addressed hash shard needed by the candidates', async () => {
+test('photo metadata is a keyed local read, not one object download per winning photo', async () => {
   reset()
   const { counts } = fixtureObjectStore({ photoOverlay: true })
   const result = await searchObjectGlobalLocations({
@@ -342,46 +351,38 @@ test('object-store photo overlay loads only the content-addressed hash shard nee
   }, { env })
   assert.equal(result.candidates[0]?.primary_photo?.content_hash, 'a'.repeat(64))
   const shardReads = [...counts.keys()].filter((key) => key.startsWith('data/search/photo-overlay-v2/'))
-  assert.equal(shardReads.length, 1)
+  assert.equal(shardReads.length, 0)
 })
 
-test('small photo shards preserve attribution and avoid fetching unrelated photos', async () => {
+test('keyed photo reads preserve attribution without decoding unrelated records', async () => {
   reset()
   const entries = Array.from({ length: 100 }, (_, index) => [photoFixtureId(index), ['b'.repeat(64), 'mapillary', 'Street attribution', 'https://fixture.invalid', 'CC BY-SA', 800, 600]])
   entries.push(['22222222-2222-4222-8222-222222222222', ['a'.repeat(64), 'wikimedia-commons', 'Fixture', 'https://fixture.invalid', 'CC BY', 1200, 800]])
-  const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
+  const { counts, manifest, manifestKey, photoIndexPath } = fixtureObjectStore({ photoOverlay: true, photoEntries: entries })
+  const db = new DatabaseSync(photoIndexPath)
+  db.prepare('update photos set photo=? where location_id=?').run('malformed unselected JSON', entries[0][0])
+  db.close()
   const overlay = await getPhotoSearchOverlay({ manifest, manifestKey, ids: ['22222222-2222-4222-8222-222222222222'], env })
   assert.equal(overlay.photos.size, 1)
   assert.deepEqual(overlay.photos.get('22222222-2222-4222-8222-222222222222'), entries.at(-1)[1])
   const reads = [...counts.keys()].filter(key => key.startsWith('data/search/photo-overlay-v2/'))
-  assert.equal(reads.length, 1)
-  const expectedBucket = (createHash('sha256').update(cafe.id).digest().readUInt16BE(0) & 4095).toString(16).padStart(3, '0')
-  assert.ok(reads[0].endsWith(`bucket=${expectedBucket}.json.br`))
+  assert.equal(reads.length, 0)
 })
 
-test('photo byte cache retains a small working set larger than the old object-count ceiling', async () => {
+test('a photo index aligned to another catalogue fails closed instead of loading shards', async () => {
   reset()
-  const entries = Array.from({ length: 80 }, (_, index) => [photoFixtureId(index), ['b'.repeat(64), 'mapillary', 'Fixture', null, 'CC BY-SA', 800, 600]])
-  const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
-  const ids = entries.map(entry => entry[0])
-  await getPhotoSearchOverlay({ manifest, manifestKey, ids, env })
-  const keys = [...counts.keys()].filter(key => key.startsWith('data/search/photo-overlay-v2/'))
-  assert.ok(keys.length > 32)
-  await getPhotoSearchOverlay({ manifest, manifestKey, ids, env })
-  assert.ok(keys.every(key => counts.get(key) === 1), 'Small shards should remain cached, not churn at 32 objects')
+  const {manifest,manifestKey,photoIndexPath} = fixtureObjectStore({photoOverlay:true})
+  const db = new DatabaseSync(photoIndexPath)
+  db.prepare('update metadata set value=? where key=?').run('another-catalogue', 'source_manifest_key')
+  db.close()
+  await assert.rejects(getPhotoSearchOverlay({manifest,manifestKey,ids:[cafe.id],env}), /does not match its active source/)
 })
 
-test('photo byte cache evicts old payloads when its byte budget is exhausted', async () => {
+test('missing local photo index remains an error instead of a fallback download', async () => {
   reset()
-  const entries = Array.from({ length: 5 }, (_, index) => [photoFixtureId(index), ['b'.repeat(64), 'mapillary', 'a'.repeat(350000), null, 'CC BY-SA', 800, 600]])
-  const { counts, manifest, manifestKey } = fixtureObjectStore({ photoOverlay: true, photoBucketCount: 4096, photoEntries: entries })
-  const options = { manifest, manifestKey, env: { ...env, GLOBAL_LOCATION_PHOTO_OVERLAY_CACHE_BYTES: String(1024 * 1024) } }
-  const keyFor = id => { const bucket = (createHash('sha256').update(id).digest().readUInt16BE(0) & 4095).toString(16).padStart(3, '0'); return [...counts.keys()].find(key => key.endsWith(`bucket=${bucket}.json.br`)) }
-  for (const [id] of entries) await getPhotoSearchOverlay({ ...options, ids: [id] })
-  await getPhotoSearchOverlay({ ...options, ids: [entries.at(-1)[0]] })
-  assert.equal(counts.get(keyFor(entries.at(-1)[0])), 1)
-  await getPhotoSearchOverlay({ ...options, ids: [entries[0][0]] })
-  assert.equal(counts.get(keyFor(entries[0][0])), 2)
+  const {manifest,manifestKey,photoIndexPath} = fixtureObjectStore({photoOverlay:true})
+  rmSync(photoIndexPath)
+  await assert.rejects(getPhotoSearchOverlay({manifest,manifestKey,ids:[cafe.id],env}), /unable to open database/)
 })
 
 test('object-store dense text radius search uses compact core and hydrates winner detail', async () => {
@@ -435,7 +436,7 @@ test('concurrent compact searches share manifest, readiness, decode, and hydrati
   assert.equal(counts.get('data/search/active.json'), 1)
   assert.equal(counts.get(projectionCandidateKey), 1)
   assert.equal(counts.get(coreKey), 1)
-  assert.equal(counts.get(detailKey), 1)
+  assert.equal(counts.get(detailKey) || 0, 0)
 })
 
 test('object-store text search fails loudly when an activated projection core is missing', async () => {
@@ -504,13 +505,52 @@ test('viewport compact ranking equals document ranking and only hydrates winners
   }
 })
 
-test('object-store ID and slug hydration use deterministic hash buckets', async () => {
+test('ID and slug details use the same completed index without catalogue bucket downloads', async () => {
   reset()
-  fixtureObjectStore()
+  const {counts} = fixtureObjectStore()
   const ids = await getObjectGlobalLocationsByIds(['11111111-1111-4111-8111-111111111111'], { env })
   assert.equal(ids[0]?.id, '11111111-1111-4111-8111-111111111111')
   const bySlug = await getObjectGlobalLocationBySlug('cn-tower', { env })
   assert.equal(bySlug?.id, '11111111-1111-4111-8111-111111111111')
+  assert.ok([...counts.keys()].every(key => !key.includes('/id/') && !key.includes('/slug/')))
+})
+
+test('keyed details preserve requested order, missing records, and historical slug aliases', async () => {
+  reset()
+  const { catalogueIndexPath } = fixtureObjectStore()
+  const db = new DatabaseSync(catalogueIndexPath)
+  db.prepare('insert into slugs values(?,?)').run('historic-tower', tower.id)
+  db.close()
+  const rows = await getObjectGlobalLocationsByIds([cafe.id, 'missing', tower.id, cafe.id], { env })
+  assert.deepEqual(rows, [cafe, tower])
+  assert.deepEqual(await getObjectGlobalLocationBySlug('historic-tower', { env }), tower)
+  assert.equal(await getObjectGlobalLocationBySlug("' OR 1=1 --", { env }), null)
+})
+
+test('missing, incomplete, and mismatched keyed catalogues fail without downloading ID buckets', async () => {
+  for (const failure of ['missing', 'complete', 'source_manifest_key']) {
+    reset()
+    const { catalogueIndexPath, counts } = fixtureObjectStore()
+    if (failure === 'missing') rmSync(catalogueIndexPath)
+    else {
+      const db = new DatabaseSync(catalogueIndexPath)
+      db.prepare('update metadata set value=? where key=?').run('invalid', failure)
+      db.close()
+    }
+    await assert.rejects(() => getObjectGlobalLocationsByIds([tower.id], { env }))
+    assert.ok([...counts.keys()].every(key => !key.includes('/id/')))
+  }
+})
+
+test('keyed hydration decodes only selected records and refuses the wrong identity', async () => {
+  reset()
+  const { catalogueIndexPath } = fixtureObjectStore()
+  const db = new DatabaseSync(catalogueIndexPath)
+  db.prepare('update locations set document=? where id=?').run(zstd(cafe), tower.id)
+  db.close()
+  assert.deepEqual(await getObjectGlobalLocationsByIds([cafe.id], { env }), [cafe])
+  await assert.rejects(() => getObjectGlobalLocationsByIds([tower.id], { env }), /wrong location identity/)
+  await assert.rejects(() => getObjectGlobalLocationBySlug('cn-tower', { env }), /wrong location identity/)
 })
 
 test('radius guard rejects world-scale legacy scans before any object-store read', async () => {

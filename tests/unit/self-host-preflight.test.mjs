@@ -13,6 +13,8 @@ const valid = {
   SUPABASE_SECRET_KEY: 'server-secret-test',
   PUDDLE_BUILD_SHA: 'a'.repeat(40),
   PUDDLE_OBJECT_DATA_DIR: process.platform === 'win32' ? 'C:\\puddle\\objects' : '/srv/puddle/objects',
+  PUDDLE_CATALOGUE_DATA_DIR: process.platform === 'win32' ? 'C:\\puddle\\catalogue' : '/var/lib/puddle-jobs/catalogue',
+  GLOBAL_LOCATION_INDEXED_DATA_DIR: '/catalogue',
   OBJECT_STORAGE_ENDPOINT: 'http://objects:8333',
   OBJECT_STORAGE_REGION: 'us-east-1',
   OBJECT_STORAGE_BUCKET: 'puddle-assets',

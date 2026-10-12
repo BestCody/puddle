@@ -59,11 +59,16 @@ python scripts/global-data/materialize_photo_candidates.py `
   --bulk-manifest D:\puddle-data\photo-pilot.parquet
 
 python scripts/global-data/build_object_photo_search_overlay.py --snapshot 2026-08-28
-python scripts/global-data/verify_photo_pilot.py --snapshot 2026-08-28
+python scripts/global-data/audit_object_photo_inventory.py --snapshot 2026-08-28
 ```
 
 The pilot must pass before the full import. The pilot bounds are explicit
 commands, not production defaults.
+Run production materialization/publication on the VPS with its private worker
+environment and `GLOBAL_LOCATION_INDEXED_DATA_DIR` set to the shared host
+catalogue directory. Photo publication creates an immutable keyed metadata
+index there; the app reads it through its read-only mount. The retired pilot
+checker for the old 64-bucket overlay is no longer applicable.
 
 ## Full resumable import
 

@@ -49,12 +49,14 @@ export function prepareJobsEnv(source) {
     if (!env[key]) throw new Error(`Missing ${key} in source environment`)
   }
   Object.assign(env, {
+    GLOBAL_LOCATION_INDEXED_DATA_DIR: entries.get('PUDDLE_CATALOGUE_DATA_DIR'),
     OBJECT_STORAGE_ENDPOINT: 'http://127.0.0.1:8333',
     PUDDLE_JOBS_ENABLED: 'true',
     PUDDLE_STORAGE_CUTOVER_COMPLETE: 'true',
     PUDDLE_SUPABASE_CUTOVER_COMPLETE: 'true',
     ...SETTINGS
   })
+  if (!isAbsolute(String(env.GLOBAL_LOCATION_INDEXED_DATA_DIR || ''))) throw new Error('PUDDLE_CATALOGUE_DATA_DIR must be an absolute host directory.')
   validateJob('wikimedia', env)
   return Object.entries(env).map(([key, value]) => `${key}=${value}`).join('\n') + '\n'
 }
