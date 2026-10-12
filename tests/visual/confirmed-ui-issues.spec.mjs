@@ -143,6 +143,35 @@ test('public Save sends the canonical batch with CSRF and recovers from failure'
   expect(actions[1].actions[0].eventId).toBe(actions[0].actions[0].eventId)
 })
 
+test('a Saved refresh failure preserves review drafts and only retries the read', async ({ page }, info) => {
+  test.skip(!['phone', 'desktop'].includes(info.project.name), 'Recovery covers both detail layouts')
+  let writes = 0
+  await page.route('**/api/saved-location/*', async route => {
+    if (route.request().method() === 'POST') {
+      writes++
+      return route.fulfill({ json: { ok: true, refreshError: 'Your change was saved, but details could not be refreshed.' } })
+    }
+    const response = await route.fetch()
+    const body = await response.json()
+    body.state.pinned = writes > 0
+    return route.fulfill({ json: body })
+  })
+  await page.goto('/plans')
+  await page.waitForLoadState('networkidle')
+  await page.locator('[data-saved-morph-card] h2 a').first().click()
+  const dialog = page.getByRole('dialog')
+  const review = dialog.getByRole('textbox', { name: 'Review', exact: true })
+  await review.fill('An unsent review')
+  await dialog.getByRole('button', { name: 'Pin', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Your change was saved')
+  await expect(review).toHaveValue('An unsent review')
+  await expect(dialog.getByRole('button', { name: 'Pin', exact: true })).toBeDisabled()
+  await dialog.getByRole('button', { name: 'Try again', exact: true }).click()
+  await expect(dialog.getByRole('button', { name: 'Unpin', exact: true })).toBeEnabled()
+  await expect(review).toHaveValue('An unsent review')
+  expect(writes).toBe(1)
+})
+
 test('failed generic upload can reselect the identical file', async ({ page }, info) => {
   test.skip(!['phone', 'desktop'].includes(info.project.name), 'File retry behavior does not vary at additional breakpoints')
   await page.route('**/api/security/csrf', route => route.fulfill({ json: { token: 'fixture-only' } }))
