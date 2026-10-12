@@ -477,6 +477,7 @@
 }
 
 @media (max-width:56.25rem) {
+  .editor-field :is(input, textarea, select) { font-size: 1rem; }
 
   :where(.editor-actions) {
     width: 100%;

@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { visitInstant } from '@/lib/app/visit-time'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage } from '@/lib/auth/redirect'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -17,8 +18,7 @@ function fullValue(formData, name) {
 
 function optionalDate(input) {
   if (!input) return null
-  const parsed = new Date(input)
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
+  return visitInstant(input)?.toISOString() || null
 }
 
 export async function recordLocationVisit(formData) {

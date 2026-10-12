@@ -502,6 +502,8 @@
 
 @media (max-width:47.5rem) {
 
+  .auth-panel :is(input, textarea, select) { font-size: 1rem; }
+
   .auth-page {
     grid-template-columns: 1fr;
   }

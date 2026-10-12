@@ -10,7 +10,7 @@ test('Saved titles and links arrive with the page; only opened details load rela
   const similarOutcomes = []
   page.on('request', (request) => {
     const url = new URL(request.url())
-    if (url.pathname === '/api/saved-location-options') previewRequests.push(url)
+    if (url.pathname === '/api/saved-page') previewRequests.push(url)
     if (url.pathname.endsWith('/similar')) similarRequests.push(url)
   })
   page.on('requestfailed', (request) => {

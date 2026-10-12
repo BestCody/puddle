@@ -1,4 +1,5 @@
 "use client"
+import { VisitDateTime } from '@/components/visit-date-time'
 import detailStyles from "@/components/saved-detail.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 
@@ -228,7 +229,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
             const form = new FormData(event.currentTarget)
             onAction('plan', { planned_for: form.get('planned_for'), note: form.get('note') })
           }}>
-            <input type="datetime-local" name="planned_for" aria-label="Planned visit date and time" required />
+            <VisitDateTime aria-label="Planned visit date and time" required />
             <input name="note" aria-label="Optional visit note" maxLength="500" placeholder="Optional note" />
             <button type="submit" disabled={!detail || busy}>Add to Plans</button>
           </form>

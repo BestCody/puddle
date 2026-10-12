@@ -175,7 +175,7 @@
   cursor: default;
 }
 
-.puddle-discover-create-title, .puddle-discover-create-description, .puddle-discover-create-place {
+.puddle-discover-create-title, .puddle-discover-create-description {
   min-width: 0;
   display: block;
 }
@@ -218,32 +218,9 @@
   gap: .75rem;
 }
 
-.puddle-discover-create-place {
-  flex: 1;
-}
-
-.puddle-discover-create-place > span, .puddle-discover-create-footer > small {
-  display: block;
-  margin-bottom: .3125rem;
-  color: var(--shell-muted, #858585);
-  font: 700 .625rem/1.2 var(--figma-mono);
-}
-
-.puddle-discover-create-place select {
-  width: 100%;
-  min-height: 2.625rem;
-  padding: .5rem .75rem;
-  border: .09375rem solid var(--shell-border, #dedede);
-  border-radius: .875rem;
-  background: var(--shell-surface, #fff);
-  color: inherit;
-  font: 700 .8125rem/1.2 var(--font-sans);
-}
-
-.puddle-discover-create-footer > small {
-  max-width: 11.25rem;
-  margin: 0 0 .625rem;
-}
+.placePicker { width: 100%; min-width: 0; }
+.placePicker summary { cursor: pointer; padding: .625rem; border: .0625rem solid var(--shell-border, #ddd); border-radius: .75rem; }
+.placePicker[open] { display: grid; gap: .75rem; }
 
 @media (max-width: 47.5rem) {
 

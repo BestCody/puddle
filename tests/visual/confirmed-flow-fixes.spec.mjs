@@ -1,0 +1,109 @@
+import { test, expect } from '@playwright/test'
+
+test.use({ timezoneId: 'America/Toronto' })
+
+test.beforeEach(async ({ context }) => {
+  await context.route('**/*', route => ['127.0.0.1', 'localhost'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort())
+})
+
+test('post search opens its picker, reaches all saves and preserves a failed draft', async ({ page }, testInfo) => {
+  await page.goto('/create/post')
+  const title = page.getByRole('textbox', { name: 'Title', exact: true })
+  if (testInfo.project.name === 'small-phone') {
+    const bounds = await title.boundingBox()
+    const nav = await page.locator('.figma-dashboard-mobile-nav').boundingBox()
+    expect(bounds.y + bounds.height).toBeLessThan(nav.y)
+  }
+  await title.fill('Keep this title')
+  await page.getByRole('textbox', { name: 'Description' }).fill('Keep this description')
+  await page.getByRole('radio', { name: 'Friends Only' }).check()
+  await page.getByRole('button', { name: 'Search saved puddles' }).click()
+  const search = page.getByRole('searchbox', { name: 'Search saved places' })
+  await expect(search).toBeVisible()
+  await search.fill('Last saved place')
+  await page.getByRole('button', { name: 'Last saved place Oakville' }).click()
+  await expect(page.locator('input[name="location_id"]')).toHaveValue('picker-place-105')
+  await expect(title).toHaveValue('Keep this title')
+  await page.getByRole('button', { name: 'Publish post' }).click()
+  await expect(page.getByRole('form', { name: 'Create a puddle post' }).getByRole('alert')).toHaveText(/could not publish/)
+  await expect(title).toHaveValue('Keep this title')
+  await expect(page.getByRole('textbox', { name: 'Description' })).toHaveValue('Keep this description')
+  await expect(page.getByRole('radio', { name: 'Friends Only' })).toBeChecked()
+  await expect(page).toHaveURL(/\/create\/post$/)
+  await page.getByRole('button', { name: 'Search saved puddles' }).click()
+  await search.fill('')
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'More saved places' }).click()
+  await expect(page.getByRole('button', { name: 'Last saved place Oakville' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'More saved places' })).toHaveCount(0)
+})
+
+test('report failure retains its target, reason, details and return route', async ({ page }) => {
+  const path = '/report?target_type=post&target_id=test-post&return_to=%2Fmap'
+  await page.goto(path)
+  await page.getByRole('combobox', { name: 'Reason' }).selectOption('spam')
+  await page.getByRole('textbox', { name: 'Details' }).fill('Retain this private report context')
+  await page.getByRole('button', { name: /Submit report/ }).click()
+  await expect(page.locator('.report-form').getByRole('alert')).toHaveText(/could not submit/)
+  await expect(page.locator('input[name="target_id"]')).toHaveValue('test-post')
+  await expect(page.locator('input[name="return_to"]')).toHaveValue('/map')
+  await expect(page.getByRole('combobox', { name: 'Reason' })).toHaveValue('spam')
+  await expect(page.getByRole('textbox', { name: 'Details' })).toHaveValue('Retain this private report context')
+  expect(new URL(page.url()).searchParams.has('details')).toBe(false)
+})
+
+test('mobile editable fields use a focus-zoom-safe font size', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.use.viewport.width > 760, 'Mobile input sizing only')
+  for (const path of ['/forgot-password', '/signup', '/account?mobile=1&section=profile', '/matches?conversation=00000000-0000-4000-8000-000000000003', '/report?target_type=post&target_id=test', '/editor']) {
+    await page.goto(path)
+    const small = await page.locator('input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea, select').evaluateAll(nodes => nodes.filter(node => node.getBoundingClientRect().width && parseFloat(getComputedStyle(node).fontSize) < 16).map(node => ({ name: node.name, font: getComputedStyle(node).fontSize })))
+    expect(small, path).toEqual([])
+  }
+})
+
+test('inline composer and Messages search beyond the old fifty-place limit', async ({ page }) => {
+  await page.goto('/map')
+  await page.getByRole('button', { name: /Create a puddle/ }).click()
+  const composer = page.getByRole('dialog', { name: 'Create a puddle', exact: true })
+  await composer.getByRole('textbox', { name: 'Title', exact: true }).fill('Inline draft')
+  await composer.locator('summary').click()
+  await composer.getByRole('searchbox', { name: 'Search saved places' }).fill('Last saved place')
+  await composer.getByRole('button', { name: 'Last saved place Oakville' }).click()
+  await expect(composer.locator('input[name="location_id"]')).toHaveValue('picker-place-105')
+  await composer.getByRole('button', { name: 'Publish puddle' }).click()
+  await expect(composer.getByRole('alert')).toHaveText(/could not publish/)
+  await expect(composer.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Inline draft')
+  await page.goto('/matches?conversation=00000000-0000-4000-8000-000000000003')
+  await page.locator('summary[aria-label="Add a place"]').click()
+  await page.getByRole('searchbox', { name: 'Search saved places' }).fill('Last saved place')
+  await expect(page.getByRole('button', { name: 'Last saved place Oakville' })).toBeVisible()
+})
+
+test('map browsing opens details and map selection attaches the chosen place', async ({ page }) => {
+  await page.goto('/map?view=map')
+  await expect(page.getByRole('link', { name: 'Open place', exact: true })).toHaveAttribute('href', /\/plans\/visual-place-/)
+  await page.goto('/map?view=map&selectForPost=1')
+  const attach = page.getByRole('link', { name: 'Use this place', exact: true })
+  await expect(attach).toHaveAttribute('href', /\/create\/post\?location=/)
+  await attach.click()
+  await expect(page.getByRole('form', { name: 'Create a puddle post' })).toBeVisible()
+})
+
+test('embedded Settings email navigation exits the frame and preserves the return context', async ({ page }) => {
+  await page.goto('/account?embedded=1&section=security&returnTo=%2Fplans')
+  const change = page.getByRole('link', { name: 'Change', exact: true })
+  await expect(change).toHaveAttribute('target', '_top')
+  await change.click()
+  const back = page.getByRole('link', { name: /Back to account settings/ })
+  await expect(back).toHaveAttribute('href', '/account?section=security&returnTo=%2Fplans')
+  await back.click()
+  await expect(page.getByRole('link', { name: 'Close settings' })).toHaveAttribute('href', '/plans')
+  await expect(page.locator('.figma-settings-screen')).not.toHaveClass(/is-embedded/)
+})
+
+test('visit editing and labels use browser-local time while submitting an offset-qualified instant', async ({ page }) => {
+  await page.goto('/visit-time')
+  await expect(page.getByLabel('Visit time')).toHaveValue('2027-01-20T13:30')
+  await expect(page.locator('input[name="planned_for"]')).toHaveValue('2027-01-20T18:30:00.000Z')
+  await page.getByLabel('Visit time').fill('2027-07-20T17:30')
+  await expect(page.locator('input[name="planned_for"]')).toHaveValue('2027-07-20T21:30:00.000Z')
+})

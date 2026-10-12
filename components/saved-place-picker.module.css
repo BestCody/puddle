@@ -1,0 +1,8 @@
+.picker { display: grid; gap: .625rem; min-width: 0; color: var(--shell-text, #111); }
+.picker input { width: 100%; min-width: 0; padding: .625rem; border: .0625rem solid var(--shell-border, #ddd); border-radius: .75rem; background: var(--shell-surface, #fff); color: inherit; font: 600 1rem/1.4 var(--font-sans); }
+.results { display: grid; gap: .375rem; max-height: min(15rem, 30dvh); overflow: auto; }
+.picker button { padding: .625rem; border: .0625rem solid var(--shell-border, #ddd); border-radius: .75rem; background: var(--shell-surface, #fff); color: inherit; text-align: start; font: inherit; cursor: pointer; }
+.results button { display: grid; gap: .25rem; overflow-wrap: anywhere; }
+.results button[aria-pressed="true"] { border-color: currentColor; background: var(--shell-hover, #f4f4f4); }
+.results small { color: var(--shell-muted, #666); }
+.picker p { margin: 0; }

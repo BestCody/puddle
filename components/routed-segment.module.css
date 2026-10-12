@@ -49,7 +49,7 @@
 }
 
 .segment > :global(.is-active) {
-  color: #fff;
+  color: var(--segment-active-text, #111);
 }
 
 .segment[data-segment-count="3"] > :is(a, button) {

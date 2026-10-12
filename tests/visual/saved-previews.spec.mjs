@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test('Saved remains usable without a preview endpoint, including before hydration', async ({ page, context }) => {
   const requests = []
-  await context.route('**/api/saved-location-options*', (route) => {
+  await context.route('**/api/saved-page*', (route) => {
     requests.push(route.request().url())
     return route.abort()
   })

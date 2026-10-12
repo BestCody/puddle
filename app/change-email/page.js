@@ -5,6 +5,7 @@ import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
 import { updateEmail } from '@/app/auth/actions'
+import { settingsActionDestination } from '@/lib/app/settings-navigation'
 import { requireUser } from '@/lib/auth/user'
 
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,8 @@ export const metadata = { title: 'Change email address' }
 
 export default async function ChangeEmailPage({ searchParams }) {
   const { user } = await requireUser()
+  const params = await searchParams
+  const destination = settingsActionDestination({ get: () => params?.settings_return }, 'security')
 
   return (
     <AuthShell
@@ -29,6 +32,7 @@ export default async function ChangeEmailPage({ searchParams }) {
       </div>
 
       <form className={scopedClasses(authStyles, "auth-form")} action={updateEmail}>
+        <input type="hidden" name="settings_return" value={destination} />
         <label className="field">
           New email address
           <input
@@ -47,7 +51,7 @@ export default async function ChangeEmailPage({ searchParams }) {
       </form>
 
       <div className={scopedClasses(authStyles, "auth-links")}>
-        <Link href="/account">← Back to account settings</Link>
+        <Link href={destination}>← Back to account settings</Link>
       </div>
     </AuthShell>
   )

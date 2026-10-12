@@ -114,7 +114,7 @@ export default async function AccountPage({ searchParams }) {
     <SettingsScrollBridge />
     <div className={scopedClasses(settingsStyles, `figma-settings-screen${embedded ? ' is-embedded' : ''}${mobileFlow ? ' is-mobile-flow' : ''}${mobileFlow && !selectedSection ? ' is-mobile-index' : ''}`)}>
       <section className={scopedClasses(settingsStyles, windowClass)} aria-label="Settings">
-        {mobileFlow ? <Link className={scopedClasses(settingsStyles, "figma-settings-mobile-back")} href={mobileBackHref} aria-label={selectedSection ? 'Back to Settings' : 'Back to Profile'}>‹ <span>Back</span></Link> : <Link className={scopedClasses(settingsStyles, "figma-settings-close")} href={returnTo} aria-label="Close settings">×</Link>}
+        {mobileFlow ? <Link className={scopedClasses(settingsStyles, "figma-settings-mobile-back")} href={mobileBackHref} aria-label={selectedSection ? 'Back to Settings' : 'Back to Profile'}>‹ <span>Back</span></Link> : <Link className={scopedClasses(settingsStyles, "figma-settings-close")} href={returnTo} target={embedded ? '_top' : undefined} aria-label="Close settings">×</Link>}
         <aside className={scopedClasses(settingsStyles, "figma-settings-local-nav")}>
           <strong>Settings</strong>
           <nav>
@@ -151,7 +151,7 @@ export default async function AccountPage({ searchParams }) {
           {showSection('security') ? <section className={scopedClasses(settingsStyles, "figma-settings-section")} id="security">
             <header><small>Email / Password</small><h1>Email / Password</h1><p>Update your sign-in details and password.</p></header>
             <div className={scopedClasses(settingsStyles, "figma-settings-section-body")}>
-              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label>Email</label><span>{user.email || 'No email available'}</span><Link href="/change-email">Change</Link></div>
+              <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label>Email</label><span>{user.email || 'No email available'}</span><Link href={`/change-email?settings_return=${encodeURIComponent(settingsHref('security', returnTo, { mobile: mobileFlow }))}`} target={embedded ? '_top' : undefined}>Change</Link></div>
               <form action={updatePassword} className={scopedClasses(settingsStyles, "figma-settings-nested-form")}>
                 <SettingsReturn href={formReturn('security')} />
                 <div className={scopedClasses(settingsStyles, "figma-settings-row")}><label htmlFor="account-password">New password</label><input id="account-password" name="password" type="password" minLength="10" maxLength="128" required /></div>
@@ -194,7 +194,7 @@ export default async function AccountPage({ searchParams }) {
                 const href = notificationHref(item.href)
                 return <article className={scopedClasses(settingsStyles, item.read_at ? '' : 'is-unread')} key={item.id}>
                   <div><small>{notificationTime(item.created_at)} · {item.kind.replaceAll('_', ' ')}</small><strong>{item.title}</strong><p>{item.body}</p></div>
-                  <div>{href ? <Link href={href}>Open</Link> : null}{!item.read_at ? <form action={markNotificationRead}><SettingsReturn href={formReturn('notifications')} /><input type="hidden" name="notification_id" value={item.id} /><button type="submit">Mark read</button></form> : null}</div>
+                  <div>{href ? <Link href={href} target={embedded ? '_top' : undefined}>Open</Link> : null}{!item.read_at ? <form action={markNotificationRead}><SettingsReturn href={formReturn('notifications')} /><input type="hidden" name="notification_id" value={item.id} /><button type="submit">Mark read</button></form> : null}</div>
                 </article>
               }) : <p>No notifications yet.</p>}</div>
             </div>

@@ -34,7 +34,10 @@
   display: flex;
   align-items: center;
   gap: .375rem;
-  width: min(11.875rem, 100%);
+  width: 3rem;
+  justify-content: center;
+  font: 700 1.375rem/1 var(--font-sans);
+  cursor: pointer;
   min-height: 3rem;
   padding: .1875rem .25rem .1875rem .75rem;
   border: .125rem solid var(--shell-border, #e2e2e2);
@@ -42,30 +45,6 @@
   background: var(--shell-surface, #fff);
 }
 
-.figma-create-post-search label {
-  flex: 1;
-  min-width: 0;
-}
-
-.figma-create-post-search input {
-  width: 100%;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: inherit;
-  font: 600 .75rem/1.2 var(--font-sans);
-}
-
-.figma-create-post-search button {
-  flex: 0 0 2rem;
-  min-height: 2rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: 700 1.375rem/1 var(--font-sans);
-}
 
 .figma-create-post-workspace {
   display: grid;
@@ -418,29 +397,6 @@
   margin: 0;
 }
 
-.figma-create-post-location-options {
-  display: grid;
-  gap: .375rem;
-}
-
-.figma-create-post-location-options > a {
-  display: grid;
-  gap: .25rem;
-  padding: .5rem;
-  border-radius: .75rem;
-  background: var(--shell-hover, #f4f4f4);
-  color: inherit;
-  text-decoration: none;
-}
-
-.figma-create-post-location-options > a:global(.is-selected) {
-  background: #fff0bd;
-  color: #111;
-}
-
-.figma-create-post-location-options small {
-  color: var(--shell-muted, #858585);
-}
 
 .figma-create-post-empty {
   width: fit-content;
@@ -486,24 +442,21 @@
     justify-content: center;
   }
 
-  .figma-create-post-search label {
-    display: none;
-  }
 
   .figma-create-post-workspace {
-    grid-template-rows: 16.625rem auto;
+    grid-template-rows: auto;
   }
 
   .figma-create-post-blur {
-    width: min(23.014375rem, calc(100% - 1.875rem));
-    min-height: 25.075625rem;
-    margin-inline-end: 0;
-    filter: blur(.49rem);
+    display: none;
   }
 
   .figma-create-post-card {
+    grid-row: 1;
     width: min(23.875rem, calc(100% - 1.125rem));
     min-height: 25rem;
     padding-inline: .75rem;
   }
 }
+
+.formError { grid-column: 1 / -1; margin: 0; color: var(--shell-text, #111); }
