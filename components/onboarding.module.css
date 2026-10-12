@@ -248,7 +248,7 @@
   box-shadow: 0 0.189375rem 0 rgba(0, 0, 0, .1);
   font-family: var(--onb-default);
   font-weight: 600;
-  font-size: 0.7575rem;
+  font-size: 1rem;
   color: #111;
   outline: none;
   transform: none;
@@ -265,7 +265,7 @@
   box-shadow: 0 0.189375rem 0 rgba(0, 0, 0, .1);
   font-family: var(--onb-default);
   font-weight: 600;
-  font-size: 0.7575rem;
+  font-size: 1rem;
   color: #111;
   outline: none;
   transform: none;
@@ -282,7 +282,7 @@
   box-shadow: 0 0.189375rem 0 rgba(0, 0, 0, .1);
   font-family: var(--onb-default);
   font-weight: 600;
-  font-size: 0.7575rem;
+  font-size: 1rem;
   color: #111;
   outline: none;
   transform: none;
@@ -297,7 +297,7 @@
   box-shadow: 0 0.189375rem 0 rgba(0, 0, 0, .1);
   font-family: var(--onb-default);
   font-weight: 600;
-  font-size: 0.7575rem;
+  font-size: 1rem;
   color: #111;
   outline: none;
   transform: none;
@@ -318,7 +318,7 @@
   box-shadow: 0 0.189375rem 0 rgba(0, 0, 0, .1);
   font-family: var(--onb-default);
   font-weight: 600;
-  font-size: 0.7575rem;
+  font-size: 1rem;
   color: #111;
   outline: none;
   transform: none;
@@ -410,7 +410,7 @@
   transform: translateY(-50%);
   font-style: normal;
   font-weight: 800;
-  font-size: 0.7575rem;
+  font-size: 1rem;
   color: var(--onb-grey);
   pointer-events: none;
 }

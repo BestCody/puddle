@@ -12,6 +12,7 @@ import { RoutedSegment } from '@/components/routed-segment'
 import { createClient } from '@/lib/supabase/client'
 import { hydrateSocialLocationRows } from '@/lib/app/social-location-metadata-client'
 import { lastInboxCursor } from '@/lib/app/social-inbox-cursor'
+import { MOBILE_LAYOUT_QUERY } from '@/lib/ui/mobile-layout'
 import { mergeById, sortConversations, conversationPreview, conversationList } from '@/lib/app/social-message-model'
 
 function initials(name) {
@@ -53,7 +54,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const [isMobile, setIsMobile] = useState(null)
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 760px)')
+    const media = window.matchMedia(MOBILE_LAYOUT_QUERY)
     const sync = () => setIsMobile(media.matches)
     sync()
     media.addEventListener('change', sync)

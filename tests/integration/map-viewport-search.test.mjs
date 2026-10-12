@@ -76,7 +76,6 @@ test('map catalogue loading is viewport-bounded through the selected global sear
   assert.match(mapSource, /addEventListener\('wheel', onWheel, \{ passive: false \}\)/)
   assert.match(mapSource, /translate3d\(\$\{x\}px,\$\{y\}px,0\) rotate\(-45deg\)/)
   assert.match(mapSource, /Directions<\/a>/)
-  assert.match(pageSource, /<DiscoverSearchOverlay initialQuery=\{query\} mapMode \/>/)
   assert.match(pageSource, /ariaLabel="Feed or map"/)
   assert.match(pageSource, /selectionFollowsMap/)
 

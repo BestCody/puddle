@@ -31,7 +31,7 @@ function AuthMessageClient({ params }) {
   return <p className={scopedClasses(authStyles, `auth-message ${error ? 'is-error' : 'is-success'}`)}>{error || success}</p>
 }
 
-function MapScreen({ selectingForPost, query }) {
+function MapScreen({ query, onQueryChange, onSelectPlace, onCancel }) {
   const [snapshot, setSnapshot] = useState(null)
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
@@ -66,27 +66,30 @@ function MapScreen({ selectingForPost, query }) {
     return () => controller.abort()
   }, [reload])
 
-  const mapPoints = snapshot?.points?.map((point) => selectingForPost
-    ? { ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` }
-    : point) || []
-
   return <section className={`${styles.mapScreen} map-screen`} data-testid="feed-map-canvas">
-    <DiscoverSearchOverlay initialQuery={query} mapMode />
-    {selectingForPost ? <div className={styles.mapSelectionNotice}><strong>Choose a place for your post.</strong><Link href="/map?compose=1">Cancel</Link></div> : null}
+    <DiscoverSearchOverlay initialQuery={query} mapMode onSearch={onQueryChange} />
+    {onSelectPlace ? <div className={styles.mapSelectionNotice}><strong>Choose a place for your post.</strong><button type="button" onClick={onCancel}>Cancel</button></div> : null}
     {error ? <div className={styles.mapEmpty} role="alert"><strong>Could not load the map.</strong><small>Check your connection and try again.</small><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button></div>
       : snapshot ? <div className={`${styles.mapCanvas} map-canvas`}><LocationMap
-        key={`${selectingForPost ? 'select' : 'browse'}:${snapshot.self?.display_name || 'map'}`}
-        initialPoints={mapPoints}
+        key={snapshot.self?.display_name || 'map'}
+        initialPoints={snapshot.points || []}
         initialCenter={snapshot.center || DEFAULT_MAP_CENTER}
         heatmapPoints={snapshot.heatmap || []}
-        passActive={Boolean(snapshot.passActive) && !selectingForPost}
+        passActive={Boolean(snapshot.passActive) && !onSelectPlace}
         loadCatalogue
         query={query}
-        selectingForPost={selectingForPost}
+        onSelectPlace={onSelectPlace}
         selectionFollowsMap
       /></div>
         : <div className={styles.mapEmpty} role="status" aria-label="Loading map"><strong>Loading map…</strong></div>}
   </section>
+}
+
+export function MapPlacePicker({ onSelect, onCancel }) {
+  const [query, setQuery] = useState('')
+  return <div className={`${styles.screen} ${styles.mapMode}`}>
+    <MapScreen query={query} onQueryChange={setQuery} onSelectPlace={onSelect} onCancel={onCancel} />
+  </div>
 }
 
 export function MapRouteClient() {
@@ -94,7 +97,6 @@ export function MapRouteClient() {
   const [feedIdentity, setFeedIdentity] = useState({ avatarUrl: null, displayName: 'Puddle person' })
   const view = params.get('view') === 'map' ? 'map' : 'feed'
   const query = params.get('q') || ''
-  const selectingForPost = view === 'map' && params.get('selectForPost') === '1'
   const beforeCreatedAt = params.get('before') || null
   const beforePostId = params.get('beforeId') || null
   const initialComposerOpen = view === 'feed' && params.get('compose') === '1'
@@ -103,7 +105,7 @@ export function MapRouteClient() {
     <AuthMessageClient params={params} />
     <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-layout-root="dashboard-feed" data-view={view}>
       <FeedTop view={view} query={query} />
-      {view === 'map' ? <MapScreen selectingForPost={selectingForPost} query={query} /> : <SocialFeedClient
+      {view === 'map' ? <MapScreen query={query} /> : <SocialFeedClient
         query={query}
         beforeCreatedAt={beforeCreatedAt}
         beforePostId={beforePostId}

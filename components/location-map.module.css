@@ -178,6 +178,26 @@
   line-height: 1.45;
 }
 
+.location-map-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.location-map-card-actions :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: .5rem .625rem;
+  border: 0;
+  border-radius: .5rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
 .location-map-list {
   overflow: auto;
   padding: .55rem;
@@ -569,7 +589,7 @@
   margin-top: .0625rem;
 }
 
-.anchored .location-map-side .location-map-card-actions a {
+.anchored .location-map-side .location-map-card-actions :is(a, button) {
   color: #fff;
   font: 800 .75rem/1 Manrope, sans-serif;
   text-underline-offset: .1875rem;
@@ -716,7 +736,7 @@
     margin-top: .125rem;
   }
 
-  .anchored .location-map-side .location-map-card-actions a {
+  .anchored .location-map-side .location-map-card-actions :is(a, button) {
     color: #111;
     font-size: .75rem;
   }

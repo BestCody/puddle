@@ -222,7 +222,7 @@
 .placePicker summary { cursor: pointer; padding: .625rem; border: .0625rem solid var(--shell-border, #ddd); border-radius: .75rem; }
 .placePicker[open] { display: grid; gap: .75rem; }
 
-@media (max-width: 47.5rem) {
+@media (max-width: 47.5rem), (max-height: 30rem) and (pointer: coarse) and (hover: none) {
 
   .puddle-discover-create-dock {
     left: 50%;

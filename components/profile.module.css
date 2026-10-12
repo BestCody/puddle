@@ -491,7 +491,7 @@
   display: none;
 }
 
-@media (max-width: 47.5rem) {
+@media (max-width: 47.5rem), (max-height: 30rem) and (pointer: coarse) and (hover: none) {
 
   .figma-profile-screen {
     padding: 1.25rem .75rem 2rem;
