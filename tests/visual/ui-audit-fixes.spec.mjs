@@ -57,9 +57,12 @@ test('Saved detail surfaces and text follow the shell theme, including mobile pa
   const card = dialog.locator('.saved-inline-detail-card')
   await expect.poll(() => card.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(surface)
   const text = await card.evaluate(node => getComputedStyle(node).color)
-  for (const heading of await dialog.locator('h1,h2').all()) {
-    expect(await heading.evaluate(node => getComputedStyle(node).color)).toBe(text)
-  }
+  // Similar-place headings can disappear when their lazy request returns no
+  // results. Snapshot the rendered styles atomically, rather than retaining
+  // nth-locators that can point past the end of the updated heading list.
+  const headingColors = await dialog.locator('.saved-inline-detail-main h1, .saved-inline-detail-main h2, .saved-inline-detail-similar h2').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).color))
+  expect(headingColors.length).toBeGreaterThanOrEqual(3)
+  for (const color of headingColors) expect(color).toBe(text)
   await page.screenshot({ path: testInfo.outputPath('saved-detail-theme.png'), animations: 'disabled' })
   await dialog.locator('.saved-inline-detail-map').scrollIntoViewIfNeeded()
   const attribution = dialog.locator('.location-map-attribution')
