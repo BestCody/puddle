@@ -47,16 +47,20 @@ export async function startGoogleSignup(formData) {
   redirect(data.url)
 }
 
-export async function requestPasswordReset(formData) {
-  ensureConfigured('/forgot-password')
+export async function requestPasswordReset(_previousState, formData) {
+  if (!isSupabaseConfigured()) return { error: 'Accounts are temporarily unavailable. Please try again later.' }
   const email = value(formData, 'email').toLowerCase()
-  if (!isValidEmail(email)) redirect(pathWithMessage('/forgot-password', 'error', 'Enter a valid email address.'))
-  const supabase = await createClient()
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await siteUrl()}/auth/callback?next=/update-password`
-  })
-  if (error) redirect(pathWithMessage('/forgot-password', 'error', publicAuthError(error, 'We could not send a reset link. Please try again.')))
-  redirect(pathWithMessage('/forgot-password', 'success', 'If that email has a Puddle account, a password reset link is on the way.'))
+  if (!isValidEmail(email)) return { error: 'Enter a valid email address.' }
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${await siteUrl()}/auth/callback?next=/update-password`
+    })
+    if (error) return { error: publicAuthError(error, 'We could not send a reset link. Please try again.') }
+  } catch {
+    return { error: 'We could not send a reset link. Please try again.' }
+  }
+  return { success: 'If that email has a Puddle account, a password reset link is on the way.' }
 }
 
 export async function updatePassword(formData) {
@@ -73,14 +77,18 @@ export async function updatePassword(formData) {
   redirect(pathWithMessage(inSettings ? destination : '/account', 'success', 'Password updated.'))
 }
 
-export async function updateEmail(formData) {
+export async function updateEmail(_previousState, formData) {
   const destination = settingsActionDestination(formData, 'security')
-  ensureConfigured(destination)
+  if (!isSupabaseConfigured()) return { error: 'Accounts are temporarily unavailable. Please try again later.' }
   const email = value(formData, 'email').toLowerCase()
-  if (!isValidEmail(email)) redirect(pathWithMessage(destination, 'error', 'Enter a valid email address.'))
-  const supabase = await createClient()
-  const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=${encodeURIComponent(destination)}` })
-  if (error) redirect(pathWithMessage(destination, 'error', publicAuthError(error, 'We could not update your email. Please try again.')))
+  if (!isValidEmail(email)) return { error: 'Enter a valid email address.' }
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=${encodeURIComponent(destination)}` })
+    if (error) return { error: publicAuthError(error, 'We could not update your email. Please try again.') }
+  } catch {
+    return { error: 'We could not update your email. Please try again.' }
+  }
   redirect(pathWithMessage(destination, 'success', 'Check both inboxes to confirm the email change.'))
 }
 

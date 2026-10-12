@@ -1,5 +1,6 @@
 .segment {
   --segment-padding: .25rem;
+  --segment-item-width: calc((100% - 2 * var(--segment-padding)) / var(--segment-count));
   position: relative;
   display: grid;
   grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr));
@@ -20,8 +21,8 @@
   z-index: 1;
   top: var(--segment-padding);
   bottom: var(--segment-padding);
-  left: var(--segment-active-left, var(--segment-padding));
-  width: var(--segment-active-width, calc((100% - 2 * var(--segment-padding)) / var(--segment-count)));
+  left: calc(var(--segment-padding) + var(--segment-active-index) * var(--segment-item-width));
+  width: var(--segment-item-width);
   border-radius: inherit;
   background: var(--segment-active-bg);
   box-shadow: 0 .25rem rgba(0,0,0,.1);

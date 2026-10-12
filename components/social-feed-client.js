@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { PhotoFrame } from '@/components/photo-frame'
 import { DismissibleDetails } from '@/components/dismissible-details'
 import { LocationVisualPreview } from '@/components/location-visual-preview'
@@ -32,8 +32,22 @@ function timeLabel(value) {
   return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }
 
-function FeedPost({ post, classes = styles, demo = false, onDemoPlaceOpen = null }) {
+function FeedPost({ post, classes = styles, demo = false, onDemoPlaceOpen = null, onSavedChange, onCommentCreated }) {
   const [saved, setSaved] = useState(Boolean(post.saved))
+  const [commentDraft, setCommentDraft] = useState('')
+  const [commentState, commentAction, postingComment] = useActionState(async (previous, data) => {
+    const result = await createFeedComment(previous, data)
+    if (result.comment) {
+      onCommentCreated(post.id, result.comment)
+      setCommentDraft('')
+    }
+    return result
+  }, null)
+  const [saveState, saveAction, saving] = useActionState(async (previous, data) => {
+    const result = await toggleFeedSave(previous, data)
+    if (typeof result.saved === 'boolean') onSavedChange(post.location_id, result.saved)
+    return result
+  }, null)
   const author = post.author || {}
   const location = post.location
   const href = `/plans/${location.slug}`
@@ -67,13 +81,21 @@ function FeedPost({ post, classes = styles, demo = false, onDemoPlaceOpen = null
         <summary aria-label={`Comment on ${post.title || location.name}`}><CommentIcon classes={classes} /><span className={classes.actionCount}>{comments.length || ''}</span></summary>
         <div className={classes.actionPanel}>
           {comments.length ? <div className={classes.commentList}>{comments.map((comment) => <p key={comment.id}><strong>{comment.author?.display_name || comment.author?.username || 'Puddle person'}</strong><span>{comment.body}</span></p>)}</div> : <p>No recent comments.</p>}
-          {demo ? <p className={classes.demoHint}>Comments are available after joining Puddle.</p> : <form action={createFeedComment}><input type="hidden" name="post_id" value={post.id} /><input name="comment_body" required maxLength="2000" placeholder="Add a comment" aria-label="Add a comment" /><button type="submit">Post</button></form>}
+          {demo ? <p className={classes.demoHint}>Comments are available after joining Puddle.</p> : <>
+            <form action={commentAction} onReset={event => event.preventDefault()}>
+              <input type="hidden" name="post_id" value={post.id} />
+              <input name="comment_body" required maxLength="2000" placeholder="Add a comment" aria-label="Add a comment" value={commentDraft} onChange={event => setCommentDraft(event.target.value)} disabled={postingComment} />
+              <button type="submit" disabled={postingComment}>{postingComment ? 'Posting…' : 'Post'}</button>
+            </form>
+            {commentState?.error ? <p role="alert">{commentState.error}</p> : null}
+          </>}
         </div>
       </DismissibleDetails>
       {demo ? <button className={classes.demoAction} type="button" onClick={() => onDemoPlaceOpen?.(post)} aria-label="Open puddle"><OpenPuddleIcon classes={classes} /></button> : <Link href={href} aria-label="Open puddle"><OpenPuddleIcon classes={classes} /></Link>}
-      {demo ? <button className={`${classes.demoAction}${isSaved ? ` ${classes.saved}` : ''}`} type="button" onClick={() => setSaved((value) => !value)} aria-label={isSaved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}><SaveIcon saved={isSaved} classes={classes} /></button> : <form action={toggleFeedSave}><input type="hidden" name="location_id" value={post.location_id} /><button className={post.saved ? classes.saved : ''} type="submit" aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}><SaveIcon saved={post.saved} classes={classes} /></button></form>}
+      {demo ? <button className={`${classes.demoAction}${isSaved ? ` ${classes.saved}` : ''}`} type="button" onClick={() => setSaved((value) => !value)} aria-label={isSaved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}><SaveIcon saved={isSaved} classes={classes} /></button> : <form action={saveAction}><input type="hidden" name="location_id" value={post.location_id} /><button className={post.saved ? classes.saved : ''} type="submit" disabled={saving} aria-busy={saving} aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}><SaveIcon saved={post.saved} classes={classes} /></button></form>}
       {demo ? <button className={classes.demoAction} type="button" onClick={() => onDemoPlaceOpen?.(post)} aria-label={`Share ${post.title || location.name}`}><ShareIcon classes={classes} /></button> : <FeedShareMenu postId={post.id} title={post.title || location.name} />}
     </footer>
+    {saveState?.error ? <p className={classes.actionError} role="alert">{saveState.error}</p> : null}
   </article>
 }
 
@@ -101,9 +123,9 @@ function FeedPagination({ query, pagination, loading, error, onLoadMore, classes
   </nav>
 }
 
-function FeedStream({ feed, query, loadingMore, loadMoreError, onLoadMore, classes = styles, demo = false, onDemoPlaceOpen = null }) {
+function FeedStream({ feed, query, loadingMore, loadMoreError, onLoadMore, classes = styles, demo = false, onDemoPlaceOpen = null, onSavedChange, onCommentCreated }) {
   return feed.items.length ? <>
-    {feed.items.map((post) => <FeedPost post={post} classes={classes} demo={demo} onDemoPlaceOpen={onDemoPlaceOpen} key={post.id} />)}
+    {feed.items.map((post) => <FeedPost post={post} classes={classes} demo={demo} onDemoPlaceOpen={onDemoPlaceOpen} onSavedChange={onSavedChange} onCommentCreated={onCommentCreated} key={post.id} />)}
     <FeedPagination
       query={query}
       pagination={feed.pagination}
@@ -281,10 +303,18 @@ export function SocialFeedClient({
     }
   }
 
+  function updateSaved(locationId, saved) {
+    setFeed(current => current ? { ...current, items: current.items.map(post => post.location_id === locationId ? { ...post, saved } : post) } : current)
+  }
+
+  function appendComment(postId, comment) {
+    setFeed(current => current ? { ...current, items: current.items.map(post => post.id === postId ? { ...post, comments: [...(post.comments || []).filter(item => item.id !== comment.id), comment] } : post) } : current)
+  }
+
   return <section className={`${classes.stream}${className ? ` ${className}` : ''}`} aria-label="Discover posts" data-testid="feed-stream">
     {feed?.focusUnavailable ? <p role="status">That post is no longer available.</p> : null}
     {error ? <div className={classes.empty} role="alert"><strong>Could not load posts.</strong><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button><small>Check your connection and try again.</small></div>
-        : feed ? <FeedStream feed={feed} query={query} loadingMore={loadingMore} loadMoreError={loadMoreError} onLoadMore={loadMore} classes={classes} demo={demo} onDemoPlaceOpen={onDemoPlaceOpen} />
+        : feed ? <FeedStream feed={feed} query={query} loadingMore={loadingMore} loadMoreError={loadMoreError} onLoadMore={loadMore} classes={classes} demo={demo} onDemoPlaceOpen={onDemoPlaceOpen} onSavedChange={updateSaved} onCommentCreated={appendComment} />
           : <div className={classes.empty} role="status" aria-label="Loading posts"><strong>Loading…</strong></div>}
   </section>
 }

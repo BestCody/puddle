@@ -404,6 +404,12 @@
   color: #e73668;
 }
 
+.actionError {
+  margin: .5rem 0 0;
+  color: inherit;
+  font: 600 .875rem/1.35 Manrope, sans-serif;
+}
+
 .actionMenu {
   position: relative;
 }

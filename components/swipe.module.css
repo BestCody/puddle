@@ -455,17 +455,17 @@
 
 .detailsActions button:nth-child(1) {
   border-color: var(--figma-pink);
-  color: var(--figma-pink);
+  color: #b8204d;
 }
 
 .detailsActions button:nth-child(2) {
   border-color: var(--figma-green);
-  color: #4caf28;
+  color: #287817;
 }
 
 .detailsActions button:nth-child(3) {
   border-color: var(--figma-yellow);
-  color: #bd8b00;
+  color: #806000;
 }
 
 .detailsActions button:disabled {

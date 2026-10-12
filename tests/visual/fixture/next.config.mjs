@@ -10,6 +10,7 @@ export default {
     '@': root,
     '@/app/(product)/create/post/actions': './mocks/failing-actions.js',
     '@/app/report/actions': './mocks/failing-actions.js',
+    '@/app/(product)/map/actions': './mocks/feed-actions.js',
     '@/lib/auth/sign-up': './mocks/signup.js',
     '@/lib/auth/user': './mocks/data.js',
     '@/lib/supabase/client': './mocks/data.js',

@@ -16,44 +16,53 @@ function back(message, type = 'success') {
   redirect(pathWithMessage('/map', type, message))
 }
 
-export async function createFeedComment(formData) {
+export async function createFeedComment(_previousState, formData) {
   const session = await requireUser({ onboarding: true })
   const postId = value(formData, 'post_id', 80)
   const body = value(formData, 'comment_body', 2000)
-  if (!postId || !body) back('Add a comment before posting.', 'error')
-  const { error } = await session.supabase.rpc('create_social_comment_v1', {
-    target_kind: 'post',
-    target_id: postId,
-    comment_body: body,
-    parent_comment: null
-  })
-  if (error) back('We could not add that comment.', 'error')
-  revalidatePath('/map')
-  back('Comment posted.')
+  if (!postId || !body) return { error: 'Add a comment before posting.' }
+  try {
+    const { data, error } = await session.supabase.rpc('create_social_comment_v1', {
+      target_kind: 'post',
+      target_id: postId,
+      comment_body: body,
+      parent_comment: null
+    })
+    if (error || data == null) return { error: 'We could not add that comment.' }
+    revalidatePath('/map')
+    return { comment: { id: data, body, author: { display_name: session.profile?.display_name || 'Puddle person', username: session.profile?.username || null } } }
+  } catch {
+    return { error: 'We could not add that comment.' }
+  }
 }
 
-export async function toggleFeedSave(formData) {
+export async function toggleFeedSave(_previousState, formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = value(formData, 'location_id', 80)
-  if (!locationId) back('That place is unavailable.', 'error')
+  if (!locationId) return { error: 'That place is unavailable.' }
 
-  const { data: existing } = await session.supabase
-    .from('user_content_states')
-    .select('location_id')
-    .eq('profile_id', session.user.id)
-    .eq('location_id', locationId)
-    .eq('state', 'saved')
-    .maybeSingle()
+  try {
+    const { data: existing, error } = await session.supabase
+      .from('user_content_states')
+      .select('location_id')
+      .eq('profile_id', session.user.id)
+      .eq('location_id', locationId)
+      .eq('state', 'saved')
+      .maybeSingle()
+    if (error) return { error: 'We could not update your saved places.' }
 
-  const result = existing
-    ? await session.supabase.from('user_content_states').delete().eq('profile_id', session.user.id).eq('location_id', locationId).eq('state', 'saved')
-    : await session.supabase.from('user_content_states').insert({ profile_id: session.user.id, location_id: locationId, state: 'saved' })
+    const result = existing
+      ? await session.supabase.from('user_content_states').delete().eq('profile_id', session.user.id).eq('location_id', locationId).eq('state', 'saved')
+      : await session.supabase.from('user_content_states').insert({ profile_id: session.user.id, location_id: locationId, state: 'saved' })
 
-  if (result.error) back('We could not update your saved places.', 'error')
-  revalidatePath('/map')
-  revalidatePath('/plans')
-  revalidatePath('/profile')
-  back(existing ? 'Removed from Saved.' : 'Saved to Puddle.')
+    if (result.error) return { error: 'We could not update your saved places.' }
+    revalidatePath('/map')
+    revalidatePath('/plans')
+    revalidatePath('/profile')
+    return { saved: !existing }
+  } catch {
+    return { error: 'We could not update your saved places.' }
+  }
 }
 
 export async function shareFeedPost(formData) {
