@@ -7,6 +7,7 @@ import { flushSync } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useModalFocus } from '@/components/modal-focus'
+import { DismissibleDetails } from '@/components/dismissible-details'
 import { PhotoFrame } from '@/components/photo-frame'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 import { validCoordinates } from '@/lib/app/optional-number'
@@ -204,10 +205,10 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
         <div className={scopedClasses(detailStyles, "saved-inline-detail-actions")}>
           <button type="button" disabled={!detail || busy} className={scopedClasses(detailStyles, "is-primary")} onClick={() => onAction('toggle_pinned')}>{detail?.state?.pinned ? 'Unpin' : 'Pin'}</button>
           <button type="button" disabled={!detail || busy} onClick={() => onAction('toggle_saved')}>{detail?.state?.saved === false ? 'Save' : 'Unsave'}</button>
-          <details>
+          <DismissibleDetails>
             <summary>Share</summary>
             <div>{detail?.friends?.length ? detail.friends.map((friend) => <button type="button" disabled={busy} onClick={() => onAction('share', { friend_id: friend.id, share_key: crypto.randomUUID() })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>) : <small>No friends to share with yet.</small>}</div>
-          </details>
+          </DismissibleDetails>
         </div>
 
         <h1 style={{ viewTransitionName: names.title }}>{location.name}</h1>

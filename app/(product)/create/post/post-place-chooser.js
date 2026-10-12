@@ -3,6 +3,7 @@ import createStyles from "@/components/create-post.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 
 import Link from 'next/link'
+import { DismissibleDetails } from '@/components/dismissible-details'
 import { useEffect, useRef, useState } from 'react'
 
 function categoryLabel(value) {
@@ -47,7 +48,7 @@ export function PostPlaceChooser({ selectedPoint }) {
     ? [selectedPoint, ...points]
     : points
 
-  return <details className={scopedClasses(createStyles, "figma-create-post-add")} onToggle={(event) => { if (event.currentTarget.open) void loadPlaces() }}>
+  return <DismissibleDetails className={scopedClasses(createStyles, "figma-create-post-add")} onToggle={(event) => { if (event.currentTarget.open) void loadPlaces() }}>
     <summary aria-label="Open add menu">＋</summary>
     <div className={scopedClasses(createStyles, "figma-create-post-add-menu")}>
       <strong>Attach a place</strong>
@@ -58,5 +59,5 @@ export function PostPlaceChooser({ selectedPoint }) {
       {error ? <p role="alert">{error}</p> : null}
       {error && !loading ? <button type="button" onClick={() => { void loadPlaces() }}>Try again</button> : null}
     </div>
-  </details>
+  </DismissibleDetails>
 }

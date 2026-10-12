@@ -4,6 +4,7 @@ import { RoutedSegment } from '@/components/routed-segment'
 import { SavedSearchInput } from '@/components/discover-search-overlay'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { SavedPagedGrid } from '@/components/saved-paged-grid'
+import { DismissibleDetails } from '@/components/dismissible-details'
 import { PhotoFrame } from '@/components/photo-frame'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansPage, getSavedCategories } from '@/lib/app/location-plans-data'
@@ -97,10 +98,10 @@ function SavedCategoryRail({ folders, selectedCategory }) {
     <Link className={selectedCategory === 'all' ? styles.categoryActive : undefined} href="/plans?tab=saved">All</Link>
     {visibleFolders.map(([category]) => <Link className={selectedCategory === category ? styles.categoryActive : undefined} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}><span aria-hidden="true">{categoryGlyph(category)}</span>{categoryLabel(category)}</Link>)}
     </nav>
-    {extraFolders.length ? <details className={styles.moreCategories}>
+    {extraFolders.length ? <DismissibleDetails className={styles.moreCategories}>
       <summary aria-label="More saved categories">+</summary>
       <nav aria-label="More saved categories">{extraFolders.map(([category]) => <Link aria-current={selectedCategory === category ? 'page' : undefined} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}>{categoryLabel(category)}</Link>)}</nav>
-    </details> : null}
+    </DismissibleDetails> : null}
   </div>
 }
 

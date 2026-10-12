@@ -29,10 +29,133 @@ test('Saved categories do not overlap, More is readable and History is reachable
     await contained(link, more)
     expect((await link.boundingBox()).height).toBeGreaterThanOrEqual(40)
   }
+  await more.getByRole('link').first().focus()
+  await page.keyboard.press('Escape')
+  await expect(more).toBeHidden()
+  const toggle = page.locator('summary[aria-label="More saved categories"]')
+  await expect(toggle).toBeFocused()
+  await toggle.click()
+  await page.getByRole('searchbox', { name: 'Search saved puddles' }).click()
+  await expect(more).toBeHidden()
   const title = page.getByTestId('saved-card').nth(2).locator('h2 span')
   expect(await title.evaluate(node => getComputedStyle(node).textOverflow)).toBe('ellipsis')
   await page.getByRole('link', { name: 'History', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'History', exact: true })).toBeVisible()
+})
+
+test('Saved detail surfaces and text follow the shell theme, including mobile panels', async ({ page }, testInfo) => {
+  await page.goto('/plans')
+  await expect(page.locator('.figma-dashboard-shell')).toHaveAttribute('data-resolved-appearance', /light|dark/)
+  if (testInfo.project.name.endsWith('-dark')) await page.locator('.figma-dashboard-shell').evaluate(node => {
+    node.dataset.appearance = 'dark'
+    node.dataset.resolvedAppearance = 'dark'
+  })
+  const surface = await page.getByTestId('saved-card').first().evaluate(node => getComputedStyle(node).backgroundColor)
+  await page.locator('[data-saved-morph-card] h2 a').first().click()
+  const dialog = page.getByRole('dialog', { name: 'Maple Grove Park details' })
+  await expect(dialog.getByRole('button', { name: 'Pin', exact: true })).toBeEnabled()
+  const card = dialog.locator('.saved-inline-detail-card')
+  await expect.poll(() => card.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(surface)
+  const text = await card.evaluate(node => getComputedStyle(node).color)
+  for (const heading of await dialog.locator('h1,h2').all()) {
+    expect(await heading.evaluate(node => getComputedStyle(node).color)).toBe(text)
+  }
+  await page.screenshot({ path: testInfo.outputPath('saved-detail-theme.png'), animations: 'disabled' })
+  await dialog.locator('.saved-inline-detail-map').scrollIntoViewIfNeeded()
+  const attribution = dialog.locator('.location-map-attribution')
+  await expect(attribution).toBeVisible()
+  const contrast = await attribution.evaluate(node => {
+    function luminance(value) {
+      const channels = value.match(/[\d.]+/g).slice(0, 3).map(Number)
+      const linear = channels.map(channel => {
+        const normalized = value.startsWith('rgb') ? channel / 255 : channel
+        return normalized <= .04045 ? normalized / 12.92 : ((normalized + .055) / 1.055) ** 2.4
+      })
+      return .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2]
+    }
+    const style = getComputedStyle(node)
+    const a = luminance(style.color), b = luminance(style.backgroundColor)
+    return (Math.max(a, b) + .05) / (Math.min(a, b) + .05)
+  })
+  expect(contrast).toBeGreaterThanOrEqual(4.5)
+})
+
+test('Saved sharing dismisses its own menu before the enclosing dialog', async ({ page }) => {
+  await page.goto('/plans')
+  await expect(page.locator('.figma-dashboard-shell')).toHaveAttribute('data-resolved-appearance', /light|dark/)
+  const source = page.locator('[data-saved-morph-card] h2 a').first()
+  await source.click()
+  const dialog = page.getByRole('dialog', { name: 'Maple Grove Park details' })
+  await expect(dialog.getByRole('button', { name: 'Pin', exact: true })).toBeEnabled()
+  const share = dialog.locator('summary').filter({ hasText: 'Share' })
+  await share.click()
+  await expect(dialog.getByRole('button', { name: 'Alex Puddle', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Alex Puddle', exact: true })).toBeHidden()
+  await expect(share).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(source).toBeFocused()
+})
+
+test('Feed comment menu dismisses without losing its unsent draft', async ({ page }) => {
+  await page.goto('/map')
+  const post = page.getByTestId('feed-post').first()
+  const comment = post.getByLabel('Comment on An afternoon outdoors')
+  await comment.click()
+  await post.getByRole('textbox', { name: 'Add a comment' }).fill('Unsent draft')
+  await page.keyboard.press('Escape')
+  await expect(post.getByRole('textbox', { name: 'Add a comment' })).toBeHidden()
+  await expect(comment).toBeFocused()
+  await comment.click()
+  await expect(post.getByRole('textbox', { name: 'Add a comment' })).toHaveValue('Unsent draft')
+  await page.getByRole('button', { name: 'Search posts', exact: true }).click()
+  await expect(post.getByRole('textbox', { name: 'Add a comment' })).toBeHidden()
+})
+
+test('Profile photo menu dismisses and concise Settings keeps its accessible name', async ({ page }) => {
+  await page.goto('/profile')
+  if (page.viewportSize().width > 760) await expect(page.getByRole('complementary', { name: 'Puddle sidebar' }).getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
+  const toggle = page.locator('summary[aria-label="Change profile photo"]')
+  await toggle.click()
+  await expect(page.getByRole('button', { name: 'Remove', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: 'Remove', exact: true })).toBeHidden()
+  await expect(toggle).toBeFocused()
+  await toggle.click()
+  await page.getByRole('heading', { name: 'Alex Puddle', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Remove', exact: true })).toBeHidden()
+})
+
+test('Create Post place picker dismisses without resetting draft fields', async ({ page }) => {
+  await page.goto('/create/post')
+  await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Unsent title')
+  const toggle = page.locator('summary[aria-label="Open add menu"]')
+  await toggle.click()
+  await expect(page.getByText('Attach a place', { exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('Attach a place', { exact: true })).toBeHidden()
+  await expect(toggle).toBeFocused()
+  await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Unsent title')
+})
+
+test('conversation menus dismiss independently and preserve the unsent message', async ({ page }) => {
+  await page.goto('/matches?tab=messages&conversation=00000000-0000-4000-8000-000000000003')
+  const message = page.getByRole('textbox', { name: 'Message', exact: true })
+  await message.fill('Unsent message')
+  const more = page.locator('summary[aria-label="More message options"]')
+  await more.click()
+  await expect(page.getByRole('link', { name: 'View shared puddles', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('link', { name: 'View shared puddles', exact: true })).toBeHidden()
+  await expect(more).toBeFocused()
+  const attach = page.locator('summary[aria-label="Add a place"]')
+  await attach.click()
+  await expect(page.getByText('Share a saved place', { exact: true })).toBeVisible()
+  await message.click()
+  await expect(page.getByText('Share a saved place', { exact: true })).toBeHidden()
+  await expect(message).toHaveValue('Unsent message')
 })
 
 test('Profile category editing reaches its real shared Settings editor', async ({ page }) => {

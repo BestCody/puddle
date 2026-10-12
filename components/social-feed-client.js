@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { PhotoFrame } from '@/components/photo-frame'
+import { DismissibleDetails } from '@/components/dismissible-details'
 import { LocationVisualPreview } from '@/components/location-visual-preview'
 import { createFeedComment, toggleFeedSave } from '@/app/(product)/map/actions'
 import { FeedShareMenu } from '@/app/(product)/map/feed-share-menu'
@@ -77,13 +78,13 @@ function FeedPost({ post, classes = styles, demo = false, onDemoPlaceOpen = null
       </span>
     </Link>
     <footer className={classes.interactions} aria-label="Post actions">
-      <details className={classes.actionMenu}>
+      <DismissibleDetails className={classes.actionMenu}>
         <summary aria-label={`Comment on ${post.title || location.name}`}><CommentIcon classes={classes} /><span className={classes.actionCount}>{comments.length || ''}</span></summary>
         <div className={classes.actionPanel}>
           {comments.length ? <div className={classes.commentList}>{comments.map((comment) => <p key={comment.id}><strong>{comment.author?.display_name || comment.author?.username || 'Puddle person'}</strong><span>{comment.body}</span></p>)}</div> : <p>No recent comments.</p>}
           {demo ? <p className={classes.demoHint}>Comments are available after joining Puddle.</p> : <form action={createFeedComment}><input type="hidden" name="post_id" value={post.id} /><input name="comment_body" required maxLength="2000" placeholder="Add a comment" aria-label="Add a comment" /><button type="submit">Post</button></form>}
         </div>
-      </details>
+      </DismissibleDetails>
       {demo ? <button className={classes.demoAction} type="button" onClick={() => onDemoPlaceOpen?.(post)} aria-label="Open puddle"><OpenPuddleIcon classes={classes} /></button> : <Link href={href} aria-label="Open puddle"><OpenPuddleIcon classes={classes} /></Link>}
       {demo ? <button className={`${classes.demoAction}${isSaved ? ` ${classes.saved}` : ''}`} type="button" onClick={() => setSaved((value) => !value)} aria-label={isSaved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}><SaveIcon saved={isSaved} classes={classes} /></button> : <form action={toggleFeedSave}><input type="hidden" name="location_id" value={post.location_id} /><button className={post.saved ? classes.saved : ''} type="submit" aria-label={post.saved ? `Remove ${location.name} from Saved` : `Save ${location.name}`}><SaveIcon saved={post.saved} classes={classes} /></button></form>}
       {demo ? <button className={classes.demoAction} type="button" onClick={() => onDemoPlaceOpen?.(post)} aria-label={`Share ${post.title || location.name}`}><ShareIcon classes={classes} /></button> : <FeedShareMenu postId={post.id} title={post.title || location.name} />}

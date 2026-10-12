@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PhotoFrame } from '@/components/photo-frame'
+import { DismissibleDetails } from '@/components/dismissible-details'
 import { RoutedSegment } from '@/components/routed-segment'
 import { createClient } from '@/lib/supabase/client'
 import { hydrateSocialLocationRows } from '@/lib/app/social-location-metadata-client'
@@ -632,7 +633,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
           </div>
           {notice ? <p className={scopedClasses(friendsStyles, "figma-friends-chat-notice")} role="status">{notice}</p> : null}
           <form className={scopedClasses(friendsStyles, "figma-friends-composer puddle-text-composer")} onSubmit={send}>
-            <details
+            <DismissibleDetails
               className={scopedClasses(friendsStyles, "figma-friends-composer-menu is-attachment")}
               ref={placeMenuRef}
               onToggle={(event) => {
@@ -641,11 +642,11 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
             >
               <summary aria-label="Add a place" title="Add a place">+</summary>
               <div className={scopedClasses(friendsStyles, "figma-message-place-picker")}><strong>Share a saved place</strong>{shareableLocationsLoading ? <p>Loading saved places...</p> : shareableLocations.length ? shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
-            </details>
-            <details className={scopedClasses(friendsStyles, "figma-friends-composer-menu is-more")}>
+            </DismissibleDetails>
+            <DismissibleDetails className={scopedClasses(friendsStyles, "figma-friends-composer-menu is-more")}>
               <summary aria-label="More message options">○</summary>
               <div><Link href="/matches?tab=shared">View shared puddles</Link><Link href="/plans">Open Saved</Link></div>
-            </details>
+            </DismissibleDetails>
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Text Message" aria-label="Message" maxLength={5000} />
             <button className={scopedClasses(friendsStyles, "is-send puddle-send-action")} type="submit" disabled={!draft.trim() || busy} aria-label="Send message">↑</button>
           </form>
