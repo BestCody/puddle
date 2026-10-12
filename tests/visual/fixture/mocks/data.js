@@ -15,7 +15,7 @@ export function snapshotForConversation(id) {
   const selectedConversation = conversations.find(item => item.conversation_id === id) || conversations[0]
   return { ...snapshot, selectedConversation, messages: messagesForConversation(selectedConversation.conversation_id), messagesHasMore: selectedConversation === conversations[0] }
 }
-const tables = { social_posts: posts, user_content_states: places.map(p => ({ location_id: p.id, created_at: '2026-10-10T12:00:00Z' })), notifications: [], notification_preferences: [null], profiles: [person] }
+const tables = { social_posts: posts, location_visits: [], user_content_states: places.map(p => ({ location_id: p.id, created_at: '2026-10-10T12:00:00Z' })), notifications: [], notification_preferences: [null], profiles: [person] }
 const rpcs = { social_friend_count_v1: 1, social_friends_v2: snapshot.friends, social_friend_picker_v2: snapshot.friends, puddle_tinder_active_v1: false, social_messages_v2: messages, social_conversations_v2: conversations, social_mark_conversation_read_v1: null }
 function query(data, count = Array.isArray(data) ? data.length : 0) {
   const q = { then: (resolve, reject) => Promise.resolve({ data, count, error: null }).then(resolve, reject), maybeSingle: () => Promise.resolve({ data: data?.[0] ?? null, error: null }), single: () => Promise.resolve({ data: data?.[0] ?? null, error: null }) }
@@ -25,6 +25,7 @@ function query(data, count = Array.isArray(data) ? data.length : 0) {
 const client = {
   from(name) { if (!(name in tables)) throw new Error(`Unmodelled visual fixture table: ${name}`); return query(tables[name]) },
   rpc(name, args = {}) {
+    if (name === 'remove_profile_photo_v1') return fetch('/api/fixture/remove-photo', { method: 'POST' }).then(response => response.json())
     if (name === 'location_reviews_v1') return fetch('/api/fixture/reviews').then(response => response.json())
     if (name === 'social_friend_search_v2') return Promise.resolve({ data: [], error: null })
     if (name === 'social_messages_v2') return fetch(`/api/fixture/messages?conversation=${encodeURIComponent(args.target)}&before=${encodeURIComponent(args.before_message_id || '')}`).then(response => response.json())
@@ -38,6 +39,7 @@ const client = {
 export function createClient() { return client }
 export async function requireUser() { return { user: { ...person, email: 'visual@example.test', aud: 'authenticated' }, profile: person, supabase: client } }
 export async function getGlobalLocationsByIds(ids) { return places.filter(p => ids.includes(p.id)) }
+export async function getGlobalLocationBySlug(slug) { return places.find(place => place.slug === slug) || null }
 export async function getPublicLocation(slug) { const location = places.find(place => place.slug === slug); return location ? { location: { ...location, cover_url: photo, gallery: [] } } : null }
 export async function getLocationPlanStatus() { return null }
 export async function getLocationPreviews(_client, ids) { return places.filter(p => ids.includes(p.id)) }

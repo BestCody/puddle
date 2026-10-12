@@ -163,6 +163,7 @@
   background: #fff;
   padding: .75rem;
   font: inherit;
+  font-size: 1rem;
 }
 
 .visit-plan-form select {
@@ -171,6 +172,7 @@
   background: #fff;
   padding: .75rem;
   font: inherit;
+  font-size: 1rem;
 }
 
 .visit-plan-form textarea {
@@ -179,6 +181,7 @@
   background: #fff;
   padding: .75rem;
   font: inherit;
+  font-size: 1rem;
 }
 
 :is(.splash-button) {
@@ -288,8 +291,6 @@
 }
 
 @media (max-width:56.25rem) {
-  .visit-plan-form :is(input, textarea, select) { font-size: 1rem; }
-
   :where(.page-heading-row) {
     height: auto;
     min-height: 0;

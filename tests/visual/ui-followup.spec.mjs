@@ -144,6 +144,50 @@ test('Feed actions have distinct share artwork and complete touch targets', asyn
   await expect(post.locator('summary[aria-label="Share An afternoon outdoors"] svg circle')).toHaveCount(3)
 })
 
+test('address lookup keeps coordinates and recovers from a failed or stale request', async ({ page }, info) => {
+  test.skip(!['phone', 'desktop'].includes(info.project.name), 'Request recovery is independent of extra viewport variants')
+  await page.route('**/api/security/csrf', route => route.fulfill({ json: { token: 'visual-fixture-only' } }))
+  await page.route('**/api/geocode', route => route.abort())
+  await page.goto('/editor')
+  await page.getByRole('button', { name: 'Find map coordinates', exact: true }).click()
+  await expect(page.locator('.geocode-row [role=status]')).toHaveText(/could not be completed/)
+  await expect(page.getByRole('spinbutton', { name: 'Latitude', exact: true })).toHaveValue('43.45')
+  await expect(page.getByRole('button', { name: 'Find map coordinates', exact: true })).toBeEnabled()
+  await page.unroute('**/api/geocode')
+  let releaseLookup
+  const lookup = new Promise(resolve => { releaseLookup = resolve })
+  await page.route('**/api/geocode', async route => { await lookup; await route.fulfill({ json: { result: { latitude: 1, longitude: 2, label: 'Old address' } } }) })
+  try {
+    await page.getByRole('button', { name: 'Find map coordinates', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Finding coordinates…', exact: true })).toBeDisabled()
+    await page.getByRole('textbox', { name: 'Public address or area', exact: true }).fill('A changed address')
+    releaseLookup()
+    await expect(page.locator('.geocode-row [role=status]')).toHaveText('The address changed. Find its coordinates again.')
+    await expect(page.getByRole('spinbutton', { name: 'Latitude', exact: true })).toHaveValue('43.45')
+    expect(await contrast(page.locator('.geocode-row span'))).toBeGreaterThanOrEqual(4.5)
+  } finally { releaseLookup() }
+})
+
+test('photo-removal failure preserves the preview and releases the controls', async ({ page }, info) => {
+  test.skip(!['phone', 'desktop'].includes(info.project.name), 'Request recovery is independent of extra viewport variants')
+  await page.route('**/api/fixture/remove-photo', route => route.abort())
+  await page.goto('/profile')
+  await page.locator('summary[aria-label="Change profile photo"]').click()
+  await expect(page.getByRole('button', { name: 'Remove', exact: true })).toBeVisible()
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'Remove', exact: true }).click()
+  await expect(page.getByRole('status')).toHaveText('Could not remove profile picture. Please try again.')
+  await expect(page.getByRole('button', { name: 'Remove', exact: true })).toBeEnabled()
+  await expect(page.getByRole('img', { name: 'Profile preview', exact: true })).toBeVisible()
+})
+
+test('visit forms have readable fields and contrast in both shell themes', async ({ page }) => {
+  await page.goto('/visit-plan')
+  await readableInputs(page.locator('.visit-plan-form input:not([type=hidden]), .visit-plan-form select, .visit-plan-form textarea'))
+  await page.locator('.figma-dashboard-shell').evaluate(node => { node.dataset.appearance = 'dark'; node.dataset.resolvedAppearance = 'dark' })
+  for (const label of await page.locator('.visit-plan-form label').all()) expect(await contrast(label)).toBeGreaterThanOrEqual(4.5)
+})
+
 test('public header encloses its navigation and mobile sign-in opens the form', async ({ page }) => {
   await page.goto('/public/place')
   const bounds = await page.locator('.public-header').evaluate(node => ({ header: node.getBoundingClientRect().bottom, nav: node.querySelector('nav').getBoundingClientRect().bottom }))
