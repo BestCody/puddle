@@ -135,13 +135,19 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
     if (busy || (!currentPath && !savedUrl)) return
     if (!window.confirm('Remove your profile picture?')) return
     setBusy(true)
-    const { error } = await client.rpc('remove_profile_photo_v1')
-    setBusy(false)
-    if (error) return setStatus(error.message || 'Could not remove profile picture.')
-    setSavedUrl(null)
-    setStatus('Profile picture removed.')
-    void productIdentity?.refresh()
-    router.refresh()
+    setStatus('')
+    try {
+      const { error } = await client.rpc('remove_profile_photo_v1')
+      if (error) return setStatus(error.message || 'Could not remove profile picture.')
+      setSavedUrl(null)
+      setStatus('Profile picture removed.')
+      void productIdentity?.refresh()
+      router.refresh()
+    } catch {
+      setStatus('Could not remove profile picture. Please try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return <div className={scopedClasses(profileStyles, "profile-photo-editor")}>
@@ -154,7 +160,7 @@ export function ProfilePhotoEditor({ userId, currentPath, displayName }) {
         {file ? <><button type="button" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save photo'}</button><button type="button" onClick={() => clearSelection()} disabled={busy}>Cancel</button></> : null}
         {!file && (currentPath || savedUrl) ? <button type="button" onClick={remove} disabled={busy}>Remove</button> : null}
       </div>
-      <div className={scopedClasses(profileStyles, "profile-photo-status")}>{status || 'JPEG, PNG, WebP, or AVIF · up to 10 MB'}</div>
+      <div className={scopedClasses(profileStyles, "profile-photo-status")} role="status">{status || 'JPEG, PNG, WebP, or AVIF · up to 10 MB'}</div>
     </div>
   </div>
 }
