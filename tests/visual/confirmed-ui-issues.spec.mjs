@@ -4,7 +4,8 @@ test.beforeEach(async ({ context }) => {
   await context.route('**/*', route => ['localhost', '127.0.0.1'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort())
 })
 
-test('mobile login survives a desktop breakpoint without an invisible modal', async ({ page }) => {
+test('mobile login survives a desktop breakpoint without an invisible modal', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone', 'One rotation cycle exercises both responsive layouts')
   await page.setViewportSize({ width: 393, height: 844 })
   await page.goto('/landing.html?mode=signup')
   const dialog = page.getByRole('dialog', { name: 'Sign up', exact: true })
@@ -123,7 +124,8 @@ test('both Saved Share entry points page and retry without dropping earlier frie
   }
 })
 
-test('public Save sends the canonical batch with CSRF and recovers from failure', async ({ page }) => {
+test('public Save sends the canonical batch with CSRF and recovers from failure', async ({ page }, info) => {
+  test.skip(!['phone', 'desktop'].includes(info.project.name), 'Request recovery uses the two distinct page layouts')
   await page.route('**/api/security/csrf', route => route.fulfill({ json: { token: 'fixture-only' } }))
   const actions = []
   await page.route('**/api/discovery/actions', route => {
@@ -141,7 +143,8 @@ test('public Save sends the canonical batch with CSRF and recovers from failure'
   expect(actions[1].actions[0].eventId).toBe(actions[0].actions[0].eventId)
 })
 
-test('failed generic upload can reselect the identical file', async ({ page }) => {
+test('failed generic upload can reselect the identical file', async ({ page }, info) => {
+  test.skip(!['phone', 'desktop'].includes(info.project.name), 'File retry behavior does not vary at additional breakpoints')
   await page.route('**/api/security/csrf', route => route.fulfill({ json: { token: 'fixture-only' } }))
   let requests = 0
   await page.route('**/api/media/upload', route => { requests++; return route.abort() })
@@ -156,7 +159,8 @@ test('failed generic upload can reselect the identical file', async ({ page }) =
   expect(requests).toBe(2)
 })
 
-test('linked older Feed post loads directly without clicking More', async ({ page }) => {
+test('linked older Feed post loads directly without clicking More', async ({ page }, info) => {
+  test.skip(!['phone', 'desktop'].includes(info.project.name), 'Post resolution needs both layouts, not repeated query tests')
   const target = '00000000-0000-4000-8000-000000000011'
   const requests = []
   await page.route('**/api/social-feed*', async route => {
@@ -187,5 +191,7 @@ test('light surfaces keep readable ink in dark mode and paid search avoids small
   await page.locator('.figma-dashboard-shell').evaluate(node => { node.dataset.appearance = 'dark'; node.dataset.resolvedAppearance = 'dark' })
   expect(await page.locator('[class*="mapSelectionNotice"] strong').evaluate(node => getComputedStyle(node).color)).toBe('rgb(17, 17, 17)')
   await page.goto('/paid-search')
+  await page.locator('.figma-dashboard-shell').evaluate(node => { node.dataset.appearance = 'dark'; node.dataset.resolvedAppearance = 'dark' })
+  expect(await page.locator('.pass-message-anyone-heading strong').evaluate(node => getComputedStyle(node).color)).toBe('rgb(17, 17, 17)')
   expect(await page.getByRole('textbox', { name: 'Search profiles to message' }).evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16)
 })
