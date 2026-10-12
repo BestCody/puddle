@@ -78,6 +78,7 @@ test('signup JSON errors retain form ownership and never echo personal fields', 
 test('an older Feed link starts at the visible target, not every intervening page', async () => {
   const rows = Array.from({ length: 12 }, (_, index) => ({ id: `00000000-0000-4000-8000-${String(100 - index).padStart(12, '0')}`, created_at: new Date(Date.UTC(2026, 9, 12 - index)).toISOString(), location_id: location.id }))
   const focus = rows[8]
+  focus.created_at = focus.created_at.replace('.000Z', '.083081+00:00')
   const requests = []
   const client = {
     rpc: async () => ({ data: [], error: null }),
@@ -91,7 +92,12 @@ test('an older Feed link starts at the visible target, not every intervening pag
         maybeSingle: async () => { requests.push({ id }); return { data: rows.find(row => row.id === id) || null, error: null } },
         then: resolve => {
           requests.push({ cursor, limit })
-          const visible = table !== 'social_posts' ? [] : cursor ? rows.filter(row => row.created_at <= focus.created_at) : rows
+          const boundary = cursor?.match(/^created_at\.lt\.([^,]+),and\(.+id\.(lte|lt)\.([^)]+)\)$/)
+          const micros = value => Date.parse(value) * 1000 + Number((value.match(/\.(\d+)/)?.[1] || '').padEnd(6, '0').slice(3, 6))
+          const visible = table !== 'social_posts' ? [] : boundary ? rows.filter(row => {
+            const time = micros(row.created_at), before = micros(boundary[1])
+            return time < before || (time === before && (boundary[2] === 'lte' ? row.id <= boundary[3] : row.id < boundary[3]))
+          }) : rows
           return Promise.resolve({ data: visible.slice(0, limit), error: null }).then(resolve)
         }
       }
@@ -110,6 +116,16 @@ test('an older Feed link starts at the visible target, not every intervening pag
   assert.equal(feed.pagination.hasMore, true)
   assert.equal(requests.filter(request => request.cursor).length, 1)
   assert.match(requests.find(request => request.cursor).cursor, new RegExp(`id.lte.${focus.id}`))
-  const hidden = await getSocialFeedSnapshot({ user, supabase: client }, '', { focusPostId: '00000000-0000-4000-8000-000000000099' })
+  const hidden = await getSocialFeedSnapshot({ user, supabase: client }, '', { focusPostId: '00000000-0000-4000-8000-000000000999' })
   assert.equal(hidden.focusUnavailable, true)
+})
+
+test('Feed cursors preserve database precision and reject unsafe timestamp syntax', async () => {
+  const { validCursorTimestamp } = await load('lib/app/social-feed-data.js', {}, 'validCursorTimestamp')
+  for (const value of ['2026-09-09T19:53:03.083081+00:00', '2026-09-09T19:53:03.083Z', '2026-09-09T19:53:03Z']) {
+    assert.equal(validCursorTimestamp(value), value)
+  }
+  for (const value of ['', 'not a date', '2026-09-09T19:53:03Z),id.gt.1', '2026-09-09T99:53:03Z']) {
+    assert.equal(validCursorTimestamp(value), null)
+  }
 })
