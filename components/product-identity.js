@@ -21,11 +21,6 @@ export function useProductIdentity() {
   return useContext(ProductIdentityContext)
 }
 
-export function ProductIdentityName() {
-  const context = useProductIdentity()
-  return context?.identity?.displayName || 'Puddle person'
-}
-
 export function ProductIdentityProvider({ children }) {
   const [identity, setIdentity] = useState(null)
   const mounted = useRef(false)

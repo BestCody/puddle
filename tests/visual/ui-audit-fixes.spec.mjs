@@ -69,7 +69,6 @@ test('streaming product shell restores saved appearance without delaying content
   await page.goto('/streaming-shell')
   await expect(page.getByRole('heading', { name: 'Saved appearance' })).toBeVisible()
   await expect(page.locator('.figma-dashboard-shell')).toHaveAttribute('data-resolved-appearance', 'dark')
-  await expect(page.locator('.profile-menu-panel strong')).toHaveText('Alex Puddle')
   expect(identityReads).toBe(1)
 })
 
