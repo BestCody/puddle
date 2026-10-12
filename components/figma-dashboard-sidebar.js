@@ -99,7 +99,7 @@ export function FigmaDashboardSidebar({ avatarUrl = null, initialAppearance, sig
     <div className={scopedClasses(shellStyles, "figma-dashboard-sidebar-logo")}><AppearanceLogo initialAppearance={initialAppearance} /></div>
     <ProductNav avatarUrl={avatarUrl} />
     <div className={scopedClasses(shellStyles, "figma-dashboard-sidebar-actions")}>
-      <SettingsTrigger className={scopedClasses(shellStyles, "figma-dashboard-settings-link")}>
+      <SettingsTrigger className={scopedClasses(shellStyles, "figma-dashboard-settings-link")} aria-label="Settings">
         <span className={scopedClasses(shellStyles, "figma-dashboard-settings-icon")}><SettingsIcon /></span>
         <span className={scopedClasses(shellStyles, "figma-dashboard-settings-label")}>Settings</span>
       </SettingsTrigger>

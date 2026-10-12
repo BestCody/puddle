@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from 'react'
+import { DismissibleDetails } from '@/components/dismissible-details'
 import { createClient } from '@/lib/supabase/client'
 import { shareSavedPlace } from './actions'
 import styles from '../Plans.module.css'
@@ -45,7 +46,7 @@ export function DetailShareMenu({ locationId, slug }) {
     if (event.currentTarget.open && !loaded && !loading) loadPage()
   }
 
-  return <details className={styles.share} onToggle={onToggle}>
+  return <DismissibleDetails className={styles.share} onToggle={onToggle}>
     <summary aria-label="Share saved place"><img src="/figma/saved-place-share.svg" alt="" aria-hidden="true" /></summary>
     <div>
       {friends.map((friend) => <form action={shareSavedPlace} onSubmit={(event) => { const input = event.currentTarget.elements.namedItem('share_key'); if (!input.value) input.value = crypto.randomUUID() }} key={friend.id}>
@@ -61,5 +62,5 @@ export function DetailShareMenu({ locationId, slug }) {
       {loaded && !friends.length && !loading && !error ? <p>Add a friend before sharing.</p> : null}
       {hasMore && !loading ? <button type="button" onClick={() => loadPage(friends[friends.length - 1])}>More friends</button> : null}
     </div>
-  </details>
+  </DismissibleDetails>
 }

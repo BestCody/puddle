@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from 'react'
+import { DismissibleDetails } from '@/components/dismissible-details'
 import { createClient } from '@/lib/supabase/client'
 import { shareFeedPost } from './actions'
 import styles from './MapFeed.module.css'
@@ -50,7 +51,7 @@ export function FeedShareMenu({ postId, title }) {
     if (cursor) await loadPage(cursor)
   }
 
-  return <details className={styles.actionMenu} onToggle={onToggle}>
+  return <DismissibleDetails className={styles.actionMenu} onToggle={onToggle}>
     <summary aria-label={`Share ${title}`}>↗</summary>
     <div className={`${styles.actionPanel} ${styles.sharePanel}`}>
       <strong>Share with a friend</strong>
@@ -66,5 +67,5 @@ export function FeedShareMenu({ postId, title }) {
       {loaded && !friends.length && !loading && !error ? <p>Add a friend before sharing.</p> : null}
       {hasMore && !loading ? <button type="button" onClick={loadMore}>More friends</button> : null}
     </div>
-  </details>
+  </DismissibleDetails>
 }
