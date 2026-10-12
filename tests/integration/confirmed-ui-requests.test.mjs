@@ -75,6 +75,44 @@ test('signup JSON errors retain form ownership and never echo personal fields', 
   assert.equal(response.headers.get('cache-control'), 'no-store')
 })
 
+test('standalone signup returns only validation errors and still redirects on success', async () => {
+  const form = new FormData()
+  form.set('email', 'private@example.test')
+  form.set('password', 'private-password')
+  const redirect = destination => { throw Object.assign(new Error('redirect'), { destination }) }
+  const { signUp } = await load('app/auth/actions.js', {
+    registerAccount: async received => {
+      assert.equal(received, form)
+      return { error: 'Please retry.' }
+    }, redirect
+  }, 'signUp')
+  assert.deepEqual(await signUp(null, form), { error: 'Please retry.' })
+  const success = await load('app/auth/actions.js', {
+    registerAccount: async () => ({ destination: '/onboarding' }), redirect
+  }, 'signUp')
+  await assert.rejects(success.signUp(null, form), error => error.destination === '/onboarding')
+})
+
+test('single-use challenge submissions do not retry a 403 and refresh CSRF on the next attempt', async () => {
+  const writes = []
+  let reads = 0
+  const { csrfFetch } = await load('lib/security/csrf-client.js', {
+    fetch: async (url, init) => {
+      if (url === '/api/security/csrf') return Response.json({ token: `csrf-${++reads}` })
+      writes.push(init)
+      return Response.json({ error: 'Safety check required.' }, { status: 403 })
+    }
+  }, 'csrfFetch')
+  for (const token of ['challenge-one', 'challenge-two']) {
+    const response = await csrfFetch('/api/appeals', { method: 'POST', retryCsrf: false, body: token })
+    assert.equal(response.status, 403)
+  }
+  assert.equal(writes.length, 2)
+  assert.equal(reads, 2)
+  assert.deepEqual(writes.map(init => init.headers.get('x-puddle-csrf')), ['csrf-1', 'csrf-2'])
+  assert.equal(writes[0].retryCsrf, undefined)
+})
+
 test('an older Feed link starts at the visible target, not every intervening page', async () => {
   const rows = Array.from({ length: 12 }, (_, index) => ({ id: `00000000-0000-4000-8000-${String(100 - index).padStart(12, '0')}`, created_at: new Date(Date.UTC(2026, 9, 12 - index)).toISOString(), location_id: location.id }))
   const focus = rows[8]

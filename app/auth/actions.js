@@ -29,9 +29,9 @@ function ensureConfigured(path) {
   if (!isSupabaseConfigured()) redirect(pathWithMessage(path, 'error', 'Accounts are temporarily unavailable. Please try again later.'))
 }
 
-export async function signUp(formData) {
+export async function signUp(_previousState, formData) {
   const result = await registerAccount(formData)
-  if (result.error) redirect(pathWithMessage('/signup', 'error', result.error))
+  if (result.error) return { error: result.error }
   redirect(result.destination)
 }
 

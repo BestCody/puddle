@@ -30,6 +30,8 @@ const client = {
     if (name === 'location_reviews_v1') return fetch('/api/fixture/reviews').then(response => response.json())
     if (name === 'social_friend_search_v2') return Promise.resolve({ data: [], error: null })
     if (name === 'social_messages_v2') return fetch(`/api/fixture/messages?conversation=${encodeURIComponent(args.target)}&before=${encodeURIComponent(args.before_message_id || '')}`).then(response => response.json())
+    if (name === 'social_conversations_v2' && args.before_conversation_id) return fetch('/api/fixture/conversations').then(response => response.json())
+    if (name === 'social_open_direct_conversation_v1') return fetch('/api/fixture/open-conversation', { method: 'POST' }).then(response => response.json())
     if (!(name in rpcs)) throw new Error(`Unmodelled visual fixture RPC: ${name}`)
     return Promise.resolve({ data: rpcs[name], error: null })
   },

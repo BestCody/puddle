@@ -190,7 +190,7 @@ function SamePageSavedDetail({ preview, detail, busy, detailLoading, message, de
         <div className={scopedClasses(detailStyles, "saved-inline-detail-actions")}>
           <button type="button" disabled={actionsDisabled} className={scopedClasses(detailStyles, "is-primary")} onClick={() => onAction('toggle_pinned')}>{detail?.state?.pinned ? 'Unpin' : 'Pin'}</button>
           <button type="button" disabled={actionsDisabled} onClick={() => onAction('toggle_saved')}>{detail?.state?.saved === false ? 'Save' : 'Unsave'}</button>
-          <FriendShareMenu key={location.id} summary="Share" disabled={actionsDisabled} renderFriend={friend => <button type="button" disabled={actionsDisabled} onClick={() => onAction('share', { friend_id: friend.id, share_key: crypto.randomUUID() })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>} />
+          <FriendShareMenu key={location.id} summary="Share" disabled={actionsDisabled} renderFriend={friend => <button type="button" disabled={actionsDisabled} onClick={() => onAction('share', { friend_id: friend.id })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>} />
         </div>
 
         <h1 style={{ viewTransitionName: names.title }}>{location.name}</h1>
@@ -246,6 +246,8 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
   const needsRefreshRef = useRef(false)
   const transitionReadyRef = useRef(false)
   const pendingDetailRef = useRef(null)
+  const actionRef = useRef(null)
+  const shareKeysRef = useRef(new Map())
 
   useEffect(() => {
     if (detailLocationId) return undefined
@@ -294,6 +296,8 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
       setMessage('')
       setDetailError('')
       setDetail(null)
+      actionRef.current = null
+      setBusy(false)
       requestRef.current += 1
       const requestId = requestRef.current
 
@@ -334,6 +338,8 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
 
     document.addEventListener('click', onClick, true)
     return () => {
+      requestRef.current += 1
+      actionRef.current = null
       detailRequestRef.current?.abort()
       if (detailLoaderRef.current === loadDetail) detailLoaderRef.current = null
       document.removeEventListener('click', onClick, true)
@@ -344,6 +350,9 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
     if (!preview) return
     detailRequestRef.current?.abort()
     requestRef.current += 1
+    const closeScope = requestRef.current
+    actionRef.current = null
+    setBusy(false)
     transitionReadyRef.current = false
     pendingDetailRef.current = null
     const card = sourceCardRef.current
@@ -364,7 +373,7 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
       commitClose()
       clearNames(card)
     }
-    if (needsRefreshRef.current) {
+    if (requestRef.current === closeScope && needsRefreshRef.current) {
       needsRefreshRef.current = false
       router.refresh()
     }
@@ -379,17 +388,29 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
   }
 
   async function performAction(action, extra = {}) {
-    if (!preview || !detail || detailError || busy) return
+    if (!preview || !detail || detailError || actionRef.current) return
+    const request = { scope: requestRef.current }
+    actionRef.current = request
+    const isCurrent = () => actionRef.current === request && requestRef.current === request.scope
+    const shareId = action === 'share' ? `${detail.location.id}:${extra.friend_id}` : null
+    const shareKey = shareId ? shareKeysRef.current.get(shareId) || crypto.randomUUID() : null
+    if (shareId) shareKeysRef.current.set(shareId, shareKey)
     setBusy(true)
     setMessage('')
     try {
       const response = await fetch(`/api/saved-location/${encodeURIComponent(preview.slug)}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-puddle-csrf': csrfToken() },
-        body: JSON.stringify({ action, ...extra })
+        body: JSON.stringify({ action, ...extra, ...(shareKey ? { share_key: shareKey } : {}) })
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload?.error || 'That action could not be completed.')
+      if (isCurrent() && shareId && shareKeysRef.current.get(shareId) === shareKey) shareKeysRef.current.delete(shareId)
+      if (['toggle_saved', 'toggle_pinned', 'plan'].includes(action)) {
+        if (isCurrent()) needsRefreshRef.current = true
+        else router.refresh()
+      }
+      if (!isCurrent()) return
       if (payload.refreshError) {
         setDetailError(payload.refreshError)
         setMessage(action === 'share' ? 'Shared.' : 'Saved.')
@@ -398,11 +419,13 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
         setDetailError('')
         setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : 'Saved.')
       }
-      if (['toggle_saved', 'toggle_pinned', 'plan'].includes(action)) needsRefreshRef.current = true
     } catch {
-      setMessage('That action could not be completed.')
+      if (isCurrent()) setMessage('That action could not be completed.')
     } finally {
-      setBusy(false)
+      if (isCurrent()) {
+        actionRef.current = null
+        setBusy(false)
+      }
     }
   }
 

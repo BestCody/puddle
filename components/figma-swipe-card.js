@@ -112,6 +112,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = 
   const draggingRef = useRef(false)
   const originX = useRef(0)
   const choiceInFlight = useRef(false)
+  const departureRef = useRef(null)
   const dragXRef = useRef(0)
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
@@ -123,6 +124,14 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = 
   const optimizedMainPhoto = mainPhoto && canOptimizeDiscoveryImage(mainPhoto) ? mainPhoto : null
 
   useEffect(() => setMainPhotoFailed(false), [mainPhoto])
+
+  useEffect(() => () => {
+    const departure = departureRef.current
+    if (!departure) return
+    departure.cancelled = true
+    window.clearTimeout(departure.timer)
+    departure.finishDelay?.()
+  }, [])
 
   function updateDragX(value) {
     dragXRef.current = value
@@ -146,6 +155,8 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = 
   async function choose(action) {
     if (preview || busy || choiceInFlight.current) return
     choiceInFlight.current = true
+    const departure = { cancelled: false, timer: null, finishDelay: null }
+    departureRef.current = departure
     draggingRef.current = false
     setDragging(false)
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -159,13 +170,19 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = 
       updateDragX(0)
     }
     try {
-      if (duration) await new Promise((resolve) => window.setTimeout(resolve, duration))
-      await onChoice(action, item)
+      if (duration) await new Promise(resolve => {
+        departure.finishDelay = resolve
+        departure.timer = window.setTimeout(resolve, duration)
+      })
+      if (!departure.cancelled) await onChoice(action, item)
     } finally {
-      updateDragX(0)
-      setLeaving(false)
-      onLeavingChange?.(false)
-      choiceInFlight.current = false
+      if (!departure.cancelled) {
+        departureRef.current = null
+        updateDragX(0)
+        setLeaving(false)
+        onLeavingChange?.(false)
+        choiceInFlight.current = false
+      }
     }
   }
 
@@ -177,7 +194,7 @@ export function FigmaSwipeCard({ item, onChoice, busy, actionRequest, preview = 
   }, [actionRequest?.id, onActionHandled, preview])
 
   function pointerDown(event) {
-    if (busy || event.button !== 0 || !event.isPrimary || event.target.closest('button,a')) return
+    if (busy || choiceInFlight.current || event.button !== 0 || !event.isPrimary || event.target.closest('button,a')) return
     event.preventDefault()
     pointerId.current = event.pointerId
     originX.current = event.clientX

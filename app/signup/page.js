@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { AuthShell } from '@/components/auth-shell'
 import { AuthMessage } from '@/components/auth-message'
 import { SubmitButton } from '@/components/submit-button'
-import { signUp, startGoogleSignup } from '@/app/auth/actions'
+import { startGoogleSignup } from '@/app/auth/actions'
+import { SignupForm } from './signup-form'
 
 export const metadata = { title: 'Create account' }
 
@@ -15,13 +16,7 @@ export default async function SignUpPage({ searchParams }) {
   return (
     <AuthShell eyebrow="New splash" title="Make plans that leave the chat." description="Create your profile, teach Puddle your vibe, and start finding things worth going out for.">
       <AuthMessage searchParams={params} />
-      <form className={scopedClasses(authStyles, "auth-form")} action={signUp}>
-        <label className="field">Display name<input name="display_name" autoComplete="name" required maxLength="60" placeholder="Ava" /></label>
-        <label className="field">Email<input name="email" type="email" autoComplete="email" required maxLength="254" defaultValue={email} placeholder="you@example.com" /></label>
-        <label className="field">Password<input name="password" type="password" autoComplete="new-password" required minLength="10" maxLength="128" placeholder="10–128 characters" /></label>
-        <label className={scopedClasses(authStyles, "checkbox")}><input type="checkbox" name="terms_accepted" value="yes" required /> <span>I agree to Puddle’s Terms and Privacy Policy and confirm the information I provide is accurate.</span></label>
-        <SubmitButton>Create my Puddle →</SubmitButton>
-      </form>
+      <SignupForm initialEmail={email} />
       <div className={scopedClasses(authStyles, "auth-divider")}>or</div>
       <div className={scopedClasses(authStyles, "oauth-grid")} style={{ gridTemplateColumns: '1fr' }}>
         <form className={scopedClasses(authStyles, "auth-form")} action={startGoogleSignup}>

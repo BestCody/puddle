@@ -569,6 +569,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     {navigationPending ? <div className={scopedClasses(friendsStyles, "figma-messages-navigation-status")} role="status" aria-label="Loading conversation">Loading conversation...</div> : null}
     <div className={scopedClasses(friendsStyles, "figma-friends-message-layout")}>
       <aside className={scopedClasses(friendsStyles, "figma-friends-conversations")} aria-label="Conversations">
+        {!selected && notice ? <p role="status">{notice}</p> : null}
         {conversations.length ? conversations.map((conversation) => <button
           className={scopedClasses(friendsStyles, selectedId && selectedId === conversation.conversation_id ? 'is-active' : '')}
           type="button"
