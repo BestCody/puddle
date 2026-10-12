@@ -8,7 +8,7 @@ import { ProductNav } from '@/components/product-nav'
 import { MainContentTransition } from '@/components/main-content-transition'
 import { MapRouteClient } from '@/components/map-route-client'
 import { FriendsRouteContent } from '@/components/friends-route-content'
-import { snapshotForConversation } from '../mocks/data'
+import { snapshot, snapshotForConversation } from '../mocks/data'
 
 const items = Array.from({ length: 12 }, (_, index) => ({
   content_id: `visual-place-${index}`,
@@ -34,7 +34,7 @@ export function VisualFixture({ view, children = null, conversationId = null, ta
     <div className={scopedClasses(shellStyles, "figma-dashboard-stage")}>
       <main className={scopedClasses(shellStyles, "figma-dashboard-main")}>
         <MainContentTransition>
-          {children || (view === 'map' ? <MapRouteClient /> : view === 'matches' ? <FriendsRouteContent snapshot={snapshotForConversation(conversationId)} tab={tab} conversationId={conversationId} /> : <DateSwipeWorkspaceV2 initialFeed={feed} profileId="visual-test-user" />)}
+          {children || (view === 'map' ? <MapRouteClient /> : view === 'messages-recovery' ? <FriendsRouteContent snapshot={{ ...snapshot, conversations: snapshot.conversations.map(row => ({ ...row, sort_at: row.last_message_at })), conversationsHasMore: true, friends: [...snapshot.friends, { id: '00000000-0000-4000-8000-000000000006', display_name: 'New friend' }] }} tab="messages" /> : view === 'matches' ? <FriendsRouteContent snapshot={snapshotForConversation(conversationId)} tab={tab} conversationId={conversationId} /> : <DateSwipeWorkspaceV2 initialFeed={feed} profileId="visual-test-user" />)}
         </MainContentTransition>
       </main>
     </div>

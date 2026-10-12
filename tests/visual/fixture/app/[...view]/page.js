@@ -29,6 +29,7 @@ import '@/app/landing-phone-demo.css'
 import ProductLoading from '@/app/(product)/loading'
 import { RecommendationSettings } from '@/components/recommendation-settings'
 import { places, photo } from '../../mocks/data'
+import { SwipeCancellationFixture } from '../swipe-cancellation-fixture'
 
 export default async function VisualPage({ params, searchParams }) {
   const { view } = await params
@@ -39,6 +40,8 @@ export default async function VisualPage({ params, searchParams }) {
   if (route === 'visit-plan') return <PlanLocationVisitPage params={Promise.resolve({ slug: 'visual-place-0' })} searchParams={Promise.resolve(query)} />
   if (route === 'create/place') return <CreatePlacePage searchParams={Promise.resolve(query)} />
   if (route === 'upload') return <VisualFixture view="upload"><MediaUploader purpose="profile_photo" /></VisualFixture>
+  if (route === 'verification-upload') return <VisualFixture view="upload"><MediaUploader purpose="verification_document" /></VisualFixture>
+  if (route === 'swipe-cancel') return <SwipeCancellationFixture />
   if (route === 'paid-search') return <VisualFixture view="paid-search"><PassMessageSearch enabled /></VisualFixture>
   if (route === 'appeals') return <VisualFixture view="appeals"><AppealForm /></VisualFixture>
   const Page = { account: AccountPage, profile: ProfilePage, plans: PlansPage, membership: MembershipPage, 'create/post': CreatePostPage, report: ReportPage, signup: SignUpPage, 'forgot-password': ForgotPasswordPage, 'change-email': ChangeEmailPage, onboarding: OnboardingPage, privacy: PrivacyPage, terms: TermsPage, 'not-found': NotFound }[route]

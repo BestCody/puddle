@@ -10,6 +10,7 @@ export default {
     '@': root,
     '@/app/(product)/create/post/actions': './mocks/failing-actions.js',
     '@/app/report/actions': './mocks/failing-actions.js',
+    '@/lib/auth/sign-up': './mocks/signup.js',
     '@/lib/auth/user': './mocks/data.js',
     '@/lib/supabase/client': './mocks/data.js',
     '@/lib/supabase/server': './mocks/data.js',
@@ -22,7 +23,7 @@ export default {
     '@/lib/app/public-content': './mocks/data.js'
   } },
   images: { unoptimized: true },
-  env: { VISUAL_PUBLIC_ROOT: path.join(root, 'public') },
+  env: { VISUAL_PUBLIC_ROOT: path.join(root, 'public'), NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'fixture-safety-key' },
   async rewrites() {
     return [{ source: '/', destination: '/assets/landing.html' },
       { source: '/figma/:path*', destination: '/assets/figma/:path*' },

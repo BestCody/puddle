@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'area[href]',
+  'summary',
   'button:not([disabled])',
   'input:not([disabled]):not([type="hidden"])',
   'select:not([disabled])',
@@ -14,9 +15,14 @@ const FOCUSABLE_SELECTOR = [
 
 function focusable(container) {
   return [...container.querySelectorAll(FOCUSABLE_SELECTOR)].filter((element) => {
-    if (element.hidden || element.getAttribute('aria-hidden') === 'true') return false
+    if (element.closest('[hidden], [inert], [aria-hidden="true"]')) return false
+    for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+      if (parent.tagName !== 'DETAILS' || parent.open) continue
+      const summary = [...parent.children].find(child => child.tagName === 'SUMMARY')
+      if (!summary?.contains(element)) return false
+    }
     const style = window.getComputedStyle(element)
-    return style.display !== 'none' && style.visibility !== 'hidden'
+    return element.getClientRects().length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.visibility !== 'collapse'
   })
 }
 
@@ -41,10 +47,11 @@ export function useModalFocus(containerRef, initialFocusRef = null, enabled = tr
       }
       const first = elements[0]
       const last = elements.at(-1)
-      if (event.shiftKey && document.activeElement === first) {
+      const outside = !container.contains(document.activeElement)
+      if (event.shiftKey && (document.activeElement === first || outside)) {
         event.preventDefault()
         last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && (document.activeElement === last || outside)) {
         event.preventDefault()
         first.focus()
       }

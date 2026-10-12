@@ -141,16 +141,25 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   const continuationPrefetchInFlight = useRef(null)
   const prefetchedContinuation = useRef(null)
   const deckGeneration = useRef(0)
+  const leavingRef = useRef(false)
+  const activeItemRef = useRef(null)
   const sessionIds = useRef(new Set(initialItems.map((item) => item.content_id)))
 
   const current = feed.items[index] || null
   const next = feed.items[index + 1] || null
   const categories = useMemo(() => [...new Set([...(feed.categories || []), ...feed.items.map((item) => item.category).filter(Boolean)])].sort(), [feed])
-  const busy = false
+  const busy = cardLeaving || loading
+  const renderedGeneration = deckGeneration.current
+  activeItemRef.current = current?.content_id
+
+  const handleLeavingChange = useCallback(value => {
+    leavingRef.current = value
+    setCardLeaving(value)
+  }, [])
 
   useEffect(() => {
-    setCardLeaving(false)
-  }, [current?.content_id])
+    handleLeavingChange(false)
+  }, [current?.content_id, handleLeavingChange])
 
   useEffect(() => {
     if (!message) return undefined
@@ -394,7 +403,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   }, [flushActions, storageKey])
 
   function requestChoice(action) {
-    if (!current || busy) return
+    if (!current || busy || leavingRef.current || showFilters) return
     actionRequestSequence.current += 1
     setActionRequest({ action, id: actionRequestSequence.current })
   }
@@ -437,14 +446,14 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
     setFilters({ ...result.filters, q: '', kind: 'place', date: 'any', limit: DECK_BATCH_SIZE })
     setIndex(0)
     setChoices({})
-    setCardLeaving(false)
+    handleLeavingChange(false)
     setShowFilters(false)
     setExhausted(result.continuation?.hasMore === false && nextItems.length < DECK_BATCH_SIZE && nextItems.length > 0)
     setMessage('')
   }
 
   function persistChoice(action, item) {
-    if (!item || busy || pendingItems.current.has(item.content_id)) return
+    if (!item || renderedGeneration !== deckGeneration.current || activeItemRef.current !== item.content_id || pendingItems.current.has(item.content_id)) return
     pendingItems.current.add(item.content_id)
     const persistedAction = action === 'pass' ? 'dismissed' : action === 'perfect' ? 'perfect' : 'saved'
     setChoices((value) => ({ ...value, [item.content_id]: { choice: action, note: '' } }))
@@ -456,7 +465,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
       requestId: item.__discovery_request_id || feed.requestId,
       context: context(item)
     }, item.content_id).then((result) => {
-      if (result) return
+      if (result || renderedGeneration !== deckGeneration.current) return
       setChoices((value) => {
         const next = { ...value }
         delete next[item.content_id]
@@ -468,7 +477,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   function undo() {
     const previousIndex = Math.max(0, index - 1)
     const item = feed.items[previousIndex]
-    if (!item || index === 0 || busy || pendingItems.current.has(`undo:${item.content_id}`)) return
+    if (!item || index === 0 || busy || leavingRef.current || showFilters || pendingItems.current.has(`undo:${item.content_id}`)) return
     const previousChoice = choices[item.content_id]
     pendingItems.current.add(`undo:${item.content_id}`)
     setIndex(previousIndex)
@@ -479,7 +488,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
       contentId: item.content_id,
       requestId: item.__discovery_request_id || feed.requestId
     }, `undo:${item.content_id}`).then((result) => {
-      if (result) return
+      if (result || renderedGeneration !== deckGeneration.current) return
       setIndex((value) => Math.max(value, previousIndex + 1))
       if (previousChoice) setChoices((value) => ({ ...value, [item.content_id]: previousChoice }))
     })
@@ -494,7 +503,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
   useEffect(() => {
     function keyboard(event) {
       const target = event.target instanceof HTMLElement ? event.target : null
-      if (!current || busy || event.metaKey || event.ctrlKey || event.altKey || target?.closest('input,textarea,select,button')) return
+      if (!current || busy || leavingRef.current || showFilters || event.metaKey || event.ctrlKey || event.altKey || target?.closest('input,textarea,select,button')) return
       if (event.key === 'ArrowLeft') requestChoice('pass')
       if (event.key === 'ArrowRight') requestChoice('save')
       if (event.key.toLowerCase() === 'p') requestChoice('perfect')
@@ -511,7 +520,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
     <DiscoveryPhotoPreloader items={feed.items} index={index} ahead={PHOTO_PRELOAD_AHEAD} />
     <span className={`figma-swipe-mobile-logo ${styles.mobileLogo}`} aria-hidden="true" />
     <div className={`figma-swipe-workspace ${styles.workspace}`}>
-      <button className={`figma-swipe-filter-trigger ${styles.filterTrigger}`} type="button" onClick={() => setShowFilters(true)} aria-label="Open filters">
+      <button className={`figma-swipe-filter-trigger ${styles.filterTrigger}`} type="button" disabled={busy} onClick={() => { if (!leavingRef.current) setShowFilters(true) }} aria-label="Open filters">
         <span className={`figma-swipe-filter-icon ${styles.filterIcon}`} aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 7h16M4 17h16M9 7a2 2 0 1 0 0 0M15 17a2 2 0 1 0 0 0" /></svg></span>
         <span className={`figma-swipe-filter-label ${styles.filterLabel}`}>Filters</span>
       </button>
@@ -519,7 +528,7 @@ export function DateSwipeWorkspaceV2({ initialFeed, profileId, initialRegion = '
       {current ? <>
         <div className={`figma-swipe-card-stage ${styles.stage}${cardLeaving ? ' is-swiping' : ''}`}>
           {next ? <FigmaSwipeCard key={`preview:${next.content_id}`} item={next} preview /> : null}
-          <FigmaSwipeCard key={`active:${current.content_id}`} item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} onLeavingChange={setCardLeaving} onActionHandled={clearActionRequest} />
+          <FigmaSwipeCard key={`active:${current.content_id}`} item={current} onChoice={persistChoice} busy={busy} actionRequest={actionRequest} onLeavingChange={handleLeavingChange} onActionHandled={clearActionRequest} />
         </div>
         <SwipeActionDock
           onUndo={undo}

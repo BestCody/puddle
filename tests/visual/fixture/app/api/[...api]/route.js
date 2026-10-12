@@ -6,6 +6,7 @@ export async function GET(request, { params }) {
   if (route === 'fixture/messages') return Response.json({ data: messagesForConversation(new URL(request.url).searchParams.get('conversation')), error: null })
   if (route === 'fixture/reviews') return Response.json({ data: [], error: null })
   if (route === 'fixture/friends') return Response.json({ data: [person], error: null })
+  if (route === 'fixture/conversations') return Response.json({ data: [], error: null })
   if (route === 'profile/identity') return Response.json({ avatarUrl: person.avatar_path, displayName: person.display_name, appearanceTheme: 'dark' })
   if (route === 'social-feed') return Response.json({ items: posts, pagination: { hasMore: false }, self: person })
   if (route === 'saved-page') {

@@ -535,7 +535,7 @@
   border: 0;
   border-radius: 1.125rem;
   background: #73a8ed;
-  color: #fff;
+  color: #171114;
   box-shadow: 0 .5rem 1.5rem rgba(38, 82, 142, .24);
 }
 
@@ -557,7 +557,7 @@
   padding: .25rem .5rem;
   border-radius: 999rem;
   background: rgba(255, 255, 255, .2);
-  color: rgba(255, 255, 255, .95);
+  color: inherit;
   font: 700 .6875rem/1 Manrope, sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -567,7 +567,7 @@
   min-width: 0;
   overflow: hidden;
   margin: 0;
-  color: #fff;
+  color: inherit;
   font: 800 clamp(.9375rem, 1.7cqi, 1.1875rem)/1.1 Manrope, sans-serif;
   letter-spacing: -.04em;
   text-overflow: ellipsis;
@@ -591,7 +591,7 @@
 }
 
 .anchored .location-map-side .location-map-card-actions :is(a, button) {
-  color: #fff;
+  color: inherit;
   font: 800 .75rem/1 Manrope, sans-serif;
   text-underline-offset: .1875rem;
 }

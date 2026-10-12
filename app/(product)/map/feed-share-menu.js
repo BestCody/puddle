@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { DismissibleDetails } from '@/components/dismissible-details'
 import { ShareIcon } from '@/components/feed-action-icons'
 import { createClient } from '@/lib/supabase/client'
@@ -20,9 +20,13 @@ export function FeedShareMenu({ postId, title }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [hasMore, setHasMore] = useState(false)
+  const pendingRef = useRef(false)
+  const retryCursorRef = useRef(null)
 
   async function loadPage(cursor = null) {
-    if (loading) return
+    if (pendingRef.current) return
+    pendingRef.current = true
+    retryCursorRef.current = cursor
     setLoading(true)
     setError('')
     try {
@@ -39,6 +43,7 @@ export function FeedShareMenu({ postId, title }) {
     } catch {
       setError('Friends could not be loaded.')
     } finally {
+      pendingRef.current = false
       setLoading(false)
     }
   }
@@ -64,7 +69,7 @@ export function FeedShareMenu({ postId, title }) {
       </form>)}
       {loading ? <p>Loading friends…</p> : null}
       {error ? <p role="alert">{error}</p> : null}
-      {error && !loading ? <button type="button" onClick={() => loadPage()}>Try again</button> : null}
+      {error && !loading ? <button type="button" onClick={() => loadPage(retryCursorRef.current)}>Try again</button> : null}
       {loaded && !friends.length && !loading && !error ? <p>Add a friend before sharing.</p> : null}
       {hasMore && !loading ? <button type="button" onClick={loadMore}>More friends</button> : null}
     </div>
