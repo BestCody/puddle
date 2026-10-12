@@ -149,7 +149,7 @@ img{display:block;max-width:100%}
 .mobile-login-dialog{display:none}
 
 /* Mobile frame 351:156. The full page is normal document flow; only artwork inside a section overlaps. */
-@media(max-width:760px){
+@media(max-width:47.5rem){
   :root{--desktop-left:0;--desktop-right:100%}
   .landing-stage--desktop{display:none}
   .landing-stage--mobile{display:block;width:min(100%,704px)}

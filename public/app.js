@@ -1,8 +1,9 @@
 const $ = (selector, root = document) => root.querySelector(selector)
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)]
+const mobileLandingLayout = window.matchMedia('(max-width: 47.5rem)')
 
 function activeLandingStage() {
-  return window.matchMedia('(max-width: 760px)').matches
+  return mobileLandingLayout.matches
     ? $('.landing-stage--mobile')
     : $('.landing-stage--desktop')
 }
@@ -37,7 +38,6 @@ function initLandingAuth() {
   const mobileLoginDialog = $('#mobile-login-dialog')
   const mobileLoginSurface = $('.mobile-login-dialog__surface', mobileLoginDialog)
   const mobileLoginClose = $('[data-close-mobile-login]', mobileLoginDialog)
-  const mobileLayout = window.matchMedia('(max-width: 760px)')
   const originalPanelParent = panel.parentNode
   const originalPanelNextSibling = panel.nextSibling
 
@@ -99,7 +99,7 @@ function initLandingAuth() {
   }
 
   mobileLoginButton?.addEventListener('click', (event) => {
-    if (!window.matchMedia('(max-width: 760px)').matches || !openMobileAuth()) return
+    if (!mobileLandingLayout.matches || !openMobileAuth()) return
     event.preventDefault()
   })
   mobileLoginClose?.addEventListener('click', () => mobileLoginDialog?.close())
@@ -108,9 +108,9 @@ function initLandingAuth() {
   })
   mobileLoginDialog?.addEventListener('close', () => {
     restorePanel()
-    if (mobileLayout.matches) mobileLoginButton?.focus()
+    if (mobileLandingLayout.matches) mobileLoginButton?.focus()
   })
-  mobileLayout.addEventListener('change', ({ matches }) => {
+  mobileLandingLayout.addEventListener('change', ({ matches }) => {
     if (matches || !mobileLoginDialog?.open) return
     const focused = document.activeElement
     mobileLoginDialog.close()
@@ -150,7 +150,7 @@ function initLandingAuth() {
 
   const requestedMode = params.get('mode') === 'signup' ? 'signup' : 'login'
   setMode(requestedMode)
-  if ((['login', 'signup'].includes(params.get('mode')) || message) && window.matchMedia('(max-width: 760px)').matches) openMobileAuth(requestedMode)
+  if ((['login', 'signup'].includes(params.get('mode')) || message) && mobileLandingLayout.matches) openMobileAuth(requestedMode)
 }
 
 function initPhoneDemoLoading() {
