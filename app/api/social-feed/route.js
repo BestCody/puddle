@@ -55,7 +55,8 @@ export async function GET(request) {
   try {
     const feed = await getSocialFeedSnapshot({ ...current, traceId }, params.get('q') || '', {
       beforeCreatedAt: params.get('before') || null,
-      beforePostId: params.get('beforeId') || null
+      beforePostId: params.get('beforeId') || null,
+      focusPostId: params.get('post') || null
     })
     recordSloObservation('socialFeed', elapsedMs(startedAt), true, {
       trace_id: traceId,

@@ -8,7 +8,7 @@ import { flushSync } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useModalFocus } from '@/components/modal-focus'
-import { DismissibleDetails } from '@/components/dismissible-details'
+import { FriendShareMenu } from '@/components/friend-share-menu'
 import { PhotoFrame } from '@/components/photo-frame'
 import { SavedPlacePosts } from '@/components/saved-place-posts'
 import { DetailReviews } from '@/app/(product)/plans/[slug]/detail-reviews'
@@ -189,10 +189,7 @@ function SamePageSavedDetail({ preview, detail, busy, message, detailError, name
         <div className={scopedClasses(detailStyles, "saved-inline-detail-actions")}>
           <button type="button" disabled={!detail || busy} className={scopedClasses(detailStyles, "is-primary")} onClick={() => onAction('toggle_pinned')}>{detail?.state?.pinned ? 'Unpin' : 'Pin'}</button>
           <button type="button" disabled={!detail || busy} onClick={() => onAction('toggle_saved')}>{detail?.state?.saved === false ? 'Save' : 'Unsave'}</button>
-          <DismissibleDetails>
-            <summary>Share</summary>
-            <div>{detail?.friends?.length ? detail.friends.map((friend) => <button type="button" disabled={busy} onClick={() => onAction('share', { friend_id: friend.id, share_key: crypto.randomUUID() })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>) : <small>No friends to share with yet.</small>}</div>
-          </DismissibleDetails>
+          <FriendShareMenu key={location.id} summary="Share" disabled={!detail || busy} renderFriend={friend => <button type="button" disabled={busy} onClick={() => onAction('share', { friend_id: friend.id, share_key: crypto.randomUUID() })} key={friend.id}>{friend.display_name || friend.username || 'Friend'}</button>} />
         </div>
 
         <h1 style={{ viewTransitionName: names.title }}>{location.name}</h1>
@@ -389,8 +386,15 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
       })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload?.error || 'That action could not be completed.')
-      setDetail(payload)
-      setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : 'Saved.')
+      if (payload.refreshError) {
+        setDetail(null)
+        setDetailError(payload.refreshError)
+        setMessage(action === 'share' ? 'Shared.' : 'Saved.')
+      } else {
+        setDetail(payload)
+        setDetailError('')
+        setMessage(action === 'toggle_pinned' ? (payload.state?.pinned ? 'Pinned.' : 'Unpinned.') : action === 'toggle_saved' ? (payload.state?.saved ? 'Saved.' : 'Removed from Saved.') : action === 'plan' ? 'Added to Plans.' : action === 'share' ? 'Shared.' : 'Saved.')
+      }
       if (['toggle_saved', 'toggle_pinned', 'plan'].includes(action)) needsRefreshRef.current = true
     } catch {
       setMessage('That action could not be completed.')

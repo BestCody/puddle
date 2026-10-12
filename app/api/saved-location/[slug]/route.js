@@ -35,7 +35,7 @@ async function detailPayload(supabase, user, slug) {
   if (!result?.location) return null
   const { location, similar = [] } = result
 
-  const [savedResult, friendsResult, visitResult, postsResult] = await Promise.all([
+  const [savedResult, visitResult, postsResult] = await Promise.all([
     supabase
       .from('user_content_states')
       .select('location_id,pinned_at')
@@ -43,7 +43,6 @@ async function detailPayload(supabase, user, slug) {
       .eq('location_id', location.id)
       .eq('state', 'saved')
       .maybeSingle(),
-    supabase.rpc('social_friend_picker_v2'),
     supabase
       .from('location_visits')
       .select('planned_for,note,status')
@@ -58,6 +57,10 @@ async function detailPayload(supabase, user, slug) {
       .order('created_at', { ascending: false })
       .limit(12)
   ])
+
+  if ([savedResult, visitResult, postsResult].some(result => result.error)) {
+    throw new Error('Saved details could not be loaded.')
+  }
 
   const posts = (postsResult.data || []).map((post) => ({
     id: post.id,
@@ -79,7 +82,6 @@ async function detailPayload(supabase, user, slug) {
       pinned: Boolean(savedResult.data?.pinned_at),
       planned: visitResult.data || null
     },
-    friends: friendsResult.data || [],
     posts
   }
 }
@@ -137,6 +139,7 @@ export async function POST(request, context) {
         .eq('location_id', location.id)
         .eq('state', 'saved')
         .maybeSingle()
+      if (existing.error) throw new Error('Saved status could not be checked.')
       const mutation = existing.data
         ? supabase.from('user_content_states').delete().eq('profile_id', user.id).eq('location_id', location.id).eq('state', 'saved')
         : supabase.from('user_content_states').insert({ profile_id: user.id, location_id: location.id, state: 'saved' })
@@ -154,6 +157,7 @@ export async function POST(request, context) {
         .eq('state', 'saved')
         .maybeSingle()
       const pinnedAt = existing.data?.pinned_at ? null : new Date().toISOString()
+      if (existing.error) throw new Error('Pinned status could not be checked.')
       const mutation = existing.data
         ? supabase.from('user_content_states').update({ pinned_at: pinnedAt }).eq('profile_id', user.id).eq('location_id', location.id).eq('state', 'saved')
         : supabase.from('user_content_states').insert({ profile_id: user.id, location_id: location.id, state: 'saved', pinned_at: pinnedAt })
@@ -199,8 +203,15 @@ export async function POST(request, context) {
       return error('Unknown Saved action.', 404)
     }
 
-    const payload = await detailPayload(supabase, user, slug)
-    return NextResponse.json({ ok: true, ...payload })
+    try {
+      const payload = await detailPayload(supabase, user, slug)
+      if (!payload) throw new Error('Saved location not found.')
+      return NextResponse.json({ ok: true, ...payload })
+    } catch {
+      // The write succeeded. Do not invite a duplicate share or reverse a
+      // toggle merely because its follow-up read failed.
+      return NextResponse.json({ ok: true, refreshError: 'Your change was saved, but details could not be refreshed.' })
+    }
   } catch (cause) {
     return error(safeSecurityError(cause, 'That Saved action could not be completed.'), 500)
   }

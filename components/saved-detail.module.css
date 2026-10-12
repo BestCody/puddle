@@ -201,12 +201,21 @@
   display: none;
 }
 
+.saved-inline-detail-actions > details > summary[aria-disabled='true'] {
+  opacity: .5;
+  cursor: default;
+}
+
 .saved-inline-detail-actions > details > div {
+  translate: var(--menu-shift-x, 0rem) 0;
   position: absolute;
   z-index: 20;
   top: 2.875rem;
-  left: 0;
+  right: 0;
   min-width: 11.875rem;
+  max-height: min(50dvh, var(--menu-available-height, 50dvh));
+  overflow-y: auto;
+  box-sizing: border-box;
   display: grid;
   gap: 0.25rem;
   padding: 0.5rem;

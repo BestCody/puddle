@@ -122,13 +122,15 @@
 }
 
 .moreCategories > nav {
+  translate: var(--menu-shift-x, 0rem) 0;
   position: absolute;
   z-index: 45;
   top: calc(100% + .5rem);
   right: 1rem;
   display: grid;
   width: min(18rem, calc(100% - 2rem));
-  max-height: 50svh;
+  max-height: min(50svh, var(--menu-available-height, 50svh));
+  box-sizing: border-box;
   overflow: auto;
   padding: .5rem;
   border: .0625rem solid #c2a3dd;
@@ -546,7 +548,7 @@
 
 .detailActions {
   position: relative;
-  z-index: 12;
+  z-index: 15;
   min-height: 2.4375rem;
   height: auto;
   display: flex;
@@ -613,6 +615,7 @@
 }
 
 .share > div {
+  translate: var(--menu-shift-x, 0rem) 0;
   position: absolute;
   z-index: 40;
   display: grid;
@@ -623,8 +626,11 @@
   background: var(--shell-surface, #fff);
   box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.12);
   top: calc(100% + .5rem);
-  left: 0;
+  right: 0;
   min-width: 12.5rem;
+  max-height: min(50dvh, var(--menu-available-height, 50dvh));
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .share > div form,

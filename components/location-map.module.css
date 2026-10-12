@@ -84,6 +84,7 @@
 }
 
 .location-map-marker {
+  color: #171114;
   position: absolute;
   left: -1.25rem;
   top: -2.5rem;
@@ -741,7 +742,4 @@
     font-size: .75rem;
   }
 
-  .anchored .location-map-zoom {
-    display: none;
-  }
 }

@@ -25,6 +25,7 @@ function query(data, count = Array.isArray(data) ? data.length : 0) {
 const client = {
   from(name) { if (!(name in tables)) throw new Error(`Unmodelled visual fixture table: ${name}`); return query(tables[name]) },
   rpc(name, args = {}) {
+    if (name === 'social_friend_picker_v2' && typeof window !== 'undefined') return fetch(`/api/fixture/friends?before=${encodeURIComponent(args.before_id || '')}`).then(response => response.json())
     if (name === 'remove_profile_photo_v1') return fetch('/api/fixture/remove-photo', { method: 'POST' }).then(response => response.json())
     if (name === 'location_reviews_v1') return fetch('/api/fixture/reviews').then(response => response.json())
     if (name === 'social_friend_search_v2') return Promise.resolve({ data: [], error: null })
@@ -46,6 +47,6 @@ export async function getLocationPreviews(_client, ids) { return places.filter(p
 export async function getMembershipSnapshot() { return { active: false, adult: true, paymentsConfigured: false, membership: null } }
 export function ageFromBirthDate() { return 25 }
 export async function getLocationPlansPage(_session, { limit = places.length } = {}) { return { items: places.slice(0, limit), pagination: { hasMore: false } } }
-export async function getSavedCategories() { return ['restaurant', 'scenic_spot', 'park', 'art_gallery', 'cafe'].map(category => ({ category, place_count: 2 })) }
+export async function getSavedCategories() { return ['restaurant', 'scenic_spot', 'park', 'art_gallery', 'cafe', 'bar', 'museum', 'theatre', 'attraction'].map(category => ({ category, place_count: 2 })) }
 export const mapPoints = places.map(place => ({ ...place, states: ['saved'], href: `/plans/${place.slug}`, summary: 'A quiet green space to explore with friends.' }))
 export async function getLocationMapSnapshot() { return { points: mapPoints, center: { latitude: 43.45, longitude: -79.66 } } }

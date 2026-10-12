@@ -86,6 +86,11 @@ function nextFeedQuery(query, pagination) {
   return params.toString()
 }
 
+function linkedPostId() {
+  const match = window.location.hash.match(/^#post-([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i)
+  return match?.[1]?.toLowerCase() || null
+}
+
 function FeedPagination({ query, pagination, loading, error, onLoadMore, classes = styles }) {
   if (!nextFeedQuery(query, pagination)) return null
   return <nav className={classes.pagination} aria-label="Discover pagination">
@@ -142,8 +147,24 @@ export function SocialFeedClient({
   const [loadingMore, setLoadingMore] = useState(false)
   const [loadMoreError, setLoadMoreError] = useState('')
   const [reload, setReload] = useState(0)
+  const [anchorVersion, setAnchorVersion] = useState(0)
   const feedGenerationRef = useRef(0)
   const loadMoreControllerRef = useRef(null)
+  const pendingPostRef = useRef(null)
+
+  useEffect(() => {
+    if (staticMode) return undefined
+    const changed = () => setAnchorVersion(value => value + 1)
+    window.addEventListener('hashchange', changed)
+    return () => window.removeEventListener('hashchange', changed)
+  }, [staticMode])
+
+  useEffect(() => {
+    if (!feed || !pendingPostRef.current) return
+    const post = document.getElementById(`post-${pendingPostRef.current}`)
+    if (post) post.scrollIntoView({ block: 'start' })
+    if (post || feed.focusUnavailable) pendingPostRef.current = null
+  }, [feed])
 
   useEffect(() => {
     if (staticMode) {
@@ -165,6 +186,9 @@ export function SocialFeedClient({
     if (query) params.set('q', query)
     if (beforeCreatedAt) params.set('before', beforeCreatedAt)
     if (beforePostId) params.set('beforeId', beforePostId)
+    const focusedId = linkedPostId()
+    pendingPostRef.current = focusedId
+    if (focusedId) params.set('post', focusedId)
     setFeed(null)
     setError('')
     setLoadingMore(false)
@@ -201,7 +225,7 @@ export function SocialFeedClient({
       loadMoreControllerRef.current?.abort()
       loadMoreControllerRef.current = null
     }
-  }, [avatarUrl, beforeCreatedAt, beforePostId, displayName, initialFeed, onIdentityChange, query, reload, staticMode])
+  }, [anchorVersion, avatarUrl, beforeCreatedAt, beforePostId, displayName, initialFeed, onIdentityChange, query, reload, staticMode])
 
   async function loadMore() {
     if (staticMode || loadingMore || !feed || loadMoreControllerRef.current) return
@@ -258,6 +282,7 @@ export function SocialFeedClient({
   }
 
   return <section className={`${classes.stream}${className ? ` ${className}` : ''}`} aria-label="Discover posts" data-testid="feed-stream">
+    {feed?.focusUnavailable ? <p role="status">That post is no longer available.</p> : null}
     {error ? <div className={classes.empty} role="alert"><strong>Could not load posts.</strong><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button><small>Check your connection and try again.</small></div>
         : feed ? <FeedStream feed={feed} query={query} loadingMore={loadingMore} loadMoreError={loadMoreError} onLoadMore={loadMore} classes={classes} demo={demo} onDemoPlaceOpen={onDemoPlaceOpen} />
           : <div className={classes.empty} role="status" aria-label="Loading posts"><strong>Loading…</strong></div>}

@@ -37,6 +37,7 @@ function initLandingAuth() {
   const mobileLoginDialog = $('#mobile-login-dialog')
   const mobileLoginSurface = $('.mobile-login-dialog__surface', mobileLoginDialog)
   const mobileLoginClose = $('[data-close-mobile-login]', mobileLoginDialog)
+  const mobileLayout = window.matchMedia('(max-width: 760px)')
   const originalPanelParent = panel.parentNode
   const originalPanelNextSibling = panel.nextSibling
 
@@ -107,7 +108,44 @@ function initLandingAuth() {
   })
   mobileLoginDialog?.addEventListener('close', () => {
     restorePanel()
-    mobileLoginButton?.focus()
+    if (mobileLayout.matches) mobileLoginButton?.focus()
+  })
+  mobileLayout.addEventListener('change', ({ matches }) => {
+    if (matches || !mobileLoginDialog?.open) return
+    const focused = document.activeElement
+    mobileLoginDialog.close()
+    restorePanel()
+    if (panel.contains(focused)) focused.focus({ preventScroll: true })
+  })
+
+  // Keep validation failures in the existing form, without putting personal
+  // fields (or the password) in redirect URLs or persistent browser storage.
+  signupForm.addEventListener('submit', async (event) => {
+    if (event.submitter?.hasAttribute('formaction')) return
+    event.preventDefault()
+    if (signupForm.getAttribute('aria-busy') === 'true') return
+    const form = new FormData(signupForm)
+    const submit = $('.landing-signup-button', signupForm)
+    signupForm.setAttribute('aria-busy', 'true')
+    submit.disabled = true
+    const showError = (text) => {
+      $$('[data-landing-auth-message]', panel).forEach((target) => {
+        target.textContent = text
+        target.hidden = false
+        target.setAttribute('role', 'alert')
+      })
+    }
+    try {
+      const response = await fetch(signupForm.action, { method: 'POST', body: form, headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      const result = await response.json()
+      if (!response.ok || !result.destination) throw new Error(result.error || 'We could not create your account. Please try again.')
+      window.location.assign(result.destination)
+    } catch (cause) {
+      showError(cause instanceof Error ? cause.message : 'We could not create your account. Please try again.')
+    } finally {
+      signupForm.removeAttribute('aria-busy')
+      submit.disabled = false
+    }
   })
 
   const requestedMode = params.get('mode') === 'signup' ? 'signup' : 'login'

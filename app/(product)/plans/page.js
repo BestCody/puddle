@@ -94,7 +94,7 @@ function SavedCategoryRail({ folders, selectedCategory }) {
     <Link className={selectedCategory === 'all' ? styles.categoryActive : undefined} href="/plans?tab=saved">All</Link>
     {visibleFolders.map(([category]) => <Link className={selectedCategory === category ? styles.categoryActive : undefined} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}><span aria-hidden="true">{categoryGlyph(category)}</span>{categoryLabel(category)}</Link>)}
     </nav>
-    {extraFolders.length ? <DismissibleDetails className={styles.moreCategories}>
+    {extraFolders.length ? <DismissibleDetails className={styles.moreCategories} fitAbove="[aria-label='Search saved puddles']">
       <summary aria-label="More saved categories">+</summary>
       <nav aria-label="More saved categories">{extraFolders.map(([category]) => <Link aria-current={selectedCategory === category ? 'page' : undefined} href={`/plans?tab=saved&category=${encodeURIComponent(category)}`} key={category}>{categoryLabel(category)}</Link>)}</nav>
     </DismissibleDetails> : null}
