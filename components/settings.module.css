@@ -425,7 +425,7 @@
   height: 100%;
 }
 
-@media (max-width: 47.5rem) {
+@media (max-width: 47.5rem), (max-height: 30rem) and (pointer: coarse) and (hover: none) {
 
   .figma-settings-screen {
     padding: 1rem;

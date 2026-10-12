@@ -16,6 +16,7 @@
 
 .card input,
 .card textarea {
+  font-size: 1rem;
   width: 100%;
   padding: 0.75rem;
   border: 1px solid rgba(0, 0, 0, 0.18);

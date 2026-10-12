@@ -28,7 +28,8 @@ export function PuddleSearchOverlay({
   compactTrigger = true,
   triggerClassName = '',
   overlayClassName = '',
-  testId = 'feed-search'
+  testId = 'feed-search',
+  onSearch = null
 }) {
   const router = useRouter()
   const inputRef = useRef(null)
@@ -60,7 +61,8 @@ export function PuddleSearchOverlay({
   }, [])
 
   function navigate(next) {
-    router.replace(buildSearchHref(route, fixedParams, next), { scroll: false })
+    if (onSearch) onSearch(next.trim())
+    else router.replace(buildSearchHref(route, fixedParams, next), { scroll: false })
   }
 
   function update(next) {
@@ -93,7 +95,7 @@ export function PuddleSearchOverlay({
   </>
 }
 
-export function DiscoverSearchOverlay({ initialQuery = '', mapMode = false }) {
+export function DiscoverSearchOverlay({ initialQuery = '', mapMode = false, onSearch = null }) {
   return <PuddleSearchOverlay
     initialQuery={initialQuery}
     placeholder={mapMode ? 'Search places' : 'Search post titles and text'}
@@ -102,6 +104,7 @@ export function DiscoverSearchOverlay({ initialQuery = '', mapMode = false }) {
     triggerClassName={mapMode ? 'puddle-map-search-trigger' : ''}
     overlayClassName={mapMode ? '' : 'puddle-feed-search-overlay'}
     testId={mapMode ? 'map-search' : 'feed-search'}
+    onSearch={onSearch}
   />
 }
 

@@ -36,6 +36,8 @@ const client = {
 export function createClient() { return client }
 export async function requireUser() { return { user: { ...person, email: 'visual@example.test', aud: 'authenticated' }, profile: person, supabase: client } }
 export async function getGlobalLocationsByIds(ids) { return places.filter(p => ids.includes(p.id)) }
+export async function getPublicLocation(slug) { const location = places.find(place => place.slug === slug); return location ? { location: { ...location, cover_url: photo, gallery: [] } } : null }
+export async function getLocationPlanStatus() { return null }
 export async function getLocationPreviews(_client, ids) { return places.filter(p => ids.includes(p.id)) }
 export async function getMembershipSnapshot() { return { active: false, adult: true, paymentsConfigured: false, membership: null } }
 export function ageFromBirthDate() { return 25 }

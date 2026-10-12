@@ -2,6 +2,8 @@ import { VisualFixture } from '../visual-fixture'
 import AccountPage from '@/app/account/page'
 import ProfilePage from '@/app/(product)/profile/page'
 import PlansPage from '@/app/(product)/plans/page'
+import SavedPlacePage from '@/app/(product)/plans/[slug]/page'
+import { AppealForm } from '@/components/appeal-form'
 import MembershipPage from '@/app/(product)/membership/page'
 import CreatePostPage from '@/app/(product)/create/post/page'
 import ReportPage from '@/app/report/page'
@@ -29,6 +31,8 @@ export default async function VisualPage({ params, searchParams }) {
   const query = await searchParams
   const route = view.join('/')
   if (view[0] === 'landing-demo') return <LandingPhoneDemo view={view[1]} />
+  if (view[0] === 'plans' && view[1]) return <SavedPlacePage params={Promise.resolve({ slug: view[1] })} searchParams={Promise.resolve(query)} />
+  if (route === 'appeals') return <VisualFixture view="appeals"><AppealForm /></VisualFixture>
   const Page = { account: AccountPage, profile: ProfilePage, plans: PlansPage, membership: MembershipPage, 'create/post': CreatePostPage, report: ReportPage, signup: SignUpPage, 'forgot-password': ForgotPasswordPage, 'change-email': ChangeEmailPage, onboarding: OnboardingPage, privacy: PrivacyPage, terms: TermsPage, 'not-found': NotFound }[route]
   if (Page) return <Page searchParams={Promise.resolve(query)} />
   if (route === 'visit-time') return <VisualFixture view="visit-time"><form><label>Visit time<VisitDateTime initialValue="2027-01-20T18:30:00Z" required /></label><VisitTimeLabel value="2027-01-20T18:30:00Z" /></form></VisualFixture>

@@ -38,15 +38,18 @@
   width: var(--figma-shell-sidebar, 15.75rem);
   height: 100dvh;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .875rem;
+  padding: clamp(1.25rem, 4dvh, 2.25rem) 1rem;
   background: var(--shell-surface);
   border-right: .125rem solid var(--shell-border);
   overflow: hidden;
 }
 
 .figma-dashboard-sidebar-logo {
-  position: absolute;
-  top: max(1.25rem, calc(50% - 14.75rem));
-  left: 1.9375rem;
+  flex: none;
+  margin: auto .9375rem 0;
   width: 3.5rem;
   aspect-ratio: 1;
   display: grid;
@@ -68,11 +71,12 @@
 }
 
 .figma-dashboard-nav {
-  position: absolute;
-  top: 50%;
-  inset-inline: 1rem;
-  transform: translateY(-50%);
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-block: .25rem;
   display: grid;
+  grid-auto-rows: max-content;
   gap: .3125rem;
 }
 
@@ -158,9 +162,8 @@
 }
 
 .figma-dashboard-sidebar-actions {
-  position: absolute;
-  left: 2.625rem;
-  bottom: clamp(1.25rem, 4dvh, 2.25rem);
+  flex: none;
+  margin: auto 0 0 1.625rem;
   display: grid;
   justify-items: start;
   gap: .875rem;
@@ -212,17 +215,13 @@
 }
 
 .figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-sidebar-logo {
-  left: 50%;
-  top: max(1.25rem, calc(50% - 13.9375rem));
+  align-self: center;
   width: 2.125rem;
-  transform: translateX(-50%);
 }
 
 .figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-nav {
-  inset-inline: auto;
-  left: 50%;
+  align-self: center;
   width: 3.375rem;
-  transform: translate(-50%, -50%);
 }
 
 .figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-nav-item {
@@ -235,8 +234,7 @@
 }
 
 .figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-sidebar-actions {
-  left: 1rem;
-  bottom: 1.5rem;
+  margin-inline: auto;
   width: 3.75rem;
   justify-items: center;
   gap: .625rem;
@@ -332,25 +330,16 @@
 @media (min-width: 47.5625rem) and (max-height: 36.1875rem) {
 
   .figma-dashboard-nav {
-    top: 6rem;
-    transform: none;
     gap: 0;
-  }
-
-  .figma-dashboard-sidebar:global(.is-concise) .figma-dashboard-nav {
-    transform: translateX(-50%);
   }
 
   .figma-dashboard-nav-item {
     height: 2.75rem;
   }
 
-  .figma-dashboard-sidebar-logo {
-    top: 1.25rem;
-  }
 }
 
-@media (max-width: 47.5rem) {
+@media (max-width: 47.5rem), (max-height: 30rem) and (pointer: coarse) and (hover: none) {
 
   .figma-dashboard-shell {
     --figma-shell-sidebar: 0rem;

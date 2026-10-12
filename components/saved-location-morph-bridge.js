@@ -352,8 +352,10 @@ export function SavedLocationMorphBridge({ detailLocationId = null }) {
     }
 
     function onClick(event) {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
       const link = event.target.closest('[data-saved-morph-link]')
       if (!link) return
+      if (link.hasAttribute('download') || (link.target && link.target !== '_self')) return
       event.preventDefault()
       openFromLink(link)
     }

@@ -61,6 +61,7 @@
   background: var(--shell-surface, #fff);
   color: inherit;
   font: inherit;
+  font-size: 1rem;
 }
 
 .minimal-filter-sheet > .minimal-filter-check {

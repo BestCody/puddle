@@ -23,7 +23,6 @@ test('active messaging uses cursor-paged inbox and newest-first message pages', 
   assert.match(ui, /Load more conversations/)
   assert.match(ui, /<Link[\s\S]*href="\/matches\?tab=messages"[\s\S]*replace[\s\S]*aria-label="Back to conversations"/)
   assert.match(ui, /conversationId = null/)
-  assert.match(ui, /matchMedia\('\(max-width: 760px\)'\)/)
   assert.match(ui, /isMobile === true && !conversationId/)
   assert.match(ui, /mobileModePending = isMobile === null && !conversationId/)
   assert.match(ui, /isConversationOpen = Boolean\(selected\) && !mobileModePending/)

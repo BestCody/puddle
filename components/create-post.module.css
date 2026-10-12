@@ -358,6 +358,7 @@
 
 .figma-create-post-map {
   grid-column: 3;
+  cursor: pointer;
 }
 
 .figma-create-post-add {

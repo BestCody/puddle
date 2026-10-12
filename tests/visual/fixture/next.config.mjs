@@ -18,7 +18,8 @@ export default {
     '@/lib/app/location-previews': './mocks/data.js',
     '@/lib/app/membership-data': './mocks/data.js',
     '@/lib/app/location-plans-data': './mocks/data.js',
-    '@/lib/app/location-map-data': './mocks/data.js'
+    '@/lib/app/location-map-data': './mocks/data.js',
+    '@/lib/app/public-content': './mocks/data.js'
   } },
   images: { unoptimized: true },
   env: { VISUAL_PUBLIC_ROOT: path.join(root, 'public') },

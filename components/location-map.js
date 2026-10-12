@@ -106,15 +106,15 @@ function MapCardPhoto({ point }) {
   </PhotoFrame>
 }
 
-function PointCard({ point, selectingForPost }) {
+function PointCard({ point, onSelectPlace }) {
   if (!point) return <div className={scopedClasses(mapStyles, "location-map-empty-selection")}><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, upcoming plans, and Puddle locations in this map area.</p></div>
   return <article className={scopedClasses(mapStyles, "location-map-card")}>
     <MapCardPhoto key={point.id} point={point} />
-    <div><small>{point.neighborhood || point.city || String(point.category || 'location').replaceAll('_', ' ')}</small><h2>{point.title}</h2><p>{point.summary}</p><div className={scopedClasses(mapStyles, "location-map-card-tags")}>{point.states.map((state) => <span className={scopedClasses(mapStyles, `is-${state}`)} key={state}>{stateLabel(state)}</span>)}</div>{point.plan?.planned_for ? <VisitTimeLabel className={scopedClasses(mapStyles, "location-map-plan-time")} value={point.plan.planned_for} /> : null}<div className={scopedClasses(mapStyles, "location-map-card-actions")}>{point.href ? <Link href={point.href}>{selectingForPost ? 'Use this place' : 'Open place'}</Link> : null}<a href={directionsUrl(point)} target="_blank" rel="noreferrer">Directions</a></div></div>
+    <div><small>{point.neighborhood || point.city || String(point.category || 'location').replaceAll('_', ' ')}</small><h2>{point.title}</h2><p>{point.summary}</p><div className={scopedClasses(mapStyles, "location-map-card-tags")}>{point.states.map((state) => <span className={scopedClasses(mapStyles, `is-${state}`)} key={state}>{stateLabel(state)}</span>)}</div>{point.plan?.planned_for ? <VisitTimeLabel className={scopedClasses(mapStyles, "location-map-plan-time")} value={point.plan.planned_for} /> : null}<div className={scopedClasses(mapStyles, "location-map-card-actions")}>{onSelectPlace ? <button type="button" onClick={() => onSelectPlace(point)}>Use this place</button> : point.href ? <Link href={point.href}>Open place</Link> : null}<a href={directionsUrl(point)} target="_blank" rel="noreferrer">Directions</a></div></div>
   </article>
 }
 
-export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, query = '', selectingForPost = false, selectionFollowsMap = false, compact = false }) {
+export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, query = '', onSelectPlace = null, selectionFollowsMap = false, compact = false }) {
   const preparedQuery = useMemo(() => prepareTextQuery(query), [query])
   const initialSelected = initialPoints.find(point => !preparedQuery.normalized || scoreTextMatch({ ...point, name: point.title }, preparedQuery) > 0)
   const mapRef = useRef(null)
@@ -230,7 +230,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
         const response = await fetch(`/api/map/viewport?${params}`, { cache: 'no-store', signal: controller.signal })
         if (!response.ok) throw new Error(`Map viewport returned ${response.status}`)
         const payload = await response.json()
-        const next = (Array.isArray(payload?.points) ? payload.points : []).map((point) => selectingForPost ? { ...point, href: `/create/post?location=${encodeURIComponent(point.id)}` } : point)
+        const next = Array.isArray(payload?.points) ? payload.points : []
         const cache = catalogueCacheRef.current
         cache.set(cacheKey, next)
         if (cache.size > CATALOGUE_CACHE_LIMIT) cache.delete(cache.keys().next().value)
@@ -246,7 +246,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       }
     }, 280)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [catalogueRetry, center.latitude, center.longitude, filter, loadCatalogue, preparedQuery.normalized, selectingForPost, viewport.height, viewport.width, viewportMeasured, zoom])
+  }, [catalogueRetry, center.latitude, center.longitude, filter, loadCatalogue, preparedQuery.normalized, viewport.height, viewport.width, viewportMeasured, zoom])
 
   useEffect(() => {
     const requestId = ++heatmapRequestRef.current
@@ -508,7 +508,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }, () => setLocationState('denied'), { maximumAge: 300000, timeout: 8000 })
   }
 
-  const selectionPanel = <aside className={scopedClasses(mapStyles, "location-map-side")} ref={selectionFollowsMap ? selectionRef : undefined}><PointCard point={selected} selectingForPost={selectingForPost} /><div className={scopedClasses(mapStyles, "location-map-list")}>{visiblePointItems.map(({ point }) => {
+  const selectionPanel = <aside className={scopedClasses(mapStyles, "location-map-side")} ref={selectionFollowsMap ? selectionRef : undefined}><PointCard point={selected} onSelectPlace={onSelectPlace} /><div className={scopedClasses(mapStyles, "location-map-list")}>{visiblePointItems.map(({ point }) => {
     const primary = primaryState(point)
     return <button type="button" className={scopedClasses(mapStyles, selectedId === point.id ? 'is-active' : '')} onClick={() => selectPoint(point)} key={point.id}><span className={scopedClasses(mapStyles, `is-${primary}`)} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>
   })}</div></aside>

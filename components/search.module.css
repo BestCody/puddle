@@ -169,6 +169,7 @@
   background: transparent;
   color: var(--shell-text, #111);
   font: inherit;
+  font-size: 1rem;
   text-overflow: ellipsis;
 }
 
@@ -190,7 +191,7 @@
   font: 800 1.375rem/1 var(--font-sans);
 }
 
-@media (max-width: 47.5rem) {
+@media (max-width: 47.5rem), (max-height: 30rem) and (pointer: coarse) and (hover: none) {
 
   .puddle-discover-search-trigger {
     width: 2.625rem;

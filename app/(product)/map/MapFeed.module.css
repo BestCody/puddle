@@ -451,6 +451,7 @@
   padding: .5rem .625rem;
   border: .0625rem solid #ccc;
   border-radius: .625rem;
+  font-size: 1rem;
 }
 
 .actionPanel button {
@@ -627,6 +628,8 @@
   display: flex;
   align-items: center;
   gap: .875rem;
+  width: max-content;
+  max-width: calc(100% - 2rem);
   padding: .625rem .9375rem;
   transform: translateX(-50%);
   border-radius: 1.125rem;
@@ -635,8 +638,14 @@
   font: 700 .8125rem/1 Manrope, sans-serif;
 }
 
-.mapSelectionNotice a {
+.mapSelectionNotice button {
+  min-height: 2.75rem;
+  border: 0;
+  padding: .5rem;
+  background: transparent;
   color: #111;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* Persisted appearance remains route-owned for migrated Feed/Map elements. */

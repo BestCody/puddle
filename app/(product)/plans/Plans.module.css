@@ -754,7 +754,7 @@
   border: .09375rem solid var(--shell-border, #ddd);
   border-radius: .625rem;
   padding: 0 .625rem;
-  font: 600 .875rem/1 Manrope, sans-serif;
+  font: 600 1rem/1 Manrope, sans-serif;
 }
 
 .planVisit form button {
@@ -1074,7 +1074,7 @@
 }
 
 @media (max-width: 47.5rem) {
-  .planVisit :is(input, textarea, select), .reviewRating, .reviewBodyInput { font-size: 1rem; }
+  .reviewRating, .reviewBodyInput { font-size: 1rem; }
 
   .screen,
   .detailScreen {

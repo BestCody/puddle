@@ -1,7 +1,8 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import createStyles from '@/components/create-post.module.css'
 import { scopedClasses } from '@/components/scoped-classes'
 import { PhotoFrame } from '@/components/photo-frame'
@@ -9,14 +10,26 @@ import { RoutedSegment } from '@/components/routed-segment'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
 import { PostPlaceChooser } from './post-place-chooser'
 
+const MapPlacePicker = dynamic(() => import('@/components/map-route-client').then(module => module.MapPlacePicker))
+
 export function PostComposer({ avatar, name, initialPoint, preview }) {
   const [point, setPoint] = useState(initialPoint)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState('public')
+  const [pickingOnMap, setPickingOnMap] = useState(false)
   const [state, action, pending] = useActionState(createPuddlePost, null)
   const chooser = useRef(null)
+  const mapButton = useRef(null)
+  const returnMapFocus = useRef(false)
+  useEffect(() => {
+    if (!pickingOnMap && returnMapFocus.current) {
+      returnMapFocus.current = false
+      mapButton.current?.focus({ preventScroll: true })
+    }
+  }, [pickingOnMap])
   const initials = name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+  if (pickingOnMap) return <MapPlacePicker onCancel={() => setPickingOnMap(false)} onSelect={next => { setPoint(next); setPickingOnMap(false) }} />
   return <>
     <header className={scopedClasses(createStyles, 'figma-create-post-topbar')}>
       <Link className={scopedClasses(createStyles, 'figma-feed-back')} href="/map" aria-label="Back to Feed">‹</Link>
@@ -38,7 +51,7 @@ export function PostComposer({ avatar, name, initialPoint, preview }) {
         <label className={scopedClasses(createStyles, 'figma-create-post-title')}><input aria-label="Title" name="title" maxLength="80" required placeholder="Title" value={title} onChange={event => setTitle(event.target.value)} /></label>
         <label className={scopedClasses(createStyles, 'figma-create-post-description')}><textarea aria-label="Description" name="description" maxLength="1000" placeholder="Description" value={description} onChange={event => setDescription(event.target.value)} /></label>
         <PostPlaceChooser selectedPoint={point} onSelect={setPoint} detailsRef={chooser} disabled={pending} />
-        <Link className={scopedClasses(createStyles, 'figma-create-post-map')} href="/map?view=map&selectForPost=1" aria-label="Choose a place from the map">⌑</Link>
+        <button ref={mapButton} className={scopedClasses(createStyles, 'figma-create-post-map')} type="button" onClick={() => { returnMapFocus.current = true; setPickingOnMap(true) }} disabled={pending} aria-label="Choose a place from the map">⌑</button>
       </form>
     </section>
     {!point ? <div className={scopedClasses(createStyles, 'figma-create-post-empty')}><strong>Choose a place before you post.</strong><Link href="/discover">Start swiping</Link></div> : null}

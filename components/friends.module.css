@@ -648,7 +648,7 @@
   color: #fff;
 }
 
-@media (max-width: 47.5rem) {
+@media (max-width: 47.5rem), (max-height: 30rem) and (pointer: coarse) and (hover: none) {
   .figma-friends-composer > input { font-size: 1rem; }
 
   .figma-friends-screen {
