@@ -98,7 +98,6 @@ export function MapRouteClient() {
   const beforeCreatedAt = params.get('before') || null
   const beforePostId = params.get('beforeId') || null
   const initialComposerOpen = view === 'feed' && params.get('compose') === '1'
-  const requestedLocation = params.get('location') || ''
 
   return <>
     <AuthMessageClient params={params} />
@@ -115,7 +114,6 @@ export function MapRouteClient() {
       avatarUrl={feedIdentity.avatarUrl}
       displayName={feedIdentity.displayName}
       initialOpen={initialComposerOpen}
-      requestedLocation={requestedLocation}
     /> : null}
   </>
 }

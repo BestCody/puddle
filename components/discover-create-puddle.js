@@ -2,7 +2,7 @@
 import composerStyles from "@/components/feed-composer.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
 import { useModalFocus } from '@/components/modal-focus'
 import { DismissibleDetails } from '@/components/dismissible-details'
@@ -14,17 +14,15 @@ function initials(name) {
 }
 
 
-export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle person', points = [], initialOpen = false, requestedLocation = '' }) {
-  const initialPoints = useMemo(() => Array.isArray(points) ? points.filter((point) => point?.id) : [], [points])
-  const [point, setPoint] = useState(initialPoints.find(point => point.id === requestedLocation) || initialPoints[0] || null)
-  const [pickerOpen, setPickerOpen] = useState(false)
+export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle person', initialOpen = false }) {
+  const [point, setPoint] = useState(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState('public')
   const [state, action, pending] = useActionState(createPuddlePost, null)
   const pickerRef = useRef(null)
   const [open, setOpen] = useState(Boolean(initialOpen))
-  const locationId = point?.id || requestedLocation || ''
+  const locationId = point?.id || ''
   const dockRef = useRef(null)
   const formRef = useRef(null)
   const titleRef = useRef(null)
@@ -73,9 +71,9 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       <label className={scopedClasses(composerStyles, "puddle-discover-create-description")}><span className={scopedClasses(composerStyles, "sr-only")}>Description</span><textarea name="description" maxLength="1000" placeholder="Description" value={description} onChange={event => setDescription(event.target.value)} tabIndex={open ? 0 : -1} /></label>
       {state?.error ? <p role="alert">{state.error}</p> : null}
       <div className={scopedClasses(composerStyles, "puddle-discover-create-footer")}>
-        <DismissibleDetails ref={pickerRef} onOpen={() => setPickerOpen(true)} className={composerStyles.placePicker}>
+        <DismissibleDetails ref={pickerRef} className={composerStyles.placePicker}>
           <summary>{point?.title || 'Choose a saved place'}</summary>
-          {open && pickerOpen ? <SavedPlacePicker selectedId={locationId} disabled={pending} onSelect={next => { setPoint(next); pickerRef.current.open = false }} /> : null}
+          {open ? <SavedPlacePicker selectedId={locationId} disabled={pending} onInitialPage={items => setPoint(current => current || (items[0] ? { ...items[0], id: items[0].location_id || items[0].id } : null))} onSelect={next => { setPoint(next); pickerRef.current.open = false }} /> : null}
         </DismissibleDetails>
       </div>
     </form>

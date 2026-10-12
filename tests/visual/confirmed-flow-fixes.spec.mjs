@@ -64,6 +64,7 @@ test('inline composer and Messages search beyond the old fifty-place limit', asy
   await page.goto('/map')
   await page.getByRole('button', { name: /Create a puddle/ }).click()
   const composer = page.getByRole('dialog', { name: 'Create a puddle', exact: true })
+  await expect(composer.locator('input[name="location_id"]')).toHaveValue('picker-place-0')
   await composer.getByRole('textbox', { name: 'Title', exact: true }).fill('Inline draft')
   await composer.locator('summary').click()
   await composer.getByRole('searchbox', { name: 'Search saved places' }).fill('Last saved place')

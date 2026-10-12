@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import styles from './saved-place-picker.module.css'
 
 // All attach/share surfaces use the indexed Saved search and cursor pages.
-export function SavedPlacePicker({ selectedId, onSelect, disabled = false, autoFocus = false }) {
+export function SavedPlacePicker({ selectedId, onSelect, onInitialPage, disabled = false, autoFocus = false }) {
   const [query, setQuery] = useState('')
   const [items, setItems] = useState([])
   const [pagination, setPagination] = useState(null)
@@ -30,6 +30,7 @@ export function SavedPlacePicker({ selectedId, onSelect, disabled = false, autoF
       if (controller.signal.aborted || search.current !== q) return
       setItems(previous => cursor ? [...new Map([...previous, ...page.items].map(item => [item.location_id || item.id, item])).values()] : page.items)
       setPagination(page.pagination)
+      if (!cursor && !q) onInitialPage?.(page.items)
     } catch {
       if (!controller.signal.aborted) setError('Saved places could not be loaded. Try again.')
     } finally {
