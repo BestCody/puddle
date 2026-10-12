@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { DismissibleDetails } from '@/components/dismissible-details'
+import { ShareIcon } from '@/components/feed-action-icons'
 import { createClient } from '@/lib/supabase/client'
 import { shareFeedPost } from './actions'
 import styles from './MapFeed.module.css'
@@ -52,7 +53,7 @@ export function FeedShareMenu({ postId, title }) {
   }
 
   return <DismissibleDetails className={styles.actionMenu} onOpen={onOpen}>
-    <summary aria-label={`Share ${title}`}>↗</summary>
+    <summary aria-label={`Share ${title}`}><ShareIcon classes={styles} /></summary>
     <div className={`${styles.actionPanel} ${styles.sharePanel}`}>
       <strong>Share with a friend</strong>
       {friends.map((friend) => <form action={shareFeedPost} onSubmit={(event) => { const input = event.currentTarget.elements.namedItem('share_key'); if (!input.value) input.value = crypto.randomUUID() }} key={friend.id}>

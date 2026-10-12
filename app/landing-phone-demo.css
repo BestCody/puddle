@@ -28,6 +28,7 @@ body:has(.landing-phone-demo) {
   --purple: #b784e4;
   --green: #78e152;
   --grey: #858585;
+  --demo-details-control-size: max(2rem, 8cqi);
   position: relative;
   container-type: inline-size;
   width: min(100%, 56svh);
@@ -75,6 +76,8 @@ body:has(.landing-phone-demo) {
 }
 
 .landing-phone-demo button {
+  min-height: 2rem;
+  min-width: 2rem;
   cursor: pointer;
 }
 
@@ -150,7 +153,7 @@ body:has(.landing-phone-demo) {
 .landing-demo-bottom-nav button {
   display: grid;
   place-items: center;
-  width: min(10.45cqi, 100%);
+  width: min(max(2.75rem, 10.45cqi), 100%);
   height: auto;
   aspect-ratio: 1;
   margin: auto;
@@ -159,7 +162,7 @@ body:has(.landing-phone-demo) {
   border-radius: 999cqi;
   background: transparent;
   color: #8d8d8d;
-  font-size: 5.5cqi;
+  font-size: max(1rem, 5.5cqi);
   font-weight: 800;
 }
 
@@ -198,7 +201,7 @@ body:has(.landing-phone-demo) {
   border-radius: 999cqi;
   background: transparent;
   color: var(--grey);
-  font-size: 3cqi;
+  font-size: max(.75rem, 3cqi);
   font-weight: 700;
 }
 
@@ -303,7 +306,7 @@ body:has(.landing-phone-demo) {
   padding: 2cqi;
   background: linear-gradient(145deg, #f1f1f1, #d9d9d9);
   color: #686868;
-  font-size: 3cqi;
+  font-size: max(.75rem, 3cqi);
   text-align: center;
   text-transform: uppercase;
 }
@@ -329,7 +332,7 @@ body:has(.landing-phone-demo) {
   border-radius: 999cqi;
   background: #d9d9d9;
   color: #000;
-  font: 600 2.5cqi/1 var(--figma-mono);
+  font: 600 max(.75rem, 2.5cqi)/1 var(--figma-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -338,7 +341,7 @@ body:has(.landing-phone-demo) {
   position: absolute;
   z-index: 4;
   left: 3cqi;
-  right: 13cqi;
+  right: calc(5cqi + var(--demo-details-control-size));
   bottom: 3cqi;
 }
 
@@ -354,7 +357,8 @@ body:has(.landing-phone-demo) {
 .landing-demo-swipe-card-copy p {
   margin: 0;
   color: #000;
-  font: 600 2.5cqi/1.15 var(--figma-mono);
+  font: 600 max(.75rem, 2.5cqi)/1.3 var(--figma-mono);
+  overflow-wrap: anywhere;
   letter-spacing: -.04em;
 }
 
@@ -363,8 +367,8 @@ body:has(.landing-phone-demo) {
   z-index: 5;
   right: 3cqi;
   bottom: 3cqi;
-  width: 8cqi;
-  height: 8cqi;
+  width: var(--demo-details-control-size);
+  height: var(--demo-details-control-size);
   display: grid;
   place-items: center;
   padding: 0;
@@ -372,7 +376,7 @@ body:has(.landing-phone-demo) {
   border-radius: 50%;
   background: #d9d9d9;
   color: #6c6c6c;
-  font-size: 5cqi;
+  font-size: max(1rem, 5cqi);
   line-height: 1;
 }
 
@@ -384,7 +388,7 @@ body:has(.landing-phone-demo) {
   border: .75cqi solid currentColor;
   border-radius: 2.5cqi;
   background: rgba(255, 255, 255, .84);
-  font-size: 5cqi;
+  font-size: max(1rem, 5cqi);
   font-weight: 800;
   line-height: 1;
   opacity: 0;
@@ -423,8 +427,8 @@ body:has(.landing-phone-demo) {
 }
 
 .landing-demo-swipe-action > span {
-  width: min(15cqi, 7dvh);
-  height: min(15cqi, 7dvh);
+  width: max(2rem, min(15cqi, 7dvh));
+  height: max(2rem, min(15cqi, 7dvh));
   min-width: 0;
   min-height: 0;
   display: grid;
@@ -449,7 +453,7 @@ body:has(.landing-phone-demo) {
   max-width: 100%;
   overflow: hidden;
   color: currentColor;
-  font: 800 2cqi/1 var(--figma-mono);
+  font: 800 max(.6875rem, 2cqi)/1 var(--figma-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -526,7 +530,7 @@ body:has(.landing-phone-demo) {
   border: 0;
   border-radius: 50%;
   background: #fff;
-  font-size: 5.5cqi;
+  font-size: max(1rem, 5.5cqi);
   line-height: 1;
 }
 
@@ -550,19 +554,19 @@ body:has(.landing-phone-demo) {
   display: block;
   margin-top: 2.5cqi;
   color: var(--blue);
-  font: 800 2.25cqi var(--figma-mono);
+  font: 800 max(.6875rem, 2.25cqi) var(--figma-mono);
 }
 
 .landing-demo-dialog h2 {
   margin: 1cqi 0;
-  font-size: 6cqi;
+  font-size: max(1rem, 6cqi);
   letter-spacing: -.04em;
 }
 
 .landing-demo-dialog p {
   margin: 0;
   color: #666;
-  font-size: 3cqi;
+  font-size: max(.75rem, 3cqi);
 }
 
 .landing-demo-swipe-details-backdrop {
@@ -602,7 +606,7 @@ body:has(.landing-phone-demo) {
   border-radius: 50%;
   background: rgba(255, 255, 255, .92);
   color: #555;
-  font-size: 5.5cqi;
+  font-size: max(1rem, 5.5cqi);
   line-height: 1;
   box-shadow: 0 .5cqi 0 rgba(0, 0, 0, .1);
 }
@@ -632,7 +636,7 @@ body:has(.landing-phone-demo) {
   place-items: center;
   background: #f0f0f0;
   color: #858585;
-  font-size: 2.25cqi;
+  font-size: max(.6875rem, 2.25cqi);
   text-align: center;
 }
 
@@ -645,12 +649,12 @@ body:has(.landing-phone-demo) {
   border-radius: 999cqi;
   background: #d9d9d9;
   color: #666;
-  font: 600 2.25cqi/1 var(--figma-mono);
+  font: 600 max(.6875rem, 2.25cqi)/1 var(--figma-mono);
 }
 
 .landing-demo-swipe-details h2 {
   margin: 1.25cqi 3cqi .75cqi;
-  font-size: 5.5cqi;
+  font-size: max(1rem, 5.5cqi);
   line-height: 1;
   letter-spacing: -.05em;
 }
@@ -658,13 +662,13 @@ body:has(.landing-phone-demo) {
 .landing-demo-swipe-details > p {
   margin: 0 3cqi;
   color: #858585;
-  font: 600 2.25cqi/1.25 var(--figma-mono);
+  font: 600 max(.6875rem, 2.25cqi)/1.25 var(--figma-mono);
 }
 
 .landing-demo-swipe-details > p.landing-demo-swipe-details-summary {
   margin-top: 2.5cqi;
   color: #333;
-  font: 600 2.5cqi/1.35 Manrope, sans-serif;
+  font: 600 max(.75rem, 2.5cqi)/1.35 Manrope, sans-serif;
 }
 
 .landing-demo-swipe-details-tags {
@@ -679,7 +683,7 @@ body:has(.landing-phone-demo) {
   border-radius: 999cqi;
   background: #f0f0f0;
   color: #777;
-  font: 700 2cqi/1 Manrope, sans-serif;
+  font: 700 max(.6875rem, 2cqi)/1 Manrope, sans-serif;
   text-transform: capitalize;
 }
 
@@ -698,7 +702,7 @@ body:has(.landing-phone-demo) {
   border-radius: 999cqi;
   background: #fff;
   color: #555;
-  font-size: 2.25cqi;
+  font-size: max(.6875rem, 2.25cqi);
 }
 
 .landing-demo-swipe-details-actions button:nth-child(1) {
@@ -750,7 +754,7 @@ body:has(.landing-phone-demo) {
   border: 0;
   background: transparent;
   color: #727272;
-  font: 500 2.75cqi/1 'Martian Mono', monospace;
+  font: 500 max(.75rem, 2.75cqi)/1 'Martian Mono', monospace;
 }
 
 .landing-demo-saved-categories button.is-active {
@@ -810,7 +814,7 @@ body:has(.landing-phone-demo) {
   display: grid;
   place-items: center;
   color: #858585;
-  font-size: 2cqi;
+  font-size: max(.6875rem, 2cqi);
 }
 
 .landing-demo-saved-copy {
@@ -823,7 +827,7 @@ body:has(.landing-phone-demo) {
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: 2.75cqi;
+  font-size: max(.75rem, 2.75cqi);
   line-height: 1.05;
   letter-spacing: -.03em;
   text-overflow: ellipsis;
@@ -845,10 +849,11 @@ body:has(.landing-phone-demo) {
 
 .landing-demo-saved-meta {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 1cqi;
   color: var(--grey);
-  font: 800 2cqi/1 'Martian Mono', monospace;
+  font: 800 max(.6875rem, 2cqi)/1 'Martian Mono', monospace;
 }
 
 .landing-demo-search {
@@ -871,7 +876,7 @@ body:has(.landing-phone-demo) {
   outline: 0;
   background: transparent;
   color: #111;
-  font-size: 2.75cqi;
+  font-size: 1rem;
 }
 
 .landing-demo-search input::placeholder {
@@ -886,7 +891,7 @@ body:has(.landing-phone-demo) {
   border: .5cqi solid var(--purple);
   border-radius: 50%;
   color: var(--purple);
-  font-size: 4cqi;
+  font-size: max(.75rem, 4cqi);
 }
 
 .landing-demo-plans {
@@ -911,11 +916,11 @@ body:has(.landing-phone-demo) {
 .landing-demo-plans small,
 .landing-demo-plans span {
   color: var(--grey);
-  font: 700 2.25cqi/1.2 'Martian Mono', monospace;
+  font: 700 max(.6875rem, 2.25cqi)/1.2 'Martian Mono', monospace;
 }
 
 .landing-demo-plans strong {
-  font-size: 4.25cqi;
+  font-size: max(.75rem, 4.25cqi);
 }
 
 /* Feed preview. All classes come from the landing namespace, including the feed component. */
@@ -956,7 +961,7 @@ body:has(.landing-phone-demo) {
   border-radius: 50%;
   background: #fff;
   color: #777;
-  font-size: 4.25cqi;
+  font-size: max(.75rem, 4.25cqi);
 }
 
 .landing-demo-feed-search {
@@ -976,7 +981,7 @@ body:has(.landing-phone-demo) {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 2.75cqi;
+  font-size: 1rem;
 }
 
 .landing-demo-feed-search input::placeholder {
@@ -985,7 +990,7 @@ body:has(.landing-phone-demo) {
 
 .landing-demo-feed-search b {
   color: #888;
-  font-size: 3.25cqi;
+  font-size: max(.75rem, 3.25cqi);
 }
 
 .landing-demo-feed-stream {
@@ -1035,7 +1040,7 @@ body:has(.landing-phone-demo) {
   border-radius: 50%;
   background: #ececec center / cover no-repeat;
   color: #555;
-  font-size: 3.25cqi;
+  font-size: max(.75rem, 3.25cqi);
   font-weight: 800;
 }
 
@@ -1053,20 +1058,20 @@ body:has(.landing-phone-demo) {
 
 .landing-demo-feed-author strong {
   overflow-wrap: anywhere;
-  font-size: 3cqi;
+  font-size: max(.75rem, 3cqi);
   line-height: 1;
 }
 
 .landing-demo-feed-author small {
   color: #858585;
-  font: 700 2cqi/1 var(--figma-mono);
+  font: 700 max(.6875rem, 2cqi)/1 var(--figma-mono);
 }
 
 .landing-demo-feed-title {
   margin: 0 .75cqi;
   color: #111;
   overflow-wrap: anywhere;
-  font-size: 3.25cqi;
+  font-size: max(.75rem, 3.25cqi);
   font-weight: 800;
   line-height: 1.05;
 }
@@ -1075,7 +1080,7 @@ body:has(.landing-phone-demo) {
   margin: 0 .75cqi;
   color: #000;
   overflow-wrap: anywhere;
-  font-size: 2.5cqi;
+  font-size: max(.75rem, 2.5cqi);
   line-height: 1.1;
 }
 
@@ -1108,7 +1113,7 @@ body:has(.landing-phone-demo) {
   border-radius: 999cqi;
   background: #d9d9d9;
   color: #858585;
-  font: 600 2cqi/1 var(--figma-mono);
+  font: 600 max(.6875rem, 2cqi)/1 var(--figma-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1126,7 +1131,7 @@ body:has(.landing-phone-demo) {
   align-self: center;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 4cqi;
+  font-size: max(.75rem, 4cqi);
   line-height: 1.05;
   letter-spacing: -.08cqi;
 }
@@ -1142,7 +1147,7 @@ body:has(.landing-phone-demo) {
   border-radius: 50%;
   background: #d9d9d9;
   color: #777;
-  font-size: 4.5cqi;
+  font-size: max(.75rem, 4.5cqi);
   font-weight: 300;
   line-height: 1;
 }
@@ -1184,8 +1189,8 @@ body:has(.landing-phone-demo) {
 .landing-demo-feed-interactions > form > button,
 .landing-demo-feed-demoAction,
 .landing-demo-feed-actionMenu > summary {
-  min-width: 6cqi;
-  min-height: 6cqi;
+  min-width: max(2rem, 6cqi);
+  min-height: max(2rem, 6cqi);
   display: grid;
   place-items: center;
   padding: 0;
@@ -1202,7 +1207,7 @@ body:has(.landing-phone-demo) {
 
 .landing-demo-feed-actionMenu > summary {
   list-style: none;
-  font-size: 2.5cqi;
+  font-size: max(.75rem, 2.5cqi);
 }
 
 .landing-demo-feed-actionMenu > summary::-webkit-details-marker {
@@ -1210,8 +1215,8 @@ body:has(.landing-phone-demo) {
 }
 
 .landing-demo-feed-actionIcon {
-  width: 5cqi;
-  height: 5cqi;
+  width: max(1.25rem, 5cqi);
+  height: max(1.25rem, 5cqi);
   display: block;
   fill: none;
   stroke: currentColor;
@@ -1226,7 +1231,7 @@ body:has(.landing-phone-demo) {
 
 .landing-demo-feed-actionCount {
   min-width: 1ch;
-  font-size: 2cqi;
+  font-size: max(.6875rem, 2cqi);
 }
 
 .landing-demo-feed-actionPanel {
@@ -1255,19 +1260,19 @@ body:has(.landing-phone-demo) {
   display: grid;
   gap: .5cqi;
   margin: 0;
-  font-size: 2.25cqi;
+  font-size: max(.6875rem, 2.25cqi);
   line-height: 1.25;
 }
 
 .landing-demo-feed-actionPanel > p {
   margin: 0;
-  font-size: 2.25cqi;
+  font-size: max(.6875rem, 2.25cqi);
 }
 
 .landing-demo-feed-hint {
   margin: 1cqi 0 0;
   color: var(--grey);
-  font-size: 2cqi;
+  font-size: max(.6875rem, 2cqi);
 }
 
 .landing-demo-feed-empty {
@@ -1283,7 +1288,7 @@ body:has(.landing-phone-demo) {
   border-radius: 5cqi;
   background: #fff;
   color: var(--grey);
-  font-size: 3cqi;
+  font-size: max(.75rem, 3cqi);
   text-align: center;
 }
 
@@ -1301,13 +1306,13 @@ body:has(.landing-phone-demo) {
   border-radius: 999cqi;
   background: #fff;
   color: #111;
-  font-size: 2.25cqi;
+  font-size: max(.6875rem, 2.25cqi);
 }
 
 .landing-demo-feed-pagination p {
   margin: 0;
   color: #b34141;
-  font-size: 2cqi;
+  font-size: max(.6875rem, 2cqi);
   text-align: center;
 }
 
@@ -1331,7 +1336,7 @@ body:has(.landing-phone-demo) {
   min-width: 0;
   flex: 1;
   overflow: hidden;
-  font-size: 2.75cqi;
+  font-size: max(.75rem, 2.75cqi);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1349,13 +1354,13 @@ body:has(.landing-phone-demo) {
 .landing-demo-compose > b {
   border: .5cqi solid var(--yellow);
   color: #d99c00;
-  font-size: 4cqi;
+  font-size: max(.75rem, 4cqi);
 }
 
 .landing-demo-avatar {
   background: #ececec;
   color: #555;
-  font-size: 2.5cqi;
+  font-size: max(.75rem, 2.5cqi);
   font-weight: 800;
 }
 
@@ -1405,7 +1410,7 @@ body:has(.landing-phone-demo) {
   background: var(--yellow);
   color: #fff;
   box-shadow: 0 .75cqi 2.25cqi rgba(0, 0, 0, .25);
-  font-size: 2cqi;
+  font-size: max(.6875rem, 2cqi);
 }
 
 .landing-demo-map-pin.pin-a {
@@ -1427,7 +1432,7 @@ body:has(.landing-phone-demo) {
   transform: translate(-50%, -50%);
   border-radius: 2cqi;
   background: #fff;
-  font: 800 2.5cqi 'Martian Mono', monospace;
+  font: 800 max(.75rem, 2.5cqi) 'Martian Mono', monospace;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -24,6 +24,8 @@
   border: 0.1875rem solid #171114;
   border-radius: 1.25rem;
   background: rgba(255,253,251,.95);
+  color: #171114;
+  color-scheme: light;
   backdrop-filter: blur(1rem);
   box-shadow: 0.3125rem 0.375rem 0 #171114;
   padding: .8rem 1rem;
@@ -103,6 +105,7 @@
 }
 
 .editor-button {
+  color: #171114;
   border: 0.125rem solid #171114;
   border-radius: 0.8125rem;
   background: #fff;
@@ -128,6 +131,8 @@
 }
 
 .editor-card {
+  color: #171114;
+  color-scheme: light;
   border: 0.1875rem solid #171114;
   background: #fff;
   box-shadow: 0.375rem 0.4375rem 0 #171114;
@@ -136,6 +141,8 @@
 }
 
 .revision-card {
+  color: #171114;
+  color-scheme: light;
   border: 0.1875rem solid #171114;
   background: #fff;
   box-shadow: 0.375rem 0.4375rem 0 #171114;
@@ -201,6 +208,8 @@
 }
 
 .editor-field input {
+  font-size: 1rem;
+  color: #171114;
   width: 100%;
   border: 0.1875rem solid #171114;
   border-radius: 0.9375rem;
@@ -213,6 +222,8 @@
 }
 
 .editor-field select {
+  font-size: 1rem;
+  color: #171114;
   width: 100%;
   border: 0.1875rem solid #171114;
   border-radius: 0.9375rem;
@@ -225,6 +236,8 @@
 }
 
 .editor-field textarea {
+  font-size: 1rem;
+  color: #171114;
   width: 100%;
   border: 0.1875rem solid #171114;
   border-radius: 0.9375rem;
@@ -477,8 +490,6 @@
 }
 
 @media (max-width:56.25rem) {
-  .editor-field :is(input, textarea, select) { font-size: 1rem; }
-
   :where(.editor-actions) {
     width: 100%;
     justify-content: flex-start;

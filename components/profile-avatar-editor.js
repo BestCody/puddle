@@ -7,7 +7,9 @@ import { useState } from 'react'
 import { PhotoFrame } from './photo-frame'
 import { DismissibleDetails } from './dismissible-details'
 
-const ProfilePhotoEditor = dynamic(() => import('./profile-photo-editor').then((module) => module.ProfilePhotoEditor))
+const ProfilePhotoEditor = dynamic(() => import('./profile-photo-editor').then((module) => module.ProfilePhotoEditor), {
+  loading: () => <p role="status">Loading photo controls…</p>
+})
 
 export function ProfileAvatarEditor({ avatarUrl, displayName, fallbackInitials, userId, currentPath }) {
   const [requested, setRequested] = useState(false)

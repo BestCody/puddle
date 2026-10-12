@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { PhotoFrame } from '@/components/photo-frame'
 import { DismissibleDetails } from '@/components/dismissible-details'
 import { LocationVisualPreview } from '@/components/location-visual-preview'
+import { CommentIcon, OpenPuddleIcon, SaveIcon, ShareIcon } from '@/components/feed-action-icons'
 import { createFeedComment, toggleFeedSave } from '@/app/(product)/map/actions'
 import { FeedShareMenu } from '@/app/(product)/map/feed-share-menu'
 import styles from '@/app/(product)/map/MapFeed.module.css'
@@ -29,22 +30,6 @@ function timeLabel(value) {
   const days = Math.floor(hours / 24)
   if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`
   return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
-}
-
-function CommentIcon({ classes = styles }) {
-  return <svg className={classes.actionIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h15v10h-9l-4.5 3v-3H4.5v-10Z" /></svg>
-}
-
-function OpenPuddleIcon({ classes = styles }) {
-  return <svg className={classes.actionIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>
-}
-
-function SaveIcon({ saved, classes = styles }) {
-  return <svg className={`${classes.actionIcon} ${saved ? classes.actionIconFilled : ''}`} viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.6c0 5-8.8 10.4-8.8 10.4S3.2 13.6 3.2 8.6A4.6 4.6 0 0 1 12 6.7a4.6 4.6 0 0 1 8.8 1.9Z" /></svg>
-}
-
-function ShareIcon({ classes = styles }) {
-  return <svg className={classes.actionIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="m7 17 10-10M10 7h7v7" /></svg>
 }
 
 function FeedPost({ post, classes = styles, demo = false, onDemoPlaceOpen = null }) {

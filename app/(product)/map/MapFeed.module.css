@@ -147,7 +147,7 @@
 
 .reportPost {
   margin-left: auto;
-  color: #666;
+  color: var(--shell-muted, #666);
   font: 700 .6875rem/1.2 Manrope, sans-serif;
   text-underline-offset: .2em;
 }
@@ -372,8 +372,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.875rem;
-  min-height: 1.875rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   color: #858585;
   font: 500 1.625rem/1 Manrope, sans-serif;
   text-decoration: none;
@@ -393,6 +393,10 @@
 }
 
 .interactions > form > button {
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   font-size: 1.5625rem;
 }
 
@@ -405,9 +409,11 @@
 }
 
 .actionMenu > summary {
-  min-height: 1.875rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: .25rem;
   list-style: none;
   font-size: 1.4375rem;
@@ -871,7 +877,6 @@
   }
 
   .actionMenu > summary {
-    min-height: 1.25rem;
     font-size: 1.125rem;
   }
 

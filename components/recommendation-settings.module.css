@@ -1,7 +1,8 @@
 .recommendation-settings-card {
-  border: 0.0625rem solid rgba(34,24,30,.16);
+  border: 0.0625rem solid var(--shell-border, #ddd);
   border-radius: 1.5rem;
-  background: rgba(255,255,255,.82);
+  background: var(--shell-surface, #fff);
+  color: var(--shell-text, #171114);
   box-shadow: 0 1rem 2.5rem rgba(41,25,35,.08);
   margin: 0;
   padding: var(--responsive-card-pad);
@@ -14,13 +15,14 @@
 
 .recommendation-settings-card p {
   max-width: 47.5rem;
-  color: var(--muted,#665b63);
+  color: var(--shell-muted, #665b63);
 }
 
 .recommendation-settings-message {
   padding: 0.75rem 0.875rem;
   border-radius: 0.875rem;
   background: #fff8ce;
+  color: #171114;
   grid-column: 1/-1;
   margin: 0;
 }
@@ -48,13 +50,13 @@
 }
 
 .recommendation-settings-card small {
-  color: var(--muted,#665b63);
+  color: var(--shell-muted, #665b63);
 }
 
 .recommendation-danger-card {
   grid-column: 1/-1;
   border-color: rgba(178,48,74,.3);
-  background: #fff7f8;
+  background: color-mix(in srgb, var(--shell-surface, #fff) 95%, #b2304a);
 }
 
 @media (max-width:50rem) {

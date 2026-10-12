@@ -12,7 +12,7 @@ function human(value) { return String(value || '').replaceAll('_', ' ') }
 export function PublicHeader() {
   return <header className={scopedClasses(publicStyles, "public-header")}>
     <PuddleLogo />
-    <nav><Link href="/">Home</Link><Link href="/landing.html">Sign in</Link><Link className={scopedClasses(publicStyles, "public-primary-link")} href="/signup">Register</Link></nav>
+    <nav><Link href="/">Home</Link><Link href="/landing.html?mode=login">Sign in</Link><Link className={scopedClasses(publicStyles, "public-primary-link")} href="/signup">Register</Link></nav>
   </header>
 }
 

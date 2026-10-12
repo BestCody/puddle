@@ -334,6 +334,7 @@
 }
 
 .auth-panel input:not([type='checkbox']):not([type='radio']) {
+  font-size: 1rem;
   min-height: 3.625rem;
   padding: 0 1.125rem;
   border: 0.125rem solid #b7b7b7;
@@ -344,6 +345,7 @@
 }
 
 .auth-panel textarea {
+  font-size: 1rem;
   min-height: 3.625rem;
   padding: 0 1.125rem;
   border: 0.125rem solid #b7b7b7;
@@ -355,6 +357,7 @@
 }
 
 .auth-panel select {
+  font-size: 1rem;
   min-height: 3.625rem;
   padding: 0 1.125rem;
   border: 0.125rem solid #b7b7b7;
@@ -501,8 +504,6 @@
 }
 
 @media (max-width:47.5rem) {
-
-  .auth-panel :is(input, textarea, select) { font-size: 1rem; }
 
   .auth-page {
     grid-template-columns: 1fr;

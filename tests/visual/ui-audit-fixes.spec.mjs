@@ -89,7 +89,7 @@ test('Saved detail surfaces and text follow the shell theme, including mobile pa
   // Similar-place headings can disappear when their lazy request returns no
   // results. Snapshot the rendered styles atomically, rather than retaining
   // nth-locators that can point past the end of the updated heading list.
-  const headingColors = await dialog.locator('.saved-inline-detail-main h1, .saved-inline-detail-main h2, .saved-inline-detail-similar h2').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).color))
+  const headingColors = await dialog.locator('.saved-inline-detail-main h1, .saved-inline-detail-plan h2, .saved-inline-detail-posts h2, .saved-inline-detail-similar h2').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).color))
   expect(headingColors.length).toBeGreaterThanOrEqual(3)
   for (const color of headingColors) expect(color).toBe(text)
   await page.screenshot({ path: testInfo.outputPath('saved-detail-theme.png'), animations: 'disabled' })

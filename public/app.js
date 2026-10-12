@@ -51,6 +51,7 @@ function initLandingAuth() {
     const signup = mode === 'signup'
     panel.dataset.authMode = signup ? 'signup' : 'login'
     panel.setAttribute('aria-label', signup ? 'Sign up' : 'Log in')
+    mobileLoginDialog?.setAttribute('aria-label', signup ? 'Sign up' : 'Log in')
     loginForm.hidden = signup
     signupForm.hidden = !signup
     if (loginAlternatives) loginAlternatives.hidden = signup
@@ -88,16 +89,16 @@ function initLandingAuth() {
     originalPanelParent.insertBefore(panel, originalPanelNextSibling && originalPanelNextSibling.parentNode === originalPanelParent ? originalPanelNextSibling : null)
   }
 
-  const openMobileLogin = (focus = true) => {
+  const openMobileAuth = (mode = 'login', focus = true) => {
     if (!mobileLoginDialog || !mobileLoginSurface || typeof mobileLoginDialog.showModal !== 'function') return false
     mobileLoginSurface.append(panel)
     if (!mobileLoginDialog.open) mobileLoginDialog.showModal()
-    setMode('login', focus)
+    setMode(mode, focus)
     return true
   }
 
   mobileLoginButton?.addEventListener('click', (event) => {
-    if (!window.matchMedia('(max-width: 760px)').matches || !openMobileLogin()) return
+    if (!window.matchMedia('(max-width: 760px)').matches || !openMobileAuth()) return
     event.preventDefault()
   })
   mobileLoginClose?.addEventListener('click', () => mobileLoginDialog?.close())
@@ -109,8 +110,9 @@ function initLandingAuth() {
     mobileLoginButton?.focus()
   })
 
-  setMode(params.get('mode') === 'signup' ? 'signup' : 'login')
-  if (params.get('mode') === 'login' && window.matchMedia('(max-width: 760px)').matches) openMobileLogin()
+  const requestedMode = params.get('mode') === 'signup' ? 'signup' : 'login'
+  setMode(requestedMode)
+  if ((['login', 'signup'].includes(params.get('mode')) || message) && window.matchMedia('(max-width: 760px)').matches) openMobileAuth(requestedMode)
 }
 
 function initPhoneDemoLoading() {

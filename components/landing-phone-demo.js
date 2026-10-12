@@ -210,6 +210,7 @@ function SavedDemo({ onNavigate }) {
         onOpen={openSaved}
         classPrefix="landing-demo-saved"
       />
+      {!savedItems.length ? <p role="status">No matching saved places.</p> : null}
       <label className="landing-demo-search landing-demo-search--saved"><span className="sr-only">Search saved puddles</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a saved puddle..." /><b aria-hidden="true">↑</b></label>
     </> : <section className="landing-demo-plans" aria-label="Plans">
       <article><small>Saturday · 7:00 PM</small><strong>Night Gallery</strong><span>Planned with friends</span></article>
@@ -224,12 +225,11 @@ function FeedDemo({ onNavigate }) {
   const [view, setView] = useState('feed')
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
-  const [open, setOpen] = useState(false)
+  const [openItem, setOpenItem] = useState(null)
   const [composing, setComposing] = useState(false)
   const visibleFeed = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized || 'maple grove park richie zheng'.includes(normalized)) return landingFeed
-    return { ...landingFeed, items: [] }
+    return { ...landingFeed, items: landingFeed.items.filter(post => `${post.title} ${post.body} ${post.location.name} ${post.author.display_name}`.toLowerCase().includes(normalized)) }
   }, [query])
 
   return <div className="landing-demo-screen landing-demo-screen--feed" data-demo-screen="feed" data-figma-screen="40:519">
@@ -250,10 +250,10 @@ function FeedDemo({ onNavigate }) {
       <button type="button" className="landing-demo-feed-search-toggle" aria-label="Search puddle" aria-expanded={searchOpen} onClick={() => setSearchOpen((value) => !value)}>⌕</button>
     </header>
     {searchOpen ? <label className="landing-demo-feed-search"><span className="sr-only">Search puddle</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search puddle" /><b aria-hidden="true">⌕</b></label> : null}
-    {view === 'feed' ? <SocialFeedClient query={query} initialFeed={visibleFeed} staticMode demo classNames={landingFeedClasses} className="landing-demo-feed-stream" onDemoPlaceOpen={() => setOpen(true)} /> : <section className="landing-demo-map" aria-label="Interactive map preview"><span className="landing-demo-map-road road-a" /><span className="landing-demo-map-road road-b" /><button type="button" className="landing-demo-map-pin pin-a" aria-label="Open Maple Grove Park" onClick={() => setOpen(true)}>●</button><button type="button" className="landing-demo-map-pin pin-b" aria-label="Open Firehall Cool Bar Hot Grill" onClick={() => setOpen(true)}>●</button><strong>Oakville</strong></section>}
+    {view === 'feed' ? <SocialFeedClient query={query} initialFeed={visibleFeed} staticMode demo classNames={landingFeedClasses} className="landing-demo-feed-stream" onDemoPlaceOpen={post => setOpenItem(swipePlaces.find(place => place.id === post.location_id))} /> : <section className="landing-demo-map" aria-label="Interactive map preview"><span className="landing-demo-map-road road-a" /><span className="landing-demo-map-road road-b" /><button type="button" className="landing-demo-map-pin pin-a" aria-label="Open Maple Grove Park" onClick={() => setOpenItem(swipePlaces[0])}>●</button><button type="button" className="landing-demo-map-pin pin-b" aria-label="Open Firehall Cool Bar Hot Grill" onClick={() => setOpenItem(swipePlaces[1])}>●</button><strong>Oakville</strong></section>}
     <button className="landing-demo-compose" type="button" onClick={() => setComposing((value) => !value)}><span className="landing-demo-avatar">R</span><span>{composing ? 'Share something about this place…' : 'Create a puddle...'}</span><b>↑</b></button>
     <DemoBottomNav active="feed" onNavigate={onNavigate} />
-    {open ? <DemoDetails title="Maple Grove Park" subtitle="2243 Devon Road, Oakville · 208m" image={DEMO_IMAGES.toronto} onClose={() => setOpen(false)} /> : null}
+    {openItem ? <DemoDetails title={openItem.title} subtitle={`${openItem.address} · ${openItem.distance}`} image={openItem.image} onClose={() => setOpenItem(null)} /> : null}
   </div>
 }
 

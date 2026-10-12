@@ -317,7 +317,7 @@ test('landing phones keep independent styles and all actions inside each screen'
   await expect(panel.locator('.landing-login-form')).toBeVisible()
   await expect(panel.locator('.landing-signup-form')).toBeHidden()
   if (mobile) {
-    await page.getByRole('button', { name: 'Close log in' }).click()
+    await page.getByRole('button', { name: 'Close account access' }).click()
     await expect(page.locator('.mobile-login-dialog')).toBeHidden()
   }
   for (const view of ['swipe', 'save', 'feed']) {
@@ -331,6 +331,10 @@ test('landing phones keep independent styles and all actions inside each screen'
     expect(await frame.locator('.landing-phone-demo__screen').evaluate(node => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(1)
     if (view === 'swipe') {
       for (const action of await frame.locator('.landing-demo-swipe-actions button').all()) await inside(action, frame.locator('.landing-phone-demo__screen'))
+      const card = frame.locator('.landing-demo-swipe-card:not(.is-preview)')
+      const copy = await card.locator('.landing-demo-swipe-card-copy').boundingBox()
+      const control = await card.locator('.landing-demo-swipe-details-button').boundingBox()
+      expect(copy.x + copy.width).toBeLessThanOrEqual(control.x)
       await frame.getByRole('button', { name: 'Open Maple Grove Park', exact: true }).click()
       await expect(frame.getByRole('dialog')).toBeVisible()
       await frame.getByRole('button', { name: 'Close details' }).click()
