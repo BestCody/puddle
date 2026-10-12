@@ -1,8 +1,10 @@
 "use client"
+import Link from 'next/link'
 import mapStyles from "@/components/location-map.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { VisitTimeLabel } from '@/components/visit-date-time'
 import { PhotoFrame } from '@/components/photo-frame'
 import { prepareTextQuery, scoreTextMatch } from '@/lib/app/location-search-ranking'
 import { mapPopupPosition } from '@/lib/ui/map-popup-position'
@@ -104,11 +106,11 @@ function MapCardPhoto({ point }) {
   </PhotoFrame>
 }
 
-function PointCard({ point }) {
+function PointCard({ point, selectingForPost }) {
   if (!point) return <div className={scopedClasses(mapStyles, "location-map-empty-selection")}><span aria-hidden="true">⌖</span><strong>Select a marker</strong><p>Compare saved places, shared matches, upcoming plans, and Puddle locations in this map area.</p></div>
   return <article className={scopedClasses(mapStyles, "location-map-card")}>
     <MapCardPhoto key={point.id} point={point} />
-    <div><small>{point.neighborhood || point.city || String(point.category || 'location').replaceAll('_', ' ')}</small><h2>{point.title}</h2><p>{point.summary}</p><div className={scopedClasses(mapStyles, "location-map-card-tags")}>{point.states.map((state) => <span className={scopedClasses(mapStyles, `is-${state}`)} key={state}>{stateLabel(state)}</span>)}</div>{point.plan?.planned_for ? <strong className={scopedClasses(mapStyles, "location-map-plan-time")}>{new Date(point.plan.planned_for).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong> : null}<div className={scopedClasses(mapStyles, "location-map-card-actions")}><a href={directionsUrl(point)} target="_blank" rel="noreferrer">Directions</a></div></div>
+    <div><small>{point.neighborhood || point.city || String(point.category || 'location').replaceAll('_', ' ')}</small><h2>{point.title}</h2><p>{point.summary}</p><div className={scopedClasses(mapStyles, "location-map-card-tags")}>{point.states.map((state) => <span className={scopedClasses(mapStyles, `is-${state}`)} key={state}>{stateLabel(state)}</span>)}</div>{point.plan?.planned_for ? <VisitTimeLabel className={scopedClasses(mapStyles, "location-map-plan-time")} value={point.plan.planned_for} /> : null}<div className={scopedClasses(mapStyles, "location-map-card-actions")}>{point.href ? <Link href={point.href}>{selectingForPost ? 'Use this place' : 'Open place'}</Link> : null}<a href={directionsUrl(point)} target="_blank" rel="noreferrer">Directions</a></div></div>
   </article>
 }
 
@@ -506,7 +508,7 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
     }, () => setLocationState('denied'), { maximumAge: 300000, timeout: 8000 })
   }
 
-  const selectionPanel = <aside className={scopedClasses(mapStyles, "location-map-side")} ref={selectionFollowsMap ? selectionRef : undefined}><PointCard point={selected} /><div className={scopedClasses(mapStyles, "location-map-list")}>{visiblePointItems.map(({ point }) => {
+  const selectionPanel = <aside className={scopedClasses(mapStyles, "location-map-side")} ref={selectionFollowsMap ? selectionRef : undefined}><PointCard point={selected} selectingForPost={selectingForPost} /><div className={scopedClasses(mapStyles, "location-map-list")}>{visiblePointItems.map(({ point }) => {
     const primary = primaryState(point)
     return <button type="button" className={scopedClasses(mapStyles, selectedId === point.id ? 'is-active' : '')} onClick={() => selectPoint(point)} key={point.id}><span className={scopedClasses(mapStyles, `is-${primary}`)} aria-hidden="true" /><div><strong>{point.title}</strong><small>{point.neighborhood || point.city || categoryLabel(point.category)}</small></div></button>
   })}</div></aside>

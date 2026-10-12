@@ -284,6 +284,7 @@
 }
 
 @media (max-width:56.25rem) {
+  .visit-plan-form :is(input, textarea, select) { font-size: 1rem; }
 
   :where(.page-heading-row) {
     height: auto;

@@ -1,63 +1,20 @@
-"use client"
-import createStyles from "@/components/create-post.module.css"
-import { scopedClasses } from "@/components/scoped-classes"
+'use client'
 
-import Link from 'next/link'
+import { useRef, useState } from 'react'
+import createStyles from '@/components/create-post.module.css'
+import { scopedClasses } from '@/components/scoped-classes'
 import { DismissibleDetails } from '@/components/dismissible-details'
-import { useEffect, useRef, useState } from 'react'
+import { SavedPlacePicker } from '@/components/saved-place-picker'
 
-function categoryLabel(value) {
-  return String(value || 'Park').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
-export function PostPlaceChooser({ selectedPoint }) {
-  const [points, setPoints] = useState([])
-  const [loaded, setLoaded] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const requestRef = useRef(null)
-
-  useEffect(() => () => requestRef.current?.abort(), [])
-
-  async function loadPlaces() {
-    if (loaded || requestRef.current) return
-    const controller = new AbortController()
-    requestRef.current = controller
-    setLoading(true)
-    setError('')
-    try {
-      const response = await fetch('/api/map/snapshot', {
-        cache: 'no-store',
-        credentials: 'same-origin',
-        signal: controller.signal
-      })
-      if (!response.ok) throw new Error(`Place chooser returned ${response.status}`)
-      const payload = await response.json()
-      if (!Array.isArray(payload.points)) throw new Error('Place chooser returned invalid data')
-      setPoints(payload.points)
-      setLoaded(true)
-    } catch {
-      if (!controller.signal.aborted) setError('Your places could not be loaded. Try again.')
-    } finally {
-      if (requestRef.current === controller) requestRef.current = null
-      if (!controller.signal.aborted) setLoading(false)
-    }
-  }
-
-  const selectablePoints = selectedPoint && !points.some((point) => point.id === selectedPoint.id)
-    ? [selectedPoint, ...points]
-    : points
-
-  return <DismissibleDetails className={scopedClasses(createStyles, "figma-create-post-add")} onOpen={loadPlaces}>
+export function PostPlaceChooser({ selectedPoint, onSelect, detailsRef, disabled = false }) {
+  const localRef = useRef(null)
+  const ref = detailsRef || localRef
+  const [opened, setOpened] = useState(false)
+  return <DismissibleDetails ref={ref} className={scopedClasses(createStyles, 'figma-create-post-add')} onOpen={() => setOpened(true)}>
     <summary aria-label="Open add menu">＋</summary>
-    <div className={scopedClasses(createStyles, "figma-create-post-add-menu")}>
+    <div className={scopedClasses(createStyles, 'figma-create-post-add-menu')}>
       <strong>Attach a place</strong>
-      {selectablePoints.length ? <div className={scopedClasses(createStyles, "figma-create-post-location-options")}>
-        {selectablePoints.slice(0, 12).map((point) => <Link className={scopedClasses(createStyles, selectedPoint?.id === point.id ? 'is-selected' : '')} href={`/create/post?location=${encodeURIComponent(point.id)}`} key={point.id}><span>{point.title}</span><small>{point.city || categoryLabel(point.category)}</small></Link>)}
-      </div> : loaded ? <p>Choose a place from Swipe, Saved, or the map.</p> : null}
-      {loading ? <p role="status">Loading your places…</p> : null}
-      {error ? <p role="alert">{error}</p> : null}
-      {error && !loading ? <button type="button" onClick={() => { void loadPlaces() }}>Try again</button> : null}
+      {opened ? <SavedPlacePicker disabled={disabled} selectedId={selectedPoint?.id} onSelect={point => { onSelect(point); ref.current.open = false }} autoFocus /> : null}
     </div>
   </DismissibleDetails>
 }

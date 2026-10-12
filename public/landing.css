@@ -174,6 +174,7 @@ img{display:block;max-width:100%}
   .mobile-login-dialog__close{position:absolute;z-index:2;top:clamp(.5rem,2vw,1rem);right:clamp(.5rem,2vw,1rem);display:grid;place-items:center;width:clamp(2rem,8vw,2.75rem);aspect-ratio:1;border:.125rem solid var(--good-grey);border-radius:50%;background:#fff;color:#111;font-size:clamp(1.25rem,5vw,1.75rem);line-height:1;cursor:pointer}
   .mobile-login-dialog .login-panel{position:static;inset:auto;z-index:0;width:100%;max-width:36rem;margin:0 auto;padding-block:clamp(2.5rem,10vw,4rem) clamp(1rem,4vw,2rem);background:#fff}
   .mobile-login-dialog .login-panel[data-auth-mode="signup"]{top:auto;padding-block-end:clamp(1rem,3vw,2rem)}
+  .mobile-login-dialog .login-panel :is(input,textarea,select){font-size:1rem}
   .mobile-login-dialog .login-panel h1{font-size:clamp(2rem,8vw,3.25rem)}
 
   .discovery--mobile{min-height:0;height:auto;aspect-ratio:704/666;background:repeating-linear-gradient(90deg,rgba(255,255,255,.72) 0,rgba(255,255,255,.72) 6.8%,rgba(242,242,242,.34) 6.8%,rgba(242,242,242,.34) 7.1%,rgba(255,255,255,.72) 7.1%,rgba(255,255,255,.72) 17.5%),#fff}

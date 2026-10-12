@@ -5,6 +5,7 @@ import { SavedSearchInput } from '@/components/discover-search-overlay'
 import { SavedLocationMorphBridge } from '@/components/saved-location-morph-bridge'
 import { SavedPagedGrid } from '@/components/saved-paged-grid'
 import { DismissibleDetails } from '@/components/dismissible-details'
+import { VisitTimeLabel } from '@/components/visit-date-time'
 import { PhotoFrame } from '@/components/photo-frame'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansPage, getSavedCategories } from '@/lib/app/location-plans-data'
@@ -17,11 +18,6 @@ function photoUrl(session, path) {
   if (!path) return null
   if (String(path).startsWith('/') || String(path).startsWith('http')) return path
   return session.supabase.storage.from('puddle-public-media').getPublicUrl(path).data.publicUrl
-}
-
-function dateLabel(value) {
-  if (!value) return null
-  return new Date(value).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
 function categoryLabel(value) {
@@ -44,7 +40,7 @@ function SavedCard({ item, session, active }) {
   const detail = item.slug ? `/plans/${item.slug}` : item.href
   const participants = item.participants?.length ? item.participants.join(', ') : null
   const primaryMeta = active === 'planned' ? participants || item.city || categoryLabel(item.category) : item.city || categoryLabel(item.category)
-  const secondaryMeta = active === 'planned' && item.planned_for ? dateLabel(item.planned_for) : null
+  const secondaryMeta = active === 'planned' && item.planned_for ? <VisitTimeLabel value={item.planned_for} /> : null
   const morphable = active === 'saved' && Boolean(item.slug)
 
   const photo = <PhotoFrame

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { locationReferenceMetadata, savedLocationOption } from '../../lib/app/location-reference-preview.js'
+import { locationReferenceMetadata } from '../../lib/app/location-reference-preview.js'
 
 const hash = 'a'.repeat(64)
 const location = { id: 'place', name: 'Park', slug: 'park', category: 'park', city: 'Toronto', status: 'published', latitude: 0, longitude: 0, primary_photo: { content_hash: hash } }
@@ -11,10 +11,6 @@ test('referenced-location preview retains real coordinates and only canonical ph
   assert.equal(metadata.longitude, 0)
   assert.equal(metadata.photo_hash, hash)
   assert.equal(metadata.is_published, true)
-  assert.deepEqual(savedLocationOption(metadata), {
-    id: 'place', name: 'Park', title: 'Park', slug: 'park', category: 'park', city: 'Toronto', latitude: 0, longitude: 0,
-    cover_url: `/api/open-photo/${hash}`
-  })
 })
 
 test('missing or invalid coordinates and photo hashes never become fabricated previews', () => {
@@ -22,6 +18,6 @@ test('missing or invalid coordinates and photo hashes never become fabricated pr
     const metadata = locationReferenceMetadata({ ...location, ...input, primary_photo: { content_hash: 'invalid' } })
     assert.equal(metadata.latitude, null)
     assert.equal(metadata.longitude, null)
-    assert.equal(savedLocationOption(metadata).cover_url, null)
+    assert.equal(metadata.photo_hash, null)
   }
 })

@@ -1,3 +1,4 @@
+import { visitInstant } from '@/lib/app/visit-time'
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'node:crypto'
@@ -161,8 +162,8 @@ export async function POST(request, context) {
       revalidatePath('/plans')
       revalidatePath('/profile')
     } else if (action === 'plan') {
-      const plannedFor = new Date(clean(input.planned_for, 80))
-      if (Number.isNaN(plannedFor.getTime()) || plannedFor.getTime() <= Date.now()) return error('Choose a future date and time.')
+      const plannedFor = visitInstant(clean(input.planned_for, 80))
+      if (!plannedFor || plannedFor.getTime() <= Date.now()) return error('Choose a future date and time.')
       const { error: mutationError } = await supabase.from('location_visits').upsert({
         profile_id: user.id,
         location_id: location.id,

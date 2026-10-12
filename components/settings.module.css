@@ -5,7 +5,7 @@
   --settings-nav: #fafbfc;
   --settings-border: #e6e9ec;
   --settings-text: #22272c;
-  --settings-muted: #8a9198;
+  --settings-muted: #626b74;
   display: grid;
   place-items: center;
   min-height: var(--shell-content-height, 100dvh);
@@ -587,7 +587,7 @@
 
   .figma-settings-row :is(input, textarea, select) {
     min-height: 2.625rem;
-    font-size: .9375rem;
+    font-size: 1rem;
     background: var(--settings-surface);
     border-radius: .875rem;
   }

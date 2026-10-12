@@ -121,6 +121,7 @@ export function SettingsOverlay() {
     setFrameLoaded(true)
     const close = doc.querySelector('.figma-settings-close')
     const closeFromFrame = (event) => {
+      if (!event.target.closest?.('.figma-settings-close')) return
       event.preventDefault()
       requestClose()
     }
@@ -143,11 +144,11 @@ export function SettingsOverlay() {
         first.focus()
       }
     }
-    close?.addEventListener('click', closeFromFrame)
+    doc.addEventListener('click', closeFromFrame, true)
     doc.addEventListener('keydown', handleFrameKeyDown)
     const focusClose = open ? window.requestAnimationFrame(() => close?.focus({ preventScroll: true })) : null
     frameCleanupRef.current = () => {
-      close?.removeEventListener('click', closeFromFrame)
+      doc.removeEventListener('click', closeFromFrame, true)
       doc.removeEventListener('keydown', handleFrameKeyDown)
       if (focusClose !== null) window.cancelAnimationFrame(focusClose)
     }

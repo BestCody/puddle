@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PhotoFrame } from '@/components/photo-frame'
+import { SavedPlacePicker } from '@/components/saved-place-picker'
 import { DismissibleDetails } from '@/components/dismissible-details'
 import { RoutedSegment } from '@/components/routed-segment'
 import { createClient } from '@/lib/supabase/client'
@@ -74,9 +75,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const [messagesLoadedForId, setMessagesLoadedForId] = useState(() => conversationId ? selectedId : null)
   const [messagesLoadFailedForId, setMessagesLoadFailedForId] = useState(null)
   const [messagesHasMore, setMessagesHasMore] = useState(Boolean(initialSnapshot.messagesHasMore))
-  const [shareableLocations, setShareableLocations] = useState(initialSnapshot.shareableLocations || [])
-  const [shareableLocationsLoaded, setShareableLocationsLoaded] = useState(Boolean(initialSnapshot.shareableLocations?.length))
-  const [shareableLocationsLoading, setShareableLocationsLoading] = useState(false)
+  const [placePickerOpen, setPlacePickerOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [paging, setPaging] = useState(false)
@@ -169,27 +168,6 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     setOpeningConversationId(null)
     setOpeningFriendId(null)
   }, [conversationId])
-
-  async function loadShareableLocations() {
-    if (shareableLocationsLoaded || shareableLocationsLoading) return
-    setShareableLocationsLoading(true)
-    let loaded = false
-    try {
-      const response = await fetch('/api/saved-location-options', { cache: 'no-store' })
-      if (!response.ok) throw new Error(`Saved locations returned ${response.status}`)
-      const payload = await response.json()
-      setShareableLocations(Array.isArray(payload?.items) ? payload.items : [])
-      setNotice('')
-      loaded = true
-    } catch (cause) {
-      console.warn('Could not load saved places for messaging.', { message: cause?.message || 'unknown error' })
-      setShareableLocations([])
-      setNotice('Saved places could not be loaded.')
-    } finally {
-      setShareableLocationsLoaded(loaded)
-      setShareableLocationsLoading(false)
-    }
-  }
 
   async function markSelectedRead() {
     if (!selectedId) return
@@ -636,10 +614,10 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
             <DismissibleDetails
               className={scopedClasses(friendsStyles, "figma-friends-composer-menu is-attachment")}
               ref={placeMenuRef}
-              onOpen={loadShareableLocations}
+              onOpen={() => setPlacePickerOpen(true)}
             >
               <summary aria-label="Add a place" title="Add a place">+</summary>
-              <div className={scopedClasses(friendsStyles, "figma-message-place-picker")}><strong>Share a saved place</strong>{shareableLocationsLoading ? <p>Loading saved places...</p> : shareableLocations.length ? shareableLocations.map((location) => <button type="button" onClick={() => sendLocation(location.id)} disabled={busy} key={location.id}><span>{location.name}</span><small>{location.city || 'Saved place'}</small></button>) : <p>No saved places yet.</p>}</div>
+              <div className={scopedClasses(friendsStyles, "figma-message-place-picker")}><strong>Share a saved place</strong>{placePickerOpen ? <SavedPlacePicker disabled={busy} onSelect={location => sendLocation(location.id)} autoFocus /> : null}</div>
             </DismissibleDetails>
             <DismissibleDetails className={scopedClasses(friendsStyles, "figma-friends-composer-menu is-more")}>
               <summary aria-label="More message options">○</summary>

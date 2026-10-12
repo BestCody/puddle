@@ -49,6 +49,7 @@ export function RoutedSegment({ items, activeValue, ariaLabel, className = '', t
     style={{
       '--segment-count': items.length,
       '--segment-active-index': activeIndex,
+      '--segment-active-text': tone === 'pink' ? '#fff' : '#111',
       '--segment-active-bg': TONE_COLORS[tone] || TONE_COLORS.neutral
     }}
   >

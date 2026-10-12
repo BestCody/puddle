@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { VisitDateTime } from '@/components/visit-date-time'
 import { AuthMessage } from '@/components/auth-message'
 import { RoutedSegment } from '@/components/routed-segment'
 import { LocationMap } from '@/components/location-map'
@@ -135,7 +136,7 @@ export default async function SavedPlacePage({ params, searchParams }) {
             <summary>Plan a visit</summary>
             <form action={planPlaceVisit}>
               <HiddenLocation location={location} slug={slug} />
-              <label>Date and time<input type="datetime-local" name="planned_for" required /></label>
+              <label>Date and time<VisitDateTime required /></label>
               <label>Note<input name="note" maxLength="500" placeholder="Optional note" /></label>
               <button type="submit">Add to Plans</button>
             </form>

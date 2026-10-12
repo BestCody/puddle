@@ -1,11 +1,8 @@
 import sharedUIStyles from "@/components/shared-ui.module.css"
-import editorStyles from "@/components/location-editor.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 import { AuthMessage } from '@/components/auth-message'
-import { SubmitButton } from '@/components/submit-button'
-import { TurnstileWidget } from '@/components/turnstile-widget'
 import { renderProductPage } from '@/lib/app/render-product-page'
-import { submitContentReport } from './actions'
+import { ReportForm } from './report-form'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Report', robots: { index: false, follow: false } }
@@ -20,24 +17,6 @@ export default async function ReportPage({ searchParams }) {
       <p>Report posts, listings, profiles, conversations, messages, comments, or shared plans. Evidence is preserved for moderators.</p>
     </div></div>
     <AuthMessage searchParams={params} />
-    <form className={scopedClasses(editorStyles, "editor-card report-form")} action={submitContentReport}>
-      <input type="hidden" name="target_type" value={params?.target_type || ''} />
-      <input type="hidden" name="target_id" value={params?.target_id || ''} />
-      <input type="hidden" name="return_to" value={params?.return_to || '/discover'} />
-      <label className={scopedClasses(editorStyles, "editor-field")}>Reason<select name="category" required defaultValue="">
-        <option value="" disabled>Choose a reason</option>
-        <option value="incorrect_information">Incorrect information</option>
-        <option value="unsafe_or_illegal">Unsafe or illegal activity</option>
-        <option value="fraud_or_impersonation">Fraud or impersonation</option>
-        <option value="harassment">Harassment or unwanted contact</option>
-        <option value="spam">Spam</option>
-        <option value="privacy">Privacy concern</option>
-        <option value="duplicate">Duplicate listing</option>
-        <option value="other">Other</option>
-      </select></label>
-      <label className={scopedClasses(editorStyles, "editor-field")}>Details<textarea className={scopedClasses(editorStyles, "editor-textarea-large")} name="details" maxLength="3000" required placeholder="Describe what happened and include the context a moderator will need." /></label>
-      <TurnstileWidget action="submit_report" />
-      <SubmitButton>Submit report →</SubmitButton>
-    </form>
+    <ReportForm context={{ target_type: params?.target_type || '', target_id: params?.target_id || '', return_to: params?.return_to || '/discover' }} />
   </>)
 }

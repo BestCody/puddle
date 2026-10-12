@@ -8,6 +8,8 @@ import ReportPage from '@/app/report/page'
 import { StaticProductShell } from '@/components/static-product-shell'
 import SignUpPage from '@/app/signup/page'
 import ForgotPasswordPage from '@/app/forgot-password/page'
+import ChangeEmailPage from '@/app/change-email/page'
+import { VisitDateTime, VisitTimeLabel } from '@/components/visit-date-time'
 import OnboardingPage from '@/app/onboarding/page'
 import PrivacyPage from '@/app/privacy/page'
 import TermsPage from '@/app/terms/page'
@@ -27,8 +29,9 @@ export default async function VisualPage({ params, searchParams }) {
   const query = await searchParams
   const route = view.join('/')
   if (view[0] === 'landing-demo') return <LandingPhoneDemo view={view[1]} />
-  const Page = { account: AccountPage, profile: ProfilePage, plans: PlansPage, membership: MembershipPage, 'create/post': CreatePostPage, report: ReportPage, signup: SignUpPage, 'forgot-password': ForgotPasswordPage, onboarding: OnboardingPage, privacy: PrivacyPage, terms: TermsPage, 'not-found': NotFound }[route]
+  const Page = { account: AccountPage, profile: ProfilePage, plans: PlansPage, membership: MembershipPage, 'create/post': CreatePostPage, report: ReportPage, signup: SignUpPage, 'forgot-password': ForgotPasswordPage, 'change-email': ChangeEmailPage, onboarding: OnboardingPage, privacy: PrivacyPage, terms: TermsPage, 'not-found': NotFound }[route]
   if (Page) return <Page searchParams={Promise.resolve(query)} />
+  if (route === 'visit-time') return <VisualFixture view="visit-time"><form><label>Visit time<VisitDateTime initialValue="2027-01-20T18:30:00Z" required /></label><VisitTimeLabel value="2027-01-20T18:30:00Z" /></form></VisualFixture>
   if (route === 'streaming-shell') return <StaticProductShell><h1>Saved appearance</h1></StaticProductShell>
   if (route === 'loading') return <VisualFixture view="loading"><ProductLoading /></VisualFixture>
   if (route === 'recommendations') return <VisualFixture view="recommendations"><RecommendationSettings initialPreferences={{ behavioral_enabled: true, friend_activity_enabled: true, vector_enabled: true, explicit_interests_only: false }} /></VisualFixture>

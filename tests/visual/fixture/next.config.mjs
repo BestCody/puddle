@@ -8,6 +8,8 @@ export default {
   devIndicators: false,
   turbopack: { root, resolveAlias: {
     '@': root,
+    '@/app/(product)/create/post/actions': './mocks/failing-actions.js',
+    '@/app/report/actions': './mocks/failing-actions.js',
     '@/lib/auth/user': './mocks/data.js',
     '@/lib/supabase/client': './mocks/data.js',
     '@/lib/supabase/server': './mocks/data.js',

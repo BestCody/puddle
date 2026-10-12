@@ -1,16 +1,13 @@
 import createStyles from "@/components/create-post.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
-import Link from 'next/link'
 import { AuthMessage } from '@/components/auth-message'
 import { PhotoFrame } from '@/components/photo-frame'
-import { RoutedSegment } from '@/components/routed-segment'
 import { renderProductPage } from '@/lib/app/render-product-page'
 import { getLocationPlansPage } from '@/lib/app/location-plans-data'
 import { getGlobalLocationsByIds } from '@/lib/app/global-location-search'
 import { openPhotoUrlForHash } from '@/lib/media/open-photo-url'
 import { validCoordinates } from '@/lib/app/optional-number'
-import { createPuddlePost } from './actions'
-import { PostPlaceChooser } from './post-place-chooser'
+import { PostComposer } from './post-composer'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Create a puddle' }
@@ -100,39 +97,7 @@ export default async function CreatePostPage({ searchParams }) {
 
     return <div className={scopedClasses(createStyles, "figma-create-post-screen")} data-figma-node="25:79">
       <AuthMessage searchParams={params} />
-      <header className={scopedClasses(createStyles, "figma-create-post-topbar")}>
-        <Link className={scopedClasses(createStyles, "figma-feed-back")} href="/map" aria-label="Back to Feed">‹</Link>
-        <span className={scopedClasses(createStyles, "figma-create-post-mobile-logo")} aria-hidden="true" />
-        <RoutedSegment
-          className={scopedClasses(createStyles, "figma-feed-tabs")}
-          tone="yellow"
-          activeValue="feed"
-          ariaLabel="Feed or map"
-          items={[{ value: 'feed', label: 'Feed', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]}
-        />
-        <form className={scopedClasses(createStyles, "figma-feed-search figma-create-post-search")} action="/plans" method="get">
-          <label><input aria-label="Search saved puddles" type="search" name="q" placeholder="Search saved puddles" /></label>
-          <button type="submit" aria-label="Search">⌕</button>
-        </form>
-      </header>
-      <section className={scopedClasses(createStyles, "figma-create-post-workspace")} aria-label="Post composer preview">
-        <CreatePostPreview avatar={avatar} name={name} point={selectedPoint} />
-        <form className={scopedClasses(createStyles, "figma-create-post-card")} aria-label="Create a puddle post" action={createPuddlePost}>
-          <input type="hidden" name="location_id" value={selectedPoint?.id || ''} />
-          <PhotoFrame as="span" className={scopedClasses(createStyles, "figma-feed-post-avatar")} src={avatar} alt="" unavailableText={initials(name)} loadingText="" />
-          <fieldset className={scopedClasses(createStyles, "figma-create-post-visibility")} aria-label="Post visibility">
-            <label><input type="radio" name="visibility" value="public" defaultChecked /><span>Public</span></label>
-            <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>
-          </fieldset>
-          <button className={scopedClasses(createStyles, "figma-create-post-submit")} type="submit" disabled={!selectedPoint} aria-label="Publish post">↑</button>
-          <p className={createStyles.selectedPlace}><span>Posting about</span><strong>{selectedPoint?.title || 'No place selected'}</strong><span>Use the add menu below to change the place.</span></p>
-          <label className={scopedClasses(createStyles, "figma-create-post-title")}><input aria-label="Title" name="title" maxLength="80" required placeholder="Title" /></label>
-          <label className={scopedClasses(createStyles, "figma-create-post-description")}><textarea aria-label="Description" name="description" maxLength="1000" placeholder="Description" /></label>
-          <PostPlaceChooser key={selectedPoint?.id || 'none'} selectedPoint={selectedPoint} />
-          <Link className={scopedClasses(createStyles, "figma-create-post-map")} href="/map?view=map&selectForPost=1" aria-label="Choose a place from the map">⌑</Link>
-        </form>
-      </section>
-      {!selectedPoint ? <div className={scopedClasses(createStyles, "figma-create-post-empty")}><strong>Choose a place before you post.</strong><Link href="/discover">Start swiping</Link></div> : null}
+      <PostComposer avatar={avatar} name={name} initialPoint={selectedPoint} preview={<CreatePostPreview avatar={avatar} name={name} point={selectedPoint} />} />
     </div>
   })
 }

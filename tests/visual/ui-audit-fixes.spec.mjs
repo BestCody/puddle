@@ -30,7 +30,7 @@ for (const [route, label, content] of [
     releaseScripts()
     await expect(page.locator('.figma-dashboard-shell')).toHaveAttribute('data-resolved-appearance', /light|dark/)
     await expect(page.locator(content)).toBeVisible()
-    if (route === '/create/post') await expect(page.locator('.figma-create-post-location-options').getByRole('link')).toHaveCount(12)
+    if (route === '/create/post') await expect(page.getByRole('searchbox', { name: 'Search saved places' })).toBeVisible()
     if (route === '/plans') await page.getByRole('searchbox', { name: 'Search saved puddles' }).click()
     else await page.getByRole('textbox', { name: 'Title', exact: true }).focus()
     await expect(page.locator(content)).toBeHidden()

@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'node:crypto'
+import { visitInstant } from '@/lib/app/visit-time'
 import { requireUser } from '@/lib/auth/user'
 import { pathWithMessage } from '@/lib/auth/redirect'
 import { ensureGlobalLocationReferences } from '@/lib/app/global-location-reference'
@@ -79,8 +80,8 @@ export async function planPlaceVisit(formData) {
   const locationId = value(formData, 'location_id', 80)
   const plannedForInput = value(formData, 'planned_for', 80)
   const note = value(formData, 'note', 500)
-  const plannedFor = new Date(plannedForInput)
-  if (!locationId || !plannedForInput || Number.isNaN(plannedFor.getTime()) || plannedFor.getTime() <= Date.now()) {
+  const plannedFor = visitInstant(plannedForInput)
+  if (!locationId || !plannedForInput || !plannedFor || plannedFor.getTime() <= Date.now()) {
     finish(formData, 'Choose a future date and time.', 'error')
   }
   await ensureLocation(formData, locationId)

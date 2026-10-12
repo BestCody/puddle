@@ -579,6 +579,7 @@
 }
 
 @media (max-width: 47.5rem) {
+  .saved-inline-detail-plan :is(input, textarea, select) { font-size: 1rem; }
 
   .saved-inline-detail-frame {
     width: 100%;

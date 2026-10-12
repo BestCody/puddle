@@ -2,28 +2,27 @@
 import composerStyles from "@/components/feed-composer.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { createPuddlePost } from '@/app/(product)/create/post/actions'
 import { useModalFocus } from '@/components/modal-focus'
+import { DismissibleDetails } from '@/components/dismissible-details'
+import { SavedPlacePicker } from '@/components/saved-place-picker'
 import { PhotoFrame } from '@/components/photo-frame'
 
 function initials(name) {
   return String(name || 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'P'
 }
 
-function placeLabel(point) {
-  return point?.city || point?.neighborhood || String(point?.category || 'Saved place').replaceAll('_', ' ')
-}
 
-export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle person', points = [], initialOpen = false, requestedLocation = '' }) {
-  const initialPoints = useMemo(() => Array.isArray(points) ? points.filter((point) => point?.id) : [], [points])
-  const [savedPoints, setSavedPoints] = useState(initialPoints)
-  const [savedPointsLoaded, setSavedPointsLoaded] = useState(Boolean(initialPoints.length))
-  const [savedPointsLoading, setSavedPointsLoading] = useState(false)
-  const [savedPointsError, setSavedPointsError] = useState('')
-  const [savedPointsRetry, setSavedPointsRetry] = useState(0)
+export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle person', initialOpen = false }) {
+  const [point, setPoint] = useState(null)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [visibility, setVisibility] = useState('public')
+  const [state, action, pending] = useActionState(createPuddlePost, null)
+  const pickerRef = useRef(null)
   const [open, setOpen] = useState(Boolean(initialOpen))
-  const [locationId, setLocationId] = useState(requestedLocation || initialPoints[0]?.id || '')
+  const locationId = point?.id || ''
   const dockRef = useRef(null)
   const formRef = useRef(null)
   const titleRef = useRef(null)
@@ -33,18 +32,6 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
   useEffect(() => {
     if (initialOpen) setOpen(true)
   }, [initialOpen])
-
-  useEffect(() => {
-    if (requestedLocation) setLocationId(requestedLocation)
-  }, [requestedLocation])
-
-  useEffect(() => {
-    if (initialPoints.length) {
-      setSavedPoints(initialPoints)
-      setSavedPointsLoaded(true)
-      setLocationId((current) => current || requestedLocation || initialPoints[0]?.id || '')
-    }
-  }, [initialPoints, requestedLocation])
 
   useEffect(() => {
     if (!open) return undefined
@@ -62,44 +49,6 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
     }
   }, [open])
 
-  useEffect(() => {
-    if (!open || savedPointsLoaded) return undefined
-    let active = true
-    setSavedPointsLoading(true)
-    setSavedPointsError('')
-
-    async function loadSavedPoints() {
-      try {
-        const query = requestedLocation ? `?ids=${encodeURIComponent(requestedLocation)}` : ''
-        const response = await fetch(`/api/saved-location-options${query}`, { cache: 'no-store' })
-        if (!response.ok) throw new Error(`Saved locations returned ${response.status}`)
-        const payload = await response.json()
-        if (!active) return
-        const items = Array.isArray(payload?.items) ? payload.items.filter((point) => point?.id) : []
-        setSavedPoints(items)
-        setLocationId((current) => current || requestedLocation || items[0]?.id || '')
-      } catch {
-        if (active) {
-          setSavedPoints([])
-          setSavedPointsError('Saved places could not be loaded.')
-        }
-      } finally {
-        if (active) {
-          setSavedPointsLoaded(true)
-          setSavedPointsLoading(false)
-        }
-      }
-    }
-
-    loadSavedPoints()
-    return () => { active = false }
-  }, [open, requestedLocation, savedPointsLoaded, savedPointsRetry])
-
-  function retrySavedPoints() {
-    setSavedPointsLoaded(false)
-    setSavedPointsRetry((value) => value + 1)
-  }
-
   return <div className={scopedClasses(composerStyles, `puddle-discover-create-dock${open ? ' is-open' : ''}`)} data-testid="feed-composer" ref={dockRef}>
     <button className={scopedClasses(composerStyles, "puddle-discover-create-trigger")} type="button" aria-expanded={open} aria-controls="discover-create-puddle-form" onClick={() => setOpen(true)}>
       <PhotoFrame as="span" className={scopedClasses(composerStyles, "puddle-discover-create-avatar")} src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
@@ -107,27 +56,25 @@ export function DiscoverCreatePuddle({ avatarUrl = null, displayName = 'Puddle p
       <span className={scopedClasses(composerStyles, "puddle-discover-create-arrow")} aria-hidden="true">↑</span>
     </button>
 
-    <form ref={formRef} action={createPuddlePost} className={scopedClasses(composerStyles, "puddle-discover-create-form")} id="discover-create-puddle-form" role="dialog" aria-modal="true" aria-label="Create a puddle" aria-hidden={!open} inert={!open} tabIndex={-1}>
+    <form ref={formRef} action={action} onReset={event => event.preventDefault()} className={scopedClasses(composerStyles, "puddle-discover-create-form")} id="discover-create-puddle-form" role="dialog" aria-modal="true" aria-label="Create a puddle" aria-hidden={!open} inert={!open} tabIndex={-1}>
       <input type="hidden" name="location_id" value={locationId} />
       <header className={scopedClasses(composerStyles, "puddle-discover-create-header")}>
         <PhotoFrame as="span" className={scopedClasses(composerStyles, "puddle-discover-create-avatar")} src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" />
         <fieldset className={scopedClasses(composerStyles, "puddle-discover-create-visibility")} aria-label="Post visibility">
-          <label><input type="radio" name="visibility" value="public" defaultChecked /><span>Public</span></label>
-          <label><input type="radio" name="visibility" value="friends" /><span>Friends Only</span></label>
+          <label><input type="radio" name="visibility" value="public" checked={visibility === 'public'} onChange={() => setVisibility('public')} /><span>Public</span></label>
+          <label><input type="radio" name="visibility" value="friends" checked={visibility === 'friends'} onChange={() => setVisibility('friends')} /><span>Friends Only</span></label>
         </fieldset>
         <button className={scopedClasses(composerStyles, "puddle-discover-create-close")} type="button" onClick={() => setOpen(false)} aria-label="Close create puddle">×</button>
-        <button className={scopedClasses(composerStyles, "puddle-discover-create-submit")} type="submit" disabled={!locationId} aria-label="Publish puddle">↑</button>
+        <button className={scopedClasses(composerStyles, "puddle-discover-create-submit")} type="submit" disabled={!locationId || pending} aria-label="Publish puddle">↑</button>
       </header>
-      <label className={scopedClasses(composerStyles, "puddle-discover-create-title")}><span className={scopedClasses(composerStyles, "sr-only")}>Title</span><input ref={titleRef} name="title" maxLength="80" required placeholder="Title" tabIndex={open ? 0 : -1} /></label>
-      <label className={scopedClasses(composerStyles, "puddle-discover-create-description")}><span className={scopedClasses(composerStyles, "sr-only")}>Description</span><textarea name="description" maxLength="1000" placeholder="Description" tabIndex={open ? 0 : -1} /></label>
+      <label className={scopedClasses(composerStyles, "puddle-discover-create-title")}><span className={scopedClasses(composerStyles, "sr-only")}>Title</span><input ref={titleRef} name="title" maxLength="80" required placeholder="Title" value={title} onChange={event => setTitle(event.target.value)} tabIndex={open ? 0 : -1} /></label>
+      <label className={scopedClasses(composerStyles, "puddle-discover-create-description")}><span className={scopedClasses(composerStyles, "sr-only")}>Description</span><textarea name="description" maxLength="1000" placeholder="Description" value={description} onChange={event => setDescription(event.target.value)} tabIndex={open ? 0 : -1} /></label>
+      {state?.error ? <p role="alert">{state.error}</p> : null}
       <div className={scopedClasses(composerStyles, "puddle-discover-create-footer")}>
-        <label className={scopedClasses(composerStyles, "puddle-discover-create-place")}>
-          <span>Saved place</span>
-          <select value={locationId} onChange={(event) => setLocationId(event.target.value)} disabled={!savedPointsLoaded || savedPointsLoading || !savedPoints.length} tabIndex={open ? 0 : -1}>
-            {savedPoints.length ? savedPoints.map((point) => <option value={point.id} key={point.id}>{point.title} · {placeLabel(point)}</option>) : <option value="">{!savedPointsLoaded || savedPointsLoading ? 'Loading saved places…' : savedPointsError ? 'Saved places unavailable' : 'Save a place first'}</option>}
-          </select>
-        </label>
-        {!savedPointsLoaded || savedPointsLoading ? <small role="status">Loading saved places...</small> : savedPointsError ? <small role="alert">{savedPointsError} <button type="button" onClick={retrySavedPoints}>Try again</button></small> : !savedPoints.length ? <small>Save a place before publishing a puddle.</small> : null}
+        <DismissibleDetails ref={pickerRef} className={composerStyles.placePicker}>
+          <summary>{point?.title || 'Choose a saved place'}</summary>
+          {open ? <SavedPlacePicker selectedId={locationId} disabled={pending} onInitialPage={items => setPoint(current => current || (items[0] ? { ...items[0], id: items[0].location_id || items[0].id } : null))} onSelect={next => { setPoint(next); pickerRef.current.open = false }} /> : null}
+        </DismissibleDetails>
       </div>
     </form>
   </div>

@@ -74,13 +74,14 @@ export async function updatePassword(formData) {
 }
 
 export async function updateEmail(formData) {
-  ensureConfigured('/account')
+  const destination = settingsActionDestination(formData, 'security')
+  ensureConfigured(destination)
   const email = value(formData, 'email').toLowerCase()
-  if (!isValidEmail(email)) redirect(pathWithMessage('/account', 'error', 'Enter a valid email address.'))
+  if (!isValidEmail(email)) redirect(pathWithMessage(destination, 'error', 'Enter a valid email address.'))
   const supabase = await createClient()
-  const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/account` })
-  if (error) redirect(pathWithMessage('/account', 'error', publicAuthError(error, 'We could not update your email. Please try again.')))
-  redirect(pathWithMessage('/account', 'success', 'Check both inboxes to confirm the email change.'))
+  const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${await siteUrl()}/auth/callback?next=${encodeURIComponent(destination)}` })
+  if (error) redirect(pathWithMessage(destination, 'error', publicAuthError(error, 'We could not update your email. Please try again.')))
+  redirect(pathWithMessage(destination, 'success', 'Check both inboxes to confirm the email change.'))
 }
 
 export async function revokeOtherSessions(formData) {

@@ -40,14 +40,15 @@ test('post reports preserve evidence and moderator removal remains enforced by R
 test('feed and saved previews use coordinates already in their bounded payloads', async () => {
   const [feedData, savedOptions, visual, account, messages] = await Promise.all([
     read('lib/app/social-feed-data.js'),
-    read('app/api/saved-location-options/route.js'),
+    read('lib/app/location-plans-data.js'),
     read('components/location-visual-preview.js'),
     read('app/account/page.js'),
     read('components/figma-messages-realtime.js')
   ])
   assert.match(feedData, /scanVisibleFeedPage\(/)
   assert.match(feedData, /latitude: row\.latitude \?\? null/)
-  assert.match(savedOptions, /location_saved_options_v1/)
+  assert.match(savedOptions, /location_saved_page_v1/)
+  assert.match(savedOptions, /latitude: row.latitude \?\? null/)
   assert.doesNotMatch(visual, /\/api\/saved-location\//)
   assert.match(visual, /onError=\{\(\) => setFailedImage\(image\)\}/)
   assert.match(account, /notificationResult\.error \|\| preferenceResult\.error \|\| passResult\.error/)
