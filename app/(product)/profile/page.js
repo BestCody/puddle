@@ -134,7 +134,7 @@ export default async function ProfilePage({ searchParams }) {
         <div className={scopedClasses(profileStyles, "figma-profile-card-column figma-profile-card-column--left")}>
           <article className={scopedClasses(profileStyles, "figma-profile-card figma-profile-puddles-card")}>
             <h2>Puddles</h2>
-            {recentPost ? <Link className={scopedClasses(profileStyles, "figma-profile-post-preview")} href="/map">
+            {recentPost ? <Link className={scopedClasses(profileStyles, "figma-profile-post-preview")} href={`/map#post-${encodeURIComponent(recentPost.id)}`}>
               <header><PhotoFrame as="span" className={scopedClasses(profileStyles, "figma-profile-post-avatar")} src={avatarUrl} alt="" unavailableText={initials(displayName)} loadingText="" /><span><strong>{displayName}</strong><small>{timeLabel(recentPost.created_at)}</small></span></header>
               {recentPost.title ? <h3>{recentPost.title}</h3> : null}
               {recentPost.body ? <p>{recentPost.body}</p> : null}

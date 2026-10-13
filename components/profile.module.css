@@ -168,7 +168,7 @@
 .figma-profile-actions a:global(.is-follow) {
   border-color: var(--profile-theme, #4ca5f7);
   background: var(--profile-theme, #4ca5f7);
-  color: #fff;
+  color: var(--ink);
 }
 
 .figma-profile-cards {

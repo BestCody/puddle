@@ -42,7 +42,7 @@ test('late history cannot enter another conversation or restore its pagination',
   await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeEnabled()
 })
 
-test('returning to the same ID rejects work from its previous visit and clears the old draft', async ({ page }) => {
+test('returning to the same ID rejects stale history without erasing its draft', async ({ page }) => {
   let release
   const pending = new Promise(resolve => { release = resolve })
   let requested
@@ -67,4 +67,5 @@ test('returning to the same ID rejects work from its previous visit and clears t
   await completed
   await expect(page.locator('.figma-friends-messages')).not.toContainText('STALE PREVIOUS VISIT')
   await expect(page.getByRole('button', { name: 'Load older messages' })).toBeEnabled()
+  await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toHaveValue('Draft for Jamie')
 })

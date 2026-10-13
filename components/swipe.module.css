@@ -241,6 +241,7 @@
 }
 
 .action small {
+  color: var(--shell-text, var(--ink));
   font: 800 .675rem/1 var(--figma-mono);
 }
 

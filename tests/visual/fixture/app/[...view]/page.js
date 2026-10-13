@@ -23,6 +23,8 @@ import NotFound from '@/app/not-found'
 import { PublicLocationView } from '@/components/public-listing'
 import { PlaceHub } from '@/components/place-hub'
 import { LocationEditor } from '@/components/location-editor'
+import { LocationClaimForm } from '@/components/location-claim-form'
+import { submitLocationClaim } from '@/app/(product)/create/actions'
 import { LegalPage, LegalSection } from '@/components/legal-page'
 import { LandingPhoneDemo } from '@/components/landing-phone-demo'
 import '@/app/landing-phone-demo.css'
@@ -38,6 +40,7 @@ export default async function VisualPage({ params, searchParams }) {
   if (view[0] === 'landing-demo') return <LandingPhoneDemo view={view[1]} />
   if (view[0] === 'plans' && view[1]) return <SavedPlacePage params={Promise.resolve({ slug: view[1] })} searchParams={Promise.resolve(query)} />
   if (route === 'visit-plan') return <PlanLocationVisitPage params={Promise.resolve({ slug: 'visual-place-0' })} searchParams={Promise.resolve(query)} />
+  if (route === 'claim') return <VisualFixture view="claim"><LocationClaimForm action={submitLocationClaim} location={places[0]} displayName="Alex Puddle" hosts={[]} /></VisualFixture>
   if (route === 'create/place') return <CreatePlacePage searchParams={Promise.resolve(query)} />
   if (route === 'upload') return <VisualFixture view="upload"><MediaUploader purpose="profile_photo" /></VisualFixture>
   if (route === 'verification-upload') return <VisualFixture view="upload"><MediaUploader purpose="verification_document" /></VisualFixture>

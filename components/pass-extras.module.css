@@ -95,7 +95,7 @@
   border: 0;
   border-radius: 0.75rem;
   background: #78e152;
-  color: #fff;
+  color: var(--ink);
   cursor: pointer;
   font: 800 0.6875rem/1 Manrope,sans-serif;
 }

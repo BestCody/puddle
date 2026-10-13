@@ -77,7 +77,10 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
   const [messagesLoadFailedForId, setMessagesLoadFailedForId] = useState(null)
   const [messagesHasMore, setMessagesHasMore] = useState(Boolean(initialSnapshot.messagesHasMore))
   const [placePickerOpen, setPlacePickerOpen] = useState(false)
-  const [draft, setDraft] = useState('')
+  // Drafts belong to a conversation, not to the currently displayed pane.
+  // Keep them in memory only; Back and thread switches must not erase them.
+  const [drafts, setDrafts] = useState({})
+  const draft = drafts[selectedId] || ''
   const [busy, setBusy] = useState(false)
   const [paging, setPaging] = useState(false)
   const [openingFriendId, setOpeningFriendId] = useState(null)
@@ -132,7 +135,6 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
       setMessagesHasMore(Boolean(initialSnapshot.messagesHasMore))
       setMessagesLoadedForId(conversationId ? selectedId : null)
       setMessagesLoadFailedForId(null)
-      setDraft('')
       setNotice('')
       setBusy(false)
       setPaging(false)
@@ -467,6 +469,7 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
 
   async function send(event) {
     event.preventDefault()
+    const submittedDraft = draft
     const body = draft.trim()
     if (!body || !selectedId || busy) return
     const scope = conversationScopeRef.current
@@ -475,8 +478,13 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
     try {
       const { data, error } = await client.rpc('social_send_message_v1', { target: selectedId, message_body: body })
       if (error || !data) throw error || new Error('Message was not accepted.')
+      setDrafts((current) => {
+        if (current[selectedId] !== submittedDraft) return current
+        const next = { ...current }
+        delete next[selectedId]
+        return next
+      })
       if (conversationScopeRef.current !== scope) return
-      setDraft('')
       stickToBottomRef.current = true
     } catch (cause) {
       console.warn('Could not send message.', { message: cause?.message || 'unknown error' })
@@ -625,7 +633,10 @@ export function FigmaMessagesRealtime({ initialSnapshot, conversationId = null }
               <summary aria-label="More message options">○</summary>
               <div><Link href="/matches?tab=shared">View shared puddles</Link><Link href="/plans">Open Saved</Link></div>
             </DismissibleDetails>
-            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Text Message" aria-label="Message" maxLength={5000} />
+            <input value={draft} onChange={(event) => {
+              const value = event.target.value
+              setDrafts((current) => ({ ...current, [selectedId]: value }))
+            }} placeholder="Text Message" aria-label="Message" maxLength={5000} />
             <button className={scopedClasses(friendsStyles, "is-send puddle-send-action")} type="submit" disabled={!draft.trim() || busy} aria-label="Send message">↑</button>
           </form>
         </> : <div className={scopedClasses(friendsStyles, "figma-friends-chat-empty")}>Select a conversation</div>}

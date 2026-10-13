@@ -24,13 +24,19 @@ function finish(formData, message, type = 'success') {
   redirect(pathWithMessage(destination(formData), type, message))
 }
 
-async function ensureLocation(formData, locationId) {
-  if (!UUID_PATTERN.test(locationId)) finish(formData, 'That place is unavailable.', 'error')
+async function locationError(locationId) {
+  if (!UUID_PATTERN.test(locationId)) return 'That place is unavailable.'
   try {
     await ensureGlobalLocationReferences(createAdminClient(), [locationId])
   } catch {
-    finish(formData, 'That place is no longer available in the canonical catalogue.', 'error')
+    return 'That place is no longer available in the canonical catalogue.'
   }
+  return null
+}
+
+async function ensureLocation(formData, locationId) {
+  const error = await locationError(locationId)
+  if (error) finish(formData, error, 'error')
 }
 
 async function savedState(session, locationId) {
@@ -121,29 +127,39 @@ export async function shareSavedPlace(formData) {
   finish(formData, 'Place shared.')
 }
 
-export async function upsertPlaceReview(formData) {
+export async function upsertPlaceReview(_previous, formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = value(formData, 'location_id', 80)
   const rating = Number(value(formData, 'rating', 1))
   const body = value(formData, 'body', 2000)
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) finish(formData, 'Choose a rating from 1 to 5.', 'error')
-  await ensureLocation(formData, locationId)
-  const { error } = await session.supabase.rpc('upsert_location_review_v1', {
-    target_location: locationId,
-    review_rating: rating,
-    review_body: body
-  })
-  if (error) finish(formData, 'We could not save your review.', 'error')
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { error: 'Choose a rating from 1 to 5.' }
+  const unavailable = await locationError(locationId)
+  if (unavailable) return { error: unavailable }
+  try {
+    const { error } = await session.supabase.rpc('upsert_location_review_v1', {
+      target_location: locationId,
+      review_rating: rating,
+      review_body: body
+    })
+    if (error) return { error: 'We could not save your review.' }
+  } catch {
+    return { error: 'We could not save your review.' }
+  }
   revalidatePath(destination(formData))
-  finish(formData, 'Your review was saved.')
+  return { success: 'Your review was saved.' }
 }
 
-export async function deletePlaceReview(formData) {
+export async function deletePlaceReview(_previous, formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = value(formData, 'location_id', 80)
-  await ensureLocation(formData, locationId)
-  const { error } = await session.supabase.rpc('delete_location_review_v1', { target_location: locationId })
-  if (error) finish(formData, 'We could not remove your review.', 'error')
+  const unavailable = await locationError(locationId)
+  if (unavailable) return { error: unavailable }
+  try {
+    const { error } = await session.supabase.rpc('delete_location_review_v1', { target_location: locationId })
+    if (error) return { error: 'We could not remove your review.' }
+  } catch {
+    return { error: 'We could not remove your review.' }
+  }
   revalidatePath(destination(formData))
-  finish(formData, 'Your review was removed.')
+  return { success: 'Your review was removed.' }
 }

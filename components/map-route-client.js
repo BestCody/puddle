@@ -5,7 +5,7 @@ import { scopedClasses } from "@/components/scoped-classes"
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { RoutedSegment } from '@/components/routed-segment'
 import { DiscoverCreatePuddle } from '@/components/discover-create-puddle'
 import { DiscoverSearchOverlay } from '@/components/discover-search-overlay'
@@ -16,8 +16,8 @@ const SocialFeedClient = dynamic(() => import('@/components/social-feed-client')
 
 const DEFAULT_MAP_CENTER = { latitude: 43.6532, longitude: -79.3832 }
 
-function FeedTop({ view, query }) {
-  return <header className={styles.header} data-testid="feed-header">
+function FeedTop({ view, query, headerRef }) {
+  return <header ref={headerRef} className={styles.header} data-testid="feed-header">
     <Link className={styles.back} href="/discover" aria-label="Back to Swipe">‹</Link>
     <RoutedSegment className={styles.tabs} tone="yellow" activeValue={view} ariaLabel="Feed or map" testId="feed-tabs" layoutAnchor="feed-tabs" items={[{ value: 'feed', label: 'Feed', href: '/map' }, { value: 'map', label: 'Map', href: '/map?view=map' }]} />
     {view === 'feed' ? <DiscoverSearchOverlay initialQuery={query} /> : <span aria-hidden="true" />}
@@ -31,7 +31,7 @@ function AuthMessageClient({ params }) {
   return <p className={scopedClasses(authStyles, `auth-message ${error ? 'is-error' : 'is-success'}`)}>{error || success}</p>
 }
 
-function MapScreen({ query, onQueryChange, onSelectPlace, onCancel }) {
+function MapScreen({ query, onQueryChange, onSelectPlace, onCancel, topOverlayRef }) {
   const [snapshot, setSnapshot] = useState(null)
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
@@ -80,6 +80,7 @@ function MapScreen({ query, onQueryChange, onSelectPlace, onCancel }) {
         query={query}
         onSelectPlace={onSelectPlace}
         selectionFollowsMap
+        topOverlayRef={topOverlayRef}
       /></div>
         : <div className={styles.mapEmpty} role="status" aria-label="Loading map"><strong>Loading map…</strong></div>}
   </section>
@@ -94,6 +95,7 @@ export function MapPlacePicker({ onSelect, onCancel }) {
 
 export function MapRouteClient() {
   const params = useSearchParams()
+  const headerRef = useRef(null)
   const [feedIdentity, setFeedIdentity] = useState({ avatarUrl: null, displayName: 'Puddle person' })
   const view = params.get('view') === 'map' ? 'map' : 'feed'
   const query = params.get('q') || ''
@@ -104,8 +106,8 @@ export function MapRouteClient() {
   return <>
     <AuthMessageClient params={params} />
     <div className={`${styles.screen} ${view === 'map' ? styles.mapMode : ''}`} data-testid="feed-screen" data-layout-root="dashboard-feed" data-view={view}>
-      <FeedTop view={view} query={query} />
-      {view === 'map' ? <MapScreen query={query} /> : <SocialFeedClient
+      <FeedTop view={view} query={query} headerRef={headerRef} />
+      {view === 'map' ? <MapScreen query={query} topOverlayRef={headerRef} /> : <SocialFeedClient
         query={query}
         beforeCreatedAt={beforeCreatedAt}
         beforePostId={beforePostId}

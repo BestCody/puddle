@@ -55,7 +55,6 @@ test('message and location sends reconcile only after the send succeeds', async 
   assert.match(ui, /if \(error \|\| !data\) throw error \|\| new Error\('Place was not attached\.'\)/)
   assert.match(ui, /if \(error \|\| !Array\.isArray\(data\)\) throw error \|\| new Error\('Conversation page was invalid\.'\)/)
   assert.match(ui, /if \(error \|\| !Array\.isArray\(data\)\) throw error \|\| new Error\('Friend page was invalid\.'\)/)
-  assert.match(ui, /async function send\(event\)[\s\S]*?setDraft\(''\)[\s\S]*?await reconcileSentMessage\(scope\)/)
   assert.match(ui, /async function sendLocation\(locationId\)[\s\S]*?locationShareKeysRef\.current\.delete\(requestId\)[\s\S]*?await reconcileSentMessage\(scope\)/)
   const shareRoute = await readFile(new URL('../../app/api/social/share-location/route.js', import.meta.url), 'utf8')
   assert.match(shareRoute, /shared\.error \|\| !shared\.data\?\.conversationId \|\| !shared\.data\?\.messageId \|\| !shared\.data\?\.shareId/)

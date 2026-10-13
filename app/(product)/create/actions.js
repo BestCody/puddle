@@ -69,7 +69,7 @@ export async function transitionLocationStatus(formData) {
   redirect(pathWithMessage(`/studio/places/${id}`, 'success', `Location moved to ${nextStatus.replaceAll('_', ' ')}.`))
 }
 
-export async function submitLocationClaim(formData) {
+export async function submitLocationClaim(_previous, formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = String(formData.get('location_id') || '')
   const hostProfileId = String(formData.get('host_profile_id') || '').trim() || null
@@ -78,23 +78,27 @@ export async function submitLocationClaim(formData) {
   const note = String(formData.get('note') || '').trim().slice(0, 1200) || null
   const next = safeNextPath(String(formData.get('next') || '/discover'))
   if (!locationId || !relationship) {
-    redirect(pathWithMessage(next, 'error', 'Describe your relationship to this location.'))
+    return { error: 'Describe your relationship to this location.' }
   }
 
   try {
     await ensureGlobalLocationReferences(createAdminClient(), [locationId])
   } catch {
-    redirect(pathWithMessage(next, 'error', 'That location is not available in the canonical catalogue.'))
+    return { error: 'That location is not available in the canonical catalogue.' }
   }
 
-  const { error } = await session.supabase.from('location_claims').insert({
-    location_id: locationId,
-    claimant_id: session.user.id,
-    host_profile_id: hostProfileId,
-    relationship,
-    evidence_url: evidenceUrl,
-    note
-  })
-  if (error) redirect(pathWithMessage(next, 'error', firstError(error, 'We could not submit this claim.')))
+  try {
+    const { error } = await session.supabase.from('location_claims').insert({
+      location_id: locationId,
+      claimant_id: session.user.id,
+      host_profile_id: hostProfileId,
+      relationship,
+      evidence_url: evidenceUrl,
+      note
+    })
+    if (error) return { error: firstError(error, 'We could not submit this claim.') }
+  } catch {
+    return { error: 'We could not submit this claim.' }
+  }
   redirect(pathWithMessage(next, 'success', 'Location claim submitted for review.'))
 }
