@@ -36,7 +36,7 @@ function initLandingAuth() {
 
   const mobileLoginButton = $('[data-mobile-login-trigger]')
   const mobileLoginDialog = $('#mobile-login-dialog')
-  const mobileLoginSurface = $('.mobile-login-dialog__surface', mobileLoginDialog)
+  const mobileLoginBody = $('.mobile-login-dialog__body', mobileLoginDialog)
   const mobileLoginClose = $('[data-close-mobile-login]', mobileLoginDialog)
   const originalPanelParent = panel.parentNode
   const originalPanelNextSibling = panel.nextSibling
@@ -91,8 +91,8 @@ function initLandingAuth() {
   }
 
   const openMobileAuth = (mode = 'login', focus = true) => {
-    if (!mobileLoginDialog || !mobileLoginSurface || typeof mobileLoginDialog.showModal !== 'function') return false
-    mobileLoginSurface.append(panel)
+    if (!mobileLoginDialog || !mobileLoginBody || typeof mobileLoginDialog.showModal !== 'function') return false
+    mobileLoginBody.append(panel)
     if (!mobileLoginDialog.open) mobileLoginDialog.showModal()
     setMode(mode, focus)
     return true

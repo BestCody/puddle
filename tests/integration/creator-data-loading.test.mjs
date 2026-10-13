@@ -19,7 +19,7 @@ test('location creation and claims load only the host identities their forms ren
   assert.doesNotMatch(data, /from\('location_submissions'\)\.select\('id,name,slug,city,status'\)/)
   assert.doesNotMatch(data, /from\('content_categories'\)/)
   assert.match(editor, /identities\.map\(/)
-  assert.match(claim, /options\.hosts\.map\(/)
+  assert.match(claim, /hosts=\{options\.hosts\}/)
   assert.match(media, /options\.hosts\.map\(/)
 })
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { deletePlaceReview, upsertPlaceReview } from './actions'
 import styles from '../Plans.module.css'
@@ -9,8 +9,13 @@ function HiddenLocation({ locationId, slug }) {
   return <><input type="hidden" name="location_id" value={locationId} /><input type="hidden" name="slug" value={slug} /></>
 }
 
-function ReviewEditor({ locationId, slug, review }) {
-  return <form action={upsertPlaceReview} className={styles.reviewEditor}>
+function ReviewEditor({ locationId, slug, review, onSaved }) {
+  const [result, submit, pending] = useActionState(async (previous, formData) => {
+    const response = await upsertPlaceReview(previous, formData)
+    if (response.success) onSaved()
+    return response
+  }, null)
+  return <form action={submit} onReset={event => event.preventDefault()} className={styles.reviewEditor}>
     <HiddenLocation locationId={locationId} slug={slug} />
     <label className={styles.reviewLabel}>
       Your rating
@@ -19,7 +24,21 @@ function ReviewEditor({ locationId, slug, review }) {
       </select>
     </label>
     <textarea className={styles.reviewBodyInput} name="body" defaultValue={review?.body || ''} maxLength="2000" placeholder="Share what you thought..." aria-label="Review" />
-    <div className={styles.reviewSubmitRow}><button className={styles.reviewSubmit} type="submit">{review ? 'Update review' : 'Post review'}</button></div>
+    {result?.error ? <p className={`${styles.reviewStatus} ${styles.reviewStatusError}`} role="alert">{result.error}</p> : null}
+    <div className={styles.reviewSubmitRow}><button className={styles.reviewSubmit} type="submit" disabled={pending}>{pending ? 'Saving review…' : review ? 'Update review' : 'Post review'}</button></div>
+  </form>
+}
+
+function DeleteReview({ locationId, slug, onSaved }) {
+  const [result, submit, pending] = useActionState(async (previous, formData) => {
+    const response = await deletePlaceReview(previous, formData)
+    if (response.success) onSaved()
+    return response
+  }, null)
+  return <form action={submit} className={styles.reviewDelete}>
+    <HiddenLocation locationId={locationId} slug={slug} />
+    {result?.error ? <p role="alert">{result.error}</p> : null}
+    <button type="submit" disabled={pending}>{pending ? 'Removing review…' : 'Delete my review'}</button>
   </form>
 }
 
@@ -52,8 +71,8 @@ export function DetailReviews({ locationId, slug, userId }) {
   return <section className={styles.reviews} data-testid="saved-place-reviews">
     <h2>Reviews{averageRating ? ` · ${averageRating.toFixed(1)} / 5 (${state.reviews.length})` : ''}</h2>
     <div className={styles.reviewContent}>
-      {!state.loading && !state.error ? <ReviewEditor key={myReview?.id || 'new'} locationId={locationId} slug={slug} review={myReview} /> : null}
-      {!state.loading && !state.error && myReview ? <form action={deletePlaceReview} className={styles.reviewDelete}><HiddenLocation locationId={locationId} slug={slug} /><button type="submit">Delete my review</button></form> : null}
+      {!state.loading && !state.error ? <ReviewEditor key={myReview?.id || 'new'} locationId={locationId} slug={slug} review={myReview} onSaved={() => setRetry(value => value + 1)} /> : null}
+      {!state.loading && !state.error && myReview ? <DeleteReview locationId={locationId} slug={slug} onSaved={() => setRetry(value => value + 1)} /> : null}
       {state.loading ? <div className={styles.reviewStatus} role="status">Loading reviews…</div> : null}
       {state.error ? <div className={`${styles.reviewStatus} ${styles.reviewStatusError}`} role="alert"><span>{state.error}</span><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></div> : null}
       {!state.loading && !state.error ? <div className={styles.reviewList}>

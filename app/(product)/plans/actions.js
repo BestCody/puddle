@@ -21,7 +21,7 @@ function optionalDate(input) {
   return visitInstant(input)?.toISOString() || null
 }
 
-export async function recordLocationVisit(formData) {
+export async function recordLocationVisit(_previous, formData) {
   const session = await requireUser({ onboarding: true })
   const locationId = value(formData, 'location_id', 64)
   const status = value(formData, 'status', 20) === 'visited' ? 'visited' : 'planned'
@@ -29,25 +29,29 @@ export async function recordLocationVisit(formData) {
   const plannedFor = optionalDate(rawPlannedFor)
   const note = fullValue(formData, 'note')
 
-  if (note.length > 500) redirect(pathWithMessage('/plans', 'error', 'Keep visit notes to 500 characters or fewer.'))
-  if (status === 'planned' && rawPlannedFor && !plannedFor) redirect(pathWithMessage('/plans', 'error', 'Choose a valid planned date and time.'))
+  if (note.length > 500) return { error: 'Keep visit notes to 500 characters or fewer.' }
+  if (status === 'planned' && rawPlannedFor && !plannedFor) return { error: 'Choose a valid planned date and time.' }
 
   try {
     await ensureGlobalLocationReferences(createAdminClient(), [locationId])
   } catch {
-    redirect(pathWithMessage('/plans', 'error', 'That place is no longer available.'))
+    return { error: 'That place is no longer available.' }
   }
 
-  const { error } = await session.supabase.from('location_visits').upsert({
-    profile_id: session.user.id,
-    location_id: locationId,
-    status,
-    planned_for: status === 'planned' ? plannedFor : null,
-    visited_at: status === 'visited' ? new Date().toISOString() : null,
-    note: note || null,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'profile_id,location_id' })
-  if (error) redirect(pathWithMessage('/plans', 'error', 'The place visit could not be saved.'))
+  try {
+    const { error } = await session.supabase.from('location_visits').upsert({
+      profile_id: session.user.id,
+      location_id: locationId,
+      status,
+      planned_for: status === 'planned' ? plannedFor : null,
+      visited_at: status === 'visited' ? new Date().toISOString() : null,
+      note: note || null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'profile_id,location_id' })
+    if (error) return { error: 'The place visit could not be saved.' }
+  } catch {
+    return { error: 'The place visit could not be saved.' }
+  }
   revalidatePath('/plans')
   redirect(pathWithMessage(
     status === 'visited' ? '/plans?tab=past' : '/plans?tab=planned',

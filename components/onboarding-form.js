@@ -173,6 +173,7 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
       <div className={scopedClasses(onboardingStyles, "pdl-onb-brand")}>
         <img src="/puddle-mark.svg" alt="" width="40" height="41" />
         <span>puddle</span>
+        {signOutAction ? <button className={scopedClasses(onboardingStyles, "pdl-onb-signout")} type="submit" formAction={signOutAction} formNoValidate>Sign out</button> : null}
       </div>
 
       <div
@@ -313,7 +314,6 @@ export function OnboardingForm({ action, profile = {}, userDisplayName = '', dat
     </form>
 
     <aside className={scopedClasses(onboardingStyles, "pdl-onb-preview")}>
-      {signOutAction ? <form className={scopedClasses(onboardingStyles, "pdl-onb-signout")} action={signOutAction}><button type="submit">Sign out</button></form> : null}
       <p className={scopedClasses(onboardingStyles, "pdl-onb-preview-label")}>Your profile so far</p>
 
       <div className={scopedClasses(onboardingStyles, "pdl-onb-card")}>

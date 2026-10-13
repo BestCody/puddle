@@ -15,6 +15,7 @@ export default {
     '@/lib/auth/user': './mocks/data.js',
     '@/lib/supabase/client': './mocks/data.js',
     '@/lib/supabase/server': './mocks/data.js',
+    '@/lib/supabase/admin': './mocks/unavailable-admin.js',
     '@/lib/app/render-product-page': './mocks/render-product-page.js',
     '@/lib/app/global-location-search': './mocks/data.js',
     '@/lib/app/location-previews': './mocks/data.js',

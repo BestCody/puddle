@@ -5,13 +5,14 @@ import { pathWithMessage, safeNextPath } from '../../lib/auth/redirect.js'
 import { isValidEmail } from '../../lib/app/input-validation.js'
 import { publicAuthError } from '../../lib/auth/errors.js'
 import { settingsActionDestination } from '../../lib/app/settings-navigation.js'
+import { visitInstant } from '../../lib/app/visit-time.js'
 
 // Exercise the real action bodies with in-memory service boundaries. No live
 // accounts, RPCs, reports or posts are created by recovery tests.
 async function loadAction(path, name, overrides = {}) {
   const deps = {
     redirect: url => { throw new Error(`Unexpected redirect: ${url}`) },
-    revalidatePath() {}, headers: async () => ({}), pathWithMessage, safeNextPath,
+    revalidatePath() {}, headers: async () => ({}), pathWithMessage, safeNextPath, visitInstant,
     requireUser: async () => ({ user: { id: 'test-user' }, supabase: {
       from: () => ({ insert: async () => ({ error: { code: 'unavailable' } }) }),
       rpc: async () => ({ error: { code: 'unavailable' } })
@@ -39,6 +40,69 @@ test('post validation, rate limits, unavailable places and insert failures retur
   form.set('title', '')
   assert.match((await insertFail(null, form)).error, /title/)
   assert.equal(form.get('description'), 'Private draft')
+})
+
+test('review, visit and claim failures return inline without changing submitted values', async () => {
+  const form = new FormData()
+  form.set('location_id', '00000000-0000-4000-8000-000000000010')
+  form.set('slug', 'test-place'); form.set('rating', '4'); form.set('body', 'Keep my review')
+  form.set('status', 'planned'); form.set('planned_for', '2027-01-20T18:30:00Z'); form.set('note', 'Keep my note')
+  form.set('relationship', 'Venue manager'); form.set('evidence_url', 'https://example.test'); form.set('next', '/places/test-place')
+  const actions = [
+    ['app/(product)/plans/[slug]/actions.js', 'upsertPlaceReview'],
+    ['app/(product)/plans/[slug]/actions.js', 'deletePlaceReview'],
+    ['app/(product)/plans/actions.js', 'recordLocationVisit'],
+    ['app/(product)/create/actions.js', 'submitLocationClaim']
+  ]
+  for (const [path, name] of actions) {
+    const failures = [
+      { ensureGlobalLocationReferences: async () => { throw Error('unavailable') } },
+      { requireUser: async () => ({ user: { id: 'test-user' }, supabase: {
+        rpc: async () => ({ error: { code: 'unavailable' } }),
+        from: () => ({ upsert: async () => ({ error: { code: 'unavailable' } }), insert: async () => ({ error: { code: 'unavailable' } }) })
+      } }) },
+      { requireUser: async () => ({ user: { id: 'test-user' }, supabase: {
+        rpc: async () => { throw Error('interrupted') }, from: () => { throw Error('interrupted') }
+      } }) }
+    ]
+    for (const deps of failures) {
+      const action = await loadAction(path, name, deps)
+      assert.ok((await action(null, form)).error)
+      assert.equal(form.get('body'), 'Keep my review')
+      assert.equal(form.get('note'), 'Keep my note')
+      assert.equal(form.get('relationship'), 'Venue manager')
+    }
+  }
+})
+
+test('successful review, visit and claim retain their authenticated writes and destinations', async () => {
+  const form = new FormData()
+  const locationId = '00000000-0000-4000-8000-000000000010'
+  form.set('location_id', locationId); form.set('slug', 'test-place'); form.set('rating', '4'); form.set('body', 'My review')
+  form.set('status', 'planned'); form.set('planned_for', '2027-01-20T18:30:00Z'); form.set('note', 'My note')
+  form.set('relationship', 'Venue manager'); form.set('next', '/places/test-place')
+  let write, destination, revalidated
+  const deps = { redirect: url => { destination = url }, revalidatePath: path => { revalidated = path },
+    requireUser: async () => ({ user: { id: 'test-user' }, supabase: {
+      rpc: async (name, args) => { write = { name, args }; return { error: null } },
+      from: name => ({ upsert: async (values, options) => { write = { name, values, options }; return { error: null } }, insert: async values => { write = { name, values }; return { error: null } } })
+    } }) }
+  const review = await loadAction('app/(product)/plans/[slug]/actions.js', 'upsertPlaceReview', deps)
+  assert.match((await review(null, form)).success, /saved/)
+  assert.deepEqual(write, { name: 'upsert_location_review_v1', args: { target_location: locationId, review_rating: 4, review_body: 'My review' } })
+  assert.equal(revalidated, '/plans/test-place')
+  assert.equal(destination, undefined)
+  const visit = await loadAction('app/(product)/plans/actions.js', 'recordLocationVisit', deps)
+  await visit(null, form)
+  assert.equal(write.values.profile_id, 'test-user')
+  assert.equal(write.values.planned_for, '2027-01-20T18:30:00.000Z')
+  assert.equal(write.options.onConflict, 'profile_id,location_id')
+  assert.match(destination, /^\/plans\?tab=planned&success=/)
+  const claim = await loadAction('app/(product)/create/actions.js', 'submitLocationClaim', deps)
+  await claim(null, form)
+  assert.equal(write.values.claimant_id, 'test-user')
+  assert.equal(write.values.relationship, 'Venue manager')
+  assert.match(destination, /^\/places\/test-place\?success=/)
 })
 
 test('report failures preserve context for a retry and retain server-side safety checks', async () => {

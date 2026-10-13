@@ -5,6 +5,17 @@ import { settingsActionDestination, settingsReturnPath } from '../../lib/app/set
 import { normalizeProfileInterests } from '../../lib/app/profile-interests.js'
 import { pathWithMessage } from '../../lib/auth/redirect.js'
 
+test('map popups avoid the measured floating navigation and still follow the marker', () => {
+  const viewport = { width: 393, height: 740 }, popup = { width: 303, height: 102 }, topInset = 85
+  for (const anchor of [{ x: 40, y: 120 }, { x: 190, y: 220 }, { x: 380, y: 720 }]) {
+    const result = mapPopupPosition({ anchor, viewport, popup, gap: 16, gutter: 8, topInset })
+    assert.ok(result.top >= topInset)
+    assert.ok(result.top + popup.height <= viewport.height)
+    assert.ok(result.left >= 0 && result.left + popup.width <= viewport.width)
+    assert.equal(result.left + result.tip, anchor.x)
+  }
+})
+
 test('map popup flips and stays contained while following visible markers', () => {
   const viewport = { width: 320, height: 500 }, popup = { width: 270, height: 100 }
   for (const anchor of [{ x: 3, y: 3 }, { x: 317, y: 3 }, { x: 3, y: 497 }, { x: 317, y: 497 }, { x: 160, y: 250 }]) {

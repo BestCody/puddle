@@ -114,7 +114,7 @@ function PointCard({ point, onSelectPlace }) {
   </article>
 }
 
-export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, query = '', onSelectPlace = null, selectionFollowsMap = false, compact = false }) {
+export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints = [], passActive = false, loadCatalogue = false, query = '', onSelectPlace = null, selectionFollowsMap = false, topOverlayRef = null, compact = false }) {
   const preparedQuery = useMemo(() => prepareTextQuery(query), [query])
   const initialSelected = initialPoints.find(point => !preparedQuery.normalized || scoreTextMatch({ ...point, name: point.title }, preparedQuery) > 0)
   const mapRef = useRef(null)
@@ -341,15 +341,20 @@ export function LocationMap({ initialPoints = [], initialCenter, heatmapPoints =
       selectionMetricsRef.current = {
         popup: { width: node.offsetWidth, height: node.offsetHeight },
         gap: marker ? marker.getBoundingClientRect().height / 2 : radius,
-        gutter: radius / 2
+        gutter: radius / 2,
+        topInset: topOverlayRef?.current && mapRef.current
+          ? Math.max(0, topOverlayRef.current.getBoundingClientRect().bottom - mapRef.current.getBoundingClientRect().top)
+          : 0
       }
       positionSelection(pendingPanRef.current || undefined)
     }
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(node)
+    if (mapRef.current) observer.observe(mapRef.current)
+    if (topOverlayRef?.current) observer.observe(topOverlayRef.current)
     return () => observer.disconnect()
-  }, [positionSelection, selectionFollowsMap, selectedId, Boolean(selectedAnchor)])
+  }, [positionSelection, selectionFollowsMap, selectedId, Boolean(selectedAnchor), topOverlayRef, viewport.width, viewport.height])
 
   useLayoutEffect(() => {
     positionSelection(pendingPanRef.current || undefined)
