@@ -615,12 +615,12 @@
   font-family: var(--onb-default);
   font-weight: 800;
   font-size: 0.7575rem;
-  color: var(--onb-muted);
+  color: var(--onb-ink);
   cursor: pointer;
 }
 
 .pdl-onb-signout:hover {
-  color: var(--onb-ink);
+  text-decoration: underline;
 }
 
 .pdl-onb-preview-label {

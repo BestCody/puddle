@@ -36,6 +36,7 @@ test('onboarding exposes one working sign-out form action in both layouts', asyn
   const button = page.getByRole('button', { name: 'Sign out', exact: true })
   await expect(button).toHaveCount(1)
   await expect(button).toBeVisible()
+  expect(await contrast(button)).toBeGreaterThanOrEqual(4.5)
   expect(await button.evaluate(node => node.type === 'submit' && node.formNoValidate && Boolean(node.form))).toBe(true)
 })
 
