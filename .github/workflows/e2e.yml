@@ -27,7 +27,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - uses: supabase/setup-cli@v3.0.1
+      - uses: supabase/setup-cli@v3.1.0
         with:
           version: latest
       - name: Prepare isolated E2E Supabase project
