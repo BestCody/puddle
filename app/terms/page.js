@@ -83,7 +83,7 @@ export default function TermsPage() {
 
       <LegalSection id="third-party" title="11. Venues, data sources, and third-party services">
         <p>Places displayed by Puddle are generally owned and operated by independent third parties. Your visit, purchase, reservation, or other interaction with a venue is between you and that venue or its provider. Their rules, prices, cancellation terms, accessibility, safety practices, and privacy policies may apply separately.</p>
-        <p>The Service may rely on or link to authentication, hosting, payments, maps, geocoding, place details, open-data catalogues, photos, email, security, and other third-party services. Their licences, terms, and privacy practices may apply. Puddle is not responsible for third-party products, content, availability, or conduct that it does not control, subject to rights that cannot legally be excluded.</p>
+        <p>The Service may rely on or link to authentication, hosting, payments, maps, geocoding, place details, open-data catalogues, photos, email, security, and other third-party services. Their licences, terms, and privacy practices may apply. City names and coordinates used for location search come from <a href="https://www.geonames.org">GeoNames</a>, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Puddle is not responsible for third-party products, content, availability, or conduct that it does not control, subject to rights that cannot legally be excluded.</p>
       </LegalSection>
 
       <LegalSection id="ip" title="12. Puddle and licensed intellectual property">

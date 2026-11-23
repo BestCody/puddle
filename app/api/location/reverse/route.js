@@ -26,8 +26,7 @@ export async function POST(request) {
     const body = await readJsonLimited(request, 4_000)
     const latitude = coordinate(body?.latitude, -90, 90)
     const longitude = coordinate(body?.longitude, -180, 180)
-    const language = String(request.headers.get('accept-language') || 'en').slice(0, 2).toLowerCase()
-    const result = await reverseGeocodeLocation(latitude, longitude, { language })
+    const result = reverseGeocodeLocation(latitude, longitude)
     return NextResponse.json({ result }, { headers: { 'cache-control': 'no-store' } })
   } catch (error) {
     return NextResponse.json({ error: error?.message || 'We could not identify that location.' }, { status: 400, headers: { 'cache-control': 'no-store' } })

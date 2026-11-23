@@ -27,7 +27,7 @@ Schedule that command with a trusted server-side job runner. Never expose `SUPAB
 
 ## Geocoding
 
-Set `GEOCODING_PROVIDER_URL` to a server-side geocoder endpoint that accepts a `q` query string and returns GeoJSON-style coordinates or equivalent latitude/longitude fields. `GEOCODING_API_KEY` is optional. The provider response is normalized in `lib/app/geocoding.js`; browser code never receives the provider key.
+City search, reverse lookup and address-to-city lookups are served from the self-hosted GeoNames index in `data/geonames/` by `lib/app/geocoding.js`. There is no provider key to configure. Rebuild the index with `scripts/build-city-index.mjs` (see `data/geonames/README.md`).
 
 Location editors can also save reviewed latitude and longitude manually. The database synchronizes those values into the PostGIS geography point used by radius and bounding-box queries.
 

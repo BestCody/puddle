@@ -62,7 +62,7 @@ User/private media
   → public or short-lived signed URL according to visibility/access policy
 ```
 
-Google Places is used for stable Place IDs. Google photo bytes and photo resource URLs are not canonical Puddle media.
+Catalogue rows may carry previously matched Google Place IDs as data; no Google API is called at runtime, and Google photo bytes and photo resource URLs are not canonical Puddle media. City search and reverse lookup use a self-hosted GeoNames index, so no paid geocoding API is involved.
 
 Historical database migrations remain in `supabase/migrations/` because applied migrations are immutable deployment history even when the runtime feature they originally supported has been retired.
 

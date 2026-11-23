@@ -1,36 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { normalizeGeocodingResult } from '../../lib/app/geocoding.js'
 import { normalizeGlobalLocationViewport } from '../../lib/app/global-location-search.js'
 import { profileLocationFromForm } from '../../lib/app/profile-location.js'
 import { resolveDiscoveryCenter } from '../../lib/app/discovery-filters.js'
 import { optionalNumber, validCoordinates } from '../../lib/app/optional-number.js'
-
-test('normalizes a worldwide geocoding result', () => {
-  const result = normalizeGeocodingResult({
-    city: 'Tokyo',
-    state: 'Tokyo',
-    country: 'Japan',
-    country_code: 'jp',
-    lat: 35.6762,
-    lon: 139.6503,
-    timezone: { name: 'Asia/Tokyo' },
-    place_id: 'tokyo-city'
-  })
-  assert.deepEqual(result, {
-    providerId: 'tokyo-city',
-    city: 'Tokyo',
-    region: 'Tokyo',
-    country: 'Japan',
-    countryCode: 'JP',
-    latitude: 35.6762,
-    longitude: 139.6503,
-    timezone: 'Asia/Tokyo',
-    label: 'Tokyo, Japan',
-    confidence: null,
-    resultType: 'city'
-  })
-})
 
 test('accepts a selected city with coordinates for a profile', () => {
   const form = new FormData()
