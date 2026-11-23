@@ -6,7 +6,6 @@ exercises invariants that must hold before any production object store/provider/
 is attempted.
 """
 import json
-import base64
 import hashlib
 import math
 import re
@@ -18,7 +17,7 @@ import time
 from contextlib import closing
 from collections import Counter
 from pathlib import Path
-from photo_overlay_format import build_membership
+from photo_overlay_format import membership_bytes, membership_object_key
 from indexed_location_data import write_photo_index, prune_inactive_photo_indices, validate_slug_targets
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -240,10 +239,9 @@ def main():
     assert len(canonical_ids) == 3, f'fixture expected 3 canonical locations, got {len(canonical_ids)}'
 
     photo_ids = [str(uuid.uuid5(namespace, f'photo:{index}')) for index in range(1000)]
-    membership = build_membership(photo_ids)
-    body = base64.b64decode(membership['ids_base64'])
-    assert membership['encoding'] == 'uuid128-sorted'
-    assert len(body) == len(photo_ids) * 16 and hashlib.sha256(body).hexdigest() == membership['sha256']
+    body = membership_bytes(photo_ids)
+    assert len(body) == len(photo_ids) * 16
+    assert membership_object_key('data', hashlib.sha256(body).hexdigest()).startswith('data/search/photo-overlay-v1/membership/')
     assert body == b''.join(sorted(uuid.UUID(identifier).bytes for identifier in photo_ids)), 'membership must preserve every canonical UUID exactly'
     with closing(sqlite3.connect(':memory:')) as db:
         db.executescript((ROOT / 'config' / 'location-lookup-schema.sql').read_text())
@@ -257,7 +255,7 @@ def main():
         except RuntimeError:
             pass
     try:
-        build_membership(photo_ids + photo_ids[:1])
+        membership_bytes(photo_ids + photo_ids[:1])
         raise AssertionError('duplicate photo membership must not be published')
     except ValueError:
         pass

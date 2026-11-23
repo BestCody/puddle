@@ -92,7 +92,7 @@ function detail(row) {
   ]
 }
 
-function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoEntries = [], locations = [tower, cafe], membership, missingKey = null } = {}) {
+function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoEntries = [], locations = [tower, cafe], membership, missingKey = null, overlayVersion = 2 } = {}) {
   const prefix = 'data/search/schema=v1/snapshot=2026-08-19'
   const plannerId = 'fixture-pack-v1'
   const manifestKey = `${prefix}/manifest.json`
@@ -166,14 +166,22 @@ function fixtureObjectStore({ delayMs = 0, photoOverlay = false, photoEntries = 
     const photoInsert = photoDatabase.prepare('insert into photos values(?,?)')
     for (const [id, photo] of entries) photoInsert.run(id,JSON.stringify(photo))
     photoDatabase.close()
+    let pointerMembership = membership === undefined ? exactMembership(entries.map(entry => entry[0])) : membership
+    if (overlayVersion === 3 && pointerMembership) {
+      // v3 moves the same verified bytes into a content-addressed object.
+      const bytes = Buffer.from(pointerMembership.ids_base64, 'base64')
+      const objectKey = `data/search/photo-overlay-v1/membership/${pointerMembership.sha256}.uuid128`
+      objects.set(objectKey, bytes)
+      pointerMembership = { encoding: pointerMembership.encoding, object_key: objectKey, sha256: pointerMembership.sha256, byte_length: bytes.length }
+    }
     objects.set('data/search/photo-overlay-v1/active.json', Buffer.from(JSON.stringify({
       schema_version: 1,
-      overlay_version: 2,
+      overlay_version: overlayVersion,
       source_snapshot: '2026-08-19',
       source_manifest_key: manifestKey,
       local_index: { schema_version:1, data_sha256:photoIdentity },
       photo_count: entries.length,
-      membership: membership === undefined ? exactMembership(entries.map(entry => entry[0])) : membership
+      membership: pointerMembership
     })))
   }
   const counts = new Map()
@@ -258,6 +266,28 @@ test('exact photo membership handles boundaries and rejects corrupt/unsorted IDs
     reset()
     const fixture = fixtureObjectStore({ photoOverlay: true, photoEntries: entries, membership: broken })
     await assert.rejects(getPhotoSearchOverlay({ manifest: fixture.manifest, manifestKey: fixture.manifestKey, env }), /required|checksum|unique and sorted/)
+  }
+  reset()
+})
+
+test('v3 photo membership lives in a verified object and is reused while its checksum is unchanged', async () => {
+  const ids = ['00000000-0000-4000-8000-000000000001', 'ffffffff-ffff-4fff-8fff-ffffffffffff']
+  const entries = ids.map(id => [id, ['a'.repeat(64), null, null, null, null, null, null]])
+  reset()
+  const store = fixtureObjectStore({ photoOverlay: true, photoEntries: entries, overlayVersion: 3 })
+  const pointer = await getPhotoSearchOverlay({ manifest: store.manifest, manifestKey: store.manifestKey, ids: [ids[0]], env })
+  assert.equal(pointer.hasPhoto(ids[0]), true)
+  assert.equal(pointer.hasPhoto('00000000-0000-4000-8000-000000000002'), false)
+  assert.equal(pointer.matchedCount, 1)
+  const membershipReads = () => [...store.counts].filter(([key]) => key.includes('/membership/')).reduce((sum, [, count]) => sum + count, 0)
+  assert.equal(membershipReads(), 1)
+  // A fresh pointer read (new env identity) must not re-download an unchanged membership.
+  await getPhotoSearchOverlay({ manifest: store.manifest, manifestKey: store.manifestKey, ids: [], env: { ...env } })
+  assert.equal(membershipReads(), 1)
+  for (const broken of [null, { ...exactMembership(ids), sha256: '0'.repeat(64) }, exactMembership([ids[0], ids[0]])]) {
+    reset()
+    const fixture = fixtureObjectStore({ photoOverlay: true, photoEntries: entries, membership: broken, overlayVersion: 3 })
+    await assert.rejects(getPhotoSearchOverlay({ manifest: fixture.manifest, manifestKey: fixture.manifestKey, env }), /required|checksum|unique and sorted|Missing object/)
   }
   reset()
 })
