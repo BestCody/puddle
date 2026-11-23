@@ -1,16 +1,3 @@
-.section-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 1rem;
-  margin: 3rem 0 1rem;
-}
-
-.section-heading h2 {
-  font: 800 clamp(1.8rem,4vw,3rem) 'Manrope';
-  margin: 0;
-}
-
 .quiet-button {
   color: #171114;
   border: 0.125rem solid #171114;

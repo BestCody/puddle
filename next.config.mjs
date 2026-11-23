@@ -43,7 +43,6 @@ const nextConfig = {
   images: { formats: ['image/avif', 'image/webp'], minimumCacheTTL: 86400, remotePatterns: mediaRemotePatterns() },
   async headers() {
     return [
-      { source: '/avatars/:path*', headers: durableAssetCache },
       { source: '/events/:path*', headers: durableAssetCache },
       { source: '/puddle-mark.svg', headers: durableAssetCache },
       { source: '/og-puddle.svg', headers: durableAssetCache },

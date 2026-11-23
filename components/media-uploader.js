@@ -3,7 +3,7 @@ import mediaStyles from "@/components/media-uploader.module.css"
 import { scopedClasses } from "@/components/scoped-classes"
 
 import { useState } from 'react'
-import { csrfFetch } from '@/lib/security/csrf-client'
+import { csrfFetch, deviceId } from '@/lib/security/csrf-client'
 import { TurnstileWidget } from './turnstile-widget'
 import { PhotoFrame } from './photo-frame'
 
@@ -24,7 +24,7 @@ export function MediaUploader({ purpose, targetId = '', multiple = false, compac
     const completed = []
     for (let index = 0; index < selected.length; index += 1) {
       const form = new FormData();form.set('file',selected[index]);form.set('purpose',purpose);form.set('target_id',targetId);form.set('sort_order',String(index));if(turnstileToken)form.set('cf-turnstile-response',turnstileToken)
-      try { const response=await csrfFetch('/api/media/upload',{method:'POST',retryCsrf:!acceptsPdf,body:form,headers:{'x-puddle-device':(()=>{let d=localStorage.getItem('puddle-device-id');if(!d){d=crypto.randomUUID();localStorage.setItem('puddle-device-id',d)}return d})()}});const result=await response.json().catch(()=>({}));if(!response.ok){setState({status:'error',message:result.error||'Upload failed.',uploads:completed});return}completed.push(result.asset);onUploaded?.(result.asset) }
+      try { const response=await csrfFetch('/api/media/upload',{method:'POST',retryCsrf:!acceptsPdf,body:form,headers:{'x-puddle-device':deviceId()}});const result=await response.json().catch(()=>({}));if(!response.ok){setState({status:'error',message:result.error||'Upload failed.',uploads:completed});return}completed.push(result.asset);onUploaded?.(result.asset) }
       catch { setState({status:'error',message:'The upload was interrupted. Try again.',uploads:completed});return }
       finally {
         if (acceptsPdf) {
@@ -35,5 +35,5 @@ export function MediaUploader({ purpose, targetId = '', multiple = false, compac
     }
     setState({status:'done',message:`${completed.length} upload${completed.length===1?'':'s'} ready.`,uploads:completed})
   }
-  return <section className={scopedClasses(mediaStyles, `media-uploader ${compact?'is-compact':''}`)}><div><span className="section-pill section-pill-mint">Secure media</span><h2>{LABELS[purpose]||'Upload media'}</h2><p>{acceptsPdf?'PDFs remain quarantined until external or manual malware scanning completes.':'Images are decoded, resized, metadata-stripped, and re-encoded before storage.'}</p></div>{acceptsPdf?<TurnstileWidget key={challengeAttempt} action="verification_upload" onToken={setTurnstileToken}/>:null}<label className={scopedClasses(mediaStyles, "media-drop")}><input type="file" accept={acceptsPdf?'application/pdf':'image/jpeg,image/png,image/webp,image/avif'} multiple={allowMultiple} onChange={uploadFiles} disabled={state.status==='uploading'}/><strong>{state.status==='uploading'?'Uploading safely…':`Choose ${allowMultiple?'images':'a file'}`}</strong><span>{acceptsPdf?'PDF · up to 15 MB':'JPEG, PNG, WebP, or AVIF · up to 10 MB'}</span></label>{state.message?<p className={scopedClasses(mediaStyles, `media-status is-${state.status}`)}>{state.message}</p>:null}{state.uploads.length?<div className={scopedClasses(mediaStyles, "media-preview-row")}>{state.uploads.map((upload)=>upload.url?<PhotoFrame className={scopedClasses(mediaStyles, "media-preview-frame")} src={upload.url} alt="Uploaded media preview" unavailableText="Preview unavailable" loading="lazy" key={upload.id}/>:<span key={upload.id}>{upload.status}</span>)}</div>:null}</section>
+  return <section className={scopedClasses(mediaStyles, `media-uploader ${compact?'is-compact':''}`)}><div><h2>{LABELS[purpose]||'Upload media'}</h2><p>{acceptsPdf?'PDFs remain quarantined until external or manual malware scanning completes.':'Images are decoded, resized, metadata-stripped, and re-encoded before storage.'}</p></div>{acceptsPdf?<TurnstileWidget key={challengeAttempt} action="verification_upload" onToken={setTurnstileToken}/>:null}<label className={scopedClasses(mediaStyles, "media-drop")}><input type="file" accept={acceptsPdf?'application/pdf':'image/jpeg,image/png,image/webp,image/avif'} multiple={allowMultiple} onChange={uploadFiles} disabled={state.status==='uploading'}/><strong>{state.status==='uploading'?'Uploading safely…':`Choose ${allowMultiple?'images':'a file'}`}</strong><span>{acceptsPdf?'PDF · up to 15 MB':'JPEG, PNG, WebP, or AVIF · up to 10 MB'}</span></label>{state.message?<p className={scopedClasses(mediaStyles, `media-status is-${state.status}`)}>{state.message}</p>:null}{state.uploads.length?<div className={scopedClasses(mediaStyles, "media-preview-row")}>{state.uploads.map((upload)=>upload.url?<PhotoFrame className={scopedClasses(mediaStyles, "media-preview-frame")} src={upload.url} alt="Uploaded media preview" unavailableText="Preview unavailable" loading="lazy" key={upload.id}/>:<span key={upload.id}>{upload.status}</span>)}</div>:null}</section>
 }

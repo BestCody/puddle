@@ -62,7 +62,6 @@ export default async function EditLocationPage({ params, searchParams }) {
     return <>
       <div className={scopedClasses(sharedUIStyles, "page-heading-row")}>
         <div>
-          <span className="section-pill section-pill-mint">Location studio</span>
           <h1 className={scopedClasses(sharedUIStyles, "product-title")}>{location.name}</h1>
           <p>Keep hours, map coordinates, access details, and secure artwork current.</p>
         </div>

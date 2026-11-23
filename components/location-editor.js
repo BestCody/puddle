@@ -111,12 +111,12 @@ export function LocationEditor({ location = null, identities = [], newDraftId = 
         </div>
 
         <section className={scopedClasses(editorStyles, "editor-card editor-card-mint")}>
-          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><span className="section-pill">01 · Identity</span><h2>Who is adding this place?</h2></div><p>Suggest it personally or manage it through a host profile.</p></div>
+          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><h2>Who is adding this place?</h2></div><p>Suggest it personally or manage it through a host profile.</p></div>
           <label className={scopedClasses(editorStyles, "editor-field")}>Publish as<select name="host_profile_id" defaultValue={location?.host_profile_id || ''}>{identities.map((identity) => <option value={identity.id} key={`${identity.kind}-${identity.id || 'personal'}`}>{identity.name} · {identity.kind.replaceAll('_', ' ')}</option>)}</select></label>
         </section>
 
         <section className={scopedClasses(editorStyles, "editor-card")}>
-          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><span className="section-pill section-pill-yellow">02 · Basics</span><h2>Give the place a personality.</h2></div></div>
+          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><h2>Give the place a personality.</h2></div></div>
           <div className={scopedClasses(editorStyles, "editor-grid two")}>
             <label className={scopedClasses(editorStyles, "editor-field span-two")}>Location name<input name="name" required minLength="2" maxLength="120" defaultValue={location?.name || ''} placeholder="Moonlight Café" /></label>
             <label className={scopedClasses(editorStyles, "editor-field")}>Type<select name="kind" defaultValue={location?.kind || 'cafe'}>{kinds.map((kind) => <option value={kind} key={kind}>{kind.replaceAll('_', ' ')}</option>)}</select></label>
@@ -127,7 +127,7 @@ export function LocationEditor({ location = null, identities = [], newDraftId = 
         </section>
 
         <section className={scopedClasses(editorStyles, "editor-card editor-card-purple")}>
-          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><span className="section-pill section-pill-yellow">03 · Map</span><h2>Put it in the right spot.</h2></div><p>Coordinates power radius search and the Explore map. Review the pin before publishing.</p></div>
+          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><h2>Put it in the right spot.</h2></div><p>Coordinates power radius search and the Explore map. Review the pin before publishing.</p></div>
           <div className={scopedClasses(editorStyles, "editor-grid two")}>
             <label className={scopedClasses(editorStyles, "editor-field")}>City<input name="city" required defaultValue={location?.city || ''} /></label>
             <label className={scopedClasses(editorStyles, "editor-field")}>Neighborhood<input name="neighborhood" defaultValue={location?.neighborhood || ''} /></label>
@@ -139,13 +139,13 @@ export function LocationEditor({ location = null, identities = [], newDraftId = 
         </section>
 
         <section className={scopedClasses(editorStyles, "editor-card editor-card-yellow")}>
-          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><span className="section-pill">04 · Hours & price</span><h2>When is it worth the trip?</h2></div></div>
+          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><h2>When is it worth the trip?</h2></div></div>
           <div className={scopedClasses(editorStyles, "hours-grid")}>{days.map((day) => <label className={scopedClasses(editorStyles, "editor-field")} key={day}>{day}<input name={`hours_${day}`} defaultValue={hours[day] || ''} placeholder="09:00-22:00 or Closed" /></label>)}</div>
           <label className={scopedClasses(editorStyles, "editor-field")}>Price range<select name="price_level" defaultValue={location?.price_level || ''}><option value="">Not specified</option><option value="1">$ · inexpensive</option><option value="2">$$ · moderate</option><option value="3">$$$ · higher</option><option value="4">$$$$ · premium</option></select></label>
         </section>
 
         <section className={scopedClasses(editorStyles, "editor-card")}>
-          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><span className="section-pill section-pill-mint">05 · Amenities</span><h2>What can people count on?</h2></div></div>
+          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><h2>What can people count on?</h2></div></div>
           <label className={scopedClasses(editorStyles, "editor-field")}>Amenities<textarea name="amenities" defaultValue={listText(location?.amenities)} placeholder="One per line: Wi-Fi, patio, outlets, parking" /></label>
           <div className={scopedClasses(editorStyles, "accessibility-grid")}>{['wheelchair_accessible','accessible_washroom','step_free','hearing_support','sensory_friendly'].map((key) => <label className={scopedClasses(editorStyles, "editor-check")} key={key}><input name={key} type="checkbox" defaultChecked={accessibilityValue(accessibility, key)} /> {key.replaceAll('_', ' ')}</label>)}</div>
           <label className={scopedClasses(editorStyles, "editor-field")}>Accessibility notes<textarea name="accessibility_notes" defaultValue={accessibility.notes || ''} /></label>
@@ -153,7 +153,7 @@ export function LocationEditor({ location = null, identities = [], newDraftId = 
         </section>
 
         <section className={scopedClasses(editorStyles, "editor-card editor-card-pink")}>
-          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><span className="section-pill">06 · Contact</span><h2>Help people verify the details.</h2></div></div>
+          <div className={scopedClasses(editorStyles, "editor-section-heading")}><div><h2>Help people verify the details.</h2></div></div>
           <div className={scopedClasses(editorStyles, "editor-grid two")}>
             <label className={scopedClasses(editorStyles, "editor-field")}>Website<input name="website" type="url" defaultValue={contactValue(contact, 'website')} /></label>
             <label className={scopedClasses(editorStyles, "editor-field")}>Instagram<input name="instagram" defaultValue={contactValue(contact, 'instagram')} /></label>
@@ -165,7 +165,7 @@ export function LocationEditor({ location = null, identities = [], newDraftId = 
 
       <div className={scopedClasses(editorStyles, "editor-sidebar-stack")}>
         <RevisionHistory revisions={location?.revisions || []} label="Location history" />
-        {draftId ? <section className={scopedClasses(editorStyles, "revision-card")}><span className="section-pill section-pill-mint">Workflow</span><h2>Location controls</h2><p className="muted">Community suggestions normally enter review before becoming public.</p><div className={scopedClasses(editorStyles, "workflow-buttons")}>{currentStatus === 'published' ? <StatusForm id={draftId} status="archived" label="Archive" /> : null}</div></section> : null}
+        {draftId ? <section className={scopedClasses(editorStyles, "revision-card")}><h2>Location controls</h2><p className="muted">Community suggestions normally enter review before becoming public.</p><div className={scopedClasses(editorStyles, "workflow-buttons")}>{currentStatus === 'published' ? <StatusForm id={draftId} status="archived" label="Archive" /> : null}</div></section> : null}
       </div>
     </div>
   )

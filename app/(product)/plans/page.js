@@ -41,41 +41,24 @@ function SavedCard({ item, session, active }) {
   const participants = item.participants?.length ? item.participants.join(', ') : null
   const primaryMeta = active === 'planned' ? participants || item.city || categoryLabel(item.category) : item.city || categoryLabel(item.category)
   const secondaryMeta = active === 'planned' && item.planned_for ? <VisitTimeLabel value={item.planned_for} /> : null
-  const morphable = active === 'saved' && Boolean(item.slug)
 
-  const photo = <PhotoFrame
-    as="a"
-    href={detail}
-    className={styles.placePhoto}
-    unavailableClassName={styles.placePhotoUnavailable}
-    src={image}
-    alt={`${item.title} photo`}
-    aria-label={`Open ${item.title}`}
-    unavailableText={image ? 'Photo unavailable' : 'Puddle'}
-    data-saved-morph-link={morphable ? '' : undefined}
-    data-saved-morph-photo={morphable ? '' : undefined}
-  >
-    {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
-  </PhotoFrame>
-
-  const title = morphable
-    ? <a href={detail} data-saved-morph-link>{item.title}</a>
-    : <Link href={detail}>{item.title}</Link>
-
-  return <article
-    className={styles.placeCard}
-    data-testid="saved-card"
-    data-saved-morph-card={morphable ? '' : undefined}
-    data-saved-morph-key={morphable ? item.location_id : undefined}
-    data-saved-morph-slug={morphable ? item.slug : undefined}
-    data-saved-morph-title={morphable ? item.title : undefined}
-    data-saved-morph-meta-text={morphable ? primaryMeta : undefined}
-    data-saved-morph-image={morphable && image ? image : undefined}
-  >
-    {photo}
+  // Plans and History only; the Saved tab renders SavedPagedGrid with its own morph hooks.
+  return <article className={styles.placeCard} data-testid="saved-card">
+    <PhotoFrame
+      as="a"
+      href={detail}
+      className={styles.placePhoto}
+      unavailableClassName={styles.placePhotoUnavailable}
+      src={image}
+      alt={`${item.title} photo`}
+      aria-label={`Open ${item.title}`}
+      unavailableText={image ? 'Photo unavailable' : 'Puddle'}
+    >
+      {item.perfect_pick ? <b className={styles.perfectPick}>★ Perfect Pick</b> : null}
+    </PhotoFrame>
     <div className={styles.placeCopy}>
-      <h2 data-saved-morph-title={morphable ? '' : undefined}>{title}</h2>
-      <div className={styles.placeMeta} data-saved-morph-meta={morphable ? '' : undefined}><small>{primaryMeta}</small>{secondaryMeta ? <span>{secondaryMeta}</span> : null}</div>
+      <h2><Link href={detail}>{item.title}</Link></h2>
+      <div className={styles.placeMeta}><small>{primaryMeta}</small>{secondaryMeta ? <span>{secondaryMeta}</span> : null}</div>
     </div>
   </article>
 }
@@ -159,7 +142,7 @@ export default async function PlansPage({ searchParams }) {
 
         {visible.length ? active === 'saved'
           ? <SavedPagedGrid key={savedPageKey} initialItems={visible} initialPagination={page.pagination} category={selectedCategory} query={query} classes={{ grid: styles.placeGrid, card: styles.placeCard, photo: styles.placePhoto, copy: styles.placeCopy, meta: styles.placeMeta, perfectPick: styles.perfectPick, loadMore: styles.loadMore }} />
-          : <section className={styles.placeGrid} aria-label={active === 'saved' ? 'Saved places' : active === 'planned' ? 'Plans' : 'History'} data-testid="saved-grid">
+          : <section className={styles.placeGrid} aria-label={active === 'planned' ? 'Plans' : 'History'} data-testid="saved-grid">
               {visible.map((item) => <SavedCard item={item} session={session} active={active} key={`${active}:${item.location_id}`} />)}
             </section>
           : <div className={styles.empty} data-testid="saved-empty"><strong>{page.pagination.hasMore ? 'Some places on this page are unavailable. Continue to see more.' : active === 'planned' ? 'No plans yet.' : active === 'past' ? 'No history yet.' : query ? 'No saved puddles match that search.' : 'Nothing saved yet.'}</strong>{!page.pagination.hasMore ? <Link href="/discover">Start swiping</Link> : null}</div>}

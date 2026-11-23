@@ -12,7 +12,6 @@ export default async function ReportPage({ searchParams }) {
   const target = String(params?.target_type || '').replaceAll('_',' ')
   return renderProductPage(async () => <>
     <div className={scopedClasses(sharedUIStyles, "page-heading-row")}><div>
-      <span className="section-pill section-pill-yellow">Safety & accuracy</span>
       <h1 className={scopedClasses(sharedUIStyles, "product-title")}>Report {target || 'something'}.</h1>
       <p>Report posts, listings, profiles, conversations, messages, comments, or shared plans. Evidence is preserved for moderators.</p>
     </div></div>

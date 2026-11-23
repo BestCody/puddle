@@ -20,7 +20,6 @@ export default async function CreatePlacePage({ searchParams }) {
     return <>
       <div className={scopedClasses(sharedUIStyles, "page-heading-row")}>
         <div>
-          <span className="section-pill section-pill-mint">New location</span>
           <h1 className={scopedClasses(sharedUIStyles, "product-title")}>Put a local gem on Puddle.</h1>
           <p>Add accurate hours, amenities, access details, and contact information.</p>
         </div>

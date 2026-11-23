@@ -18,6 +18,6 @@ export default async function ClaimLocationPage({ params, searchParams }) {
   if (!result) notFound()
   return renderProductPage(async (session) => {
     const options = await getCreatorOptions(session)
-    return <><div className={scopedClasses(sharedUIStyles, "page-heading-row")}><div><span className="section-pill section-pill-mint">Location claim</span><h1 className={scopedClasses(sharedUIStyles, "product-title")}>Manage {result.location.name}.</h1><p>Claims attach management rights to your existing user account or a host profile you already manage.</p></div></div><AuthMessage searchParams={messages} /><LocationClaimForm action={submitLocationClaim} location={result.location} displayName={session.profile.display_name} hosts={options.hosts} /></>
+    return <><div className={scopedClasses(sharedUIStyles, "page-heading-row")}><div><h1 className={scopedClasses(sharedUIStyles, "product-title")}>Manage {result.location.name}.</h1><p>Claims attach management rights to your existing user account or a host profile you already manage.</p></div></div><AuthMessage searchParams={messages} /><LocationClaimForm action={submitLocationClaim} location={result.location} displayName={session.profile.display_name} hosts={options.hosts} /></>
   })
 }
