@@ -23,6 +23,7 @@ export async function GET() {
   if (current.profile.suspended_at || current.profile.banned_at) return NextResponse.json({ error: 'Profile identity is unavailable.' }, { status: 403 })
 
   return NextResponse.json({
+    id: current.user.id,
     displayName: current.profile.display_name || 'Puddle person',
     avatarUrl: publicMediaUrl(current, current.profile.avatar_path),
     appearanceTheme: current.profile.appearance_theme

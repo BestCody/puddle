@@ -23,7 +23,7 @@ async function loadDiscoverySession(supabase, userId) {
   if (active) return active
   const request = (async () => {
     try {
-      return await supabase.rpc('discovery_session_v1')
+      return await supabase.rpc('discovery_session_v2')
     } catch (error) {
       return { data: null, error }
     }
@@ -58,9 +58,8 @@ async function authenticatedSession(traceId, requestHeaders) {
     return { error: NextResponse.json({ error: 'Sign in to swipe through nearby places.' }, { status: 401 }) }
   }
   const user = { id: userId }
-  // Profile state and seen history are read together by one authenticated RPC.
-  // This removes a second Supabase round trip while preserving the same
-  // account-state and seen-location semantics.
+  // One authenticated RPC reads profile and account state. Seen history is
+  // checked later, only for the candidate places the feed is about to show.
   const sessionResult = await loadDiscoverySession(supabase, userId)
   const authMs = elapsedMs(supabaseStarted)
   recordServerLatency('supabase.discoverySession', authMs, SERVER_LATENCY_BUDGET_MS.pageSession, {
@@ -74,12 +73,7 @@ async function authenticatedSession(traceId, requestHeaders) {
   if (profile?.suspended_at || profile?.banned_at) {
     return { error: NextResponse.json({ error: profile.banned_at ? 'This account is banned.' : 'This account is suspended.' }, { status: 403 }) }
   }
-  const seenLocationIds = sessionResult.data?.seen_location_ids
-  if (!Array.isArray(seenLocationIds) || !seenLocationIds.every((id) => typeof id === 'string' && UUID_PATTERN.test(id))) {
-    return { error: NextResponse.json({ error: 'Discovery history could not be verified.' }, { status: 503 }) }
-  }
-  const preloadedSeenLocationIds = seenLocationIds
-  return { session: { supabase, user, profile: profile || {}, traceId, authMs, preloadedSeenLocationIds } }
+  return { session: { supabase, user, profile: profile || {}, traceId, authMs } }
 }
 
 function withTrace(response, traceId) {
@@ -92,10 +86,7 @@ async function discoveryResponse(session, filters, excludeIds = [], traceId) {
   const started = latencyStart()
   let feed
   try {
-    feed = await getDiscoveryFeed(session, { ...filters, kind: 'place', date: 'any' }, {
-      excludeIds,
-      preloadedSeenLocationIds: session.preloadedSeenLocationIds
-    })
+    feed = await getDiscoveryFeed(session, { ...filters, kind: 'place', date: 'any' }, { excludeIds })
   } catch (error) {
     console.error(`Discovery refresh failed trace=${traceId}: ${error?.message || 'unknown error'}`)
     recordSloObservation('discovery', elapsedMs(started), false, { trace_id: traceId, service: 'self-hosted' })

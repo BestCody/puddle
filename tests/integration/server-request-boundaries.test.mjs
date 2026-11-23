@@ -32,8 +32,10 @@ test('Hot read APIs consume the proxy-verified user and verify only required pro
     assert.doesNotMatch(source, /auth\.getClaims\(\)/)
     assert.doesNotMatch(source, /auth\.getUser\(\)/)
   }
-  assert.match(discovery, /supabase\.rpc\('discovery_session_v1'\)/)
-  assert.match(discovery, /seen_location_ids/)
+  // One RPC for profile/account state; history is checked per candidate window, never loaded whole.
+  assert.match(discovery, /supabase\.rpc\('discovery_session_v2'\)/)
+  assert.doesNotMatch(discovery, /seen_location_ids/)
+  assert.match(await read('lib/app/discovery-global.js'), /rpc\('discovery_seen_among_v1'/)
   assert.doesNotMatch(discovery, /ensureProfile/)
   assert.match(map, /select\('suspended_at,banned_at'\)/)
   assert.doesNotMatch(map, /ensureProfile/)
