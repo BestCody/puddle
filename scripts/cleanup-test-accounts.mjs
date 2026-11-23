@@ -76,6 +76,7 @@ const profileRelationProbes = [
   ['orders', 'buyer_id'],
   ['tickets', 'owner_id'],
   ['reports', 'reporter_id'],
+  ['audit_logs', 'actor_id'],
   ['host_announcements', 'author_id'],
   ['refund_requests', 'requester_id'],
   ['bulk_operations', 'requested_by']

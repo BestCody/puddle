@@ -1,20 +1,20 @@
--- Drop 33 tables left behind by retired features (event ticketing, payouts
+-- Drop 32 tables left behind by retired features (event ticketing, payouts
 -- and Stripe Connect, plan polls and stops, live location sharing, host follows,
 -- close friends, message reactions and media, recommendation experiments,
--- account-signal and audit tables nothing writes) and the 43 functions that
--- only they used.
+-- account-signal tables nothing writes) and the 43 functions that only they used.
 --
 -- Checked against production on 2026-11-23: no live table holds a foreign key
 -- into these tables; nothing in app/, lib/, components/, scripts/ or the SQL
--- tests CI runs references them; 30 are empty. The non-empty ones
+-- tests CI runs references them; 29 are empty. The non-empty ones
 -- (content_categories 10 rows, recommendation_ranking_configs 2,
 -- payment_configuration 1) were exported on the server before this ran.
--- Tables the service-role moderation backend uses (moderation_actions, reports,
--- system_notices, linked_account_signals) and google_places_sku_monthly_usage,
--- which location_architecture_integrity.sql requires, are kept.
+-- Kept: the service-role moderation backend's tables (moderation_actions,
+-- reports, system_notices, linked_account_signals), audit_logs (its immutability
+-- trigger is asserted by 0024_stage9_authorization.sql) and
+-- google_places_sku_monthly_usage (required by location_architecture_integrity.sql).
 
 drop table if exists
-  public.abuse_risk_signals, public.account_deletion_requests, public.audit_logs,
+  public.abuse_risk_signals, public.account_deletion_requests,
   public.content_categories, public.context_arrival_statuses,
   public.ephemeral_location_points, public.event_checkins, public.friend_close_friends,
   public.host_follows, public.inventory_reservations, public.ledger_entries,
