@@ -1,6 +1,10 @@
 import http from 'node:http'
 import { createHash } from 'node:crypto'
-import { brotliCompressSync } from 'node:zlib'
+import { mkdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
+import { brotliCompressSync, zstdCompressSync } from 'node:zlib'
+import { catalogueIndexIdentity } from '../../lib/app/indexed-location-data.js'
 
 const DEFAULT_PORT = Number(process.env.E2E_GLOBAL_SEARCH_PORT || 39200)
 const DEFAULT_BUCKET = process.env.OBJECT_STORAGE_BUCKET || 'puddle-e2e-assets'
@@ -17,6 +21,40 @@ function sha256Hex(value) {
 
 function hashBucket(value) {
   return sha256Hex(value).slice(0, 3)
+}
+
+function catalogueLedger(documents) {
+  return sha256Hex(JSON.stringify(documents.map((document) => document.id)))
+}
+
+// Since the keyed catalogue moved to a local SQLite index (#466), ID and slug
+// lookups read GLOBAL_LOCATION_INDEXED_DATA_DIR instead of object-store buckets.
+// Write the same schema and identity the runtime verifies.
+export function writeIndexedCatalogue(documents, directory, { prefix = 'data/search/schema=v1/snapshot=e2e' } = {}) {
+  const manifestKey = `${prefix}/manifest.json`
+  const manifest = { location_count: documents.length, validation: { hashes_sha256: catalogueLedger(documents) } }
+  mkdirSync(directory, { recursive: true })
+  const path = join(directory, `catalogue-${catalogueIndexIdentity(manifest, manifestKey)}.sqlite`)
+  const database = new DatabaseSync(path)
+  try {
+    database.exec(readFileSync(new URL('../../config/location-lookup-schema.sql', import.meta.url), 'utf8'))
+    const meta = database.prepare('insert into metadata values(?,?)')
+    for (const [key, value] of Object.entries({
+      schema_version: 1, complete: 1, kind: 'catalogue', source_manifest_key: manifestKey,
+      source_ledger_sha256: manifest.validation.hashes_sha256, location_count: documents.length
+    })) meta.run(key, String(value))
+    const location = database.prepare('insert into locations values(?,?,?)')
+    const slug = database.prepare('insert into slugs values(?,?)')
+    for (const document of documents) {
+      // The stub publishes no text projection, so only the identity column is read.
+      location.run(document.id, zstdCompressSync(Buffer.from(JSON.stringify(document))), zstdCompressSync(Buffer.from(JSON.stringify([document.id]))))
+      if (document.slug) slug.run(document.slug, document.id)
+    }
+    database.exec('create unique index location_id_lookup on locations(id); create unique index slug_lookup on slugs(slug);')
+  } finally {
+    database.close()
+  }
+  return path
 }
 
 export function buildObjects(documents, { prefix = 'data/search/schema=v1/snapshot=e2e', plannerId = 'e2e-pack' } = {}) {
@@ -38,6 +76,8 @@ export function buildObjects(documents, { prefix = 'data/search/schema=v1/snapsh
     prefix,
     location_count: documents.length,
     published_count: documents.length,
+    // The runtime keys its local catalogue index to this ledger hash.
+    validation: { hashes_sha256: catalogueLedger(documents) },
     geo_location_count: documents.length,
     planner: { version: 2, id: plannerId },
     geo: {
@@ -175,6 +215,8 @@ if (process.env.OBJECT_STUB_STANDALONE === '1') {
     quality_score: 0.9,
     popularity_score: 3
   }))
+  const indexDirectory = String(process.env.GLOBAL_LOCATION_INDEXED_DATA_DIR || '').trim()
+  if (indexDirectory) console.log(`object-e2e-stub wrote catalogue index ${writeIndexedCatalogue(documents, indexDirectory)}`)
   const stub = createObjectE2EStub({ documents })
   await stub.listen()
   console.log(`object-e2e-stub listening on ${DEFAULT_PORT}; objects=${stub.objects.size} fixtures=${documents.length}`)

@@ -106,6 +106,8 @@ jobs:
           )"
           echo "E2E_GLOBAL_SEARCH_PORT=$object_port" >> "$GITHUB_ENV"
           echo "OBJECT_STORAGE_ENDPOINT=http://127.0.0.1:${object_port}" >> "$GITHUB_ENV"
+          # The runtime reads ID/slug details from a local catalogue index the stub writes here.
+          echo "GLOBAL_LOCATION_INDEXED_DATA_DIR=${RUNNER_TEMP}/puddle-e2e-catalogue" >> "$GITHUB_ENV"
           echo "Using object-store emulator port $object_port"
       - name: Start local object-store emulator
         run: |
