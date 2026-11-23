@@ -18,7 +18,7 @@ import threading
 import time
 import urllib.error
 import urllib.parse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import boto3
 import duckdb
@@ -27,6 +27,7 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 from PIL import Image, ImageOps
 from kartaview_urls import canonical_asset_url
+from photo_schedule import RETRYABLE_STATUSES, next_start_country, retry_delay, rotate_countries
 
 
 def first_env(*names, default=''):
@@ -104,6 +105,9 @@ MAX_BYTES = 10_000_000
 MAX_SOURCE_PIXELS = 40_000_000
 PROVIDER_CODES = {'wikimedia-commons': 1, 'mapillary': 2, 'kartaview': 3, 'yfcc100m': 4}
 TRANSIENT_HTTP_CODES = {408, 425, 429, 500, 502, 503, 504}
+# A plain 500 for one static image is usually a broken asset rather than an
+# outage. Retry it briefly; the per-location back-off decides when to try again.
+INTERNAL_ERROR_DOWNLOAD_ATTEMPTS = 3
 WIKIMEDIA_DOWNLOAD_CONCURRENCY = max(1, min(2, int(os.getenv('GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_CONCURRENCY', '2'))))
 WIKIMEDIA_DOWNLOAD_MBIT = max(1.0, min(25.0, float(os.getenv('GLOBAL_PHOTO_WIKIMEDIA_DOWNLOAD_MBIT', '25'))))
 WIKIMEDIA_DOWNLOAD_BYTES_PER_SECOND = WIKIMEDIA_DOWNLOAD_MBIT * 1_000_000 / 8.0
@@ -116,6 +120,10 @@ MAPILLARY_GRAPH_LOCK = threading.Lock()
 MAPILLARY_GRAPH_NEXT_AT = 0.0
 EXCLUSION_PREFIX = f'{DATA_PREFIX}/enrichment/photo_exclusions/snapshot={args.snapshot}'
 ATTEMPT_PREFIX = f'{DATA_PREFIX}/enrichment/photo_attempts/snapshot={args.snapshot}'
+COUNTRY_CURSOR_KEY = f'{DATA_PREFIX}/enrichment/photo_state/snapshot={args.snapshot}/materialize-country-cursor-v1.json'
+# Explicit country lists, bulk manifests and pilot bounds are operator runs;
+# only the scheduled full drain rotates and records its country cursor.
+ROTATE_COUNTRIES = not args.countries.strip() and not args.bulk_manifest and args.max_locations is None
 
 if not DATA_ENDPOINT_URL or not DATA_KEY_ID or not DATA_KEY:
     raise RuntimeError('Object storage data endpoint and credentials are required.')
@@ -190,6 +198,27 @@ def object_exists(key):
         if code in {'404', 'NoSuchKey', 'NotFound'} or status == 404:
             return False
         raise
+
+
+def read_country_cursor():
+    """Country the scheduled drain resumes at, or None to start a full pass."""
+    try:
+        body = data_s3.get_object(Bucket=DATA_BUCKET, Key=COUNTRY_CURSOR_KEY)['Body'].read()
+    except ClientError as error:
+        code = str(error.response.get('Error', {}).get('Code', ''))
+        status = error.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
+        if code in {'404', 'NoSuchKey', 'NotFound'} or status == 404:
+            return None
+        raise
+    value = json.loads(body or b'{}').get('next_country')
+    return safe_partition(value, 'country cursor') if value else None
+
+
+def write_country_cursor(next_country):
+    data_s3.put_object(
+        Bucket=DATA_BUCKET, Key=COUNTRY_CURSOR_KEY, ContentType='application/json',
+        Body=json.dumps({'next_country': next_country, 'updated_at': datetime.now(timezone.utc).isoformat()}).encode(),
+    )
 
 
 def supabase_rpc(name, payload, retries=6):
@@ -485,7 +514,8 @@ def download(url, provider):
                     raise RuntimeError('too many image redirects') from error
                 current = urllib.parse.urljoin(current, error.headers['Location'])
                 continue
-            if error.code in TRANSIENT_HTTP_CODES and attempt < 5:
+            attempt_limit = INTERNAL_ERROR_DOWNLOAD_ATTEMPTS if error.code == 500 else 6
+            if error.code in TRANSIENT_HTTP_CODES and attempt < attempt_limit - 1:
                 retry_after = error.headers.get('Retry-After')
                 try:
                     delay = float(retry_after) if retry_after else 0.0
@@ -895,22 +925,45 @@ def write_results(country, results):
     con.execute(f"COPY materialized_results TO '{out}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 100000)")
 
 
+def prior_retryable_failures(country, location_ids):
+    """Count each location's retryable failures recorded in the last 14 days."""
+    attempt_prefix = f'{ATTEMPT_PREFIX}/country_code={country}'
+    ids = sorted({str(value) for value in location_ids if value})
+    if not ids or not prefix_exists(attempt_prefix):
+        return {}
+    id_list = ','.join("'" + value.replace("'", "''") + "'" for value in ids)
+    statuses = ','.join(f"'{status}'" for status in sorted(RETRYABLE_STATUSES))
+    rows = con.execute(f"""
+      SELECT cast(location_id AS VARCHAR), count(*)
+      FROM read_parquet('s3://{DATA_BUCKET}/{attempt_prefix}/*.parquet', union_by_name=true)
+      WHERE cast(location_id AS VARCHAR) IN ({id_list})
+        AND cast(status AS VARCHAR) IN ({statuses})
+        AND try_cast(attempted_at AS TIMESTAMPTZ) > current_timestamp - INTERVAL 14 DAY
+      GROUP BY 1
+    """).fetchall()
+    return {str(location_id): int(count) for location_id, count in rows}
+
+
 def write_attempts(country, diagnostics):
     # Successful locations are already durable in photo_metadata and do not
     # need a second state record. Keeping only non-success outcomes bounds the
     # ledger and makes subsequent scans cheaper; permanent invalid assets use
-    # the long retry window instead of occupying the hourly retry path.
+    # the long retry window instead of occupying the hourly retry path, and
+    # repeatedly failing locations back off exponentially (photo_schedule).
     diagnostics = [detail for detail in diagnostics if detail.get('status') != 'materialized']
     if not diagnostics:
         return
     attempted_at = datetime.now(timezone.utc)
+    prior = prior_retryable_failures(country, [
+        detail.get('location_id') for detail in diagnostics if detail.get('status') in RETRYABLE_STATUSES
+    ])
     rows = []
     for detail in diagnostics:
         status = str(detail.get('status') or 'worker_error')
-        if status in {'exhausted', 'invalid'}:
-            retry_at = attempted_at + timedelta(days=ATTEMPT_RETRY_DAYS)
-        else:
-            retry_at = attempted_at + timedelta(hours=ATTEMPT_RETRY_HOURS)
+        failures = prior.get(str(detail.get('location_id') or ''), 0)
+        if status in RETRYABLE_STATUSES:
+            detail['priorFailures'] = failures
+        retry_at = attempted_at + retry_delay(status, failures, ATTEMPT_RETRY_HOURS, ATTEMPT_RETRY_DAYS)
         rows.append((
             str(detail.get('location_id') or ''), status, attempted_at, retry_at,
             len(detail.get('attempts') or []),
@@ -932,12 +985,17 @@ else:
     exclusion_sql = 'SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false'
 
 stop_requested = False
+stopped_country = None
 batches_processed = 0
 locations_seen = 0
 materialized_total = 0
-for country in countries():
+start_country = read_country_cursor() if ROTATE_COUNTRIES else None
+country_order = rotate_countries(countries(), start_country)
+print(f'photo country order: {len(country_order)} countries starting at {country_order[0] if country_order else None}', flush=True)
+for country in country_order:
     if runtime_exhausted():
         stop_requested = True
+        stopped_country = country
         break
     country_location_limit = None
     if args.max_locations is not None:
@@ -1093,11 +1151,18 @@ for country in countries():
             break
 
     if stop_requested:
+        stopped_country = country
         break
+
+next_country = next_start_country(stopped_country, complete=not stop_requested)
+if ROTATE_COUNTRIES:
+    write_country_cursor(next_country)
 
 print(json.dumps({
     'provider': 'global-photo-materializer',
     'snapshot': args.snapshot,
+    'startCountry': start_country,
+    'nextStartCountry': next_country if ROTATE_COUNTRIES else None,
     'complete': not stop_requested,
     'runBudgetSeconds': RUN_BUDGET_SECONDS,
     'runtimeBudgetExhausted': runtime_exhausted(),
