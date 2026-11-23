@@ -17,8 +17,7 @@ export async function GET(request) {
   if (query.length < 2) return NextResponse.json({ results: [] })
 
   try {
-    const language = String(request.headers.get('accept-language') || 'en').slice(0, 2).toLowerCase()
-    const results = await searchCities(query, { language, limit: 6 })
+    const results = searchCities(query, { limit: 6 })
     return NextResponse.json({ results }, { headers: { 'cache-control': 'private, max-age=300' } })
   } catch (error) {
     return NextResponse.json({ error: error?.message || 'City search is unavailable.' }, { status: 503, headers: { 'cache-control': 'no-store' } })

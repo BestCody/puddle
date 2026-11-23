@@ -1,6 +1,6 @@
 # Worldwide locations
 
-Puddle discovers places from the user's stored latitude and longitude. City text is not a silent coordinate fallback. Users can select a city through the server-side geocoding adapter or grant browser location permission. Geoapify uses the server-only `GEOCODING_API_KEY`; the adapter URL is configurable.
+Puddle discovers places from the user's stored latitude and longitude. City text is not a silent coordinate fallback. Users can select a city or grant browser location permission. City search, reverse lookup and place-editor lookups use a self-hosted GeoNames city index (`data/geonames/cities.tsv.gz`, built by `scripts/build-city-index.mjs`); no external geocoding API or key is involved.
 
 ## Catalogue and photos
 

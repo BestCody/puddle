@@ -22,8 +22,7 @@ export async function POST(request) {
   try {
     const body = object(await readJsonLimited(request, 8_000))
     const address = string(body.address, { name: 'address', min: 3, max: 500 })
-    const response = await geocodeAddress(address)
-    if (!response.configured) return NextResponse.json({ configured: false, error: 'Automatic map lookup is temporarily unavailable. Enter coordinates manually.' }, { status: 503 })
+    const response = geocodeAddress(address)
     if (!response.result) return NextResponse.json({ error: 'No matching location was found.' }, { status: 404 })
     return NextResponse.json({ configured: true, result: response.result })
   } catch (error) {

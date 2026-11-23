@@ -41,6 +41,12 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   images: { formats: ['image/avif', 'image/webp'], minimumCacheTTL: 86400, remotePatterns: mediaRemotePatterns() },
+  // lib/app/geocoding.js reads the self-hosted GeoNames city index at runtime.
+  outputFileTracingIncludes: {
+    '/api/location/search': ['./data/geonames/cities.tsv.gz'],
+    '/api/location/reverse': ['./data/geonames/cities.tsv.gz'],
+    '/api/geocode': ['./data/geonames/cities.tsv.gz']
+  },
   async headers() {
     return [
       { source: '/events/:path*', headers: durableAssetCache },
