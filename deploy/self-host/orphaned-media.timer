@@ -1,0 +1,10 @@
+[Unit]
+Description=Remove abandoned and deleted Puddle media rows daily
+
+[Timer]
+OnCalendar=*-*-* 04:40:00 UTC
+Persistent=true
+Unit=orphaned-media.service
+
+[Install]
+WantedBy=timers.target

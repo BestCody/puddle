@@ -1,0 +1,10 @@
+[Unit]
+Description=Raise Puddle security and moderation alerts hourly
+
+[Timer]
+OnCalendar=*-*-* *:17:00 UTC
+Persistent=true
+Unit=security-alerts.service
+
+[Install]
+WantedBy=timers.target

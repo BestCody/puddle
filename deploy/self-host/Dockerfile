@@ -29,6 +29,8 @@ COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/scripts/self-host-submit-indexnow.mjs ./scripts/self-host-submit-indexnow.mjs
 COPY --from=build --chown=node:node /app/scripts/self-host-process-media-scans.mjs ./scripts/self-host-process-media-scans.mjs
 COPY --from=build --chown=node:node /app/scripts/self-host-cleanup-media-objects.mjs ./scripts/self-host-cleanup-media-objects.mjs
+COPY --from=build --chown=node:node /app/scripts/self-host-run-security-alerts.mjs ./scripts/self-host-run-security-alerts.mjs
+COPY --from=build --chown=node:node /app/scripts/self-host-cleanup-orphaned-media.mjs ./scripts/self-host-cleanup-orphaned-media.mjs
 RUN mkdir -p .next/cache && chown node:node .next/cache
 USER node
 EXPOSE 3000

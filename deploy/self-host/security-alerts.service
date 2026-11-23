@@ -1,0 +1,10 @@
+[Unit]
+Description=Raise Puddle moderation-SLA and security-anomaly alerts
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/puddle
+ExecStart=/usr/bin/docker compose --env-file .env.selfhost -f deploy/self-host/compose.yaml exec -T app node scripts/self-host-run-security-alerts.mjs
+TimeoutStartSec=10min
