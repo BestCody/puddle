@@ -1,13 +1,18 @@
 """Exact photo membership shared by the builder and runtime reader."""
-import base64
-import hashlib
 import uuid
 
-def build_membership(ids: list[str]) -> dict:
-    """Exact presence without per-candidate crypto or metadata shard reads."""
+
+def membership_bytes(ids: list[str]) -> bytes:
+    """Sorted, unique 16-byte location IDs for exact presence checks.
+
+    Overlay v3 publishes these bytes as their own content-addressed object, so
+    the active pointer stays small however many locations have photos.
+    """
     values = sorted(uuid.UUID(identifier).bytes for identifier in ids)
     if len(set(values)) != len(values):
         raise ValueError('Photo membership IDs must be unique.')
-    body = b''.join(values)
-    return {'encoding': 'uuid128-sorted', 'ids_base64': base64.b64encode(body).decode('ascii'),
-            'sha256': hashlib.sha256(body).hexdigest()}
+    return b''.join(values)
+
+
+def membership_object_key(data_prefix: str, sha256: str) -> str:
+    return f'{data_prefix}/search/photo-overlay-v1/membership/{sha256}.uuid128'

@@ -100,6 +100,12 @@ RUN_DEADLINE = time.monotonic() + RUN_BUDGET_SECONDS
 CLAIM_CONCURRENCY = max(1, min(64, int(os.getenv('GLOBAL_PHOTO_CLAIM_CONCURRENCY', '32'))))
 ATTEMPT_RETRY_DAYS = max(1, min(365, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_DAYS', '7'))))
 ATTEMPT_RETRY_HOURS = max(1, min(24, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_RETRY_HOURS', '1'))))
+# Retryable failures in this window drive the per-location back-off.
+FAILURE_WINDOW_DAYS = 14
+# Older attempt rows can neither block a location (retry_at is at most
+# ATTEMPT_RETRY_DAYS away) nor count toward back-off, so compaction drops them.
+ATTEMPT_HISTORY_DAYS = max(FAILURE_WINDOW_DAYS, ATTEMPT_RETRY_DAYS) + 1
+ATTEMPT_COMPACT_FILES = max(2, int(os.getenv('GLOBAL_PHOTO_ATTEMPT_COMPACT_FILES', '24')))
 CLAIM_LEASE_SECONDS = max(300, min(3600, int(os.getenv('GLOBAL_PHOTO_CLAIM_LEASE_SECONDS', '1200'))))
 MAX_BYTES = 10_000_000
 MAX_SOURCE_PIXELS = 40_000_000
@@ -938,10 +944,51 @@ def prior_retryable_failures(country, location_ids):
       FROM read_parquet('s3://{DATA_BUCKET}/{attempt_prefix}/*.parquet', union_by_name=true)
       WHERE cast(location_id AS VARCHAR) IN ({id_list})
         AND cast(status AS VARCHAR) IN ({statuses})
-        AND try_cast(attempted_at AS TIMESTAMPTZ) > current_timestamp - INTERVAL 14 DAY
+        AND try_cast(attempted_at AS TIMESTAMPTZ) > current_timestamp - INTERVAL {FAILURE_WINDOW_DAYS} DAY
       GROUP BY 1
     """).fetchall()
     return {str(location_id): int(count) for location_id, count in rows}
+
+
+def compact_attempts(country):
+    """Merge a country's attempt ledger into one file once it has many parts.
+
+    Each batch appends a small Parquet part and every run re-reads them all, so
+    busy countries accumulated thousands of files. Rows older than
+    ATTEMPT_HISTORY_DAYS cannot affect scheduling and are dropped. The merged
+    file is written and verified before the parts it replaces are deleted.
+    """
+    attempt_prefix = f'{ATTEMPT_PREFIX}/country_code={country}/'
+    keys = []
+    for page in data_s3.get_paginator('list_objects_v2').paginate(Bucket=DATA_BUCKET, Prefix=attempt_prefix):
+        keys.extend(item['Key'] for item in page.get('Contents', []) if item['Key'].endswith('.parquet'))
+    if len(keys) <= ATTEMPT_COMPACT_FILES:
+        return 0
+    uris = ','.join("'s3://" + DATA_BUCKET + '/' + key.replace("'", "''") + "'" for key in keys)
+    con.execute('DROP TABLE IF EXISTS compacted_attempts')
+    con.execute(f"""
+      CREATE TEMP TABLE compacted_attempts AS
+      SELECT cast(location_id AS VARCHAR) location_id, cast(status AS VARCHAR) status,
+             try_cast(attempted_at AS TIMESTAMPTZ) attempted_at, try_cast(retry_at AS TIMESTAMPTZ) retry_at,
+             try_cast(candidate_count AS INTEGER) candidate_count, cast(details AS VARCHAR) details
+      FROM read_parquet([{uris}], union_by_name=true)
+      WHERE try_cast(attempted_at AS TIMESTAMPTZ) > current_timestamp - INTERVAL {ATTEMPT_HISTORY_DAYS} DAY
+    """)
+    kept = con.execute('SELECT count(*) FROM compacted_attempts').fetchone()[0]
+    if kept:
+        stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+        out = f's3://{DATA_BUCKET}/{attempt_prefix}part-{stamp}-compacted.parquet'
+        con.execute(f"COPY compacted_attempts TO '{out}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 100000)")
+        written = con.execute(f"SELECT count(*) FROM read_parquet('{out}')").fetchone()[0]
+        if written != kept:
+            raise RuntimeError(f'{country}: compacted attempt ledger has {written} rows, expected {kept}')
+    con.execute('DROP TABLE IF EXISTS compacted_attempts')
+    for start in range(0, len(keys), 1000):
+        response = data_s3.delete_objects(Bucket=DATA_BUCKET, Delete={'Objects': [{'Key': key} for key in keys[start:start + 1000]], 'Quiet': True})
+        if response.get('Errors'):
+            raise RuntimeError(f'{country}: could not delete compacted attempt parts: {response["Errors"][:3]}')
+    print(f'{country}: compacted {len(keys)} attempt files into one ({kept} rows from the last {ATTEMPT_HISTORY_DAYS} days kept)', flush=True)
+    return len(keys)
 
 
 def write_attempts(country, diagnostics):
@@ -1047,6 +1094,7 @@ for country in country_order:
             print(f'{country}: ignoring legacy enrichment photo metadata without content_hash', flush=True)
     existing_sql = ' UNION ALL '.join(existing_sources) if existing_sources else 'SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false'
     attempt_prefix = f'{ATTEMPT_PREFIX}/country_code={country}'
+    compact_attempts(country)
     if prefix_exists(attempt_prefix):
         attempt_uri = f's3://{DATA_BUCKET}/{attempt_prefix}/*.parquet'
         recent_attempts_sql = f"""

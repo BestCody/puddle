@@ -13,19 +13,23 @@ import argparse
 import hashlib
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import boto3
 import duckdb
 import orjson
 from botocore.client import Config
+from botocore.exceptions import ClientError
 
 from location_search_common import object_source_config, clean_prefix, configure_duckdb, first_env
-from photo_overlay_format import build_membership
+from photo_overlay_format import membership_bytes, membership_object_key
 from indexed_location_data import write_photo_index, prune_inactive_photo_indices
 
 
-OVERLAY_VERSION = 2
+OVERLAY_VERSION = 3
+# Superseded membership objects stay readable for app instances still holding
+# the previous pointer (60 s cache) and are deleted after this window.
+MEMBERSHIP_RETENTION = timedelta(days=1)
 SNAPSHOT_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -48,6 +52,36 @@ def snapshot_argument(value: str) -> str:
 
 def sql_text(value: object) -> str:
     return str(value or "").replace("'", "''")
+
+
+def publish_membership(client, bucket: str, key: str, body: bytes, sha256: str) -> None:
+    """Upload immutable membership bytes once and verify what the store holds."""
+    try:
+        head = client.head_object(Bucket=bucket, Key=key)
+        if int(head.get("ContentLength", -1)) == len(body) and head.get("Metadata", {}).get("sha256") == sha256:
+            return
+    except ClientError as error:
+        if str(error.response.get("Error", {}).get("Code", "")) not in {"404", "NoSuchKey", "NotFound"}:
+            raise
+    client.put_object(
+        Bucket=bucket, Key=key, Body=body, ContentType="application/octet-stream",
+        CacheControl="public, max-age=31536000, immutable", Metadata={"sha256": sha256},
+    )
+    head = client.head_object(Bucket=bucket, Key=key)
+    if int(head.get("ContentLength", -1)) != len(body) or head.get("Metadata", {}).get("sha256") != sha256:
+        raise RuntimeError("Photo membership object verification failed.")
+
+
+def prune_membership_objects(client, bucket: str, prefix: str, keep: str) -> int:
+    cutoff = datetime.now(timezone.utc) - MEMBERSHIP_RETENTION
+    removed = 0
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
+        for item in page.get("Contents", []):
+            key = str(item.get("Key") or "")
+            if key != keep and key.endswith(".uuid128") and item["LastModified"] < cutoff:
+                client.delete_object(Bucket=bucket, Key=key)
+                removed += 1
+    return removed
 
 
 def list_keys(client, bucket: str, prefix: str) -> list[str]:
@@ -315,6 +349,10 @@ for row in rows:
     ])
 
 local_index = write_photo_index(entries, manifest_key, first_env('GLOBAL_LOCATION_INDEXED_DATA_DIR'))
+membership_body = membership_bytes([entry[0] for entry in entries])
+membership_sha256 = sha256_hex(membership_body)
+membership_key = membership_object_key(source.data_prefix, membership_sha256)
+publish_membership(client, source.bucket, membership_key, membership_body, membership_sha256)
 pointer = {
     "schema_version": 1,
     "overlay_version": OVERLAY_VERSION,
@@ -323,7 +361,12 @@ pointer = {
     "source_manifest_sha256": sha256_hex(manifest_body),
     "local_index": local_index,
     "photo_count": len(entries),
-    "membership": build_membership([entry[0] for entry in entries]),
+    "membership": {
+        "encoding": "uuid128-sorted",
+        "object_key": membership_key,
+        "sha256": membership_sha256,
+        "byte_length": len(membership_body),
+    },
     "generated_at": utc_now(),
 }
 pointer_key = f"{source.data_prefix}/search/photo-overlay-v1/active.json"
@@ -338,10 +381,14 @@ client.put_object(
     CacheControl="no-store",
 )
 prune_inactive_photo_indices(first_env('GLOBAL_LOCATION_INDEXED_DATA_DIR'), local_index['data_sha256'])
+pruned_memberships = prune_membership_objects(
+    client, source.bucket, f"{source.data_prefix}/search/photo-overlay-v1/membership/", membership_key
+)
 print(
     f"photo_overlay_published=true snapshot={args.snapshot} photos={len(entries)} "
     f"indexed=true incompatible_files={incompatible_files} "
     f"missing_media_references={missing_media_references} "
-    f"pointer_key={pointer_key}",
+    f"pointer_key={pointer_key} pointer_bytes={len(pointer_body)} "
+    f"membership_key={membership_key} pruned_memberships={pruned_memberships}",
     flush=True,
 )
