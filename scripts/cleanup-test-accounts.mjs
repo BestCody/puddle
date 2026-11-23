@@ -73,20 +73,12 @@ const profileRelationProbes = [
   ['organizers', 'owner_id'],
   ['conversations', 'created_by'],
   ['messages', 'sender_id'],
-  ['inventory_reservations', 'profile_id'],
   ['orders', 'buyer_id'],
   ['tickets', 'owner_id'],
   ['reports', 'reporter_id'],
   ['audit_logs', 'actor_id'],
   ['host_announcements', 'author_id'],
-  ['event_checkins', 'checked_in_by'],
-  ['plan_stops', 'added_by'],
-  ['plan_polls', 'created_by'],
-  ['promo_redemptions', 'profile_id'],
   ['refund_requests', 'requester_id'],
-  ['ticket_transfers', 'sender_id'],
-  ['ticket_transfers', 'recipient_id'],
-  ['ticket_checkin_events', 'staff_id'],
   ['bulk_operations', 'requested_by']
 ]
 
