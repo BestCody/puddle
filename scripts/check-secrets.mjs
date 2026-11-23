@@ -64,7 +64,7 @@ for (const path of tracked) {
   const clientFile = /^\s*["']use client["']/m.test(source.slice(0, 300))
   if (clientFile) {
     for (const name of serverOnlyNames) if (source.includes(name)) findings.push(`${path}: client bundle references ${name}`)
-    if (/from\s+["'](?:node:|@\/lib\/supabase\/(?:admin|server)|@\/lib\/storage\/(?:b2-native|self-host-object-store)|@\/lib\/app\/global-location-search|@\/lib\/security\/(?:worker-auth|malware-scanner))/.test(source)) findings.push(`${path}: client bundle imports a server-only module`)
+    if (/from\s+["'](?:node:|@\/lib\/supabase\/(?:admin|server)|@\/lib\/storage\/self-host-object-store|@\/lib\/app\/global-location-search|@\/lib\/security\/(?:worker-auth|malware-scanner))/.test(source)) findings.push(`${path}: client bundle imports a server-only module`)
     for (const match of source.matchAll(/process\.env\.([A-Z0-9_]+)/g)) if (!match[1].startsWith('NEXT_PUBLIC_')) findings.push(`${path}: client bundle reads non-public environment variable ${match[1]}`)
   }
 

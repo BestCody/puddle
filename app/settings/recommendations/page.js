@@ -17,6 +17,6 @@ export default function RecommendationSettingsPage() {
     } catch (error) {
       console.error('Recommendation settings failed:', error)
     }
-    return <><section className={scopedClasses(sharedUIStyles, "page-heading-row")}><div><span className="section-pill section-pill-purple">Recommendations</span><h1 className={scopedClasses(sharedUIStyles, "product-title")}>Control what shapes your feed.</h1><p>Use transparent signals, reset learned preferences, or remove recommendation data without affecting operational records.</p></div><Link className={scopedClasses(sharedUIStyles, "splash-button splash-button-mint")} href="/discover">Back to Discover</Link></section>{preferences ? <RecommendationSettings initialPreferences={preferences} /> : <p role="alert">Recommendation settings could not be loaded. <a href="/settings/recommendations">Try again</a>.</p>}</>
+    return <><section className={scopedClasses(sharedUIStyles, "page-heading-row")}><div><h1 className={scopedClasses(sharedUIStyles, "product-title")}>Control what shapes your feed.</h1><p>Use transparent signals, reset learned preferences, or remove recommendation data without affecting operational records.</p></div><Link className={scopedClasses(sharedUIStyles, "splash-button splash-button-mint")} href="/discover">Back to Discover</Link></section>{preferences ? <RecommendationSettings initialPreferences={preferences} /> : <p role="alert">Recommendation settings could not be loaded. <a href="/settings/recommendations">Try again</a>.</p>}</>
   })
 }

@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { csrfFetch } from '@/lib/security/csrf-client'
+import { csrfFetch, deviceId } from '@/lib/security/csrf-client'
 import { useProductIdentity } from '@/components/product-identity'
 
 function initials(name) {
@@ -30,15 +30,6 @@ function publicMediaUrl(client, path) {
   const directUrl = safeImageUrl(path)
   if (directUrl) return directUrl
   return safeImageUrl(client.storage.from('puddle-public-media').getPublicUrl(path).data.publicUrl)
-}
-
-function deviceId() {
-  let value = window.localStorage.getItem('puddle-device-id')
-  if (!value) {
-    value = crypto.randomUUID()
-    window.localStorage.setItem('puddle-device-id', value)
-  }
-  return value
 }
 
 export function ProfilePhotoEditor({ userId, currentPath, displayName }) {

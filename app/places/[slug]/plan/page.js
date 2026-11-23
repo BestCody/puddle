@@ -18,6 +18,6 @@ export default async function PlanLocationVisitPage({ params, searchParams }) {
     if (!location) notFound()
     const { data: existing } = await session.supabase.from('location_visits').select('status,planned_for,note').eq('profile_id',session.user.id).eq('location_id',location.id).maybeSingle()
     const locality = location.neighborhood || location.city || location.region || location.country || 'this area'
-    return <><section className={scopedClasses(sharedUIStyles, "product-hero product-hero-purple")}><div><span className="section-pill section-pill-yellow">Place plan</span><h1>{location.name}</h1><p>{location.summary || location.description || `Plan a visit in ${locality}.`}</p></div><div className={scopedClasses(sharedUIStyles, "create-scribble")} aria-hidden="true">save<br/>a day<br/>to go ↗</div></section><AuthMessage searchParams={messages}/><VisitPlanForm action={recordLocationVisit} locationId={location.id} existing={existing} /></>
+    return <><section className={scopedClasses(sharedUIStyles, "product-hero product-hero-purple")}><div><h1>{location.name}</h1><p>{location.summary || location.description || `Plan a visit in ${locality}.`}</p></div><div className={scopedClasses(sharedUIStyles, "create-scribble")} aria-hidden="true">save<br/>a day<br/>to go ↗</div></section><AuthMessage searchParams={messages}/><VisitPlanForm action={recordLocationVisit} locationId={location.id} existing={existing} /></>
   })
 }
