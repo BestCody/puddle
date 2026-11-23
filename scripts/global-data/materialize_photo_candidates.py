@@ -985,7 +985,9 @@ else:
     exclusion_sql = 'SELECT NULL::VARCHAR location_id,NULL::VARCHAR content_hash WHERE false'
 
 stop_requested = False
-stopped_country = None
+# The country being processed when the budget ran out. Every early exit below
+# (including the break inside the worker-pool block) leaves this set correctly.
+current_country = None
 batches_processed = 0
 locations_seen = 0
 materialized_total = 0
@@ -993,9 +995,9 @@ start_country = read_country_cursor() if ROTATE_COUNTRIES else None
 country_order = rotate_countries(countries(), start_country)
 print(f'photo country order: {len(country_order)} countries starting at {country_order[0] if country_order else None}', flush=True)
 for country in country_order:
+    current_country = country
     if runtime_exhausted():
         stop_requested = True
-        stopped_country = country
         break
     country_location_limit = None
     if args.max_locations is not None:
@@ -1151,10 +1153,9 @@ for country in country_order:
             break
 
     if stop_requested:
-        stopped_country = country
         break
 
-next_country = next_start_country(stopped_country, complete=not stop_requested)
+next_country = next_start_country(current_country if stop_requested else None, complete=not stop_requested)
 if ROTATE_COUNTRIES:
     write_country_cursor(next_country)
 
