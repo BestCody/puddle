@@ -24,7 +24,8 @@ Status below was checked on 2026-10-11. Recheck the host before operating on it.
 | Web and API | `self-host-app-1` behind the `self-host-proxy-1` Caddy container |
 | Auth, Postgres, Realtime, user uploads | Self-hosted Supabase in `/opt/puddle-supabase` |
 | Search shards and canonical photos | Private SeaweedFS in `self-host-objects-1`; object data under `/srv/puddle/objects` |
-| Upload scanning and cleanup | ClamAV plus enabled `media-scans.timer` and `media-objects.timer` |
+| Upload scanning and cleanup | ClamAV plus enabled `media-scans.timer`, `media-objects.timer` and daily `orphaned-media.timer` |
+| Security and moderation alerts | Enabled hourly `security-alerts.timer` |
 | SEO submission | Enabled `indexnow.timer` |
 | Photo work | Enabled Wikimedia, KartaView, Mapillary, and materialization timers |
 | Global location import | Disabled by product decision; the existing catalogue remains in service |
@@ -67,7 +68,7 @@ docker compose --project-name self-host --env-file .env.selfhost \
 docker compose --env-file /opt/puddle-supabase/.env \
   -f /opt/puddle-supabase/docker-compose.yml \
   -f /opt/puddle/deploy/self-host/supabase-compose.override.yaml ps
-systemctl list-timers --all 'puddle-data@*.timer' 'media-*.timer' 'indexnow.timer'
+systemctl list-timers --all 'puddle-data@*.timer' 'media-*.timer' 'indexnow.timer' 'security-alerts.timer' 'orphaned-media.timer'
 df -h /srv/puddle/objects
 curl --fail --silent --show-error https://puddle.you/api/health
 ```
@@ -161,7 +162,17 @@ them, use `systemctl list-timers`, `systemctl status`, and `journalctl` for each
 enabled timer alone does not guarantee image coverage. The location-import
 timer remains disabled intentionally. `media-scans.timer` processes uploads
 through the private ClamAV service; `media-objects.timer` retries durable
-cleanup of deleted user media. `indexnow.timer` is independent of photo jobs.
+cleanup of deleted user media. `orphaned-media.timer` deletes media rows still
+quarantined a day after upload with no verification document, and rows marked
+deleted; the row trigger queues their objects for `media-objects.timer`, so it
+never touches storage itself (`node scripts/self-host-cleanup-orphaned-media.mjs
+--dry-run` lists candidates). `security-alerts.timer` runs the moderation-SLA and
+security-anomaly checks into `security_alerts` hourly. `indexnow.timer` is
+independent of photo jobs.
+
+Install or update these units by copying them from `deploy/self-host/` to
+`/etc/systemd/system/`, then `systemctl daemon-reload` and
+`systemctl enable --now security-alerts.timer orphaned-media.timer`.
 
 The off-machine Postgres backup timer is currently disabled. The host is the
 active copy of its database and objects; treat any future backup or restore
