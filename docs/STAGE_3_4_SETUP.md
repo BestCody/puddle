@@ -8,10 +8,9 @@ Apply these migrations after the existing migrations through `0007_private_addre
 2. `supabase/migrations/0009_plans_rsvps_and_collaboration.sql`
 3. `supabase/migrations/0010_stage34_profile_access.sql`
 
-Then run the matching SQL assertions in a non-production project:
-
-- `supabase/tests/0008_stage3_authorization.sql`
-- `supabase/tests/0009_stage4_authorization.sql`
+The stage 3/4 SQL assertions were removed in 2026-11 with the retired plan,
+ticketing and sharing tables they exercised. CI validates the current schema with
+the SQL tests listed in `.github/workflows/validate-supabase-migrations.yml`.
 
 ## Secure media
 
