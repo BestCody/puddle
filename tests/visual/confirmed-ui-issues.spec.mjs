@@ -145,6 +145,8 @@ test('public Save sends the canonical batch with CSRF and recovers from failure'
 
 test('a Saved refresh failure preserves review drafts and only retries the read', async ({ page }, info) => {
   test.skip(!['phone', 'desktop'].includes(info.project.name), 'Recovery covers both detail layouts')
+  // The Saved detail now sends writes through csrfFetch, like every other client mutation.
+  await page.route('**/api/security/csrf', route => route.fulfill({ json: { token: 'fixture' } }))
   let writes = 0
   await page.route('**/api/saved-location/*', async route => {
     if (route.request().method() === 'POST') {

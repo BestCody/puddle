@@ -8,6 +8,7 @@ import { SettingsOverlay } from './settings-overlay'
 import { SettingsTrigger } from './settings-trigger'
 import { signOut } from '@/app/auth/actions'
 import { ProductIdentityProvider } from './product-identity'
+import { AccountMenuName, StaticDashboardRuntime } from './static-account-menu'
 
 // Render navigation without blocking on account data; one lightweight client
 // read restores the avatar and saved appearance for the persistent shell.
@@ -19,9 +20,10 @@ export function StaticProductShell({ children }) {
       <details className={scopedClasses(shellStyles, "figma-dashboard-account-menu")}>
         <summary aria-label="Open profile menu"><span aria-hidden="true"><i /><i /><i /></span></summary>
         <div className="profile-menu-panel">
-          <strong>Puddle person</strong>
+          <AccountMenuName />
           <Link href="/profile">Profile</Link>
           <Link href="/membership">Pass</Link>
+          <StaticDashboardRuntime />
           <SettingsTrigger>Settings</SettingsTrigger>
           <form action={signOut}><button type="submit">Sign out</button></form>
         </div>

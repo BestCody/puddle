@@ -14,6 +14,7 @@ import { SavedPlacePosts } from '@/components/saved-place-posts'
 import { DetailReviews } from '@/app/(product)/plans/[slug]/detail-reviews'
 import { savedLocationTransitionNames } from '@/lib/app/saved-location-transition'
 import { validCoordinates } from '@/lib/app/optional-number'
+import { csrfFetch } from '@/lib/security/csrf-client'
 
 const LocationMap = dynamic(() => import('@/components/location-map').then((module) => module.LocationMap))
 
@@ -37,15 +38,6 @@ function clearNames(card) {
   for (const node of card.querySelectorAll('[data-saved-morph-photo],[data-saved-morph-title],[data-saved-morph-meta]')) {
     node.style.viewTransitionName = ''
   }
-}
-
-function csrfToken() {
-  const pairs = document.cookie.split(';').map((value) => value.trim())
-  for (const name of ['__Host-puddle-csrf', 'puddle-csrf']) {
-    const match = pairs.find((value) => value.startsWith(`${name}=`))
-    if (match) return decodeURIComponent(match.slice(name.length + 1))
-  }
-  return ''
 }
 
 function placeLabel(location) {
@@ -398,9 +390,10 @@ export function SavedLocationMorphBridge({ detailLocationId = null, userId = nul
     setBusy(true)
     setMessage('')
     try {
-      const response = await fetch(`/api/saved-location/${encodeURIComponent(preview.slug)}`, {
+      // csrfFetch obtains a fresh token and retries once if it expired while the page was open.
+      const response = await csrfFetch(`/api/saved-location/${encodeURIComponent(preview.slug)}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-puddle-csrf': csrfToken() },
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action, ...extra, ...(shareKey ? { share_key: shareKey } : {}) })
       })
       const payload = await response.json()

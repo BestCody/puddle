@@ -23,7 +23,8 @@ export default async function DiscoverPage({ searchParams }) {
     const feedFilters = {
       kind: 'place',
       date: 'any',
-      distance: Number.isFinite(requestedDistance) && requestedDistance > 0 ? requestedDistance : 10,
+      // Without an explicit filter, use the radius chosen during onboarding (the API's default too).
+      distance: Number.isFinite(requestedDistance) && requestedDistance > 0 ? requestedDistance : Number(session.profile?.search_radius_km) || 25,
       limit: 12,
       q: '',
       category: textParam(params?.category, 40),

@@ -41,6 +41,10 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   images: { formats: ['image/avif', 'image/webp'], minimumCacheTTL: 86400, remotePatterns: mediaRemotePatterns() },
+  // Next buffers request bodies for proxy.js and silently truncates them at
+  // 10 MB by default. Match proxy.js's 20,000,000-byte upload ceiling so
+  // 10-20 MB media uploads arrive whole; other routes are capped far lower there.
+  experimental: { proxyClientMaxBodySize: 20_000_000 },
   // lib/app/geocoding.js reads the self-hosted GeoNames city index at runtime.
   outputFileTracingIncludes: {
     '/api/location/search': ['./data/geonames/cities.tsv.gz'],

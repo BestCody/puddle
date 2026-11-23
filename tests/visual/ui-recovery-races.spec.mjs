@@ -67,6 +67,8 @@ test.beforeEach(async ({}, info) => {
 })
 
 test('late Saved mutation cannot replace a newly opened place or clear its pending state', async ({ page }) => {
+  // The Saved detail now sends writes through csrfFetch, like every other client mutation.
+  await page.route('**/api/security/csrf', route => route.fulfill({ json: { token: 'fixture' } }))
   let completeFirst, completeSecond
   const waiting = new Promise(resolve => { completeFirst = resolve })
   const secondWaiting = new Promise(resolve => { completeSecond = resolve })
@@ -103,6 +105,8 @@ test('late Saved mutation cannot replace a newly opened place or clear its pendi
 })
 
 test('interrupted Saved share retries reuse the same idempotency key', async ({ page }) => {
+  // The Saved detail now sends writes through csrfFetch, like every other client mutation.
+  await page.route('**/api/security/csrf', route => route.fulfill({ json: { token: 'fixture' } }))
   const requests = []
   await page.route('**/api/saved-location/*', async route => {
     if (route.request().method() !== 'POST') return route.continue()
